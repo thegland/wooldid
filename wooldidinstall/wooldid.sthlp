@@ -653,9 +653,9 @@ The STATA 18 command {help hdidregress} has an option for implementing Wooldridg
 and uses the command {help regress}, in conjunction with {help margins}, to compute estimates. Estimates from {it:hdidregress twfe} with the option {it:notyet}
 (i.e., allowing use of not-yet treated cohorts as controls) should be comparable to estimates from {it:wooldid} using the {it:att} estimand-type, a pooled
 reference period (i.e., not using {it:esfixedbaseperiod}), unconditional standard errors, and sample weights which (if present) do not vary within units.
-Estimates produced by the two will still differ, however, when certain types of panel imbalance are present. In particular, when a treatment onset group contains
+Estimates produced by the two will still differ, however, when certain types of panel imbalance are present. For example, when a treatment onset group contains
 multiple cohorts and some of those cohorts are not observed in periods when others are observed, {it:wooldid} and {it:hddiregress twfe} will yield different results.
-In such cases, {it:wooldid} approaches the situation by presenting the average treatment effect among whatever observations are observed. For example, suppose cohorts 1 and 2
+In such cases, {it:wooldid} approaches the situation by presenting the average treatment effect among only the observed cohort-periods. For example, suppose cohorts 1 and 2
 are in the same treatment onset group, cohort 1 is observed for the first 3 periods after treatment onset, and cohort 2 is only observed for the first 2. In this case, {it:wooldid}
 and {it:hdidregress} will report the same treatment effects for the treatment onset group for the first 2 periods after treatment. The two programs will disagree on the third
 effect: {it:wooldid} will report the same 3rd period effect that it (and {it:hdidregress}) would report if cohort 2 were not incldued in the dataset at all; {it:hdidregress} does not.
