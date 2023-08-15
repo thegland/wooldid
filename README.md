@@ -1,6 +1,6 @@
 # wooldid: Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions
 
-This program offers a suite of tools for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2021) and the high dimensional fixed effects estimators developed by Correia (2017). Features include:
+This program offers a suite of tools in STATA for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2021) and the high dimensional fixed effects estimators developed by Correia (2017). Features include:
 
 - Estimation of multiple types of overall average treatment effects
 - Estimation of event study style estimates of treatment effects in particular years relative to treatment using the user's choice of a pooled or fixed reference period
