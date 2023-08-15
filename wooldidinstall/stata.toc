@@ -1,0 +1,4 @@
+v 3
+
+d Thomas A. Hegland, Agency for Healthcare Research and Quality (thomas.hegland@ahrq.hhs.gov)
+p wooldid: Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions
