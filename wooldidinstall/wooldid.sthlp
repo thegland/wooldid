@@ -26,7 +26,6 @@
 {viewerjumpto "Citations" "wooldid##citations"}{...}
 {viewerjumpto "Author Info How to Cite" "wooldid##author"}{...}
 {viewerjumpto "Disclaimer" "wooldid##disclaimer"}{...}
-
 {title:Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions}
 
 {pstd} {bf:wooldid} -- Suite for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2021)
@@ -41,9 +40,9 @@ and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
 {help wooldid##comparison:Comparison with Related Estimators}, {help wooldid##examples:Examples},
 {help wooldid##bugs:Bugs and Assistance}, {help wooldid##citations:Citations}, {help wooldid##author:Author Info and How to Cite}, {help wooldid##disclaimer:Disclaimer} {p_end}
 
-
 {pstd}{ul:Dependencies:} {cmd:wooldid} requires users have STATA 16 or higher installed, {help reghdfe} version 5.7.3, {help ftools} (for {it:reghdfe}),
 and (optionally, for speed) {help gtools}. Poisson estimation also requires the package {help ppmlhdfe}. {p_end}
+
 
 
 {marker syntax}{...}
@@ -222,7 +221,6 @@ to present the average percentage change, rather than the average level differen
 {it:eydx} option of the {help margins} command. Note that for estimation to succeed, this option tends to require large samples and a y-variable that is not sparsely distributed. {p_end}
 
 
-
 {marker standarderrors}{...}
 {dlgtab:Standard Errors}
 
@@ -276,7 +274,6 @@ effect estimates, despite the fact that the existence of a shared control group 
 independence assumption.  {p_end}
 
 
-
 {marker supporting}{...}
 {dlgtab:Supporting Features}
 
@@ -299,7 +296,6 @@ log(y) as an outcome, but where y contains natural 0s, as well as when treatment
 
 {phang}{opt poisexp:results}: When implementing poisson, present treatment effects in terms of differences in exponentiated linear predictions (the poisson "number of events" or {it:predict(n)}
 option). Results of this sort will thus not have a log-type interpretation. {p_end}
-
 
 
 {marker eventstudy}{...}
@@ -359,7 +355,6 @@ cells not relevant to a given relative-time period specific estimate. As such, o
 For the {it:att_i} and {it:att_itime} concepts, {it:att_it} type results will be shown. {p_end}
 
 
-
 {marker interactions}{...}
 {dlgtab:Subgroup Effects}
 
@@ -383,7 +378,6 @@ for subgroup-specific estimates can fail when using clustered standard errors in
 existing among treated cohorts and control cohorts. The target estimand may be thought of as the difference in the diff-in-diff estimates obtained separately for each of the two groups. To
 implement a triple diff design in {it:wooldid}, one can specify the variable containing the two triple diff groups as a SG variable and then manually specify inclusion of SG by period
 fixed effects (i.e., specifying {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}). The difference in SG level estimates returned will be the triple diff estimate. {p_end}
-
 
 
 {marker continuous}{...}
@@ -507,7 +501,6 @@ variation in treatment intensity), the option {it:contreatwithin} should be spec
 and to the presence of i-t fixed effects (if specified). When specified, {it:wooldid} will still present ATT-type average treatment effects estimates, which in this case should essentially
 be the integral of the estimated average marginal effects across the distribution of the continuous treatment variable. Note: one should not specify the control type {it:byTime} in this case,
 since in the absence of an untreated group, the time period interactions will force {it:wooldid} to partial out genuine treatment effects for some group, threatening identification. {p_end}
-
 
 
 {marker controls}{...}
@@ -723,6 +716,7 @@ by period), controlling for the continuous treatment variable by treatment group
 {p 10 10}   {cmd:wooldid y i t ttre, contreat(contreatvar) contreatcontrols(byTreated byTime) makecfxplot lattice(byTreatedByTime 5) cfxplottypes(pre))}
 
 
+
 {marker bugs}{...}
 
 {title:Bugs and Assistance}
@@ -748,6 +742,7 @@ under development, so assistance finding and correcting bugs is much appreciated
 {pstd} Note: if you encounter unusual, hard to track down errors, try uninstalling and reinstalling {it:reghdfe} and {it:ftools} first. This can fix some problems. {p_end}
 
 
+
 {marker citations}{...}
 
 {title:Citations}
@@ -771,7 +766,8 @@ Boston College Department of Economics. https://ideas.repec.org/c/boc/bocode/s45
 {pstd} Contact: thomas.hegland@ahrq.hhs.gov, thomashegland.com, @thomas_hegland  {p_end}
 
 {pstd} Citation: Hegland, Thomas A. wooldid: Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way
-Fixed Effects Regressions. Statistical Software Components, 2023.{p_end}
+Fixed Effects Regressions. 2023.{p_end}
+
 
 
 {marker disclaimer}{...}
