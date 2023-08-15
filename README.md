@@ -22,7 +22,7 @@ This program offers a suite of tools for implementing difference-in-differences 
 *Citation:* Hegland, Thomas A. wooldid: Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way
 Fixed Effects Regressions. 2023.
 
-*Disclaimer:* This document reflects only the views of the author and does not necessarily represent the views of the Agency for Healthcare Research and Quality, the Department of Health and Human Services, or the United States government. The program with which this help file is associated is the work of the author and does not come with any endorsement by or warranty from the Agency for Healthcare Research and Quality, the Department of Health and Human Services, or the United States government.  
+*Disclaimer:* This document reflects only the views of the author and does not necessarily represent the views of the Agency for Healthcare Research and Quality, the Department of Health and Human Services, or the United States government. The program with which this file is associated is the work of the author and does not come with any endorsement by or warranty from the Agency for Healthcare Research and Quality, the Department of Health and Human Services, or the United States government.  
 
 &nbsp;
 
