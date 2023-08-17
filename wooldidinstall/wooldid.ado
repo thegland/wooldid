@@ -16,8 +16,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 * Execute update before running main program
   if "`update'" == "update" {
-    net install wooldid, from(https://raw.githubusercontent.com/thegland/wooldid/master/wooldidinstall/)
-    dis as text "Update complete; exiting wooldid."
+    net install wooldid, from(https://raw.githubusercontent.com/thegland/wooldid/master/wooldidinstall/) replace
+    dis as text "Update complete; exiting wooldid. Other dependencies (reghdfe, ftools, ppmlhdfe (optional), gtools (optional)) must be updated manually if necessary."
     exit
   }
 
