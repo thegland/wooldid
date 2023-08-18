@@ -736,6 +736,9 @@ without a lattice variable or any polynomial terms. However, a continuous treatm
 unbalanced panel, {it:wooldid} will be unlikely to detect problems related to important treatment effects being partialled out by controls or fixed effects. As such, one should
 be very careful when specifying one's fixed effects and {it:contreatcontrols} when using a continuous treatment.
 
+{p 10 10}   Under various circumstances, {it:wooldid} cannot estimate standard errors for all requested objects. In this case, {it:wooldid} will return point estimates without 
+standard errors. This can cause the functionality of certain post-estimation tools to break since, in this situation, {it:wooldid} will not return an {it:e(V)} matrix. 
+
 {pstd}If you encounter a bug - be it the program crashing or just the program delivering a weird result - please reach out to me about it. This program is still
 under development, so assistance finding and correcting bugs is much appreciated. I am also happy to help and offer guidance on how to use this program.{p_end}
 
