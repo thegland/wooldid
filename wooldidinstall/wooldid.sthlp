@@ -43,6 +43,9 @@ and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
 {pstd}{ul:Dependencies:} {cmd:wooldid} requires users have STATA 16 or higher installed, {help reghdfe} version 5.7.3, {help ftools} (for {it:reghdfe}),
 and (optionally, for speed) {help gtools}. Poisson estimation also requires the package {help ppmlhdfe}. {p_end}
 
+{pstd}{ul:Github Link:} {browse "https://github.com/thegland/wooldid/"} - the command {it:wooldid, update} will cause this program to update itself using the materials 
+at this link. {p_end}
+
 
 
 {marker syntax}{...}
