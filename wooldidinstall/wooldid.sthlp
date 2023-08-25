@@ -155,8 +155,10 @@ the regression is saturated with i-t indicator variables and all treatment effec
 {pstd} With greater modification, the approach above can be extended to handle continuous treatment variables and treatments that come with an associated measure of treatment intensity
 or dosage. When cohorts are coarse -- i.e., there are multiple units within each cohort-period cell -- and when a continuous treatment variable varies
 within i-t cells, estimates of the effect of the continuous treatment variable can be computed within each treated i-t cell. To ensure treatment effect
-heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed. Note that
-this approach is a bit speculative, and is not proposed in Wooldridge (2021). {p_end}
+heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed. 
+Note that this approach is a bit speculative and is not covered in Wooldridge (2021), though Wooldridge has 
+{browse "https://twitter.com/jmwooldridge/status/1695115782739435922?s=61&t=pXC6R4euc7LaN6MMB5VApQ":informally suggested} 
+handling continuous treatments using interactions between treated cell indicators and the continuous treatment variable. {p_end}
 
 {pstd} The particular modification to the underlying regression used for estimation in the continuous treatment context is as follows: {p_end}
 {p2col 5 8 8 0 : Step 1 (Continuous):} Y_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt)) {p_end}
