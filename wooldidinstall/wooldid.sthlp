@@ -772,7 +772,7 @@ Boston College Department of Economics. https://ideas.repec.org/c/boc/bocode/s45
 {pstd} Contact: thomas.hegland@ahrq.hhs.gov, thomashegland.com, @thomas_hegland  {p_end}
 
 {pstd} Citation: Hegland, Thomas A. wooldid: Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way
-Fixed Effects Regressions. 2023.{p_end}
+Fixed Effects Regressions. Statistical Software Components, 2023.{p_end}
 
 
 
