@@ -20,15 +20,19 @@ This program offers a suite of tools in STATA for implementing difference-in-dif
 *Contact:* thomas.hegland@ahrq.hhs.gov, thomashegland.com, @thomas_hegland  
 
 *Citation:* Hegland, Thomas A. wooldid: Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way
-Fixed Effects Regressions. 2023.
+Fixed Effects Regressions. Statistical Software Components, 2023.
 
 *Disclaimer:* This document reflects only the views of the author and does not necessarily represent the views of the Agency for Healthcare Research and Quality, the Department of Health and Human Services, or the United States government. The program with which this file is associated is the work of the author and does not come with any endorsement by or warranty from the Agency for Healthcare Research and Quality, the Department of Health and Human Services, or the United States government.  
 
 &nbsp;
 
 ### How to Install
+ ```
+ ssc install wooldid
+```
+or
   ```
- net install wooldid, from(https://raw.githubusercontent.com/thegland/wooldid/master/wooldidinstall/)
+ net install wooldid, from(https://raw.githubusercontent.com/thegland/wooldid/master/wooldidinstall/) replace
   ```
 
 &nbsp;
@@ -154,5 +158,5 @@ Boston College Department of Economics. https://ideas.repec.org/c/boc/bocode/s45
 
 Ibragimov, Rustam and Muller, Ulrich K. t-Statistic Based Correlation and Heterogeneity Robust Inference. Journal of Business & Economic Statistics, 2010. 
 
- Wooldridge, Jeffrey M. Two-Way Fixed Effects, the Two-Way Mundlak Regression, and Difference-in-differences Estimators. Working Paper, 2021. https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345 
+Wooldridge, Jeffrey M. Two-Way Fixed Effects, the Two-Way Mundlak Regression, and Difference-in-differences Estimators. Working Paper, 2021. https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345 
 
