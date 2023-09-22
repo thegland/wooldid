@@ -2926,10 +2926,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     ereturn matrix summarystats = `summarystats'
 
     * most summary stats will live in the summary stats matrix, but these may be worth returning on their own
-    ereturn scalar ytrepre_mean = `ypre_mean'
-    ereturn scalar ytrepre_med =  `ypre_med'
-    ereturn scalar ytrepre_sd =  `ypre_sd'
-    ereturn scalar ytrepre_iqr =  `ypre_iqr'
+    ereturn scalar ypre_mean = `ypre_mean'
+    ereturn scalar ypre_med =  `ypre_med'
+    ereturn scalar ypre_sd =  `ypre_sd'
+    ereturn scalar ypre_iqr =  `ypre_iqr'
+
+    if "`contreat'" != "" {
+	    ereturn scalar contreatpre_mean = `contreatpre_mean'
+	    ereturn scalar contreatpre_med =  `contreatpre_med'
+	    ereturn scalar contreatpre_sd =  `contreatpre_sd'
+	    ereturn scalar contreatpost_mean = `contreatpost_mean'
+	    ereturn scalar contreatpost_med =  `contreatpost_med'
+	    ereturn scalar contreatpost_sd =  `contreatpost_sd'
+	    ereturn scalar contreat_mean = `contreat_mean'
+	    ereturn scalar contreat_med =  `contreat_med'
+	    ereturn scalar contreat_sd =  `contreat_sd'
+    }
 
     if "`poisson'" == "poisson" dis as result  "Note: summary stats above are for untransformed Y, while coefficients are from Y=exp(regression equation) and have a log-linear type interpretation."
   }
