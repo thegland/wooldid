@@ -560,8 +560,8 @@ efficiency in the main regression or under certain other circumstances. {p_end}
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
 
 {phang}{opt emptycellsoverride}: By default, {it:wooldid} tells Stata to drop interaction terms that correspond with empty cells, which is achieved by the command 
-{it:set emptycells drop}, which improves estimation efficiency in this setting. This option overrides this behavior. This should only be of interest in conjunction 
-with the option {it:verbose}. {p_end}
+{it:set emptycells drop}. This should improve estimation speed in most settings, and has done so by up to 50% in some cases. This option overrides this behavior, which 
+may be useful to do when debugging or when intending to inspect the underlying regression results delivered by {it:verbose}. {p_end}
 
 {phang}{opt safety(string)}: When {it:safety(off)} is not explicitly specified, {it:wooldid} will caution the user or halt estimation when {it:wooldid} is likely to yield unreliable estimates.
 Most important among these checks are tests for whether or not a variable intended to capture the treatment effect in a given i-t cell was dropped from the underlying regression for
