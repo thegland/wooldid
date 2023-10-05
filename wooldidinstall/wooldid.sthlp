@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0 2023-08-24}{...}
+{* *! version 1.1 2023-10-05}{...}
 {vieweralsosee "reghdfe" "help reghdfe"}{...}
 {vieweralsosee "regress" "help regress"}{...}
 {vieweralsosee "ppmlhdfe" "help ppmlhdfe"}{...}
@@ -43,7 +43,7 @@ and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
 {pstd}{ul:Dependencies:} {cmd:wooldid} requires users have STATA 16 or higher installed, {help reghdfe} version 5.7.3, {help ftools} (for {it:reghdfe}),
 and (optionally, for speed) {help gtools}. Poisson estimation also requires the package {help ppmlhdfe}. {p_end}
 
-{pstd}{ul:Github Link:} {browse "https://github.com/thegland/wooldid/"} - the command {it:wooldid, update} will cause this program to update itself using the materials 
+{pstd}{ul:Github Link:} {browse "https://github.com/thegland/wooldid/"} - the command {it:wooldid, update} will cause this program to update itself using the materials
 at this link. {p_end}
 
 
@@ -85,7 +85,8 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 {phang3} {it:-latticenum}: integer > 1  {p_end}
 {phang3} {it:-conttreatcontroltype}: {it:untreatedZero}, or one or more of {it:basic}, {it:byTreated}, {it:byTtre}, {it:byCohort}, {it:byTime}  {p_end}
 
-{synopt : {help wooldid##controls:Controls and Fixed Effects:}} {opt control:s(fv varlist)} {opt fe(fv varlist)} {opt timetrend:s} {opt coarse:cohortcontrols(fv-required varlist)}   {p_end}
+{synopt : {help wooldid##controls:Controls and Fixed Effects:}} {opt control:s(fv varlist)} {opt fe(fv varlist)} {opt timetrend:s} {opt coarse:cohortcontrols(fv-required varlist)}
+{opt inter:activecontrols(varlist)} {p_end}
 
 {synopt : {help wooldid##technical:Technical Features:}}
 {opt update} {opt customw:eightmultiplier(variable[>=0 numerical])}  {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
@@ -155,9 +156,9 @@ the regression is saturated with i-t indicator variables and all treatment effec
 {pstd} With greater modification, the approach above can be extended to handle continuous treatment variables and treatments that come with an associated measure of treatment intensity
 or dosage. When cohorts are coarse -- i.e., there are multiple units within each cohort-period cell -- and when a continuous treatment variable varies
 within i-t cells, estimates of the effect of the continuous treatment variable can be computed within each treated i-t cell. To ensure treatment effect
-heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed. 
-Note that this approach is a bit speculative and is not covered in Wooldridge (2021), though Wooldridge has 
-{browse "https://twitter.com/jmwooldridge/status/1695115782739435922?s=61&t=pXC6R4euc7LaN6MMB5VApQ":informally suggested} 
+heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed.
+Note that this approach is a bit speculative and is not covered in Wooldridge (2021), though Wooldridge has
+{browse "https://twitter.com/jmwooldridge/status/1695115782739435922?s=61&t=pXC6R4euc7LaN6MMB5VApQ":informally suggested}
 handling continuous treatments using interactions between treated cell indicators and the continuous treatment variable. {p_end}
 
 {pstd} The particular modification to the underlying regression used for estimation in the continuous treatment context is as follows: {p_end}
@@ -522,10 +523,19 @@ and, in the fixed reference period case, ensures that the two reference periods 
 automatically include any time trends that are a function of any included continuous treatment variable.  {p_end}
 
 {phang}{opt coarse:cohortcontrols()}: Includes the specified controls as well as interactions between them with all Tz_it dummies included in the model, meaning one interaction with each
-cohort-time period for which a treatment effect is estimated (if {it:esfixedbaseperiod} is specified, that includes every estimable treated cohort by relative time period effect).
-This differs from simply specifying cohort
+cohort-time period for which a treatment effect is estimated (if {it:esfixedbaseperiod} is specified, that includes every estimable treated cohort by relative time period effect). Note that
+reported treatment effects will not vary as a direct function of these controls; the effect of these controls are partialled out from the reported treatment effects.
+This option differs from simply specifying cohort
 by time period interactions with a given control in that it pools the effect of the controls in the reference period and the control group. Note that all specified coarse cohort controls must be
-specified using factor notation, so that {it:wooldid} knows if they are to be interacted as a continuous variable (prefixed with "c.") or as a categorical variable (prefixed with "i.").
+specified using factor notation, so that {it:wooldid} knows if they are to be interacted as a continuous variable (prefixed with "c.") or as a categorical variable (prefixed with "i."). {p_end}
+
+{phang}{opt inter:activecontrols()}: Includes the specified variables in the regression in two capacities. First, the variables are included as controls interacted with time period-specific
+indicator variables. Second, the variables are de-meaned by cohort (i) and then treatment effects are permitted to vary linearly with the de-meaned variables. This is achieved by including
+interactions between the de-meaned controls and all Tz_it dummies included in the model. The specification used is similar to as with {it:coarsecohortcontrols}, but differs in that these terms
+are marked so that variation associated with them is reported as part of the treatment effects (as opposed to being partialled out from the treatment effects). This specification most closely
+mimics the approach to including covariates that appears in Wooldridge (2021). When using only one interactive control, ATTs obtained using this option should be similar to those obtained
+when specifying that variable as a continuous treatment variable and then separately including controls that interact the continuous treatment variable with time dummy variables. {p_end}
+
 
 {pstd} {ul:Caution Regarding Continuous Treatment Variables and Controls:} If seeking to manually specify additional controls as a function of a continuous treatment variable, be sure not
 to include the continuous treatment variable itself among your controls, as this can adversely affect estimates produced in {it:wooldid}'s margins calculation stage. It is okay to include
@@ -559,9 +569,9 @@ efficiency in the main regression or under certain other circumstances. {p_end}
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses, displays raw output from the regression estimated, and prints progress reports throughout the estimation process.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
 
-{phang}{opt emptycellsoverride}: By default, {it:wooldid} tells Stata to drop interaction terms that correspond with empty cells, which is achieved by the command 
-{it:set emptycells drop}. This should improve estimation speed in most settings, and has done so by up to 50% in some cases. This option overrides this behavior, which 
-may be useful to do when debugging or when intending to inspect the underlying regression results delivered by {it:verbose}. {p_end}
+{phang}{opt emptycellsoverride}: By default, {it:wooldid} tells Stata to drop interaction terms that correspond with empty cells, which is achieved by the command
+{it:set emptycells drop}, which improves estimation efficiency in this setting. This option overrides this behavior. This should only be of interest in conjunction
+with the option {it:verbose}. {p_end}
 
 {phang}{opt safety(string)}: When {it:safety(off)} is not explicitly specified, {it:wooldid} will caution the user or halt estimation when {it:wooldid} is likely to yield unreliable estimates.
 Most important among these checks are tests for whether or not a variable intended to capture the treatment effect in a given i-t cell was dropped from the underlying regression for
@@ -609,7 +619,7 @@ the test can be found in objects with names like {it:e(joint_pre_att_allsgssame)
 
 {synopt:{it:e(histogramestimates)}} The cohort i-specific treatment effects used to generate histograms, when requested.{p_end}
 
-{synopt:{it:e(summarystats)}} Summary statistics on the outcome variable and (if present) continuous treatment variable, when requested. Some of the most commonly referenced summary 
+{synopt:{it:e(summarystats)}} Summary statistics on the outcome variable and (if present) continuous treatment variable, when requested. Some of the most commonly referenced summary
 statistics from this matrix are also returned directly as scalars into e(). {p_end}
 
 {synopt: CFX Plot Info} Information used to generate the continuous treatment effects plots. The information used to produce each plot will be stored in a matrix with the following naming
@@ -746,8 +756,8 @@ without a lattice variable or any polynomial terms. However, a continuous treatm
 unbalanced panel, {it:wooldid} will be unlikely to detect problems related to important treatment effects being partialled out by controls or fixed effects. As such, one should
 be very careful when specifying one's fixed effects and {it:contreatcontrols} when using a continuous treatment.
 
-{p 10 10}   Under various circumstances, {it:wooldid} cannot estimate standard errors for all requested objects. In this case, {it:wooldid} will return point estimates without 
-standard errors. This can cause the functionality of certain post-estimation tools to break since, in this situation, {it:wooldid} will not return an {it:e(V)} matrix. 
+{p 10 10}   Under various circumstances, {it:wooldid} cannot estimate standard errors for all requested objects. In this case, {it:wooldid} will return point estimates without
+standard errors. This can cause the functionality of certain post-estimation tools to break since, in this situation, {it:wooldid} will not return an {it:e(V)} matrix.
 
 {pstd}If you encounter a bug - be it the program crashing or just the program delivering a weird result - please reach out to me about it. This program is still
 under development, so assistance finding and correcting bugs is much appreciated. I am also happy to help and offer guidance on how to use this program.{p_end}
