@@ -38,3 +38,34 @@ wooldid y ttre_groups t ttre, att cluster(i) subgroup(ttre) fe(i)
 * Return to using i as the cohort variable, but now produce event study estimates,
 * an event study plot, and using the period immediately prior to treatment as the reference period.
 wooldid y i t ttre, att cluster(i) subgroup(ttre) espre(3) espost(3) esfixedbaseperiod makeplots
+
+
+
+
+****** Now do an example with a continuous treatment
+
+* Create a simple dataset where observations within cohorts have a latent intensity level that affects their outcome in all periods
+* and, where the teratment causes this intensity to impact the outcome variable y even more strongly.
+clear
+set obs 10
+
+gen i = _n
+expand 10 
+bysort i: gen t = _n 
+
+gen ttre = 5 if i <= 5
+gen treated = t >= ttre
+
+expand 10 
+gen intensity = rnormal(10,.5)
+
+gen y = rnormal(0,.01) + intensity*2 + 3*i + t*-2 + treated*intensity
+
+* Estimate wooldid with a continuous treatment, diffing out the effect of intensity from the treatment period using an estimate of intensity
+* drawing upon both the control group and the treatment group's untreated period collectively.
+* The Average Marginal effect should be about equal to 1 (the coefficient on treated*intensity) and 
+* the ATT should be about 10 (the mean of the intensity variable * the AME).
+wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) esf espre(5) espost(5)
+
+
+
