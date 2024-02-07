@@ -1,5 +1,5 @@
 
-* Wooldid Version 1.1.1, 2/07/2024
+* Wooldid Version 1.2, 2/07/2024
 * Author: Thomas Hegland, Agency for Healthcare Research and Quality
 * Contact: thomas.hegland@ahrq.hhs.gov, @thomas_hegland (twitter), thomashegland.com
 * This code file is the work of the author. The code comes with no endorsement, guarantee, or warranty
