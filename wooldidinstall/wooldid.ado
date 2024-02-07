@@ -1,5 +1,5 @@
 
-* Wooldid Version 1.1, 10/05/2023
+* Wooldid Version 1.1.1, 2/07/2024
 * Author: Thomas Hegland, Agency for Healthcare Research and Quality
 * Contact: thomas.hegland@ahrq.hhs.gov, @thomas_hegland (twitter), thomashegland.com
 * This code file is the work of the author. The code comes with no endorsement, guarantee, or warranty
@@ -12,7 +12,7 @@ cap prog drop wooldid
 prog def wooldid, eclass
 version 16.0
 
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace   ADVersarial update ]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace   ADVersarial update oldsyntax]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -42,6 +42,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     set emptycells drop
  }
 
+ * This controls the names we use for ES plots; the new syntax is more compatible with the program event_plot
+ if "`oldsyntax'" == "oldsyntax" {
+    local oldsyntax 1
+ }
+ else {
+    local oldsyntax 0
+ }
 
   **** Begin a block of checks that command info is correctly specified; error out if not. handle all syntax errors here
 
@@ -2252,8 +2259,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               local relyrlist_s`sgcase'
               foreach relyrsg in `names' {
                 local relyrinj = `relyrsg' -`min_t' -1
-                if `relyrinj' == 0 local relyrlist_s`sgcase' `relyrlist_s`sgcase'' contemp
-                if `relyrinj' > 0 local relyrlist_s`sgcase' `relyrlist_s`sgcase'' post`relyrinj'
+                if `relyrinj' >= 0 local relyrlist_s`sgcase' `relyrlist_s`sgcase'' post`relyrinj'
+                if `relyrinj' == 0 & `oldsyntax' ==1 local relyrlist_s`sgcase' `relyrlist_s`sgcase'' contemp
+
                 if `relyrinj' < 0 {
                   local absinj = abs(`relyrinj')
                   local relyrlist_s`sgcase' `relyrlist_s`sgcase'' pre`absinj'
@@ -2648,8 +2656,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       foreach horiz in `horizlist' {
         local relyr = `horiz' - `min_t' - 1
         local arelyr = abs(`relyr')
-        if `relyr' == 0 local name "contemp"
-        if `relyr' > 0 local name "post`relyr'"
+        if `relyr' >= 0 local name "post`relyr'"
+        if `relyr' == 0 & `oldsyntax' == 1 local name "contemp"
         if `relyr' < 0 local name "pre`arelyr'"
         local rownamespool `rownamespool' ES_att:`name'
       }
@@ -2660,8 +2668,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       foreach horiz in `horizlist' {
         local relyr = `horiz' - `min_t' - 1
         local arelyr = abs(`relyr')
-        if `relyr' == 0 local name "contemp"
-        if `relyr' > 0 local name "post`relyr'"
+        if `relyr' >= 0 local name "post`relyr'"
+        if `relyr' == 0 & `oldsyntax' == 1 local name "contemp"
         if `relyr' < 0 local name "pre`arelyr'"
         local rownamespool `rownamespool' ES_att_it:`name'
       }
@@ -2673,8 +2681,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         foreach horiz in `horizlist' {
           local relyr = `horiz' - `min_t' - 1
           local arelyr = abs(`relyr')
-          if `relyr' == 0 local name "contemp"
-          if `relyr' > 0 local name "post`relyr'"
+          if `relyr' >= 0 local name "post`relyr'"
+          if `relyr' == 0 & `oldsyntax' == 1 local name "contemp"
           if `relyr' < 0 local name "pre`arelyr'"
           local rownamespool `rownamespool' ES_ame:`name'
         }
@@ -2685,8 +2693,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         foreach horiz in `horizlist' {
           local relyr = `horiz' - `min_t' - 1
           local arelyr = abs(`relyr')
-          if `relyr' == 0 local name "contemp"
-          if `relyr' > 0 local name "post`relyr'"
+          if `relyr' >= 0 local name "post`relyr'"
+          if `relyr' == 0 & `oldsyntax' == 1 local name "contemp"
           if `relyr' < 0 local name "pre`arelyr'"
           local rownamespool `rownamespool' ES_ame_it:`name'
         }
