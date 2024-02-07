@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.1 2023-10-05}{...}
+{* *! version 1.2 2024-02-07}{...}
 {vieweralsosee "reghdfe" "help reghdfe"}{...}
 {vieweralsosee "regress" "help regress"}{...}
 {vieweralsosee "ppmlhdfe" "help ppmlhdfe"}{...}
@@ -651,7 +651,7 @@ accessed using standard {it:estimates restore} type syntax. {p_end}
 output matrices into a dataset that you can directly manipulate (e.g., to remake the automatically generated event study graphs), use the {it:svmat} command. For example, the command 
 {it:svmat e(histogramestimates), names(col)} will create in memory a dataset containing the contents of {it:e(histogramestimates)} (i.e., the cohort i-specific treatment effects), 
 using as variable names the names of the matrix's columns. The program {help event_plot} can also be used to automatically generate event study plots using the information stored by
-{it:wooldid} in {it:e()}, though the user will need to point {it:event_plot} to the name of the results of interest (e.g., for ATT type event study coefficients, by specifying 
+{it:wooldid} in {it:e()}, though the user will need to point {it:event_plot} to the name of the results of interest (e.g., for ATT-type event study coefficients, by specifying 
 {it:stub_lag(ES_att_post#)} and {it:stub_lead(ES_att_pre#)}). If taking this approach, be aware that the {it:event_plot} does not automatically insert 0s into the event study plot 
 to represent the missing reference period. {p_end}
 
