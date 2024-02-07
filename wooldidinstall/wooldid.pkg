@@ -2,7 +2,7 @@ v 3
 
 d wooldid: Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions
 d
-d Author: Thomas A. Hegland, Agency for Healthcare Research and Quality
+d Author: Thomas A. Hegland, Agency for Healthcare Research and Quality, thomas.hegland@ahrq.hhs.gov
 d
 d wooldid offers a set of tools for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2021) and the high dimensional fixed effects estimators developed by Correia (2017). Features include estimation of various types of average treatment effects, comparison of treatment effects across subgroups, estimation of event study style estimates and related parallel trends assumption tests, and estimation of average and marginal treatment effects in the presence of a continuous treatment (or treatment intensity) variable [experimental]. This suite also can produce event study plots, histograms of treatment effects by cohort, and plots of treatment effects across the distribution of a specified continuous treatment variable. Options for inference include inference using standard analytic clustered standard errors, inference using standard errors on average treatment effects that account for sampling variation in covariates (unconditional standard errors), and Ibragimov and Muller (2010) style cluster-robust inference.
 d
@@ -14,6 +14,8 @@ d
 d Requires: STATA 16, reghdfe version 5.7.3, ftools
 d
 d Optional packages: gtools, ppmlhdfe
+d
+d Distribution-Date: 20240207
 d
 
 f wooldid.ado
