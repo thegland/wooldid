@@ -90,7 +90,7 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 
 {synopt : {help wooldid##technical:Technical Features:}}
 {opt update} {opt customw:eightmultiplier(variable[>=0 numerical])}  {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
-{opt ver:bose} {opt emptycellsoverride} {opt safety(off)}  {p_end}
+{opt ver:bose} {opt emptycellsoverride} {opt safety(off)}   {opt oldsyntax}  {p_end}
 
 
 
@@ -578,6 +578,11 @@ Most important among these checks are tests for whether or not a variable intend
 multicolinearity, as may occur if one's fixed effects or continuous treatment control variables partial out one of the main effects. Identification failures of this sort will generally be detected,
 though not necessarily when the problem concerns continuous treatments being analyzed with a lattice or with polynomial terms.   {p_end}
 
+{phang}{opt oldsyntax}: In older versions, {it:wooldid} used the suffix {it:contemp} to flag the event study coefficient containing the period contemporaneous with treatment. 
+This turned out to make {it:wooldid} relatively incompatible with the popular event study plot production program {help event_plot}, so the {it:contemp} suffix has been 
+replaced with the suffix {it:post0}. This option reverts {it:wooldid} to using the older coefficient syntax, for compatibility with any older code that relies on it. {p_end}
+
+
 
 
 {marker output}{...}
@@ -596,7 +601,6 @@ The commands {it:est restore} and {it:est save} are compatible with {it:wooldid}
 primary results has not been suppressed.{p_end}
 
 {synopt:{it:e(pwsgs)}} Pairwise differences between the subgroup-specific treatment effects, if subgroups are used.{p_end}
-
 
 {pstd} In addition to these core results, the following materials are also returned in e(): {p_end}
 {synopt: Joint Tests by Horizon} Joint tests for the statistical significance of pre-treatment relative time period-specific event study effects are presented in the scalars e(joint_horiz)
@@ -643,11 +647,13 @@ all graphs generated will be saved to a file with your specified name in STATA's
 {pstd} If the option {it:verbose} is specified, the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called {it:___wdidfullmodel}, which can be
 accessed using standard {it:estimates restore} type syntax. {p_end}
 
-{pstd} {ul:Tips for accessing output:} Use the {it:matlist} command to print the contents of one of {it:wooldid}'s output matrices, for example the command {it:matlist e(wdidmainresults)} will
-display the contents of the main results matrix. The command {it:dis} can be used to print the content of a particular scalar macro. To convert one of {it:wooldid}'s output matrices
-into a dataset that you can directly manipulate (e.g., to remake the automatically generated graphs), use the {it:svmat} command. For example, the command
-{it:svmat e(histogramestimates), names(col)} will create in memory a dataset containing the contents of {it:e(histogramestimates)}
-(i.e., the cohort i-specific treatment effects), using as variable names the names of the matrix's columns. {p_end}
+{pstd} {ul:Tips for accessing output and remaking graphs:} Use the {it:matlist} command to print the contents of one of {it:wooldid}'s output matrices. To convert one of {it:wooldid}'s 
+output matrices into a dataset that you can directly manipulate (e.g., to remake the automatically generated event study graphs), use the {it:svmat} command. For example, the command 
+{it:svmat e(histogramestimates), names(col)} will create in memory a dataset containing the contents of {it:e(histogramestimates)} (i.e., the cohort i-specific treatment effects), 
+using as variable names the names of the matrix's columns. The program {help event_plot} can also be used to automatically generate event study plots using the information stored by
+{it:wooldid} in {it:e()}, though the user will need to point {it:event_plot} to the name of the results of interest (e.g., for ATT type event study coefficients, by specifying 
+{it:stub_lag(ES_att_post#)} and {it:stub_lead(ES_att_pre#)}). If taking this approach, be aware that the {it:event_plot} does not automatically insert 0s into the event study plot 
+to represent the missing reference period. {p_end}
 
 {pstd} {ul:Compatible Post-Estimation Commands:} {it:estimates save}, {it:estimates store}, {it:estimates restore}, {it:esttab}, and similar commands. {p_end}
 
