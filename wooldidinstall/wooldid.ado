@@ -1,5 +1,5 @@
 
-* Wooldid Version 1.2, 2/07/2024
+* Wooldid Version 1.3, 7/31/2024
 * Author: Thomas Hegland, Agency for Healthcare Research and Quality
 * Contact: thomas.hegland@ahrq.hhs.gov, @thomas_hegland (twitter), thomashegland.com
 * This code file is the work of the author. The code comes with no endorsement, guarantee, or warranty
@@ -12,7 +12,7 @@ cap prog drop wooldid
 prog def wooldid, eclass
 version 16.0
 
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace   ADVersarial update oldsyntax]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -1660,6 +1660,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               qui replace t = `special_pos' if _n == `interpret_t'
             }
             local bignjump = 1
+
 						*for timetrends, add 2 0 ref periods for esf; not otherwise. for pooled, still count only 1 ref period
 						*the best way to do this for pooled is ambiguous, but makes sense since it isnt strictly limited to 2 periods here
             if "`timetrends'" == "timetrends" & "`esfixedbaseperiod'" == "esfixedbaseperiod" local bignjump = 2
@@ -1686,16 +1687,38 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               }
             }
 
-            qui reg b t
+
+            * an alternate implementation might estimate the regression below using only pre-treatment coefficients, projecting them forward
+            local altadv_restrict
+            local altadv_restrict_num
+            if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
+            if "`altmethod_adversarial'" != "" local altadv_restrict_num `espre'
+            if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
+              qui sum t
+              local altmethod_min = r(min)
+              local altadv_restrict if t <= `espre'+`altmethod_min'-1
+              local altadv_restrict_num = `espre'+`altmethod_min'-1
+              * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
+            }
+
+            qui reg b t `altadv_restrict'
             tempname adversarialB_`horizitem'
             matrix `adversarialB_`horizitem''   = e(b)
             qui predict linearproject, xb
             qui `gtoolscheck'levelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
             local testconstructor
+            * this ensures that when projecting forward we etst only the post-treatment period effects
             forval advframe_i = 1(1)`bignorig' {
               local horiztocheck = t[`advframe_i']
-              local xbline = linearproject[`advframe_i']
-              local testconstructor `testconstructor' ([1.`targetflag']`horiztocheck'.`_t' = `xbline')
+              local proceed 0 
+              if "`altadv_restrict_num'" == "" local proceed 1
+              if "`altadv_restrict_num'" != "" {
+                if `horiztocheck' > `altadv_restrict_num' local proceed 1
+              }
+              if `proceed' == 1 {
+                local xbline = linearproject[`advframe_i']
+                local testconstructor `testconstructor' ([1.`targetflag']`horiztocheck'.`_t' = `xbline')
+             }
             }
             frame change `defaultframe'
             frame drop `adversarialframe'
@@ -2045,16 +2068,36 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 }
               }
 
-              qui reg b t
+              local altadv_restrict
+              if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
+              local altadv_restrict_num
+              if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
+              if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
+                qui sum t
+                local altmethod_min = r(min)
+                local altadv_restrict if t <= `espre'+`altmethod_min'-1
+                local altadv_restrict_num = `espre'+`altmethod_min'-1
+                * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
+              }
+
+              qui reg b t `altadv_restrict'
               tempname adversarialB_C`horizitem'
               matrix `adversarialB_C`horizitem'' = e(b)
               qui predict linearproject, xb
               qui `gtoolscheck'levelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
               local testconstructor
+
               forval advframe_i = 1(1)`bignorig' {
                 local horiztocheck = t[`advframe_i']
-                local xbline = linearproject[`advframe_i']
-                local testconstructor `testconstructor' (`horiztocheck'.`_t' = `xbline')
+                local proceed 0 
+                if "`altadv_restrict_num'" == "" local proceed 1
+                if "`altadv_restrict_num'" != "" {
+                  if `horiztocheck' > `altadv_restrict_num' local proceed 1
+                }
+                if `proceed' == 1 {
+                  local xbline = linearproject[`advframe_i']
+                  local testconstructor `testconstructor' (`horiztocheck'.`_t' = `xbline')
+                }
               }
               frame change `defaultframe'
               frame drop `adversarialframe'
@@ -2332,7 +2375,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                     }
                   }
 
-                  qui reg b t
+                  local altadv_restrict
+                  local altadv_restrict_num
+                  if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
+                  if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
+                  if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
+                     local altadv_restrict if t <=  `skiplocation'-1
+                     local altadv_restrict_num = `skiplocation'-1
+                     * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
+                  }
+                  qui reg b t  `altadv_restrict'
                   tempname adversarialB_`horizitem'_s`sgcase'
                   matrix `adversarialB_`horizitem'_s`sgcase'' = e(b)
                   qui predict linearproject, xb
@@ -2340,8 +2392,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   local testconstructor
                   forval advframe_i = 1(1)`bignorig' {
                     local horiztocheck = t[`advframe_i']
-                    local xbline = linearproject[`advframe_i']
-                    local testconstructor `testconstructor' ([1.`targetflag']`horiztocheck'.`_t' = `xbline')
+                    local proceed 0 
+                    if "`altadv_restrict_num'" == "" local proceed 1
+                    if "`altadv_restrict_num'" != "" {
+                      if `horiztocheck' > `altadv_restrict_num' local proceed 1
+                    }
+                    if `proceed' == 1 {
+                      local xbline = linearproject[`advframe_i']
+                      local testconstructor `testconstructor' ([1.`targetflag']`horiztocheck'.`_t' = `xbline')
+                    }
                   }
                   frame change `defaultframe'
                   frame drop `adversarialframe'
@@ -2507,8 +2566,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                         if "`timetrends'" == "timetrends" qui replace t = r(min) - 2 if _n == _N - 1
                       }
                     }
+                   local altadv_restrict
+                   local altadv_restrict_num
+                   if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
+                   if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
+                   if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
+                      local altadv_restrict if t <=  `skiplocation'-1
+                      local altadv_restrict_num = `skiplocation'-1
+                      * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
+                    }
 
-                    qui reg b t
+                    qui reg b t  `altadv_restrict'
                     tempname adversarialB_C`horizitem'_s`sgcase'
                     matrix `adversarialB_C`horizitem'_s`sgcase'' = e(b)
                     qui predict linearproject, xb
@@ -2516,8 +2584,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                     local testconstructor
                     forval advframe_i = 1(1)`bignorig' {
                       local horiztocheck = t[`advframe_i']
-                      local xbline = linearproject[`advframe_i']
-                      local testconstructor `testconstructor' (`horiztocheck'.`_t' = `xbline')
+                      local proceed 0 
+                      if "`altadv_restrict_num'" == "" local proceed 1
+                      if "`altadv_restrict_num'" != "" {
+                        if `horiztocheck' > `altadv_restrict_num' local proceed 1
+                      }
+                      if `proceed' == 1 {
+                        local xbline = linearproject[`advframe_i']
+                        local testconstructor `testconstructor' (`horiztocheck'.`_t' = `xbline')
+                      }
                     }
                     frame change `defaultframe'
                     frame drop `adversarialframe'

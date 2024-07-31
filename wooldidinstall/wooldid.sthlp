@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.2 2024-02-07}{...}
+{* *! version 1.3 2024-07-31}{...}
 {vieweralsosee "reghdfe" "help reghdfe"}{...}
 {vieweralsosee "regress" "help regress"}{...}
 {vieweralsosee "ppmlhdfe" "help ppmlhdfe"}{...}
@@ -327,6 +327,12 @@ relative time period
 {it:esfixedbaseperiod} are specified). The final p-values presented are from the F-test of the the joint null hypothesis that all non-reference period relative-time period specific effects
 are equal to the fitted values from the OLS best fit line. These tests will not be conducted if an insufficient number of relative time period-specific treatment effects are requested
 (either overall, or within specific subgroups). {p_end}
+
+{phang}{opt altmethod_adversarial}: Alternate method of implementing the test above, which projects a trend forward using the pre-treatment coefficients only, and
+then which only tests to see if the post-treatment coefficients collectively fall in line with the projected values. This likely reflects a weaker test than 
+the primary implementaiton, but may be preferred under certain circumstances. {p_end}
+
+altmethod_adversarial
 
 {phang}{opt makep:lots}: Produce event study plots. {p_end}
 
