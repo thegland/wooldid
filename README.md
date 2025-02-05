@@ -15,13 +15,11 @@ This program offers a suite of tools in STATA for implementing difference-in-dif
 
 ### Author Information and Contact
 
-*Author:* Thomas A. Hegland, Agency for Healthcare Research and Quality
-
-*Contact:* thomas.hegland@ahrq.hhs.gov, thomashegland.com, @thomas_hegland  
+*Author:* Thomas A. Hegland, thomashegland.com, @thomas_hegland
 
 *Citation:* Thomas A. Hegland, 2023. "WOOLDID: Stata module to estimate Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions," Statistical Software Components S459238, Boston College Department of Economics, revised 06 Oct 2023. https://ideas.repec.org/c/boc/bocode/s459238.html
  
-*Disclaimer:* This document reflects only the views of the author and does not necessarily represent the views of the Agency for Healthcare Research and Quality, the Department of Health and Human Services, or the United States government. The program with which this file is associated is the work of the author and does not come with any endorsement by or warranty from the Agency for Healthcare Research and Quality, the Department of Health and Human Services, or the United States government.  
+*Disclaimer:* This document reflects only the views of the author and does not necessarily represent the views of the United States federal government or any of its departments or agencies. The program with which this file is associated is the work of the author and does not come with any endorsement by or warranty from the United States government.  
 
 &nbsp;
 
