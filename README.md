@@ -95,7 +95,7 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 
 ##### Continuous Treatments: 
 - contreat(_variable_) - specifies the continuous treatment variable
-- contreatelasticitytype(_dydx_, _eydx_, _dyex_, or _eyex_) - specifies what type of continuous treatment effects are to be estimated: standard or some time of elasticity
+- contreatelasticitytype(_dydx_, _eydx_, _dyex_, or _eyex_) - specifies what type of continuous treatment effects are to be estimated: standard or some kind of elasticity
 - lattice(), contreatpoly(), and latticeignoreweights - tools for enabling the continuous treatment variable to affect the outcome variable within cohort-periods using a flexible, stepwise function (see help file for details)
 - contreatcontrols(_untreatedZero OR one or more of: basic, byTreated, byTtre, byCohort, byTime_) - specifies what controls for the effect of the continuous treatment outside treated-cohort periods are included; akin to specifying the fixed effects to be included in the binary treatment case
 - contreatwithin - enables estimation of marginal effect of treatment using only within-treated cohort variation in the continuous treatment variable
@@ -143,7 +143,7 @@ g() consists of interactions between various fixed effects-like indicator variab
 
 A final feature available in wooldid is its implementation of Ibragimov and Muller (2010) style cluster robust inference. This approach estimates the same underlying regression as normal, but then modifies the margins calculation significantly. In particular, for any treatment effect requested (be it an average treatment effect or an effect of a continuous treatment variable), this approach has the margins calculation compute that effect separately within each cluster. The final estimate presented is then the simple average of these cluster-specific estimates, with inference being conducted by t-testing the cluster-level estimates. 
 
-_Note: greater detail on the program's implementation can be found in wooldid's help file, including comparisons with other estimators, greater detail on how constinuous treatments are handled, tips for working with wooldid output, etc._
+_Note: greater detail on the program's implementation can be found in wooldid's help file, including comparisons with other estimators, greater detail on how continuous treatments are handled, tips for working with wooldid output, etc._
 
 &nbsp;
 
