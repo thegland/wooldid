@@ -117,6 +117,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     error 198
   }
 
+  * unconditional SEs are computed by margins via vce(unconditional), which requires the underlying
+  * regression to have been fit with robust or clustered standard errors; catch this early rather than
+  * failing with a bare r(322) at the first margins call after estimation has completed
+  if "`unconditionalse'" == "unconditionalse" & "`robust'" == "" & "`cluster'" == "" & "`customvce'" == "" {
+    dis as error "Error: the option unconditionalse requires specifying either robust or clustered standard errors."
+    dis as text "Specify robust or cluster(), or provide a robust/clustered vce via customvce()."
+    error 198
+  }
+
 
   *check conditions for using im p-values - in principle, SG estimates could be computed provided SGs never cross cut clusters, but I have not implemented this
   if "`impvalues'" != "" & "`subgroups'" != "" {
