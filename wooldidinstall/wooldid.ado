@@ -847,6 +847,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           }
         }
         else {
+          * the non-gtools path below relies on egen's xtile() (from the user-contributed package egenmore) and egen cannot accept weights
+          if "`gtoolscheck'" == "" & "`latticeweightinserter'" != "" {
+            dis as error "Error: automatically generating a weighted lattice of type `latticetype' requires that the package gtools be installed. It does not appear to be installed."
+            dis as text "Install gtools, specify the option latticeignoreweights to construct the lattice without using weights, use a base-period lattice type (e.g., baseTreated), or pass a pre-made lattice variable to lattice()."
+            error 198
+          }
+          if "`gtoolscheck'" == "" {
+            cap which _gxtile
+            if _rc != 0 {
+              dis as error "Error: automatically generating a lattice of type `latticetype' requires either the package gtools or the egen function xtile() from the package egenmore. Neither appears to be installed. Installing gtools is recommended."
+              error 198
+            }
+          }
           if "`latticetype'" != "all" & "`gtoolscheck'" == "g" qui gquantiles `latticevar' = `contreat' `latticeweightinserter' if `ifstatement' , xtile nquantiles(`latticenum') by(`byable')
           if "`latticetype'" != "all" & "`gtoolscheck'" == "" qui bysort `byable': egen `latticevar' = xtile(`contreat'  ) `latticeweightinserter' if `ifstatement' , nquantiles(`latticenum')
           if "`latticetype'" == "all" & "`gtoolscheck'" == ""  qui egen `latticevar' = xtile(`contreat') `latticeweightinserter' if `ifstatement' ,   nquantiles(`latticenum')
