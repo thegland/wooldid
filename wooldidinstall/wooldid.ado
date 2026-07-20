@@ -779,6 +779,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       dis as error  "Error: subgroups are specified, but contains no values within sample during the treatment period."
       error 459
     }
+    * subgroup values reaching the treated estimation sample must be integer-valued: a non-integer
+    * value yields an sglist token like 1.5 that later crashes the naming machinery (locals,
+    * matrices, ereturns named ..._s1.5) with an unexplained r(198). the check deliberately uses
+    * the levelsof domain above, so values appearing only outside it (never-treated units, screened
+    * observations) stay tolerated exactly as before, and missing values pass (int(.) == .)
+    cap assert `subgroups' == int(`subgroups') if `ifstatement' & `t' >= `ttre'
+    if _rc != 0 {
+      dis as error "The subgroup variable contains non-integer values within the treated estimation sample; it must contain only non-negative integers."
+      error 411
+    }
     * initialize these for later
     foreach sgcase in `sglist' {
       local joint_horiz_i_s`sgcase'
