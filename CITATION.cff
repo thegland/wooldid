@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "wooldid: Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions"
+authors:
+  - family-names: Hegland
+    given-names: Thomas A.
+    website: "https://thomashegland.com"
+abstract: >-
+  A suite of tools in Stata for implementing difference-in-differences style
+  analyses with staggered treatment onset using the two-way fixed effects
+  approach proposed in Wooldridge (2021) and the high dimensional fixed
+  effects estimators developed by Correia (2017). Features include estimation
+  of overall average treatment effects, event study style estimates,
+  pre-trend tests, subgroup/treatment-arm specific effects, continuous
+  treatment effects, and cluster-robust inference.
+keywords:
+  - difference-in-differences
+  - staggered treatment
+  - two-way fixed effects
+  - event study
+  - econometrics
+  - Stata
+repository-code: "https://github.com/thegland/wooldid"
+url: "https://ideas.repec.org/c/boc/bocode/s459238.html"
+date-released: "2023-10-06"
+preferred-citation:
+  type: software
+  title: "WOOLDID: Stata module to estimate Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions"
+  authors:
+    - family-names: Hegland
+      given-names: Thomas A.
+  year: 2023
+  collection-title: "Statistical Software Components"
+  number: S459238
+  institution:
+    name: "Boston College Department of Economics"
+  url: "https://ideas.repec.org/c/boc/bocode/s459238.html"
+  notes: "Revised 06 Oct 2023"
