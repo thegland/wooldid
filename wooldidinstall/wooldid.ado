@@ -1374,9 +1374,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       local `sumvar'post_max = r(max)
       local rownamessum `rownamessum' `sumvar2'_posttreat
 
-      * do the same in the control group
+      * do the same in the control group (units never treated in-window: `ttre' == . covers never-treated and out-of-window-treated units)
       if "`contreatwithin'" == "" & ("`sumvar'" == "y" | ("`contreatcontrols'" != "untreatedZero" & "`sumvar'" == "contreat"))  {
-        qui `gtoolscheck2' sum ``sumvar'' `weightinserter' if e(sample) & `ttre' <. & `t' < `ttre', detail
+        qui `gtoolscheck2' sum ``sumvar'' `weightinserter' if e(sample) & `ttre' == ., detail
         local `sumvar'con_mean = r(mean)
         local `sumvar'con_med = r(p50)
         local `sumvar'con_sd = r(sd)
