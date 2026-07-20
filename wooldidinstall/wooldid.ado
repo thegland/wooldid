@@ -1356,7 +1356,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         local `sumvar'pre_sd = r(sd)
         local `sumvar'pre_p25 = r(p25)
         local `sumvar'pre_p75 = r(p75)
-        local `sumvar'pre_iqr = ``sumvar'_p75' - ``sumvar'_p25'
+        local `sumvar'pre_iqr = ``sumvar'pre_p75' - ``sumvar'pre_p25'
         local `sumvar'pre_min = r(min)
         local `sumvar'pre_max = r(max)
         local rownamessum `rownamessum' `sumvar2'_pretreat
@@ -1369,7 +1369,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       local `sumvar'post_sd = r(sd)
       local `sumvar'post_p25 = r(p25)
       local `sumvar'post_p75 = r(p75)
-      local `sumvar'post_iqr = ``sumvar'_p75' - ``sumvar'_p25'
+      local `sumvar'post_iqr = ``sumvar'post_p75' - ``sumvar'post_p25'
       local `sumvar'post_min = r(min)
       local `sumvar'post_max = r(max)
       local rownamessum `rownamessum' `sumvar2'_posttreat
@@ -1382,7 +1382,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         local `sumvar'con_sd = r(sd)
         local `sumvar'con_p25 = r(p25)
         local `sumvar'con_p75 = r(p75)
-        local `sumvar'con_iqr = ``sumvar'_p75' - ``sumvar'_p25'
+        local `sumvar'con_iqr = ``sumvar'con_p75' - ``sumvar'con_p25'
         local `sumvar'con_min = r(min)
         local `sumvar'con_max = r(max)
         local rownamessum `rownamessum' `sumvar2'_control
