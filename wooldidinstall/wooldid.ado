@@ -1911,8 +1911,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
         local cfxmatendpoint 6
         if "`cfxplotnose'" != "" local cfxmatendpoint 1
-        if "`cfxplotnose'" == "" local cfxplotnose `marginsdof'
-        if "`cfxplotnose'" == "cfxplotnose" local cfxplotnose nose
+        * build the margins se/df option in a per-iteration copy rather than overwriting the user's
+        * cfxplotnose flag: the overwrite leaked across the estimand loop, so every estimand after
+        * the first was treated as if cfxplotnose had been specified, silently truncating its
+        * returned cfx matrices to the estimate row only
+        local cfxseopt `marginsdof'
+        if "`cfxplotnose'" == "cfxplotnose" local cfxseopt nose
 
         * specify title for cfx plots x axis
         if "`cfxlattice'" != ""   local cfx_xtitle xtitle("estimation lattice: `cfxlattice'")
@@ -1920,8 +1924,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           local cfx_xtitle xtitle("`latticenum' quantiles (type: `latticetype')")
         }
 
-        * use the lattice var for the plots if cfxlattice is not specified
-        if "`cfxlattice'" == "" local cfxlattice `latticevar'
+        * use the lattice var for the plots if cfxlattice is not specified; a per-iteration copy
+        * keeps the user's cfxlattice local pristine, so later iterations' x-axis titles do not
+        * pick up the auto-lattice tempvar's internal name
+        local cfxlatticeplot `cfxlattice'
+        if "`cfxlatticeplot'" == "" local cfxlatticeplot `latticevar'
 
         * loop through plot types to make
         * note that we never apply impvalues here - except in rare cases, it probably (even more severely than normal) violates IM assumptions to do this at specific lattice points like this
@@ -1952,7 +1959,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
           * conceptually, all we are doing is asking for treatment effects to be generated using over(cfxlattice) - but this tends to be a pretty taxing request, actually
           * we then ask margins plot to handle plot production for us here
-          qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlattice') `cfxplotnose' `poismarginstext'
+          qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstext'
           tempname cfx`item'_`nametext'
           matrix `cfx`item'_`nametext'' = r(table)[1..`cfxmatendpoint',floor(`=colsof(r(table))'/2)+1..`=colsof(r(table))']'
           qui marginsplot, recastci(rarea) plotopts(color(navy)) ciopts(color(navy%50)) `cfx_xtitle'  scale(.85) ytitle("`ytext'") title("`titletext'") name("cfx`item'_`nametext'")
@@ -1976,7 +1983,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
           * proceed for continuous treatment
           local itemtext = subinstr("`item'","att","ame",.)
-          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlattice') `cfxplotnose' `poismarginstext'
+          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstext'
           tempname cfx`itemtext'_`nametext'
           matrix `cfx`itemtext'_`nametext'' = r(table)[1..`cfxmatendpoint',1..`=colsof(r(table))']'
           qui marginsplot, recastci(rarea) ciopts(color(navy%50)) plotopts(color(navy)) `cfx_xtitle' ytitle("`ytext'")  scale(.85) title("`titletext'") name("cfx`itemtext'_`nametext'")
@@ -2011,7 +2018,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               if "`item'" == "att_itime" local ytext "ATT_itime on `y'"
               if "`item'" == "att_i" local ytext "ATT_i on `y'"
 
-              qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `subgroups' == `sgcase' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlattice') `cfxplotnose' `poismarginstext'
+              qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `subgroups' == `sgcase' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstext'
               tempname cfx`item'_`nametext'_sg`sgcase'
               matrix `cfx`item'_`nametext'_sg`sgcase''  = r(table)[1..`cfxmatendpoint',floor(`=colsof(r(b))'/2)+1..`=colsof(r(b))']'
               qui marginsplot, recastci(rarea) plotopts(color(navy)) ciopts(color(navy%50)) `cfx_xtitle' ytitle("`ytext'") title("`titletext'") scale(.85) name("cfx`item'_`nametext'_sg`sgcase'")
@@ -2032,7 +2039,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               }
 
               local itemtext = subinstr("`item'","att","ame",.)
-              qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `subgroups' == `sgcase' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlattice') `cfxplotnose' `poismarginstext'
+              qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `subgroups' == `sgcase' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstext'
               tempname cfx`itemtext'_`nametext'_sg`sgcase'
               matrix `cfx`itemtext'_`nametext'_sg`sgcase'' = r(table)[1..`cfxmatendpoint',1..`=colsof(r(b))']'
               qui marginsplot, plotopts(color(navy)) recastci(rarea) ciopts(color(navy%50)) `cfx_xtitle' ytitle("`ytext'") title("`titletext'")  scale(.85) name("cfx`itemtext'_`nametext'_sg`sgcase'")
