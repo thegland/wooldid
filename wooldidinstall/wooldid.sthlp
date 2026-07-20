@@ -335,7 +335,10 @@ the primary implementaiton, but may be preferred under certain circumstances. {p
 
 altmethod_adversarial
 
-{phang}{opt makep:lots}: Produce event study plots. {p_end}
+{phang}{opt makep:lots}: Produce event study plots. Note on graph management (applies to all of {it:wooldid}'s plotting options): {it:wooldid} names the graphs it draws
+(e.g. att_fullmodel, hist_att_i, cfxatt_cfxpost) and creates them with the graph-name {it:replace} suboption, so re-running overwrites {it:wooldid}'s own prior graphs of the
+same name; it does not clear other graphs from memory. Two consequences: a user graph whose name exactly matches a {it:wooldid} graph name will be overwritten when that plot
+is recreated, and {it:wooldid} graphs from an earlier, differently-configured run linger in memory until that configuration is run again (or the user drops them). {p_end}
 
 {phang}{opt oos:treatedcontrols(integer)}: By default, {it:wooldid} uses cohorts treated after the end of the sample the same way as never-treated control cohorts (i.e., such cohorts are
 "out-of-sample treated controls"). When this option is specified with a value of T, cohorts treated within T periods of the end of sample are instead handled the same as other treated cohorts.
