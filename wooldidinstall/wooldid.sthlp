@@ -239,7 +239,7 @@ option will underlyingly rely on either {it:reghdfe} or, for poisson, {it:ppmlhd
 
 {phang}{opt uncond:itionalse}: Compute standard errors that account for sampling variation in covariates. This option also forces {it:wooldid} to abandon
 high dimensional fixed effect estimation packages for the underlying two-way fixed effect regression in favor of the commands {it:regress} and {it:poisson}.
-As such, this option should be slower to use on average. This option requires specifying either robust or clustered standard errors. {p_end}
+As such, this option should be slower to use on average. This option requires specifying either robust or clustered standard errors (a robust or clustered vce supplied via {it:customvce()} also satisfies this requirement, as do pweights, which imply robust standard errors). {p_end}
 
 {phang}{opt customvce()}: Forces {it:wooldid} to switch to using either the {help regress} or {help poisson} command for underlying regression estimation,
 and then passes the user specified text without modification into the {it:vce()} option for these commands. This allows specifying a broader set of

@@ -119,8 +119,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * unconditional SEs are computed by margins via vce(unconditional), which requires the underlying
   * regression to have been fit with robust or clustered standard errors; catch this early rather than
-  * failing with a bare r(322) at the first margins call after estimation has completed
-  if "`unconditionalse'" == "unconditionalse" & "`robust'" == "" & "`cluster'" == "" & "`customvce'" == "" {
+  * failing with a bare r(322) at the first margins call after estimation has completed.
+  * pweights are exempt: they force a robust vce in reg/poisson, satisfying the requirement on their own
+  if "`unconditionalse'" == "unconditionalse" & "`robust'" == "" & "`cluster'" == "" & "`customvce'" == "" & "`weight'" != "pweight" {
     dis as error "Error: the option unconditionalse requires specifying either robust or clustered standard errors."
     dis as text "Specify robust or cluster(), or provide a robust/clustered vce via customvce()."
     error 198
