@@ -2433,7 +2433,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                local joint_horiz_s`sgcase'
              }
           }
-          if "`joint_horiz_i_s`sgcase''" == "" & ("`att_it'" == "att_it" | "`att_itime'" == "att_itime'" | "`att_i'" == "att_i" ){
+          if "`joint_horiz_i_s`sgcase''" == "" & ("`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" ){
             qui margins  [`weight'=`w_att_it'] ,`semielasticity'(`targetflag') noestimcheck  subpop(if `ifstatement' & `subgroups' == `sgcase' & `t' < `ttre' & `ttre' != .   &  (`_t' == 0 |`_t' >= `horizonstarter')   ) contrast(overjoint) over(`_t') `poismarginstext' `marginsdof'
             cap confirm matrix r(p)
             if _rc == 0 {
@@ -2624,7 +2624,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               }
             }
 
-            if ("`att_it'" == "att_it" | "`att_itime'" == "att_itime'" | "`att_i'" == "att_i" ) & "`joint_Choriz_i_s`sgcase''" == "" {
+            if ("`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" ) & "`joint_Choriz_i_s`sgcase''" == "" {
               qui margins [`weight'=`w_att_it'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & `subgroups' == `sgcase'  &  (`_t' == 0 |`_t' >= `horizonstarter')    ) contrast(overjoint) `poismarginstext' `marginsdof'
               cap confirm matrix r(p)
               if _rc == 0 {
