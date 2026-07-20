@@ -364,6 +364,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if strpos("`cfxplottypes'","pre") != 0 & ("`esfixedbaseperiod'" == "esfixedbaseperiod" | `esprelength' > 0 ) local cfxpre 1
     local cfxplottypes = subinstr("`cfxplottypes'","pre"," ",.)
     foreach item in `cfxplottypes' {
+      * entries other than the (already-stripped) post/pre keywords must be numeric: a stray token
+      * would otherwise be evaluated as a variable reference below -- crashing with an unexplained
+      * r(111) if no such variable exists, or silently injecting the variable into the plot list if
+      * one does (stata does not short-circuit |, so the reference-period comparison always runs)
+      cap confirm number `item'
+      if _rc != 0 {
+        dis as error "Error: cfxplottypes() contains an unrecognized entry: `item'"
+        dis as error "Valid cfxplottypes() entries are post, pre, and/or integers specifying relative time periods."
+        error 198
+      }
       if "`esfixedbaseperiod'" == "" | `item' != `esrelativeto' {
         cap if int(`item')==`item' & `item' >= 0 & (`item' <= `espostlength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
         cap if int(`item')==`item' & `item' < 0 & (abs(`item') <= `esprelength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
