@@ -1027,96 +1027,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
 
-  *****************************************************************************************************************
-  ******************************  PRODUCE THE WEIGHTS FOR CREATING VARIOUS OUTCOMES  ******************************
-  *****************************************************************************************************************
-  * special weights are required to go beyond a simple ATT; this generates them
-
-  * handle custom weight multipliers that the user specifies
-  local customweighttext
-  if "`customweightmultiplier'" != "" local customweighttext * `customweightmultiplier'
-
-  ***** begin manufacturing weights to produce averages of interest
-  * 4 weight concepts to target
-  * att is the "do nothing but use sample weights" weight
-  * att_i says give the average of cohort-specific effects, obtaining said effects using sample weights
-  * att_it says "calculate cohort-period specific effects using weights, then average those"
-  * att_itime says "calculate cohort-period specific effects using weights, then average those by cohort, then average the cohort averages"
-
-  foreach item in tag posttreatment   w_per_it w_per_i  t_per_i   w_att  w_att_it w_att_i w_att_itime   {
-    tempvar `item'
-  }
-
-  * create necessary supporting object for computing att_i and att_itime weights
-  * this object is 1 if in the treated period for treated units,
-  * 2 if in the pre-treatment period for treated units and we are reporting effects for that time period
-  * 0 if in the pre-treatment period for treated units and we are not reporting effects for that period (i.e., the reference period)
-  * 3 if untreated and in sample
-  * 4 if out of sample
-  if "`att_i'" == "att_i" | "`att_itime'" == "att_itime" {
-    qui gen `posttreatment' = `t' >= `ttre' if `ifstatement'
-    qui replace `posttreatment' = 2 if `t' < `ttre' & `ttre' != . & `_i' != 0 & `_t' != 0 & `ifstatement'
-    qui replace `posttreatment' = 3 if `ttre' == .  & `ifstatement'
-    qui replace `posttreatment' = 4 if `posttreatment' == .
-  }
-
-  * this variable helps count the number of i-t cells that exist in various subsets - useful for att_itime weights
-  if "`att_itime'" == "att_itime" {
-    qui `gtoolscheck'egen `tag' = tag(`i' `t') if  `ifstatement'
-    qui replace `tag' = 0 if `tag' == .
-  }
-
-  * generate some inputs for weights calculation
-  * w_per_it contains the amount of weight falling into each i-t cell
-  * w per i gives the total amount of sample weight associated for each i falling into the categories specified by posttreatment
-  * t per i is the total number of periods appearing for i in each posttreatment-defined period
-  * in each case, we only make the input if needed for a weight type the user actually requested
-  * that said, we always produce w_att_it whenever a non att weight is requested, since they are needed for the event horizon estimates and sometimes for histogram
-  if "`gtoolscheck'" != "g" {
-    if "`att_it'" == "att_it" | "`att_itime'" == "att_itime"  | "`att_i'" == "att_i" qui bysort `i' `t': egen `w_per_it' = total(`ifvar' * `w')
-    if "`att_i'" == "att_i"  qui bysort  `i' `posttreatment': egen `w_per_i' = total(`w'*`ifvar')
-    if "`att_itime'" == "att_itime" qui bysort  `i' `posttreatment': egen `t_per_i' = total(`tag')
-  }
-  else{
-    if "`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" qui gegen `w_per_it' = total(`ifvar' * `w')  , by(`i' `t')
-    if "`att_i'" == "att_i"  qui gegen `w_per_i' = total(`w'*`ifvar')      , by(`posttreatment' `i')
-    if "`att_itime'" == "att_itime" qui gegen `t_per_i' = total(`tag')    , by(`posttreatment' `i')
-  }
-
-  * att requires no special weights - it gets to stay as the given weight (w), albeit with the customweight text multiplier coming through
-  * dividing w by w_per_it weights all i-t cells equally, but still lets w be influential within i-t cells (att_it)
-  * dividing w by total w in i weights all i equally, but still lets w be influential within i-t cells and across i-t cells within i (att_i)
-  * dividing w by total w in i-t cells * number of t in the i, yields w_att_itime. this lets w be influential inside i-t cells, but then
-  *        weights every i-t cell equally when contributing to estimates of i-specific effects, which are themselves then averaged
-
-  if "`att_i'" == "att_i" {
-    qui gen `w_att_i' = `w' `customweighttext'/`w_per_i'
-    qui replace `w_att_i' = 0 if `w_att_i' == .
-    qui drop `w_per_i'
-    qui drop  `posttreatment'
-  }
-
-  if "`att_itime'" == "att_itime" {
-    qui gen `w_att_itime' = `w' `customweighttext' /(`w_per_it'*`t_per_i')
-    qui replace `w_att_itime' = 0 if `w_att_itime' == .
-    qui drop `tag' `t_per_i'
-    qui cap drop  `posttreatment'
-  }
-
-  if "`att_it'" == "att_it" | "`att_itime'" == "att_itime"  | "`att_i'" == "att_i" {
-    qui gen `w_att_it' = `w' `customweighttext'/`w_per_it'
-    qui replace `w_att_it' = 0 if `w_att_it' == .
-    qui drop `w_per_it'
-  }
-
-  * generate w_att whenever att is requested
-  if "`att'" == "att" qui gen `w_att' = `w' `customweighttext'
-
-  * some comments on the weights:
-  * provided each i is always wholly contained in a given sg, we have no issues using these weights for sg purposes
-  * since we don't allow fw type weights, weight scale here actually doesn't matter - no need to multiply weights by scalar adjustment factors
-  * for event study estimates, note that att_i and att_itime are not conceptually all that sensible --
-  *       we substitute att_it for them since it retains a spirit of 'all same across i'
 
 
 
@@ -1181,6 +1091,100 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   tempvar esamp
   qui gen byte `esamp' = e(sample)
   local df_r = e(df_r)
+
+  *****************************************************************************************************************
+  ******************************  PRODUCE THE WEIGHTS FOR CREATING VARIOUS OUTCOMES  ******************************
+  *****************************************************************************************************************
+  * special weights are required to go beyond a simple ATT; this generates them
+  * note: constructed after estimation, on the realized estimation sample (esamp), so that cell/cohort
+  * normalizations only count observations that actually entered the regression (estimators can drop
+  * observations - e.g. reghdfe singletons, ppmlhdfe separation - after the initial sample screens)
+
+  * handle custom weight multipliers that the user specifies
+  local customweighttext
+  if "`customweightmultiplier'" != "" local customweighttext * `customweightmultiplier'
+
+  ***** begin manufacturing weights to produce averages of interest
+  * 4 weight concepts to target
+  * att is the "do nothing but use sample weights" weight
+  * att_i says give the average of cohort-specific effects, obtaining said effects using sample weights
+  * att_it says "calculate cohort-period specific effects using weights, then average those"
+  * att_itime says "calculate cohort-period specific effects using weights, then average those by cohort, then average the cohort averages"
+
+  foreach item in tag posttreatment   w_per_it w_per_i  t_per_i   w_att  w_att_it w_att_i w_att_itime   {
+    tempvar `item'
+  }
+
+  * create necessary supporting object for computing att_i and att_itime weights
+  * this object is 1 if in the treated period for treated units,
+  * 2 if in the pre-treatment period for treated units and we are reporting effects for that time period
+  * 0 if in the pre-treatment period for treated units and we are not reporting effects for that period (i.e., the reference period)
+  * 3 if untreated and in sample
+  * 4 if out of sample
+  if "`att_i'" == "att_i" | "`att_itime'" == "att_itime" {
+    qui gen `posttreatment' = `t' >= `ttre' if `esamp' == 1
+    qui replace `posttreatment' = 2 if `t' < `ttre' & `ttre' != . & `_i' != 0 & `_t' != 0 & `esamp' == 1
+    qui replace `posttreatment' = 3 if `ttre' == .  & `esamp' == 1
+    qui replace `posttreatment' = 4 if `posttreatment' == .
+  }
+
+  * this variable helps count the number of i-t cells that exist in various subsets - useful for att_itime weights
+  if "`att_itime'" == "att_itime" {
+    qui `gtoolscheck'egen `tag' = tag(`i' `t') if  `esamp' == 1
+    qui replace `tag' = 0 if `tag' == .
+  }
+
+  * generate some inputs for weights calculation
+  * w_per_it contains the amount of weight falling into each i-t cell
+  * w per i gives the total amount of sample weight associated for each i falling into the categories specified by posttreatment
+  * t per i is the total number of periods appearing for i in each posttreatment-defined period
+  * in each case, we only make the input if needed for a weight type the user actually requested
+  * that said, we always produce w_att_it whenever a non att weight is requested, since they are needed for the event horizon estimates and sometimes for histogram
+  if "`gtoolscheck'" != "g" {
+    if "`att_it'" == "att_it" | "`att_itime'" == "att_itime"  | "`att_i'" == "att_i" qui bysort `i' `t': egen `w_per_it' = total(`esamp' * `w')
+    if "`att_i'" == "att_i"  qui bysort  `i' `posttreatment': egen `w_per_i' = total(`w'*`esamp')
+    if "`att_itime'" == "att_itime" qui bysort  `i' `posttreatment': egen `t_per_i' = total(`tag')
+  }
+  else{
+    if "`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" qui gegen `w_per_it' = total(`esamp' * `w')  , by(`i' `t')
+    if "`att_i'" == "att_i"  qui gegen `w_per_i' = total(`w'*`esamp')      , by(`posttreatment' `i')
+    if "`att_itime'" == "att_itime" qui gegen `t_per_i' = total(`tag')    , by(`posttreatment' `i')
+  }
+
+  * att requires no special weights - it gets to stay as the given weight (w), albeit with the customweight text multiplier coming through
+  * dividing w by w_per_it weights all i-t cells equally, but still lets w be influential within i-t cells (att_it)
+  * dividing w by total w in i weights all i equally, but still lets w be influential within i-t cells and across i-t cells within i (att_i)
+  * dividing w by total w in i-t cells * number of t in the i, yields w_att_itime. this lets w be influential inside i-t cells, but then
+  *        weights every i-t cell equally when contributing to estimates of i-specific effects, which are themselves then averaged
+
+  if "`att_i'" == "att_i" {
+    qui gen `w_att_i' = `w' `customweighttext'/`w_per_i'
+    qui replace `w_att_i' = 0 if `w_att_i' == .
+    qui drop `w_per_i'
+    qui drop  `posttreatment'
+  }
+
+  if "`att_itime'" == "att_itime" {
+    qui gen `w_att_itime' = `w' `customweighttext' /(`w_per_it'*`t_per_i')
+    qui replace `w_att_itime' = 0 if `w_att_itime' == .
+    qui drop `tag' `t_per_i'
+    qui cap drop  `posttreatment'
+  }
+
+  if "`att_it'" == "att_it" | "`att_itime'" == "att_itime"  | "`att_i'" == "att_i" {
+    qui gen `w_att_it' = `w' `customweighttext'/`w_per_it'
+    qui replace `w_att_it' = 0 if `w_att_it' == .
+    qui drop `w_per_it'
+  }
+
+  * generate w_att whenever att is requested
+  if "`att'" == "att" qui gen `w_att' = `w' `customweighttext'
+
+  * some comments on the weights:
+  * provided each i is always wholly contained in a given sg, we have no issues using these weights for sg purposes
+  * since we don't allow fw type weights, weight scale here actually doesn't matter - no need to multiply weights by scalar adjustment factors
+  * for event study estimates, note that att_i and att_itime are not conceptually all that sensible --
+  *       we substitute att_it for them since it retains a spirit of 'all same across i'
 
   * save the name of the current frame  - will be useful going forward
   qui frame
