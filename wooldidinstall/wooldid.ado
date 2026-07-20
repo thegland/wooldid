@@ -418,7 +418,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 	if "`if'" == "" local dropcount (1 == 1)
 
   * i, t, y, and the weight variable must all be non missing. weights must exceed 0 to be included. a loop below imposes similar requirements for control variables and the continuous treatment variable
-  qui replace `ifvar' =  0 if `i' == . | `t' == . | `y' == . | `w' == .  | `w' <= 0
+  qui replace `ifvar' =  0 if `i' >= . | `t' >= . | `y' >= . | `w' >= .  | `w' <= 0
 
   * sanitize controls passed that may contain factor variable notation
   local loopablecontorls
@@ -440,7 +440,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * not so if using sg to do a triple diff - here, missing values actually are an issue
   cap assert `subgroups' >= 0
   foreach mustbenonmissingvar in `checkclus'  `loopablecontrols' `ccc_absorb' `customweightmultiplier' `contreat' `checklattice' `includesg'  `interactivecontrols' {
-    qui replace `ifvar' = 0 if `mustbenonmissingvar' == .
+    qui replace `ifvar' = 0 if `mustbenonmissingvar' >= .
   }
 
 
