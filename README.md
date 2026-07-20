@@ -1,10 +1,10 @@
 # wooldid: Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions
 
-This program offers a suite of tools in STATA for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2021) and the high dimensional fixed effects estimators developed by Correia (2017). Features include:
+This program offers a suite of tools in Stata for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2025) and the high dimensional fixed effects estimators developed by Correia (2017). Features include:
 
 - Estimation of multiple types of overall average treatment effects
 - Estimation of event study style estimates of treatment effects in particular years relative to treatment using the user's choice of a pooled or fixed reference period
-- Estimation of various pre-trend tests: various types of average pre-treatment effects, testing the hypothesis that all pre-treatment relative time period specific effects are zero, testing the hypothesis that all relative time period specific effects (pre-and post-treatment) are on a single line
+- Estimation of various pre-trend tests: various types of average pre-treatment effects, testing the hypothesis that all pre-treatment relative time period specific effects are zero, testing the hypothesis that all relative time period specific effects (pre- and post-treatment) are on a single line
 - Estimation of subgroup/treatment-arm specific effects, including comparisons of effects across subgroups, tests for homogeneity of treatment effects across subgroups, and subgroup specific pre-trend tests
 - Estimation of the average marginal treatment effect of a continuous treatment variable (experimental) 
 - Production of event study plots, histograms of treatment effects by cohorts, and plots of treatment effects across the distribution of a continuous treatment variable
@@ -15,7 +15,7 @@ This program offers a suite of tools in STATA for implementing difference-in-dif
 
 ### Author Information and Contact
 
-*Author:* Thomas A. Hegland, thomashegland.com, @thomas_hegland
+*Author:* Thomas A. Hegland, thomashegland.com
 
 *Citation:* Thomas A. Hegland, 2023. "WOOLDID: Stata module to estimate Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions," Statistical Software Components S459238, Boston College Department of Economics, revised 06 Oct 2023. https://ideas.repec.org/c/boc/bocode/s459238.html
  
@@ -36,7 +36,7 @@ or
     
 ### Short Guide to Syntax
 
-_For more detail on syntax, please refer to wooldid's included stata help file. This is only a brief overview and does not contain as much detail as the help file._
+_For more detail on syntax, please refer to wooldid's included Stata help file. This is only a brief overview and does not contain as much detail as the help file._
 _Note: the file wooldid_simple_example.do offers a basic example of how to run the program and set up the treatment variable._
 
 ```
@@ -77,7 +77,7 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 
 ##### Subgroup Effects: 
 - subgroups(_variable_) - variable whose levels specify subgroups for which estimates are to be produced
-- suppresssgprimaryeffects - do not produce main results for each subgroup, only compare subgroups to eachother
+- suppresssgprimaryeffects - do not produce main results for each subgroup, only compare subgroups to each other
 
 ##### Controls and Fixed Effects: controls() fe() timetrends coarsecohortcontrols()
 - controls(_fv varlist_) - specify control variables
@@ -104,7 +104,7 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 -  cfxplottypes(_post, pre, and/or integers specifying relative time periods_) - specifies whether the plots showing the effect of treatment across the distribution of the continuous treatment variable will show post-treatment effects, pre-treatment effects, or effects in specific years relative to treatment
 
 ##### Technical Features: 
-- update - update your local installation of wooldid using the most recent version of wooldid available on github
+- update - update your local installation of wooldid using the most recent version of wooldid available on GitHub
 - verbose - print updates as estimation progresses and save the results from the underlying regression estimated to a model called ___wooldidfullmodel
 - safety() - if set to "off", turns off various safety features that block estimation when wooldid detects a situation where it may yield unreliable results
 - Other features documented in the help file.
@@ -114,7 +114,7 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 
 ### Description of Estimation Approach
 
-wooldid estimates various types of difference-in-differences treatment effects in the vein of Wooldridge (2021), with extensions to handle continuous treatments and estimation of effects by subgroup or treatment arm. The program does not currently accommodate cases where treatment is reversible -- once treated, cohorts must remain treated.
+wooldid estimates various types of difference-in-differences treatment effects in the vein of Wooldridge (2025), with extensions to handle continuous treatments and estimation of effects by subgroup or treatment arm. The program does not currently accommodate cases where treatment is reversible -- once treated, cohorts must remain treated.
 
 Broadly speaking, wooldid estimates difference-in-differences treatment effects using a two-step procedure. In step 1, wooldid estimates the underlying two-way fixed effects regression, which consists of (at baseline) a regression of the outcome variable on cohort fixed effects, time fixed effects, and a set of indicator variables used to flexibly capture the effect of treatment. Each indicator variable is 1 in a specific cohort-period (i-t) cell, and 0 otherwise. The slate of indicator variables spans all cohort-periods for which treatment effects are to be estimated. In step 2, wooldid completes a set of calculations using the {help margins} command that convert the large slate of coefficients on the treatment indicator variables from the underlying regression in step 1 into treatment effects of interest. These margins calculations proceed by computing, for all treated observations, the difference between the predicted values from the underlying regression and the counterfactual predicted values that would be observed given each observation was not treated. Various averages of these differences are then presented to obtain various types of user-specified average treatment effects. To flesh this out, the underlying regression used is as follows: 
 
@@ -133,7 +133,7 @@ In a similar vein, event study style estimates that present treatment effects sp
 
 In terms of implementing event study-style estimates, wooldid offers two approaches. The default pooled reference period approach is conceptually similar to estimating results like normal, but with the treatment onset date for all treated cohorts pulled earlier in time by just enough periods to estimate all requested relative time period effects. With this approach, we add no more (i,t) pairs to Z than is necessary and we allow the reference period to potentially pool multiple periods together for each cohort. Event study estimates derived from this approach always have a normalized effect of 0 in the earliest period reported (the pooled reference period). The alternative approach is to use a fixed reference period, in which case Z is modified to include all (i,t) pairs for treated cohorts, except the pair corresponding with the period immediately prior to treatment (or corresponding with some other user specified period). In this case, the regression is saturated with i-t indicator variables and all treatment effects are estimated relative to the single specified reference period. 
 
-With greater modification, the approach above can be extended to handle continuous treatment variables and treatments that come with an associated measure of treatment intensity or dosage. When cohorts are coarse -- i.e., there are multiple units within each cohort-period cell -- and when a continuous treatment variable varies within i-t cells, estimates of the effect of the continuous treatment variable can be computed within each treated i-t cell. To ensure treatment effect heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed. Note that this approach is a bit speculative and is not covered in Wooldridge (2021), though Wooldridge has informally suggested that it would be sensible to handle continuous treatments using interactions between treated cell indicators and the continuous treatment variable. 
+With greater modification, the approach above can be extended to handle continuous treatment variables and treatments that come with an associated measure of treatment intensity or dosage. When cohorts are coarse -- i.e., there are multiple units within each cohort-period cell -- and when a continuous treatment variable varies within i-t cells, estimates of the effect of the continuous treatment variable can be computed within each treated i-t cell. To ensure treatment effect heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed. Note that this approach is a bit speculative and is not covered in Wooldridge (2025), though Wooldridge has informally suggested that it would be sensible to handle continuous treatments using interactions between treated cell indicators and the continuous treatment variable. 
 
 The particular modification to the underlying regression used for estimation in the continuous treatment context is as follows: 
 Step 1 (Continuous): Y_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt)) 
@@ -149,12 +149,11 @@ _Note: greater detail on the program's implementation can be found in wooldid's 
 
 ### Citations
 
-Borusyak, Kirill, Xavier Jaravel, and Jann Spiess. Revisiting Event Study Designs: Robust and Efficient Estimation. Working Paper, 2023. 
+Borusyak, Kirill, Xavier Jaravel, and Jann Spiess. Revisiting Event Study Designs: Robust and Efficient Estimation. Review of Economic Studies, 2024. 
 
-Correia, Sergio. reghdfe: Stata module for linear and instrumental-variable/gmm regression absorbing multiple levels of fixed effects. Statistical Software Components s457874, 2017.
-Boston College Department of Economics. https://ideas.repec.org/c/boc/bocode/s457874.html 
+Correia, Sergio and Noah Constantine. reghdfe: Stata module to perform linear or instrumental-variable regression absorbing any number of high-dimensional fixed effects. Statistical Software Components S457874, 2014. Boston College Department of Economics, revised 11 Jan 2026. https://ideas.repec.org/c/boc/bocode/s457874.html 
 
 Ibragimov, Rustam and Muller, Ulrich K. t-Statistic Based Correlation and Heterogeneity Robust Inference. Journal of Business & Economic Statistics, 2010. 
 
-Wooldridge, Jeffrey M. Two-Way Fixed Effects, the Two-Way Mundlak Regression, and Difference-in-differences Estimators. Working Paper, 2021. https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345 
+Wooldridge, Jeffrey M. Two-Way Fixed Effects, the Two-Way Mundlak Regression, and Difference-in-differences Estimators. Empirical Economics, 2025.
 
