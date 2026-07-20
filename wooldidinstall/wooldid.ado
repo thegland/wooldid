@@ -3440,7 +3440,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   if "`verbose'" != "verbose" qui est drop ___wooldidfullmodel
   * clean up after ppmlhdfe
-  if "`poisson'" == "poisson" & ("`unconditionalse'" != "" | "`customvce'" != "" ) qui cap drop _ppmlhdfe_d
+  if "`poisson'" == "poisson" & "`unconditionalse'" == "" & "`customvce'" == "" qui cap drop _ppmlhdfe_d
 
 
   * program ends!
