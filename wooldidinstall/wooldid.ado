@@ -1565,9 +1565,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       local b = r(mean)
       qui ttest `ibmucoefs'1 == 0
       local se = r(se)
-      local ll = `b' + invt(r(df_t),.025)*`se'
-      local ul = `b' - invt(r(df_t),.025)*`se'
-      matrix `___`item'' = (`b',`se', r(t), r(p), `ll', `ul')
+      local im_ll = `b' + invt(r(df_t),.025)*`se'
+      local im_ul = `b' - invt(r(df_t),.025)*`se'
+      matrix `___`item'' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
       frame change `defaultframe'
       frame drop `ibmuframe'
       matrix drop `ibmucoefs'
@@ -1596,9 +1596,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         local b = r(mean)
         qui ttest `ibmucoefs'1 == 0
         local se = r(se)
-        local ll = `b' + invt(r(df_t),.025)*`se'
-        local ul = `b' - invt(r(df_t),.025)*`se'
-        matrix `___`item'_pre' = (`b',`se', r(t), r(p), `ll', `ul')
+        local im_ll = `b' + invt(r(df_t),.025)*`se'
+        local im_ul = `b' - invt(r(df_t),.025)*`se'
+        matrix `___`item'_pre' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
         frame change `defaultframe'
         frame drop `ibmuframe'
         matrix drop `ibmucoefs'
@@ -1748,10 +1748,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             local b = r(mean)
             qui ttest `ibmucoefs'1 == 0
             local se = r(se)
-            local ll = `b' + invt(r(df_t),.025)*`se'
-            local ul = `b' - invt(r(df_t),.025)*`se'
-            if `currenthoriz' == 1 matrix `horizhold' = (`b',`se', r(t), r(p), `ll', `ul')
-            if `currenthoriz' >1  matrix `horizhold' = `horizhold' \ (`b',`se', r(t), r(p), `ll', `ul')
+            local im_ll = `b' + invt(r(df_t),.025)*`se'
+            local im_ul = `b' - invt(r(df_t),.025)*`se'
+            if `currenthoriz' == 1 matrix `horizhold' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
+            if `currenthoriz' >1  matrix `horizhold' = `horizhold' \ (`b',`se', r(t), r(p), `im_ll', `im_ul')
             frame change `defaultframe'
             frame drop `ibmuframe'
             local ++currenthoriz
@@ -1822,9 +1822,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         local b = r(mean)
         qui ttest `ibmucoefs'1 == 0
         local se = r(se)
-        local ll = `b' + invt(r(df_t),.025)*`se'
-        local ul = `b' - invt(r(df_t),.025)*`se'
-        matrix `___C`item'' = (`b',`se', r(t), r(p), `ll', `ul')
+        local im_ll = `b' + invt(r(df_t),.025)*`se'
+        local im_ul = `b' - invt(r(df_t),.025)*`se'
+        matrix `___C`item'' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
         frame change `defaultframe'
         frame drop `ibmuframe'
         matrix drop `ibmucoefs'
@@ -1851,9 +1851,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           local b = r(mean)
           qui ttest `ibmucoefs'1 == 0
           local se = r(se)
-          local ll = `b' + invt(r(df_t),.025)*`se'
-          local ul = `b' - invt(r(df_t),.025)*`se'
-          matrix `___C`item'_pre' = (`b',`se', r(t), r(p), `ll', `ul')
+          local im_ll = `b' + invt(r(df_t),.025)*`se'
+          local im_ul = `b' - invt(r(df_t),.025)*`se'
+          matrix `___C`item'_pre' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
           frame change `defaultframe'
           frame drop `ibmuframe'
           matrix drop `ibmucoefs'
@@ -2126,10 +2126,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               local b = r(mean)
               qui ttest `ibmucoefs'1 == 0
               local se = r(se)
-              local ll = `b' + invt(r(df_t),.025)*`se'
-              local ul = `b' - invt(r(df_t),.025)*`se'
-              if `currenthoriz' == 1 matrix `horizhold' = (`b',`se', r(t), r(p), `ll', `ul')
-              if `currenthoriz' >1  matrix `horizhold' = `horizhold' \ (`b',`se', r(t), r(p), `ll', `ul')
+              local im_ll = `b' + invt(r(df_t),.025)*`se'
+              local im_ul = `b' - invt(r(df_t),.025)*`se'
+              if `currenthoriz' == 1 matrix `horizhold' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
+              if `currenthoriz' >1  matrix `horizhold' = `horizhold' \ (`b',`se', r(t), r(p), `im_ll', `im_ul')
               frame change `defaultframe'
               frame drop `ibmuframe'
               local ++currenthoriz
@@ -2205,10 +2205,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             local b = r(mean)
             qui ttest `ibmucoefs'1 == 0
             local se = r(se)
-            local ll = `b' + invt(r(df_t),.025)*`se'
-            local ul = `b' - invt(r(df_t),.025)*`se'
-            if `iter'==1 matrix `sgimpmat' = (`b',`se', r(t), r(p), `ll', `ul')
-            if `iter'>1 matrix `sgimpmat' = `sgimpmat' \ (`b',`se', r(t), r(p), `ll', `ul')
+            local im_ll = `b' + invt(r(df_t),.025)*`se'
+            local im_ul = `b' - invt(r(df_t),.025)*`se'
+            if `iter'==1 matrix `sgimpmat' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
+            if `iter'>1 matrix `sgimpmat' = `sgimpmat' \ (`b',`se', r(t), r(p), `im_ll', `im_ul')
             frame change `defaultframe'
             frame drop `ibmuframe'
             local ++iter
@@ -2247,10 +2247,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               local b = r(mean)
               qui ttest `ibmucoefs'1 == 0
               local se = r(se)
-              local ll = `b' + invt(r(df_t),.025)*`se'
-              local ul = `b' - invt(r(df_t),.025)*`se'
-              if `iter'==1 matrix `sgimpmat' = (`b',`se', r(t), r(p), `ll', `ul')
-              if `iter'>1 matrix `sgimpmat' = `sgimpmat' \ (`b',`se', r(t), r(p), `ll', `ul')
+              local im_ll = `b' + invt(r(df_t),.025)*`se'
+              local im_ul = `b' - invt(r(df_t),.025)*`se'
+              if `iter'==1 matrix `sgimpmat' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
+              if `iter'>1 matrix `sgimpmat' = `sgimpmat' \ (`b',`se', r(t), r(p), `im_ll', `im_ul')
               frame change `defaultframe'
               frame drop `ibmuframe'
               local ++iter
