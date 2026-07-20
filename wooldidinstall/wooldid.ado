@@ -76,9 +76,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     error 198
   }
 
-  if "`safety'" != "off" & "`unconditionalse'" == "unconditionalse" & ("`weight'" == "aw" ) {
+  if "`safety'" != "off" & "`unconditionalse'" == "unconditionalse" & ("`weight'" == "aweight" ) {
     dis " "
-    dis as text "Error: unconditional standard errors may be unreliable with aweights."
+    dis as text "Caution: unconditional standard errors may be unreliable with aweights."
     dis as text "Set option safety(off) to suppress this warning message."
     dis " "
   }
