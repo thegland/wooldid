@@ -3048,9 +3048,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     ereturn scalar ypre_iqr =  `ypre_iqr'
 
     if "`contreat'" != "" {
-	    ereturn scalar contreatpre_mean = `contreatpre_mean'
-	    ereturn scalar contreatpre_med =  `contreatpre_med'
-	    ereturn scalar contreatpre_sd =  `contreatpre_sd'
+	    * under untreatedZero, pre-treatment contreat stats are never computed (see the matching guard in the summarystats block), so do not ereturn them
+	    if "`contreatcontrols'" != "untreatedZero" {
+	      ereturn scalar contreatpre_mean = `contreatpre_mean'
+	      ereturn scalar contreatpre_med =  `contreatpre_med'
+	      ereturn scalar contreatpre_sd =  `contreatpre_sd'
+	    }
 	    ereturn scalar contreatpost_mean = `contreatpost_mean'
 	    ereturn scalar contreatpost_med =  `contreatpost_med'
 	    ereturn scalar contreatpost_sd =  `contreatpost_sd'
