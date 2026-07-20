@@ -1499,8 +1499,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`histogramcohorteffects'" != "" {
     if "`verbose'" == "verbose" dis as text "Wooldid is now producing histograms."
     tempname ___hist
-    * graph window management
-    cap graph drop *
+    * graph window management: graphs are created with name(..., replace) so re-runs overwrite wooldid's own prior graphs; wooldid no longer clears the user's unrelated graphs from memory
 
     * we pool att with att_i b/c they conceptually should match into the same histograms
     if "`att_i'" == "att_i" |  "`att'" == "att"  {
@@ -1526,9 +1525,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       if "`contreat'" != "" rename `___hist'2 ame_i
       local bininserter
       if _N < 100 local bininserter bin(20)
-      qui hist att_i, freq   xtitle("Cohort-Specific Average Treatment `effecttype'") name(hist_att_i) gap(5) `bininserter' color(navy)
+      qui hist att_i, freq   xtitle("Cohort-Specific Average Treatment `effecttype'") name(hist_att_i, replace) gap(5) `bininserter' color(navy)
       if "`saveplots'" != "" qui graph save "`saveplots'_hist_att_i.gph", `replace'
-      if "`contreat'" != "" qui hist ame_i, freq   xtitle("Cohort-Specific Average Marginal Treatment `Ceffecttype'") name(hist_ame_i) gap(5) `bininserter' color(navy)
+      if "`contreat'" != "" qui hist ame_i, freq   xtitle("Cohort-Specific Average Marginal Treatment `Ceffecttype'") name(hist_ame_i, replace) gap(5) `bininserter' color(navy)
       if "`contreat'" != "" & "`saveplots'" != ""  qui graph save "`saveplots'_hist_ame_i.gph", `replace'
       frame change `defaultframe'
       frame drop `wooldidframe'
@@ -1557,9 +1556,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       if "`contreat'" != "" rename `___hist2'2 ame_itime
       local bininserter
       if _N < 100 local bininserter bin(20)
-      qui hist att_itime, freq   xtitle("Cohort-Specific i-t Cell Average Treatment `effecttype'") name(hist_att_itime) gap(5) `bininserter' color(navy)
+      qui hist att_itime, freq   xtitle("Cohort-Specific i-t Cell Average Treatment `effecttype'") name(hist_att_itime, replace) gap(5) `bininserter' color(navy)
       if "`saveplots'" != "" qui graph save "`saveplots'_hist_att_itime.gph", `replace'
-      if "`contreat'" != "" qui hist ame_itime, freq   xtitle("Cohort-Specific i-t Cell Average Marginal Treatment `Ceffecttype'") name(hist_ame_itime) gap(5) `bininserter' color(navy)
+      if "`contreat'" != "" qui hist ame_itime, freq   xtitle("Cohort-Specific i-t Cell Average Marginal Treatment `Ceffecttype'") name(hist_ame_itime, replace) gap(5) `bininserter' color(navy)
       if "`contreat'" != "" &   "`saveplots'" != ""   qui graph save "`saveplots'_hist_ame_itime.gph", `replace'
       frame change `defaultframe'
       frame drop `wooldidframe'
@@ -1857,8 +1856,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   **********************************************************************************************************************************************
   *****************************         MAKE CONTINUOUS TREATMENT EFFECTS PLOTS AND CALCULATE CONTINUOUS TREATMENT EFFECTS      ****************************
   **********************************************************************************************************************************************
-  * graph window management
-  if "`makecfxplots'" != "" & "`histogramcohorteffects'" == "" cap graph drop *
+  * graph window management: graphs are created with name(..., replace) so re-runs overwrite wooldid's own prior graphs; wooldid no longer clears the user's unrelated graphs from memory
   local cfxmatricestoreturn
 
   * continuous treatment estimates are constructed borderline identically to the main estimates until we get to cfx plots
@@ -1982,7 +1980,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstext'
           tempname cfx`item'_`nametext'
           matrix `cfx`item'_`nametext'' = r(table)[1..`cfxmatendpoint',floor(`=colsof(r(table))'/2)+1..`=colsof(r(table))']'
-          qui marginsplot, recastci(rarea) plotopts(color(navy)) ciopts(color(navy%50)) `cfx_xtitle'  scale(.85) ytitle("`ytext'") title("`titletext'") name("cfx`item'_`nametext'")
+          qui marginsplot, recastci(rarea) plotopts(color(navy)) ciopts(color(navy%50)) `cfx_xtitle'  scale(.85) ytitle("`ytext'") title("`titletext'") name("cfx`item'_`nametext'", replace)
           if "`saveplots'" != "" qui graph save "`saveplots'_cfx`item'_`nametext'.gph", `replace'
 
           * this code here just handles text to switch to contreat
@@ -2006,7 +2004,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstext'
           tempname cfx`itemtext'_`nametext'
           matrix `cfx`itemtext'_`nametext'' = r(table)[1..`cfxmatendpoint',1..`=colsof(r(table))']'
-          qui marginsplot, recastci(rarea) ciopts(color(navy%50)) plotopts(color(navy)) `cfx_xtitle' ytitle("`ytext'")  scale(.85) title("`titletext'") name("cfx`itemtext'_`nametext'")
+          qui marginsplot, recastci(rarea) ciopts(color(navy%50)) plotopts(color(navy)) `cfx_xtitle' ytitle("`ytext'")  scale(.85) title("`titletext'") name("cfx`itemtext'_`nametext'", replace)
           if "`saveplots'" != "" qui graph save "`saveplots'_cfx`itemtext'_`nametext'.gph", `replace'
           local cfxmatricestoreturn `cfxmatricestoreturn' cfx`itemtext'_`nametext' cfx`item'_`nametext'
         }
@@ -2041,7 +2039,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `subgroups' == `sgcase' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstext'
               tempname cfx`item'_`nametext'_sg`sgcase'
               matrix `cfx`item'_`nametext'_sg`sgcase''  = r(table)[1..`cfxmatendpoint',floor(`=colsof(r(b))'/2)+1..`=colsof(r(b))']'
-              qui marginsplot, recastci(rarea) plotopts(color(navy)) ciopts(color(navy%50)) `cfx_xtitle' ytitle("`ytext'") title("`titletext'") scale(.85) name("cfx`item'_`nametext'_sg`sgcase'")
+              qui marginsplot, recastci(rarea) plotopts(color(navy)) ciopts(color(navy%50)) `cfx_xtitle' ytitle("`ytext'") title("`titletext'") scale(.85) name("cfx`item'_`nametext'_sg`sgcase'", replace)
               if "`saveplots'" != ""  qui graph save "`saveplots'_cfx`item'_`nametext'_sg`sgcase'.gph", `replace'
               if "`item'" == "att" local ytext "AME on `y'"
               if "`item'" == "att_it" local ytext "AME_it on `y'"
@@ -2062,7 +2060,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `subgroups' == `sgcase' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstext'
               tempname cfx`itemtext'_`nametext'_sg`sgcase'
               matrix `cfx`itemtext'_`nametext'_sg`sgcase'' = r(table)[1..`cfxmatendpoint',1..`=colsof(r(b))']'
-              qui marginsplot, plotopts(color(navy)) recastci(rarea) ciopts(color(navy%50)) `cfx_xtitle' ytitle("`ytext'") title("`titletext'")  scale(.85) name("cfx`itemtext'_`nametext'_sg`sgcase'")
+              qui marginsplot, plotopts(color(navy)) recastci(rarea) ciopts(color(navy%50)) `cfx_xtitle' ytitle("`ytext'") title("`titletext'")  scale(.85) name("cfx`itemtext'_`nametext'_sg`sgcase'", replace)
               if "`saveplots'" != "" qui graph save "`saveplots'_cfx`itemtext'_`nametext'_sg`sgcase'.gph", `replace'
               local cfxmatricestoreturn `cfxmatricestoreturn'   cfx`itemtext'_`nametext'_sg`sgcase' cfx`item'_`nametext'_sg`sgcase'
             }
@@ -3297,7 +3295,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   if `espre' +`espl' > 0 & "`makeplots'" == "makeplots" {
 
-    if "`histogramcohorteffects'" == "" & "`makecfxplots'" == "" cap graph drop *
 
     * this creates and enters a frame where we will produce graphs using wdidpooled and similar for sgs
     tempname __wooldidframe
@@ -3392,7 +3389,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       local att_text ATT `elasinj'
       local ame_it_text AME_it `elasinj2'
       local ame_text AME `elasinj2'
-      twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_fullmodel) `xlabelstarter'
+      twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_fullmodel, replace) `xlabelstarter'
       if "`saveplots'" != "" qui graph save "`saveplots'_`graph'.gph", `replace'
     }
 
@@ -3471,7 +3468,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           local att_text ATT `elasinj'
           local ame_it_text AME_it `elasinj2'
           local ame_text AME `elasinj2'
-          twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_sg`sgcase') `xlabelstarter'   title("`subgroups' == `sgcase'")
+          twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_sg`sgcase', replace) `xlabelstarter'   title("`subgroups' == `sgcase'")
           if "`saveplots'" != "" qui graph save "`saveplots'_`graph'_sg`sgcase'.gph", `replace'
         }
 
