@@ -1,0 +1,65 @@
+rc|0
+varlist|i t ttre y
+scalar|df_r|+1.2000000000000X+003
+scalar|N|+1.9000000000000X+006
+scalar|Nclus|+1.4000000000000X+003
+scalar|ll|+1.d1b6e1064ec79X+006
+scalar|ll_0|-1.781d6eb9d8058X+007
+scalar|r2|+1.ff7c790415536X-001
+scalar|r2adj|+1.fedea3d5c8843X-001
+scalar|r2_within|+1.fed6fc528c304X-001
+scalar|r2_withinadj|+1.fde95fc7c923aX-001
+scalar|rmse|+1.cd2eec0618260X-004
+scalar|rss|+1.2415d656edd16X-001
+scalar|N_dropped|+0.0000000000000X-3ff
+scalar|joint_att_allsgssame|+1.0a7a4c0e372dbX-029
+macro|cmd|wooldid
+macro|estimate_type|pooled_reference_period
+macro|cmdline|y i t ttre, att cluster(i) subgroup(ttre)
+macro|properties|b V
+macro|depvar|y
+matnames|b|1x3|y1|main_att main_SG3_att main_SG7_att
+mat|b|1|1|+1.1c5acc0189273X+002
+mat|b|1|2|+1.92f4a2e3363c9X+001
+mat|b|1|3|+1.c21bc1216538fX+002
+matnames|V|3x3|main_att main_SG3_att main_SG7_att|main_att main_SG3_att main_SG7_att
+mat|V|1|1|+1.119b2cb9175e9X-009
+mat|V|1|2|+0.0000000000000X-3ff
+mat|V|1|3|+0.0000000000000X-3ff
+mat|V|2|1|+0.0000000000000X-3ff
+mat|V|2|2|+1.d114d957c549bX-00a
+mat|V|2|3|+0.0000000000000X-3ff
+mat|V|3|1|+0.0000000000000X-3ff
+mat|V|3|2|+0.0000000000000X-3ff
+mat|V|3|3|+1.66cd05d1a61d8X-008
+matnames|wdidmainresults|1x7|main:att|estimate se t p lb_95ci ub_95ci relyr
+mat|wdidmainresults|1|1|+1.1c5acc0189273X+002
+mat|wdidmainresults|1|2|+1.7647f6d555b3aX-005
+mat|wdidmainresults|1|3|+1.84fc0fc6b98e8X+006
+mat|wdidmainresults|1|4|+1.d5e748c7ce744X-030
+mat|wdidmainresults|1|5|+1.15bd6e7771daeX+002
+mat|wdidmainresults|1|6|+1.22f8298ba0738X+002
+mat|wdidmainresults|1|7|+1.0000000000000X+3ff
+matnames|wdidsgresults_7|1x7|main:att|estimate se t p lb_95ci ub_95ci relyr
+mat|wdidsgresults_7|1|1|+1.c21bc1216538fX+002
+mat|wdidsgresults_7|1|2|+1.2f129846eb89cX-004
+mat|wdidsgresults_7|1|3|+1.7c32cf56732fdX+006
+mat|wdidsgresults_7|1|4|+1.2088e656e8269X-02f
+mat|wdidsgresults_7|1|5|+1.b7655cd872f44X+002
+mat|wdidsgresults_7|1|6|+1.ccd2256a577daX+002
+mat|wdidsgresults_7|1|7|+1.0000000000000X+3ff
+matnames|wdidsgresults_3|1x7|main:att|estimate se t p lb_95ci ub_95ci relyr
+mat|wdidsgresults_3|1|1|+1.92f4a2e3363c9X+001
+mat|wdidsgresults_3|1|2|+1.590d4cabbd8b8X-005
+mat|wdidsgresults_3|1|3|+1.2af5b082692e4X+006
+mat|wdidsgresults_3|1|4|+1.3909900d47c7cX-02c
+mat|wdidsgresults_3|1|5|+1.86c263a9b2463X+001
+mat|wdidsgresults_3|1|6|+1.9f26e21cba32fX+001
+mat|wdidsgresults_3|1|7|+1.0000000000000X+3ff
+matnames|pwsgs|1x6|att:7vs3.ttre|estimate se t p lb_95ci ub_95ci
+mat|pwsgs|1|1|+1.f142df5f94355X+001
+mat|pwsgs|1|2|+1.07963bd5fc036X-004
+mat|pwsgs|1|3|+1.e2f2d0842446dX+005
+mat|pwsgs|1|4|+1.0a7a4c0e37f04X-029
+mat|pwsgs|1|5|+1.dea0ac6a48160X+001
+mat|pwsgs|1|6|+1.01f2892a702a5X+002

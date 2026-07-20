@@ -1,0 +1,70 @@
+rc|0
+varlist|i ttre sg ife t w y
+scalar|df_r|+1.c000000000000X+002
+scalar|N|+1.8000000000000X+005
+scalar|Nclus|+1.0000000000000X+003
+scalar|ll|+1.2cd3df200bca2X+003
+scalar|ll_0|-1.33cf4495c95e0X+004
+scalar|r2|+1.f062b24a71d1cX-001
+scalar|r2adj|+1.e01798dae8965X-001
+scalar|r2_within|+1.64c017c28b6aeX-001
+scalar|r2_withinadj|+1.13c024280bcf2X-001
+scalar|rmse|+1.2647f49e6d441X-002
+scalar|rss|+1.e649717ee319cX+000
+scalar|N_dropped|+0.0000000000000X-3ff
+macro|cmd|wooldid
+macro|estimate_type|pooled_reference_period
+macro|cmdline|y i t ttre, att cluster(i) esprelength(1) espostlength(1)
+macro|properties|b V
+macro|depvar|y
+matnames|b|1x4|y1|main_att pretreatment_att ES_att_pre1 ES_att_post0
+mat|b|1|1|+1.328ecaee93e90X+000
+mat|b|1|2|+1.c6ab7ba111110X-003
+mat|b|1|3|+1.c6ab7ba111110X-003
+mat|b|1|4|+1.247c94d488884X+000
+matnames|V|4x4|main_att pretreatment_att ES_att_pre1 ES_att_post0|main_att pretreatment_att ES_att_pre1 ES_att_post0
+mat|V|1|1|+1.7afa03afaf596X-006
+mat|V|1|2|+0.0000000000000X-3ff
+mat|V|1|3|+0.0000000000000X-3ff
+mat|V|1|4|+0.0000000000000X-3ff
+mat|V|2|1|+0.0000000000000X-3ff
+mat|V|2|2|+1.440634427673fX-007
+mat|V|2|3|+0.0000000000000X-3ff
+mat|V|2|4|+0.0000000000000X-3ff
+mat|V|3|1|+0.0000000000000X-3ff
+mat|V|3|2|+0.0000000000000X-3ff
+mat|V|3|3|+1.440634427673fX-007
+mat|V|3|4|+0.0000000000000X-3ff
+mat|V|4|1|+0.0000000000000X-3ff
+mat|V|4|2|+0.0000000000000X-3ff
+mat|V|4|3|+0.0000000000000X-3ff
+mat|V|4|4|+1.2a8e3e5051ff2X-005
+matnames|wdidmainresults|4x7|main:att pretreatment:att ES_att:pre1 ES_att:post0|estimate se t p lb_95ci ub_95ci relyr
+mat|wdidmainresults|1|1|+1.328ecaee93e90X+000
+mat|wdidmainresults|1|2|+1.377a26713142fX-003
+mat|wdidmainresults|1|3|+1.f7e9e49cf5329X+002
+mat|wdidmainresults|1|4|+1.a7273b3c3917bX-00e
+mat|wdidmainresults|1|5|+1.acfbe4fd681b2X-001
+mat|wdidmainresults|1|6|+1.8e9fa35e73c47X+000
+mat|wdidmainresults|1|7|+1.0000000000000X+3ff
+mat|wdidmainresults|2|1|+1.c6ab7ba111110X-003
+mat|wdidmainresults|2|2|+1.974f0978ca898X-004
+mat|wdidmainresults|2|3|+1.1dc468107ca54X+001
+mat|wdidmainresults|2|4|+1.f197c8e66210dX-005
+mat|wdidmainresults|2|5|-1.ae56db157e7d0X-007
+mat|wdidmainresults|2|6|+1.d41e3279bd04eX-002
+mat|wdidmainresults|2|7|+1.0000000000000X+3ff
+mat|wdidmainresults|3|1|+1.c6ab7ba111110X-003
+mat|wdidmainresults|3|2|+1.974f0978ca898X-004
+mat|wdidmainresults|3|3|+1.1dc468107ca54X+001
+mat|wdidmainresults|3|4|+1.f197c8e66210dX-005
+mat|wdidmainresults|3|5|-1.ae56db157e7d0X-007
+mat|wdidmainresults|3|6|+1.d41e3279bd04eX-002
+mat|wdidmainresults|3|7|-1.0000000000000X+000
+mat|wdidmainresults|4|1|+1.247c94d488884X+000
+mat|wdidmainresults|4|2|+1.86f948d2ac74bX-003
+mat|wdidmainresults|4|3|+1.7f06af64ae24bX+002
+mat|wdidmainresults|4|4|+1.20a68cc4f40ecX-00b
+mat|wdidmainresults|4|5|+1.61d8c68031ddaX-001
+mat|wdidmainresults|4|6|+1.980cc668f821bX+000
+mat|wdidmainresults|4|7|+0.0000000000000X-3ff
