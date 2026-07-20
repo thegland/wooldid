@@ -271,9 +271,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   local t = word("`varlist'",3)
   local ttre_asgiven = word("`varlist'",4)
 
+  * the input-validity asserts below respect the user's if() restriction, mirroring the
+  * estimation sample construction exactly: the sample keeps rows where the if expression
+  * evaluates to 1 (gen ifvar = `if' further down), so the asserts test (`if') == 1 --
+  * identical row selection for any expression shape, including bare flag variables with
+  * nonzero or missing values, which a plain if-qualifier would wrongly include. empty when
+  * no if() is given, leaving the asserts running over the full dataset exactly as before
+  local ifassert
+  if `"`if'"' != "" local ifassert if (`if') == 1
+
   * check that i is specified acceptably
   if "`safety'" != "off" {
-    cap assert `i' > 0  & int(`i') == `i'
+    cap assert `i' > 0  & int(`i') == `i' `ifassert'
     if _rc != 0 {
       dis as error  "Error: `i' must consist of positive, non-zero integers, but does not"
       error 411
@@ -282,7 +291,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * if poisson, check that y is not negative
   if "`poisson'" != "" {
-    cap assert `y' >= 0
+    cap assert `y' >= 0 `ifassert'
     if _rc != 0 {
       dis as error "The outcome variable contains negative values; this is not allowed with poisson."
       error 411
@@ -396,7 +405,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * that's desirable for our purposes
   }
   if  "`safety'" != "off" {
-    cap assert `w' >= 0
+    cap assert `w' >= 0 `ifassert'
     if _rc != 0 {
       dis as error  "Error: weights must not be negative."
       error 411
@@ -406,7 +415,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * subgroups cannot be negative
   if "`subgroups'" != "" {
-    cap assert `subgroups' >= 0
+    cap assert `subgroups' >= 0 `ifassert'
     if _rc != 0 {
       dis as error "The subgroup variable contains negative values; it must contain only non-negative integers."
       error 411
