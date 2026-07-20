@@ -1347,13 +1347,27 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     local rownamessum
     if "`contreat'" == "" local sumvarlist y
     if "`contreat'" != "" local sumvarlist y contreat
+    * summarize does not accept pweights (r 101), so on the non-gtools path substitute
+    * aweights for these descriptive computations: the point statistics (mean, median,
+    * percentiles, min, max) are identical under aweights and pweights. the sd differs
+    * only in the finite-sample divisor convention (aweight: N-1 with weights normalized
+    * to sum to N; gstats sum with pweights: sum of weights minus 1), so it is
+    * reconstructed after each call to match what gstats sum reports with pweights,
+    * keeping reported results identical whether or not gtools is installed
+    local sumweightinserter `weightinserter'
+    local sumpwfix 0
+    if "`weight'" == "pweight" & "`gtoolscheck2'" != "gstats" {
+      local sumweightinserter [aweight = `w']
+      local sumpwfix 1
+    }
     foreach sumvar in `sumvarlist' {
       local sumvar2 c
       if "`sumvar'" == "y" local sumvar2 y
-      qui `gtoolscheck2' sum ``sumvar'' `weightinserter' if e(sample), detail
+      qui `gtoolscheck2' sum ``sumvar'' `sumweightinserter' if e(sample), detail
       local `sumvar'_mean = r(mean)
       local `sumvar'_med = r(p50)
       local `sumvar'_sd = r(sd)
+      if `sumpwfix' & r(N) > 1 & r(sum_w) > 1 local `sumvar'_sd = sqrt( r(Var) * (r(N)-1)/r(N) * r(sum_w)/(r(sum_w)-1) )
       local `sumvar'_p25 = r(p25)
       local `sumvar'_p75 = r(p75)
       local `sumvar'_iqr = ``sumvar'_p75' - ``sumvar'_p25'
@@ -1363,10 +1377,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
       * do the same in the pre-treatment treated sample
       if "`sumvar'" == "y" | ("`contreatcontrols'" != "untreatedZero" & "`sumvar'" == "contreat") {
-        qui `gtoolscheck2' sum ``sumvar'' `weightinserter' if e(sample) & `ttre' <. & `t' < `ttre', detail
+        qui `gtoolscheck2' sum ``sumvar'' `sumweightinserter' if e(sample) & `ttre' <. & `t' < `ttre', detail
         local `sumvar'pre_mean = r(mean)
         local `sumvar'pre_med = r(p50)
         local `sumvar'pre_sd = r(sd)
+        if `sumpwfix' & r(N) > 1 & r(sum_w) > 1 local `sumvar'pre_sd = sqrt( r(Var) * (r(N)-1)/r(N) * r(sum_w)/(r(sum_w)-1) )
         local `sumvar'pre_p25 = r(p25)
         local `sumvar'pre_p75 = r(p75)
         local `sumvar'pre_iqr = ``sumvar'pre_p75' - ``sumvar'pre_p25'
@@ -1376,10 +1391,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       }
 
       * do the same in the post-treatment treated sample
-      qui `gtoolscheck2' sum ``sumvar'' `weightinserter' if e(sample) & `ttre' <. & `t' >= `ttre', detail
+      qui `gtoolscheck2' sum ``sumvar'' `sumweightinserter' if e(sample) & `ttre' <. & `t' >= `ttre', detail
       local `sumvar'post_mean = r(mean)
       local `sumvar'post_med = r(p50)
       local `sumvar'post_sd = r(sd)
+      if `sumpwfix' & r(N) > 1 & r(sum_w) > 1 local `sumvar'post_sd = sqrt( r(Var) * (r(N)-1)/r(N) * r(sum_w)/(r(sum_w)-1) )
       local `sumvar'post_p25 = r(p25)
       local `sumvar'post_p75 = r(p75)
       local `sumvar'post_iqr = ``sumvar'post_p75' - ``sumvar'post_p25'
@@ -1389,10 +1405,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
       * do the same in the control group (units never treated in-window: `ttre' == . covers never-treated and out-of-window-treated units)
       if "`contreatwithin'" == "" & ("`sumvar'" == "y" | ("`contreatcontrols'" != "untreatedZero" & "`sumvar'" == "contreat"))  {
-        qui `gtoolscheck2' sum ``sumvar'' `weightinserter' if e(sample) & `ttre' == ., detail
+        qui `gtoolscheck2' sum ``sumvar'' `sumweightinserter' if e(sample) & `ttre' == ., detail
         local `sumvar'con_mean = r(mean)
         local `sumvar'con_med = r(p50)
         local `sumvar'con_sd = r(sd)
+        if `sumpwfix' & r(N) > 1 & r(sum_w) > 1 local `sumvar'con_sd = sqrt( r(Var) * (r(N)-1)/r(N) * r(sum_w)/(r(sum_w)-1) )
         local `sumvar'con_p25 = r(p25)
         local `sumvar'con_p75 = r(p75)
         local `sumvar'con_iqr = ``sumvar'con_p75' - ``sumvar'con_p25'
