@@ -1251,10 +1251,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * here, we check and see if the main treatment effects have been dropped from the regression for multicolinearity - my tests for this are imperfect, but still useful
   if "`safety'" != "off"  {
     local bvars: colnames e(b)
-    tokenize `bvars'
-    local maxwordcount = wordcount("`bvars'")
     local catastrophe 0
     local bigcatastrophe 0
+    * "o." appears in e(b) colnames iff some term carries an omission flag (a dot only ever
+    * follows a factor operator, and a token cannot straddle whitespace), so when it is
+    * absent the loop below provably cannot fire -- skip the whole interpreted scan
+    if strpos("`bvars'", "o.") != 0 {
+    tokenize `bvars'
+    local maxwordcount = wordcount("`bvars'")
     forval testbvar = 1(1)`maxwordcount' {
       if strpos("``testbvar''", "o.") != 0   & strpos("``testbvar''", "0b.") == 0 & strpos("``testbvar''", "`_i'") != 0 & strpos("``testbvar''", "`_t'") != 0  & ( strpos("``testbvar''", "1o.`targetflag'") != 0 | strpos("``testbvar''", "1.`targetflag'") != 0)  {
         * the above triggers if and only if (a) the variable has an omission flag (and thus was dropped), and
@@ -1282,16 +1286,20 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           local checkifpresent = subinstr("`checkifpresent'","#"," ",.)
           local problem_i = word("`checkifpresent'",1)
           local problem_t = word("`checkifpresent'",2)
+          * 2 remaining cases. wordcount = 3, in which case what we have is probably a dropped i-t dummy
+          * or wordcount > 3, in which case we have something else, like a contreat interaction
+          local wordcountproblem = wordcount("`checkifpresent'")
 
           * are there observations falling in the _i _t cell associated with the missing coefficient? if not, this isn't a problem
-          * note: this regrettably is a bit computationally intensive
+          * note: this regrettably is a bit computationally intensive -- and its result is
+          * consumed only through the r(N) gate below, whose branches ALL require
+          * wordcount <= 3, no lattice, or verbose: when the flagged term is an interaction
+          * (wordcount > 3) with a lattice active and verbose off, nothing can consume the
+          * count, so skip the full-data pass entirely (lattice drops there are expected)
+          if `wordcountproblem' <= 3 | "`lattice'" == "" | "`verbose'" != "" {
           qui count if `_i' == `problem_i' & `_t' == `problem_t' & `targetflag' == 1 & `w' > 0 & `ifstatement'
           if r(N) > 0 {
             * if we proceeded to this point, then the omitted object has associated observations, so this is an actual problem!
-            * 2 remaining cases. wordcount = 3, in which case what we have is probably a dropped i-t dummy
-            * or wordcount > 3, in which case we have something else, like a contreat interaction
-
-            local wordcountproblem = wordcount("`checkifpresent'")
 
             if `wordcountproblem' <= 3 {
               local problem_t = `problem_t' - `min_t' - 1
@@ -1322,8 +1330,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               local catastrophe = `catastrophe' + 1
             }
           }
+          }
         }
       }
+    }
     }
     if `catastrophe' > 0 dis as text "Note: the multicolinearity warning above was triggered `catastrophe' times total."
     if `bigcatastrophe' == 1 error 322
