@@ -11,9 +11,9 @@ d KW: did
 d KW: twfe
 d KW: staggered
 d
-d Requires: STATA 16, reghdfe version 5.7.3, ftools
+d Requires: STATA 16, reghdfe version 5.7.3, ftools, gtools
 d
-d Optional packages: gtools, ppmlhdfe
+d Optional packages: ppmlhdfe
 d
 d Distribution-Date: 20240207
 d

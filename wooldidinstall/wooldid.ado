@@ -17,9 +17,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 * Execute update before running main program
   if "`update'" == "update" {
     net install wooldid, from(https://raw.githubusercontent.com/thegland/wooldid/master/wooldidinstall/) replace
-    dis as text "Update complete; exiting wooldid. Other dependencies (reghdfe, ftools, ppmlhdfe (optional), gtools (optional)) must be updated manually if necessary."
+    dis as text "Update complete; exiting wooldid. Other dependencies (reghdfe, ftools, gtools, ppmlhdfe (optional)) must be updated manually if necessary."
     exit
   }
+
+* Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
+* ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
+  local missingpackages
+  foreach requiredpackage in reghdfe ftools gtools {
+    cap which `requiredpackage'
+    if _rc != 0 {
+      dis as error "Error: wooldid requires the package `requiredpackage', which does not appear to be installed."
+      dis as text "To install it, run: ssc install `requiredpackage', replace"
+      local missingpackages `missingpackages' `requiredpackage'
+    }
+  }
+  if "`missingpackages'" != "" error 198
 
   ***************************************************************************************************
   ******************************  Initialize and Process Command Input ******************************
@@ -358,23 +371,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   }
 
 
-  * check if gtools is present and enable program to use it if so
-  local gtoolscheck
-  local gtoolscheck2
-  cap which gtools
-  if _rc == 0{
-    local gtoolscheck g
-    local gtoolscheck2 gstats
-  }
-
-  * object to centering the interactive controls without gstats
-  if "`interactivecontrols'" != "" & "`gtoolscheck2'" != "gstats" {
-    dis as error "Error: the option interactivecontrols() requires that the package gtools be installed. It does not appear to be installed."
-    error 198
-  }
-
-
-
   * process cfxplottypes
   * note that the tests here on what cfxplottypes are allowed are kinda weak in that you can request impractical relative periods (relyrs) and such, but better than no checks
   if "`makecfxplots'" != "" {
@@ -506,7 +502,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * estimability constraints where appropriate.
   * We do this differently depending on if we are using a fixed or an pooled reference period.
 
-  `gtoolscheck2' sum `t' if `ifstatement', meanonly
+  gstats sum `t' if `ifstatement', meanonly
   local maxyearobserved = r(max)
   local minyearobserved = r(min)
   tempvar ttre
@@ -528,12 +524,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * make a variable to drop all i where we see no pre period
     tempvar mint
 
-    if "`gtoolscheck'" == "g" {
-      qui gegen `mint' = min(`t') if `ifstatement', by(`i')
-    }
-    else {
-      qui bysort `i': egen `mint' = min(`t') if `ifstatement'
-    }
+    qui gegen `mint' = min(`t') if `ifstatement', by(`i')
 
 
     * if requesting time trends, figuring the 2nd from the minimum time unit observed for each i
@@ -541,12 +532,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       tempvar mintp1
       tempvar tp1
       qui gen `tp1' = `t' if `t' != `mint'
-      if "`gtoolscheck'" == "g" {
-        qui gegen `mintp1' = min(`tp1' ) if `ifstatement' , by(`i')
-      }
-      else {
-        qui bysort `i': egen `mintp1' = min(`tp1') if `ifstatement'
-      }
+      qui gegen `mintp1' = min(`tp1' ) if `ifstatement' , by(`i')
       qui drop `tp1'
     }
 
@@ -616,8 +602,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       tempvar controlcheck
       tempvar controlcheck2
       qui gen `controlcheck' = `_t' ==. & `ifstatement'
-      if "`gtoolscheck'" == "g" qui gegen `controlcheck2' = max(`controlcheck') if `ifstatement' , by(`t')
-      if "`gtoolscheck'" != "g" qui bysort `t': egen `controlcheck2' = max(`controlcheck') if `ifstatement'
+      qui gegen `controlcheck2' = max(`controlcheck') if `ifstatement' , by(`t')
       qui replace `ifvar'  = 0 if `controlcheck2' == 0
 
       * update _t and ttre
@@ -635,7 +620,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
 
     *get min viable _t and max; set up relative period variable to have no negative values
-    qui `gtoolscheck2' sum `_t' if `ifstatement', meanonly
+    qui gstats sum `_t' if `ifstatement', meanonly
     local min_t = abs(r(min))
     local max_t = r(max) + 1
     qui replace `_t' = `_t' + `min_t' + 1
@@ -678,8 +663,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     tempvar refperiodobserved_temp
     tempvar refperiodobserved
     qui gen `refperiodobserved_temp' = `_t' == `refperiod' if `ifstatement' & `ttre' != .
-    if "`gtoolscheck'" == "g" qui gegen `refperiodobserved' = max(`refperiodobserved_temp') if `ifstatement' & `ttre' != ., by(`i')
-    if "`gtoolscheck'" != "g" qui bysort `i': egen `refperiodobserved' = max(`refperiodobserved_temp') if `ifstatement' & `ttre' != .
+    qui gegen `refperiodobserved' = max(`refperiodobserved_temp') if `ifstatement' & `ttre' != ., by(`i')
     qui drop `refperiodobserved_temp'
     qui replace `ifvar' = 0 if `refperiodobserved' == 0  & `ttre' != .
     * update _t and ttre
@@ -692,8 +676,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       tempvar ttrefperiodobserved_temp
       tempvar ttrefperiodobserved
       qui gen `ttrefperiodobserved_temp' = `_t' == `refperiod' -1 if `ifstatement' & `ttre' != .
-      if "`gtoolscheck'" == "g" qui gegen `ttrefperiodobserved' = max(`ttrefperiodobserved_temp') if `ifstatement' & `ttre' != ., by(`i')
-      if "`gtoolscheck'" != "g" qui bysort `i': egen `ttrefperiodobserved' = max(`ttrefperiodobserved_temp') if `ifstatement' & `ttre' != .
+      qui gegen `ttrefperiodobserved' = max(`ttrefperiodobserved_temp') if `ifstatement' & `ttre' != ., by(`i')
       qui drop `ttrefperiodobserved_temp'
       qui replace `ifvar' = 0 if `ttrefperiodobserved' == 0  & `ttre' != .
     }
@@ -710,8 +693,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       tempvar controlcheck
       tempvar controlcheck2
       qui gen `controlcheck' = `ttre' ==. & `ifstatement'
-      if "`gtoolscheck'" == "g" qui gegen `controlcheck2' = max(`controlcheck') if `ifstatement' , by(`t')
-      if "`gtoolscheck'" != "g" qui bysort `t': egen `controlcheck2' = max(`controlcheck') if `ifstatement'
+      qui gegen `controlcheck2' = max(`controlcheck') if `ifstatement' , by(`t')
       qui replace `ifvar'  = 0 if `controlcheck2' == 0
       if "`safety'" != "off"  {
         cap assert `controlcheck2' != 0
@@ -728,7 +710,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     qui replace `ttre'  = . if `ifvar' == 0
 
     * grab information about range of _t
-    qui `gtoolscheck2' sum `_t' if `ifstatement', meanonly
+    qui gstats sum `_t' if `ifstatement', meanonly
     local min_t = abs(r(min))
     local max_t = r(max) + 1
 
@@ -744,7 +726,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
     * check that there is a real sample in that someone, somewhere, has a pre-period and a post period
     if "`safety'" != "off"   {
-      qui  `gtoolscheck2' sum `_t'  if `ifstatement' & `ttre' != ., meanonly
+      qui  gstats sum `_t'  if `ifstatement' & `ttre' != ., meanonly
       local failure 0
       cap assert r(N) != 0
       if _rc != 0 local failure 1
@@ -802,7 +784,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * while we're at it, figure out how many levels the sg variable takes on during the treatment period - will be useful down the line
 
   if "`subgroups'" != "" {
-    qui `gtoolscheck'levelsof(`subgroups') if `ifstatement' & `t' >= `ttre' , clean local(sglist)
+    qui glevelsof(`subgroups') if `ifstatement' & `t' >= `ttre' , clean local(sglist)
     if wordcount("`sglist'") == 0 {
       dis as error  "Error: subgroups are specified, but contains no values within sample during the treatment period."
       error 459
@@ -914,8 +896,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         * base type needs to be handled special b/c we code this variable with a loop through the grabbed list of percentiles
         * for the others, we just use a percentile generator to create them under the specified conditions
         if "`latticetype'" == "baseTreatedPost" | "`latticetype'" == "baseTreated" | "`latticetype'" == "baseTreatedPre" | "`latticetype'" == "baseTreatedRef" {
-          if "`gtoolscheck'" == "" _pctile `contreat' `latticeweightinserter' if `ifstatement' `xtileif', nquantiles(`latticenum')
-          if "`gtoolscheck'" == "g" gquantiles `contreat' `latticeweightinserter' if `ifstatement' `xtileif', _pctile   nquantiles(`latticenum')
+          gquantiles `contreat' `latticeweightinserter' if `ifstatement' `xtileif', _pctile   nquantiles(`latticenum')
           gen `latticevar' = 1
           forval latticecase = 2(1)`latticenum'{
             local percentiletograb = `latticecase'-1
@@ -923,23 +904,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           }
         }
         else {
-          * the non-gtools path below relies on egen's xtile() (from the user-contributed package egenmore) and egen cannot accept weights
-          if "`gtoolscheck'" == "" & "`latticeweightinserter'" != "" {
-            dis as error "Error: automatically generating a weighted lattice of type `latticetype' requires that the package gtools be installed. It does not appear to be installed."
-            dis as text "Install gtools, specify the option latticeignoreweights to construct the lattice without using weights, use a base-period lattice type (e.g., baseTreated), or pass a pre-made lattice variable to lattice()."
-            error 198
-          }
-          if "`gtoolscheck'" == "" {
-            cap which _gxtile
-            if _rc != 0 {
-              dis as error "Error: automatically generating a lattice of type `latticetype' requires either the package gtools or the egen function xtile() from the package egenmore. Neither appears to be installed. Installing gtools is recommended."
-              error 198
-            }
-          }
-          if "`latticetype'" != "all" & "`gtoolscheck'" == "g" qui gquantiles `latticevar' = `contreat' `latticeweightinserter' if `ifstatement' , xtile nquantiles(`latticenum') by(`byable')
-          if "`latticetype'" != "all" & "`gtoolscheck'" == "" qui bysort `byable': egen `latticevar' = xtile(`contreat'  ) `latticeweightinserter' if `ifstatement' , nquantiles(`latticenum')
-          if "`latticetype'" == "all" & "`gtoolscheck'" == ""  qui egen `latticevar' = xtile(`contreat') `latticeweightinserter' if `ifstatement' ,   nquantiles(`latticenum')
-          if "`latticetype'" == "all" & "`gtoolscheck'" == "g"  qui gquantiles `latticevar' = `contreat' `latticeweightinserter' if `ifstatement' ,   nquantiles(`latticenum') xtile
+          if "`latticetype'" != "all" qui gquantiles `latticevar' = `contreat' `latticeweightinserter' if `ifstatement' , xtile nquantiles(`latticenum') by(`byable')
+          if "`latticetype'" == "all"  qui gquantiles `latticevar' = `contreat' `latticeweightinserter' if `ifstatement' ,   nquantiles(`latticenum') xtile
         }
         qui replace `latticevar' = 0 if `latticevar' == . & `ifstatement'
         * null lattice points are sent to 0
@@ -1209,7 +1175,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * this variable helps count the number of i-t cells that exist in various subsets - useful for att_itime weights
   if "`att_itime'" == "att_itime" {
-    qui `gtoolscheck'egen `tag' = tag(`i' `t') if  `esamp' == 1
+    qui gegen `tag' = tag(`i' `t') if  `esamp' == 1
     qui replace `tag' = 0 if `tag' == .
   }
 
@@ -1219,16 +1185,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * t per i is the total number of periods appearing for i in each posttreatment-defined period
   * in each case, we only make the input if needed for a weight type the user actually requested
   * that said, we always produce w_att_it whenever a non att weight is requested, since they are needed for the event horizon estimates and sometimes for histogram
-  if "`gtoolscheck'" != "g" {
-    if "`att_it'" == "att_it" | "`att_itime'" == "att_itime"  | "`att_i'" == "att_i" qui bysort `i' `t': egen `w_per_it' = total(`esamp' * `w')
-    if "`att_i'" == "att_i"  qui bysort  `i' `posttreatment': egen `w_per_i' = total(`w'*`esamp')
-    if "`att_itime'" == "att_itime" qui bysort  `i' `posttreatment': egen `t_per_i' = total(`tag')
-  }
-  else{
-    if "`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" qui gegen `w_per_it' = total(`esamp' * `w')  , by(`i' `t')
-    if "`att_i'" == "att_i"  qui gegen `w_per_i' = total(`w'*`esamp')      , by(`posttreatment' `i')
-    if "`att_itime'" == "att_itime" qui gegen `t_per_i' = total(`tag')    , by(`posttreatment' `i')
-  }
+  if "`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" qui gegen `w_per_it' = total(`esamp' * `w')  , by(`i' `t')
+  if "`att_i'" == "att_i"  qui gegen `w_per_i' = total(`w'*`esamp')      , by(`posttreatment' `i')
+  if "`att_itime'" == "att_itime" qui gegen `t_per_i' = total(`tag')    , by(`posttreatment' `i')
 
   * att requires no special weights - it gets to stay as the given weight (w), albeit with the customweight text multiplier coming through
   * dividing w by w_per_it weights all i-t cells equally, but still lets w be influential within i-t cells (att_it)
@@ -1430,27 +1389,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     local rownamessum
     if "`contreat'" == "" local sumvarlist y
     if "`contreat'" != "" local sumvarlist y contreat
-    * summarize does not accept pweights (r 101), so on the non-gtools path substitute
-    * aweights for these descriptive computations: the point statistics (mean, median,
-    * percentiles, min, max) are identical under aweights and pweights. the sd differs
-    * only in the finite-sample divisor convention (aweight: N-1 with weights normalized
-    * to sum to N; gstats sum with pweights: sum of weights minus 1), so it is
-    * reconstructed after each call to match what gstats sum reports with pweights,
-    * keeping reported results identical whether or not gtools is installed
-    local sumweightinserter `weightinserter'
-    local sumpwfix 0
-    if "`weight'" == "pweight" & "`gtoolscheck2'" != "gstats" {
-      local sumweightinserter [aweight = `w']
-      local sumpwfix 1
-    }
+    * gstats sum accepts pweights directly, so the regression weights pass through to these descriptive computations unchanged
     foreach sumvar in `sumvarlist' {
       local sumvar2 c
       if "`sumvar'" == "y" local sumvar2 y
-      qui `gtoolscheck2' sum ``sumvar'' `sumweightinserter' if e(sample), detail
+      qui gstats sum ``sumvar'' `weightinserter' if e(sample), detail
       local `sumvar'_mean = r(mean)
       local `sumvar'_med = r(p50)
       local `sumvar'_sd = r(sd)
-      if `sumpwfix' & r(N) > 1 local `sumvar'_sd = sqrt( r(Var) * (r(N)-1)/r(N) * r(sum_w)/(r(sum_w)-1) )
       local `sumvar'_p25 = r(p25)
       local `sumvar'_p75 = r(p75)
       local `sumvar'_iqr = ``sumvar'_p75' - ``sumvar'_p25'
@@ -1460,11 +1406,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
       * do the same in the pre-treatment treated sample
       if "`sumvar'" == "y" | ("`contreatcontrols'" != "untreatedZero" & "`sumvar'" == "contreat") {
-        qui `gtoolscheck2' sum ``sumvar'' `sumweightinserter' if e(sample) & `ttre' <. & `t' < `ttre', detail
+        qui gstats sum ``sumvar'' `weightinserter' if e(sample) & `ttre' <. & `t' < `ttre', detail
         local `sumvar'pre_mean = r(mean)
         local `sumvar'pre_med = r(p50)
         local `sumvar'pre_sd = r(sd)
-        if `sumpwfix' & r(N) > 1 local `sumvar'pre_sd = sqrt( r(Var) * (r(N)-1)/r(N) * r(sum_w)/(r(sum_w)-1) )
         local `sumvar'pre_p25 = r(p25)
         local `sumvar'pre_p75 = r(p75)
         local `sumvar'pre_iqr = ``sumvar'pre_p75' - ``sumvar'pre_p25'
@@ -1474,11 +1419,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       }
 
       * do the same in the post-treatment treated sample
-      qui `gtoolscheck2' sum ``sumvar'' `sumweightinserter' if e(sample) & `ttre' <. & `t' >= `ttre', detail
+      qui gstats sum ``sumvar'' `weightinserter' if e(sample) & `ttre' <. & `t' >= `ttre', detail
       local `sumvar'post_mean = r(mean)
       local `sumvar'post_med = r(p50)
       local `sumvar'post_sd = r(sd)
-      if `sumpwfix' & r(N) > 1 local `sumvar'post_sd = sqrt( r(Var) * (r(N)-1)/r(N) * r(sum_w)/(r(sum_w)-1) )
       local `sumvar'post_p25 = r(p25)
       local `sumvar'post_p75 = r(p75)
       local `sumvar'post_iqr = ``sumvar'post_p75' - ``sumvar'post_p25'
@@ -1488,11 +1432,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
       * do the same in the control group (units never treated in-window: `ttre' == . covers never-treated and out-of-window-treated units)
       if "`contreatwithin'" == "" & ("`sumvar'" == "y" | ("`contreatcontrols'" != "untreatedZero" & "`sumvar'" == "contreat"))  {
-        qui `gtoolscheck2' sum ``sumvar'' `sumweightinserter' if e(sample) & `ttre' == ., detail
+        qui gstats sum ``sumvar'' `weightinserter' if e(sample) & `ttre' == ., detail
         local `sumvar'con_mean = r(mean)
         local `sumvar'con_med = r(p50)
         local `sumvar'con_sd = r(sd)
-        if `sumpwfix' & r(N) > 1 local `sumvar'con_sd = sqrt( r(Var) * (r(N)-1)/r(N) * r(sum_w)/(r(sum_w)-1) )
         local `sumvar'con_p25 = r(p25)
         local `sumvar'con_p75 = r(p75)
         local `sumvar'con_iqr = ``sumvar'con_p75' - ``sumvar'con_p25'
@@ -1672,7 +1615,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       frame create `ibmuframe'
       frame change `ibmuframe'
       qui svmat `ibmucoefs'
-      qui `gtoolscheck2' sum `ibmucoefs'1, meanonly
+      qui gstats sum `ibmucoefs'1, meanonly
       local b = r(mean)
       qui ttest `ibmucoefs'1 == 0
       local se = r(se)
@@ -1703,7 +1646,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         frame create `ibmuframe'
         frame change `ibmuframe'
         qui svmat `ibmucoefs'
-        qui `gtoolscheck2' sum `ibmucoefs'1, meanonly
+        qui gstats sum `ibmucoefs'1, meanonly
         local b = r(mean)
         qui ttest `ibmucoefs'1 == 0
         local se = r(se)
@@ -1778,21 +1721,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             local bign = `bign' + `bignjump'
             qui set obs `bign'
             if "`esfixedbaseperiod'" == "" {
-              qui `gtoolscheck2' sum t, meanonly
+              qui gstats sum t, meanonly
               qui replace b = 0 if b == .
               qui replace t = r(min) - 1 if _n == _N
             }
             else{
               qui replace b = 0 if b == .
               qui gen missingfind = t - t[_n -1]
-              qui `gtoolscheck'levelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
+              qui glevelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
               qui drop missingfind
               if "`skiplocation'" != "" {
                 qui replace t = `skiplocation' - 1 if _n == _N
                 if "`timetrends'" == "timetrends" qui replace t = `skiplocation' - 2 if _n == _N - 1
               }
               else{
-                qui `gtoolscheck2' sum t, meanonly
+                qui gstats sum t, meanonly
                 qui replace t = r(min) -1 if _n == _N
                 if "`timetrends'" == "timetrends" qui replace t = r(min) - 2 if _n == _N - 1
               }
@@ -1816,7 +1759,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             tempname adversarialB_`horizitem'
             matrix `adversarialB_`horizitem''   = e(b)
             qui predict linearproject, xb
-            qui `gtoolscheck'levelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
+            qui glevelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
             local testconstructor
             * this ensures that when projecting forward we etst only the post-treatment period effects
             forval advframe_i = 1(1)`bignorig' {
@@ -1855,7 +1798,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             frame create `ibmuframe'
             frame change `ibmuframe'
             qui svmat `ibmucoefs'
-            qui `gtoolscheck2' sum `ibmucoefs'1, meanonly
+            qui gstats sum `ibmucoefs'1, meanonly
             local b = r(mean)
             qui ttest `ibmucoefs'1 == 0
             local se = r(se)
@@ -1928,7 +1871,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         frame create `ibmuframe'
         frame change `ibmuframe'
         qui svmat `ibmucoefs'
-        qui `gtoolscheck2' sum `ibmucoefs'1, meanonly
+        qui gstats sum `ibmucoefs'1, meanonly
         local b = r(mean)
         qui ttest `ibmucoefs'1 == 0
         local se = r(se)
@@ -1957,7 +1900,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           frame create `ibmuframe'
           frame change `ibmuframe'
           qui svmat `ibmucoefs'
-          qui `gtoolscheck2' sum `ibmucoefs'1, meanonly
+          qui gstats sum `ibmucoefs'1, meanonly
           local b = r(mean)
           qui ttest `ibmucoefs'1 == 0
           local se = r(se)
@@ -2165,21 +2108,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               local bign = `bign' + `bignjump'
               qui set obs `bign'
               if "`esfixedbaseperiod'" == "" {
-                qui `gtoolscheck2' sum t, meanonly
+                qui gstats sum t, meanonly
                 qui replace b = 0 if b == .
                 qui replace t = r(min) - 1 if _n == _N
               }
               else{
                 qui replace b = 0 if b == .
                 qui gen missingfind = t - t[_n -1]
-                qui `gtoolscheck'levelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
+                qui glevelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
                 qui drop missingfind
                 if "`skiplocation'" != "" {
                   qui replace t = `skiplocation' - 1 if _n == _N
                   if "`timetrends'" == "timetrends" qui replace t = `skiplocation' - 2 if _n == _N - 1
                 }
                 else{
-                  qui `gtoolscheck2' sum t, meanonly
+                  qui gstats sum t, meanonly
                   qui replace t = r(min) -1 if _n == _N
                   if "`timetrends'" == "timetrends" qui replace t = r(min) - 2 if _n == _N - 1
                 }
@@ -2201,7 +2144,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               tempname adversarialB_C`horizitem'
               matrix `adversarialB_C`horizitem'' = e(b)
               qui predict linearproject, xb
-              qui `gtoolscheck'levelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
+              qui glevelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
               local testconstructor
 
               forval advframe_i = 1(1)`bignorig' {
@@ -2239,7 +2182,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               frame create `ibmuframe'
               frame change `ibmuframe'
               qui svmat `ibmucoefs'
-              qui `gtoolscheck2' sum `ibmucoefs'1, meanonly
+              qui gstats sum `ibmucoefs'1, meanonly
               local b = r(mean)
               qui ttest `ibmucoefs'1 == 0
               local se = r(se)
@@ -2318,7 +2261,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             frame create `ibmuframe'
             frame change `ibmuframe'
             qui svmat `ibmucoefs'
-            qui `gtoolscheck2' sum `ibmucoefs'1, meanonly
+            qui gstats sum `ibmucoefs'1, meanonly
             local b = r(mean)
             qui ttest `ibmucoefs'1 == 0
             local se = r(se)
@@ -2360,7 +2303,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               frame change `ibmuframe'
               qui svmat `ibmucoefs'
               qui ttest `ibmucoefs'1 == 0
-              qui `gtoolscheck2' sum `ibmucoefs'1, meanonly
+              qui gstats sum `ibmucoefs'1, meanonly
               local b = r(mean)
               qui ttest `ibmucoefs'1 == 0
               local se = r(se)
@@ -2412,7 +2355,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 * when we remove 1.`targetflag', there should be nothing left in names, meaning we need to figure out what the missing _t level is and put it back into names
                 * why not just by default figure out what the correct _t levels are?
                 * this approach requires a levelsof() statement, which can take longer than the text processing for large datasets
-                qui  `gtoolscheck'levelsof(`_t')  if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0, clean local(names)
+                qui  glevelsof(`_t')  if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0, clean local(names)
               }
 
               local relyrbysg
@@ -2472,21 +2415,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   local bign = `bign' + `bignjump'
                   qui set obs `bign'
                   if "`esfixedbaseperiod'" == "" {
-                    qui `gtoolscheck2' sum t, meanonly
+                    qui gstats sum t, meanonly
                     qui replace b = 0 if b == .
                     qui replace t = r(min) - 1 if _n == _N
                   }
                   else{
                     qui replace b = 0 if b == .
                     qui gen missingfind = t - t[_n -1]
-                    qui `gtoolscheck'levelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
+                    qui glevelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
                     qui drop missingfind
                     if "`skiplocation'" != "" {
                       qui replace t = `skiplocation' - 1 if _n == _N
                       if "`timetrends'" == "timetrends" qui replace t = `skiplocation' - 2 if _n == _N - 1
                     }
                     else{
-                      qui `gtoolscheck2' sum t, meanonly
+                      qui gstats sum t, meanonly
                       qui replace t = r(min) -1 if _n == _N
                       if "`timetrends'" == "timetrends" qui replace t = r(min) - 2 if _n == _N - 1
                     }
@@ -2505,7 +2448,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   tempname adversarialB_`horizitem'_s`sgcase'
                   matrix `adversarialB_`horizitem'_s`sgcase'' = e(b)
                   qui predict linearproject, xb
-                  qui `gtoolscheck'levelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
+                  qui glevelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
                   local testconstructor
                   forval advframe_i = 1(1)`bignorig' {
                     local horiztocheck = t[`advframe_i']
@@ -2664,21 +2607,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                     local bign = `bign' + `bignjump'
                     qui set obs `bign'
                     if "`esfixedbaseperiod'" == "" {
-                      qui `gtoolscheck2' sum t, meanonly
+                      qui gstats sum t, meanonly
                       qui replace b = 0 if b == .
                       qui replace t = r(min) - 1 if _n == _N
                     }
                     else{
                       qui replace b = 0 if b == .
                       qui gen missingfind = t - t[_n -1]
-                      qui `gtoolscheck'levelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
+                      qui glevelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
                       qui drop missingfind
                       if "`skiplocation'" != "" {
                         qui replace t = `skiplocation' - 1 if _n == _N
                         if "`timetrends'" == "timetrends" qui replace t = `skiplocation' - 2 if _n == _N - 1
                       }
                       else{
-                        qui `gtoolscheck2' sum t, meanonly
+                        qui gstats sum t, meanonly
                         qui replace t = r(min) -1 if _n == _N
                         if "`timetrends'" == "timetrends" qui replace t = r(min) - 2 if _n == _N - 1
                       }
@@ -2697,7 +2640,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                     tempname adversarialB_C`horizitem'_s`sgcase'
                     matrix `adversarialB_C`horizitem'_s`sgcase'' = e(b)
                     qui predict linearproject, xb
-                    qui `gtoolscheck'levelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
+                    qui glevelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
                     local testconstructor
                     forval advframe_i = 1(1)`bignorig' {
                       local horiztocheck = t[`advframe_i']
@@ -3355,14 +3298,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       qui replace rownamesvar=`"`: word `i' of `names''"' in `i'
     }
     qui drop if relyr == .
-    qui `gtoolscheck'levelsof(rownamesvar), clean local(graphtypes)
+    qui glevelsof(rownamesvar), clean local(graphtypes)
     qui gen postperiod =  relyr >= 0
     keep   postperiod relyr  estimate lb_95ci ub_95ci rownamesvar
 
     * add the pre treatment observation / reference period
     if "`esfixedbaseperiod'" == "" {
       local newN = _N + 1
-      qui `gtoolscheck2' sum relyr, meanonly
+      qui gstats sum relyr, meanonly
       local max = r(max)
       local min = r(min)
       local initialflagt = r(min) - 1
@@ -3381,7 +3324,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
     else{
       local initialflagt `esrelativeto'
-      qui   `gtoolscheck2' sum relyr, meanonly
+      qui   gstats sum relyr, meanonly
       local max = r(max)
       local min = r(min)
       local newN = _N + 1
@@ -3412,7 +3355,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
     local xlineinserter
-    qui   `gtoolscheck2' sum relyr, meanonly
+    qui   gstats sum relyr, meanonly
     if r(min) < 0 local xlineinserter xline(-0.5,   lpattern(dash) lcolor(black))
 
     * inject elasticity info
@@ -3455,14 +3398,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           qui replace rownamesvar=`"`: word `i' of `names''"' in `i'
         }
         qui drop if relyr == .
-        qui `gtoolscheck'levelsof(rownamesvar), clean local(graphtypes)
+        qui glevelsof(rownamesvar), clean local(graphtypes)
         qui gen postperiod =  relyr >= 0
         keep  rownamesvar postperiod relyr  estimate lb_95ci ub_95ci
 
         * add the pre treatment observation
         if "`esfixedbaseperiod'" == "" {
           local newN = _N + 1
-          qui   `gtoolscheck2' sum relyr, meanonly
+          qui   gstats sum relyr, meanonly
           local max = r(max)
           local min = r(min)
           local initialflagt = r(min) - 1
@@ -3481,7 +3424,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         }
         else{
           local initialflagt `esrelativeto'
-          qui   `gtoolscheck2' sum relyr, meanonly
+          qui   gstats sum relyr, meanonly
           local max = r(max)
           local min = r(min)
           local newN = _N + 1
