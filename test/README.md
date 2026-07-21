@@ -37,18 +37,19 @@ new outputs become the baseline: `cp run1/*.csv baseline/` and commit with the f
 
 Notes:
 - Run one battery at a time; each takes a few minutes.
-- The battery is bit-reproducible on the **gtools** path. The non-gtools path has inherent
-  ~1-ulp run-to-run noise from `bysort` tie-breaking (pre-existing; see B10's commit notes),
-  so non-gtools comparisons should use the default tolerance, not `--rtol 0`.
+- The battery is bit-reproducible. (gtools is a hard requirement since `40414c7`; the
+  non-gtools code path — which had inherent ~1-ulp bysort tie-break noise — no longer
+  exists. Comparisons against pre-refactor builds' non-gtools legs need a tolerance.)
 
 ## Build-out roadmap (gaps the campaign identified)
 1. **Plot-path configs.** The battery never ran `makeplots`/`makecfxplots`/`histogramcohorteffects`,
    yet the cfx matrices are e() returns — a cfx config would have caught B7's truncation
    directly. Add: a continuous `makecfxplots` + `makecfxplotsbysg` config and a binary
    `makeplots` + `histogramcohorteffects` config (`set graphics off` for speed).
-2. **A gtools-neutralized leg.** B13/B14 lived only on the untested non-gtools path. Add a
-   variant run that loads a copy of the ado with `cap which gtools` redirected (one sed line),
-   compared with the default tolerance per the noise note above.
+2. **A dependency-check negative leg.** (Replaced the old gtools-neutralized leg: since
+   `40414c7` gtools is mandatory and the non-gtools path is gone.) Add a variant run that
+   loads a copy of the ado with a package renamed in the entry check's foreach list and
+   asserts the informative r(198) missing-package error fires.
 3. **A drop-inducing config with documented expected values.** The current datasets produce no
    estimator drops, so B10-class weight-semantics changes are invisible here. Add a config with
    an `fe()` singleton cascade whose correct (post-B10) values are pinned in the baseline.

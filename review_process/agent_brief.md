@@ -47,12 +47,14 @@ B1–B23 campaign, updated with the process rules adopted 2026-07-21.
 - **Use the tested harness template** at `review_process/harness_template.do` (copy it into
   your working directory) instead of writing dump/compare machinery from scratch — past
   agents lost hours to self-inflicted harness bugs.
-- Installed packages: reghdfe, ppmlhdfe, ftools, gtools, boottest, honestdid, `_gxtile`
-  (egenmore itself NOT installed). gtools presence switches wooldid code paths
-  (`gtoolscheck`): to exercise the NON-gtools path, redirect detection in your COPY
-  (`sed 's/cap which gtools/cap which gtools_neutralized/'`) — never in the repo.
-  Note: the non-gtools path is run-to-run non-bit-reproducible (~1 ulp bysort tie-break
-  noise); compare it with a relative tolerance, or fix `set sortseed` for determinism.
+- Installed packages: reghdfe, ppmlhdfe, ftools, gtools, boottest, honestdid.
+  Since commit `40414c7`, gtools is a HARD requirement: there is no non-gtools code path
+  anymore; wooldid checks reghdfe/ftools/gtools at entry and exits r(198) if any is
+  missing. To test that dependency check, rename a package inside the check's foreach
+  list in your COPY (never in the repo) and confirm the informative error fires.
+  (Historical note: pre-40414c7 builds had dual paths; the old non-gtools path was
+  run-to-run non-bit-reproducible, so comparisons against pre-refactor builds' non-gtools
+  legs need a relative tolerance.)
 - Deterministic data: `set seed` AND `set sortseed` before generation.
 
 ## Coverage discipline

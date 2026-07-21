@@ -75,7 +75,7 @@ coordinator (Claude) owns this checklist; agents follow `agent_brief.md`.
 ## Standing environment facts
 - Stata binary: `"/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp" -e do file.do`
   (the PATH symlink is broken). Compute cap: 6 concurrent Stata instances total.
-- The non-gtools path is not bit-reproducible run-to-run (bysort tie-breaks, ~1 ulp);
-  compare it with tolerance or under a fixed sortseed.
+- gtools is a hard requirement since `40414c7`; the non-gtools code path no longer
+  exists. The old D11 "gtools-neutralized" leg is now a dependency-check negative test.
 - Author's edge-case calibration: realistic messy data and option combinations matter;
   deliberately absurd inputs don't — except name-length (32-char) hazards, which are real.

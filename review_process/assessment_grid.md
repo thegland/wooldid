@@ -56,8 +56,10 @@ mixes) | cfxplotnose | cfxlattice(varname) | saveplots(). Run with `set graphics
 **D10. Misc options**: safety(off) | oostreatedcontrols(>0) | verbose | cleanmatrices |
 oldsyntax | poisexpresults | semielasticity | regtol.
 
-**D11. Environment**: gtools active (default) | gtools-neutralized copy (compare with
-tolerance; see brief) | back-to-back runs in one session (stale-state bugs — B7, B12, B19).
+**D11. Environment**: gtools active (the only supported path since `40414c7` made gtools
+a hard requirement) | dependency-check negative test (a COPY with a package renamed in
+the entry check's list must error r(198) informatively) | back-to-back runs in one
+session (stale-state bugs — B7, B12, B19).
 
 **D12. Data shape** — use `test/data/dta_path_*.dta` (built by `test/mkpathological.do`)
 or construct equivalents:
