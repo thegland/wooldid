@@ -223,23 +223,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * extract contreatcontrol type and error out if misspecifeid
   if "`contreatcontrols'" != "" {
-    local numbase 0
     foreach word in `contreatcontrols' {
       if inlist("`word'",  "byTreated", "byTtre", "byCohort", "byTime") == 0 & inlist("`word'","basic","untreatedZero") == 0 {
         dis as error  "Error: continuous treatment control type misspecified; `word' is not a valid continuous treatment control type."
         error 198
       }
-      if strpos("`word'","base") != 0 local ++numbase
-    }
-    if `numbase' > 1  {
-      dis as error "Error: cannot specify more than one base[]ByTime control set."
-      error 198
     }
     if strpos("`contreatcontrols'","untreatedZero") != 0 & wordcount("`contreatcontrols'") > 1 {
       dis as error "Error: untreatedZero cannot be paired with other control types"
       error 198
     }
-
   }
 
   * error out if no contreatcontrol type is specified in a continuous treatment scenario
@@ -482,8 +475,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * normally, it is ok to have missing values in the sg variable -- we only produce estimates for flagged sg groups
   * not so if using sg to do a triple diff - here, missing values actually are an issue
-  cap assert `subgroups' >= 0
-  foreach mustbenonmissingvar in `checkclus'  `loopablecontrols' `ccc_absorb' `customweightmultiplier' `contreat' `checklattice' `includesg'  `interactivecontrols' {
+  * that said, we aren't really implementing that at this time
+  foreach mustbenonmissingvar in `checkclus'  `loopablecontrols' `ccc_absorb' `customweightmultiplier' `contreat' `checklattice'   `interactivecontrols' {
     qui replace `ifvar' = 0 if `mustbenonmissingvar' >= .
   }
 
@@ -1759,7 +1752,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             tempname adversarialB_`horizitem'
             matrix `adversarialB_`horizitem''   = e(b)
             qui predict linearproject, xb
-            qui glevelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
             local testconstructor
             * this ensures that when projecting forward we etst only the post-treatment period effects
             forval advframe_i = 1(1)`bignorig' {
@@ -2144,7 +2136,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               tempname adversarialB_C`horizitem'
               matrix `adversarialB_C`horizitem'' = e(b)
               qui predict linearproject, xb
-              qui glevelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
               local testconstructor
 
               forval advframe_i = 1(1)`bignorig' {
@@ -2302,7 +2293,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               frame create `ibmuframe'
               frame change `ibmuframe'
               qui svmat `ibmucoefs'
-              qui ttest `ibmucoefs'1 == 0
               qui gstats sum `ibmucoefs'1, meanonly
               local b = r(mean)
               qui ttest `ibmucoefs'1 == 0
@@ -2448,7 +2438,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   tempname adversarialB_`horizitem'_s`sgcase'
                   matrix `adversarialB_`horizitem'_s`sgcase'' = e(b)
                   qui predict linearproject, xb
-                  qui glevelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
                   local testconstructor
                   forval advframe_i = 1(1)`bignorig' {
                     local horiztocheck = t[`advframe_i']
@@ -2640,7 +2629,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                     tempname adversarialB_C`horizitem'_s`sgcase'
                     matrix `adversarialB_C`horizitem'_s`sgcase'' = e(b)
                     qui predict linearproject, xb
-                    qui glevelsof(t) if _n <= _N - `bignjump', clean local(adversarialhlist)
                     local testconstructor
                     forval advframe_i = 1(1)`bignorig' {
                       local horiztocheck = t[`advframe_i']
@@ -2900,8 +2888,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
         * if horizon estimates are to be produced, present them here
         if `espre' + `espl'  > 0 {
-          local sgnumhoriz_start = (`sgnum'-1)*(`horizoncount'-`horizonstarter'+1)+1
-          local sgnumhoriz_end= `sgnum'*(`horizoncount'-`horizonstarter'+1)
           if "`att'" == "att" {
             matrix `wdid_sg`sgcase'' = `wdid_sg`sgcase'' \ `___att_horiz_s`sgcase''
             matrix drop `___att_horiz_s`sgcase''
