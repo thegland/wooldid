@@ -181,7 +181,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
 
     local latticenum = word("`lattice'",2)
-    if "`latticenum'" == "1" {
+    * validate by VALUE, not spelling: every downstream quantile engine accepts
+    * integer-valued spellings like 02, +2, 2.0, and 1e2, so a confirm-integer-number
+    * spelling check would reject inputs that work; conversely gquantiles silently
+    * remaps nquantiles <= 0 to its default (and forval builds a degenerate no-op
+    * lattice), so 0/negatives must be caught here by value. missing-evaluating
+    * tokens fail confirm number or the mod() test (mod(., 1) != 0 is true)
+    cap confirm number `latticenum'
+    if _rc != 0 {
+      dis as error "Error: lattice incorrectly specified; `latticenum' is not a valid number of lattice quantiles. lattice() requires a valid lattice type and an integer number of quantiles, or a pre-made lattice variable."
+      error 198
+    }
+    if mod(`latticenum',1) != 0 {
+      dis as error "Error: lattice incorrectly specified; the number of lattice quantiles (`latticenum') must be an integer."
+      error 198
+    }
+    if `latticenum' <= 1 {
       dis as error "Error: lattice incorrectly specified; latticenum must be > 1 or else the lattice does not permit additional variation relative to not specifying a lattice at all."
       error 198
     }
