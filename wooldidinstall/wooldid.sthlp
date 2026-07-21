@@ -375,7 +375,9 @@ For the {it:att_i} and {it:att_itime} concepts, {it:att_it} type results will be
 
 {phang}{opt sub:groups()}: Specifies the subgroup (SG) variable, whose levels specify subgroups for which {it:wooldid} will compute subgroup specific estimates.
 The SG variable must consist of non-negative integer values (or missing values) and its levels must specify collections of cohorts i. For estimates to be valid, a given cohort i cannot
-be split across multiple subgroups. Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations.   {p_end}
+be split across multiple subgroups. Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations. Because subgroup values are
+embedded in the names of stored results and plots, values 8 or more digits long can hit Stata's 31/32-character name limits and crash some option combinations with r(198); recode
+ID-style subgroup codes to small integers first (e.g., {cmd:egen newsg = group(oldsg)}).   {p_end}
 
 {phang}{opt suppress:sgprimaryeffects}: Skips estimation of subgroup-specific treatment effects and computes only the differences in effects between SGs. This option should
 speed estimation if these treatment effects are not otherwise of interest. {p_end}

@@ -805,17 +805,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * long subgroup values overflow stata's 31/32-character name limits when embedded in
     * constructed local/matrix/rowname/graph/e() names (the worst prefixes reach 24-25
     * characters: the makecfxplotsbysg tempnames, the adversarial-by-sg ereturns, and the
-    * pooled pretreatment_SG<value>_att_itime rownames all crash at 8-digit values), and
-    * values beyond 2,147,483,647 exceed the factor-variable level cap that margins over()
-    * relies on. whether a given run crashes depends on the options requested, so this is
-    * a caution rather than an error. the sglist domain matches the checks above: only
-    * values reaching the treated estimation sample are ever injected into names
+    * pooled pretreatment_SG<value>_att_itime rownames all crash at 8-digit values; the
+    * bysg tempnames also embed the relative year, so with 3-digit relyr plot requests
+    * even 7-digit values overflow), and values beyond 2,147,483,647 exceed the
+    * factor-variable level cap that margins over() relies on. whether a given run
+    * crashes depends on the options requested, so this is a caution rather than an
+    * error. the sglist domain matches the checks above: only values reaching the
+    * treated estimation sample are ever injected into names
     local sgmaxlen 0
     foreach sgcase in `sglist' {
       if strlen("`sgcase'") > `sgmaxlen' local sgmaxlen = strlen("`sgcase'")
     }
-    if `sgmaxlen' >= 8 {
-      dis as text "Caution: the subgroup variable takes values up to `sgmaxlen' digits long. wooldid embeds subgroup values in the names of stored results, matrices, and plots, and Stata caps such names at 31-32 characters, so values 8 or more digits long can sometimes cause unexplained r(198) invalid-name crashes (att_itime results tables, adversarial, and makecfxplotsbysg are most exposed). Values above 2,147,483,647 will generally fail outright at Stata's factor-variable level cap."
+    if `sgmaxlen' >= 8 | (`sgmaxlen' == 7 & "`makecfxplotsbysg'" != "") {
+      dis as text "Caution: the subgroup variable takes values up to `sgmaxlen' digits long. wooldid embeds subgroup values in the names of stored results, matrices, and plots, and Stata caps such names at 31-32 characters, so values 8 or more digits long (7, with makecfxplotsbysg and 3-digit relative-year plot requests) can sometimes cause unexplained r(198) invalid-name crashes; att_itime results tables, adversarial, and makecfxplotsbysg are most exposed. Values above 2,147,483,647 will generally fail outright at Stata's factor-variable level cap."
       dis as text "If wooldid crashes, recode ID-style subgroup values to small integers first (e.g., egen newsg = group(oldsg))."
     }
     * initialize these for later
