@@ -387,6 +387,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         dis as error "Valid cfxplottypes() entries are post, pre, and/or integers specifying relative time periods."
         error 198
       }
+      * a leading + is a natural way to write positive relative years (+2, matching -2), but
+      * the raw token is later embedded in matrix names, where + is an invalid character;
+      * strip it so +2 means 2 (and the post-loop dedup then also collapses +2 with 2)
+      if substr("`item'",1,1) == "+" local item = substr("`item'",2,.)
       if "`esfixedbaseperiod'" == "" | `item' != `esrelativeto' {
         cap if int(`item')==`item' & `item' >= 0 & (`item' <= `espostlength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
         cap if int(`item')==`item' & `item' < 0 & (abs(`item') <= `esprelength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
