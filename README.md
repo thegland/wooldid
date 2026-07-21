@@ -31,6 +31,7 @@ or
   ```
  net install wooldid, from(https://raw.githubusercontent.com/thegland/wooldid/master/wooldidinstall/) replace
   ```
+Note: _wooldid_ requires _reghdfe_, _ftools_, and _gtools_ as dependencies. For poisson estimation, it also benefits from _ppmlhdfe_.
 
 &nbsp;
     
