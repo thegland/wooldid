@@ -39,6 +39,8 @@ def _selftest():
         got = hex2f(s)
         assert isinstance(got, float) and abs(got - want) <= 1e-300 + 1e-15 * abs(want), (s, got, want)
     assert hex2f(".") == "." and hex2f(".a") == ".a"
+    assert not close(1.0, 1.0 + 1e-13, 0), "rtol 0 must reject sub-1e-12 diffs (bit-exactness)"
+    assert close(1.0, 1.0 + 1e-13, 1e-9) and close(0.0, 0.0, 0)
 
 def load(path):
     d = {"scalar": {}, "macro": {}, "mat": {}, "matnames": {}, "rc": None, "varlist": None}
@@ -66,6 +68,8 @@ def close(a, b, rtol):
         return a == b
     if a == b:
         return True
+    if rtol == 0:
+        return False  # --rtol 0 means bit-exact: no absolute-difference floor either
     return abs(a - b) <= rtol * max(abs(a), abs(b), 1e-300) or abs(a - b) < 1e-12
 
 def main():
