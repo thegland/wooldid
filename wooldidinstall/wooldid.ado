@@ -388,6 +388,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         cap if int(`item')==`item' & `item' < 0 & (abs(`item') <= `esprelength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
       }
     }
+    * a repeated relyr entry would build the same result matrix twice; the final ereturn loop
+    * moves (not copies) each matrix, so the duplicate's second pass dies r(111). list uniq
+    * preserves first-occurrence order, so duplicate-free input is untouched
+    local cfxrelyrlist : list uniq cfxrelyrlist
     if "`cfxrelyrlist'" != "" local cfxrelyr 1
   }
 
