@@ -450,7 +450,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   qui replace `ifvar' =  0 if `i' >= . | `t' >= . | `y' >= . | `w' >= .  | `w' <= 0
 
   * sanitize controls passed that may contain factor variable notation
-  local loopablecontorls
+  local loopablecontrols
   foreach factorvarspossible in fe controls coarsecohortcontrols      {
     local processtemp ``factorvarspossible''
     local processtemp = subinstr("`processtemp'","#"," ",.)
@@ -1602,7 +1602,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * initialize some times
   local joint_horiz_i
   local joint_Choriz_i
-  local pretlist
 
   * do not calculate traditional SEs if producing Ibragimov and Muller style p-values
   if "`impvalues'" != "" local marginsdof nose

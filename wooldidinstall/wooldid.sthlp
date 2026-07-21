@@ -41,8 +41,7 @@ and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
 {help wooldid##bugs:Bugs and Assistance}, {help wooldid##citations:Citations}, {help wooldid##author:Author Info and How to Cite}, {help wooldid##disclaimer:Disclaimer} {p_end}
 
 {pstd}{ul:Dependencies:} {cmd:wooldid} requires users have STATA 16 or higher installed, {help reghdfe} version 5.7.3, {help ftools} (for {it:reghdfe}),
-and (optionally, for speed) {help gtools}. Poisson estimation also requires the package {help ppmlhdfe}. Automatically generating a lattice variable of a type other than the base-period types
-(see {it:lattice()}) requires either {help gtools} or the {it:xtile()} egen function from the package {it:egenmore}, and requires {help gtools} if sample weights are to be used when constructing the lattice. {p_end}
+and {help gtools}. Poisson estimation also requires the package {help ppmlhdfe}. {p_end}
 
 {pstd}{ul:Github Link:} {browse "https://github.com/thegland/wooldid/"} - the command {it:wooldid, update} will cause this program to update itself using the materials
 at this link. {p_end}
@@ -416,8 +415,7 @@ periods for which a control cohort is not present.   {p_end}
 allowed to vary, even within cohort-periods and within the reference period. If just the name of a variable is passed to {it:lattice()}, this variable will be used as the lattice variable.
 If instead a lattice type and a lattice number are passed, this option will generate a lattice variable using {it:latticenum} quantiles, with the quantiles being formed within groups
 according to the {it:latticetype} (see below). Any specified sample weights will be used when constructing the lattice, unless the option {it:latticeignoreweights} is specified (which
-constructs the lattice quantiles without using weights). Note that automatically generating a lattice of a type other than the base-period types ({it:baseTreated}, {it:baseTreatedPost},
-{it:baseTreatedPre}, {it:baseTreatedRef}) requires {help gtools} when sample weights are used, and requires either {help gtools} or the package {it:egenmore} when unweighted.
+constructs the lattice quantiles without using weights). 
 If {it:lattice} is not specified, {it:wooldid} will proceed without
 using a lattice variable (as though you specified a lattice variable that is always 1). {p_end}
 
@@ -657,7 +655,7 @@ from the underlying regression estimator, wherever available. {p_end}
 {pstd} In addition to these objects returned in e(), if saveplots() is specified, a dataset containing the information used to produce event study plots along with .gph files containing
 all graphs generated will be saved to a file with your specified name in STATA's working directory. {p_end}
 
-{pstd} If the option {it:verbose} is specified, the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called {it:___wdidfullmodel}, which can be
+{pstd} If the option {it:verbose} is specified, the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called {it:___wooldidfullmodel}, which can be
 accessed using standard {it:estimates restore} type syntax. {p_end}
 
 {pstd} {ul:Tips for accessing output and remaking graphs:} Use the {it:matlist} command to print the contents of one of {it:wooldid}'s output matrices. To convert one of {it:wooldid}'s 
