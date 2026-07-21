@@ -17,6 +17,12 @@ runs therefore detects *any* change in returned results, down to the last bit.
   startup. Use `--rtol 0` for strict bit-exactness.
 - `baseline/` — the committed reference outputs (as of commit `8d7bd01` / doc follow-up
   `42f2293`, 2026-07-20, gtools active, Stata 19.0 MP).
+- `mkpathological.do` — builds `data/dta_path_*.dta`, the pathological data shapes used by
+  the coverage grid (`review_process/assessment_grid.md`, dimension D12): no never-treated
+  units, no controls, cohorts lacking pre-/post-periods, missing relative years, single-obs
+  ttre-year cells, deeply imbalanced panels with an fe() singleton inducer, poisson
+  separation. Each shape's baseline wooldid behavior is recorded in the grid. These are for
+  targeted/wave testing; they are not yet battery configs (roadmap item 3).
 
 ## Usage
 ```bash
