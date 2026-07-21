@@ -929,15 +929,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * that is to say, when we control for the continuous treatment variable outside of the treated/pre-treated observations, we don't want that to contribute to treatment effect estimation
     * we can do that by creating a ringer variable that is equal to contreat but with a different name, or by pushing stuff into the absorb() command
     * we handle requests for contreat polynomials using c.#c. interactions so that the polynomial terms are legible to margins; we don't care about doing so for the ringer variable though
+    * the ringer copies must be double: gen defaults to float, and a float-truncated copy of a
+    * double contreat is only approximately collinear with it, weakening the engineered
+    * collinearity drop that keeps the base effect out of the margins-visible terms
     tempvar ringer
-    qui gen `ringer' = `contreat'
+    qui gen double `ringer' = `contreat'
     local contreatpolypart c.`contreat'
     local ringerpoly c.(`ringer'
       if `contreatpoly' > 1 {
         forval polycount = 2(1)`contreatpoly' {
           local contreatpolypart `contreatpolypart'##c.`contreat'
           tempvar ringer`polycount'
-          qui gen `ringer`polycount'' = `ringer'^`polycount'
+          qui gen double `ringer`polycount'' = `ringer'^`polycount'
           local ringerpoly `ringerpoly' `ringer`polycount''
         }
       }
@@ -976,7 +979,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     local iter 1
     foreach intercon in `interactivecontrols' {
       tempvar ic`iter'
-      qui gen `ic`iter'' = `intercon'
+      qui gen double `ic`iter'' = `intercon'
       local interlist `interlist' `ic`iter''
       local ++iter
     }
@@ -1201,27 +1204,27 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   *        weights every i-t cell equally when contributing to estimates of i-specific effects, which are themselves then averaged
 
   if "`att_i'" == "att_i" {
-    qui gen `w_att_i' = `w' `customweighttext'/`w_per_i'
+    qui gen double `w_att_i' = `w' `customweighttext'/`w_per_i'
     qui replace `w_att_i' = 0 if `w_att_i' == .
     qui drop `w_per_i'
     qui drop  `posttreatment'
   }
 
   if "`att_itime'" == "att_itime" {
-    qui gen `w_att_itime' = `w' `customweighttext' /(`w_per_it'*`t_per_i')
+    qui gen double `w_att_itime' = `w' `customweighttext' /(`w_per_it'*`t_per_i')
     qui replace `w_att_itime' = 0 if `w_att_itime' == .
     qui drop `tag' `t_per_i'
     qui cap drop  `posttreatment'
   }
 
   if "`att_it'" == "att_it" | "`att_itime'" == "att_itime"  | "`att_i'" == "att_i" {
-    qui gen `w_att_it' = `w' `customweighttext'/`w_per_it'
+    qui gen double `w_att_it' = `w' `customweighttext'/`w_per_it'
     qui replace `w_att_it' = 0 if `w_att_it' == .
     qui drop `w_per_it'
   }
 
   * generate w_att whenever att is requested
-  if "`att'" == "att" qui gen `w_att' = `w' `customweighttext'
+  if "`att'" == "att" qui gen double `w_att' = `w' `customweighttext'
 
   * some comments on the weights:
   * provided each i is always wholly contained in a given sg, we have no issues using these weights for sg purposes
