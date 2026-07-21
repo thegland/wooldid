@@ -15,8 +15,8 @@ runs therefore detects *any* change in returned results, down to the last bit.
   Parses `%21x` (hex mantissa **and hex exponent**) and compares numerically with a relative
   tolerance; missing-value sentinels and unparseable strings compare exactly. Self-tests on
   startup. Use `--rtol 0` for strict bit-exactness.
-- `baseline/` — the committed reference outputs (as of commit `8d7bd01` / doc follow-up
-  `42f2293`, 2026-07-20, gtools active, Stata 19.0 MP).
+- `baseline/` — the committed reference outputs (as of commit `3cb0c41` — the B21
+  gen-double re-bless, 2026-07-21; gtools active, Stata 19.0 MP).
 - `mkpathological.do` — builds `data/dta_path_*.dta`, the pathological data shapes used by
   the coverage grid (`review_process/assessment_grid.md`, dimension D12): no never-treated
   units, no controls, cohorts lacking pre-/post-periods, missing relative years, single-obs
