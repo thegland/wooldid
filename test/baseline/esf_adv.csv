@@ -12,7 +12,7 @@ scalar|r2_withinadj|+1.96cd05071f3fdX-003
 scalar|rmse|+1.0519a995312caX-001
 scalar|rss|+1.4bd65e9d9a68eX+006
 scalar|N_dropped|+0.0000000000000X-3ff
-scalar|adversarial_pval_att|+1.842be458d396cX-020
+scalar|adversarial_pval_att|+1.842beab2bdb17X-020
 macro|cmd|wooldid
 macro|estimate_type|fixed_reference_period
 macro|cmdline|y i t ttre, att cluster(i) esprelength(3) espostlength(3) esfixedbaseperiod esrelativeto(-2) adversarial
@@ -150,5 +150,5 @@ mat|wdidmainresults|8|5|+1.d36eb7aa9ba27X-002
 mat|wdidmainresults|8|6|+1.0725284870fbaX+000
 mat|wdidmainresults|8|7|+1.0000000000000X+001
 matnames|adversarial_line_att|1x2|y1|t _cons
-mat|adversarial_line_att|1|1|+1.5808d876db6dcX-003
-mat|adversarial_line_att|1|2|-1.06362b4924925X+000
+mat|adversarial_line_att|1|1|+1.5808d87098235X-003
+mat|adversarial_line_att|1|2|-1.06362b4a54d8fX+000

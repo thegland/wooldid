@@ -1526,7 +1526,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       tempname wooldidframe
       frame create `wooldidframe'
       frame change `wooldidframe'
-      qui svmat `___hist'
+      qui svmat double `___hist'
       rename `___hist'1 att_i
       if "`contreat'" != "" rename `___hist'2 ame_i
       local bininserter
@@ -1557,7 +1557,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       tempname wooldidframe
       frame create `wooldidframe'
       frame change `wooldidframe'
-      qui svmat `___hist2'
+      qui svmat double `___hist2'
       rename `___hist2'1 att_itime
       if "`contreat'" != "" rename `___hist2'2 ame_itime
       local bininserter
@@ -1628,7 +1628,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       matrix `ibmucoefs' =  r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
       frame create `ibmuframe'
       frame change `ibmuframe'
-      qui svmat `ibmucoefs'
+      qui svmat double `ibmucoefs'
       qui gstats sum `ibmucoefs'1, meanonly
       local b = r(mean)
       qui ttest `ibmucoefs'1 == 0
@@ -1659,7 +1659,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         matrix `ibmucoefs' =  r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
         frame create `ibmuframe'
         frame change `ibmuframe'
-        qui svmat `ibmucoefs'
+        qui svmat double `ibmucoefs'
         qui gstats sum `ibmucoefs'1, meanonly
         local b = r(mean)
         qui ttest `ibmucoefs'1 == 0
@@ -1717,7 +1717,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             matrix `pretrendregmat' = `pretrendregmat''
             frame create `adversarialframe'
             frame change `adversarialframe'
-            qui svmat `pretrendregmat'
+            qui svmat double `pretrendregmat'
             qui rename `pretrendregmat'1 b
             qui gen t = .
             local bignorig = _N
@@ -1772,7 +1772,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             qui reg b t `altadv_restrict'
             tempname adversarialB_`horizitem'
             matrix `adversarialB_`horizitem''   = e(b)
-            qui predict linearproject, xb
+            qui predict double linearproject, xb
             local testconstructor
             * this ensures that when projecting forward we etst only the post-treatment period effects
             forval advframe_i = 1(1)`bignorig' {
@@ -1810,7 +1810,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             matrix `ibmucoefs' =  r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
             frame create `ibmuframe'
             frame change `ibmuframe'
-            qui svmat `ibmucoefs'
+            qui svmat double `ibmucoefs'
             qui gstats sum `ibmucoefs'1, meanonly
             local b = r(mean)
             qui ttest `ibmucoefs'1 == 0
@@ -1883,7 +1883,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         matrix `ibmucoefs' =  r(b)[1, 1..`=colsof(r(b))']'
         frame create `ibmuframe'
         frame change `ibmuframe'
-        qui svmat `ibmucoefs'
+        qui svmat double `ibmucoefs'
         qui gstats sum `ibmucoefs'1, meanonly
         local b = r(mean)
         qui ttest `ibmucoefs'1 == 0
@@ -1912,7 +1912,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           matrix `ibmucoefs' =  r(b)[1, 1..`=colsof(r(b))']'
           frame create `ibmuframe'
           frame change `ibmuframe'
-          qui svmat `ibmucoefs'
+          qui svmat double `ibmucoefs'
           qui gstats sum `ibmucoefs'1, meanonly
           local b = r(mean)
           qui ttest `ibmucoefs'1 == 0
@@ -2106,7 +2106,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               matrix `pretrendregmat' = `pretrendregmat''
               frame create `adversarialframe'
               frame change `adversarialframe'
-              qui svmat `pretrendregmat'
+              qui svmat double `pretrendregmat'
               qui rename `pretrendregmat'1 b
               qui gen t = .
               local bignorig = _N
@@ -2156,7 +2156,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               qui reg b t `altadv_restrict'
               tempname adversarialB_C`horizitem'
               matrix `adversarialB_C`horizitem'' = e(b)
-              qui predict linearproject, xb
+              qui predict double linearproject, xb
               local testconstructor
 
               forval advframe_i = 1(1)`bignorig' {
@@ -2193,7 +2193,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               matrix `ibmucoefs' =  r(b)[1, 1..`=colsof(r(b))']'
               frame create `ibmuframe'
               frame change `ibmuframe'
-              qui svmat `ibmucoefs'
+              qui svmat double `ibmucoefs'
               qui gstats sum `ibmucoefs'1, meanonly
               local b = r(mean)
               qui ttest `ibmucoefs'1 == 0
@@ -2272,7 +2272,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             matrix `ibmucoefs' =  r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
             frame create `ibmuframe'
             frame change `ibmuframe'
-            qui svmat `ibmucoefs'
+            qui svmat double `ibmucoefs'
             qui gstats sum `ibmucoefs'1, meanonly
             local b = r(mean)
             qui ttest `ibmucoefs'1 == 0
@@ -2313,7 +2313,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               matrix `ibmucoefs' =  r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
               frame create `ibmuframe'
               frame change `ibmuframe'
-              qui svmat `ibmucoefs'
+              qui svmat double `ibmucoefs'
               qui gstats sum `ibmucoefs'1, meanonly
               local b = r(mean)
               qui ttest `ibmucoefs'1 == 0
@@ -2411,7 +2411,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   matrix `pretrendregmat' = `pretrendregmat''
                   frame create `adversarialframe'
                   frame change `adversarialframe'
-                  qui svmat `pretrendregmat'
+                  qui svmat double `pretrendregmat'
                   qui rename `pretrendregmat'1 b
                   qui gen t = .
                   local bignorig = _N
@@ -2458,7 +2458,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   qui reg b t  `altadv_restrict'
                   tempname adversarialB_`horizitem'_s`sgcase'
                   matrix `adversarialB_`horizitem'_s`sgcase'' = e(b)
-                  qui predict linearproject, xb
+                  qui predict double linearproject, xb
                   local testconstructor
                   forval advframe_i = 1(1)`bignorig' {
                     local horiztocheck = t[`advframe_i']
@@ -2602,7 +2602,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                     matrix `pretrendregmat' = `pretrendregmat''
                     frame create `adversarialframe'
                     frame change `adversarialframe'
-                    qui svmat `pretrendregmat'
+                    qui svmat double `pretrendregmat'
                     qui rename `pretrendregmat'1 b
                     qui gen t = .
                     local bignorig = _N
@@ -2649,7 +2649,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                     qui reg b t  `altadv_restrict'
                     tempname adversarialB_C`horizitem'_s`sgcase'
                     matrix `adversarialB_C`horizitem'_s`sgcase'' = e(b)
-                    qui predict linearproject, xb
+                    qui predict double linearproject, xb
                     local testconstructor
                     forval advframe_i = 1(1)`bignorig' {
                       local horiztocheck = t[`advframe_i']
@@ -3298,7 +3298,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     tempname __wooldidframe
     frame create `__wooldidframe'
     frame change `__wooldidframe'
-    qui svmat `wdidpooled', names(col)
+    qui svmat double `wdidpooled', names(col)
     qui gen rownamesvar = ""
     local names : roweq `wdidpooled'
     forvalues i=1/`: word count `names'' {
@@ -3391,7 +3391,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * repeat by SG if appropriate
     if "`subgroups'" != "" & "`suppresssgprimaryeffects'" == "" {
       foreach sgcase in `sglist' {
-        qui svmat `wdid_sg`sgcase'', names(col)
+        qui svmat double `wdid_sg`sgcase'', names(col)
         qui gen rownamesvar = ""
         local names : roweq `wdid_sg`sgcase''
         forvalues i=1/`: word count `names'' {
