@@ -79,7 +79,7 @@ detectable:
 | cohort missing specific relative years — incl. relyr −1 (the default reference) and a mid-window post gap | `dta_path_relyrgap` | horizon construction, reference-period fallbacks, ES plots, adversarial line; try esfixedbaseperiod variants | 0 (pooled ref) |
 | exactly 1 observation per ttre-year cell (single-unit cohorts) | `dta_path_onepercell` | cell-weight denominators, singleton drops, clustering with few clusters | 0 |
 | deeply imbalanced panel (units span 2–12 periods) + an fe() singleton-inducing variable | `dta_path_imbalanced` | e(sample) shrinkage (B10 class — `fe(extraFE)` drops 2 obs), ragged horizons | 0 |
-| poisson separation (all-zero count cells/units) | `dta_path_sep` | ppmlhdfe drops, count models | 0 linear; **322** under poisson (wooldid's own dropped-dummy guard — expected) |
+| poisson separation (all-zero count cells/units) | `dta_path_sep` | ppmlhdfe drops, count models | 0 linear; **322** under poisson with outcome `ycount` (wooldid's own dropped-dummy guard — expected); outcome `y` instead hits the negative-value screen first, r(411) |
 | extended missings (.a–.z) sprinkled per user variable | build ad hoc | input screens (B9 class) | — |
 | calendar gaps (years absent from the panel entirely) | build ad hoc | `_t` construction, mint/maxt logic | — |
 
