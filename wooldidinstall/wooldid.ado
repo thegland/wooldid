@@ -1601,7 +1601,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   local joint_Choriz_i
 
   * do not calculate traditional SEs if producing Ibragimov and Muller style p-values
-  if "`impvalues'" != "" local marginsdof nose
+  if "`impvalues'" != "" {
+    local marginsdof nose
+    * --- IM (Ibragimov-Muller) degeneracy guard: shared tolerance + one-time caution flag ---
+    * consumed by all six IM ttest sites. a collapsed cross-cluster spread (per-cluster estimates
+    * numerically identical, e.g. noiseless/deterministic data) makes the IM SE not identified;
+    * detect on the reported SE relative to the estimate (ttest returns r(se)/r(sd_1), NOT r(sd)),
+    * strict relative only -- an absolute floor would false-fire on structural-zero estimands
+    local imdegtol_rel = 1e-10
+    local imdegwarned
+    local imdegmsg "Caution: for one or more Ibragimov-Muller estimates the per-cluster estimates were numerically identical, so the cross-cluster (IM) standard error is not identified; wooldid has set the standard error, test statistic, p-value, and 95% confidence interval to missing for the affected estimate(s) while retaining the point estimate. A collapsed IM standard error usually reflects deterministic or noiseless data - please verify your input if this was not expected."
+  }
 
 
   * loop through requested estimate types - basically just different weights
@@ -1633,9 +1643,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       local b = r(mean)
       qui ttest `ibmucoefs'1 == 0
       local se = r(se)
+      local imt = r(t)
+      local imp = r(p)
       local im_ll = `b' + invt(r(df_t),.025)*`se'
       local im_ul = `b' - invt(r(df_t),.025)*`se'
-      matrix `___`item'' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
+      if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
+        local se .
+        local imt .
+        local imp .
+        local im_ll .
+        local im_ul .
+        if "`imdegwarned'" == "" {
+          dis as text "`imdegmsg'"
+          local imdegwarned 1
+        }
+      }
+      matrix `___`item'' = (`b',`se', `imt', `imp', `im_ll', `im_ul')
       frame change `defaultframe'
       frame drop `ibmuframe'
       matrix drop `ibmucoefs'
@@ -1664,9 +1687,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         local b = r(mean)
         qui ttest `ibmucoefs'1 == 0
         local se = r(se)
+        local imt = r(t)
+        local imp = r(p)
         local im_ll = `b' + invt(r(df_t),.025)*`se'
         local im_ul = `b' - invt(r(df_t),.025)*`se'
-        matrix `___`item'_pre' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
+        if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
+          local se .
+          local imt .
+          local imp .
+          local im_ll .
+          local im_ul .
+          if "`imdegwarned'" == "" {
+            dis as text "`imdegmsg'"
+            local imdegwarned 1
+          }
+        }
+        matrix `___`item'_pre' = (`b',`se', `imt', `imp', `im_ll', `im_ul')
         frame change `defaultframe'
         frame drop `ibmuframe'
         matrix drop `ibmucoefs'
@@ -1815,10 +1851,23 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             local b = r(mean)
             qui ttest `ibmucoefs'1 == 0
             local se = r(se)
+            local imt = r(t)
+            local imp = r(p)
             local im_ll = `b' + invt(r(df_t),.025)*`se'
             local im_ul = `b' - invt(r(df_t),.025)*`se'
-            if `currenthoriz' == 1 matrix `horizhold' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
-            if `currenthoriz' >1  matrix `horizhold' = `horizhold' \ (`b',`se', r(t), r(p), `im_ll', `im_ul')
+            if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
+              local se .
+              local imt .
+              local imp .
+              local im_ll .
+              local im_ul .
+              if "`imdegwarned'" == "" {
+                dis as text "`imdegmsg'"
+                local imdegwarned 1
+              }
+            }
+            if `currenthoriz' == 1 matrix `horizhold' = (`b',`se', `imt', `imp', `im_ll', `im_ul')
+            if `currenthoriz' >1  matrix `horizhold' = `horizhold' \ (`b',`se', `imt', `imp', `im_ll', `im_ul')
             frame change `defaultframe'
             frame drop `ibmuframe'
             local ++currenthoriz
@@ -1888,9 +1937,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         local b = r(mean)
         qui ttest `ibmucoefs'1 == 0
         local se = r(se)
+        local imt = r(t)
+        local imp = r(p)
         local im_ll = `b' + invt(r(df_t),.025)*`se'
         local im_ul = `b' - invt(r(df_t),.025)*`se'
-        matrix `___C`item'' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
+        if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
+          local se .
+          local imt .
+          local imp .
+          local im_ll .
+          local im_ul .
+          if "`imdegwarned'" == "" {
+            dis as text "`imdegmsg'"
+            local imdegwarned 1
+          }
+        }
+        matrix `___C`item'' = (`b',`se', `imt', `imp', `im_ll', `im_ul')
         frame change `defaultframe'
         frame drop `ibmuframe'
         matrix drop `ibmucoefs'
@@ -1917,9 +1979,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           local b = r(mean)
           qui ttest `ibmucoefs'1 == 0
           local se = r(se)
+          local imt = r(t)
+          local imp = r(p)
           local im_ll = `b' + invt(r(df_t),.025)*`se'
           local im_ul = `b' - invt(r(df_t),.025)*`se'
-          matrix `___C`item'_pre' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
+          if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
+            local se .
+            local imt .
+            local imp .
+            local im_ll .
+            local im_ul .
+            if "`imdegwarned'" == "" {
+              dis as text "`imdegmsg'"
+              local imdegwarned 1
+            }
+          }
+          matrix `___C`item'_pre' = (`b',`se', `imt', `imp', `im_ll', `im_ul')
           frame change `defaultframe'
           frame drop `ibmuframe'
           matrix drop `ibmucoefs'
@@ -2198,10 +2273,23 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               local b = r(mean)
               qui ttest `ibmucoefs'1 == 0
               local se = r(se)
+              local imt = r(t)
+              local imp = r(p)
               local im_ll = `b' + invt(r(df_t),.025)*`se'
               local im_ul = `b' - invt(r(df_t),.025)*`se'
-              if `currenthoriz' == 1 matrix `horizhold' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
-              if `currenthoriz' >1  matrix `horizhold' = `horizhold' \ (`b',`se', r(t), r(p), `im_ll', `im_ul')
+              if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
+                local se .
+                local imt .
+                local imp .
+                local im_ll .
+                local im_ul .
+                if "`imdegwarned'" == "" {
+                  dis as text "`imdegmsg'"
+                  local imdegwarned 1
+                }
+              }
+              if `currenthoriz' == 1 matrix `horizhold' = (`b',`se', `imt', `imp', `im_ll', `im_ul')
+              if `currenthoriz' >1  matrix `horizhold' = `horizhold' \ (`b',`se', `imt', `imp', `im_ll', `im_ul')
               frame change `defaultframe'
               frame drop `ibmuframe'
               local ++currenthoriz
