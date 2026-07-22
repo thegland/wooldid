@@ -2895,7 +2895,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 if "`truerow'" == "" local sghaspre no
               }
               else{
-                local trurerow
+                local truerow
               }
             }
 
