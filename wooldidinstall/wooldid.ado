@@ -247,6 +247,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     error 198
   }
 
+  * error out if a lattice is requested without a continuous treatment - the lattice-construction
+  * code all sits inside the contreat block, so the option would otherwise be silently ignored
+  if "`lattice'" != "" & "`contreat'" == "" {
+    dis as error "Error: lattice() has no effect without contreat(); specify a continuous treatment variable or remove the lattice() option."
+    error 198
+  }
+
  * issue warnings pertaining to cfxplot types
   if "`makecfxplots'" != "" & ("`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" )   {
     if "`safety'" == "off" {
