@@ -27,6 +27,10 @@ program define addcommon
 end
 
 * ---- dta_path_nonever: staggered onsets, NO never-treated units --------------
+* wooldid INTENTIONALLY rejects this design (r459) unless safety(off) is used with a
+* continuous treatment; for binary designs, truncate the sample window so the
+* latest-treated cohorts become never-treated within the window. this dataset exists
+* to verify the rejection stays informative, not to be made to run.
 clear
 set seed 20260721
 set sortseed 20260721

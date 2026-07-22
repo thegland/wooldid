@@ -72,7 +72,7 @@ detectable:
 |---|---|---|---|
 | well-behaved balanced staggered panel | `test/data/dta_binary`, `dta_cont` | reference / bit-identity | 0 |
 | tiny panel | `dta_tiny` | small-sample paths | 0 |
-| no never-treated units (staggered-only identification) | `dta_path_nonever` | control-group construction, `ttre == .` logic | **459** — errors even though not-yet-treated controls exist mid-sample; see the below-the-line observation logged 2026-07-21 |
+| no never-treated units (staggered-only identification) | `dta_path_nonever` | control-group construction, `ttre == .` logic | **459 BY DESIGN** — wooldid intentionally does not support designs with no never-treated units, except via safety(off) with a continuous treatment design (author ruling, 2026-07-22). For binary designs the author's guidance is to truncate the sample window so the latest-treated cohort(s) fall outside it and become never-treated within the window (the error's "modify the sample window manually" hint). Do NOT file the r(459) here as a bug; this shape exists to verify the rejection stays informative |
 | no controls at all (every unit treated, same onset) | `dta_path_nocontrols` | the no-sample/estimability error paths — must fail informatively, not crash | 459 (informative, as intended) |
 | cohort with no pre-period (treated at first sample period) | `dta_path_nopre` | reference-period selection, estimability screens | 0 |
 | cohort with no post-period (onset after sample end) | `dta_path_nopost` | out-of-sample-treatment handling, oostreatedcontrols interaction | 0 |
