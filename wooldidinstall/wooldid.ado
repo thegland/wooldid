@@ -639,7 +639,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
     * produce modified identifiers _i
     * _i is unit identifiers that are positive integers if i is ever treated in sample and 0 otherwise
-    qui gen `_i' = `i' if  `_t' > 0 & `_t' < . & `ifstatement'
+    qui gen double `_i' = `i' if  `_t' > 0 & `_t' < . & `ifstatement'
     qui replace `_i' = 0 if `_i' == . & `ifstatement'
 
     local espl = min(`max_t',`espostlength')
@@ -748,7 +748,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
     * produce modified identifiers
     * _i is unit identifiers that are positive integers if i is ever treated in sample and 0 otherwise
-    qui gen `_i' = `i' if  `_t' > 0 & `_t' < . & `ifstatement'
+    qui gen double `_i' = `i' if  `_t' > 0 & `_t' < . & `ifstatement'
     qui replace `_i' = 0 if `_i' == . & `ifstatement'
 
 
