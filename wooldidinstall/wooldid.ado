@@ -1688,7 +1688,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           matrix `___`horizitem'_horiz' = ( r(table)[1..6, `matrixstartgrab'..`=colsof(r(b))']',`relyrcolumn')
           if "`postinject'" == "post" qui est sto __marginsmodel
 
-          * this implements the f test that all points are well explained by a single line fit on the pre-period, constrained to run through 0
+          * this implements the f test that all points are well explained by a single line fit on the pre-period coefficients
           * the finaladvtest is for the adversarial test being estimable - mainly just an issue w/ SGs later. sometimes we have enough coefs to do the
           *     test overall, but not in a particular sg. since this is the overall section, if it triggers badly here, call off adversarial as a whole
           *     threshold of 2 here b/c that corresponds w/ 1 coef (targetflag==0 will get dummy columns )
@@ -3359,13 +3359,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if r(min) < 0 local xlineinserter xline(-0.5,   lpattern(dash) lcolor(black))
 
     * inject elasticity info
-    if "`semielasticity'" == "eydx" local elasinj Treatment Effects Presented as Semi-elasticities
-    if "`contreatelasticitytype'" != "dydx" & "`elasinj'" != "" local elasinj `elasinj',
-    if "`contreatelasticitytype'" == "eyex" local elasinj `elasinj' Marginal Treatment Effects Presented as Elasticities
-    if "`contreatelasticitytype'" == "eydx" local elasinj `elasinj' Marginal Treatment Effects Presented as Semi-elasticities (eydx)
-    if "`contreatelasticitytype'" == "dyex" local elasinj `elasinj' Marginal Treatment Effects Presented as Semi-elasticities (dyex)
-
-
     local elasinj Effects
     if "`semielasticity'" == "eydx" local elasinj "Semi-elasticities"
     local elasinj2 Effects

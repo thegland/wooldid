@@ -561,8 +561,10 @@ in conjunction with the option {it:contreatcontrols(basic)}, or any option other
 
 {phang}{opt update}: If specified, the command {it:wooldid,} {it:update} will update your local installation of {it:wooldid} based on the most recent edition of the program available on github. {p_end}
 
-{phang}{opt customw:eightmultiplier(varname)}: When computing various treatment effects using the margins calculation (see step 2 {help wooldid##description:here}), this variable is used to
-weight the observations (or if a weight would already be used, that weight is multiplied by this variable). This allows production of certain bespoke types of treatment effects. {p_end}
+{phang}{opt customw:eightmultiplier(varname)}: When computing various treatment effects using the margins calculation (see step 2 {help wooldid##description:here}), the weights normally 
+used to produce the requested type of treatment effect (ATT, ATT_i, etc.) will be multiplied by this variable. When requesting an ATT without specifying sample weights, this is 
+equivalent to estimating all regressions without weights, but then using these weights when averaging treatment effects to obtain the ATT. This allows production of certain 
+bespoke types of treatment effects. {p_end}
 
 {phang}{opt clean:matrices}: If specified, {it:wooldid} will clear out all matrices storied in STATA's main memory and in mata. Occasionally, {it:wooldid} enters a state where it repeatedly
 crashes for difficult to determine reasons (relating to {it:reghdfe} crashing and leaving certain content in mata). Doing this can sometimes recover {it:wooldid} from this problem. {p_end}
