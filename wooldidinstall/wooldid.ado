@@ -2260,35 +2260,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           local matrixstartgrab floor(`=colsof(r(b))'/2)+1
           matrix `___`item'_s' = r(table)[1..6,`matrixstartgrab'..`=colsof(r(b))']'
         }
-        * this handles the impvalues, though there is reason for suspicion about these depending on how cohorts and clusters interrelate
-        if "`impvalues'" == "impvalues" {
-          local iter 1
-          tempname sgimpmat
-          foreach sgcase in `sglist' {
-            qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre' & `subgroups' == `sgcase') noestimcheck `poismarginstext' nose over(`cluster')
-            tempname ibmucoefs
-            tempname ibmuframe
-            local matrixstartgrab floor(`=colsof(r(b))'/2)+1
-            matrix `ibmucoefs' =  r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
-            frame create `ibmuframe'
-            frame change `ibmuframe'
-            qui svmat double `ibmucoefs'
-            qui gstats sum `ibmucoefs'1, meanonly
-            local b = r(mean)
-            qui ttest `ibmucoefs'1 == 0
-            local se = r(se)
-            local im_ll = `b' + invt(r(df_t),.025)*`se'
-            local im_ul = `b' - invt(r(df_t),.025)*`se'
-            if `iter'==1 matrix `sgimpmat' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
-            if `iter'>1 matrix `sgimpmat' = `sgimpmat' \ (`b',`se', r(t), r(p), `im_ll', `im_ul')
-            frame change `defaultframe'
-            frame drop `ibmuframe'
-            local ++iter
-            matrix drop `ibmucoefs'
-          }
-          matrix `___`item'_s' =   `sgimpmat'
-          matrix drop `sgimpmat'
-        }
 
 
         * pretreatment effects
@@ -2302,34 +2273,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             matrix `___`item'_pre_s' = r(table)[1..6,`matrixstartgrab'..`=colsof(r(b))']'
           }
 
-          if "`impvalues'" == "impvalues" {
-            local iter 1
-            tempname sgimpmat
-            foreach sgcase in `sglist' {
-              qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `subgroups' == `sgcase') noestimcheck `poismarginstext' nose over(`cluster')
-              tempname ibmucoefs
-              tempname ibmuframe
-              local matrixstartgrab floor(`=colsof(r(b))'/2)+1
-              matrix `ibmucoefs' =  r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
-              frame create `ibmuframe'
-              frame change `ibmuframe'
-              qui svmat double `ibmucoefs'
-              qui gstats sum `ibmucoefs'1, meanonly
-              local b = r(mean)
-              qui ttest `ibmucoefs'1 == 0
-              local se = r(se)
-              local im_ll = `b' + invt(r(df_t),.025)*`se'
-              local im_ul = `b' - invt(r(df_t),.025)*`se'
-              if `iter'==1 matrix `sgimpmat' = (`b',`se', r(t), r(p), `im_ll', `im_ul')
-              if `iter'>1 matrix `sgimpmat' = `sgimpmat' \ (`b',`se', r(t), r(p), `im_ll', `im_ul')
-              frame change `defaultframe'
-              frame drop `ibmuframe'
-              local ++iter
-              matrix drop `ibmucoefs'
-            }
-            matrix `___`item'_pre_s' =  `sgimpmat'
-            matrix drop `sgimpmat'
-          }
         }
 
         * effects by horizon for sgs
