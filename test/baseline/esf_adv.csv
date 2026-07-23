@@ -1,6 +1,7 @@
 rc|0
 varlist|i ttre sg ife t w eff y ycount
 scalar|df_r|+1.3c00000000000X+006
+scalar|numpre_att|+1.8000000000000X+001
 scalar|N|+1.e000000000000X+009
 scalar|Nclus|+1.4000000000000X+006
 scalar|ll|-1.75b9014af7dcaX+007
@@ -152,3 +153,47 @@ mat|wdidmainresults|8|7|+1.0000000000000X+001
 matnames|adversarial_line_att|1x2|y1|t _cons
 mat|adversarial_line_att|1|1|+1.5808d87098235X-003
 mat|adversarial_line_att|1|2|-1.06362b4a54d8fX+000
+matnames|V_es_att|6x6|pre4 pre3 pre1 post0 post1 post2|pre4 pre3 pre1 post0 post1 post2
+mat|V_es_att|1|1|+1.55cfcff9f0b08X-006
+mat|V_es_att|1|2|+1.a35eebfeff07eX-008
+mat|V_es_att|1|3|+1.10c37208e8564X-006
+mat|V_es_att|1|4|+1.d75c78464e302X-008
+mat|V_es_att|1|5|+1.c95cfaeb372faX-009
+mat|V_es_att|1|6|+1.0551f2afc1faaX-007
+mat|V_es_att|2|1|+1.a35eebfeff082X-008
+mat|V_es_att|2|2|+1.d297021b6824cX-007
+mat|V_es_att|2|3|+1.e2cb23e4fb024X-008
+mat|V_es_att|2|4|+1.836c019f6809bX-007
+mat|V_es_att|2|5|+1.2441ce2a0c6f0X-008
+mat|V_es_att|2|6|+1.0613822bb759fX-007
+mat|V_es_att|3|1|+1.10c37208e8567X-006
+mat|V_es_att|3|2|+1.e2cb23e4fb027X-008
+mat|V_es_att|3|3|+1.5a537875ddd36X-006
+mat|V_es_att|3|4|+1.3946c500c403dX-007
+mat|V_es_att|3|5|+1.6b4444a1f38bdX-009
+mat|V_es_att|3|6|+1.bb56bc60ebfb4X-007
+mat|V_es_att|4|1|+1.d75c78464e301X-008
+mat|V_es_att|4|2|+1.836c019f6809dX-007
+mat|V_es_att|4|3|+1.3946c500c4038X-007
+mat|V_es_att|4|4|+1.149ca360de3adX-006
+mat|V_es_att|4|5|+1.a9a02e09b68d1X-009
+mat|V_es_att|4|6|+1.3e9a7a58fbc2bX-007
+mat|V_es_att|5|1|+1.c95cfaeb372ffX-009
+mat|V_es_att|5|2|+1.2441ce2a0c6efX-008
+mat|V_es_att|5|3|+1.6b4444a1f38c2X-009
+mat|V_es_att|5|4|+1.a9a02e09b68d0X-009
+mat|V_es_att|5|5|+1.23386a865f286X-007
+mat|V_es_att|5|6|+1.038776ac66809X-00a
+mat|V_es_att|6|1|+1.0551f2afc1faaX-007
+mat|V_es_att|6|2|+1.0613822bb759eX-007
+mat|V_es_att|6|3|+1.bb56bc60ebfb5X-007
+mat|V_es_att|6|4|+1.3e9a7a58fbc2bX-007
+mat|V_es_att|6|5|+1.038776ac66801X-00a
+mat|V_es_att|6|6|+1.5196ec57bb840X-006
+matnames|b_es_att|1x6|r1|pre4 pre3 pre1 post0 post1 post2
+mat|b_es_att|1|1|-1.15515ebae1500X-004
+mat|b_es_att|1|2|+1.f4a9df8369d00X-005
+mat|b_es_att|1|3|-1.f1b3ed9555620X-004
+mat|b_es_att|1|4|+1.b3633a0792c60X-001
+mat|b_es_att|1|5|+1.8bb7736ed3a04X-001
+mat|b_es_att|1|6|+1.7c00d63317e44X-001

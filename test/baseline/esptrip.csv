@@ -1,6 +1,9 @@
 rc|0
 varlist|i ttre sg ife t w eff y ycount
 scalar|df_r|+1.3c00000000000X+006
+scalar|numpre_att|+1.0000000000000X+001
+scalar|numpre_att_s1|+1.0000000000000X+001
+scalar|numpre_att_s2|+1.0000000000000X+001
 scalar|N|+1.e000000000000X+009
 scalar|Nclus|+1.4000000000000X+006
 scalar|ll|-1.90e8fddbf9e3aX+008
@@ -277,3 +280,27 @@ mat|pwsgs|2|3|-1.e53bfb6763b2fX+003
 mat|pwsgs|2|4|+1.0268e3349abdfX-051
 mat|pwsgs|2|5|-1.40c5397fe381dX-004
 mat|pwsgs|2|6|-1.eca8e1aabed47X-005
+matnames|V_es_att_s2|2x2|pre2 pre1|pre2 pre1
+mat|V_es_att_s2|1|1|+1.6ab7e815e0c18X-008
+mat|V_es_att_s2|1|2|+1.28c477efdf54aX-00a
+mat|V_es_att_s2|2|1|+1.28c477efdf549X-00a
+mat|V_es_att_s2|2|2|+1.bbab1656d839eX-008
+matnames|b_es_att_s2|1x2|r1|pre2 pre1
+mat|b_es_att_s2|1|1|-1.46cc8f82e2d00X-005
+mat|b_es_att_s2|1|2|-1.eea77b71628c0X-004
+matnames|V_es_att_s1|2x2|pre2 pre1|pre2 pre1
+mat|V_es_att_s1|1|1|+1.76dbb8871f02eX-008
+mat|V_es_att_s1|1|2|+1.1b0b301ca4a54X-00a
+mat|V_es_att_s1|2|1|+1.1b0b301ca4a53X-00a
+mat|V_es_att_s1|2|2|+1.bde56ab057145X-008
+matnames|b_es_att_s1|1x2|r1|pre2 pre1
+mat|b_es_att_s1|1|1|+1.cc7c1715fdd00X-007
+mat|b_es_att_s1|1|2|-1.29073780a1840X-005
+matnames|V_es_att|2x2|pre2 pre1|pre2 pre1
+mat|V_es_att|1|1|+1.7003f119f47cfX-008
+mat|V_es_att|1|2|+1.21d5ebf351d37X-00a
+mat|V_es_att|2|1|+1.21d5ebf351d3aX-00a
+mat|V_es_att|2|2|+1.bc3968970b865X-008
+matnames|b_es_att|1x2|r1|pre2 pre1
+mat|b_es_att|1|1|-1.a75b137ac6b00X-007
+mat|b_es_att|1|2|-1.41958b98d9a60X-004

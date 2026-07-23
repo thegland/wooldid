@@ -617,6 +617,10 @@ primary results has not been suppressed.{p_end}
 
 {synopt:{it:e(pwsgs)}} Pairwise differences between the subgroup-specific treatment effects, if subgroups are used.{p_end}
 
+{synopt:{it:e(b_es_{it:type})}, {it:e(V_es_{it:type})}} The event study coefficient vector and its {ul:full} variance-covariance matrix (carrying genuine off-diagonal covariances, unlike {it:e(V)}), relative-period-labeled as {it:pre#}/{it:post#} with the reference period omitted. Returned per estimand type: {it:att} (binary) and, with {cmd:contreat()}, {it:ame}, plus {it:att_it} / {it:ame_it} for the {it:att_it}, {it:att_i}, and {it:att_itime} estimands (which share a single event-study horizon internally). With {cmd:subgroups()}, per-subgroup versions {it:e(b_es_{it:type}_s{it:sgcase})} / {it:e(V_es_{it:type}_s{it:sgcase})} are returned as well. These matrices are valid inputs for {it:honestdid} (Rambachan-Roth robustness), and — after {it:ereturn post} — for {it:lincom} and {it:test}. They are not returned when a valid variance-covariance matrix is unavailable (e.g. under {cmd:impvalues}, or when the event-study standard errors are not identified).{p_end}
+
+{synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods (relative year < 0) in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument.{p_end}
+
 {pstd} In addition to these core results, the following materials are also returned in e(): {p_end}
 {synopt: Joint Tests by Horizon} Joint tests for the statistical significance of pre-treatment relative time period-specific event study effects are presented in the scalars e(joint_horiz)
 (ATT), e(joint_horiz_i) (ATT_i), e(joint_Choriz) (AME; continuous treatments only), and e(joint_Choriz_i) (AME_i; continuous treatments only). {p_end}
@@ -675,7 +679,7 @@ to represent the missing reference period. {p_end}
 {pstd} {ul:Incompatible Post-Estimation Commands:} {it:lincom}, {it:test}, and all other post-estimation commands that rely on receiving a valid variance-covariance matrix from
 an estimator. While {it:wooldid} does return a coefficient vector ({it:e(b)}) and a variance-covariance matrix ({it:e(V)}), these are for display purposes only. The variance-covariance
 matrix has all off-diagonal elements set to 0, meaning that while {it:esttab} and the like will present correct estimates using these inputs, efforts to combine or otherwise test different
-estimates will not, in general, yield valid results {p_end}
+estimates will not, in general, yield valid results. This limitation applies to the summary {it:e(b)}/{it:e(V)}; the event-study coefficients are additionally returned with a genuine full variance-covariance matrix in {it:e(b_es_{it:type})} / {it:e(V_es_{it:type})} (see Stored Results), and {it:lincom}, {it:test}, and {it:honestdid} {ul:are} valid when applied to those. For {it:lincom}/{it:test}, first repost the event study with {it:ereturn post e(b_es_{it:type}) e(V_es_{it:type})}. {p_end}
 
 
 
@@ -755,6 +759,16 @@ period 2 periods before treatment):{p_end}
 by period), controlling for the continuous treatment variable by treatment group and by time period, with continuous treatment effects plots for the pre-treatment period:{p_end}
 
 {p 10 10}   {cmd:wooldid y i t ttre, contreat(contreatvar) contreatcontrols(byTreated byTime) makecfxplot lattice(byTreatedByTime 5) cfxplottypes(pre))}
+
+{phang}10) Event study followed by a Rambachan & Roth (2023) HonestDiD pre-trends sensitivity analysis, using the full event-study variance-covariance matrix wooldid returns. (Requires the {stata ssc install honestdid:honestdid} package. A fixed reference period is recommended so the reference is a single omitted period.):{p_end}
+
+{p 10 10}   {cmd:wooldid y i t ttre, att espre(4) espost(4) esfixedbaseperiod}
+
+{p 10 10}   {cmd:matrix b = e(b_es_att)}
+
+{p 10 10}   {cmd:matrix V = e(V_es_att)}
+
+{p 10 10}   {cmd:honestdid, numpre(`=e(numpre_att)') b(b) vcov(V) delta(rm) mvec(0.5(0.5)2)}
 
 
 

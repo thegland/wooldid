@@ -1729,6 +1729,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `_t' >= `horizonstarter' & `_t' <= `horizonend' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof' `postinject'
           local matrixstartgrab = floor(`=colsof(r(b))'/2)+1
           matrix `___`horizitem'_horiz' = ( r(table)[1..6, `matrixstartgrab'..`=colsof(r(b))']',`relyrcolumn')
+          * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
+          if "`marginsdof'" != "nose" {
+            tempname f2bmat f2vmat
+            matrix `f2bmat' = r(b)[1, `matrixstartgrab'..`=colsof(r(b))']
+            matrix `f2vmat' = r(V)[`matrixstartgrab'..`=colsof(r(b))', `matrixstartgrab'..`=colsof(r(b))']
+            local f2k `horizitem'
+            local f2b_`f2k' `f2bmat'
+            local f2v_`f2k' `f2vmat'
+            local f2keys `f2keys' `f2k'
+            local f2rl_`f2k'
+            forval f2ri = 1/`=rowsof(`relyrcolumn')' {
+              local f2rv = `relyrcolumn'[`f2ri',1]
+              if `f2rv' < 0  local f2rl_`f2k' `f2rl_`f2k'' pre`=abs(`f2rv')'
+              else          local f2rl_`f2k' `f2rl_`f2k'' post`f2rv'
+            }
+          }
           if "`postinject'" == "post" qui est sto __marginsmodel
 
           * this implements the f test that all points are well explained by a single line fit on the pre-period coefficients
@@ -2160,6 +2176,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           if "`impvalues'" == "" {
             qui  margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof' `postinject'
             matrix `___C`horizitem'_horiz' = (r(table)[1..6, 1..`=colsof(r(b))']',`relyrcolumn')
+            * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
+            if "`marginsdof'" != "nose" {
+              tempname f2bmat f2vmat
+              matrix `f2bmat' = r(b)[1, 1..`=colsof(r(b))']
+              matrix `f2vmat' = r(V)[1..`=colsof(r(b))', 1..`=colsof(r(b))']
+              local f2k = cond("`horizitem'"=="att","ame","ame_it")
+              local f2b_`f2k' `f2bmat'
+              local f2v_`f2k' `f2vmat'
+              local f2keys `f2keys' `f2k'
+              local f2rl_`f2k'
+              forval f2ri = 1/`=rowsof(`relyrcolumn')' {
+                local f2rv = `relyrcolumn'[`f2ri',1]
+                if `f2rv' < 0  local f2rl_`f2k' `f2rl_`f2k'' pre`=abs(`f2rv')'
+                else          local f2rl_`f2k' `f2rl_`f2k'' post`f2rv'
+              }
+            }
             if "`postinject'" == "post" qui est sto __marginsmodel
 
             * this implements the f test that all points are well explained by a single line fit on the pre-period, constrained to run through 0
@@ -2379,6 +2411,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               local matrixstartgrab = floor(`=colsof(r(b))'/2)+1
               tempname ___`horizitem'_horiz_s`sgcase'
               matrix `___`horizitem'_horiz_s`sgcase'' =  r(table)[1..6, `matrixstartgrab'..`=colsof(r(b))']'
+              * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
+              if "`marginsdof'" != "nose" {
+                tempname f2bmat f2vmat
+                matrix `f2bmat' = r(b)[1, `matrixstartgrab'..`=colsof(r(b))']
+                matrix `f2vmat' = r(V)[`matrixstartgrab'..`=colsof(r(b))', `matrixstartgrab'..`=colsof(r(b))']
+                local f2k `horizitem'_s`sgcase'
+                local f2b_`f2k' `f2bmat'
+                local f2v_`f2k' `f2vmat'
+                local f2keys `f2keys' `f2k'
+              }
               *the above will be udpated w/ rownames / relyrs by the below
 
               * SGs need not have the same number of relative periods appear for each
@@ -2421,6 +2463,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               tempname relyrcolumn_s`sgcase'
               matrix `relyrcolumn_s`sgcase'' = (`relyrbysg')'
               matrix `___`horizitem'_horiz_s`sgcase'' = ( `___`horizitem'_horiz_s`sgcase'',`relyrcolumn_s`sgcase'')
+              local f2rl_`horizitem'_s`sgcase'
+              forval f2ri = 1/`=rowsof(`relyrcolumn_s`sgcase'')' {
+                local f2rv = `relyrcolumn_s`sgcase''[`f2ri',1]
+                if `f2rv' < 0  local f2rl_`horizitem'_s`sgcase' `f2rl_`horizitem'_s`sgcase'' pre`=abs(`f2rv')'
+                else          local f2rl_`horizitem'_s`sgcase' `f2rl_`horizitem'_s`sgcase'' post`f2rv'
+              }
 
               * we construct relyrcolumn_s`sgcase' because not all sgs have all relyrs, necessarily
 
@@ -2623,6 +2671,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 qui margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof' `postinject'
                 tempname ___`horizitem'_Choriz_s`sgcase'
                 matrix `___`horizitem'_Choriz_s`sgcase'' = ( r(table)[1..6, 1..`=colsof(r(b))']',`relyrcolumn_s`sgcase'')
+                * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
+                if "`marginsdof'" != "nose" {
+                  tempname f2bmat f2vmat
+                  matrix `f2bmat' = r(b)[1, 1..`=colsof(r(b))']
+                  matrix `f2vmat' = r(V)[1..`=colsof(r(b))', 1..`=colsof(r(b))']
+                  local f2k = cond("`horizitem'"=="att","ame","ame_it") + "_s`sgcase'"
+                  local f2b_`f2k' `f2bmat'
+                  local f2v_`f2k' `f2vmat'
+                  local f2keys `f2keys' `f2k'
+                  local f2rl_`f2k'
+                  forval f2ri = 1/`=rowsof(`relyrcolumn_s`sgcase'')' {
+                    local f2rv = `relyrcolumn_s`sgcase''[`f2ri',1]
+                    if `f2rv' < 0  local f2rl_`f2k' `f2rl_`f2k'' pre`=abs(`f2rv')'
+                    else          local f2rl_`f2k' `f2rl_`f2k'' post`f2rv'
+                  }
+                }
                 * handle the adversarial pre-trends test
                 if "`postinject'" == "post" qui est sto __marginsmodel
 
@@ -3106,6 +3170,35 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
   * return the command line input and estimate_type
+  * F2: expose captured event-study b/V (honestdid/lincom/test compatible) [pure-add, after post]
+  foreach f2ky of local f2keys {
+    local f2bm `f2b_`f2ky''
+    local f2vm `f2v_`f2ky''
+    local f2rl `f2rl_`f2ky''
+    if "`f2bm'" != "" & "`f2rl'" != "" {
+      if `=colsof(`f2bm')' == `:list sizeof f2rl' & `=colsof(`f2bm')' > 0 {
+        cap mata: st_matrix("`f2bm'", st_matrix("`f2bm'"))
+        cap mata: st_matrix("`f2vm'", st_matrix("`f2vm'"))
+        matrix colnames `f2bm' = `f2rl'
+        matrix colnames `f2vm' = `f2rl'
+        matrix rownames `f2vm' = `f2rl'
+        local f2np 0
+        foreach f2t of local f2rl {
+          if substr("`f2t'",1,3) == "pre" local ++f2np
+        }
+        * skip a fully non-identified VCV (e.g. timetrends): no positive-finite diagonal
+        local f2ok 0
+        forval f2d = 1/`=colsof(`f2vm')' {
+          if `f2vm'[`f2d',`f2d'] > 0 & `f2vm'[`f2d',`f2d'] < . local f2ok 1
+        }
+        if `f2ok' {
+          cap ereturn matrix b_es_`f2ky' = `f2bm'
+          cap ereturn matrix V_es_`f2ky' = `f2vm'
+          cap ereturn scalar numpre_`f2ky' = `f2np'
+        }
+      }
+    }
+  }
   ereturn local cmdline `"`0'"'
   local estimate_type "pooled_reference_period"
   if "`esfixedbaseperiod'" != "" local estimate_type "fixed_reference_period"
