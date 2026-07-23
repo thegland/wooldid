@@ -2482,9 +2482,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
                   if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
                   if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
-                     local altadv_restrict if t <=  `skiplocation'-1
-                     local altadv_restrict_num = `skiplocation'-1
-                     * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
+                     if "`skiplocation'" != "" {
+                       local altadv_restrict if t <=  `skiplocation'-1
+                       local altadv_restrict_num = `skiplocation'-1
+                       * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
+                     }
+                     else {
+                       qui sum t
+                       local altmethod_min = r(min)
+                       local altadv_restrict if t <= `espre'+`altmethod_min'-1
+                       local altadv_restrict_num = `espre'+`altmethod_min'-1
+                     }
                   }
                   qui reg b t  `altadv_restrict'
                   tempname adversarialB_`horizitem'_s`sgcase'
@@ -2672,9 +2680,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                    if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
                    if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
                    if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
-                      local altadv_restrict if t <=  `skiplocation'-1
-                      local altadv_restrict_num = `skiplocation'-1
-                      * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
+                      if "`skiplocation'" != "" {
+                        local altadv_restrict if t <=  `skiplocation'-1
+                        local altadv_restrict_num = `skiplocation'-1
+                        * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
+                      }
+                      else {
+                        qui sum t
+                        local altmethod_min = r(min)
+                        local altadv_restrict if t <= `espre'+`altmethod_min'-1
+                        local altadv_restrict_num = `espre'+`altmethod_min'-1
+                      }
                     }
 
                     qui reg b t  `altadv_restrict'
