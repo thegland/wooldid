@@ -4270,7 +4270,7 @@ version 16.0
       dis as text "Caution: the `ptpty' pre-period variance-covariance block is not invertible; pretrendpower() diagnostics skipped for `ptpty'."
       continue
     }
-    if `ptpkeff' < `ptpk' dis as text "Caution: the `ptpty' pre-period variance-covariance block is rank-deficient (rank `ptpkeff' of `ptpk'); a generalized inverse is used and the joint pre-trend test has `ptpkeff' degrees of freedom."
+    if `ptpkeff' < `ptpk' dis as text "Caution: the `ptpty' pre-period variance-covariance block is rank-deficient (rank `ptpkeff' of `ptpk'). The slope, its CI, the joint test (now `ptpkeff' degrees of freedom), and the detectable-trend columns then reflect only the linearly independent subset of pre-period coefficients a generalized inverse retains - NOT a summary of all pre-period evidence - and can differ arbitrarily from statistics built on the discarded coefficients; interpret with care."
     matrix `ptpwork' = `ptpm''*`ptpSi'*`ptpm'
     local ptpc2 = `ptpwork'[1, 1]
     if missing(`ptpc2') | `ptpc2' <= 0 {
@@ -4291,7 +4291,10 @@ version 16.0
 
     * NIS setup: the pre-test Roth's pretrends package powers - reject when ANY pre
     * coefficient is individually significant (using wooldid's own critical value)
-    local ptpnisok = (`ptpk' <= 50)
+    * exact quadrature cost explodes with dimension (~2.9s per evaluation at k=6, ~85
+    * evaluations per power level per type); cap the NIS column at k <= 4 and point
+    * larger designs at the pretrends package, which consumes e(b_es_*)/e(V_es_*)
+    local ptpnisok = (`ptpk' <= 4)
     local ptpnissize .
     if `ptpnisok' {
       tempname ptpsd ptpmrow
@@ -4373,6 +4376,7 @@ version 16.0
     if `ptpdfok' dis as result "    joint pre-trend test: F(`ptpkeff', `dfr') = " %-8.0g `=`ptpW'/`ptpkeff'' ", p = " %-6.4f `ptpprep'
     else dis as result "    joint pre-trend test: chi2(`ptpkeff') = " %-8.0g `ptpW' ", p = " %-6.4f `ptpprep'
     if `ptpnisok' dis as result "    size of the any-pre-period-individually-significant pre-test: " %-6.4f real("`ptpnissize'")
+    if !`ptpnisok' & `ptpk' > 4 dis as text "    note: mdt_nis and the NIS-test size are omitted (`ptpk' pre-periods exceed the exact-quadrature budget of 4); mdt_wald is unaffected. For the NIS convention at larger k, feed e(b_es_`ptpty')/e(V_es_`ptpty')/e(numpre_`ptpty') to Roth's pretrends package."
     dis as result "    weighted mean post-treatment relative period (hbar) = " %-9.0g `ptphbar'
     dis as result "    minimum detectable linear trend, and the bias such a trend would imply for the"
     dis as result "    pooled estimate if it continued into the post-treatment period:"

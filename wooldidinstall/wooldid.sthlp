@@ -344,8 +344,11 @@ for the pooled estimate {ul:if it continued into the post-treatment period} (the
 coefficients). Requires {cmd:esfixedbaseperiod} (under the pooled reference the single omitted reference period the linear-trend normalization needs is not defined) and at least one
 pre-treatment event-study coefficient; not compatible with {cmd:impvalues}. Results are returned in {it:e(roth_power_{it:type})} and companion scalars (see Stored Results) and skipped
 with a caution when the pre-period variance-covariance block is unavailable (e.g. under {cmd:timetrends}) or carries missing or non-positive variance entries; rank-deficient blocks are
-handled with a generalized inverse and reduced degrees of freedom, with a caution (note that on an exactly rank-deficient block the reported slope depends on which columns the
-generalized inverse retains, so treat it as one representative of an underdetermined family). When the underlying estimator posts no residual degrees of freedom (e.g. the
+handled with a generalized inverse and reduced degrees of freedom, with a caution (note that on an exactly rank-deficient block every reported statistic reflects only the linearly
+independent subset of pre-period coefficients the generalized inverse retains - not a summary of all pre-period evidence - and depends on which columns are retained, so treat those
+numbers as one representative of an underdetermined family and interpret with care). The exact-quadrature {it:mdt_nis} column is computed only for up to 4 pre-periods (its cost grows
+steeply with dimension); for larger designs, feed {it:e(b_es_{it:type})}/{it:e(V_es_{it:type})}/{it:e(numpre_{it:type})} to Roth's {it:pretrends} package, which implements the same
+convention with a normal critical value. When the underlying estimator posts no residual degrees of freedom (e.g. the
 ppmlhdfe path), the joint test and minimum detectable trends use chi-squared rather than F distributions and the slope CI uses a normal critical value. Under {cmd:poisson} without
 {cmd:poisexpresults}, the diagnostics are on the linear-index (xb) scale like the event-study coefficients themselves. {p_end}
 
