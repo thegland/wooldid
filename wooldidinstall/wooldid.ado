@@ -660,21 +660,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if "`timetrends'" == "timetrends" qui replace `ifvar' = 0 if `ttre' <= `mintp1'
     qui replace `ttre' = . if `ifvar' == 0
 
-    * F4: warn when an effective onset lands on a period not observed in the data - on
-    * panels whose t is not unit-spaced (e.g. biennial), an off-grid anticipation shift
-    * can merely relabel horizons (pooled reference) or move the fixed reference period
-    * in unintended ways (esfixedbaseperiod), silently changing what is estimated
-    if `anticipation' > 0 {
-      qui glevelsof `ttre' if `ifstatement' & `ttre' != ., local(anticonsets)
-      local anticoffgrid
-      foreach anticv of local anticonsets {
-        qui count if `t' == `anticv' & `ifstatement'
-        if r(N) == 0 local anticoffgrid `anticoffgrid' `anticv'
-      }
-      if "`anticoffgrid'" != "" {
-        dis as text "Caution: anticipation() is expressed in the units of `t', and the effective onset value(s) `anticoffgrid' fall on period(s) not observed in the data. Depending on the specification, this can merely relabel horizons, move the reference period in unintended ways, or cause estimation to fail. Verify that the anticipation length matches the spacing of `t'."
-      }
-    }
 
     * construct _t, which contains dummies for treatment periods of interest - it will be specified in terms of relative periods
     * _t is born as a relative period variable, which we missing out for relyrs before the event study prelength and for the very first observation we have for everyone
@@ -802,6 +787,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     qui gegen `refperiodobserved' = max(`refperiodobserved_temp') if `ifstatement' & `ttre' != ., by(`i')
     qui drop `refperiodobserved_temp'
     qui replace `ifvar' = 0 if `refperiodobserved' == 0  & `ttre' != .
+    * F4: attribute reference-period drops caused only by the anticipation shift
+    if `anticipation' > 0 wooldid_anticesf , ivar(`i') tvar(`t') rawttre(`ttre_asgiven') refobs(`refperiodobserved') esrel(`esrelativeto') antic(`anticipation') ttrevar(`ttre')
     * update _t and ttre
     qui replace `_t' = . if `ifvar' == 0
     qui replace `ttre'  = . if `ifvar' == 0
@@ -872,6 +859,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       if _rc != 0 local failure 1
       if `failure' == 1 dis as error  "Error: cannot find sufficient pre- and post-treatment periods for the treated units."
       if `failure' == 1 & "`timetrends'" == "timetrends"  dis as error  "Note that inclusion of cohort-specific time trends increases the required number of pre-treatment units."
+      if `failure' == 1 & `anticipation' > 0 dis as error  "Note: anticipation(`anticipation') shifted every effective onset earlier; a shift larger than the available pre-period window can leave no estimable treated periods."
       if `failure' == 1 error 459
     }
     * send _t to 0  when we want it to be  a comparison period
@@ -894,6 +882,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * in that case, horizon = 1 might not be of any interest
     * so what you want to start at is   1+`min_t' - `espre'
   }
+
+  * F4: warn when an effective onset lands on a period not observed in the data (both
+  * reference regimes; the checks live in a subprogram to conserve worker size headroom)
+  if `anticipation' > 0 wooldid_anticgrid , tvar(`t') ttrevar(`ttre') ifv(`ifvar')
 
   * this is needed for correctly rendering tables / looping through the right number of horizons
   local horizonstarter = 1 + `min_t' - `espre'
@@ -3598,6 +3590,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   local estimate_type "pooled_reference_period"
   if "`esfixedbaseperiod'" != "" local estimate_type "fixed_reference_period"
   ereturn local estimate_type "`estimate_type'"
+  if `anticipation' > 0 ereturn scalar anticipation = `anticipation'
+
 
 
 
@@ -4070,6 +4064,52 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
   end
+
+
+* ============================================================================
+* F4 helper subprograms (kept out of the worker to conserve its size headroom)
+* ============================================================================
+
+* warn when an effective onset lands on a period not observed in the data - on panels
+* whose t is not unit-spaced (e.g. biennial), an off-grid anticipation shift can merely
+* relabel horizons (pooled reference), move the fixed reference period in unintended
+* ways (esfixedbaseperiod), or make estimation fail
+cap prog drop wooldid_anticgrid
+prog def wooldid_anticgrid
+version 16.0
+  syntax , tvar(string) ttrevar(string) ifv(string)
+  qui glevelsof `ttrevar' if `ifv' == 1 & `ttrevar' != ., local(anticonsets)
+  local anticoffgrid
+  foreach anticv of local anticonsets {
+    qui count if `tvar' == `anticv' & `ifv' == 1
+    if r(N) == 0 local anticoffgrid `anticoffgrid' `anticv'
+  }
+  if "`anticoffgrid'" != "" {
+    dis as text "Caution: anticipation() is expressed in the units of `tvar', and the effective onset value(s) `anticoffgrid' fall on period(s) not observed in the data. Depending on the specification, this can merely relabel horizons, move the reference period in unintended ways, or cause estimation to fail. Verify that the anticipation length matches the spacing of `tvar'."
+  }
+end
+
+* under esfixedbaseperiod, report units dropped only BECAUSE the anticipation shift
+* moved their reference period onto a period they are not observed in (called after the
+* reference-period screen zeroes ifvar, before ttre is nulled for the dropped units)
+cap prog drop wooldid_anticesf
+prog def wooldid_anticesf
+version 16.0
+  syntax , ivar(string) tvar(string) rawttre(string) refobs(string) esrel(string) antic(string) ttrevar(string)
+  tempvar rawref rawrefobs
+  qui gen byte `rawref' = `tvar' == `rawttre' + `esrel'
+  qui gegen `rawrefobs' = max(`rawref'), by(`ivar')
+  qui count if `refobs' == 0 & `ttrevar' != . & `rawrefobs' == 1
+  if r(N) > 0 {
+    local anticdropobs = r(N)
+    tempvar antictag
+    qui gegen `antictag' = tag(`ivar') if `refobs' == 0 & `ttrevar' != . & `rawrefobs' == 1
+    qui count if `antictag' == 1
+    dis as text "Caution: anticipation(`antic') places the effective reference period of `r(N)' unit(s) on a period they are not observed in; those unit(s) and their `anticdropobs' observations are dropped (their reference period would have been observed without the anticipation shift)."
+    qui drop `antictag'
+  }
+  qui drop `rawref' `rawrefobs'
+end
 
 
 * ============================================================================
