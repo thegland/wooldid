@@ -3828,7 +3828,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * given (identically 1, making the assert vacuous there), so screen the user's
   * weight expression directly instead
   local w `exp'
-  if  "`safety'" != "off" & "`w'" != "" {
+  * gate on safetyinput, not safety: contreatwithin's internal safety-off overwrite sits
+  * upstream and previously skipped this screen entirely - contreatwithin + a negative
+  * weight ran rc 0 with no message (verifier s5_v2, 2026-07-26). an explicit user
+  * safety(off) still bypasses
+  if  "`safetyinput'" != "off" & "`w'" != "" {
     cap assert `w' >= 0 `ifassert'
     if _rc != 0 {
       dis as error  "Error: weights must not be negative."
