@@ -64,6 +64,11 @@ B1–B23 campaign, updated with the process rules adopted 2026-07-21.
   run-to-run non-bit-reproducible, so comparisons against pre-refactor builds' non-gtools
   legs need a relative tolerance.)
 - Deterministic data: `set seed` AND `set sortseed` before generation.
+- **Tolerance exception:** the plain reg/poisson estimation paths with a clustered VCE
+  (`unconditionalse`, `customvce(cluster ...)`) are NOT bit-reproducible run-to-run —
+  the same build run twice in one session can differ in the last 1-2 ulps of V/V_es_*/
+  pwsgs/wdid*results (verified 2026-07-26, f11_v3). Two-build comparisons touching those
+  cells need `--rtol 1e-12`; everything else stays at rtol 0.
 
 ## Coverage discipline
 - Your report MUST end with the coverage grid from `review_process/assessment_grid.md`,

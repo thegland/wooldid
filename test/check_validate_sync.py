@@ -70,7 +70,12 @@ if not clist:
 
 assigned = set()
 for l in vbody:
-    m = re.match(r"\s*(?:cap\s+)?local\s+([A-Za-z_][A-Za-z0-9_]*)", l)
+    # mid-line mutations ("if COND local x ..." / "local ++x") are this file's dominant
+    # idiom - a line-anchored match missed them (verifier s5_v1, 2026-07-26). skip
+    # comment lines so prose after "* local ..." is not picked up.
+    if l.lstrip().startswith("*"):
+        continue
+    m = re.search(r"(?:^|\s)(?:cap\s+)?local\s+(?:\+\+)?([A-Za-z_][A-Za-z0-9_]*)", l)
     if m:
         assigned.add(m.group(1))
 assigned.discard("wdv_ret")
