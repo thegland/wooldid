@@ -299,6 +299,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   local t = word("`varlist'",3)
   local ttre_asgiven = word("`varlist'",4)
 
+  * capture the user's own safety() input before any internal relaxation (contreatwithin sets
+  * the working copy to off further down); the identifying-assumption checks gate on this copy
+  * so an internal relaxation does not silently disable them
+  local safetyinput `safety'
+
   * the input-validity asserts below respect the user's if() restriction, mirroring the
   * estimation sample construction exactly: the sample keeps rows where the if expression
   * evaluates to 1 (gen ifvar = `if' further down), so the asserts test (`if') == 1 --
@@ -515,6 +520,33 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * the modified version will treat cohorts with treatment onsets a set distance (specified in oostreatedcontrols)
   * from the end of the sample identically as to units that are never treated at all
   qui gen `ttre' = `ttre_asgiven' if `ttre_asgiven' <= `maxyearobserved' + `oostreatedcontrols' & `ifstatement'
+
+  * F13: the _i/_t construction below assumes cohort-level timing - exactly one treatment onset
+  * per unit. rows of the same i carrying different onsets, or a mix of missing and non-missing
+  * onsets, are silently re-timed row by row: part of the unit joins the control pool or a
+  * second cohort, shifting event-study horizons and pre-trends with no error. detect on the
+  * internal `ttre' (the window screen above normalized extended missings to sysmiss) over the
+  * screened estimation sample - exactly the rows the construction reads. all missing flavors
+  * fold to one sentinel value so all-missing (never-treated) units pass while mixed
+  * missing/nonmissing within a unit fails
+  if "`safetyinput'" != "off" {
+    tempvar f13ttremin f13ttremax
+    qui gegen double `f13ttremin' = min(cond(`ttre' >= ., -8.9884656743115785e+307, `ttre')) if `ifstatement', by(`i')
+    qui gegen double `f13ttremax' = max(cond(`ttre' >= ., -8.9884656743115785e+307, `ttre')) if `ifstatement', by(`i')
+    cap assert `f13ttremin' == `f13ttremax' if `ifstatement'
+    if _rc != 0 {
+      tempvar f13badi
+      qui gen double `f13badi' = `i' if `f13ttremin' != `f13ttremax' & `ifstatement'
+      qui gstats sum `f13badi', meanonly
+      local f13badid : dis %18.0g r(min)
+      dis as error "Error: the treatment onset variable `ttre_asgiven' is not constant within `i' (first offending `i':`f13badid')."
+      dis as error "wooldid requires exactly one treatment onset per unit: rows of the same `i' carrying different onsets, or a mix of missing and non-missing onsets, are silently split across cohorts, and part of the unit can be used as its own control."
+      dis as error "Common causes: an onset recorded only from the onset period onward (fill it in on every in-sample row of a treated unit, including pre-treatment rows); two different units sharing one `i' value; or unit IDs stored as float, which pools distinct large IDs (recast double `i'). Alternatively, restrict the estimation sample with if()."
+      dis as error "To ignore this error, specify safety(off)."
+      error 459
+    }
+    qui drop `f13ttremin' `f13ttremax'
+  }
 
   * prepare the _i and _t variables, which are cohort and time variables where non-treated-unit non-treated-times are all pooled
   * noting that "non-treated-times" should be extended here to actually mean "any time period for treated units in its reference period"
@@ -802,6 +834,39 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if _rc != 0 {
       dis as error "The subgroup variable contains non-integer values within the treated estimation sample; it must contain only non-negative integers."
       error 411
+    }
+    * F13: subgroup containment. sg never enters the regression - the unit-by-period cell
+    * coefficients are shared by every subgroup a unit touches. sg varying WITHIN a unit-period
+    * cell therefore makes by-subgroup contrasts structurally unable to reflect within-cell
+    * heterogeneity (each subgroup only reweights the same pooled cell effects; contrasts can
+    * come back identical under strong true heterogeneity) -> error. sg varying within a unit
+    * only ACROSS periods leaves by-sg att/att_it correct (row-weighted) but makes
+    * att_i/att_itime weight a straddling unit by its weight share rather than equally ->
+    * caution. domains: missing sg rows belong to no subgroup by design and never-treated
+    * units never enter any sg subpop, so both are excluded (cond() folds extended missings)
+    if "`safetyinput'" != "off" {
+      tempvar f13sgitmin f13sgitmax
+      qui gegen double `f13sgitmin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i' `t')
+      qui gegen double `f13sgitmax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i' `t')
+      cap assert `f13sgitmin' == `f13sgitmax' if `ifstatement' & `ttre' != .
+      if _rc != 0 {
+        dis as error "Error: the subgroup variable `subgroups' varies within `i'-by-`t' cells of the treated estimation sample."
+        dis as error "wooldid estimates effects at the `i'-by-period level, so subgroup estimates built from cells that mix subgroups cannot reflect within-cell subgroup differences - each subgroup only reweights the same pooled cell effects, and subgroup contrasts can come back identical even when true effects differ sharply by subgroup."
+        dis as error "Define `i' at the finer level over which the subgroup varies (e.g., egen newi = group(`i' `subgroups')), or drop the subgroups() option."
+        dis as error "To ignore this error, specify safety(off)."
+        error 459
+      }
+      qui drop `f13sgitmin' `f13sgitmax'
+      if "`att_i'" != "" | "`att_itime'" != "" {
+        tempvar f13sgimin f13sgimax
+        qui gegen double `f13sgimin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
+        qui gegen double `f13sgimax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
+        cap assert `f13sgimin' == `f13sgimax' if `ifstatement' & `ttre' != .
+        if _rc != 0 {
+          dis as text "Caution: the subgroup variable `subgroups' changes over time within some units. For att_i and att_itime, a unit appearing in more than one subgroup enters each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply; by-subgroup att and att_it results are unaffected. Consider whether a time-invariant subgroup definition (or a finer unit id) better matches your design."
+        }
+        qui drop `f13sgimin' `f13sgimax'
+      }
     }
     * long subgroup values overflow stata's 31/32-character name limits when embedded in
     * constructed local/matrix/rowname/graph/e() names (the worst prefixes reach 24-25

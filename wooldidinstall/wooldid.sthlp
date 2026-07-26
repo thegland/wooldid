@@ -61,7 +61,7 @@ at this link. {p_end}
 than to consist of treatment onset cohorts. Coarser cohort definitions tend to enable faster estimation, and you can specify coarse cohorts
  alongside unit-level fixed effects. Simulations suggest the estimator is most statistically efficient when {it:i} is set at the level at which you cluster. {p_end}
 {synopt : {it:t}}Time period identifier; must consist of integers greater than 0.{p_end}
-{synopt : {it:ttre}}Variable containing cohort-specific dates of treatment onset; missing indicates never-treated cohorts, cohorts treated before the sample begins are dropped. {p_end}
+{synopt : {it:ttre}}Variable containing cohort-specific dates of treatment onset; missing indicates never-treated cohorts, cohorts treated before the sample begins are dropped. {it:ttre} must take a single value (or be missing on every row) within each unit of {it:i} over the estimation sample: {it:wooldid} builds relative time row by row from {it:ttre}, so a unit carrying different onsets on different rows - including an onset recorded only from the onset period onward, with missing values pre-treatment - would be silently split across cohorts. {it:wooldid} verifies this and exits with an informative error if it is violated (bypass with {it:safety(off)}). {p_end}
 
 {phang} {ul:Options by Purpose:} {p_end}
 {synoptset 1 tabbed }{...}
@@ -390,6 +390,12 @@ Additionally, {it:wooldid} computes all possible pairwise comparisons of the ove
 effects (and pre-treatment effects) estimates by SG (e.g., SG 1 vs 2, 1 vs 3, 2 vs 3, etc.), presenting for each comparison the difference in effect estimates and a p-value for each difference.
 A joint test of the hypothesis that all SGs share the same effect estimate (normalized to be the effect estimate of the numerically lowest numbered SG) is also computed. Note: standard errors
 for subgroup-specific estimates can fail when using clustered standard errors in conjunction with subgroups that contain few (or only one) cluster. {p_end}
+
+{pstd} Each treated unit of {it:i} should lie wholly within one subgroup. Because subgroups never enter the regression itself (they only select and reweight the unit-by-period effect cells),
+a subgroup variable that varies {ul:within} a unit-by-period cell makes subgroup contrasts structurally unable to reflect within-cell subgroup differences, and {it:wooldid} exits with an
+informative error (bypass with {it:safety(off)}; the usual remedy is defining {it:i} at the finer level over which the subgroup varies, e.g. {it:egen newi = group(i sg)}). A subgroup variable
+that changes only over time within a unit is permitted, but note that for {it:att_i} and {it:att_itime} a straddling unit enters each subgroup weighted by its share of sample weight there
+rather than with equal unit weighting; {it:wooldid} prints a caution in that case. Observations with missing subgroup values remain allowed and belong to no subgroup. {p_end}
 
 {pstd} A special case to consider is the difference-in-differences-in-differences (triple diff) case. In the triple diff case, all cohorts are categorized into two groups, with both groups
 existing among treated cohorts and control cohorts. The target estimand may be thought of as the difference in the diff-in-diff estimates obtained separately for each of the two groups. To
