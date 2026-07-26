@@ -106,6 +106,7 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 -  cfxplottypes(_post, pre, and/or integers specifying relative time periods_) - specifies whether the plots showing the effect of treatment across the distribution of the continuous treatment variable will show post-treatment effects, pre-treatment effects, or effects in specific years relative to treatment
 
 ##### Technical Features: 
+- fastnose - fast exploratory mode: point estimates only (no SEs, CIs, p-values, or joint tests), roughly 2-4x faster and far more on poisson event-study runs
 - replay - typing wooldid by itself after an estimation redisplays the full stored results from e() (no options; plots are not redrawn)
 - update - update your local installation of wooldid using the most recent version of wooldid available on GitHub
 - verbose - print updates as estimation progresses and save the results from the underlying regression estimated to a model called ___wooldidfullmodel

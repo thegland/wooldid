@@ -67,7 +67,7 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 {synoptset 1 tabbed }{...}
 {synopt : {help wooldid##specifyestimand:Specifying the Estimand(s):}} {opt att} {opt att_it} {opt att_i} {opt att_itime} {opt semi:elasticitiy} {p_end}
 
-{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values}  {p_end}
+{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values} {opt fast:nose} {p_end}
 
 {synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem)} {opt replace} {opt sum:marystats}
 {opt pois:son} {opt poisexp:results}  {p_end}
@@ -252,6 +252,17 @@ Using IM-style inference requires specifying a single cluster variable and is no
 target estimand. For example, if clustering at the cohort level, IM-style inference will cause {it:att} to yield the same effect estimates as {it:att_i}. Note that {it:wooldid} does not adjust the
 weights used for computing different estimands when IM-style inference is requested: in general, IM-style inference will yield incorrect results for non-att estimands if clusters cross-cut cohorts
 or (worse) cohort-time period cells. IM-style inference is not currently allowed with the use of subgroups, the option {it:jointtests}, and the option {it:makecfxplots}. {p_end}
+
+{phang}{opt fast:nose}: Fast exploratory mode. Every {it:margins} call runs with {it:nose}, so no standard errors, test statistics, p-values, or confidence intervals are computed
+for any estimand: only point estimates are produced, the corresponding cells of the results tables display as missing (.), and the output carries the line "SEs and related materials
+are not estimated in fast mode." Intended for specification search on large panels, where the delta-method variance calculation inside {it:margins} dominates run time (measured
+speedups of roughly 2-4x on typical specifications, and far larger on poisson event-study runs, where fast mode completes in seconds configurations that otherwise run for tens of
+minutes); re-run the chosen specification without {it:fastnose} before reporting results. Under {it:fastnose}: {it:e(V)} is not posted ({it:e(properties)} is {it:b}), so {it:test},
+{it:lincom}, {it:esttab} standard errors, and anything else needing a variance-covariance matrix will refuse; {it:e(b_es_)}, {it:e(V_es_)}, and {it:e(numpre_)} are not returned, so
+{it:honestdid} and Roth-style diagnostics have no inputs; no joint tests of any kind are computed (including the subgroup homogeneity tests); the continuous-treatment-effects plot
+matrices carry only the point-estimate column, exactly as under {it:cfxplotnose}; and event-study plots are drawn without confidence bands. Not compatible with
+{it:unconditionalse}, {it:adversarial}, {it:jointtests}, {it:pretrendpower()}, or {it:impvalues} (each is refused with an error). Point estimates can differ from a full run in
+roughly the last digit of precision (relative differences on the order of 1e-15), because {it:margins} follows a different computational path when the variance is skipped. {p_end}
 
 {pstd} {ul: Discussion of Unconditional Standard Errors:}
 The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates
