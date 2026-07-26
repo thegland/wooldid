@@ -3872,7 +3872,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       dis as error "Error: lattice() must contain either an existing numeric variable or a lattice type followed by a quantile count."
       error 198
     }
-    if "`safety'" != "off" {
+    * gate on safetyinput (the user's own safety() setting, captured before the
+    * contreatwithin block relaxes `safety'), matching the F13 checks: an internal
+    * relaxation must not silently disable a data-integrity screen
+    if "`safetyinput'" != "off" {
       cap assert (`lattice' >= 0 & int(`lattice') == `lattice') | `lattice' >= . `ifassert'
       if _rc != 0 {
         dis as error "Error: the lattice() variable must contain only non-negative integers (it is used as a factor variable)."
@@ -3886,13 +3889,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * messages. worse, margins silently DROPS missing-cfxlattice rows and wooldid calls
   * margins quietly, so the omitted-observations note never reached the user (measured:
   * rc 0 with materially different cfx results) - hence the missing-values Caution
-  if "`cfxlattice'" != "" {
+  if "`cfxlattice'" != "" & "`makecfxplots'" == "" {
+    * inert option: without makecfxplots the variable is never passed to margins, and
+    * such calls ran fine before these screens existed - caution, do not error
+    dis as text "Caution: cfxlattice() has no effect without makecfxplots and is being ignored."
+  }
+  if "`cfxlattice'" != "" & "`makecfxplots'" != "" {
     cap confirm numeric variable `cfxlattice'
     if _rc != 0 {
       dis as error "Error: cfxlattice() must specify a numeric variable."
       error 198
     }
-    if "`safety'" != "off" {
+    if "`safetyinput'" != "off" {
       cap assert (`cfxlattice' >= 0 & int(`cfxlattice') == `cfxlattice') | `cfxlattice' >= . `ifassert'
       if _rc != 0 {
         dis as error "Error: the cfxlattice() variable must contain only non-negative integers (margins allows only non-negative integers in over())."
@@ -3905,16 +3913,28 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
 
-  * non-commensurate ttre: fractional t - ttre previously survived to the regression
-  * stage and died there with a bare "invalid syntax", a tempvar-named factor-variable
-  * error, or (under esfixedbaseperiod) a misleading insufficient-pre-periods r(459).
-  * integer SPACING is not required - biennial or 5-year panels pass - only that onset
-  * times sit on the same grid as t
-  if "`safety'" != "off" {
+  * non-commensurate ttre: fractional t - ttre previously either died late at the
+  * regression stage with opaque errors (a bare "invalid syntax", a tempvar-named
+  * factor-variable error, or a misleading insufficient-pre-periods r(459)) or - worse -
+  * ran to completion with the onset period silently mislabeled as pre-treatment.
+  * integer SPACING is not required - biennial or 5-year panels pass - only that onsets
+  * sit on the same grid as t. tiered like the F13 checks: offending onsets that fall
+  * wholly outside the usable window (dropped as pre-sample or treated as never-treated
+  * downstream) downgrade to a caution rather than an error
+  if "`safetyinput'" != "off" {
     cap assert (`t' - `ttre_asgiven') == int(`t' - `ttre_asgiven') | `ttre_asgiven' >= . `ifassert'
     if _rc != 0 {
-      dis as error "Error: t minus ttre takes non-integer values, so relative-period horizons cannot be constructed. Treatment onset times must sit on the same grid as the time variable."
-      error 411
+      local wdvtrng `t' < .
+      if `"`if'"' != "" local wdvtrng (`wdvtrng') & ((`if') == 1)
+      qui gstats sum `t' if `wdvtrng', meanonly
+      local wdvtlo = r(min) + `anticipation'
+      local wdvthi = r(max) + `oostreatedcontrols' + `anticipation'
+      cap assert (`t' - `ttre_asgiven') == int(`t' - `ttre_asgiven') | `ttre_asgiven' >= . | `ttre_asgiven' <= `wdvtlo' | `ttre_asgiven' > `wdvthi' `ifassert'
+      if _rc != 0 {
+        dis as error "Error: t minus ttre takes non-integer values, so relative-period horizons cannot be constructed. Treatment onset times must sit on the same grid as the time variable; if the time variable itself is on a fractional grid (e.g. year + quarter/4), recode both to consecutive integers."
+        error 459
+      }
+      dis as text "Caution: some treatment onset times are not on the same grid as t (t minus ttre is non-integer), but all such onsets fall outside the usable estimation window and will be dropped or treated as never-treated downstream."
     }
   }
 
