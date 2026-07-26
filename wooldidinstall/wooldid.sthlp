@@ -681,7 +681,9 @@ from the underlying regression estimator, wherever available. {p_end}
 all graphs generated will be saved to a file with your specified name in STATA's working directory. {p_end}
 
 {pstd} If the option {it:verbose} is specified, the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called {it:___wooldidfullmodel}, which can be
-accessed using standard {it:estimates restore} type syntax. Under {it:verbose} with {it:poisson} (in the high-dimensional-fixed-effects estimation path), the {it:_ppmlhdfe_d} scaffolding
+accessed using standard {it:estimates restore} type syntax. Note that {it:___wooldidfullmodel} and {it:__marginsmodel} are reserved scratch estimate names: {it:wooldid} overwrites and
+removes stored estimates carrying these names on every run, including runs that end in an error (under {it:verbose}, {it:___wooldidfullmodel} is retained on failed runs as well, for
+inspection). Do not store your own estimates under these names. Under {it:verbose} with {it:poisson} (in the high-dimensional-fixed-effects estimation path), the {it:_ppmlhdfe_d} scaffolding
 variable that {it:ppmlhdfe} creates is also retained in the dataset rather than dropped at exit. Note that coefficient-level replay of the stored model ({it:lincom}, {it:test},
 {it:matrix list e(b)}) works, but data-touching replay ({it:predict}, {it:margins}) does not: the model's regressors are internally constructed temporary variables that no longer exist
 after {it:wooldid} returns. {p_end}
