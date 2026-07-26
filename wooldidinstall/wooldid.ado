@@ -3847,6 +3847,85 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
 
+  * ---- S5: additional early screens for inputs that previously failed late with ----
+  * ---- opaque messages or were silently mis-handled. placed AFTER all pre-existing ----
+  * ---- checks so no existing multi-error precedence changes. ----
+
+  * makecfxplots without a continuous treatment was a silent no-op: the whole cfx
+  * production block is gated on contreat(), so makecfxplots + cfxlattice() alone
+  * returned rc 0 with no plots and no message
+  if "`makecfxplots'" != "" & "`contreat'" == "" {
+    dis as error "Error: makecfxplots requires a continuous treatment; specify contreat()."
+    error 198
+  }
+
+  * one-token lattice() was previously unvalidated: a forgotten quantile count surfaced
+  * as a bare "variable all not found" r(111), and bad variable contents survived to the
+  * regression stage. variable lookup runs first, so a genuine variable that happens to
+  * share a lattice-type name still wins, exactly as before
+  if "`lattice'" != "" & wordcount("`lattice'") == 1 {
+    cap confirm numeric variable `lattice'
+    if _rc != 0 {
+      local wdvlatone = strlower("`lattice'")
+      if inlist("`wdvlatone'","all","basetreated","basetreatedpost","basetreatedpre","basetreatedref") | inlist("`wdvlatone'","bycohort","bytime","bycohortbytime","bytreated","bytreatedbytime","byttre","byttrebytime") {
+        dis as error "Error: lattice(`lattice') specifies a lattice type without a quantile count; use, for example, lattice(`lattice' 4)."
+        error 198
+      }
+      dis as error "Error: lattice() must contain either an existing numeric variable or a lattice type followed by a quantile count."
+      error 198
+    }
+    if "`safety'" != "off" {
+      cap assert (`lattice' >= 0 & int(`lattice') == `lattice') | `lattice' >= . `ifassert'
+      if _rc != 0 {
+        dis as error "Error: the lattice() variable must contain only non-negative integers (it is used as a factor variable)."
+        error 411
+      }
+    }
+  }
+
+  * cfxlattice() content screens: margins over() accepts only non-negative integers, and
+  * previously bad contents died late at the margins/regression stage with generic
+  * messages. worse, margins silently DROPS missing-cfxlattice rows and wooldid calls
+  * margins quietly, so the omitted-observations note never reached the user (measured:
+  * rc 0 with materially different cfx results) - hence the missing-values Caution
+  if "`cfxlattice'" != "" {
+    cap confirm numeric variable `cfxlattice'
+    if _rc != 0 {
+      dis as error "Error: cfxlattice() must specify a numeric variable."
+      error 198
+    }
+    if "`safety'" != "off" {
+      cap assert (`cfxlattice' >= 0 & int(`cfxlattice') == `cfxlattice') | `cfxlattice' >= . `ifassert'
+      if _rc != 0 {
+        dis as error "Error: the cfxlattice() variable must contain only non-negative integers (margins allows only non-negative integers in over())."
+        error 411
+      }
+      local wdvcfxmiss `cfxlattice' >= .
+      if `"`if'"' != "" local wdvcfxmiss (`wdvcfxmiss') & ((`if') == 1)
+      qui count if `wdvcfxmiss'
+      if r(N) > 0 dis as text "Caution: the cfxlattice() variable is missing on `r(N)' observation(s); margins omits those observations when computing the continuous treatment effect plot points, so the plotted averages reflect only the nonmissing-cfxlattice subsample."
+    }
+  }
+
+  * non-commensurate ttre: fractional t - ttre previously survived to the regression
+  * stage and died there with a bare "invalid syntax", a tempvar-named factor-variable
+  * error, or (under esfixedbaseperiod) a misleading insufficient-pre-periods r(459).
+  * integer SPACING is not required - biennial or 5-year panels pass - only that onset
+  * times sit on the same grid as t
+  if "`safety'" != "off" {
+    cap assert (`t' - `ttre_asgiven') == int(`t' - `ttre_asgiven') | `ttre_asgiven' >= . `ifassert'
+    if _rc != 0 {
+      dis as error "Error: t minus ttre takes non-integer values, so relative-period horizons cannot be constructed. Treatment onset times must sit on the same grid as the time variable."
+      error 411
+    }
+  }
+
+  * esrelativeto() without esfixedbaseperiod was silently ignored (output is identical
+  * with and without it)
+  if `esrelativeto' != -1 & "`esfixedbaseperiod'" == "" {
+    dis as text "Caution: esrelativeto() has no effect without esfixedbaseperiod and is being ignored."
+  }
+
   * ---- return the parsed options and every derived/normalized local to the worker ----
   * blanket-by-construction: every option the syntax line defines is listed (plus the
   * derived locals below), so a future edit that mutates one more local here cannot

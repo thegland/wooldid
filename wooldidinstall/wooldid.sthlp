@@ -61,7 +61,7 @@ at this link. {p_end}
 than to consist of treatment onset cohorts. Coarser cohort definitions tend to enable faster estimation, and you can specify coarse cohorts
  alongside unit-level fixed effects. Simulations suggest the estimator is most statistically efficient when {it:i} is set at the level at which you cluster. {p_end}
 {synopt : {it:t}}Time period identifier; must consist of integers greater than 0.{p_end}
-{synopt : {it:ttre}}Variable containing cohort-specific dates of treatment onset; missing indicates never-treated cohorts, cohorts treated before the sample begins are dropped. {it:ttre} must take a single value (or be missing on every row) within each unit of {it:i} over the estimation sample: {it:wooldid} builds relative time row by row from {it:ttre}, so a unit carrying different onsets on different rows - including an onset recorded only from the onset period onward, with missing values pre-treatment - would be silently split across cohorts. {it:wooldid} verifies this and exits with an informative error if it is violated (bypass with {it:safety(off)}). {p_end}
+{synopt : {it:ttre}}Variable containing cohort-specific dates of treatment onset; missing indicates never-treated cohorts, cohorts treated before the sample begins are dropped. {it:ttre} must take a single value (or be missing on every row) within each unit of {it:i} over the estimation sample: {it:wooldid} builds relative time row by row from {it:ttre}, so a unit carrying different onsets on different rows - including an onset recorded only from the onset period onward, with missing values pre-treatment - would be silently split across cohorts. {it:wooldid} verifies this and exits with an informative error if it is violated (bypass with {it:safety(off)}). Onset times must also sit on the same grid as {it:t} - {it:t} minus {it:ttre} must be an integer wherever {it:ttre} is nonmissing (integer spacing is not required: biennial or five-year panels are fine). Fractional offsets previously survived to the estimation stage, where they either failed with opaque errors or silently mislabeled the onset period as pre-treatment; {it:wooldid} now rejects them at parse time (bypass with {it:safety(off)}). {p_end}
 
 {phang} {ul:Options by Purpose:} {p_end}
 {synoptset 1 tabbed }{...}
@@ -312,7 +312,7 @@ option). Results of this sort will thus not have a log-type interpretation. {p_e
 {phang}{opt esf:ixedbaseperiod}: Use a fixed reference period for estimation, rather than a pooled reference period.   {p_end}
 
 {phang}{opt esr:elativeto(-integer)}: The relative time period used as the fixed reference period, if a fixed reference period is being used. The default is -1, the time period immediately
-prior to treatment.  {p_end}
+prior to treatment. Without {it:esfixedbaseperiod}, this option has no effect and a Caution is printed. {p_end}
 
 {phang}{opt espre:length(integer)}: The number of pre-treatment relative time period-specific effects to be estimated. If any pre-treatment effects are requested and
 {it:esfixedbaseperiod} is specified, all relative time period effects between the {it:esrelativeto()} period and treatment onset will be presented.{p_end}
@@ -454,7 +454,8 @@ If instead a lattice type and a lattice number are passed, this option will gene
 according to the {it:latticetype} (see below). Any specified sample weights will be used when constructing the lattice, unless the option {it:latticeignoreweights} is specified (which
 constructs the lattice quantiles without using weights). 
 If {it:lattice} is not specified, {it:wooldid} will proceed without
-using a lattice variable (as though you specified a lattice variable that is always 1). {p_end}
+using a lattice variable (as though you specified a lattice variable that is always 1). A user-supplied lattice variable must be numeric and contain only non-negative
+integers (it is used as a factor variable); a lattice type passed without a quantile count is rejected with a specific error at parse time. {p_end}
 
 {phang} {it:latticetype:} Specifies groups in which to estimate {it:latticenum} quantiles of {it:contreat}. Choice of lattice type can be important for both interpretive reasons
 (e.g., when interpreting the output of {it:makecfxplots}) and for estimation feasibility reasons: clustered standard error computation will often fail if multiple clusters are not
@@ -484,7 +485,9 @@ variable or, if specified, the variable in {it:cfxlattice()}. These plots are on
 do not crosscut cohorts (or, less stringently, cohort-periods, for ATT_it). {p_end}
 
 {phang}{opt cfxlattice(varname)}: A variable containing the bins in which effects are to be calculated for the continuous treatment effects plots. If not specified,
-the lattice variable will be used. {p_end}
+the lattice variable will be used. The variable must be numeric and contain only non-negative integers ({it:margins} accepts only non-negative integers in {it:over()}).
+If it has missing values, {it:wooldid} prints a Caution: {it:margins} silently omits those observations from the plotted bin averages. Note that {it:makecfxplots}
+requires a continuous treatment ({it:contreat()}); previously, requesting it with {it:cfxlattice()} alone was silently ignored. {p_end}
 
 {phang}{opt cfxplott:ypes(pre post integers)}: A list of types of cfxplots to be produced. If {it:post} is among the types specified, plots will be produced giving
 treatment effects across the continuous treatment variable within the post-treatment period. If {it:pre} is among the types specified, plots will be produced within the pre-treatment period.
