@@ -800,8 +800,10 @@ be very careful when specifying one's fixed effects and {it:contreatcontrols} wh
 {p 10 10}   Under various circumstances, {it:wooldid} cannot estimate standard errors for all requested objects (for example, when an Ibragimov-Muller estimate at some event-study horizon
 has only a single contributing cluster, or when per-cluster estimates are numerically identical on effectively noiseless data). If standard errors are identified for some but not all
 reported estimates, {it:wooldid} still returns {it:e(V)}: the identified estimates carry their variances as usual, while each affected estimate carries a placeholder entry that displays
-as a missing standard error (and that {it:test} drops and {it:lincom} propagates as missing). If no reported estimate has an identified standard error, {it:wooldid} returns point estimates
-without {it:e(V)}, which can cause the functionality of certain post-estimation tools to break. In either situation, {it:wooldid} prints a caution identifying how many estimates were affected.
+as a missing standard error (and that {it:test} drops and {it:lincom} propagates as missing). The placeholder is stored as a large negative number, which every Stata display and inference
+surface renders as missing - but code that reads {it:e(V)} cells directly for its own matrix algebra should treat negative diagonal entries as not identified. If no reported estimate has
+an identified standard error, {it:wooldid} returns point estimates without {it:e(V)}, which can cause the functionality of certain post-estimation tools to break. In these situations,
+{it:wooldid} prints a caution; when the cause is unidentified standard errors, the caution states how many estimates were affected.
 
 {pstd}If you encounter a bug - be it the program crashing or just the program delivering a weird result - please reach out to me about it. This program is still
 under development, so assistance finding and correcting bugs is much appreciated. I am also happy to help and offer guidance on how to use this program.{p_end}
