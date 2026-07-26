@@ -2494,12 +2494,26 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         matrix `pwsgs_`item''  =  `f9tab'[1..6,floor(`=colsof(r(table_vs))'/2)+1..`=colsof(r(table_vs))']'
         if "`sgpost'" != "" {
           wooldid_sgchain, half
+          * rank guard (verifier e1_v1): on a rank-deficient posted VCE, -test- silently
+          * drops redundant constraints and reports a residual-rank p where
+          * contrast(overjoint) reported missing (a silent "." -> 0.0000 flip). when the
+          * chain test is not provably full rank, defer to the old contrast engine so
+          * the reported p is identical to the pre-E1 build by construction
+          local sgfallback
           if `sgchainn' > 1 {
             qui test `sgchain'
-            local joint_`item'_sdiff = r(p)
+            if r(df) == `sgchainn' - 1 local joint_`item'_sdiff = r(p)
+            else {
+              local joint_`item'_sdiff
+              local sgfallback 1
+            }
           }
           else local joint_`item'_sdiff
           qui est restore ___wooldidfullmodel
+          if "`sgfallback'" != "" {
+            qui  margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstext' `marginsdof'
+            local joint_`item'_sdiff = r(p)[1,2]
+          }
         }
         else local joint_`item'_sdiff
 
@@ -2526,13 +2540,25 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             local prepwok_`item' 1
             if "`sgpost'" != "" {
               wooldid_sgchain, half
+              * rank guard: see the post-period twin above; a failed or not-full-rank
+              * chain test defers to the old contrast engine (whose r(p) read keeps the
+              * old cap semantics)
+              local sgfallback
               if `sgchainn' > 1 {
                 cap qui test `sgchain'
-                if _rc == 0 local prejoint_`item'_sdiff = r(p)
-                else local prejoint_`item'_sdiff
+                if _rc == 0 & r(df) == `sgchainn' - 1 local prejoint_`item'_sdiff = r(p)
+                else {
+                  local prejoint_`item'_sdiff
+                  local sgfallback 1
+                }
               }
               else local prejoint_`item'_sdiff
               qui est restore ___wooldidfullmodel
+              if "`sgfallback'" != "" {
+                qui  margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstext' `marginsdof'
+                cap local prejoint_`item'_sdiff = r(p)[1,2]
+                if _rc != 0 local prejoint_`item'_sdiff
+              }
             }
             else local prejoint_`item'_sdiff
           }
@@ -2755,12 +2781,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           matrix `pwsgs_C`item''  = `f9tab'[1..6,1..`=colsof(r(table_vs))']'
           if "`sgpost'" != "" {
             wooldid_sgchain
+            * rank guard: see the binary twin
+            local sgfallback
             if `sgchainn' > 1 {
               qui test `sgchain'
-              local joint_C`item'_sdiff = r(p)
+              if r(df) == `sgchainn' - 1 local joint_C`item'_sdiff = r(p)
+              else {
+                local joint_C`item'_sdiff
+                local sgfallback 1
+              }
             }
             else local joint_C`item'_sdiff
             qui est restore ___wooldidfullmodel
+            if "`sgfallback'" != "" {
+              qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') `poismarginstext' noestimcheck over(`subgroups') contrast(overjoint) `marginsdof'
+              local joint_C`item'_sdiff = r(p)[1,1]
+            }
           }
           else local joint_C`item'_sdiff
 
@@ -2783,13 +2819,23 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               local prepwok_C`item' 1
               if "`sgpost'" != "" {
                 wooldid_sgchain
+                * rank guard: see the binary twin
+                local sgfallback
                 if `sgchainn' > 1 {
                   cap qui test `sgchain'
-                  if _rc == 0 local prejoint_C`item'_sdiff = r(p)
-                  else local prejoint_C`item'_sdiff
+                  if _rc == 0 & r(df) == `sgchainn' - 1 local prejoint_C`item'_sdiff = r(p)
+                  else {
+                    local prejoint_C`item'_sdiff
+                    local sgfallback 1
+                  }
                 }
                 else local prejoint_C`item'_sdiff
                 qui est restore ___wooldidfullmodel
+                if "`sgfallback'" != "" {
+                  qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstext' `marginsdof'
+                  cap local prejoint_C`item'_sdiff = r(p)[1,1]
+                  if _rc != 0 local prejoint_C`item'_sdiff
+                }
               }
               else local prejoint_C`item'_sdiff
             }
