@@ -4570,6 +4570,19 @@ cap prog drop wooldid_esplots
 prog def wooldid_esplots
 version 16.0
   syntax [, SAVEplots(name) replace]
+  * guard the hand-call surface: without a posted wooldid result, the body would die
+  * later inside its own tempname frame with a misleading "relyr not found" (an absent
+  * e() matrix silently reads as a 1x1 missing scalar), stranding a caller who typed
+  * this directly from a non-default frame in the default frame
+  if "`e(wdid_replayv)'" == "" {
+    dis as error "Error: wooldid_esplots is internal to wooldid and needs a stored wooldid estimation in e(); run wooldid first."
+    error 301
+  }
+  cap confirm matrix e(wdidmainresults)
+  if _rc != 0 {
+    dis as error "Error: the stored results no longer contain e(wdidmainresults); rerun wooldid."
+    error 301
+  }
   qui frame
   local defaultframe `r(currentframe)'
 
