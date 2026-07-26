@@ -583,8 +583,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       tempvar f13badi
       qui gen double `f13badi' = `i' if `f13ttremin' != `f13ttremax' & `ifstatement'
       qui gstats sum `f13badi', meanonly
-      local f13badid : dis %18.0g r(min)
-      dis as error "Error: the treatment onset variable `ttre_asgiven' is not constant within `i' (first offending `i':`f13badid')."
+      local f13badid = strtrim(string(r(min), "%18.0g"))
+      dis as error "Error: the treatment onset variable `ttre_asgiven' is not constant within `i' (smallest offending `i': `f13badid')."
       dis as error "wooldid requires exactly one treatment onset per unit: rows of the same `i' carrying different onsets, or a mix of missing and non-missing onsets, are silently split across cohorts, and part of the unit can be used as its own control."
       dis as error "Common causes: an onset recorded only from the onset period onward (fill it in on every in-sample row of a treated unit, including pre-treatment rows); two different units sharing one `i' value; or unit IDs stored as float, which pools distinct large IDs (recast double `i'). Alternatively, restrict the estimation sample with if()."
       dis as error "To ignore this error, specify safety(off)."
