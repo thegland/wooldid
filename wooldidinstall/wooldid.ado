@@ -2391,34 +2391,53 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * joint test the sg effect estimates against eachother - are they the same or different?
     * do not suppress these like normal joint tests; this is a key point of using SGs
     * in theory this could be expanded further as well
+    * E1: ONE posted margins pass per (estimand x pre/post) now serves BOTH the pairwise
+    * comparison table and the all-subgroups-equal joint test. the joint p comes from a
+    * chain `test` on the posted margins, whose coefficient names are read back off the
+    * posted e(b) (never built from subgroup values); contrast(overjoint) is not allowed
+    * after a posted pwcompare (r322), so the separate contrast pass is gone. every post
+    * is followed by est restore, and the pre-period pass is capture-wrapped because
+    * pwcompare hard-errors (r111) where contrast(overjoint) merely no-ops when only one
+    * subgroup level is realized in the pre-period subpopulation
     if wordcount("`sglist'") > 1 {
       foreach item in `att' `att_it' `att_i' `att_itime' {
-        * this is a joint test that all sgs have the same effect, not vs 0 since no 0 category is included
-        qui  margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstext' `marginsdof'
-        local joint_`item'_sdiff = r(p)[1,2]
-        * the above gets a p-value for the joint test of all sgs vs the sg baselevel
-
-        * the below grabs all pairwise comparisons among the sgs
-        qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof'
+        * pairwise comparisons among the sgs AND the joint test that all sgs are the same
+        qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof' post
         tempname pwsgs_`item'
         matrix `pwsgs_`item''  =  r(table_vs)[1..6,floor(`=colsof(r(table_vs))'/2)+1..`=colsof(r(table_vs))']'
-
+        wooldid_sgchain, half
+        if `sgchainn' > 1 {
+          qui test `sgchain'
+          local joint_`item'_sdiff = r(p)
+        }
+        else local joint_`item'_sdiff
+        qui est restore ___wooldidfullmodel
 
         * repeat for pre-treatment
         if (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) {
-          * this is a joint test that all sgs have the same effect, not vs 0 since no 0 category is included
-          qui  margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstext' `marginsdof'
-          cap local prejoint_`item'_sdiff = r(p)[1,2]
+          cap qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof' post
           if _rc != 0 {
+            * the pre-ame only exists for 1 sg (or margins otherwise refused): no joint
+            * test and no pairwise rows, exactly as under the previous contrast-first order
             local prejoint_`item'_sdiff
-          * the above gets a p-value for the joint test of all sgs vs the sg baselevel. the if _rc is to handle cases where the pre-ame only exists for 1 sg
+            qui est restore ___wooldidfullmodel
           }
           else {
-            * the below grabs all pairwise comparisons among the sgs
-            qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof'
             tempname prepwsgs_`item'
             matrix `prepwsgs_`item''  =  r(table_vs)[1..6,floor(`=colsof(r(table_vs))'/2)+1..`=colsof(r(table_vs))']'
-         }
+            * the pairwise rows are stacked into e(pwsgs) iff THIS flag is set - not iff
+            * the joint p exists - so a chain-test failure after a successful pwcompare
+            * cannot silently shorten e(pwsgs)
+            local prepwok_`item' 1
+            wooldid_sgchain, half
+            if `sgchainn' > 1 {
+              cap qui test `sgchain'
+              if _rc == 0 local prejoint_`item'_sdiff = r(p)
+              else local prejoint_`item'_sdiff
+            }
+            else local prejoint_`item'_sdiff
+            qui est restore ___wooldidfullmodel
+          }
         }
       }
     }
@@ -2604,33 +2623,43 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
       *************** joint test the sg AMEs  against eachother -
+      * E1: see the binary twin above - one posted pwcompare pass per (estimand x pre/post)
+      * serves both the pairwise table and the all-subgroups-equal joint test
       if wordcount("`sglist'") > 1 {
 
         foreach item in `att' `att_it' `att_i' `att_itime' {
 
-          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') `poismarginstext' noestimcheck over(`subgroups') contrast(overjoint) `marginsdof'
-          local joint_C`item'_sdiff = r(p)[1,1]
-           * the above gets a p-value for the joint test of all sgs vs the sg baselevel
-
-          * the below grabs all pairwise comparisons among the sgs
-          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') `poismarginstext' noestimcheck over(`subgroups') pwcompare(effects) `marginsdof'
+          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') `poismarginstext' noestimcheck over(`subgroups') pwcompare(effects) `marginsdof' post
           tempname pwsgs_C`item'
           matrix `pwsgs_C`item''  = r(table_vs)[1..6,1..`=colsof(r(table_vs))']'
+          wooldid_sgchain
+          if `sgchainn' > 1 {
+            qui test `sgchain'
+            local joint_C`item'_sdiff = r(p)
+          }
+          else local joint_C`item'_sdiff
+          qui est restore ___wooldidfullmodel
 
           * repeat for pre-treatment
           if (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) {
-            * this is a joint test that all sgs have the same effect, not vs 0 since no 0 category is included
-            qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstext' `marginsdof'
-            cap local prejoint_C`item'_sdiff = r(p)[1,1]
+            cap qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof' post
             if _rc != 0 {
               local prejoint_C`item'_sdiff
-              * the above gets a p-value for the joint test of all sgs vs the sg baselevel
+              qui est restore ___wooldidfullmodel
             }
-            else{
-              * the below grabs all pairwise comparisons among the sgs
-              qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof'
+            else {
               tempname prepwsgs_C`item'
               matrix `prepwsgs_C`item''  =  r(table_vs)[1..6,1..`=colsof(r(table_vs))']'
+              * see the binary twin: stacking is gated on this flag, not the joint p
+              local prepwok_C`item' 1
+              wooldid_sgchain
+              if `sgchainn' > 1 {
+                cap qui test `sgchain'
+                if _rc == 0 local prejoint_C`item'_sdiff = r(p)
+                else local prejoint_C`item'_sdiff
+              }
+              else local prejoint_C`item'_sdiff
+              qui est restore ___wooldidfullmodel
             }
           }
         }
@@ -2868,7 +2897,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         if `itemround' == 1 matrix `pwsgs' = `pwsgs' \ `pwsgs_`item''
         matrix drop `pwsgs_`item''
         local itemround 1
-        if ("`prejoint_`item'_sdiff'" !=  "") & ( (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) ){
+        if ("`prepwok_`item''" !=  "") & ( (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) ){
             matrix rownames `prepwsgs_`item'' = pre_`item':
             matrix `pwsgs' = `pwsgs' \ `prepwsgs_`item''
             matrix drop `prepwsgs_`item''
@@ -2880,7 +2909,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           matrix rownames `pwsgs_C`item'' = `itemtext':
           matrix `pwsgs' = `pwsgs' \ `pwsgs_C`item''
           matrix drop `pwsgs_C`item''
-          if ("`prejoint_C`item'_sdiff'" != "") & ( (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == ""))))) {
+          if ("`prepwok_C`item''" != "") & ( (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == ""))))) {
                 matrix rownames `prepwsgs_C`item'' = pre_`itemtext':
                 matrix `pwsgs' = `pwsgs' \ `prepwsgs_C`item''
                 matrix drop `prepwsgs_C`item''
@@ -4018,6 +4047,49 @@ version 16.0
   }
   qui drop `rawref' `rawrefobs'
 end
+
+* ============================================================================
+* E1 subprogram: build the "every subgroup margin is equal" constraint chain for
+* -test- out of the coefficient names Stata itself posted in e(b) after
+*   margins ..., over(<sg>) pwcompare(effects) <marginsdof> post
+* The names are READ BACK (colnames/coleq), never constructed from subgroup
+* values, so they are valid by construction whatever the level values, level
+* labels or variable name length; omitted (o.) columns are skipped. -half-
+* selects the binary layout, where the posted e(b) carries the base-outcome half
+* followed by the 1.<targetflag> half and only the second half is wanted;
+* without -half- (continuous treatment) every column is used.
+* Returns: sgchain (the chain, empty if fewer than 2 usable columns)
+*          sgchainn (number of usable columns; the caller must require > 1,
+*          since a one-term chain would test that margin against 0 instead)
+* A subprogram because wooldid_worker sits near Stata's per-program compiled-size
+* ceiling and this is used at four call sites.
+* ============================================================================
+cap prog drop wooldid_sgchain
+prog def wooldid_sgchain
+version 16.0
+  syntax [, HALF]
+  tempname sgcb
+  matrix `sgcb' = e(b)
+  local sgck = colsof(`sgcb')
+  local sgccn : colnames `sgcb'
+  local sgcce : coleq `sgcb'
+  local sgcj0 = 1
+  if "`half'" == "half" local sgcj0 = floor(`sgck'/2) + 1
+  local sgcchain
+  local sgcn 0
+  forval sgcj = `sgcj0'/`sgck' {
+    local sgcnm : word `sgcj' of `sgccn'
+    local sgceq : word `sgcj' of `sgcce'
+    if strmatch("`sgcnm'","*o.*") continue
+    local sgcn = `sgcn' + 1
+    if `sgcn' == 1 local sgcchain [`sgceq']`sgcnm'
+    else local sgcchain `sgcchain' = [`sgceq']`sgcnm'
+  }
+  if `sgcn' < 2 local sgcchain
+  c_local sgchain `"`sgcchain'"'
+  c_local sgchainn `sgcn'
+end
+
 
 
 * ============================================================================
