@@ -18,12 +18,15 @@ B1–B23 campaign, updated with the process rules adopted 2026-07-21.
    (the coordinator implements other fixes in parallel). Obtain source with
    `git -C <repo> show <sha>:wooldidinstall/wooldid.ado > yourcopy.ado`. Your task prompt
    names the sha(s). To run two versions in one Stata session, rename one program.
-   Since the B22 wrapper landed (2026-07-26), the ado defines TWO programs — a thin
-   `wooldid` shell and `wooldid_worker` — so rename both (worker substitution first;
-   it also fixes the shell's call site):
-   `sed 's/wooldid_worker/wooldid_old_worker/g; s/^cap prog drop wooldid$/cap prog drop wooldid_old/; s/^prog def wooldid, eclass$/prog def wooldid_old, eclass/'`
-   For pre-wrapper builds (through c53e25b) the old two-substitution recipe still works;
-   the recipe above is safe for those too (the worker substitution just matches nothing).
+   Since the B22 wrapper landed (2026-07-26), the ado defines MULTIPLE programs — the
+   thin `wooldid` shell, `wooldid_worker`, and helper subprograms (`wooldid_anticgrid`,
+   `wooldid_anticesf`, `wooldid_ptpcheck`, `wooldid_ptp` as of e73287d/f9fd239; check
+   `grep '^prog def' yourcopy.ado` for the current list). Rename ALL of them in the old
+   copy or a two-build session silently shares whichever helper loaded last:
+   `sed 's/wooldid_worker/wooldid_old_worker/g; s/wooldid_anticgrid/wooldid_old_anticgrid/g; s/wooldid_anticesf/wooldid_old_anticesf/g; s/wooldid_ptpcheck/wooldid_old_ptpcheck/g; s/wooldid_ptp /wooldid_old_ptp /g; s/^cap prog drop wooldid_ptp$/cap prog drop wooldid_old_ptp/; s/^prog def wooldid_ptp,/prog def wooldid_old_ptp,/; s/^cap prog drop wooldid$/cap prog drop wooldid_old/; s/^prog def wooldid, eclass$/prog def wooldid_old, eclass/'`
+   (The helper substitutions match nothing on older builds, so the recipe is safe for
+   every era. Do NOT use a bare `s/wooldid/wooldid_old/g` — it would rewrite
+   `ereturn local cmd "wooldid"` and display strings, corrupting e()-level comparisons.)
 3. **All writing/testing happens in YOUR working directory** (given in your task prompt;
    create it if needed).
 4. **At most ONE Stata instance at a time**, and check the shared cap before launching:
