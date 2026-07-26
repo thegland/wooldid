@@ -3595,46 +3595,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
 
-  ********* begin actual result presentation *************
-  * the if statements are here to ensure appropriate info is shown depending on if you chose reg vs reghdfe, poisson vs ppmlhdfe, clustered ses vs robust, etc.
-  dis as result  " "
-  dis as result  "Wooldid Estimation for Outcome: `y'; Standard Errors: `vcespecifier'"
-  dis as result  " "
-  if "`Nclus'" != "." & "`Nclus'" != "" {
-    dis as result  "N clusters = `Nclus'; N = `N' (`droppedobs' obs dropped from initial sample)"
-  }
-  else{
-    dis as result  "N = `N' (`droppedobs' obs dropped from initial sample)"
-  }
-  if "`poisson'" == "" {
-    if "`r2_within'" != "." {
-      dis as result  "R2 = " %-6.4f `r2' ";  R2adj = " %-6.4f `r2adj' "; R2-within = " %-6.4f `r2_within' ";  R2-withinadj = " %-6.4f `r2_withinadj'
-    }
-    else{
-      dis as result  "R2 = " %-6.4f `r2' ";  R2adj = " %-6.4f `r2adj'
-    }
-  }
-  else{
-    dis as result  "pseudo-R2 = " %-6.4f `r2pseud'
-  }
 
-  dis as result  " "
-
-
+  * F11: ship every remaining result and the display-state macros to e() BEFORE any
+  * display runs. the presentation itself now lives in wooldid_display / wooldid_esplots
+  * (the worker is near stata's per-program compiled-size ceiling), and those
+  * subprograms read e() only - which is also what makes replay (typing wooldid alone
+  * after estimation) possible. the posting order below preserves the pre-F11 posting
+  * order exactly; the hidden wdid_* display-state macros are appended at the end.
   if "`summarystats'" != "" {
-
-    if "`esfixedbaseperiod'" == "" &  `espre' > 0  {
-      dis as result  " "
-      dis as result  "Treatment group reference period size: N = `Npre_trebase'."
-      dis as result  "`Npre_rat'% of pre-treatment treatment group observations are in the reference period."
-      dis as result  "The reference period contains `Wpre_rat'% of the pre-treatment treatment group by sample weight."
-      dis as result  " "
-    }
-
-    local contreatsummaryinjector
-    if "`contreat'" != "" local contreatsummaryinjector " and Continuous Treatment Variable (c)"
-    dis as result  "Summary Stats on Outcome Variable (y)`contreatsummaryinjector':"
-    matlist `summarystats'
     ereturn matrix summarystats = `summarystats'
 
     * most summary stats will live in the summary stats matrix, but these may be worth returning on their own
@@ -3644,23 +3612,20 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     ereturn scalar ypre_iqr =  `ypre_iqr'
 
     if "`contreat'" != "" {
-	    * under untreatedZero, pre-treatment contreat stats are never computed (see the matching guard in the summarystats block), so do not ereturn them
-	    if "`contreatcontrols'" != "untreatedZero" {
-	      ereturn scalar contreatpre_mean = `contreatpre_mean'
-	      ereturn scalar contreatpre_med =  `contreatpre_med'
-	      ereturn scalar contreatpre_sd =  `contreatpre_sd'
-	    }
-	    ereturn scalar contreatpost_mean = `contreatpost_mean'
-	    ereturn scalar contreatpost_med =  `contreatpost_med'
-	    ereturn scalar contreatpost_sd =  `contreatpost_sd'
-	    ereturn scalar contreat_mean = `contreat_mean'
-	    ereturn scalar contreat_med =  `contreat_med'
-	    ereturn scalar contreat_sd =  `contreat_sd'
+      * under untreatedZero, pre-treatment contreat stats are never computed (see the matching guard in the summarystats block), so do not ereturn them
+      if "`contreatcontrols'" != "untreatedZero" {
+        ereturn scalar contreatpre_mean = `contreatpre_mean'
+        ereturn scalar contreatpre_med =  `contreatpre_med'
+        ereturn scalar contreatpre_sd =  `contreatpre_sd'
+      }
+      ereturn scalar contreatpost_mean = `contreatpost_mean'
+      ereturn scalar contreatpost_med =  `contreatpost_med'
+      ereturn scalar contreatpost_sd =  `contreatpost_sd'
+      ereturn scalar contreat_mean = `contreat_mean'
+      ereturn scalar contreat_med =  `contreat_med'
+      ereturn scalar contreat_sd =  `contreat_sd'
     }
-
-    if "`poisson'" == "poisson" dis as result  "Note: summary stats above are for untransformed Y, while coefficients are from Y=exp(regression equation) and have a log-linear type interpretation."
   }
-
 
   * return various scalars and summary stats
   local r2list r2 r2adj r2_within r2_withinadj F
@@ -3671,52 +3636,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   }
   ereturn scalar N_dropped = `droppedobs'
 
-
-  ************* now return main results with matlist `wdidpooled'
-  dis as result  " "
-  local poistext
-  if "`poisson'" == "poisson" local poistext " Poisson Regression"
-  local elasinj
-  if "`semielasticity'" == "eydx" local elasinj Treatment Effects Presented as Semi-elasticities
-  if "`contreatelasticitytype'" != "dydx" & "`elasinj'" != "" local elasinj `elasinj',
-  if "`contreatelasticitytype'" == "eyex" local elasinj `elasinj' Marginal Treatment Effects Presented as Elasticities
-  if "`contreatelasticitytype'" == "eydx" local elasinj `elasinj' Marginal Treatment Effects Presented as Semi-elasticities (eydx)
-  if "`contreatelasticitytype'" == "dyex" local elasinj `elasinj' Marginal Treatment Effects Presented as Semi-elasticities (dyex)
-
-
-
-  dis as result  "Main`poistext' Results (Full Estimation Sample): `elasinj'"
-  if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
-  matlist `wdidpooled'
-
-  * F8: composition table prints with the other descriptive material under summarystats
-  if "`summarystats'" != "" & "`f8mat_main'" != "" {
-    dis as result  " "
-    dis as result  "Event-Study Composition by Horizon (Full Estimation Sample; also in e(escomp)):"
-    matlist `f8mat_main', format(%12.4g)
-  }
-
   * return the joint  tests
   if "`suppressjointtests'" == "" {
-    dis as result  " "
-    if "`joint_horiz'" != "" {
-      dis as result  "p-value for joint test that all pre-treatment att horizon estimates are 0: " %-6.4f `joint_horiz'
-      ereturn scalar joint_horiz = `joint_horiz'
-    }
-    if "`joint_horiz_i'" != "" {
-      dis as result  "p-value for joint test that all pre-treatment att_it horizon estimates are 0: " %-6.4f `joint_horiz_i'
-      ereturn scalar joint_horiz_i = `joint_horiz_i'
-    }
-    if "`joint_Choriz'" != "" {
-      dis as result  "p-value for joint test that all pre-treatment ame horizon estimates are 0: " %-6.4f `joint_Choriz'
-      ereturn scalar joint_Choriz = `joint_Choriz'
-    }
-    if "`joint_Choriz_i'" != "" {
-      dis as result  "p-value for joint test that all pre-treatment ame_it horizon estimates are 0: " %-6.4f `joint_Choriz_i'
-      ereturn scalar joint_Choriz_i = `joint_Choriz_i'
-    }
+    if "`joint_horiz'" != "" ereturn scalar joint_horiz = `joint_horiz'
+    if "`joint_horiz_i'" != "" ereturn scalar joint_horiz_i = `joint_horiz_i'
+    if "`joint_Choriz'" != "" ereturn scalar joint_Choriz = `joint_Choriz'
+    if "`joint_Choriz_i'" != "" ereturn scalar joint_Choriz_i = `joint_Choriz_i'
   }
-  dis as result  " "
 
  if "`adversarial'" != "" {
    foreach scenario in _ _C {
@@ -3724,59 +3650,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
        if "`adversarialP`scenario'`type''" != "" {
          local typetext `type'
          if "`scenario'" == "_C" local typetext = subinstr("`typetext'","att","ame",.)
-         dis as result "p-value for joint test of null that all (non-reference) `typetext' coefficients are on a single line: " %-6.4f `adversarialP`scenario'`type''
          ereturn scalar adversarial_pval_`typetext' = `adversarialP`scenario'`type''
          ereturn matrix adversarial_line_`typetext' =   `adversarialB`scenario'`type''
        }
      }
    }
  }
-  * F7: Roth (2022) pre-trend power diagnostics (compute + display + ereturns live in a
-  * subprogram; cap noi so a failure here cannot abort an otherwise-complete run)
-  if "`pretrendpower'" != "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`df_r') pois(`poisson') poisexp(`poisexpresults') tvar(`t') ttrevar(`ttre') ivar(`i') wvar(`w') cwm(`customweightmultiplier')
-  dis as result  " "
 
-  * now return the sg results
   if "`subgroups'" != "" {
     if "`suppresssgprimaryeffects'" == "" {
       foreach sgcase in `sglist' {
-        dis as result  " "
-        local poistext
-        if "`poisson'" == "poisson" local poistext "Poisson Regression"
-        dis as result  "`poistext'Results for Subgroup `subgroups' == `sgcase': `elasinj'"
-        if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
-        matlist `wdid_sg`sgcase''
-        dis as result  " "
-        * F8: per-subgroup composition table under summarystats
-        if "`summarystats'" != "" & "`f8mat_s`sgcase''" != "" {
-          dis as result  "Event-Study Composition by Horizon, Subgroup `subgroups' == `sgcase' (also in e(escomp_s`sgcase')):"
-          matlist `f8mat_s`sgcase'', format(%12.4g)
-          dis as result  " "
-        }
-        * return the joint  tests
         if "`suppressjointtests'" == "" {
-
-          if "`joint_horiz_s`sgcase''" != "" {
-            dis as result  "p-value for joint test that sg=`sgcase' pre-treatment att horizon estimates are 0: " %-6.4f `joint_horiz_s`sgcase''
-            ereturn local joint_horiz_s`sgcase' = `joint_horiz_s`sgcase''
-          }
-          if "`joint_horiz_i_s`sgcase''" != ""  {
-            dis as result  "p-value for joint test that sg=`sgcase' pre-treatment att_it horizon estimates are 0: " %-6.4f `joint_horiz_i_s`sgcase''
-            ereturn local joint_horiz_i_s`sgcase' = `joint_horiz_i_s`sgcase''
-          }
-
-
-          if "`joint_Choriz_s`sgcase''" != "" {
-            dis as result  "p-value for joint test that sg=`sgcase' pre-treatment ame horizon estimates are 0: " %-6.4f `joint_Choriz_s`sgcase''
-            ereturn local  joint_Choriz_s`sgcase' = `joint_Choriz_s`sgcase''
-          }
-
-          if "`joint_Choriz_i_s`sgcase''" != ""  {
-            dis as result  "p-value for joint test that sg=`sgcase' pre-treatment ame_it horizon estimates are 0: " %-6.4f `joint_Choriz_i_s`sgcase''
-            ereturn local  joint_Choriz_i_s`sgcase' =  `joint_Choriz_i_s`sgcase''
-          }
-
-          dis as result  " "
+          if "`joint_horiz_s`sgcase''" != "" ereturn local joint_horiz_s`sgcase' = `joint_horiz_s`sgcase''
+          if "`joint_horiz_i_s`sgcase''" != "" ereturn local joint_horiz_i_s`sgcase' = `joint_horiz_i_s`sgcase''
+          if "`joint_Choriz_s`sgcase''" != "" ereturn local  joint_Choriz_s`sgcase' = `joint_Choriz_s`sgcase''
+          if "`joint_Choriz_i_s`sgcase''" != "" ereturn local  joint_Choriz_i_s`sgcase' =  `joint_Choriz_i_s`sgcase''
         }
         if "`adversarial'" != "" {
           foreach scenario in _ _C {
@@ -3784,244 +3672,32 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               if "`adversarialP`scenario'`type'_s`sgcase''" != "" {
                 local typetext `type'
                 if "`scenario'" == "_C" local typetext = subinstr("`typetext'","att","ame",.)
-                dis as result "p-value for joint test of null that all (non-reference) `typetext' coefficients for sg=`sgcase' are on a single line: " %-6.4f `adversarialP`scenario'`type'_s`sgcase''
                 ereturn scalar adversarial_pval_`typetext'_s`sgcase' = `adversarialP`scenario'`type'_s`sgcase''
                 ereturn matrix adversarial_line_`typetext'_s`sgcase' =   `adversarialB`scenario'`type'_s`sgcase''
-
               }
             }
           }
         }
-        dis as result " "
       }
     }
-    * having return the main sg materials, return the pairwise comparisons
     if wordcount("`sglist'") > 1 {
-      dis as result  "Pairwise Comparisons of Different Subgroups' Estimates: `elasinj'"
-      matlist `pwsgs'
-      dis as result " "
       ereturn matrix pwsgs = `pwsgs'
       foreach item in `att'  `att_it' `att_i' `att_itime' {
-        if "`joint_`item'_sdiff'" != "" dis as result  "p-value for joint test that all SGs have the same `item': " %-6.4f `joint_`item'_sdiff'
         if "`joint_`item'_sdiff'" != "" ereturn scalar joint_`item'_allsgssame =   `joint_`item'_sdiff'
-        if "`prejoint_`item'_sdiff'" != "" dis as result  "p-value for joint test that all SGs have the same pre-treatment `item': " %-6.4f `prejoint_`item'_sdiff'
         if "`prejoint_`item'_sdiff'" != "" ereturn scalar joint_pre_`item'_allsgssame =   `prejoint_`item'_sdiff'
       }
-      dis as result  " "
       if "`contreat'" != "" {
         foreach item in `att'  `att_it' `att_i' `att_itime' {
           local itemtext = subinstr("`item'","att","ame",.)
-          if "`joint_C`item'_sdiff'" != "" dis as result  "p-value for joint test that all SGs have the same `itemtext': " %-8.4f `joint_C`item'_sdiff'
           if "`joint_C`item'_sdiff'" != "" ereturn scalar joint_`itemtext'_allsgssame =   `joint_C`item'_sdiff'
-          if "`prejoint_C`item'_sdiff'" != "" dis as result  "p-value for joint test that all SGs have the same pre-treatment `itemtext': " %-6.4f `prejoint_C`item'_sdiff'
           if "`prejoint_C`item'_sdiff'" != "" ereturn scalar joint_pre_`itemtext'_allsgssame =   `prejoint_C`item'_sdiff'
-
         }
-        dis as result  " "
       }
     }
   }
 
   *return the histogram matrix
   if "`histogramcohorteffects'" != "" ereturn matrix histogramestimates = `___hist'
-
-
-
-
-  ***************************************************************************************************************************
-  ********************************************         PRODUCE EVENT STUDY PLOTS       **************************************
-  ***************************************************************************************************************************
-  * present event study plots if requested; a little complicated because of naming practices in wdidpooled
-  * this is also somewhat awkward placement b/c I have this coded to use the wdidpooled matrix
-  * this choice is vestigial to a prior program design and is kept here on the principle of not redoing what already works
-  * though I should probably redo this someday
-
-  if `espre' +`espl' > 0 & "`makeplots'" == "makeplots" {
-
-
-    * this creates and enters a frame where we will produce graphs using wdidpooled and similar for sgs
-    tempname __wooldidframe
-    frame create `__wooldidframe'
-    frame change `__wooldidframe'
-    qui svmat double `wdidpooled', names(col)
-    qui gen rownamesvar = ""
-    local names : roweq `wdidpooled'
-    forvalues i=1/`: word count `names'' {
-      qui replace rownamesvar=`"`: word `i' of `names''"' in `i'
-    }
-    qui drop if relyr == .
-    qui glevelsof(rownamesvar), clean local(graphtypes)
-    qui gen postperiod =  relyr >= 0
-    keep   postperiod relyr  estimate lb_95ci ub_95ci rownamesvar
-
-    * add the pre treatment observation / reference period
-    if "`esfixedbaseperiod'" == "" {
-      local newN = _N + 1
-      qui gstats sum relyr, meanonly
-      local max = r(max)
-      local min = r(min)
-      local initialflagt = r(min) - 1
-      qui set obs `newN'
-      qui replace relyr = `initialflagt' if _n == _N
-      qui replace lb_95ci = 0 if _n == _N
-      qui replace ub_95ci = 0 if _n == _N
-      qui replace estimate = 0 if _n == _N
-      qui replace rownamesvar = "reference" if _n == _N
-      local xlabelstarter xlabel(`initialflagt' "*"
-        forval xlabeltick = `min'(1)`max' {
-          local xlabelstarter `xlabelstarter' `xlabeltick' "`xlabeltick'"
-        }
-        local xlabelstarter `xlabelstarter' )
-
-    }
-    else{
-      local initialflagt `esrelativeto'
-      qui   gstats sum relyr, meanonly
-      local max = r(max)
-      local min = r(min)
-      local newN = _N + 1
-			if "`timetrends'" == "timetrends" local ++newN
-      qui set obs `newN'
-			qui replace relyr = `esrelativeto' if _n == _N
-			if "`timetrends'" == "timetrends" qui replace relyr = `esrelativeto' - 1 if _n == _N - 1
-      qui replace lb_95ci = 0 if _n == _N
-      qui replace ub_95ci = 0 if _n == _N
-      qui replace estimate = 0 if _n == _N
-			qui replace rownamesvar = "reference" if _n == _N
-			if "`timetrends'" == "timetrends" qui replace lb_95ci = 0 if _n == _N -1
-			if "`timetrends'" == "timetrends" qui replace ub_95ci = 0 if _n == _N -1
-			if "`timetrends'" == "timetrends" qui replace estimate = 0 if _n == _N -1
-			if "`timetrends'" == "timetrends" qui replace rownamesvar = "reference" if _n == _N - 1
-			if `esrelativeto' < `min' local min `esrelativeto'
-			if "`timetrends'" == "timetrends" if `esrelativeto' -1  < `min' local min = `esrelativeto' - 1
-      local xlabelstarter xlabel(
-        forval xlabeltick = `min'(1)`max' {
-          local asterisk
-					if `xlabeltick' == `esrelativeto' local asterisk *
-					if "`timetrends'" == "timetrends" & `xlabeltick' == `esrelativeto' -1 local asterisk *
-          local xlabelstarter `xlabelstarter' `xlabeltick' "`xlabeltick'`asterisk'"
-        }
-        local xlabelstarter `xlabelstarter' )
-    }
-    sort  relyr
-
-
-    local xlineinserter
-    qui   gstats sum relyr, meanonly
-    if r(min) < 0 local xlineinserter xline(-0.5,   lpattern(dash) lcolor(black))
-
-    * inject elasticity info
-    local elasinj Effects
-    if "`semielasticity'" == "eydx" local elasinj "Semi-elasticities"
-    local elasinj2 Effects
-    if "`contreatelasticitytype'" == "eyex" local elasinj2 Elasticities
-    if "`contreatelasticitytype'" == "eydx" local elasinj2 Semi-elasticities (eydx)
-    if "`contreatelasticitytype'" == "dyex" local elasinj2 Semi-elasticities (dyex)
-
-    * generate and save the actual graphs; then save the data
-    foreach graph in `graphtypes' {
-      local graphtext = subinstr("`graph'","ES_","",.)
-      local att_it_text ATT_it `elasinj'
-      local att_text ATT `elasinj'
-      local ame_it_text AME_it `elasinj2'
-      local ame_text AME `elasinj2'
-      twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_fullmodel, replace) `xlabelstarter'
-      if "`saveplots'" != "" qui graph save "`saveplots'_`graph'.gph", `replace'
-    }
-
-
-    if "`saveplots'" != "" qui save "`saveplots'_ES.dta", `replace'
-    clear
-
-    * repeat by SG if appropriate
-    if "`subgroups'" != "" & "`suppresssgprimaryeffects'" == "" {
-      foreach sgcase in `sglist' {
-        qui svmat double `wdid_sg`sgcase'', names(col)
-        qui gen rownamesvar = ""
-        local names : roweq `wdid_sg`sgcase''
-        forvalues i=1/`: word count `names'' {
-          qui replace rownamesvar=`"`: word `i' of `names''"' in `i'
-        }
-        qui drop if relyr == .
-        qui glevelsof(rownamesvar), clean local(graphtypes)
-        qui gen postperiod =  relyr >= 0
-        keep  rownamesvar postperiod relyr  estimate lb_95ci ub_95ci
-
-        * add the pre treatment observation
-        if "`esfixedbaseperiod'" == "" {
-          local newN = _N + 1
-          qui   gstats sum relyr, meanonly
-          local max = r(max)
-          local min = r(min)
-          local initialflagt = r(min) - 1
-          qui set obs `newN'
-          qui replace relyr = `initialflagt' if _n == _N
-          qui replace lb_95ci = 0 if _n == _N
-          qui replace ub_95ci = 0 if _n == _N
-          qui replace estimate = 0 if _n == _N
-          qui replace rownamesvar = "reference" if _n == _N
-
-          local xlabelstarter xlabel(`initialflagt' "*"
-            forval xlabeltick = `min'(1)`max' {
-              local xlabelstarter `xlabelstarter' `xlabeltick' "`xlabeltick'"
-            }
-            local xlabelstarter `xlabelstarter' )
-        }
-        else{
-          local initialflagt `esrelativeto'
-          qui   gstats sum relyr, meanonly
-          local max = r(max)
-          local min = r(min)
-          local newN = _N + 1
-					if "`timetrends'" == "timetrends" local ++newN
-          qui set obs `newN'
-          qui replace relyr = `esrelativeto' if _n == _N
-					if "`timetrends'" == "timetrends" qui replace relyr = `esrelativeto' - 1 if _n == _N - 1
-					qui replace lb_95ci = 0 if _n == _N
-          qui replace ub_95ci = 0 if _n == _N
-          qui replace estimate = 0 if _n == _N
-					qui replace rownamesvar = "reference" if _n == _N
-					if "`timetrends'" == "timetrends" qui replace lb_95ci = 0 if _n == _N -1
-          if "`timetrends'" == "timetrends" qui replace ub_95ci = 0 if _n == _N -1
-          if "`timetrends'" == "timetrends" qui replace estimate = 0 if _n == _N -1
-					if "`timetrends'" == "timetrends" qui replace rownamesvar = "reference" if _n == _N - 1
-
-          if `esrelativeto' < `min' local min `esrelativeto'
-          local xlabelstarter xlabel(
-            forval xlabeltick = `min'(1)`max' {
-              local asterisk
-							if `xlabeltick' == `esrelativeto' local asterisk *
-							if "`timetrends'" == "timetrends" & `xlabeltick' == `esrelativeto' -1 local asterisk *
-              local xlabelstarter `xlabelstarter' `xlabeltick' "`xlabeltick'`asterisk'"
-            }
-            local xlabelstarter `xlabelstarter' )
-        }
-
-        sort relyr
-        foreach graph in `graphtypes' {
-          local graphtext = subinstr("`graph'","ES_","",.)
-          local att_it_text ATT_it `elasinj'
-          local att_text ATT `elasinj'
-          local ame_it_text AME_it `elasinj2'
-          local ame_text AME `elasinj2'
-          twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_sg`sgcase', replace) `xlabelstarter'   title("`subgroups' == `sgcase'")
-          if "`saveplots'" != "" qui graph save "`saveplots'_`graph'_sg`sgcase'.gph", `replace'
-        }
-
-        if "`saveplots'" != ""  qui save "`saveplots'_ES_`subgroups'`sgcase'.dta", `replace'
-        clear
-      }
-    }
-
-    frame change `defaultframe'
-    frame drop `__wooldidframe'
-  }
-
-
-
-  ***************************************************************************************************************************
-  ***************************************         SHIP REMAINING MATRICES TO ERETURN AND EXIT       **************************************
-  ***************************************************************************************************************************
 
   * ship remaining matrices into ereturn
   if "`subgroups'" != "" & "`suppresssgprimaryeffects'" == "" {
@@ -4036,6 +3712,68 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   foreach matrix in `cfxmatricestoreturn' {
     ereturn matrix `matrix' = ``matrix''
   }
+
+  * display-state macros consumed by wooldid_display / wooldid_esplots (and by replay).
+  * hidden: internal plumbing, not part of the documented e() surface (they still appear
+  * to "local m : e(macros)" and so to the test battery). an ereturn local with an empty
+  * value creates no macro, so the unconditional lines below are self-gating.
+  ereturn hidden local wdid_vcespec `"`vcespecifier'"'
+  ereturn hidden local wdid_poisson "`poisson'"
+  ereturn hidden local wdid_poisexp "`poisexpresults'"
+  ereturn hidden local wdid_contreat "`contreat'"
+  ereturn hidden local wdid_sgvar "`subgroups'"
+  ereturn hidden local wdid_sglist "`sglist'"
+  ereturn hidden local wdid_estimands "`att' `att_it' `att_i' `att_itime'"
+  ereturn hidden local wdid_cwm "`customweightmultiplier'"
+  ereturn hidden local wdid_semielas "`semielasticity'"
+  ereturn hidden local wdid_cetype "`contreatelasticitytype'"
+  ereturn hidden local wdid_suppressjt "`suppressjointtests'"
+  ereturn hidden local wdid_suppresssgpe "`suppresssgprimaryeffects'"
+  ereturn hidden local wdid_adversarial "`adversarial'"
+  if "`summarystats'" != "" ereturn hidden local wdid_sumstats "summarystats"
+  ereturn hidden local wdid_espre "`espre'"
+  ereturn hidden local wdid_nptb "`Npre_trebase'"
+  ereturn hidden local wdid_nprat "`Npre_rat'"
+  ereturn hidden local wdid_wprat "`Wpre_rat'"
+  ereturn hidden local wdid_esrel "`esrelativeto'"
+  ereturn hidden local wdid_timetrends "`timetrends'"
+  ereturn hidden local wdid_replayv "1"
+
+
+  ********* begin actual result presentation *************
+  * F11: the presentation code lives in wooldid_display (non-eclass, reads e() only).
+  * it is split in two parts so the eclass wooldid_ptp call below stays at worker level
+  * (its ereturns would be discarded inside a non-eclass subprogram)
+  wooldid_display , part(1)
+  * F7: Roth (2022) pre-trend power diagnostics (compute + display + ereturns live in a
+  * subprogram; cap noi so a failure here cannot abort an otherwise-complete run)
+  if "`pretrendpower'" != "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`df_r') pois(`poisson') poisexp(`poisexpresults') tvar(`t') ttrevar(`ttre') ivar(`i') wvar(`w') cwm(`customweightmultiplier')
+  wooldid_display , part(2)
+
+
+
+
+  ***************************************************************************************************************************
+  ********************************************         PRODUCE EVENT STUDY PLOTS       **************************************
+  ***************************************************************************************************************************
+  * present event study plots if requested; a little complicated because of naming practices in wdidpooled
+  * this is also somewhat awkward placement b/c I have this coded to use the wdidpooled matrix
+  * this choice is vestigial to a prior program design and is kept here on the principle of not redoing what already works
+  * though I should probably redo this someday
+
+  if `espre' +`espl' > 0 & "`makeplots'" == "makeplots" {
+    local wdesopts
+    if "`saveplots'" != "" local wdesopts saveplots(`saveplots')
+    wooldid_esplots , `wdesopts' `replace'
+  }
+
+
+
+  ***************************************************************************************************************************
+  ***************************************         CLEAN UP AND EXIT       **************************************
+  ***************************************************************************************************************************
+  * (F11) all result matrices and scalars were shipped to e() above, BEFORE the display
+  * and plot calls; only cleanup remains here
 
   if "`cleanmatrices'" != "" {
     clear mata
@@ -4399,3 +4137,433 @@ version 16.0
   }
   if `ptpheader' == 0 dis as text "Caution: pretrendpower() was requested, but no event-study coefficient vector with a valid variance-covariance matrix was available (e.g. under timetrends); no diagnostics were computed."
 end
+
+
+* F11: all result presentation lives here, out of wooldid_worker (which is near stata's
+* per-program compiled-size ceiling), reading ONLY e() - the live estimation path and
+* replay (wooldid typed alone after estimation) both call this, so their output is
+* identical by construction. non-eclass on purpose: ereturn inside a non-eclass program
+* is a hard error, so this program is structurally incapable of altering the posted
+* results. part(1) = header through the adversarial lines; part(2) = subgroup tables
+* through the pairwise comparisons (split so the eclass wooldid_ptp call can stay in
+* the caller between them); part(roth) is reserved for replay of the Roth diagnostics.
+cap prog drop wooldid_display
+prog def wooldid_display
+version 16.0
+  syntax , part(string)
+  if "`e(wdid_replayv)'" == "" {
+    dis as error "Error: the stored results were posted by a wooldid version without replay support; nothing can be redisplayed."
+    error 301
+  }
+
+  * rehydrate the display state from e(). each local below mirrors the worker local of
+  * the same meaning byte-for-byte: option/label strings come from the hidden wdid_*
+  * macros (string-exact by construction), data-derived values from posted e() scalars
+  * (locals were themselves "= e(...)" evaluations upstream, so re-evaluating here
+  * reproduces the same strings, including "." for a never-set value)
+  local y `e(depvar)'
+  local vcespecifier `"`e(wdid_vcespec)'"'
+  local poisson `e(wdid_poisson)'
+  local contreat `e(wdid_contreat)'
+  local subgroups `e(wdid_sgvar)'
+  local sglist `e(wdid_sglist)'
+  local estimandlist `e(wdid_estimands)'
+  local customweightmultiplier `e(wdid_cwm)'
+  local semielasticity `e(wdid_semielas)'
+  local contreatelasticitytype `e(wdid_cetype)'
+  local suppressjointtests `e(wdid_suppressjt)'
+  local suppresssgprimaryeffects `e(wdid_suppresssgpe)'
+  local adversarial `e(wdid_adversarial)'
+  local summarystats `e(wdid_sumstats)'
+  local espre `e(wdid_espre)'
+  local Npre_trebase `e(wdid_nptb)'
+  local Npre_rat `e(wdid_nprat)'
+  local Wpre_rat `e(wdid_wprat)'
+  local esfixedbaseperiod
+  if "`e(estimate_type)'" == "fixed_reference_period" local esfixedbaseperiod esfixedbaseperiod
+  local N = e(N)
+  local Nclus = e(Nclus)
+  local droppedobs = e(N_dropped)
+  local r2 = e(r2)
+  local r2adj = e(r2adj)
+  local r2_within = e(r2_within)
+  local r2_withinadj = e(r2_withinadj)
+  local r2pseud = e(r2pseud)
+
+  local poistext
+  if "`poisson'" == "poisson" local poistext " Poisson Regression"
+  local elasinj
+  if "`semielasticity'" == "eydx" local elasinj Treatment Effects Presented as Semi-elasticities
+  if "`contreatelasticitytype'" != "dydx" & "`elasinj'" != "" local elasinj `elasinj',
+  if "`contreatelasticitytype'" == "eyex" local elasinj `elasinj' Marginal Treatment Effects Presented as Elasticities
+  if "`contreatelasticitytype'" == "eydx" local elasinj `elasinj' Marginal Treatment Effects Presented as Semi-elasticities (eydx)
+  if "`contreatelasticitytype'" == "dyex" local elasinj `elasinj' Marginal Treatment Effects Presented as Semi-elasticities (dyex)
+
+  if "`part'" == "1" {
+  dis as result  " "
+  dis as result  "Wooldid Estimation for Outcome: `y'; Standard Errors: `vcespecifier'"
+  dis as result  " "
+  if "`Nclus'" != "." & "`Nclus'" != "" {
+    dis as result  "N clusters = `Nclus'; N = `N' (`droppedobs' obs dropped from initial sample)"
+  }
+  else{
+    dis as result  "N = `N' (`droppedobs' obs dropped from initial sample)"
+  }
+  if "`poisson'" == "" {
+    if "`r2_within'" != "." {
+      dis as result  "R2 = " %-6.4f `r2' ";  R2adj = " %-6.4f `r2adj' "; R2-within = " %-6.4f `r2_within' ";  R2-withinadj = " %-6.4f `r2_withinadj'
+    }
+    else{
+      dis as result  "R2 = " %-6.4f `r2' ";  R2adj = " %-6.4f `r2adj'
+    }
+  }
+  else{
+    dis as result  "pseudo-R2 = " %-6.4f `r2pseud'
+  }
+
+  dis as result  " "
+
+
+  if "`summarystats'" != "" {
+
+    if "`esfixedbaseperiod'" == "" &  `espre' > 0  {
+      dis as result  " "
+      dis as result  "Treatment group reference period size: N = `Npre_trebase'."
+      dis as result  "`Npre_rat'% of pre-treatment treatment group observations are in the reference period."
+      dis as result  "The reference period contains `Wpre_rat'% of the pre-treatment treatment group by sample weight."
+      dis as result  " "
+    }
+
+    local contreatsummaryinjector
+    if "`contreat'" != "" local contreatsummaryinjector " and Continuous Treatment Variable (c)"
+    dis as result  "Summary Stats on Outcome Variable (y)`contreatsummaryinjector':"
+    matlist e(summarystats)
+
+    if "`poisson'" == "poisson" dis as result  "Note: summary stats above are for untransformed Y, while coefficients are from Y=exp(regression equation) and have a log-linear type interpretation."
+  }
+
+
+  ************* now show main results with matlist
+  dis as result  " "
+  dis as result  "Main`poistext' Results (Full Estimation Sample): `elasinj'"
+  if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
+  matlist e(wdidmainresults)
+
+  * F8: composition table prints with the other descriptive material under summarystats
+  cap confirm matrix e(escomp)
+  if "`summarystats'" != "" & _rc == 0 {
+    dis as result  " "
+    dis as result  "Event-Study Composition by Horizon (Full Estimation Sample; also in e(escomp)):"
+    matlist e(escomp), format(%12.4g)
+  }
+
+  * show the joint  tests
+  if "`suppressjointtests'" == "" {
+    dis as result  " "
+    if "`e(joint_horiz)'" != "" {
+      dis as result  "p-value for joint test that all pre-treatment att horizon estimates are 0: " %-6.4f e(joint_horiz)
+    }
+    if "`e(joint_horiz_i)'" != "" {
+      dis as result  "p-value for joint test that all pre-treatment att_it horizon estimates are 0: " %-6.4f e(joint_horiz_i)
+    }
+    if "`e(joint_Choriz)'" != "" {
+      dis as result  "p-value for joint test that all pre-treatment ame horizon estimates are 0: " %-6.4f e(joint_Choriz)
+    }
+    if "`e(joint_Choriz_i)'" != "" {
+      dis as result  "p-value for joint test that all pre-treatment ame_it horizon estimates are 0: " %-6.4f e(joint_Choriz_i)
+    }
+  }
+  dis as result  " "
+
+ if "`adversarial'" != "" {
+   foreach typetext in att att_it ame ame_it {
+     if "`e(adversarial_pval_`typetext')'" != "" {
+       dis as result "p-value for joint test of null that all (non-reference) `typetext' coefficients are on a single line: " %-6.4f e(adversarial_pval_`typetext')
+     }
+   }
+ }
+  }
+
+  if "`part'" == "2" {
+  dis as result  " "
+
+  * now show the sg results
+  if "`subgroups'" != "" {
+    if "`suppresssgprimaryeffects'" == "" {
+      foreach sgcase in `sglist' {
+        dis as result  " "
+        local poistext
+        if "`poisson'" == "poisson" local poistext "Poisson Regression"
+        dis as result  "`poistext'Results for Subgroup `subgroups' == `sgcase': `elasinj'"
+        if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
+        matlist e(wdidsgresults_`sgcase')
+        dis as result  " "
+        * F8: per-subgroup composition table under summarystats
+        cap confirm matrix e(escomp_s`sgcase')
+        if "`summarystats'" != "" & _rc == 0 {
+          dis as result  "Event-Study Composition by Horizon, Subgroup `subgroups' == `sgcase' (also in e(escomp_s`sgcase')):"
+          matlist e(escomp_s`sgcase'), format(%12.4g)
+          dis as result  " "
+        }
+        * show the joint  tests
+        if "`suppressjointtests'" == "" {
+
+          if "`e(joint_horiz_s`sgcase')'" != "" {
+            dis as result  "p-value for joint test that sg=`sgcase' pre-treatment att horizon estimates are 0: " %-6.4f `e(joint_horiz_s`sgcase')'
+          }
+          if "`e(joint_horiz_i_s`sgcase')'" != ""  {
+            dis as result  "p-value for joint test that sg=`sgcase' pre-treatment att_it horizon estimates are 0: " %-6.4f `e(joint_horiz_i_s`sgcase')'
+          }
+
+
+          if "`e(joint_Choriz_s`sgcase')'" != "" {
+            dis as result  "p-value for joint test that sg=`sgcase' pre-treatment ame horizon estimates are 0: " %-6.4f `e(joint_Choriz_s`sgcase')'
+          }
+
+          if "`e(joint_Choriz_i_s`sgcase')'" != ""  {
+            dis as result  "p-value for joint test that sg=`sgcase' pre-treatment ame_it horizon estimates are 0: " %-6.4f `e(joint_Choriz_i_s`sgcase')'
+          }
+
+          dis as result  " "
+        }
+        if "`adversarial'" != "" {
+          foreach typetext in att att_it ame ame_it {
+            if "`e(adversarial_pval_`typetext'_s`sgcase')'" != "" {
+              dis as result "p-value for joint test of null that all (non-reference) `typetext' coefficients for sg=`sgcase' are on a single line: " %-6.4f e(adversarial_pval_`typetext'_s`sgcase')
+            }
+          }
+        }
+        dis as result " "
+      }
+    }
+    * having shown the main sg materials, show the pairwise comparisons
+    if wordcount("`sglist'") > 1 {
+      dis as result  "Pairwise Comparisons of Different Subgroups' Estimates: `elasinj'"
+      matlist e(pwsgs)
+      dis as result " "
+      foreach item in `estimandlist' {
+        if "`e(joint_`item'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same `item': " %-6.4f e(joint_`item'_allsgssame)
+        if "`e(joint_pre_`item'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same pre-treatment `item': " %-6.4f e(joint_pre_`item'_allsgssame)
+      }
+      dis as result  " "
+      if "`contreat'" != "" {
+        foreach item in `estimandlist' {
+          local itemtext = subinstr("`item'","att","ame",.)
+          if "`e(joint_`itemtext'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same `itemtext': " %-8.4f e(joint_`itemtext'_allsgssame)
+          if "`e(joint_pre_`itemtext'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same pre-treatment `itemtext': " %-6.4f e(joint_pre_`itemtext'_allsgssame)
+        }
+        dis as result  " "
+      }
+    }
+  }
+  }
+end
+
+* F11: event-study plots, moved out of wooldid_worker (per-program size ceiling). reads
+* e() plus the two per-call options only; runs inside its own tempname frame and returns
+* to the caller's frame on the normal path. on an error inside this program, stata
+* auto-drops the tempname frame and the wooldid shell's rc-gated epilogue restores the
+* caller's frame - the same net behavior as the pre-F11 inline code.
+cap prog drop wooldid_esplots
+prog def wooldid_esplots
+version 16.0
+  syntax [, SAVEplots(name) replace]
+  qui frame
+  local defaultframe `r(currentframe)'
+
+  * rehydrate what the plot code reads from e()
+  local y `e(depvar)'
+  local esrelativeto `e(wdid_esrel)'
+  local timetrends `e(wdid_timetrends)'
+  local semielasticity `e(wdid_semielas)'
+  local contreatelasticitytype `e(wdid_cetype)'
+  local subgroups `e(wdid_sgvar)'
+  local sglist `e(wdid_sglist)'
+  local suppresssgprimaryeffects `e(wdid_suppresssgpe)'
+  local esfixedbaseperiod
+  if "`e(estimate_type)'" == "fixed_reference_period" local esfixedbaseperiod esfixedbaseperiod
+  tempname wdidpooled
+  matrix `wdidpooled' = e(wdidmainresults)
+
+
+
+    * this creates and enters a frame where we will produce graphs using wdidpooled and similar for sgs
+    tempname __wooldidframe
+    frame create `__wooldidframe'
+    frame change `__wooldidframe'
+    qui svmat double `wdidpooled', names(col)
+    qui gen rownamesvar = ""
+    local names : roweq `wdidpooled'
+    forvalues i=1/`: word count `names'' {
+      qui replace rownamesvar=`"`: word `i' of `names''"' in `i'
+    }
+    qui drop if relyr == .
+    qui glevelsof(rownamesvar), clean local(graphtypes)
+    qui gen postperiod =  relyr >= 0
+    keep   postperiod relyr  estimate lb_95ci ub_95ci rownamesvar
+
+    * add the pre treatment observation / reference period
+    if "`esfixedbaseperiod'" == "" {
+      local newN = _N + 1
+      qui gstats sum relyr, meanonly
+      local max = r(max)
+      local min = r(min)
+      local initialflagt = r(min) - 1
+      qui set obs `newN'
+      qui replace relyr = `initialflagt' if _n == _N
+      qui replace lb_95ci = 0 if _n == _N
+      qui replace ub_95ci = 0 if _n == _N
+      qui replace estimate = 0 if _n == _N
+      qui replace rownamesvar = "reference" if _n == _N
+      local xlabelstarter xlabel(`initialflagt' "*"
+        forval xlabeltick = `min'(1)`max' {
+          local xlabelstarter `xlabelstarter' `xlabeltick' "`xlabeltick'"
+        }
+        local xlabelstarter `xlabelstarter' )
+
+    }
+    else{
+      local initialflagt `esrelativeto'
+      qui   gstats sum relyr, meanonly
+      local max = r(max)
+      local min = r(min)
+      local newN = _N + 1
+			if "`timetrends'" == "timetrends" local ++newN
+      qui set obs `newN'
+			qui replace relyr = `esrelativeto' if _n == _N
+			if "`timetrends'" == "timetrends" qui replace relyr = `esrelativeto' - 1 if _n == _N - 1
+      qui replace lb_95ci = 0 if _n == _N
+      qui replace ub_95ci = 0 if _n == _N
+      qui replace estimate = 0 if _n == _N
+			qui replace rownamesvar = "reference" if _n == _N
+			if "`timetrends'" == "timetrends" qui replace lb_95ci = 0 if _n == _N -1
+			if "`timetrends'" == "timetrends" qui replace ub_95ci = 0 if _n == _N -1
+			if "`timetrends'" == "timetrends" qui replace estimate = 0 if _n == _N -1
+			if "`timetrends'" == "timetrends" qui replace rownamesvar = "reference" if _n == _N - 1
+			if `esrelativeto' < `min' local min `esrelativeto'
+			if "`timetrends'" == "timetrends" if `esrelativeto' -1  < `min' local min = `esrelativeto' - 1
+      local xlabelstarter xlabel(
+        forval xlabeltick = `min'(1)`max' {
+          local asterisk
+					if `xlabeltick' == `esrelativeto' local asterisk *
+					if "`timetrends'" == "timetrends" & `xlabeltick' == `esrelativeto' -1 local asterisk *
+          local xlabelstarter `xlabelstarter' `xlabeltick' "`xlabeltick'`asterisk'"
+        }
+        local xlabelstarter `xlabelstarter' )
+    }
+    sort  relyr
+
+
+    local xlineinserter
+    qui   gstats sum relyr, meanonly
+    if r(min) < 0 local xlineinserter xline(-0.5,   lpattern(dash) lcolor(black))
+
+    * inject elasticity info
+    local elasinj Effects
+    if "`semielasticity'" == "eydx" local elasinj "Semi-elasticities"
+    local elasinj2 Effects
+    if "`contreatelasticitytype'" == "eyex" local elasinj2 Elasticities
+    if "`contreatelasticitytype'" == "eydx" local elasinj2 Semi-elasticities (eydx)
+    if "`contreatelasticitytype'" == "dyex" local elasinj2 Semi-elasticities (dyex)
+
+    * generate and save the actual graphs; then save the data
+    foreach graph in `graphtypes' {
+      local graphtext = subinstr("`graph'","ES_","",.)
+      local att_it_text ATT_it `elasinj'
+      local att_text ATT `elasinj'
+      local ame_it_text AME_it `elasinj2'
+      local ame_text AME `elasinj2'
+      twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_fullmodel, replace) `xlabelstarter'
+      if "`saveplots'" != "" qui graph save "`saveplots'_`graph'.gph", `replace'
+    }
+
+
+    if "`saveplots'" != "" qui save "`saveplots'_ES.dta", `replace'
+    clear
+
+    * repeat by SG if appropriate
+    if "`subgroups'" != "" & "`suppresssgprimaryeffects'" == "" {
+      foreach sgcase in `sglist' {
+        tempname wdidsgmat
+        matrix `wdidsgmat' = e(wdidsgresults_`sgcase')
+        qui svmat double `wdidsgmat', names(col)
+        qui gen rownamesvar = ""
+        local names : roweq `wdidsgmat'
+        forvalues i=1/`: word count `names'' {
+          qui replace rownamesvar=`"`: word `i' of `names''"' in `i'
+        }
+        qui drop if relyr == .
+        qui glevelsof(rownamesvar), clean local(graphtypes)
+        qui gen postperiod =  relyr >= 0
+        keep  rownamesvar postperiod relyr  estimate lb_95ci ub_95ci
+
+        * add the pre treatment observation
+        if "`esfixedbaseperiod'" == "" {
+          local newN = _N + 1
+          qui   gstats sum relyr, meanonly
+          local max = r(max)
+          local min = r(min)
+          local initialflagt = r(min) - 1
+          qui set obs `newN'
+          qui replace relyr = `initialflagt' if _n == _N
+          qui replace lb_95ci = 0 if _n == _N
+          qui replace ub_95ci = 0 if _n == _N
+          qui replace estimate = 0 if _n == _N
+          qui replace rownamesvar = "reference" if _n == _N
+
+          local xlabelstarter xlabel(`initialflagt' "*"
+            forval xlabeltick = `min'(1)`max' {
+              local xlabelstarter `xlabelstarter' `xlabeltick' "`xlabeltick'"
+            }
+            local xlabelstarter `xlabelstarter' )
+        }
+        else{
+          local initialflagt `esrelativeto'
+          qui   gstats sum relyr, meanonly
+          local max = r(max)
+          local min = r(min)
+          local newN = _N + 1
+					if "`timetrends'" == "timetrends" local ++newN
+          qui set obs `newN'
+          qui replace relyr = `esrelativeto' if _n == _N
+					if "`timetrends'" == "timetrends" qui replace relyr = `esrelativeto' - 1 if _n == _N - 1
+					qui replace lb_95ci = 0 if _n == _N
+          qui replace ub_95ci = 0 if _n == _N
+          qui replace estimate = 0 if _n == _N
+					qui replace rownamesvar = "reference" if _n == _N
+					if "`timetrends'" == "timetrends" qui replace lb_95ci = 0 if _n == _N -1
+          if "`timetrends'" == "timetrends" qui replace ub_95ci = 0 if _n == _N -1
+          if "`timetrends'" == "timetrends" qui replace estimate = 0 if _n == _N -1
+					if "`timetrends'" == "timetrends" qui replace rownamesvar = "reference" if _n == _N - 1
+
+          if `esrelativeto' < `min' local min `esrelativeto'
+          local xlabelstarter xlabel(
+            forval xlabeltick = `min'(1)`max' {
+              local asterisk
+							if `xlabeltick' == `esrelativeto' local asterisk *
+							if "`timetrends'" == "timetrends" & `xlabeltick' == `esrelativeto' -1 local asterisk *
+              local xlabelstarter `xlabelstarter' `xlabeltick' "`xlabeltick'`asterisk'"
+            }
+            local xlabelstarter `xlabelstarter' )
+        }
+
+        sort relyr
+        foreach graph in `graphtypes' {
+          local graphtext = subinstr("`graph'","ES_","",.)
+          local att_it_text ATT_it `elasinj'
+          local att_text ATT `elasinj'
+          local ame_it_text AME_it `elasinj2'
+          local ame_text AME `elasinj2'
+          twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_sg`sgcase', replace) `xlabelstarter'   title("`subgroups' == `sgcase'")
+          if "`saveplots'" != "" qui graph save "`saveplots'_`graph'_sg`sgcase'.gph", `replace'
+        }
+
+        if "`saveplots'" != ""  qui save "`saveplots'_ES_`subgroups'`sgcase'.dta", `replace'
+        clear
+      }
+    }
+
+    frame change `defaultframe'
+    frame drop `__wooldidframe'
+end
+
