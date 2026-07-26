@@ -74,6 +74,7 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 - makeplots - produce event study plots
 - esrelativeto(_-int_) - choice of reference period if a fixed period is being used; default: period immediately prior to treatment
 - oostreatedcontrols(_+int_) - determines how cohorts treated after the end of the sample are handled
+- anticipation(_+int_) - treats the effective treatment onset as ttre − #, so anticipation windows are not misclassified as clean pre-treatment periods
 
 ##### Subgroup Effects: 
 - subgroups(_variable_) - variable whose levels specify subgroups for which estimates are to be produced

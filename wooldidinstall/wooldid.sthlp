@@ -73,7 +73,7 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 {opt pois:son} {opt poisexp:results}  {p_end}
 
 {synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt espre:length(int>=0)} {opt espost:length(int>=0)} {opt esr:elativeto(-int)}
- {opt joint:tests}   {opt adv:ersarial} {opt makep:lots} {opt oos:treatedcontrols(int>=0)}  {p_end}
+ {opt joint:tests}   {opt adv:ersarial} {opt makep:lots} {opt oos:treatedcontrols(int>=0)} {opt antic:ipation(int>=0)}  {p_end}
 
 {synopt : {help wooldid##interactions:Subgroup Effects:}} {opt subgroups(variable[>=0 int])} {opt suppress:sgprimaryeffects}  {p_end}
 
@@ -188,7 +188,9 @@ not observed enough times to estimate a time trend using the pre-treatment data.
 {pstd}
 {ul: Comment on Cohorts Treated After Sample End:} By default, {it:wooldid} handles cohorts treated after the end of the sample identically to cohorts that have never been treated. The
 option {it:oostreatedcontrols()} allows the user to specify that cohorts of this type should instead be handled more like cohorts treated within-sample
-and thus that these cohorts should be allowed to contribute to pre-treatment relative time period-specific estimates in the event study context.
+and thus that these cohorts should be allowed to contribute to pre-treatment relative time period-specific estimates in the event study context. Relatedly, when units may respond
+in anticipation of a known upcoming treatment, the option {it:anticipation(#)} treats the effective onset as {it:ttre} − #, so anticipation windows are not misclassified as clean
+pre-treatment periods.
 {p_end}
 
 
@@ -343,7 +345,16 @@ is recreated, and {it:wooldid} graphs from an earlier, differently-configured ru
 "out-of-sample treated controls"). When this option is specified with a value of T, cohorts treated within T periods of the end of sample are instead handled the same as other treated cohorts.
 Such cohorts are potentially allowed to contribute to pre-treatment relative time period-specific effects when this option is specified,
 but not otherwise. Note that if {it:esfixedbaseperiod} is specified, the out-of-sample-treated cohorts will be dropped if the specified reference period is not observed
-within the sample for these cohorts. {p_end}
+within the sample for these cohorts. When {it:anticipation()} is also specified, the out-of-sample window applies to the {ul:effective} (shifted) onset, so a cohort whose recorded onset
+lies just beyond the window can become usable once its effective onset falls within it. {p_end}
+
+{phang}{opt antic:ipation(integer)}: Treats the effective treatment onset as {it:ttre} − #, so that periods in which units may act in anticipation of a known upcoming treatment are counted
+as treated periods rather than clean pre-treatment periods (which would otherwise contaminate the reference period and pre-trend estimates). The shift is applied once, before relative time
+is constructed, and is exactly equivalent to re-running {it:wooldid} after replacing {it:ttre} with {it:ttre} − # (this is also the convention of {it:did_imputation}'s {it:shift()} option):
+all event-study horizons are counted from the {ul:effective} onset, so relative period 0 is # periods before the recorded onset, and you may wish to raise {it:espostlength()} by # to keep
+the same number of genuine post-treatment horizons. Notes: # is expressed in the units of {it:t} (not in panel-period counts — with, e.g., biennial data an odd # lands between observed
+periods, and {it:wooldid} prints a caution); units whose effective onset falls at or before their first usable period are dropped (with a caution reporting the count); with
+{cmd:subgroups({it:ttre})}, subgroup labels remain the recorded (unshifted) onset values. Negative values are not allowed. {p_end}
 
 {pstd}{ul: Two Approaches to Estimation -- Pooled Reference Period vs Fixed Reference Period:} Difference-in-differences treatment effect estimates involve comparing average outcomes during
 treated cohorts' treatment periods to treated cohorts' average outcomes during a pre-treatment reference period. By default, {it:wooldid} does comparisons using a pooled reference period,

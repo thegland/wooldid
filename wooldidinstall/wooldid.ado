@@ -49,7 +49,7 @@ cap prog drop wooldid_worker
 prog def wooldid_worker, eclass
 version 16.0
 
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -212,6 +212,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if `oostreatedcontrols' < 0 {
     dis as error  "Error: oostreatedcontrols specified as < 0, indicating that treatments occurring within sample should be ignored."
     dis as error  "This is not allowed; you must specially set up cases of this sort by modifying the ttre variable and the if statement."
+    error 198
+  }
+
+  * anticipation() shifts the effective onset EARLIER (ttre - #); a negative value would
+  * pretend onset is later, pushing genuinely treated periods into the control/reference
+  * pool - a silent identification failure. delayed-onset designs need their own setup
+  if `anticipation' < 0 {
+    dis as error  "Error: anticipation specified as < 0, indicating that treatment onset should be treated as occurring later than recorded."
+    dis as error  "This is not allowed; if you need a delayed-onset design, modify the ttre variable and the if statement directly."
     error 198
   }
 
@@ -564,7 +573,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * create a modified version of the period-of-treatment-onset variable ttre
   * the modified version will treat cohorts with treatment onsets a set distance (specified in oostreatedcontrols)
   * from the end of the sample identically as to units that are never treated at all
-  qui gen `ttre' = `ttre_asgiven' if `ttre_asgiven' <= `maxyearobserved' + `oostreatedcontrols' & `ifstatement'
+  * F4 anticipation(): treat the effective onset as ttre - #, shifted ONCE here so every
+  * downstream consumer (window screens, _t construction, summarystats, margins subpops)
+  * sees the shifted onset. the shift applies to BOTH the value and the out-of-sample
+  * window screen (a value-only shift would leave out-of-window anticipating cohorts in
+  * the control pool). the single-expression form is bit-identical to the hand-edit
+  * workaround (gen ttre2 = ttre - #); with anticipation absent/0 the emitted command is
+  * unchanged from before the option existed
+  local anticshift
+  if `anticipation' > 0 local anticshift - `anticipation'
+  qui gen `ttre' = `ttre_asgiven' `anticshift' if `ttre_asgiven' `anticshift' <= `maxyearobserved' + `oostreatedcontrols' & `ifstatement'
 
   * F13: the _i/_t construction below assumes cohort-level timing - exactly one treatment onset
   * per unit. rows of the same i carrying different onsets, or a mix of missing and non-missing
@@ -618,9 +636,41 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
 
     * drop cohorts which do not have a pre-treatment period (or 2 such periods if using time trends)
+    * F4: before applying the drops, report units that are dropped only BECAUSE of the
+    * anticipation shift (shifted onset at/before their first usable period while the
+    * recorded onset is not) - otherwise the only signal is a smaller N in the header
+    if `anticipation' > 0 {
+      local anticmintvar `mint'
+      if "`timetrends'" == "timetrends" local anticmintvar `mintp1'
+      qui count if `ttre' <= `anticmintvar' & `ttre_asgiven' > `anticmintvar' & `ttre_asgiven' < . & `ifstatement'
+      if r(N) > 0 {
+        local anticdroppedobs = r(N)
+        tempvar antictag
+        qui gegen `antictag' = tag(`i') if `ttre' <= `anticmintvar' & `ttre_asgiven' > `anticmintvar' & `ttre_asgiven' < . & `ifstatement'
+        qui count if `antictag' == 1
+        dis as text "Caution: anticipation(`anticipation') places the effective onset of `r(N)' unit(s) at or before their first usable pre-period; those unit(s) and their `anticdroppedobs' observations are dropped from the sample."
+        qui drop `antictag'
+      }
+    }
     if "`timetrends'" == "" qui replace `ifvar' = 0 if `ttre' <= `mint'
     if "`timetrends'" == "timetrends" qui replace `ifvar' = 0 if `ttre' <= `mintp1'
     qui replace `ttre' = . if `ifvar' == 0
+
+    * F4: warn when an effective onset lands on a period not observed in the data - on
+    * panels whose t is not unit-spaced (e.g. biennial), an off-grid anticipation shift
+    * can merely relabel horizons (pooled reference) or move the fixed reference period
+    * in unintended ways (esfixedbaseperiod), silently changing what is estimated
+    if `anticipation' > 0 {
+      qui glevelsof `ttre' if `ifstatement' & `ttre' != ., local(anticonsets)
+      local anticoffgrid
+      foreach anticv of local anticonsets {
+        qui count if `t' == `anticv' & `ifstatement'
+        if r(N) == 0 local anticoffgrid `anticoffgrid' `anticv'
+      }
+      if "`anticoffgrid'" != "" {
+        dis as text "Caution: anticipation() is expressed in the units of `t', and the effective onset value(s) `anticoffgrid' fall on period(s) not observed in the data. Depending on the specification, this can merely relabel horizons, move the reference period in unintended ways, or cause estimation to fail. Verify that the anticipation length matches the spacing of `t'."
+      }
+    }
 
     * construct _t, which contains dummies for treatment periods of interest - it will be specified in terms of relative periods
     * _t is born as a relative period variable, which we missing out for relyrs before the event study prelength and for the very first observation we have for everyone
@@ -712,6 +762,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if _rc != 0 {
       dis as error  "Error: cannot find either a treated time period for any treated units or sufficient untreated periods for treated units."
       if "`timetrends'" != "" dis as error  "Note that including cohort-specific time trends raises the number of untreated periods required."
+      if `anticipation' > 0 dis as error  "Note: anticipation(`anticipation') shifted every effective onset earlier; a shift larger than the available pre-period window can leave no estimable treated periods."
       error 459
     }
     * produce modified identifiers _i
@@ -853,6 +904,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if r(N) == 0 {
       dis as error  "Error: you have no never-treated control group and no not-yet-treated control group whose treatment falls outside the sample window."
       dis as error  "To ignore this error, specify safety(off) or modify the sample window manually."
+      if `anticipation' > 0 dis as error  "Note: anticipation(`anticipation') moves effective onsets earlier, which can pull cohorts treated after the sample window into it; a larger oostreatedcontrols() or a smaller anticipation() may restore a control group."
       error 459
     }
   }
