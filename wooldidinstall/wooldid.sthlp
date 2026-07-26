@@ -364,8 +364,10 @@ as treated periods rather than clean pre-treatment periods (which would otherwis
 is constructed, and is exactly equivalent to re-running {it:wooldid} after replacing {it:ttre} with {it:ttre} − # (this is also the convention of {it:did_imputation}'s {it:shift()} option):
 all event-study horizons are counted from the {ul:effective} onset, so relative period 0 is # periods before the recorded onset, and you may wish to raise {it:espostlength()} by # to keep
 the same number of genuine post-treatment horizons. Notes: # is expressed in the units of {it:t} (not in panel-period counts — with, e.g., biennial data an odd # lands between observed
-periods, and {it:wooldid} prints a caution); units whose effective onset falls at or before their first usable period are dropped (with a caution reporting the count); with
-{cmd:subgroups({it:ttre})}, subgroup labels remain the recorded (unshifted) onset values. Negative values are not allowed. {p_end}
+periods, and {it:wooldid} prints a caution); units whose effective onset falls at or before their first usable period are dropped (with a caution reporting the count), and under
+{cmd:esfixedbaseperiod}, units whose {ul:shifted} reference period falls on a period they are not observed in are dropped, with a caution when the drop is attributable to the shift
+itself; with {cmd:subgroups({it:ttre})}, subgroup labels remain the recorded (unshifted) onset values. When active, the shift is recorded in {it:e(anticipation)}. Negative values are
+not allowed. {p_end}
 
 {pstd}{ul: Two Approaches to Estimation -- Pooled Reference Period vs Fixed Reference Period:} Difference-in-differences treatment effect estimates involve comparing average outcomes during
 treated cohorts' treatment periods to treated cohorts' average outcomes during a pre-treatment reference period. By default, {it:wooldid} does comparisons using a pooled reference period,

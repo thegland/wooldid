@@ -788,7 +788,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     qui drop `refperiodobserved_temp'
     qui replace `ifvar' = 0 if `refperiodobserved' == 0  & `ttre' != .
     * F4: attribute reference-period drops caused only by the anticipation shift
-    if `anticipation' > 0 wooldid_anticesf , ivar(`i') tvar(`t') rawttre(`ttre_asgiven') refobs(`refperiodobserved') esrel(`esrelativeto') antic(`anticipation') ttrevar(`ttre')
+    if `anticipation' > 0 cap noi wooldid_anticesf , ivar(`i') tvar(`t') rawttre(`ttre_asgiven') refobs(`refperiodobserved') esrel(`esrelativeto') antic(`anticipation') ttrevar(`ttre') ifv(`ifvar')
     * update _t and ttre
     qui replace `_t' = . if `ifvar' == 0
     qui replace `ttre'  = . if `ifvar' == 0
@@ -885,7 +885,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * F4: warn when an effective onset lands on a period not observed in the data (both
   * reference regimes; the checks live in a subprogram to conserve worker size headroom)
-  if `anticipation' > 0 wooldid_anticgrid , tvar(`t') ttrevar(`ttre') ifv(`ifvar')
+  if `anticipation' > 0 cap noi wooldid_anticgrid , tvar(`t') ttrevar(`ttre') ifv(`ifvar')
 
   * this is needed for correctly rendering tables / looping through the right number of horizons
   local horizonstarter = 1 + `min_t' - `espre'
@@ -4095,9 +4095,14 @@ end
 cap prog drop wooldid_anticesf
 prog def wooldid_anticesf
 version 16.0
-  syntax , ivar(string) tvar(string) rawttre(string) refobs(string) esrel(string) antic(string) ttrevar(string)
+  syntax , ivar(string) tvar(string) rawttre(string) refobs(string) esrel(string) antic(string) ttrevar(string) ifv(string)
+  * the raw-reference check must use the SAME domain the reference screen itself used:
+  * rows in-sample before this screen ran. the screen has already zeroed ifv for its own
+  * victims, so that domain = still-in-sample rows plus the just-zeroed victims. without
+  * this restriction, a raw reference observed only on rows an EARLIER screen (e.g. a
+  * user if()) had excluded would mis-attribute an unrelated drop to the shift
   tempvar rawref rawrefobs
-  qui gen byte `rawref' = `tvar' == `rawttre' + `esrel'
+  qui gen byte `rawref' = `tvar' == `rawttre' + `esrel' if `ifv' == 1 | (`refobs' == 0 & `ttrevar' != .)
   qui gegen `rawrefobs' = max(`rawref'), by(`ivar')
   qui count if `refobs' == 0 & `ttrevar' != . & `rawrefobs' == 1
   if r(N) > 0 {
