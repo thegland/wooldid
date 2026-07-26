@@ -49,7 +49,7 @@ cap prog drop wooldid_worker
 prog def wooldid_worker, eclass
 version 16.0
 
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -192,6 +192,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     dis as error "Error: Ibragimov and Muller p-values not compatible with continuous treatment effects plots."
     error 198
   }
+
+  * F7 pre-trend power diagnostics: validate the request early (checks live in a
+  * subprogram - the worker is close to Stata's per-program size ceiling)
+  if "`pretrendpower'" != "" wooldid_ptpcheck , levels(`pretrendpower') esf(`esfixedbaseperiod') impv(`impvalues') espre(`esprelength')
 
   * check conditions for using im p-values --
   * for the joint tests, I have not seen IM characterize multi-way tests. implementing a test here of some sort would be easy,
@@ -3733,6 +3737,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
      }
    }
  }
+  * F7: Roth (2022) pre-trend power diagnostics (compute + display + ereturns live in a
+  * subprogram; cap noi so a failure here cannot abort an otherwise-complete run)
+  if "`pretrendpower'" != "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`df_r') pois(`poisson') poisexp(`poisexpresults') tvar(`t') ttrevar(`ttre') ivar(`i') wvar(`w') cwm(`customweightmultiplier')
   dis as result  " "
 
   * now return the sg results
@@ -4063,3 +4070,283 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
   end
+
+
+* ============================================================================
+* F7 subprograms: Roth (2022) pre-trend power diagnostics.
+* Implemented as subprograms because wooldid_worker sits close to Stata's
+* per-program compiled-size ceiling (verified: sizable inline additions make
+* the ado fail to load with r(1000)).
+* ============================================================================
+
+* parse-time validation for pretrendpower()
+cap prog drop wooldid_ptpcheck
+prog def wooldid_ptpcheck
+version 16.0
+  syntax , [levels(numlist) esf(string) impv(string) espre(string)]
+  if "`impv'" != "" {
+    dis as error "Error: pretrendpower() is not compatible with impvalues (no event-study variance-covariance matrix exists under Ibragimov-Muller inference)."
+    error 198
+  }
+  if "`esf'" == "" {
+    dis as error "Error: pretrendpower() requires esfixedbaseperiod. Under the pooled reference the comparison period is a cohort-specific pool of pre-periods, so the single omitted reference period that the Roth (2022) linear-trend normalization requires is not defined."
+    dis as error "Specify esfixedbaseperiod (with esrelativeto() if you want a reference other than -1)."
+    error 198
+  }
+  if `espre' <= 0 {
+    dis as error "Error: pretrendpower() requires esprelength() of at least 1; without pre-treatment event-study coefficients there is nothing to diagnose."
+    error 198
+  }
+  foreach ptpl of local levels {
+    if `ptpl' > 0 & `ptpl' < 1 {
+      dis as error "Error: pretrendpower() takes power levels in percent (for example 80, not .8)."
+      error 198
+    }
+    if `ptpl' != int(`ptpl') | `ptpl' <= 5 | `ptpl' >= 100 {
+      dis as error "Error: pretrendpower() power levels must be integers strictly between 5 and 100 (for example 50, 80, 90, 95)."
+      error 198
+    }
+  }
+end
+
+* compute + display + ereturn the diagnostics. Runs AFTER the ereturn post, so it may
+* only use r-class data commands and matrix algebra (an estimation command here would
+* wipe the posted e()). All inputs arrive as passed tempvar names or e() objects.
+cap prog drop wooldid_ptp
+prog def wooldid_ptp, eclass
+version 16.0
+  syntax , levels(numlist) [esrel(string) dfr(string) pois(string) poisexp(string) tvar(string) ttrevar(string) ivar(string) wvar(string) cwm(string)]
+
+  local ptpref = `esrel'
+  * degrees of freedom: use the regression's residual df when available (t and F
+  * distributions, matching the critical values wooldid's own tables and joint tests
+  * use); fall back to normal / chi-squared otherwise (e.g. some poisson paths)
+  local ptpdfok 0
+  if "`dfr'" != "" & "`dfr'" != "." {
+    if real("`dfr'") > 0 & real("`dfr'") < . local ptpdfok 1
+  }
+  if `ptpdfok' local ptpcrit = invttail(`dfr', .025)
+  else local ptpcrit = invnormal(.975)
+
+  * hbar: estimand-weighted mean post-treatment relative period over the FULL post
+  * support of the estimation sample - the pooled estimands aggregate over all post
+  * cells (subpop t >= onset), not only the reported event-study window, and using the
+  * reported window instead understates the implied bias whenever espostlength is
+  * smaller than the largest post relative period
+  tempvar ptprely ptpwa ptppost ptpnum
+  qui gen double `ptprely' = `tvar' - `ttrevar'
+  qui gen double `ptpwa' = `wvar'
+  if "`cwm'" != "" qui replace `ptpwa' = `ptpwa' * `cwm'
+  qui gen byte `ptppost' = e(sample) & `ttrevar' != . & `ptprely' >= 0 & `ptprely' < .
+  qui gen double `ptpnum' = `ptpwa' * `ptprely' if `ptppost'
+  qui sum `ptpnum' if `ptppost', meanonly
+  local ptphnum = r(sum)
+  qui sum `ptpwa' if `ptppost', meanonly
+  local ptphbar_att = cond(r(sum) > 0 & r(sum) < ., `ptphnum'/r(sum), .)
+  * att_it-family hbar: weight divided by the (i,t) cell weight total, replicating the
+  * weight-construction block (cell totals use the raw weight, without any custom
+  * weight multiplier - the documented asymmetry)
+  tempvar ptpwpit ptpwit ptpnum2
+  qui gegen double `ptpwpit' = total(cond(e(sample), `wvar', 0)), by(`ivar' `tvar')
+  qui gen double `ptpwit' = `ptpwa'/`ptpwpit'
+  qui replace `ptpwit' = 0 if `ptpwit' == .
+  qui gen double `ptpnum2' = `ptpwit' * `ptprely' if `ptppost'
+  qui sum `ptpnum2' if `ptppost', meanonly
+  local ptphnum2 = r(sum)
+  qui sum `ptpwit' if `ptppost', meanonly
+  local ptphbar_it = cond(r(sum) > 0 & r(sum) < ., `ptphnum2'/r(sum), .)
+  cap drop `ptprely' `ptpwa' `ptppost' `ptpnum' `ptpwpit' `ptpwit' `ptpnum2'
+
+  local ptpheader 0
+  foreach ptpty in att att_it ame ame_it {
+    cap confirm matrix e(b_es_`ptpty')
+    if _rc != 0 continue
+    cap confirm matrix e(V_es_`ptpty')
+    if _rc != 0 continue
+    tempname ptpb ptpV
+    matrix `ptpb' = e(b_es_`ptpty')
+    matrix `ptpV' = e(V_es_`ptpty')
+    local ptplbl : colnames `ptpb'
+    * pre-period indices and the trend vector m = relyr - reference. m is built from
+    * the actual labels: under esrelativeto(< -1) the pre relyrs straddle the
+    * reference, so m carries BOTH signs - no ordering or sign assumption is safe
+    local ptpk 0
+    local ptppreidx
+    local ptpmvals
+    local ptpj 0
+    foreach ptpl of local ptplbl {
+      local ++ptpj
+      if substr("`ptpl'", 1, 3) == "pre" {
+        local ++ptpk
+        local ptppreidx `ptppreidx' `ptpj'
+        local ptpmvals `ptpmvals' `=-real(substr("`ptpl'", 4, .)) - `ptpref''
+      }
+    }
+    if `ptpk' == 0 {
+      dis as text "Caution: pretrendpower() requested, but the `ptpty' event study has no pre-treatment coefficients; diagnostics skipped for `ptpty'."
+      continue
+    }
+    tempname ptpS ptpbp ptpm
+    matrix `ptpS' = J(`ptpk', `ptpk', 0)
+    matrix `ptpbp' = J(`ptpk', 1, 0)
+    matrix `ptpm' = J(`ptpk', 1, 0)
+    local ptpr 0
+    foreach ptpi of local ptppreidx {
+      local ++ptpr
+      matrix `ptpbp'[`ptpr', 1] = `ptpb'[1, `ptpi']
+      local ptpmv : word `ptpr' of `ptpmvals'
+      matrix `ptpm'[`ptpr', 1] = `ptpmv'
+      local ptpc 0
+      foreach ptpi2 of local ptppreidx {
+        local ++ptpc
+        matrix `ptpS'[`ptpr', `ptpc'] = `ptpV'[`ptpi', `ptpi2']
+      }
+    }
+    * screens, in hazard order: a missing element would make invsym abort the run; a
+    * non-positive diagonal (degeneracy sentinel, zero-variance row) would otherwise be
+    * silently g-inversed into a plausible-looking wrong number
+    local ptpbad 0
+    forval ptpr = 1/`ptpk' {
+      if missing(`ptpbp'[`ptpr', 1]) local ptpbad 1
+      if missing(`ptpS'[`ptpr', `ptpr']) | `ptpS'[`ptpr', `ptpr'] <= 0 local ptpbad 1
+      forval ptpc = 1/`ptpk' {
+        if missing(`ptpS'[`ptpr', `ptpc']) local ptpbad 1
+      }
+    }
+    if `ptpbad' {
+      dis as text "Caution: the `ptpty' pre-period variance-covariance block contains missing or non-positive variance entries; pretrendpower() diagnostics skipped for `ptpty'."
+      continue
+    }
+    matrix `ptpS' = (`ptpS' + `ptpS'')/2
+    tempname ptpSi ptpwork
+    matrix `ptpSi' = invsym(`ptpS')
+    local ptpkeff = `ptpk' - diag0cnt(`ptpSi')
+    if `ptpkeff' <= 0 {
+      dis as text "Caution: the `ptpty' pre-period variance-covariance block is not invertible; pretrendpower() diagnostics skipped for `ptpty'."
+      continue
+    }
+    if `ptpkeff' < `ptpk' dis as text "Caution: the `ptpty' pre-period variance-covariance block is rank-deficient (rank `ptpkeff' of `ptpk'); a generalized inverse is used and the joint pre-trend test has `ptpkeff' degrees of freedom."
+    matrix `ptpwork' = `ptpm''*`ptpSi'*`ptpm'
+    local ptpc2 = `ptpwork'[1, 1]
+    if missing(`ptpc2') | `ptpc2' <= 0 {
+      dis as text "Caution: the linear-trend information m'V^(-1)m for `ptpty' is not positive; pretrendpower() diagnostics skipped for `ptpty'."
+      continue
+    }
+    matrix `ptpwork' = `ptpm''*`ptpSi'*`ptpbp'
+    local ptpslope = `ptpwork'[1, 1]/`ptpc2'
+    local ptpse = 1/sqrt(`ptpc2')
+    local ptpll = `ptpslope' - `ptpcrit'*`ptpse'
+    local ptpul = `ptpslope' + `ptpcrit'*`ptpse'
+    matrix `ptpwork' = `ptpbp''*`ptpSi'*`ptpbp'
+    local ptpW = `ptpwork'[1, 1]
+    if `ptpdfok' local ptpprep = Ftail(`ptpkeff', `dfr', `ptpW'/`ptpkeff')
+    else local ptpprep = chi2tail(`ptpkeff', `ptpW')
+    local ptphbar `ptphbar_att'
+    if "`ptpty'" == "att_it" | "`ptpty'" == "ame_it" local ptphbar `ptphbar_it'
+
+    * NIS setup: the pre-test Roth's pretrends package powers - reject when ANY pre
+    * coefficient is individually significant (using wooldid's own critical value)
+    local ptpnisok = (`ptpk' <= 50)
+    local ptpnissize .
+    if `ptpnisok' {
+      tempname ptpsd ptpmrow
+      matrix `ptpsd' = J(1, `ptpk', 0)
+      forval ptpr = 1/`ptpk' {
+        matrix `ptpsd'[1, `ptpr'] = sqrt(`ptpS'[`ptpr', `ptpr'])
+      }
+      matrix `ptpmrow' = `ptpm''
+      cap mata: st_local("ptpnissize", strofreal(1 - mvnormalcvqp(-`ptpcrit'*st_matrix("`ptpsd'"), `ptpcrit'*st_matrix("`ptpsd'"), J(1, `ptpk', 0), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
+      if _rc != 0 local ptpnisok 0
+      else if missing(real("`ptpnissize'")) local ptpnisok 0
+    }
+
+    local ptpnlev : word count `levels'
+    tempname ptpmat
+    matrix `ptpmat' = J(`ptpnlev', 5, .)
+    local ptprn
+    local ptplr 0
+    foreach ptplev of local levels {
+      local ++ptplr
+      local ptprn `ptprn' p`ptplev'
+      matrix `ptpmat'[`ptplr', 1] = `ptplev'
+      * Wald-based minimum detectable trend: powers the joint pre-trend test above,
+      * using the F distribution with the regression's residual df (a chi-squared
+      * shortcut is optimistic by ~25 percent at 10 clusters)
+      if `ptpdfok' local ptplam = npnF(`ptpkeff', `dfr', invF(`ptpkeff', `dfr', .95), 1 - `ptplev'/100)
+      else local ptplam = npnchi2(`ptpkeff', invchi2(`ptpkeff', .95), 1 - `ptplev'/100)
+      if !missing(`ptplam') {
+        matrix `ptpmat'[`ptplr', 2] = sqrt(`ptplam'/`ptpc2')
+        if !missing(`ptphbar') matrix `ptpmat'[`ptplr', 4] = sqrt(`ptplam'/`ptpc2')*(`ptphbar' - `ptpref')
+      }
+      * NIS-based minimum detectable trend, by bisection on the exact rejection
+      * probability (deterministic quadrature; self-checked against the target)
+      if `ptpnisok' {
+        if `ptplev'/100 > real("`ptpnissize'") {
+          local ptpglo = 0
+          local ptpghi = 8*`ptpse'
+          local ptpiter 0
+          local ptppw 0
+          while `ptppw' < `ptplev'/100 & `ptpiter' < 60 {
+            local ptpghi = 2*`ptpghi'
+            cap mata: st_local("ptppw2", strofreal(1 - mvnormalcvqp(-`ptpcrit'*st_matrix("`ptpsd'"), `ptpcrit'*st_matrix("`ptpsd'"), `ptpghi'*st_matrix("`ptpmrow'"), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
+            if _rc != 0 local ptpiter 999
+            else local ptppw = real("`ptppw2'")
+            local ++ptpiter
+          }
+          if `ptpiter' < 999 {
+            forval ptpbi = 1/80 {
+              local ptpgmid = (`ptpglo' + `ptpghi')/2
+              cap mata: st_local("ptppw2", strofreal(1 - mvnormalcvqp(-`ptpcrit'*st_matrix("`ptpsd'"), `ptpcrit'*st_matrix("`ptpsd'"), `ptpgmid'*st_matrix("`ptpmrow'"), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
+              if _rc == 0 {
+                if real("`ptppw2'") < `ptplev'/100 local ptpglo = `ptpgmid'
+                else local ptpghi = `ptpgmid'
+              }
+            }
+            local ptpgn = (`ptpglo' + `ptpghi')/2
+            cap mata: st_local("ptppw2", strofreal(1 - mvnormalcvqp(-`ptpcrit'*st_matrix("`ptpsd'"), `ptpcrit'*st_matrix("`ptpsd'"), `ptpgn'*st_matrix("`ptpmrow'"), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
+            if _rc == 0 {
+              if abs(real("`ptppw2'") - `ptplev'/100) < 1e-4 {
+                matrix `ptpmat'[`ptplr', 3] = `ptpgn'
+                if !missing(`ptphbar') matrix `ptpmat'[`ptplr', 5] = `ptpgn'*(`ptphbar' - `ptpref')
+              }
+            }
+          }
+        }
+      }
+    }
+    matrix rownames `ptpmat' = `ptprn'
+    matrix colnames `ptpmat' = power mdt_wald mdt_nis bias_wald bias_nis
+
+    * display
+    if `ptpheader' == 0 {
+      dis as result " "
+      dis as result "Pre-Trend Power Diagnostics (Roth 2022):"
+      local ptpheader 1
+    }
+    dis as result "  `ptpty': GLS linear pre-trend fit on `ptpk' pre-treatment coefficient(s); reference relative period = `ptpref'"
+    dis as result "    slope = " %-9.0g `ptpslope' " (se " %-9.0g `ptpse' "; 95% CI " %-9.0g `ptpll' " to " %-9.0g `ptpul' ")"
+    if `ptpdfok' dis as result "    joint pre-trend test: F(`ptpkeff', `dfr') = " %-8.0g `=`ptpW'/`ptpkeff'' ", p = " %-6.4f `ptpprep'
+    else dis as result "    joint pre-trend test: chi2(`ptpkeff') = " %-8.0g `ptpW' ", p = " %-6.4f `ptpprep'
+    if `ptpnisok' dis as result "    size of the any-pre-period-individually-significant pre-test: " %-6.4f real("`ptpnissize'")
+    dis as result "    weighted mean post-treatment relative period (hbar) = " %-9.0g `ptphbar'
+    dis as result "    minimum detectable linear trend, and the bias such a trend would imply for the"
+    dis as result "    pooled estimate if it continued into the post-treatment period:"
+    matlist `ptpmat', format(%12.4g)
+    dis as text "    note: mdt_wald powers the joint pre-trend test above; mdt_nis powers the test that any"
+    dis as text "    pre-period coefficient is individually significant (the convention of Roth's pretrends package)."
+    if "`pois'" == "poisson" & "`poisexp'" == "" dis as text "    note: poisson event-study coefficients are on the linear-index (xb) scale, and so are these diagnostics."
+
+    * ereturns (matrix uses copy so the object survives if this block is ever resited)
+    cap ereturn matrix roth_power_`ptpty' = `ptpmat', copy
+    cap ereturn scalar roth_slope_`ptpty' = `ptpslope'
+    cap ereturn scalar roth_slope_se_`ptpty' = `ptpse'
+    cap ereturn scalar roth_slope_ll_`ptpty' = `ptpll'
+    cap ereturn scalar roth_slope_ul_`ptpty' = `ptpul'
+    cap ereturn scalar roth_prep_`ptpty' = `ptpprep'
+    cap ereturn scalar roth_hbar_`ptpty' = `ptphbar'
+    cap ereturn scalar roth_npre_`ptpty' = `ptpk'
+    cap ereturn scalar roth_keff_`ptpty' = `ptpkeff'
+    if `ptpnisok' cap ereturn scalar roth_nissize_`ptpty' = real("`ptpnissize'")
+  }
+  if `ptpheader' == 0 dis as text "Caution: pretrendpower() was requested, but no event-study coefficient vector with a valid variance-covariance matrix was available (e.g. under timetrends); no diagnostics were computed."
+end

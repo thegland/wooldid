@@ -73,7 +73,7 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 {opt pois:son} {opt poisexp:results}  {p_end}
 
 {synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt espre:length(int>=0)} {opt espost:length(int>=0)} {opt esr:elativeto(-int)}
- {opt joint:tests}   {opt adv:ersarial} {opt makep:lots} {opt oos:treatedcontrols(int>=0)} {opt antic:ipation(int>=0)}  {p_end}
+ {opt joint:tests}   {opt adv:ersarial} {opt makep:lots} {opt oos:treatedcontrols(int>=0)} {opt antic:ipation(int>=0)} {opt pretrendpow:er(numlist)}  {p_end}
 
 {synopt : {help wooldid##interactions:Subgroup Effects:}} {opt subgroups(variable[>=0 int])} {opt suppress:sgprimaryeffects}  {p_end}
 
@@ -331,10 +331,21 @@ are equal to the fitted values from the OLS best fit line. These tests will not 
 (either overall, or within specific subgroups). {p_end}
 
 {phang}{opt altmethod_adversarial}: Alternate method of implementing the test above, which projects a trend forward using the pre-treatment coefficients only, and
-then which only tests to see if the post-treatment coefficients collectively fall in line with the projected values. This likely reflects a weaker test than 
+then which only tests to see if the post-treatment coefficients collectively fall in line with the projected values. This likely reflects a weaker test than
 the primary implementaiton, but may be preferred under certain circumstances. {p_end}
 
-altmethod_adversarial
+{phang}{opt pretrendpow:er(numlist)}: Reports Roth (2022)-style pre-trend power diagnostics for each requested power level (specified in percent as integers strictly between 5 and 100,
+e.g. {it:pretrendpower(50 80 90 95)}): a GLS estimate of the linear pre-trend slope with its standard error and confidence interval (fit through the reference period on the pre-treatment
+event-study coefficients using their full variance-covariance matrix from {it:e(V_es_{it:type})} — a more efficient and validly-inferenced line than the display-oriented
+{it:e(adversarial_line_{it:type})}, which is an unweighted fit over all horizons); the minimum linear pre-trend each pre-test would detect with the requested power ({it:mdt_wald} powers
+the joint pre-trend test, an F test with the regression's residual degrees of freedom; {it:mdt_nis} powers the test that any pre-period coefficient is individually significant — the
+convention of Roth's {it:pretrends} package, whose size is also reported since it exceeds its nominal level when there are several pre-periods); and the bias each such trend would imply
+for the pooled estimate {ul:if it continued into the post-treatment period} (the minimum detectable trend itself depends only on the design's precision, never on the estimated
+coefficients). Requires {cmd:esfixedbaseperiod} (under the pooled reference the single omitted reference period the linear-trend normalization needs is not defined) and at least one
+pre-treatment event-study coefficient; not compatible with {cmd:impvalues}. Results are returned in {it:e(roth_power_{it:type})} and companion scalars (see Stored Results) and skipped
+with a caution when the pre-period variance-covariance block is unavailable (e.g. under {cmd:timetrends}) or carries missing or non-positive variance entries; rank-deficient blocks are
+handled with a generalized inverse and reduced degrees of freedom, with a caution. Under {cmd:poisson} without {cmd:poisexpresults}, the diagnostics are on the linear-index (xb) scale
+like the event-study coefficients themselves. {p_end}
 
 {phang}{opt makep:lots}: Produce event study plots. Note on graph management (applies to all of {it:wooldid}'s plotting options): {it:wooldid} names the graphs it draws
 (e.g. att_fullmodel, hist_att_i, cfxatt_cfxpost) and creates them with the graph-name {it:replace} suboption, so re-running overwrites {it:wooldid}'s own prior graphs of the
@@ -654,6 +665,13 @@ is displayed when {cmd:summarystats} is specified.{p_end}
 {synopt:{it:e(escomp_trtN)}, {it:e(escomp_trtW)}} Observation count and total {it:att}-style weight over the entire treated estimation sample, for assessing how much treated weight lies
 outside the reported event-study window.{p_end}
 
+{synopt:{it:e(roth_power_{it:type})}} With {cmd:pretrendpower()}: one row per requested power level, columns {it:power}, {it:mdt_wald}, {it:mdt_nis} (the minimum detectable linear
+pre-trend under the joint-Wald and any-individually-significant pre-tests respectively), and {it:bias_wald}, {it:bias_nis} (the pooled-estimate bias such a trend would imply if it
+continued post-treatment, i.e. mdt × (hbar − reference)). Companion scalars: {it:e(roth_slope_{it:type})}, {it:e(roth_slope_se_{it:type})}, {it:e(roth_slope_ll/ul_{it:type})} (the GLS
+pre-trend slope and 95% CI), {it:e(roth_prep_{it:type})} (the joint pre-trend test p-value), {it:e(roth_hbar_{it:type})} (the estimand-weighted mean post-treatment relative period over
+the full post support of the estimation sample), {it:e(roth_npre_{it:type})}, {it:e(roth_keff_{it:type})} (pre-period count and effective rank), and {it:e(roth_nissize_{it:type})} (the
+actual size of the any-individually-significant pre-test).{p_end}
+
 {pstd} In addition to these core results, the following materials are also returned in e(): {p_end}
 {synopt: Joint Tests by Horizon} Joint tests for the statistical significance of pre-treatment relative time period-specific event study effects are presented in the scalars e(joint_horiz)
 (ATT), e(joint_horiz_i) (ATT_i), e(joint_Choriz) (AME; continuous treatments only), and e(joint_Choriz_i) (AME_i; continuous treatments only). {p_end}
@@ -849,6 +867,8 @@ under development, so assistance finding and correcting bugs is much appreciated
 {title:Citations}
 
 {phang} Borusyak, Kirill, Xavier Jaravel, and Jann Spiess. Revisiting Event Study Designs: Robust and Efficient Estimation. Working Paper, 2023. {p_end}
+
+{phang} Roth, Jonathan. Pretest with Caution: Event-Study Estimates after Testing for Parallel Trends. American Economic Review: Insights, 2022, 4(3): 305-322. {p_end}
 
 {phang} Correia, Sergio. reghdfe: Stata module for linear and instrumental-variable/gmm regression absorbing multiple levels of fixed effects. Statistical Software Components s457874, 2017.
 Boston College Department of Economics. https://ideas.repec.org/c/boc/bocode/s457874.html {p_end}

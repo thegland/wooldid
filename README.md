@@ -71,6 +71,7 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 - espostlength(_+int_) - number of post-treatment coefficients
 - jointtests - test hypothesis that all pre-treatment coefficients are 0
 - adversarial - test hypothesis that all event study coefficients fall on a single line
+- pretrendpower(_numlist_) - Roth (2022) pre-trend power diagnostics: GLS pre-trend slope with CI, minimum detectable linear trend at each requested power level, and the bias such a trend would imply
 - makeplots - produce event study plots
 - esrelativeto(_-int_) - choice of reference period if a fixed period is being used; default: period immediately prior to treatment
 - oostreatedcontrols(_+int_) - determines how cohorts treated after the end of the sample are handled
