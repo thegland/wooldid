@@ -670,7 +670,10 @@ from the underlying regression estimator, wherever available. {p_end}
 all graphs generated will be saved to a file with your specified name in STATA's working directory. {p_end}
 
 {pstd} If the option {it:verbose} is specified, the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called {it:___wooldidfullmodel}, which can be
-accessed using standard {it:estimates restore} type syntax. {p_end}
+accessed using standard {it:estimates restore} type syntax. Under {it:verbose} with {it:poisson} (in the high-dimensional-fixed-effects estimation path), the {it:_ppmlhdfe_d} scaffolding
+variable that {it:ppmlhdfe} creates is also retained in the dataset rather than dropped at exit. Note that coefficient-level replay of the stored model ({it:lincom}, {it:test},
+{it:matrix list e(b)}) works, but data-touching replay ({it:predict}, {it:margins}) does not: the model's regressors are internally constructed temporary variables that no longer exist
+after {it:wooldid} returns. {p_end}
 
 {pstd} {ul:Tips for accessing output and remaking graphs:} Use the {it:matlist} command to print the contents of one of {it:wooldid}'s output matrices. To convert one of {it:wooldid}'s 
 output matrices into a dataset that you can directly manipulate (e.g., to remake the automatically generated event study graphs), use the {it:svmat} command. For example, the command 

@@ -17,8 +17,13 @@ B1–B23 campaign, updated with the process rules adopted 2026-07-21.
 2. **Pin to a commit; never copy the working tree.** The working tree changes while you run
    (the coordinator implements other fixes in parallel). Obtain source with
    `git -C <repo> show <sha>:wooldidinstall/wooldid.ado > yourcopy.ado`. Your task prompt
-   names the sha(s). To run two versions in one Stata session, rename one program:
-   `sed 's/^cap prog drop wooldid$/cap prog drop wooldid_old/; s/^prog def wooldid, eclass$/prog def wooldid_old, eclass/'`.
+   names the sha(s). To run two versions in one Stata session, rename one program.
+   Since the B22 wrapper landed (2026-07-26), the ado defines TWO programs — a thin
+   `wooldid` shell and `wooldid_worker` — so rename both (worker substitution first;
+   it also fixes the shell's call site):
+   `sed 's/wooldid_worker/wooldid_old_worker/g; s/^cap prog drop wooldid$/cap prog drop wooldid_old/; s/^prog def wooldid, eclass$/prog def wooldid_old, eclass/'`
+   For pre-wrapper builds (through c53e25b) the old two-substitution recipe still works;
+   the recipe above is safe for those too (the worker substitution just matches nothing).
 3. **All writing/testing happens in YOUR working directory** (given in your task prompt;
    create it if needed).
 4. **At most ONE Stata instance at a time**, and check the shared cap before launching:

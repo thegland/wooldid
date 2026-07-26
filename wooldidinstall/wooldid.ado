@@ -11,6 +11,43 @@
 cap prog drop wooldid
 prog def wooldid, eclass
 version 16.0
+  * thin shell (B18/B22): run the worker under capture so that when a run fails midway,
+  * the caller's frame is restored and this run's scratch estimates are removed before
+  * the error is re-raised. the epilogue is rc-gated: successful runs are untouched by
+  * construction. the worker registers what it actually created this run in the
+  * WOOLDID_CLEANUP global (keep / fullmodel / ppml) so the epilogue never removes a
+  * user-owned object the worker did not create. e() posted by the worker survives the
+  * shell; rc and error messages pass through exactly (exit, not error - error reprints)
+  local wdsh_ec "`c(emptycells)'"
+  qui frame
+  local wdsh_frame `r(currentframe)'
+  cap macro drop WOOLDID_CLEANUP
+  capture noisily wooldid_worker `0'
+  local wdsh_rc = _rc
+  nobreak {
+    local wdsh_flags "$WOOLDID_CLEANUP"
+    cap macro drop WOOLDID_CLEANUP
+    if `wdsh_rc' != 0 {
+      * set emptycells is program-scoped (stata restores it automatically at program
+      * exit); this restore is belt-and-braces against version drift only
+      if "`c(emptycells)'" != "`wdsh_ec'" set emptycells `wdsh_ec'
+      * stata auto-drops the worker's tempname frames on error but then leaves the
+      * user in the default frame, not the frame wooldid was called from
+      qui frame
+      if "`r(currentframe)'" != "`wdsh_frame'" cap frame change `wdsh_frame'
+      cap est drop __marginsmodel
+      if strpos("`wdsh_flags'", "keep") == 0 {
+        if strpos("`wdsh_flags'", "fullmodel") != 0 cap est drop ___wooldidfullmodel
+        if strpos("`wdsh_flags'", "ppml") != 0 cap drop _ppmlhdfe_d
+      }
+    }
+  }
+  if `wdsh_rc' != 0 exit `wdsh_rc'
+end
+
+cap prog drop wooldid_worker
+prog def wooldid_worker, eclass
+version 16.0
 
 syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax]
 
@@ -52,6 +89,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
  * Unless disabled by the user, set emptycells to drop -- greatly improves performance since structure of the reghdfe matrix
  * involves lots of empty cells in the interaction term.
  if "`emptycellsoverride'" == "" {
+    * note: set emptycells is program-scoped - stata automatically restores the caller's
+    * value when wooldid exits, including on error paths (cf. StataCorp's anova.ado);
+    * no manual capture/restore is needed here (B18 was verified illusory, 2026-07-26)
     set emptycells drop
  }
 
@@ -303,6 +343,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * the working copy to off further down); the identifying-assumption checks gate on this copy
   * so an internal relaxation does not silently disable them
   local safetyinput `safety'
+
+  * register verbose retention with the shell's error-path cleanup epilogue (top of this
+  * file): under verbose, ___wooldidfullmodel (and _ppmlhdfe_d under poisson) are
+  * documented as retained for inspection - on failed runs as well
+  if "`verbose'" == "verbose" global WOOLDID_CLEANUP $WOOLDID_CLEANUP keep
 
   * the input-validity asserts below respect the user's if() restriction, mirroring the
   * estimation sample construction exactly: the sample keeps rows where the if expression
@@ -1195,6 +1240,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * save the model; will be useful later
   qui est sto ___wooldidfullmodel
+  * register this run's scratch objects with the shell's error-path cleanup epilogue
+  global WOOLDID_CLEANUP $WOOLDID_CLEANUP fullmodel
+  if "`poisson'" == "poisson" & "`unconditionalse'" == "" & "`customvce'" == "" global WOOLDID_CLEANUP $WOOLDID_CLEANUP ppml
   if "`verbose'" == "verbose" dis as text "Wooldid has finished regression estimation and is preparing to begin margins calculations."
 
 	* check on dropped obs
@@ -3734,9 +3782,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     matrix drop _all
   }
 
+  * __marginsmodel is a scratch intermediate; the adversarial branches that store it do
+  * not all reach their own est drop (the finaladvtest short-circuits skip it), so drop
+  * it unconditionally here (B22; this also removes the _est___marginsmodel marker
+  * variable the store planted in the dataset)
+  cap est drop __marginsmodel
   if "`verbose'" != "verbose" qui est drop ___wooldidfullmodel
-  * clean up after ppmlhdfe
-  if "`poisson'" == "poisson" & "`unconditionalse'" == "" & "`customvce'" == "" qui cap drop _ppmlhdfe_d
+  * clean up after ppmlhdfe. under verbose, retain _ppmlhdfe_d alongside the retained
+  * ___wooldidfullmodel (author directive, 2026-07). note this alone does not make
+  * predict/margins replay work after est restore: the model's regressors (_i, _t,
+  * targetflag, and the internal weight) are tempvars that no longer exist at that
+  * point - retention just stops closing that door for a future replay feature
+  if "`poisson'" == "poisson" & "`unconditionalse'" == "" & "`customvce'" == "" & "`verbose'" != "verbose" qui cap drop _ppmlhdfe_d
 
 
   * program ends!
