@@ -151,5 +151,31 @@ cap noi wooldid y i t ttre, att cluster(i) subgroup(ttre) esprelength(3) espostl
 local rc = _rc
 dumpres simple_esf `rc'
 
+* E1 coverage (added 2026-07-26, blessed pre-E1): the contreat SG-comparison block had
+* zero battery coverage; sg_missif pins missing-sg + bare-flag-if through the SG block;
+* sg_degpre pins the degenerate no-pre-period state (absent pre joints, post-only pwsgs)
+freshstart "`DATA'/dta_cont"
+qui gen sg = mod(i,2)+1
+cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests
+local rc = _rc
+dumpres cont_sg `rc'
+
+freshstart "`DATA'/dta_binary"
+qui gen sgm = mod(i,3)
+qui replace sgm = . if mod(i,11) == 0
+cap noi wooldid y i t ttre if w > 0, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sgm) jointtests
+local rc = _rc
+dumpres sg_missif `rc'
+
+freshstart "`DATA'/dta_binary"
+qui sum t, meanonly
+local t2 = r(min) + 1
+qui gen sgd2 = 1
+qui replace sgd2 = 2 if mod(i,7) == 0
+qui replace ttre = `t2' if mod(i,7) == 0
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sgd2) jointtests
+local rc = _rc
+dumpres sg_degpre `rc'
+
 di "BATTERY_DONE"
 exit, clear
