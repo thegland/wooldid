@@ -678,8 +678,8 @@ outside the reported event-study window.{p_end}
 pre-trend under the joint-Wald and any-individually-significant pre-tests respectively), and {it:bias_wald}, {it:bias_nis} (the pooled-estimate bias such a trend would imply if it
 continued post-treatment, i.e. mdt × (hbar − reference)). Companion scalars: {it:e(roth_slope_{it:type})}, {it:e(roth_slope_se_{it:type})}, {it:e(roth_slope_ll/ul_{it:type})} (the GLS
 pre-trend slope and 95% CI), {it:e(roth_prep_{it:type})} (the joint pre-trend test p-value), {it:e(roth_hbar_{it:type})} (the estimand-weighted mean post-treatment relative period over
-the full post support of the estimation sample), {it:e(roth_npre_{it:type})}, {it:e(roth_keff_{it:type})} (pre-period count and effective rank), and {it:e(roth_nissize_{it:type})} (the
-actual size of the any-individually-significant pre-test).{p_end}
+the full post support of the estimation sample), {it:e(roth_npre_{it:type})}, {it:e(roth_keff_{it:type})} (pre-period count and effective rank), {it:e(roth_W_{it:type})} (the joint
+pre-trend test statistic), and {it:e(roth_nissize_{it:type})} (the actual size of the any-individually-significant pre-test).{p_end}
 
 {pstd} In addition to these core results, the following materials are also returned in e(): {p_end}
 {synopt: Joint Tests by Horizon} Joint tests for the statistical significance of pre-treatment relative time period-specific event study effects are presented in the scalars e(joint_horiz)
@@ -740,6 +740,14 @@ using as variable names the names of the matrix's columns. The program {help eve
 to represent the missing reference period. {p_end}
 
 {pstd} {ul:Compatible Post-Estimation Commands:} {it:estimates save}, {it:estimates store}, {it:estimates restore}, {it:esttab}, and similar commands. {p_end}
+
+{pstd} {ul:Replay:} Typing {it:wooldid} by itself after a successful estimation redisplays the full stored results from {it:e()} - the header, summary statistics, all results tables,
+the joint, adversarial, and pre-trend power diagnostics - byte-for-byte as originally shown. Replay works after {it:estimates restore} of a stored {it:wooldid} model, after
+{it:cleanmatrices}, and with no dataset in memory. It does not re-draw plots, does not repeat estimation-time Caution messages (which describe the estimation run, not the results),
+and accepts no options: any non-empty command line - including {it:wooldid, update} - is processed as a normal call. Note that if a {it:wooldid} run fails, {it:e()} still holds the
+previous successful estimation (standard Stata behavior), so a replay at that point redisplays the earlier run; check {it:e(cmdline)} if in doubt. Replay requires results posted by a
+{it:wooldid} version with replay support; internally, the display state travels in hidden {it:e(wdid_*)} macros, which are implementation details and not part of the documented
+{it:e()} surface. {p_end}
 
 {pstd} {ul:Incompatible Post-Estimation Commands:} {it:lincom}, {it:test}, and all other post-estimation commands that rely on receiving a valid variance-covariance matrix from
 an estimator. While {it:wooldid} does return a coefficient vector ({it:e(b)}) and a variance-covariance matrix ({it:e(V)}), these are for display purposes only. The variance-covariance

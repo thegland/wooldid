@@ -11,6 +11,18 @@
 cap prog drop wooldid
 prog def wooldid, eclass
 version 16.0
+  * F11: replay - wooldid typed alone after a successful wooldid estimation redisplays
+  * the stored results from e() (tables and diagnostics; plots are not redrawn, and no
+  * options are accepted on replay). gated on a STRICTLY EMPTY command line, so every
+  * other invocation - including "wooldid, update" and an option typo like "wooldid,
+  * att" - falls through to the worker and behaves exactly as before
+  if `"`0'"' == "" & "`e(cmd)'" == "wooldid" {
+    wooldid_display , part(1)
+    wooldid_display , part(roth)
+    wooldid_display , part(2)
+    dis as result  " "
+    exit
+  }
   * thin shell (B18/B22): run the worker under capture so that when a run fails midway,
   * the caller's frame is restored and this run's scratch estimates are removed before
   * the error is re-raised. the epilogue is rc-gated: successful runs are untouched by
@@ -4134,6 +4146,8 @@ version 16.0
     cap ereturn scalar roth_npre_`ptpty' = `ptpk'
     cap ereturn scalar roth_keff_`ptpty' = `ptpkeff'
     if `ptpnisok' cap ereturn scalar roth_nissize_`ptpty' = real("`ptpnissize'")
+    * F11: the joint-test statistic, so replay can re-render the F/chi2 line from e()
+    cap ereturn scalar roth_W_`ptpty' = `ptpW'
   }
   if `ptpheader' == 0 dis as text "Caution: pretrendpower() was requested, but no event-study coefficient vector with a valid variance-covariance matrix was available (e.g. under timetrends); no diagnostics were computed."
 end
@@ -4146,7 +4160,8 @@ end
 * is a hard error, so this program is structurally incapable of altering the posted
 * results. part(1) = header through the adversarial lines; part(2) = subgroup tables
 * through the pairwise comparisons (split so the eclass wooldid_ptp call can stay in
-* the caller between them); part(roth) is reserved for replay of the Roth diagnostics.
+* the caller between them); part(roth) redisplays the Roth diagnostics from e(roth_*)
+* on replay without re-running the quadrature.
 cap prog drop wooldid_display
 prog def wooldid_display
 version 16.0
@@ -4282,6 +4297,53 @@ version 16.0
      }
    }
  }
+  }
+
+  if "`part'" == "roth" {
+  * replay-only: redisplay the Roth (2022) pre-trend power block from e(roth_*) without
+  * re-running the quadrature (the NIS computation can cost minutes). estimation-time
+  * Cautions from wooldid_ptp are deliberately not replayed. on the live path the worker
+  * calls wooldid_ptp itself between part(1) and part(2), so this part is never run live
+  local dfr = e(df_r)
+  local ptpdfok 0
+  if "`dfr'" != "" & "`dfr'" != "." {
+    if real("`dfr'") > 0 & real("`dfr'") < . local ptpdfok 1
+  }
+  local ptpref `e(wdid_esrel)'
+  local ptpheader 0
+  foreach ptpty in att att_it ame ame_it {
+    cap confirm matrix e(roth_power_`ptpty')
+    if _rc != 0 continue
+    local ptpk = e(roth_npre_`ptpty')
+    local ptpkeff = e(roth_keff_`ptpty')
+    local ptpslope = e(roth_slope_`ptpty')
+    local ptpse = e(roth_slope_se_`ptpty')
+    local ptpll = e(roth_slope_ll_`ptpty')
+    local ptpul = e(roth_slope_ul_`ptpty')
+    local ptpprep = e(roth_prep_`ptpty')
+    local ptphbar = e(roth_hbar_`ptpty')
+    local ptpW = e(roth_W_`ptpty')
+    local ptpnisok = ("`e(roth_nissize_`ptpty')'" != "")
+    local ptpnissize = e(roth_nissize_`ptpty')
+    if `ptpheader' == 0 {
+      dis as result " "
+      dis as result "Pre-Trend Power Diagnostics (Roth 2022):"
+      local ptpheader 1
+    }
+    dis as result "  `ptpty': GLS linear pre-trend fit on `ptpk' pre-treatment coefficient(s); reference relative period = `ptpref'"
+    dis as result "    slope = " %-9.0g `ptpslope' " (se " %-9.0g `ptpse' "; 95% CI " %-9.0g `ptpll' " to " %-9.0g `ptpul' ")"
+    if `ptpdfok' dis as result "    joint pre-trend test: F(`ptpkeff', `dfr') = " %-8.0g `=`ptpW'/`ptpkeff'' ", p = " %-6.4f `ptpprep'
+    else dis as result "    joint pre-trend test: chi2(`ptpkeff') = " %-8.0g `ptpW' ", p = " %-6.4f `ptpprep'
+    if `ptpnisok' dis as result "    size of the any-pre-period-individually-significant pre-test: " %-6.4f real("`ptpnissize'")
+    if !`ptpnisok' & `ptpk' > 4 dis as text "    note: mdt_nis and the NIS-test size are omitted (`ptpk' pre-periods exceed the exact-quadrature budget of 4); mdt_wald is unaffected. For the NIS convention at larger k, feed e(b_es_`ptpty')/e(V_es_`ptpty')/e(numpre_`ptpty') to Roth's pretrends package."
+    dis as result "    weighted mean post-treatment relative period (hbar) = " %-9.0g `ptphbar'
+    dis as result "    minimum detectable linear trend, and the bias such a trend would imply for the"
+    dis as result "    pooled estimate if it continued into the post-treatment period:"
+    matlist e(roth_power_`ptpty'), format(%12.4g)
+    dis as text "    note: mdt_wald powers the joint pre-trend test above; mdt_nis powers the test that any"
+    dis as text "    pre-period coefficient is individually significant (the convention of Roth's pretrends package)."
+    if "`poisson'" == "poisson" & "`e(wdid_poisexp)'" == "" dis as text "    note: poisson event-study coefficients are on the linear-index (xb) scale, and so are these diagnostics."
+  }
   }
 
   if "`part'" == "2" {
