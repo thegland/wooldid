@@ -148,6 +148,27 @@ if `rc1' != 0 | _rc != 0 {
   local ++fails
 }
 
+* ---- T6: makeplots under fastnose - plots draw without bands, no rarea failure ----
+use "`DATA'/dta_binary", clear
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) makeplots saveplots(fnplot) replace fastnose
+if _rc != 0 {
+  dis as error "T6 FAIL: rc=" _rc
+  local ++fails
+}
+else {
+  qui use fnplot_ES.dta, clear
+  qui count if !missing(lb_95ci) & rownamesvar != "reference"
+  if r(N) != 0 {
+    dis as error "T6 FAIL: non-reference CI bounds present under fastnose"
+    local ++fails
+  }
+  qui count if missing(estimate)
+  if r(N) != 0 {
+    dis as error "T6 FAIL: missing point estimates in the saved ES data"
+    local ++fails
+  }
+}
+
 if `fails' == 0 dis "FASTNOSE_ALL_PASS"
 else dis as error "FASTNOSE_FAILS=`fails'"
 exit, clear

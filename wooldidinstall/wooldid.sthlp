@@ -262,7 +262,9 @@ minutes); re-run the chosen specification without {it:fastnose} before reporting
 {it:honestdid} and Roth-style diagnostics have no inputs; no joint tests of any kind are computed (including the subgroup homogeneity tests); the continuous-treatment-effects plot
 matrices carry only the point-estimate column, exactly as under {it:cfxplotnose}; and event-study plots are drawn without confidence bands. Not compatible with
 {it:unconditionalse}, {it:adversarial}, {it:jointtests}, {it:pretrendpower()}, or {it:impvalues} (each is refused with an error). Point estimates can differ from a full run in
-roughly the last digit of precision (relative differences on the order of 1e-15), because {it:margins} follows a different computational path when the variance is skipped. {p_end}
+roughly the last digit of precision (absolute differences on the order of 1e-15; relative differences are typically similar but can reach roughly 1e-13 on subgroup pairwise
+contrasts, whose differencing amplifies rounding, up to roughly 1e-14 under {it:timetrends}, and larger still in relative terms where an estimate is itself near zero), because
+{it:margins} follows a different computational path when the variance is skipped. {p_end}
 
 {pstd} {ul: Discussion of Unconditional Standard Errors:}
 The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates

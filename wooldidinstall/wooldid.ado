@@ -3751,6 +3751,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
   *check conditions for using im p-values - in principle, SG estimates could be computed provided SGs never cross cut clusters, but I have not implemented this
+  * NOTE (t10_v3): this gate is LOAD-BEARING for the E1 subgroup restructure - under
+  * impvalues, marginsdof is nose, and a chain `test' after a nose `post' is r(321);
+  * do not relax this pairing without also emptying `sgpost' in the SG-comparison blocks
   if "`impvalues'" != "" & "`subgroups'" != "" {
     dis as error "Error: Ibragimov and Muller p-values not compatible with subgroups."
     error 198
