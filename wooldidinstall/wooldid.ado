@@ -3320,6 +3320,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       qui gegen long `f8ncl'   = total(`f8tagcl') if `f8in', by(`_t')
     }
     else {
+      qui gen byte `f8tagcl' = .
       qui gen double `f8ncl' = .
     }
     qui gegen long   `f8n'     = count(1)       if `f8in', by(`_t')
@@ -3402,6 +3403,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         qui gegen long `f8sncl'   = total(`f8stagcl') if `f8sin', by(`_t' `subgroups')
       }
       else {
+        qui gen byte `f8stagcl' = .
         qui gen double `f8sncl' = .
       }
       qui gegen long   `f8sn'     = count(1)        if `f8sin', by(`_t' `subgroups')

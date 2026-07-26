@@ -649,7 +649,7 @@ heterogeneity across the cohorts entering or leaving), and composition change {u
 is displayed when {cmd:summarystats} is specified.{p_end}
 
 {synopt:{it:e(escomp_refN)}, {it:e(escomp_refnunits)}, {it:e(escomp_refncoh)}, {it:e(escomp_refW)}} Observation count, distinct treated units, distinct onset cohorts, and total
-{it:att}-style weight in the reference pool (treated units' relative period 0 rows of the estimation sample) — available under both the pooled- and fixed-reference-period regimes.{p_end}
+{it:att}-style weight in the reference pool (treated units' reference-period rows of the estimation sample) — available under both the pooled- and fixed-reference-period regimes.{p_end}
 
 {synopt:{it:e(escomp_trtN)}, {it:e(escomp_trtW)}} Observation count and total {it:att}-style weight over the entire treated estimation sample, for assessing how much treated weight lies
 outside the reported event-study window.{p_end}
