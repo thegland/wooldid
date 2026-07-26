@@ -344,8 +344,10 @@ for the pooled estimate {ul:if it continued into the post-treatment period} (the
 coefficients). Requires {cmd:esfixedbaseperiod} (under the pooled reference the single omitted reference period the linear-trend normalization needs is not defined) and at least one
 pre-treatment event-study coefficient; not compatible with {cmd:impvalues}. Results are returned in {it:e(roth_power_{it:type})} and companion scalars (see Stored Results) and skipped
 with a caution when the pre-period variance-covariance block is unavailable (e.g. under {cmd:timetrends}) or carries missing or non-positive variance entries; rank-deficient blocks are
-handled with a generalized inverse and reduced degrees of freedom, with a caution. Under {cmd:poisson} without {cmd:poisexpresults}, the diagnostics are on the linear-index (xb) scale
-like the event-study coefficients themselves. {p_end}
+handled with a generalized inverse and reduced degrees of freedom, with a caution (note that on an exactly rank-deficient block the reported slope depends on which columns the
+generalized inverse retains, so treat it as one representative of an underdetermined family). When the underlying estimator posts no residual degrees of freedom (e.g. the
+ppmlhdfe path), the joint test and minimum detectable trends use chi-squared rather than F distributions and the slope CI uses a normal critical value. Under {cmd:poisson} without
+{cmd:poisexpresults}, the diagnostics are on the linear-index (xb) scale like the event-study coefficients themselves. {p_end}
 
 {phang}{opt makep:lots}: Produce event study plots. Note on graph management (applies to all of {it:wooldid}'s plotting options): {it:wooldid} names the graphs it draws
 (e.g. att_fullmodel, hist_att_i, cfxatt_cfxpost) and creates them with the graph-name {it:replace} suboption, so re-running overwrites {it:wooldid}'s own prior graphs of the
@@ -666,6 +668,8 @@ is displayed when {cmd:summarystats} is specified.{p_end}
 
 {synopt:{it:e(escomp_trtN)}, {it:e(escomp_trtW)}} Observation count and total {it:att}-style weight over the entire treated estimation sample, for assessing how much treated weight lies
 outside the reported event-study window.{p_end}
+
+{synopt:{it:e(anticipation)}} The anticipation shift applied to the treatment onset, returned when {cmd:anticipation()} is active.{p_end}
 
 {synopt:{it:e(roth_power_{it:type})}} With {cmd:pretrendpower()}: one row per requested power level, columns {it:power}, {it:mdt_wald}, {it:mdt_nis} (the minimum detectable linear
 pre-trend under the joint-Wald and any-individually-significant pre-tests respectively), and {it:bias_wald}, {it:bias_nis} (the pooled-estimate bias such a trend would imply if it
