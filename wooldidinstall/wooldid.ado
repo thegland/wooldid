@@ -3163,9 +3163,41 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * the return statement also passes N and dof count and the function flagging the estimation sample
   cap ereturn post `eb' `ev', esample(`esamp') depname(`y') obs(`N') dof(`df_r')
-  if _rc != 0 {
-    cap ereturn post `eb' , esample(`esamp') depname(`y') obs(`N') dof(`df_r')
-    if _rc != 0 ereturn post   , esample(`esamp') depname(`y') obs(`N') dof(`df_r')
+  local evpostrc = _rc
+  if `evpostrc' != 0 {
+    * partial-identification rescue: ereturn post rejects a VCE carrying ANY missing diagonal cell,
+    * so one estimand with an unidentified SE (an IM ttest with a single contributing cluster, or a
+    * row nulled by the IM degeneracy guard) would otherwise cost every OTHER estimand its posted
+    * variance. When at least one estimand IS identified, replace the missing diagonal cells with a
+    * negative sentinel: Stata accepts it and every display/inference surface renders it as a
+    * missing standard error (ereturn display/esttab show ., test drops the constraint, lincom
+    * returns ., sqrt() of it is missing), so nothing is fabricated. Runs with no identified
+    * estimand at all keep the b-only fallback below.
+    local evpostgood 0
+    local evpostmiss 0
+    * capture the count now: a successful ereturn post consumes `eb'/`ev', so their
+    * dimensions are no longer available when the caution below is displayed
+    local evposttotal = colsof(`ev')
+    forval evpostd = 1/`evposttotal' {
+      if missing(`ev'[`evpostd',`evpostd']) local ++evpostmiss
+      else if `ev'[`evpostd',`evpostd'] > 0 & `ev'[`evpostd',`evpostd'] < . local ++evpostgood
+    }
+    if `evpostgood' > 0 & `evpostmiss' > 0 {
+      forval evpostd = 1/`=colsof(`ev')' {
+        if missing(`ev'[`evpostd',`evpostd']) matrix `ev'[`evpostd',`evpostd'] = -1e100
+      }
+      cap ereturn post `eb' `ev', esample(`esamp') depname(`y') obs(`N') dof(`df_r')
+      local evpostrc = _rc
+      if `evpostrc' == 0 {
+        dis as text "Caution: standard errors were not identified for `evpostmiss' of `evposttotal' reported estimates. e(V) contains placeholder entries for the affected estimates that display as missing standard errors; all other estimates retain their variances in e(V). See e(wdidmainresults) and the displayed tables for per-estimate detail."
+      }
+    }
+    if `evpostrc' != 0 {
+      cap ereturn post `eb' , esample(`esamp') depname(`y') obs(`N') dof(`df_r')
+      if _rc != 0 ereturn post   , esample(`esamp') depname(`y') obs(`N') dof(`df_r')
+      if `evpostmiss' > 0  dis as text "Caution: standard errors were not identified for `evpostmiss' of `evposttotal' reported estimates, so no variance-covariance matrix e(V) was posted. Point estimates remain in e(b); per-estimate results remain in e(wdidmainresults) and the displayed tables."
+      if `evpostmiss' == 0 dis as text "Caution: wooldid could not post a variance-covariance matrix e(V) for this run. Per-estimate results remain in e(wdidmainresults) and the displayed tables."
+    }
   }
 
 
