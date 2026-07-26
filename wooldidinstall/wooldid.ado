@@ -1364,6 +1364,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * ensure that we request unconditional SEs where sought
   if "`unconditionalse'" == "unconditionalse" local marginsdof `marginsdof' vce(unconditional)
 
+  * E1b: the two whole-sample pre-treatment horizon joint tests below hard-coded
+  * df(`df_r') where every other margins call threads `marginsdof', so under
+  * unconditionalse they silently used the conditional (delta) VCE. they cannot take
+  * `marginsdof' itself: under impvalues `marginsdof' becomes `nose', which would leave
+  * the joint test with no VCE at all (unreachable today - jointtests and impvalues are
+  * mutually exclusive - but a latent trap), so the dof/vce pair is built separately
+  local jointmarginsdof df(`df_r')
+  if "`unconditionalse'" == "unconditionalse" local jointmarginsdof `jointmarginsdof' vce(unconditional)
+
   * if doing adversarial checks, inject the "post" statement where needed
   local postinject
   if "`adversarial'" == "adversarial" local postinject post
@@ -1674,11 +1683,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if "`att'" == "att" {
       * contrast(overjoint) joint-tests the hypothesis that each estimate by group specified in over() is the same
       * since we have specified our subpop to include _t == 0, which is the omitted case, this is a joint test vs 0
-      qui margins [`weight'=`w_att'] ,`semielasticity'(`targetflag') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & (`_t' == 0 | `_t' >= `horizonstarter')   ) contrast(overjoint) `poismarginstext' df(`df_r')
+      qui margins [`weight'=`w_att'] ,`semielasticity'(`targetflag') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & (`_t' == 0 | `_t' >= `horizonstarter')   ) contrast(overjoint) `poismarginstext' `jointmarginsdof'
       local joint_horiz = r(p)[1,2]
     }
     if "`joint_horiz_i'" == "" & (  "`att_i'" != "" | "`att_itime'" != "" | "`att_it'" != "" ){
-      qui margins [`weight'=`w_att_it'],`semielasticity'(`targetflag') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . &  (`_t' == 0 | `_t' >= `horizonstarter')   ) contrast(overjoint) `poismarginstext' df(`df_r')
+      qui margins [`weight'=`w_att_it'],`semielasticity'(`targetflag') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . &  (`_t' == 0 | `_t' >= `horizonstarter')   ) contrast(overjoint) `poismarginstext' `jointmarginsdof'
       local joint_horiz_i = r(p)[1,2]
     }
   }
