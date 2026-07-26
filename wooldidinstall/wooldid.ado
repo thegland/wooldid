@@ -3283,6 +3283,182 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
   ***************************************************************************************************************************
+  ****************************         EVENT-STUDY COMPOSITION DIAGNOSTICS (F8)       **************************************
+  ***************************************************************************************************************************
+  * per reported horizon: distinct treatment-onset cohorts, distinct units of i (= the number of
+  * unit-by-period coefficients averaged at that horizon), distinct clusters, estimation-sample
+  * observations, and the horizon's share of the reported-window treated weight under both weight
+  * concepts the event studies use (w_att = w x customweightmultiplier; w_att_it = that divided by
+  * the i-by-t cell weight total, replicating the weight construction above - the tempvars
+  * themselves are estimand-gated and w_per_it is already dropped, so the shares are recomputed
+  * here so the matrix has fixed width regardless of which estimands were requested). rows come
+  * from the SAME relyrcolumn / relyrcolumn_s<sg> sources as the reported ES matrices, so they
+  * align one-for-one with the ES_* blocks (horizons without a surviving coefficient get no row).
+  * composition is a diagnostic aid, not a test: flat columns rule composition out as the cause of
+  * a jumpy profile; moving columns do not by themselves establish composition bias.
+  * this block runs NO margins call and NO e-class command, so the active e() is untouched and no
+  * est restore is needed. it DOES clear r(); nothing between here and the ereturn post consumes
+  * r(). gtools by() is hash-based: the user's sort order is not disturbed.
+  local f8keys
+  if `espre' + `espl' > 0 {
+    tempvar f8wa f8wpit f8wit
+    qui gen double `f8wa' = `w' `customweighttext'
+    qui gegen double `f8wpit' = total(`esamp' * `w'), by(`i' `t')
+    qui gen double `f8wit' = `f8wa'/`f8wpit'
+    qui replace `f8wit' = 0 if `f8wit' == .
+    local f8cluster
+    if "`cluster'" != "" & wordcount("`cluster'") == 1 local f8cluster `cluster'
+    tempvar f8in f8tagc f8tagi f8tagcl f8tagt f8nc f8nu f8ncl f8n f8w f8wi
+    qui gen byte `f8in' = (`esamp' == 1 & `targetflag' == 1 & `_t' >= `horizonstarter' & `_t' <= `horizonend')
+    qui gegen byte   `f8tagc'  = tag(`_t' `ttre') if `f8in'
+    qui gegen byte   `f8tagi'  = tag(`_t' `_i')   if `f8in'
+    qui gegen byte   `f8tagt'  = tag(`_t')        if `f8in'
+    qui gegen long   `f8nc'    = total(`f8tagc') if `f8in', by(`_t')
+    qui gegen long   `f8nu'    = total(`f8tagi') if `f8in', by(`_t')
+    if "`f8cluster'" != "" {
+      qui gegen byte `f8tagcl' = tag(`_t' `f8cluster') if `f8in'
+      qui gegen long `f8ncl'   = total(`f8tagcl') if `f8in', by(`_t')
+    }
+    else {
+      qui gen double `f8ncl' = .
+    }
+    qui gegen long   `f8n'     = count(1)       if `f8in', by(`_t')
+    qui gegen double `f8w'     = total(`f8wa')  if `f8in', by(`_t')
+    qui gegen double `f8wi'    = total(`f8wit') if `f8in', by(`_t')
+    tempname f8raw
+    cap mkmat `_t' `f8nc' `f8nu' `f8ncl' `f8n' `f8w' `f8wi' if `f8tagt' == 1, matrix(`f8raw')
+    local f8rawrc = _rc
+    cap drop `f8in' `f8tagc' `f8tagi' `f8tagcl' `f8tagt' `f8nc' `f8nu' `f8ncl' `f8n' `f8w' `f8wi'
+    if `f8rawrc' == 0 {
+      tempname f8m
+      local f8nr = rowsof(`relyrcolumn')
+      matrix `f8m' = J(`f8nr', 8, 0)
+      local f8wtot = 0
+      local f8witot = 0
+      local f8rn
+      forval f8i = 1/`f8nr' {
+        local f8rv = `relyrcolumn'[`f8i',1]
+        local f8h  = `f8rv' + `min_t' + 1
+        if `f8rv' < 0 local f8rn `f8rn' pre`=abs(`f8rv')'
+        else if `f8rv' == 0 & `oldsyntax' == 1 local f8rn `f8rn' contemp
+        else local f8rn `f8rn' post`f8rv'
+        matrix `f8m'[`f8i',8] = `f8rv'
+        forval f8r = 1/`=rowsof(`f8raw')' {
+          if `f8raw'[`f8r',1] == `f8h' {
+            matrix `f8m'[`f8i',1] = `f8raw'[`f8r',2]
+            matrix `f8m'[`f8i',2] = `f8raw'[`f8r',3]
+            matrix `f8m'[`f8i',3] = `f8raw'[`f8r',4]
+            matrix `f8m'[`f8i',4] = `f8raw'[`f8r',5]
+            matrix `f8m'[`f8i',5] = `f8raw'[`f8r',6]
+            matrix `f8m'[`f8i',6] = `f8raw'[`f8r',6]
+            matrix `f8m'[`f8i',7] = `f8raw'[`f8r',7]
+            local f8wtot = `f8wtot' + `f8raw'[`f8r',6]
+            local f8witot = `f8witot' + `f8raw'[`f8r',7]
+          }
+        }
+      }
+      * share denominators accumulate over the matched (reported) horizons only, so each
+      * share column sums to 1 by construction
+      forval f8i = 1/`f8nr' {
+        if `f8wtot' > 0 & `f8wtot' < .   matrix `f8m'[`f8i',6] = `f8m'[`f8i',6]/`f8wtot'
+        if `f8witot' > 0 & `f8witot' < . matrix `f8m'[`f8i',7] = `f8m'[`f8i',7]/`f8witot'
+      }
+      matrix rownames `f8m' = `f8rn'
+      matrix colnames `f8m' = ncohorts nunits nclusters nobs sumw_att wshare_att wshare_att_it relyr
+      local f8mat_main `f8m'
+      local f8keys `f8keys' main
+      * reference-pool and whole-treated-sample coverage scalars (the reported window need not
+      * exhaust the treated sample; under esfixedbaseperiod no reference stats exist elsewhere)
+      tempvar f8refc f8refu
+      qui count if `esamp' == 1 & `_t' == 0 & `ttre' != .
+      local f8refN = r(N)
+      qui gegen byte `f8refc' = tag(`ttre') if `esamp' == 1 & `_t' == 0 & `ttre' != .
+      qui gegen byte `f8refu' = tag(`i')    if `esamp' == 1 & `_t' == 0 & `ttre' != .
+      qui count if `f8refc' == 1
+      local f8refncoh = r(N)
+      qui count if `f8refu' == 1
+      local f8refnunits = r(N)
+      qui drop `f8refc' `f8refu'
+      qui sum `f8wa' if `esamp' == 1 & `_t' == 0 & `ttre' != ., meanonly
+      local f8refW = cond(r(N) > 0, r(sum), 0)
+      qui count if `esamp' == 1 & `ttre' != .
+      local f8trtN = r(N)
+      qui sum `f8wa' if `esamp' == 1 & `ttre' != ., meanonly
+      local f8trtW = cond(r(N) > 0, r(sum), 0)
+    }
+    cap matrix drop `f8raw'
+
+    * ---- subgroup scopes: one extra pass keyed on (_t, sg) covers every subgroup at once ----
+    if "`subgroups'" != "" & "`suppresssgprimaryeffects'" == "" {
+      tempvar f8sin f8stagc f8stagi f8stagcl f8stagt f8snc f8snu f8sncl f8sn f8sw f8swi
+      qui gen byte `f8sin' = (`esamp' == 1 & `targetflag' == 1 & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' < .)
+      qui gegen byte   `f8stagc'  = tag(`_t' `subgroups' `ttre') if `f8sin'
+      qui gegen byte   `f8stagi'  = tag(`_t' `subgroups' `_i')   if `f8sin'
+      qui gegen byte   `f8stagt'  = tag(`_t' `subgroups')        if `f8sin'
+      qui gegen long   `f8snc'    = total(`f8stagc') if `f8sin', by(`_t' `subgroups')
+      qui gegen long   `f8snu'    = total(`f8stagi') if `f8sin', by(`_t' `subgroups')
+      if "`f8cluster'" != "" {
+        qui gegen byte `f8stagcl' = tag(`_t' `subgroups' `f8cluster') if `f8sin'
+        qui gegen long `f8sncl'   = total(`f8stagcl') if `f8sin', by(`_t' `subgroups')
+      }
+      else {
+        qui gen double `f8sncl' = .
+      }
+      qui gegen long   `f8sn'     = count(1)        if `f8sin', by(`_t' `subgroups')
+      qui gegen double `f8sw'     = total(`f8wa')   if `f8sin', by(`_t' `subgroups')
+      qui gegen double `f8swi'    = total(`f8wit')  if `f8sin', by(`_t' `subgroups')
+      tempname f8sraw
+      cap mkmat `_t' `subgroups' `f8snc' `f8snu' `f8sncl' `f8sn' `f8sw' `f8swi' if `f8stagt' == 1, matrix(`f8sraw')
+      local f8srawrc = _rc
+      cap drop `f8sin' `f8stagc' `f8stagi' `f8stagcl' `f8stagt' `f8snc' `f8snu' `f8sncl' `f8sn' `f8sw' `f8swi'
+      if `f8srawrc' == 0 {
+        foreach sgcase in `sglist' {
+          cap confirm matrix `relyrcolumn_s`sgcase''
+          if _rc == 0 {
+            tempname f8sm
+            local f8snr = rowsof(`relyrcolumn_s`sgcase'')
+            matrix `f8sm' = J(`f8snr', 8, 0)
+            local f8swtot = 0
+            local f8switot = 0
+            local f8srn
+            forval f8i = 1/`f8snr' {
+              local f8rv = `relyrcolumn_s`sgcase''[`f8i',1]
+              local f8h  = `f8rv' + `min_t' + 1
+              if `f8rv' < 0 local f8srn `f8srn' pre`=abs(`f8rv')'
+              else if `f8rv' == 0 & `oldsyntax' == 1 local f8srn `f8srn' contemp
+              else local f8srn `f8srn' post`f8rv'
+              matrix `f8sm'[`f8i',8] = `f8rv'
+              forval f8r = 1/`=rowsof(`f8sraw')' {
+                if `f8sraw'[`f8r',1] == `f8h' & `f8sraw'[`f8r',2] == `sgcase' {
+                  matrix `f8sm'[`f8i',1] = `f8sraw'[`f8r',3]
+                  matrix `f8sm'[`f8i',2] = `f8sraw'[`f8r',4]
+                  matrix `f8sm'[`f8i',3] = `f8sraw'[`f8r',5]
+                  matrix `f8sm'[`f8i',4] = `f8sraw'[`f8r',6]
+                  matrix `f8sm'[`f8i',5] = `f8sraw'[`f8r',7]
+                  matrix `f8sm'[`f8i',6] = `f8sraw'[`f8r',7]
+                  matrix `f8sm'[`f8i',7] = `f8sraw'[`f8r',8]
+                  local f8swtot = `f8swtot' + `f8sraw'[`f8r',7]
+                  local f8switot = `f8switot' + `f8sraw'[`f8r',8]
+                }
+              }
+            }
+            forval f8i = 1/`f8snr' {
+              if `f8swtot' > 0 & `f8swtot' < .   matrix `f8sm'[`f8i',6] = `f8sm'[`f8i',6]/`f8swtot'
+              if `f8switot' > 0 & `f8switot' < . matrix `f8sm'[`f8i',7] = `f8sm'[`f8i',7]/`f8switot'
+            }
+            matrix rownames `f8sm' = `f8srn'
+            matrix colnames `f8sm' = ncohorts nunits nclusters nobs sumw_att wshare_att wshare_att_it relyr
+            local f8mat_s`sgcase' `f8sm'
+            local f8keys `f8keys' s`sgcase'
+          }
+        }
+      }
+      cap matrix drop `f8sraw'
+    }
+    cap drop `f8wa' `f8wpit' `f8wit'
+  }
+
+  ***************************************************************************************************************************
   ***************************************         PRESENT AND RETURN THE RESULTS       **************************************
   ***************************************************************************************************************************
 
@@ -3396,6 +3572,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       }
     }
   }
+  * F8: expose event-study composition diagnostics [pure-add, after post]
+  foreach f8ky of local f8keys {
+    local f8mm `f8mat_`f8ky''
+    if "`f8mm'" != "" {
+      if "`f8ky'" == "main" cap ereturn matrix escomp = `f8mm', copy
+      else cap ereturn matrix escomp_`f8ky' = `f8mm', copy
+    }
+  }
+  if strpos("`f8keys'", "main") != 0 {
+    cap ereturn scalar escomp_refN = `f8refN'
+    cap ereturn scalar escomp_refnunits = `f8refnunits'
+    cap ereturn scalar escomp_refncoh = `f8refncoh'
+    cap ereturn scalar escomp_refW = `f8refW'
+    cap ereturn scalar escomp_trtN = `f8trtN'
+    cap ereturn scalar escomp_trtW = `f8trtW'
+  }
   ereturn local cmdline `"`0'"'
   local estimate_type "pooled_reference_period"
   if "`esfixedbaseperiod'" != "" local estimate_type "fixed_reference_period"
@@ -3497,6 +3689,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
   matlist `wdidpooled'
 
+  * F8: composition table prints with the other descriptive material under summarystats
+  if "`summarystats'" != "" & "`f8mat_main'" != "" {
+    dis as result  " "
+    dis as result  "Event-Study Composition by Horizon (Full Estimation Sample; also in e(escomp)):"
+    matlist `f8mat_main', format(%12.4g)
+  }
+
   * return the joint  tests
   if "`suppressjointtests'" == "" {
     dis as result  " "
@@ -3545,6 +3744,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
         matlist `wdid_sg`sgcase''
         dis as result  " "
+        * F8: per-subgroup composition table under summarystats
+        if "`summarystats'" != "" & "`f8mat_s`sgcase''" != "" {
+          dis as result  "Event-Study Composition by Horizon, Subgroup `subgroups' == `sgcase' (also in e(escomp_s`sgcase')):"
+          matlist `f8mat_s`sgcase'', format(%12.4g)
+          dis as result  " "
+        }
         * return the joint  tests
         if "`suppressjointtests'" == "" {
 

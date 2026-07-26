@@ -638,6 +638,22 @@ primary results has not been suppressed.{p_end}
 
 {synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods (relative year < 0) in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument.{p_end}
 
+{synopt:{it:e(escomp)}} Event-study composition diagnostics, one row per reported horizon (rows align one-for-one with the ES rows of {it:e(wdidmainresults)}; horizons without a surviving
+coefficient get no row). Columns: {it:ncohorts} (distinct treatment-onset values contributing), {it:nunits} (distinct units of {it:i} — equivalently, the number of unit-by-period
+coefficients averaged at that horizon), {it:nclusters} (distinct clusters, when a single {cmd:cluster()} variable is used; missing otherwise), {it:nobs} (estimation-sample observations),
+{it:sumw_att} (total {it:att}-style weight: sample weight times any {cmd:customweightmultiplier()}), {it:wshare_att} and {it:wshare_att_it} (the horizon's share of the reported-window
+treated weight under the {it:att} and {it:att_it} weighting concepts respectively; each column sums to 1 across the reported horizons), and {it:relyr}. With {cmd:subgroups()},
+per-subgroup versions {it:e(escomp_s{it:sgcase})} are returned as well. Composition shifts across horizons are a common cause of jumpy event-study profiles; note this is a diagnostic aid,
+not a test — flat composition columns rule composition out as the cause of a jump, but moving columns do not by themselves establish composition bias (that additionally requires effect
+heterogeneity across the cohorts entering or leaving), and composition change {ul:within} a coarse {it:i} is visible only through {it:nobs}/{it:sumw_att}, not the count columns. The table
+is displayed when {cmd:summarystats} is specified.{p_end}
+
+{synopt:{it:e(escomp_refN)}, {it:e(escomp_refnunits)}, {it:e(escomp_refncoh)}, {it:e(escomp_refW)}} Observation count, distinct treated units, distinct onset cohorts, and total
+{it:att}-style weight in the reference pool (treated units' relative period 0 rows of the estimation sample) — available under both the pooled- and fixed-reference-period regimes.{p_end}
+
+{synopt:{it:e(escomp_trtN)}, {it:e(escomp_trtW)}} Observation count and total {it:att}-style weight over the entire treated estimation sample, for assessing how much treated weight lies
+outside the reported event-study window.{p_end}
+
 {pstd} In addition to these core results, the following materials are also returned in e(): {p_end}
 {synopt: Joint Tests by Horizon} Joint tests for the statistical significance of pre-treatment relative time period-specific event study effects are presented in the scalars e(joint_horiz)
 (ATT), e(joint_horiz_i) (ATT_i), e(joint_Choriz) (AME; continuous treatments only), and e(joint_Choriz_i) (AME_i; continuous treatments only). {p_end}
