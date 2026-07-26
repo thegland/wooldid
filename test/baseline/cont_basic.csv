@@ -21,6 +21,15 @@ scalar|rmse|+1.434dc60010d19X-007
 scalar|rss|+1.62df3a165c5c3X-004
 scalar|N_dropped|+0.0000000000000X-3ff
 macro|cmd|wooldid
+macro|wdid_replayv|1
+macro|wdid_esrel|-1
+macro|wdid_espre|4
+macro|wdid_suppressjt|suppressjointtests
+macro|wdid_cetype|dydx
+macro|wdid_semielas|dydx
+macro|wdid_estimands|att   
+macro|wdid_contreat|intensity
+macro|wdid_vcespec|cluster(i)
 macro|estimate_type|fixed_reference_period
 macro|cmdline|y i t ttre, contreat(intensity) contreatcontrols(basic) esfixedbaseperiod esprelength(3) espostlength(3) cluster(i)
 macro|properties|b V

@@ -24,6 +24,16 @@ scalar|joint_pre_att_allsgssame|+1.0268e3349a6feX-051
 scalar|joint_att_allsgssame|+1.4ebafc08239c3X-096
 scalar|N_dropped|+0.0000000000000X-3ff
 macro|cmd|wooldid
+macro|wdid_replayv|1
+macro|wdid_esrel|-1
+macro|wdid_espre|2
+macro|wdid_suppressjt|suppressjointtests
+macro|wdid_cetype|dydx
+macro|wdid_semielas|dydx
+macro|wdid_estimands|att   
+macro|wdid_sglist|1 2
+macro|wdid_sgvar|sg
+macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
 macro|cmdline|y i t ttre, att cluster(i) subgroups(sg) esprelength(2) espostlength(-999)
 macro|properties|b V

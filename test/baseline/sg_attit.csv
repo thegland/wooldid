@@ -25,6 +25,15 @@ scalar|joint_att_it_allsgssame|+1.4ebafc08239c3X-096
 scalar|joint_horiz_i|+1.45c838f32df50X-001
 scalar|N_dropped|+0.0000000000000X-3ff
 macro|cmd|wooldid
+macro|wdid_replayv|1
+macro|wdid_esrel|-1
+macro|wdid_espre|2
+macro|wdid_cetype|dydx
+macro|wdid_semielas|dydx
+macro|wdid_estimands| att_it  
+macro|wdid_sglist|1 2
+macro|wdid_sgvar|sg
+macro|wdid_vcespec|cluster(i)
 macro|joint_horiz_i_s2|.33352542783821
 macro|joint_horiz_i_s1|.8765646252981073
 macro|estimate_type|pooled_reference_period

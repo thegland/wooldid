@@ -34,6 +34,19 @@ scalar|contreat_sd|+1.fb1ad24118d2bX-002
 scalar|contreat_med|+1.3fa9d00000000X+003
 scalar|contreat_mean|+1.3fc02af958106X+003
 macro|cmd|wooldid
+macro|wdid_replayv|1
+macro|wdid_esrel|-1
+macro|wdid_wprat|50
+macro|wdid_nprat|50
+macro|wdid_nptb|100
+macro|wdid_espre|2
+macro|wdid_sumstats|summarystats
+macro|wdid_suppressjt|suppressjointtests
+macro|wdid_cetype|dydx
+macro|wdid_semielas|dydx
+macro|wdid_estimands|att   
+macro|wdid_contreat|intensity
+macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
 macro|cmdline|y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) summarystats
 macro|properties|b V

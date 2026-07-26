@@ -21,6 +21,15 @@ scalar|rss|+1.4bd65e9d9a68eX+006
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|adversarial_pval_att|+1.842beab2bdb17X-020
 macro|cmd|wooldid
+macro|wdid_replayv|1
+macro|wdid_esrel|-2
+macro|wdid_espre|4
+macro|wdid_adversarial|adversarial
+macro|wdid_suppressjt|suppressjointtests
+macro|wdid_cetype|dydx
+macro|wdid_semielas|dydx
+macro|wdid_estimands|att   
+macro|wdid_vcespec|cluster(i)
 macro|estimate_type|fixed_reference_period
 macro|cmdline|y i t ttre, att cluster(i) esprelength(3) espostlength(3) esfixedbaseperiod esrelativeto(-2) adversarial
 macro|properties|b V

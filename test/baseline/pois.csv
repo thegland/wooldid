@@ -9,6 +9,15 @@ scalar|rmse|+1.ce7ede94055a7X-003
 scalar|rss|+1.e4aff78108b87X+004
 scalar|N_dropped|+0.0000000000000X-3ff
 macro|cmd|wooldid
+macro|wdid_replayv|1
+macro|wdid_esrel|-1
+macro|wdid_espre|0
+macro|wdid_suppressjt|suppressjointtests
+macro|wdid_cetype|dydx
+macro|wdid_semielas|dydx
+macro|wdid_estimands|att   
+macro|wdid_poisson|poisson
+macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
 macro|cmdline|ycount i t ttre, att cluster(i) poisson
 macro|properties|b V

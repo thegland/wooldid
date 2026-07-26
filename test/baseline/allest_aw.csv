@@ -21,6 +21,14 @@ scalar|rmse|+1.f447d1a2c45e0X-002
 scalar|rss|+1.d7a4d8b935943X+006
 scalar|N_dropped|+0.0000000000000X-3ff
 macro|cmd|wooldid
+macro|wdid_replayv|1
+macro|wdid_esrel|-1
+macro|wdid_espre|2
+macro|wdid_suppressjt|suppressjointtests
+macro|wdid_cetype|dydx
+macro|wdid_semielas|dydx
+macro|wdid_estimands|att att_it att_i att_itime
+macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
 macro|cmdline|y i t ttre [aw=w], att att_it att_i att_itime cluster(i) esprelength(2) espostlength(2)
 macro|properties|b V
