@@ -289,12 +289,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         cap assert `_t' == . if  `t' == `mint' &  `ifstatement'
         if _rc != 0 {
           qui replace `_t' = . if `t' == `mint'
-          dis as result " "
-          dis as error "Warning: Reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
-          dis as result "This does not break estimation, but event study estimates can carry counter intuitive meanings and reflect effect levels by cohort."
-          dis as result "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
-          dis as result "(Or request estimates for fewer pre-treatment horizons.)"
-          dis as result " "
+          dis as text " "
+          dis as text "Caution: reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
+          dis as text "This does not break estimation, but event study estimates can carry counter intuitive meanings and reflect effect levels by cohort."
+          dis as text "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
+          dis as text "(Or request estimates for fewer pre-treatment horizons.)"
+          dis as text " "
           * If this condition triggers, event study coefficients are very difficult to interpret
         }
       }
@@ -310,7 +310,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         if _rc != 0 {
           qui replace `_t' = . if `t' <= `mintp1'
           dis as text " "
-          dis as error "Warning: Reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
+          dis as text "Caution: reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
           dis as text "This does not break estimation, but event study estimates can carry counter intuitive meanings and reflect effect levels by cohort."
           dis as text "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
           dis as text "(Or: request estimates for fewer pre-treatment horizons, drop request to include timetrends.)"
@@ -343,7 +343,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       if "`safety'" != "off"  {
         cap assert `controlcheck2' != 0
         if _rc != 0 {
-          dis as text "Estimability checks found time periods exist in sample without a control unit, causing them to be dropped."
+          dis as text "Caution: estimability checks found time periods exist in sample without a control unit, causing them to be dropped."
           if "`contreat'" != "" dis as text "If intending to only use within treated-cohorts variation in your continuous treatment variable, specify option contreatwithin to prevent these time periods from being dropped."
         }
       }
@@ -432,7 +432,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       if "`safety'" != "off"  {
         cap assert `controlcheck2' != 0
         if _rc != 0 {
-          dis as text "Estimability checks found time periods exist in sample without a control unit, causing them to be dropped."
+          dis as text "Caution: estimability checks found time periods exist in sample without a control unit, causing them to be dropped."
           if "`contreat'" != "" dis as text "If intending to only use within treated-cohorts variation in your continuous treatment variable, specify option contreatwithin to avoid these checks."
         }
       }
@@ -3665,7 +3665,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       dis as text "Caution: interpretation of continuous treatment effects plots for estimands other than the ATT is difficult unless i-t cells (and sometimes cohorts i) are wholly contained within lattice bins."
     }
     else{
-      dis as error "Caution: interpretation of continuous treatment effects plots for estimands other than the ATT is difficult unless i-t cells (and sometimes cohorts i) are wholly contained within lattice bins."
+      dis as text "Caution: interpretation of continuous treatment effects plots for estimands other than the ATT is difficult unless i-t cells (and sometimes cohorts i) are wholly contained within lattice bins."
       dis as text "As such, wooldid will not produce these plots unless you specify safety = off."
     }
   }
@@ -3736,7 +3736,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`poisson'" != "" {
     cap assert `y' >= 0 `ifassert'
     if _rc != 0 {
-      dis as error "The outcome variable contains negative values; this is not allowed with poisson."
+      dis as error "Error: the outcome variable contains negative values; this is not allowed with poisson."
       error 411
     }
   }
@@ -3842,7 +3842,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`subgroups'" != "" {
     cap assert `subgroups' >= 0 `ifassert'
     if _rc != 0 {
-      dis as error "The subgroup variable contains negative values; it must contain only non-negative integers."
+      dis as error "Error: the subgroup variable contains negative values; it must contain only non-negative integers."
       error 411
     }
   }
