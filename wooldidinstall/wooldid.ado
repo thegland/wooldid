@@ -61,6 +61,7 @@ cap prog drop wooldid_worker
 prog def wooldid_worker, eclass
 version 16.0
 
+* S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
 syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist)]
 
 * Execute update before running main program
@@ -70,18 +71,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     exit
   }
 
-* Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
-* ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
-  local missingpackages
-  foreach requiredpackage in reghdfe ftools gtools {
-    cap which `requiredpackage'
-    if _rc != 0 {
-      dis as error "Error: wooldid requires the package `requiredpackage', which does not appear to be installed."
-      dis as text "To install it, run: ssc install `requiredpackage', replace"
-      local missingpackages `missingpackages' `requiredpackage'
-    }
-  }
-  if "`missingpackages'" != "" error 198
+  * S5: all parse-time validation and option normalization lives in wooldid_validate,
+  * which re-parses `0' with a BYTE-IDENTICAL copy of the syntax line above (guarded by
+  * test/check_validate_sync.py) and returns its option/derived locals via c_local.
+  * called before cleanmatrices, so a rejected call no longer clears user matrices/mata
+  wooldid_validate `0'
+
 
   ***************************************************************************************************
   ******************************  Initialize and Process Command Input ******************************
@@ -89,7 +84,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * This section converts user input into actionable information and checks for validity of the user input.
 
 
-  if "`verbose'" == "verbose" dis as text "Wooldid is processing input in preparation of regression estimation."
 
   * Clean the workspace if cleanmatrices is specified - this is helpful b/c sometimes reghdfe enters into a failure state
   * that leaves junk matrices floating around in stata and mata which prevent further estimation. cleanmatrices should fix that.
@@ -107,384 +101,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     set emptycells drop
  }
 
- * This controls the names we use for ES plots; the new syntax is more compatible with the program event_plot
- if "`oldsyntax'" == "oldsyntax" {
-    local oldsyntax 1
- }
- else {
-    local oldsyntax 0
- }
-
-  **** Begin a block of checks that command info is correctly specified; error out if not. handle all syntax errors here
-
-  * check that sufficient input is given - note that the error will occur automatically if > 4 is given
-  if wordcount("`varlist'") < 4 {
-    dis as error "Error: command line input should feature all of y i t ttre; too few variables specified."
-    error 198
-  }
-
-  if wordcount("`varlist'") > 4 {
-    dis as error "Error: command line input should feature only y i t ttre; too many variables specified."
-    error 198
-  }
-
-  *Confirm correct weight usge if using poisson
-  if "`weight'" == "aweight" & "`poisson'" == "poisson" {
-    dis as error "Error: poisson only accepts pweights, not aweights."
-    error 198
-  }
-
-  *Issue warnings related to unconditional se reliability
-  if "`safety'" != "off" & "`unconditionalse'" == "unconditionalse" & ("att_i" == "`att_i'" | "att_it" == "`att_it'" | "att_itime" == "`att_itime'" ) {
-    dis as error "Error: unconditional standard errors may be unreliable with non-att estimand types."
-    dis as text "Set option safety(off) to disregard this error."
-    error 198
-  }
-
-  if "`safety'" != "off" & "`unconditionalse'" == "unconditionalse" & ("`weight'" == "aweight" ) {
-    dis " "
-    dis as text "Caution: unconditional standard errors may be unreliable with aweights."
-    dis as text "Set option safety(off) to suppress this warning message."
-    dis " "
-  }
-
-  if "`adversarial'" == "adversarial" & "`impvalues'" == "impvalues" {
-    dis as error "Error: Adversarial Pre-Trends Testing not allowed with Ibragimov and Muller p-values."
-    error 198
-  }
-
-  * object to certain specification types when forced to switch to reg or poisson over an hdfe estimator
-  if ("`customvce'" != "" | "`unconditionalse'" != "") & ( "`fe'" != "" | "`ccc_absorb'" != "")  {
-    dis as text "Caution: unconditional SEs and custom VCE specifications rely on the plain regress command and so are not compatible with absorbed fixed effects."
-    dis as text "You must specify anything in fe as controls, manually specifying any needed i. prefixes."
-  }
-
-  * check conditions for using im p-values
-  if "`impvalues'" != "" & "`cluster'" == "" {
-    dis as error "Error: Ibragimov and Muller p-values only allowed when clustering; please specify a clustering variable."
-    error 198
-  }
-
-  if "`impvalues'" != "" & wordcount("`cluster'") > 1 {
-    dis as error "Error: Ibragimov and Muller p-values only allowed with a single cluster variable."
-    error 198
-  }
-
-  * check conditions for using im p-values
-  if "`impvalues'" != "" & ( "`customvce'" != "" | "`unconditionalse'" != "") {
-    dis as error "Error: Ibragimov and Muller p-values are not compatible with unconditional SE computation and custom VCE specifications."
-    error 198
-  }
-
-  * complain if you specify customvce and something else with it
-  if "`customvce'" != "" & ("`robust'" != "" | "`cluster'" != "") {
-    dis as error "Error: customvce() is not compatible with robust and cluster(). You must manually specify the contents of reg's vce() statement in this case."
-    error 198
-  }
-
-  * unconditional SEs are computed by margins via vce(unconditional), which requires the underlying
-  * regression to have been fit with robust or clustered standard errors; catch this early rather than
-  * failing with a bare r(322) at the first margins call after estimation has completed.
-  * pweights are exempt: they force a robust vce in reg/poisson, satisfying the requirement on their own
-  if "`unconditionalse'" == "unconditionalse" & "`robust'" == "" & "`cluster'" == "" & "`customvce'" == "" & "`weight'" != "pweight" {
-    dis as error "Error: the option unconditionalse requires specifying either robust or clustered standard errors."
-    dis as text "Specify robust or cluster(), or provide a robust/clustered vce via customvce()."
-    error 198
-  }
-
-
-  *check conditions for using im p-values - in principle, SG estimates could be computed provided SGs never cross cut clusters, but I have not implemented this
-  if "`impvalues'" != "" & "`subgroups'" != "" {
-    dis as error "Error: Ibragimov and Muller p-values not compatible with subgroups."
-    error 198
-  }
-
-  *check conditions for using im p-values - for CFX plots, we have problems similar to with SGs, but even worse
-  if "`impvalues'" != "" & "`makecfxplots'" != "" {
-    dis as error "Error: Ibragimov and Muller p-values not compatible with continuous treatment effects plots."
-    error 198
-  }
-
-  * F7 pre-trend power diagnostics: validate the request early (checks live in a
-  * subprogram - the worker is close to Stata's per-program size ceiling)
-  if "`pretrendpower'" != "" wooldid_ptpcheck , levels(`pretrendpower') esf(`esfixedbaseperiod') impv(`impvalues') espre(`esprelength')
-
-  * check conditions for using im p-values --
-  * for the joint tests, I have not seen IM characterize multi-way tests. implementing a test here of some sort would be easy,
-  * but I am not sure if it would technically be valid.
-  if "`impvalues'" != "" & ( "`jointtests'" != "" ){
-    dis as error "Error: Ibragimov and Muller p-values are not compatible with the jointtests option."
-    error 198
-  }
-
-  * verify that if continuous treatment effects plots are requested, we have a lattice over which to produce them
-  if "`makecfxplots'" != "" & "`cfxlattice'" == "" & ("`lattice'"=="" ) {
-    dis as error  "Error: You requested continuous treatment effects plots, but either didn't specify a cfxlattice variable or a lattice option for the continuous treatment."
-    error 198
-  }
-
-  * oostreatedcontrols determines whether or not units treated after the end of the sample window are allowed to contribute to pre-treatment horizons;
-  * cancel estimation if you specify a negative value here (corresponding with a within window treatment)
-  if `oostreatedcontrols' < 0 {
-    dis as error  "Error: oostreatedcontrols specified as < 0, indicating that treatments occurring within sample should be ignored."
-    dis as error  "This is not allowed; you must specially set up cases of this sort by modifying the ttre variable and the if statement."
-    error 198
-  }
-
-  * anticipation() shifts the effective onset EARLIER (ttre - #); a negative value would
-  * pretend onset is later, pushing genuinely treated periods into the control/reference
-  * pool - a silent identification failure. delayed-onset designs need their own setup
-  if `anticipation' < 0 {
-    dis as error  "Error: anticipation specified as < 0, indicating that treatment onset should be treated as occurring later than recorded."
-    dis as error  "This is not allowed; if you need a delayed-onset design, modify the ttre variable and the if statement directly."
-    error 198
-  }
-
-
-  * check that controls are specified alright - error out if c. and i. are not specified for each variable
-  if "`coarsecohortcontrols'" != "" {
-    foreach case in `coarsecohortcontrols' {
-      if strpos("`case'","c.") == 0 & strpos("`case'","i.") == 0 {
-        dis as error  "Error: Your coarse cohort controls do not all specify whether they are continuous or categorical. You must do this using i. and c. style notation."
-        error 198
-      }
-    }
-  }
-
-  * extract information about requested continuous treatment and error out if the user misspecified the information
-  if "`lattice'" != "" & wordcount("`lattice'") != 1 {
-    if wordcount("`lattice'") >= 3  {
-      dis as error  "Error: lattice incorrectly specified; requires 2 arguments or a pre-made lattice variable"
-      error 198
-    }
-
-    local latticenum = word("`lattice'",2)
-    * validate by VALUE, not spelling: every downstream quantile engine accepts
-    * integer-valued spellings like 02, +2, 2.0, and 1e2, so a confirm-integer-number
-    * spelling check would reject inputs that work; conversely gquantiles silently
-    * remaps nquantiles <= 0 to its default (and forval builds a degenerate no-op
-    * lattice), so 0/negatives must be caught here by value. missing-evaluating
-    * tokens fail confirm number or the mod() test (mod(., 1) != 0 is true)
-    cap confirm number `latticenum'
-    if _rc != 0 {
-      dis as error "Error: lattice incorrectly specified; `latticenum' is not a valid number of lattice quantiles. lattice() requires a valid lattice type and an integer number of quantiles, or a pre-made lattice variable."
-      error 198
-    }
-    if mod(`latticenum',1) != 0 {
-      dis as error "Error: lattice incorrectly specified; the number of lattice quantiles (`latticenum') must be an integer."
-      error 198
-    }
-    if `latticenum' <= 1 {
-      dis as error "Error: lattice incorrectly specified; latticenum must be > 1 or else the lattice does not permit additional variation relative to not specifying a lattice at all."
-      error 198
-    }
-
-    local latticetype = word("`lattice'",1)
-    if inlist("`latticetype'","all","baseTreated","baseTreatedPost","baseTreatedPre", "baseTreatedRef") == 0 & inlist("`latticetype'","byCohort","byTime","byCohortByTime","byTreated","byTreatedByTime","byTtre","byTtreByTime") == 0{
-      dis as error  "Error: lattice type is misspecified; `latticetype' is not a valid lattice type."
-      error 198
-    }
-  }
-
-  * extract contreatcontrol type and error out if misspecifeid
-  if "`contreatcontrols'" != "" {
-    foreach word in `contreatcontrols' {
-      if inlist("`word'",  "byTreated", "byTtre", "byCohort", "byTime") == 0 & inlist("`word'","basic","untreatedZero") == 0 {
-        dis as error  "Error: continuous treatment control type misspecified; `word' is not a valid continuous treatment control type."
-        error 198
-      }
-    }
-    if strpos("`contreatcontrols'","untreatedZero") != 0 & wordcount("`contreatcontrols'") > 1 {
-      dis as error "Error: untreatedZero cannot be paired with other control types"
-      error 198
-    }
-  }
-
-  * error out if no contreatcontrol type is specified in a continuous treatment scenario
-  if "`contreatcontrols'" == "" & "`contreat'" != "" {
-    dis as error "Error: contreatcontrols type not specified; you must specify this - substantive judgement is required."
-    error 198
-  }
-
-  * error out if you request continuous treatment controls w/o a continuous treatment variable
-  if "`contreatcontrols'" != "" & "`contreat'" == "" {
-    dis as error "Error: you cannot request continuous treatment controls without specifying a continuous treatment variable."
-    error 198
-  }
-
-  * error out if a lattice is requested without a continuous treatment - the lattice-construction
-  * code all sits inside the contreat block, so the option would otherwise be silently ignored
-  if "`lattice'" != "" & "`contreat'" == "" {
-    dis as error "Error: lattice() has no effect without contreat(); specify a continuous treatment variable or remove the lattice() option."
-    error 198
-  }
-
- * issue warnings pertaining to cfxplot types
-  if "`makecfxplots'" != "" & ("`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" )   {
-    if "`safety'" == "off" {
-      dis as text "Caution: interpretation of continuous treatment effects plots for estimands other than the ATT is difficult unless i-t cells (and sometimes cohorts i) are wholly contained within lattice bins."
-    }
-    else{
-      dis as error "Caution: interpretation of continuous treatment effects plots for estimands other than the ATT is difficult unless i-t cells (and sometimes cohorts i) are wholly contained within lattice bins."
-      dis as text "As such, wooldid will not produce these plots unless you specify safety = off."
-    }
-  }
-
-  if `esprelength' < 0 {
-    dis as error "Error: cannot accept negative values of esprelength."
-    error 198
-  }
-
-  * this implements a hack for estimability check failures in certain special cases
-  if `espostlength' < 0  {
-    if `espostlength' != -999  {
-      dis as error "Error: cannot accept negative values of espostlength."
-      error 198
-    }
-    local espostlength 0
-    local esposttrip no
-  }
-
-  if "`subgroups'" != "" &   `esprelength' > 0  & `espostlength' == 0 & "`esposttrip'" == "" {
-    local espostlength 1
-    if "`safety'" != "off" dis as text "Caution: espostlength set to 1 due to use of subgroups in conjunction with esprelength > 0."
-    if "`safety'" != "off" dis as text "Without this modification, subgroups may crash if pre-treatment effects are not estimable for them."
-    if "`safety'" != "off" dis as text "Specify espostlength(-999) to override this issue. Specify safety(off) to avoid seeing this message."
-  }
-
-
-
-  ******** parsing for specification errors complete, begin processing input on other dimensions, setting defaults, etc. handle errors that aren't purely syntax here
-
-  ******* process the raw inputs
-
-  * extract y, i, t, and ttre from the main variable list
-  local y = word("`varlist'",1)
-  local i = word("`varlist'",2)
-  local t = word("`varlist'",3)
-  local ttre_asgiven = word("`varlist'",4)
-
-  * capture the user's own safety() input before any internal relaxation (contreatwithin sets
-  * the working copy to off further down); the identifying-assumption checks gate on this copy
-  * so an internal relaxation does not silently disable them
-  local safetyinput `safety'
-
-  * register verbose retention with the shell's error-path cleanup epilogue (top of this
-  * file): under verbose, ___wooldidfullmodel (and _ppmlhdfe_d under poisson) are
-  * documented as retained for inspection - on failed runs as well
-  if "`verbose'" == "verbose" global WOOLDID_CLEANUP $WOOLDID_CLEANUP keep
-
-  * the input-validity asserts below respect the user's if() restriction, mirroring the
-  * estimation sample construction exactly: the sample keeps rows where the if expression
-  * evaluates to 1 (gen ifvar = `if' further down), so the asserts test (`if') == 1 --
-  * identical row selection for any expression shape, including bare flag variables with
-  * nonzero or missing values, which a plain if-qualifier would wrongly include. empty when
-  * no if() is given, leaving the asserts running over the full dataset exactly as before
-  local ifassert
-  if `"`if'"' != "" local ifassert if (`if') == 1
-
-  * check that i is specified acceptably
-  if "`safety'" != "off" {
-    cap assert `i' > 0  & int(`i') == `i' `ifassert'
-    if _rc != 0 {
-      dis as error  "Error: `i' must consist of positive, non-zero integers, but does not"
-      error 411
-    }
-  }
-
-  * if poisson, check that y is not negative
-  if "`poisson'" != "" {
-    cap assert `y' >= 0 `ifassert'
-    if _rc != 0 {
-      dis as error "The outcome variable contains negative values; this is not allowed with poisson."
-      error 411
-    }
-  }
-
-
-  ****** process other aspects of the command syntax
-
-  * if no elasticity type specified, assume regular non-elasticity estimates
-  if "`contreatelasticitytype'" != "eyex" & "`contreatelasticitytype'" != "dyex" & "`contreatelasticitytype'" != "eydx" local contreatelasticitytype dydx
-  if "`semielasticity'" == "" {
-    local semielasticity dydx
-  }
-  else {
-    local semielasticity eydx
-  }
-
-  * do some light processing of the "number of pre-treatment coefs" input - it needs some adjustment when esfixedbaseperiod is used since the period normalized to 0 could fall within your range of requested coefs
-  if "`esfixedbaseperiod'" == "esfixedbaseperiod" &   `esprelength' > 0  {
-    if abs(`esrelativeto') <= `esprelength' local ++esprelength
-    * this is needed b/c we arent counting the reference period coef as a coef
-  }
-
-  * process the joint tests suppression flag  - it is on by default unless jointtests is specified
-  local suppressjointtests suppressjointtests
-  if "jointtests" == "`jointtests'" local suppressjointtests
-
-  * what type of results do we want estimated  - if nothing specified, default estimand to att
-  if "`att'" == "" & "" == "`att_it'" & "" == "`att_itime'" & "" == "`att_i'" {
-    local att att
-  }
-
-  * handle contreatwithin - indicator to use only within variation
-  * crash if probably illegitimate contreatcontrols are specified
-  * also, set safety to off
-  if "`contreatwithin'" == "contreatwithin" & "`contreat'" != "" {
-    if strpos("`contreatcontrols'","byTime") != 0  {
-      if "`safety'" == "off" dis as text "Caution: contreatwithin is specified in conjunction with the byTime contreatcontrol type."
-      if "`safety'" != "off" dis as error "Error: contreatwithin is specified in conjunction with the byTime contreatcontrol type."
-      if "`verbose'" == "verbose" dis as text "Typically, this partials out some treatment effects and yields unidentified estimates."
-      if "`safety'" != "off" {
-        dis as error "To proceed anyway in a new estimation run, manually set safety(off) before proceeding."
-        error 198
-      }
-    }
-    local safety off
-    * the above is required since we are intentionally making the base effects irrelevant
-  }
-
-
-  * process cfxplottypes
-  * note that the tests here on what cfxplottypes are allowed are kinda weak in that you can request impractical relative periods (relyrs) and such, but better than no checks
-  if "`makecfxplots'" != "" {
-    local cfxpost 0
-    local cfxpre 0
-    local cfxrelyr 0
-    local cfxrelyrlist
-    if "`cfxplottypes'" == "" local cfxplottypes post
-    if strpos("`cfxplottypes'","post") != 0 local cfxpost 1
-    local cfxplottypes = subinstr("`cfxplottypes'","post"," ",.)
-    if strpos("`cfxplottypes'","pre") != 0 & ("`esfixedbaseperiod'" == "esfixedbaseperiod" | `esprelength' > 0 ) local cfxpre 1
-    local cfxplottypes = subinstr("`cfxplottypes'","pre"," ",.)
-    foreach item in `cfxplottypes' {
-      * entries other than the (already-stripped) post/pre keywords must be numeric: a stray token
-      * would otherwise be evaluated as a variable reference below -- crashing with an unexplained
-      * r(111) if no such variable exists, or silently injecting the variable into the plot list if
-      * one does (stata does not short-circuit |, so the reference-period comparison always runs)
-      cap confirm number `item'
-      if _rc != 0 {
-        dis as error "Error: cfxplottypes() contains an unrecognized entry: `item'"
-        dis as error "Valid cfxplottypes() entries are post, pre, and/or integers specifying relative time periods."
-        error 198
-      }
-      * a leading + is a natural way to write positive relative years (+2, matching -2), but
-      * the raw token is later embedded in matrix names, where + is an invalid character;
-      * strip it so +2 means 2 (and the post-loop dedup then also collapses +2 with 2)
-      if substr("`item'",1,1) == "+" local item = substr("`item'",2,.)
-      if "`esfixedbaseperiod'" == "" | `item' != `esrelativeto' {
-        cap if int(`item')==`item' & `item' >= 0 & (`item' <= `espostlength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
-        cap if int(`item')==`item' & `item' < 0 & (abs(`item') <= `esprelength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
-      }
-    }
-    * a repeated relyr entry would build the same result matrix twice; the final ereturn loop
-    * moves (not copies) each matrix, so the duplicate's second pass dies r(111). list uniq
-    * preserves first-occurrence order, so duplicate-free input is untouched
-    local cfxrelyrlist : list uniq cfxrelyrlist
-    if "`cfxrelyrlist'" != "" local cfxrelyr 1
-  }
-
 
   * extract the regression weights variable and setup macros for handling weights; if no weight variable, create one. require weights to be non-negative everywhere
   local w `exp'
@@ -497,23 +113,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * when weights are absent, we need to tell what kind of weights margins should use
     * iw in margins is treated like fw w/o the N adjustment
     * that's desirable for our purposes
-  }
-  if  "`safety'" != "off" {
-    cap assert `w' >= 0 `ifassert'
-    if _rc != 0 {
-      dis as error  "Error: weights must not be negative."
-      error 411
-    }
-  }
-
-
-  * subgroups cannot be negative
-  if "`subgroups'" != "" {
-    cap assert `subgroups' >= 0 `ifassert'
-    if _rc != 0 {
-      dis as error "The subgroup variable contains negative values; it must contain only non-negative integers."
-      error 411
-    }
   }
 
 
@@ -3815,6 +3414,450 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   end
 
+
+* ============================================================================
+* S5: the complete early input gate - every parse-time check and option
+* normalization wooldid performs before touching the dataset structure. moved out
+* of wooldid_worker (per-program compiled-size ceiling) verbatim and in the original
+* order, so multi-error calls report the same first error as before. re-parses `0'
+* with a byte-identical copy of the worker's syntax line (test/check_validate_sync.py
+* guards the duplication) and returns everything it parses or mutates via c_local.
+* NOT in here (hard constraints, all measured): set emptycells (program-scoped, would
+* be restored the instant this returns), tempvar creation (dies on return), and the
+* update branch (its exit would only leave this subprogram).
+cap prog drop wooldid_validate
+prog def wooldid_validate
+version 16.0
+
+* S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist)]
+
+* Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
+* ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
+  local missingpackages
+  foreach requiredpackage in reghdfe ftools gtools {
+    cap which `requiredpackage'
+    if _rc != 0 {
+      dis as error "Error: wooldid requires the package `requiredpackage', which does not appear to be installed."
+      dis as text "To install it, run: ssc install `requiredpackage', replace"
+      local missingpackages `missingpackages' `requiredpackage'
+    }
+  }
+  if "`missingpackages'" != "" error 198
+
+  if "`verbose'" == "verbose" dis as text "Wooldid is processing input in preparation of regression estimation."
+
+ * This controls the names we use for ES plots; the new syntax is more compatible with the program event_plot
+ if "`oldsyntax'" == "oldsyntax" {
+    local oldsyntax 1
+ }
+ else {
+    local oldsyntax 0
+ }
+
+  **** Begin a block of checks that command info is correctly specified; error out if not. handle all syntax errors here
+
+  * check that sufficient input is given - note that the error will occur automatically if > 4 is given
+  if wordcount("`varlist'") < 4 {
+    dis as error "Error: command line input should feature all of y i t ttre; too few variables specified."
+    error 198
+  }
+
+  if wordcount("`varlist'") > 4 {
+    dis as error "Error: command line input should feature only y i t ttre; too many variables specified."
+    error 198
+  }
+
+  *Confirm correct weight usge if using poisson
+  if "`weight'" == "aweight" & "`poisson'" == "poisson" {
+    dis as error "Error: poisson only accepts pweights, not aweights."
+    error 198
+  }
+
+  *Issue warnings related to unconditional se reliability
+  if "`safety'" != "off" & "`unconditionalse'" == "unconditionalse" & ("att_i" == "`att_i'" | "att_it" == "`att_it'" | "att_itime" == "`att_itime'" ) {
+    dis as error "Error: unconditional standard errors may be unreliable with non-att estimand types."
+    dis as text "Set option safety(off) to disregard this error."
+    error 198
+  }
+
+  if "`safety'" != "off" & "`unconditionalse'" == "unconditionalse" & ("`weight'" == "aweight" ) {
+    dis " "
+    dis as text "Caution: unconditional standard errors may be unreliable with aweights."
+    dis as text "Set option safety(off) to suppress this warning message."
+    dis " "
+  }
+
+  if "`adversarial'" == "adversarial" & "`impvalues'" == "impvalues" {
+    dis as error "Error: Adversarial Pre-Trends Testing not allowed with Ibragimov and Muller p-values."
+    error 198
+  }
+
+  * object to certain specification types when forced to switch to reg or poisson over an hdfe estimator
+  if ("`customvce'" != "" | "`unconditionalse'" != "") & ( "`fe'" != "" | "`ccc_absorb'" != "")  {
+    dis as text "Caution: unconditional SEs and custom VCE specifications rely on the plain regress command and so are not compatible with absorbed fixed effects."
+    dis as text "You must specify anything in fe as controls, manually specifying any needed i. prefixes."
+  }
+
+  * check conditions for using im p-values
+  if "`impvalues'" != "" & "`cluster'" == "" {
+    dis as error "Error: Ibragimov and Muller p-values only allowed when clustering; please specify a clustering variable."
+    error 198
+  }
+
+  if "`impvalues'" != "" & wordcount("`cluster'") > 1 {
+    dis as error "Error: Ibragimov and Muller p-values only allowed with a single cluster variable."
+    error 198
+  }
+
+  * check conditions for using im p-values
+  if "`impvalues'" != "" & ( "`customvce'" != "" | "`unconditionalse'" != "") {
+    dis as error "Error: Ibragimov and Muller p-values are not compatible with unconditional SE computation and custom VCE specifications."
+    error 198
+  }
+
+  * complain if you specify customvce and something else with it
+  if "`customvce'" != "" & ("`robust'" != "" | "`cluster'" != "") {
+    dis as error "Error: customvce() is not compatible with robust and cluster(). You must manually specify the contents of reg's vce() statement in this case."
+    error 198
+  }
+
+  * unconditional SEs are computed by margins via vce(unconditional), which requires the underlying
+  * regression to have been fit with robust or clustered standard errors; catch this early rather than
+  * failing with a bare r(322) at the first margins call after estimation has completed.
+  * pweights are exempt: they force a robust vce in reg/poisson, satisfying the requirement on their own
+  if "`unconditionalse'" == "unconditionalse" & "`robust'" == "" & "`cluster'" == "" & "`customvce'" == "" & "`weight'" != "pweight" {
+    dis as error "Error: the option unconditionalse requires specifying either robust or clustered standard errors."
+    dis as text "Specify robust or cluster(), or provide a robust/clustered vce via customvce()."
+    error 198
+  }
+
+
+  *check conditions for using im p-values - in principle, SG estimates could be computed provided SGs never cross cut clusters, but I have not implemented this
+  if "`impvalues'" != "" & "`subgroups'" != "" {
+    dis as error "Error: Ibragimov and Muller p-values not compatible with subgroups."
+    error 198
+  }
+
+  *check conditions for using im p-values - for CFX plots, we have problems similar to with SGs, but even worse
+  if "`impvalues'" != "" & "`makecfxplots'" != "" {
+    dis as error "Error: Ibragimov and Muller p-values not compatible with continuous treatment effects plots."
+    error 198
+  }
+
+  * F7 pre-trend power diagnostics: validate the request early (checks live in a
+  * subprogram - the worker is close to Stata's per-program size ceiling)
+  if "`pretrendpower'" != "" wooldid_ptpcheck , levels(`pretrendpower') esf(`esfixedbaseperiod') impv(`impvalues') espre(`esprelength')
+
+  * check conditions for using im p-values --
+  * for the joint tests, I have not seen IM characterize multi-way tests. implementing a test here of some sort would be easy,
+  * but I am not sure if it would technically be valid.
+  if "`impvalues'" != "" & ( "`jointtests'" != "" ){
+    dis as error "Error: Ibragimov and Muller p-values are not compatible with the jointtests option."
+    error 198
+  }
+
+  * verify that if continuous treatment effects plots are requested, we have a lattice over which to produce them
+  if "`makecfxplots'" != "" & "`cfxlattice'" == "" & ("`lattice'"=="" ) {
+    dis as error  "Error: You requested continuous treatment effects plots, but either didn't specify a cfxlattice variable or a lattice option for the continuous treatment."
+    error 198
+  }
+
+  * oostreatedcontrols determines whether or not units treated after the end of the sample window are allowed to contribute to pre-treatment horizons;
+  * cancel estimation if you specify a negative value here (corresponding with a within window treatment)
+  if `oostreatedcontrols' < 0 {
+    dis as error  "Error: oostreatedcontrols specified as < 0, indicating that treatments occurring within sample should be ignored."
+    dis as error  "This is not allowed; you must specially set up cases of this sort by modifying the ttre variable and the if statement."
+    error 198
+  }
+
+  * anticipation() shifts the effective onset EARLIER (ttre - #); a negative value would
+  * pretend onset is later, pushing genuinely treated periods into the control/reference
+  * pool - a silent identification failure. delayed-onset designs need their own setup
+  if `anticipation' < 0 {
+    dis as error  "Error: anticipation specified as < 0, indicating that treatment onset should be treated as occurring later than recorded."
+    dis as error  "This is not allowed; if you need a delayed-onset design, modify the ttre variable and the if statement directly."
+    error 198
+  }
+
+
+  * check that controls are specified alright - error out if c. and i. are not specified for each variable
+  if "`coarsecohortcontrols'" != "" {
+    foreach case in `coarsecohortcontrols' {
+      if strpos("`case'","c.") == 0 & strpos("`case'","i.") == 0 {
+        dis as error  "Error: Your coarse cohort controls do not all specify whether they are continuous or categorical. You must do this using i. and c. style notation."
+        error 198
+      }
+    }
+  }
+
+  * extract information about requested continuous treatment and error out if the user misspecified the information
+  if "`lattice'" != "" & wordcount("`lattice'") != 1 {
+    if wordcount("`lattice'") >= 3  {
+      dis as error  "Error: lattice incorrectly specified; requires 2 arguments or a pre-made lattice variable"
+      error 198
+    }
+
+    local latticenum = word("`lattice'",2)
+    * validate by VALUE, not spelling: every downstream quantile engine accepts
+    * integer-valued spellings like 02, +2, 2.0, and 1e2, so a confirm-integer-number
+    * spelling check would reject inputs that work; conversely gquantiles silently
+    * remaps nquantiles <= 0 to its default (and forval builds a degenerate no-op
+    * lattice), so 0/negatives must be caught here by value. missing-evaluating
+    * tokens fail confirm number or the mod() test (mod(., 1) != 0 is true)
+    cap confirm number `latticenum'
+    if _rc != 0 {
+      dis as error "Error: lattice incorrectly specified; `latticenum' is not a valid number of lattice quantiles. lattice() requires a valid lattice type and an integer number of quantiles, or a pre-made lattice variable."
+      error 198
+    }
+    if mod(`latticenum',1) != 0 {
+      dis as error "Error: lattice incorrectly specified; the number of lattice quantiles (`latticenum') must be an integer."
+      error 198
+    }
+    if `latticenum' <= 1 {
+      dis as error "Error: lattice incorrectly specified; latticenum must be > 1 or else the lattice does not permit additional variation relative to not specifying a lattice at all."
+      error 198
+    }
+
+    local latticetype = word("`lattice'",1)
+    if inlist("`latticetype'","all","baseTreated","baseTreatedPost","baseTreatedPre", "baseTreatedRef") == 0 & inlist("`latticetype'","byCohort","byTime","byCohortByTime","byTreated","byTreatedByTime","byTtre","byTtreByTime") == 0{
+      dis as error  "Error: lattice type is misspecified; `latticetype' is not a valid lattice type."
+      error 198
+    }
+  }
+
+  * extract contreatcontrol type and error out if misspecifeid
+  if "`contreatcontrols'" != "" {
+    foreach word in `contreatcontrols' {
+      if inlist("`word'",  "byTreated", "byTtre", "byCohort", "byTime") == 0 & inlist("`word'","basic","untreatedZero") == 0 {
+        dis as error  "Error: continuous treatment control type misspecified; `word' is not a valid continuous treatment control type."
+        error 198
+      }
+    }
+    if strpos("`contreatcontrols'","untreatedZero") != 0 & wordcount("`contreatcontrols'") > 1 {
+      dis as error "Error: untreatedZero cannot be paired with other control types"
+      error 198
+    }
+  }
+
+  * error out if no contreatcontrol type is specified in a continuous treatment scenario
+  if "`contreatcontrols'" == "" & "`contreat'" != "" {
+    dis as error "Error: contreatcontrols type not specified; you must specify this - substantive judgement is required."
+    error 198
+  }
+
+  * error out if you request continuous treatment controls w/o a continuous treatment variable
+  if "`contreatcontrols'" != "" & "`contreat'" == "" {
+    dis as error "Error: you cannot request continuous treatment controls without specifying a continuous treatment variable."
+    error 198
+  }
+
+  * error out if a lattice is requested without a continuous treatment - the lattice-construction
+  * code all sits inside the contreat block, so the option would otherwise be silently ignored
+  if "`lattice'" != "" & "`contreat'" == "" {
+    dis as error "Error: lattice() has no effect without contreat(); specify a continuous treatment variable or remove the lattice() option."
+    error 198
+  }
+
+ * issue warnings pertaining to cfxplot types
+  if "`makecfxplots'" != "" & ("`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" )   {
+    if "`safety'" == "off" {
+      dis as text "Caution: interpretation of continuous treatment effects plots for estimands other than the ATT is difficult unless i-t cells (and sometimes cohorts i) are wholly contained within lattice bins."
+    }
+    else{
+      dis as error "Caution: interpretation of continuous treatment effects plots for estimands other than the ATT is difficult unless i-t cells (and sometimes cohorts i) are wholly contained within lattice bins."
+      dis as text "As such, wooldid will not produce these plots unless you specify safety = off."
+    }
+  }
+
+  if `esprelength' < 0 {
+    dis as error "Error: cannot accept negative values of esprelength."
+    error 198
+  }
+
+  * this implements a hack for estimability check failures in certain special cases
+  if `espostlength' < 0  {
+    if `espostlength' != -999  {
+      dis as error "Error: cannot accept negative values of espostlength."
+      error 198
+    }
+    local espostlength 0
+    local esposttrip no
+  }
+
+  if "`subgroups'" != "" &   `esprelength' > 0  & `espostlength' == 0 & "`esposttrip'" == "" {
+    local espostlength 1
+    if "`safety'" != "off" dis as text "Caution: espostlength set to 1 due to use of subgroups in conjunction with esprelength > 0."
+    if "`safety'" != "off" dis as text "Without this modification, subgroups may crash if pre-treatment effects are not estimable for them."
+    if "`safety'" != "off" dis as text "Specify espostlength(-999) to override this issue. Specify safety(off) to avoid seeing this message."
+  }
+
+
+
+  ******** parsing for specification errors complete, begin processing input on other dimensions, setting defaults, etc. handle errors that aren't purely syntax here
+
+  ******* process the raw inputs
+
+  * extract y, i, t, and ttre from the main variable list
+  local y = word("`varlist'",1)
+  local i = word("`varlist'",2)
+  local t = word("`varlist'",3)
+  local ttre_asgiven = word("`varlist'",4)
+
+  * capture the user's own safety() input before any internal relaxation (contreatwithin sets
+  * the working copy to off further down); the identifying-assumption checks gate on this copy
+  * so an internal relaxation does not silently disable them
+  local safetyinput `safety'
+
+  * register verbose retention with the shell's error-path cleanup epilogue (top of this
+  * file): under verbose, ___wooldidfullmodel (and _ppmlhdfe_d under poisson) are
+  * documented as retained for inspection - on failed runs as well
+  if "`verbose'" == "verbose" global WOOLDID_CLEANUP $WOOLDID_CLEANUP keep
+
+  * the input-validity asserts below respect the user's if() restriction, mirroring the
+  * estimation sample construction exactly: the sample keeps rows where the if expression
+  * evaluates to 1 (gen ifvar = `if' further down), so the asserts test (`if') == 1 --
+  * identical row selection for any expression shape, including bare flag variables with
+  * nonzero or missing values, which a plain if-qualifier would wrongly include. empty when
+  * no if() is given, leaving the asserts running over the full dataset exactly as before
+  local ifassert
+  if `"`if'"' != "" local ifassert if (`if') == 1
+
+  * check that i is specified acceptably
+  if "`safety'" != "off" {
+    cap assert `i' > 0  & int(`i') == `i' `ifassert'
+    if _rc != 0 {
+      dis as error  "Error: `i' must consist of positive, non-zero integers, but does not"
+      error 411
+    }
+  }
+
+  * if poisson, check that y is not negative
+  if "`poisson'" != "" {
+    cap assert `y' >= 0 `ifassert'
+    if _rc != 0 {
+      dis as error "The outcome variable contains negative values; this is not allowed with poisson."
+      error 411
+    }
+  }
+
+
+  ****** process other aspects of the command syntax
+
+  * if no elasticity type specified, assume regular non-elasticity estimates
+  if "`contreatelasticitytype'" != "eyex" & "`contreatelasticitytype'" != "dyex" & "`contreatelasticitytype'" != "eydx" local contreatelasticitytype dydx
+  if "`semielasticity'" == "" {
+    local semielasticity dydx
+  }
+  else {
+    local semielasticity eydx
+  }
+
+  * do some light processing of the "number of pre-treatment coefs" input - it needs some adjustment when esfixedbaseperiod is used since the period normalized to 0 could fall within your range of requested coefs
+  if "`esfixedbaseperiod'" == "esfixedbaseperiod" &   `esprelength' > 0  {
+    if abs(`esrelativeto') <= `esprelength' local ++esprelength
+    * this is needed b/c we arent counting the reference period coef as a coef
+  }
+
+  * process the joint tests suppression flag  - it is on by default unless jointtests is specified
+  local suppressjointtests suppressjointtests
+  if "jointtests" == "`jointtests'" local suppressjointtests
+
+  * what type of results do we want estimated  - if nothing specified, default estimand to att
+  if "`att'" == "" & "" == "`att_it'" & "" == "`att_itime'" & "" == "`att_i'" {
+    local att att
+  }
+
+  * handle contreatwithin - indicator to use only within variation
+  * crash if probably illegitimate contreatcontrols are specified
+  * also, set safety to off
+  if "`contreatwithin'" == "contreatwithin" & "`contreat'" != "" {
+    if strpos("`contreatcontrols'","byTime") != 0  {
+      if "`safety'" == "off" dis as text "Caution: contreatwithin is specified in conjunction with the byTime contreatcontrol type."
+      if "`safety'" != "off" dis as error "Error: contreatwithin is specified in conjunction with the byTime contreatcontrol type."
+      if "`verbose'" == "verbose" dis as text "Typically, this partials out some treatment effects and yields unidentified estimates."
+      if "`safety'" != "off" {
+        dis as error "To proceed anyway in a new estimation run, manually set safety(off) before proceeding."
+        error 198
+      }
+    }
+    local safety off
+    * the above is required since we are intentionally making the base effects irrelevant
+  }
+
+
+  * process cfxplottypes
+  * note that the tests here on what cfxplottypes are allowed are kinda weak in that you can request impractical relative periods (relyrs) and such, but better than no checks
+  if "`makecfxplots'" != "" {
+    local cfxpost 0
+    local cfxpre 0
+    local cfxrelyr 0
+    local cfxrelyrlist
+    if "`cfxplottypes'" == "" local cfxplottypes post
+    if strpos("`cfxplottypes'","post") != 0 local cfxpost 1
+    local cfxplottypes = subinstr("`cfxplottypes'","post"," ",.)
+    if strpos("`cfxplottypes'","pre") != 0 & ("`esfixedbaseperiod'" == "esfixedbaseperiod" | `esprelength' > 0 ) local cfxpre 1
+    local cfxplottypes = subinstr("`cfxplottypes'","pre"," ",.)
+    foreach item in `cfxplottypes' {
+      * entries other than the (already-stripped) post/pre keywords must be numeric: a stray token
+      * would otherwise be evaluated as a variable reference below -- crashing with an unexplained
+      * r(111) if no such variable exists, or silently injecting the variable into the plot list if
+      * one does (stata does not short-circuit |, so the reference-period comparison always runs)
+      cap confirm number `item'
+      if _rc != 0 {
+        dis as error "Error: cfxplottypes() contains an unrecognized entry: `item'"
+        dis as error "Valid cfxplottypes() entries are post, pre, and/or integers specifying relative time periods."
+        error 198
+      }
+      * a leading + is a natural way to write positive relative years (+2, matching -2), but
+      * the raw token is later embedded in matrix names, where + is an invalid character;
+      * strip it so +2 means 2 (and the post-loop dedup then also collapses +2 with 2)
+      if substr("`item'",1,1) == "+" local item = substr("`item'",2,.)
+      if "`esfixedbaseperiod'" == "" | `item' != `esrelativeto' {
+        cap if int(`item')==`item' & `item' >= 0 & (`item' <= `espostlength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
+        cap if int(`item')==`item' & `item' < 0 & (abs(`item') <= `esprelength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
+      }
+    }
+    * a repeated relyr entry would build the same result matrix twice; the final ereturn loop
+    * moves (not copies) each matrix, so the duplicate's second pass dies r(111). list uniq
+    * preserves first-occurrence order, so duplicate-free input is untouched
+    local cfxrelyrlist : list uniq cfxrelyrlist
+    if "`cfxrelyrlist'" != "" local cfxrelyr 1
+  }
+
+
+  * weight-sign screen: the worker's `w' is its own tempvar when no weights are
+  * given (identically 1, making the assert vacuous there), so screen the user's
+  * weight expression directly instead
+  local w `exp'
+  if  "`safety'" != "off" & "`w'" != "" {
+    cap assert `w' >= 0 `ifassert'
+    if _rc != 0 {
+      dis as error  "Error: weights must not be negative."
+      error 411
+    }
+  }
+
+  * subgroups cannot be negative
+  if "`subgroups'" != "" {
+    cap assert `subgroups' >= 0 `ifassert'
+    if _rc != 0 {
+      dis as error "The subgroup variable contains negative values; it must contain only non-negative integers."
+      error 411
+    }
+  }
+
+  * ---- return the parsed options and every derived/normalized local to the worker ----
+  * blanket-by-construction: every option the syntax line defines is listed (plus the
+  * derived locals below), so a future edit that mutates one more local here cannot
+  * silently strand the worker on the stale syntax-parsed value. varlist/if/weight/exp
+  * are excluded: the worker's own syntax call already parsed them identically and this
+  * subprogram never alters them.
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist cfxrelyr {
+    c_local `wdv_ret' `"``wdv_ret''"'
+  }
+
+end
 
 * ============================================================================
 * F4 helper subprograms (kept out of the worker to conserve its size headroom)
