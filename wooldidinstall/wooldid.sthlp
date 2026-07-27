@@ -266,6 +266,21 @@ roughly the last digit of precision (absolute differences on the order of 1e-15;
 contrasts, whose differencing amplifies rounding, up to roughly 1e-14 under {it:timetrends}, and larger still in relative terms where an estimate is itself near zero), because
 {it:margins} follows a different computational path when the variance is skipped. {p_end}
 
+{phang}{opt gte:ffects}: Returns (and, for tables of up to 200 rows, prints) the individual cohort-by-relative-period effect estimates that every {it:wooldid} aggregate is built
+from, in {it:e(gteffects)} — one row per estimated {it:i}-by-relative-period cell, read directly off the underlying regression's coefficient vector at essentially zero additional
+computation. Columns: {it:i} (the cohort/unit identifier value), {it:onset} (that unit's effective treatment onset, after any {cmd:anticipation()} shift), {it:caltime} (the calendar
+period the cell covers), {it:relyr} (period relative to onset), {it:estimate}, {it:se}, {it:p}, {it:lb_95ci}, {it:ub_95ci}, {it:inwindow} (1 if the cell falls inside the reported
+event-study window), {it:nobs} (estimation-sample observations in the cell), and the cell's total estimation weight under each requested estimand ({it:w_att}, {it:w_att_it},
+{it:w_att_i}, {it:w_att_itime}; missing for estimands not requested). The weighted mean of {it:estimate} under any of these weight columns over the relevant cells reproduces the
+corresponding aggregate exactly, so the table supports arbitrary custom aggregations and is directly comparable to the group-time tables of {it:csdid} or {it:xthdidregress}
+(the cells are ATT(g,t)-style group-time effects when {it:i} indexes cohorts; with a fine unit-level {it:i} they are unit-by-period effects and the table can be large). Notes:
+standard errors are the regression's coefficient-level (conditional) VCE — {it:unconditionalse} and {it:impvalues} do not alter them; under {it:poisson} the estimates are on the
+linear-index (xb) scale ({it:poisexpresults} and {it:semielasticity} are not applied); under {it:timetrends} the coefficient-level variances are typically not identified and the
+{it:se} column is missing (degenerate zero variances are always reported as missing, never zero); with {cmd:subgroups()} a single full-sample table is returned; with time-varying
+{cmd:interactivecontrols()} the interaction coefficients absorb control variation and the cell-level reading is unreliable. Not available with {cmd:contreat()}, where the
+cohort-by-period interaction coefficients are dose-zero intercepts rather than treatment effects. Fully available under {it:fastnose} (the regression's own VCE is intact even
+though the {it:margins} stage skips variances), making {it:gteffects} the one inference surface that survives fast mode. {p_end}
+
 {pstd} {ul: Discussion of Unconditional Standard Errors:}
 The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates
 or continuous treatment variables. The standard errors {it:wooldid} presents for these final estimates are produced during the margins calculation stage
@@ -673,6 +688,8 @@ primary results has not been suppressed.{p_end}
 {synopt:{it:e(b_es_{it:type})}, {it:e(V_es_{it:type})}} The event study coefficient vector and its {ul:full} variance-covariance matrix (carrying genuine off-diagonal covariances, unlike {it:e(V)}), relative-period-labeled as {it:pre#}/{it:post#} with the reference period omitted. Returned per estimand type: {it:att} (binary) and, with {cmd:contreat()}, {it:ame}, plus {it:att_it} / {it:ame_it} for the {it:att_it}, {it:att_i}, and {it:att_itime} estimands (which share a single event-study horizon internally). With {cmd:subgroups()}, per-subgroup versions {it:e(b_es_{it:type}_s{it:sgcase})} / {it:e(V_es_{it:type}_s{it:sgcase})} are returned as well. These matrices are valid inputs for {it:honestdid} (Rambachan-Roth robustness), and — after {it:ereturn post} — for {it:lincom} and {it:test}. They are not returned when a valid variance-covariance matrix is unavailable (e.g. under {cmd:impvalues}, or when the event-study standard errors are not identified).{p_end}
 
 {synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods (relative year < 0) in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument.{p_end}
+
+{synopt:{it:e(gteffects)}} The cohort-by-relative-period building-block table produced by the {it:gteffects} option; see that option's description for the column layout.{p_end}
 
 {synopt:{it:e(escomp)}} Event-study composition diagnostics, one row per reported horizon (rows align one-for-one with the ES rows of {it:e(wdidmainresults)}; horizons without a surviving
 coefficient get no row). Columns: {it:ncohorts} (distinct treatment-onset values contributing), {it:nunits} (distinct units of {it:i} — equivalently, the number of unit-by-period

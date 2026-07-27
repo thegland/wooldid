@@ -81,7 +81,7 @@ prog def wooldid_worker, eclass
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -1176,6 +1176,41 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
 
+
+  ***************************************************************************************************
+  ***********************  F3: ATT(g,t) BUILDING BLOCKS (gteffects)  ********************************
+  ***************************************************************************************************
+  * runs inside the "clean e() window": the stage-1 model stored above is still the ACTIVE e()
+  * here, so this reads e(b)/e(V)/e(sample) directly - no restore, no e-class command, and no
+  * effect on anything downstream. binary designs only (wooldid_validate refuses contreat):
+  * the <g>._i#<t>._t#1.targetflag coefficients ARE the cohort-by-relative-period effects on
+  * the regression scale. the name parse and table assembly live in the wooldid_gtx mata
+  * function at the bottom of this file to conserve worker compiled-size headroom.
+  local gtn 0
+  if "`gteffects'" != "" {
+    tempvar gtin gttag gtnob gtw1 gtw2 gtw3 gtw4
+    qui gen byte `gtin' = e(sample) & `targetflag' == 1
+    qui gegen double `gtnob' = total(`gtin') if `gtin', by(`_i' `_t')
+    local gtj 0
+    foreach gtwv in `w_att' `w_att_it' `w_att_i' `w_att_itime' {
+      local ++gtj
+      cap confirm variable `gtwv'
+      if _rc == 0 qui gegen double `gtw`gtj'' = total(`gtwv') if `gtin', by(`_i' `_t')
+      else qui gen double `gtw`gtj'' = .
+    }
+    qui gegen byte `gttag' = tag(`_i' `_t') if `gtin'
+    tempname gtraw gtsed gtm
+    cap mkmat `_i' `_t' `ttre' `t' `gtnob' `gtw1' `gtw2' `gtw3' `gtw4' if `gttag' == 1, matrix(`gtraw')
+    if _rc == 0 {
+      cap matrix `gtsed' = vecdiag(e(V))
+      if _rc != 0 matrix `gtsed' = J(1, colsof(e(b)), .)
+      local gthstart = 1 + `min_t' - `espre'
+      if "`esfixedbaseperiod'" == "" local gthstart 1
+      local gthend = `gthstart' + `espre' + `espl' - 1
+      mata: wooldid_gtx("`_i'", "`_t'", "`targetflag'", "`gtraw'", "`gtsed'", `min_t', `gthstart', `gthend', "`df_r'", "`gtm'")
+    }
+    qui drop `gtin' `gtnob' `gtw1' `gtw2' `gtw3' `gtw4' `gttag'
+  }
 
   **************************************************************************************************
   *****************************         PRODUCE SUMMARY STATS       ********************************
@@ -3451,6 +3486,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       }
     }
   }
+  * F3: expose the ATT(g,t) building blocks [pure-add, after post]
+  if "`gteffects'" != "" {
+    if `gtn' > 0 {
+      cap ereturn matrix gteffects = `gtm'
+      if _rc != 0 dis as text "Caution: e(gteffects) could not be posted (rc `=_rc')."
+    }
+    else dis as text "Caution: gteffects found no cohort-by-relative-period main-effect coefficients to report."
+  }
   * F8: expose event-study composition diagnostics [pure-add, after post]
   foreach f8ky of local f8keys {
     local f8mm `f8mat_`f8ky''
@@ -3704,7 +3747,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -3813,6 +3856,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * do not relax this pairing without also emptying `sgpost' in the SG-comparison blocks
   if "`impvalues'" != "" & "`subgroups'" != "" {
     dis as error "Error: Ibragimov and Muller p-values not compatible with subgroups."
+    error 198
+  }
+
+  * F3: under a continuous treatment the cohort-by-period interaction coefficients are
+  * intercepts at dose zero, not treatment effects, so the building-block table would be
+  * silently meaningless there
+  if "`gteffects'" != "" & "`contreat'" != "" {
+    dis as error "Error: gteffects is not available with contreat(): the cohort-by-period interaction coefficients are dose-zero intercepts under a continuous treatment, not treatment effects. Aggregate e(b_es_ame) or the cfx materials instead."
     error 198
   }
 
@@ -4265,7 +4316,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * silently strand the worker on the stale syntax-parsed value. varlist/if/weight/exp
   * are excluded: the worker's own syntax call already parsed them identically and this
   * subprogram never alters them.
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose gteffects y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -4934,6 +4985,25 @@ version 16.0
       }
     }
   }
+
+  * F3: cohort-by-relative-period building blocks - existence-gated on e(gteffects),
+  * so replay reproduces it and older stores simply print nothing
+  cap confirm matrix e(gteffects)
+  if _rc == 0 {
+    tempname gtd
+    matrix `gtd' = e(gteffects)
+    local gtrows = rowsof(`gtd')
+    dis as result " "
+    dis as result "Cohort-by-Relative-Period Effects (regression scale; full table incl. weight totals in e(gteffects)):"
+    if "`poisson'" == "poisson" dis as text "Note: under poisson these are on the linear-index (xb) scale; poisexpresults/semielasticity adjustments are not applied."
+    dis as text "Note: standard errors are the stage-1 regression's coefficient-level VCE; rows outside the reported event-study window have inwindow = 0."
+    if `gtrows' <= 200 {
+      tempname gtds
+      matrix `gtds' = `gtd'[1..., 1..9]
+      matlist `gtds', format(%9.0g)
+    }
+    else dis as text "  (`gtrows' rows; table not printed - see e(gteffects))"
+  }
   }
 end
 
@@ -5159,3 +5229,80 @@ version 16.0
     frame drop `__wooldidframe'
 end
 
+
+*** F3: mata worker for the gteffects extraction (name parse + table assembly; kept out
+*** of wooldid_worker to conserve compiled-size headroom). the cap mata drop makes the
+*** file safely re-loadable within a session (two-build harnesses, dev reloads)
+cap mata: mata drop wooldid_gtx()
+mata:
+void wooldid_gtx(string scalar gtiv, string scalar gttv, string scalar gttf,
+                 string scalar rawname, string scalar sedname, real scalar gtmint,
+                 real scalar gthstart, real scalar gthend, string scalar gtdfr,
+                 string scalar outname)
+{
+    real matrix cells, raw, out
+    real matrix b, sed
+    string matrix names
+    string scalar pat
+    real scalar j, r, q, df, g, tt, est, v, se, z, p, lb, ub, crit, n
+    names = st_matrixcolstripe("e(b)")[., 2]
+    b = st_matrix("e(b)")
+    sed = st_matrix(sedname)
+    raw = st_matrix(rawname)
+    pat = "^([0-9]+)\." + gtiv + "#([0-9]+)\." + gttv + "#1\." + gttf + "$"
+    cells = J(0, 3, .)
+    for (j = 1; j <= rows(names); j++) {
+        if (regexm(names[j], pat)) cells = cells \ (strtoreal(regexs(1)), strtoreal(regexs(2)), j)
+    }
+    n = rows(cells)
+    st_local("gtn", strofreal(n))
+    if (n == 0) return
+    df = strtoreal(gtdfr)
+    out = J(n, 15, .)
+    for (r = 1; r <= n; r++) {
+        g = cells[r, 1]
+        tt = cells[r, 2]
+        j = cells[r, 3]
+        est = b[1, j]
+        v = sed[1, j]
+        se = (v < . & v > 0) ? sqrt(v) : .
+        p = lb = ub = .
+        if (se < .) {
+            z = est / se
+            if (df < .) {
+                p = 2 * ttail(df, abs(z))
+                crit = invttail(df, .025)
+            }
+            else {
+                p = 2 * normal(-abs(z))
+                crit = invnormal(.975)
+            }
+            lb = est - crit * se
+            ub = est + crit * se
+        }
+        out[r, 1] = g
+        out[r, 4] = tt - gtmint - 1
+        out[r, 5] = est
+        out[r, 6] = se
+        out[r, 7] = p
+        out[r, 8] = lb
+        out[r, 9] = ub
+        out[r, 10] = (tt >= gthstart & tt <= gthend)
+        for (q = 1; q <= rows(raw); q++) {
+            if (raw[q, 1] == g & raw[q, 2] == tt) {
+                out[r, 2] = raw[q, 3]
+                out[r, 3] = raw[q, 4]
+                out[r, 11] = raw[q, 5]
+                out[r, 12] = raw[q, 6]
+                out[r, 13] = raw[q, 7]
+                out[r, 14] = raw[q, 8]
+                out[r, 15] = raw[q, 9]
+                break
+            }
+        }
+    }
+    out = sort(out, (1, 4))
+    st_matrix(outname, out)
+    st_matrixcolstripe(outname, (J(15, 1, ""), ("i", "onset", "caltime", "relyr", "estimate", "se", "p", "lb_95ci", "ub_95ci", "inwindow", "nobs", "w_att", "w_att_it", "w_att_i", "w_att_itime")'))
+}
+end
