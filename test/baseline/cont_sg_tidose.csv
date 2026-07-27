@@ -42,7 +42,7 @@ macro|estimate_type|pooled_reference_period
 macro|cmdline|y i t ttre, contreat(dose) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg)
 macro|properties|b V
 macro|depvar|y
-matnames|b|1x45|y1|main_att pretreatment_att main_ame pretreatment_ame ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_ame_pre2 ES_ame_pre1 ES_ame_post0 ES_ame_post1 main_SG0_att main_SG0_ame ES_att_SG0_pre2 ES_att_SG0_pre1 ES_att_SG0_post0 ES_att_SG0_post1 ES_ame_SG0_pre2 ES_ame_SG0_pre1 ES_ame_SG0_post0 ES_ame_SG0_post1 main_SG1_att main_SG1_ame ES_att_SG1_pre2 ES_att_SG1_pre1 ES_att_SG1_post0 ES_att_SG1_post1 ES_ame_SG1_pre2 ES_ame_SG1_pre1 ES_ame_SG1_post0 ES_ame_SG1_post1 main_SG2_att main_SG2_ame ES_att_SG2_pre2 ES_att_SG2_pre1 ES_att_SG2_post0 ES_att_SG2_post1 ES_ame_SG2_pre2 ES_ame_SG2_pre1 ES_ame_SG2_post0 ES_ame_SG2_post1 ES_ame_SG2_post1 ES_ame_SG2_post1 ES_ame_SG2_post1
+matnames|b|1x45|y1|main_att pretreatment_att main_ame pretreatment_ame ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_ame_pre2 ES_ame_pre1 ES_ame_post0 ES_ame_post1 main_SG0_att pretreatment_SG0_att main_SG0_ame ES_att_SG0_pre2 ES_att_SG0_pre1 ES_att_SG0_post0 ES_att_SG0_post1 ES_ame_SG0_pre2 ES_ame_SG0_pre1 ES_ame_SG0_post0 ES_ame_SG0_post1 main_SG1_att pretreatment_SG1_att main_SG1_ame ES_att_SG1_pre2 ES_att_SG1_pre1 ES_att_SG1_post0 ES_att_SG1_post1 ES_ame_SG1_pre2 ES_ame_SG1_pre1 ES_ame_SG1_post0 ES_ame_SG1_post1 main_SG2_att pretreatment_SG2_att main_SG2_ame ES_att_SG2_pre2 ES_att_SG2_pre1 ES_att_SG2_post0 ES_att_SG2_post1 ES_ame_SG2_pre2 ES_ame_SG2_pre1 ES_ame_SG2_post0 ES_ame_SG2_post1
 mat|b|1|1|+1.3d6ef339fbe68X+000
 mat|b|1|2|+1.9946e5c663800X-00b
 mat|b|1|3|+0.0000000000000X-3ff
@@ -88,7 +88,7 @@ mat|b|1|42|+0.0000000000000X-3ff
 mat|b|1|43|+0.0000000000000X-3ff
 mat|b|1|44|+0.0000000000000X-3ff
 mat|b|1|45|+0.0000000000000X-3ff
-matnames|V|45x45|main_att pretreatment_att main_ame pretreatment_ame ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_ame_pre2 ES_ame_pre1 ES_ame_post0 ES_ame_post1 main_SG0_att main_SG0_ame ES_att_SG0_pre2 ES_att_SG0_pre1 ES_att_SG0_post0 ES_att_SG0_post1 ES_ame_SG0_pre2 ES_ame_SG0_pre1 ES_ame_SG0_post0 ES_ame_SG0_post1 main_SG1_att main_SG1_ame ES_att_SG1_pre2 ES_att_SG1_pre1 ES_att_SG1_post0 ES_att_SG1_post1 ES_ame_SG1_pre2 ES_ame_SG1_pre1 ES_ame_SG1_post0 ES_ame_SG1_post1 main_SG2_att main_SG2_ame ES_att_SG2_pre2 ES_att_SG2_pre1 ES_att_SG2_post0 ES_att_SG2_post1 ES_ame_SG2_pre2 ES_ame_SG2_pre1 ES_ame_SG2_post0 ES_ame_SG2_post1 ES_ame_SG2_post1 ES_ame_SG2_post1 ES_ame_SG2_post1|main_att pretreatment_att main_ame pretreatment_ame ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_ame_pre2 ES_ame_pre1 ES_ame_post0 ES_ame_post1 main_SG0_att main_SG0_ame ES_att_SG0_pre2 ES_att_SG0_pre1 ES_att_SG0_post0 ES_att_SG0_post1 ES_ame_SG0_pre2 ES_ame_SG0_pre1 ES_ame_SG0_post0 ES_ame_SG0_post1 main_SG1_att main_SG1_ame ES_att_SG1_pre2 ES_att_SG1_pre1 ES_att_SG1_post0 ES_att_SG1_post1 ES_ame_SG1_pre2 ES_ame_SG1_pre1 ES_ame_SG1_post0 ES_ame_SG1_post1 main_SG2_att main_SG2_ame ES_att_SG2_pre2 ES_att_SG2_pre1 ES_att_SG2_post0 ES_att_SG2_post1 ES_ame_SG2_pre2 ES_ame_SG2_pre1 ES_ame_SG2_post0 ES_ame_SG2_post1 ES_ame_SG2_post1 ES_ame_SG2_post1 ES_ame_SG2_post1
+matnames|V|45x45|main_att pretreatment_att main_ame pretreatment_ame ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_ame_pre2 ES_ame_pre1 ES_ame_post0 ES_ame_post1 main_SG0_att pretreatment_SG0_att main_SG0_ame ES_att_SG0_pre2 ES_att_SG0_pre1 ES_att_SG0_post0 ES_att_SG0_post1 ES_ame_SG0_pre2 ES_ame_SG0_pre1 ES_ame_SG0_post0 ES_ame_SG0_post1 main_SG1_att pretreatment_SG1_att main_SG1_ame ES_att_SG1_pre2 ES_att_SG1_pre1 ES_att_SG1_post0 ES_att_SG1_post1 ES_ame_SG1_pre2 ES_ame_SG1_pre1 ES_ame_SG1_post0 ES_ame_SG1_post1 main_SG2_att pretreatment_SG2_att main_SG2_ame ES_att_SG2_pre2 ES_att_SG2_pre1 ES_att_SG2_post0 ES_att_SG2_post1 ES_ame_SG2_pre2 ES_ame_SG2_pre1 ES_ame_SG2_post0 ES_ame_SG2_post1|main_att pretreatment_att main_ame pretreatment_ame ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_ame_pre2 ES_ame_pre1 ES_ame_post0 ES_ame_post1 main_SG0_att pretreatment_SG0_att main_SG0_ame ES_att_SG0_pre2 ES_att_SG0_pre1 ES_att_SG0_post0 ES_att_SG0_post1 ES_ame_SG0_pre2 ES_ame_SG0_pre1 ES_ame_SG0_post0 ES_ame_SG0_post1 main_SG1_att pretreatment_SG1_att main_SG1_ame ES_att_SG1_pre2 ES_att_SG1_pre1 ES_att_SG1_post0 ES_att_SG1_post1 ES_ame_SG1_pre2 ES_ame_SG1_pre1 ES_ame_SG1_post0 ES_ame_SG1_post1 main_SG2_att pretreatment_SG2_att main_SG2_ame ES_att_SG2_pre2 ES_att_SG2_pre1 ES_att_SG2_post0 ES_att_SG2_post1 ES_ame_SG2_pre2 ES_ame_SG2_pre1 ES_ame_SG2_post0 ES_ame_SG2_post1
 mat|V|1|1|+1.46c614039b941X-008
 mat|V|1|2|+0.0000000000000X-3ff
 mat|V|1|3|+0.0000000000000X-3ff
@@ -2199,7 +2199,7 @@ mat|wdidmainresults|12|4|+1.0000000000000X+3ff
 mat|wdidmainresults|12|5|+1.0000000000000X+3ff
 mat|wdidmainresults|12|6|+1.0000000000000X+3ff
 mat|wdidmainresults|12|7|+1.0000000000000X+000
-matnames|wdidsgresults_2|11x7|main:att main:ame ES_att:pre2 ES_att:pre1 ES_att:post0 ES_att:post1 ES_ame:pre2 ES_ame:pre1 ES_ame:post0 ES_ame:post1 ES_ame:post1|estimate se t p lb_95ci ub_95ci relyr
+matnames|wdidsgresults_2|11x7|main:att pretreatment:att main:ame ES_att:pre2 ES_att:pre1 ES_att:post0 ES_att:post1 ES_ame:pre2 ES_ame:pre1 ES_ame:post0 ES_ame:post1|estimate se t p lb_95ci ub_95ci relyr
 mat|wdidsgresults_2|1|1|+1.a1fc49f0f83e0X+000
 mat|wdidsgresults_2|1|2|+1.1a8d18cae1206X-004
 mat|wdidsgresults_2|1|3|+1.7ab5294a8c199X+004
@@ -2277,7 +2277,7 @@ mat|wdidsgresults_2|11|4|+1.0000000000000X+3ff
 mat|wdidsgresults_2|11|5|+1.0000000000000X+3ff
 mat|wdidsgresults_2|11|6|+1.0000000000000X+3ff
 mat|wdidsgresults_2|11|7|+1.0000000000000X+000
-matnames|wdidsgresults_1|11x7|main:att main:ame ES_att:pre2 ES_att:pre1 ES_att:post0 ES_att:post1 ES_ame:pre2 ES_ame:pre1 ES_ame:post0 ES_ame:post1 ES_ame:post1|estimate se t p lb_95ci ub_95ci relyr
+matnames|wdidsgresults_1|11x7|main:att pretreatment:att main:ame ES_att:pre2 ES_att:pre1 ES_att:post0 ES_att:post1 ES_ame:pre2 ES_ame:pre1 ES_ame:post0 ES_ame:post1|estimate se t p lb_95ci ub_95ci relyr
 mat|wdidsgresults_1|1|1|+1.32e27510afa3aX+000
 mat|wdidsgresults_1|1|2|+1.2be0f1dbe8af6X-004
 mat|wdidsgresults_1|1|3|+1.05fb154878f53X+004
@@ -2355,7 +2355,7 @@ mat|wdidsgresults_1|11|4|+1.0000000000000X+3ff
 mat|wdidsgresults_1|11|5|+1.0000000000000X+3ff
 mat|wdidsgresults_1|11|6|+1.0000000000000X+3ff
 mat|wdidsgresults_1|11|7|+1.0000000000000X+000
-matnames|wdidsgresults_0|11x7|main:att main:ame ES_att:pre2 ES_att:pre1 ES_att:post0 ES_att:post1 ES_ame:pre2 ES_ame:pre1 ES_ame:post0 ES_ame:post1 ES_ame:post1|estimate se t p lb_95ci ub_95ci relyr
+matnames|wdidsgresults_0|11x7|main:att pretreatment:att main:ame ES_att:pre2 ES_att:pre1 ES_att:post0 ES_att:post1 ES_ame:pre2 ES_ame:pre1 ES_ame:post0 ES_ame:post1|estimate se t p lb_95ci ub_95ci relyr
 mat|wdidsgresults_0|1|1|+1.b97b607b602c0X-001
 mat|wdidsgresults_0|1|2|+1.1caee21b72164X-004
 mat|wdidsgresults_0|1|3|+1.8d00276c10351X+003
