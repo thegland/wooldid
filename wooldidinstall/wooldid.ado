@@ -17,6 +17,20 @@ version 16.0
   * other invocation - including "wooldid, update" and an option typo like "wooldid,
   * att" - falls through to the worker and behaves exactly as before
   if `"`0'"' == "" & "`e(cmd)'" == "wooldid" {
+    * refuse to replay across a failed wooldid call: WOOLDID_LASTRC is a session
+    * global (namespaced like WOOLDID_CLEANUP) set to the failing rc in the shell's
+    * rc-gated epilogue below whenever a wooldid invocation fails - at the parse
+    * stage or anywhere later - and cleared there on any successful completion.
+    * while it is set, the stored e() results predate the user's latest (failed)
+    * attempt, so redisplaying them silently would be misleading. exiting here
+    * leaves the marker set: replay stays refused until a wooldid call completes
+    * successfully. shell-level state only: never posted to e(), invisible to the
+    * S5 c_local closure, and this check lives strictly inside the empty-line
+    * branch, so "wooldid, update" and every other non-empty call is untouched
+    if "${WOOLDID_LASTRC}" != "" {
+      dis as error "Error: the last wooldid call failed with r(${WOOLDID_LASTRC}); the stored results predate that failed call. Refit wooldid before replaying."
+      exit 198
+    }
     wooldid_display , part(1)
     wooldid_display , part(roth)
     wooldid_display , part(2)
@@ -39,6 +53,11 @@ version 16.0
   nobreak {
     local wdsh_flags "$WOOLDID_CLEANUP"
     cap macro drop WOOLDID_CLEANUP
+    * replay-staleness marker consumed by the replay branch above: any failed
+    * invocation (parse-stage or later) records its rc; any successful completion
+    * (estimation or update) clears it (assigning an empty value drops a global)
+    if `wdsh_rc' != 0 global WOOLDID_LASTRC `wdsh_rc'
+    else global WOOLDID_LASTRC
     if `wdsh_rc' != 0 {
       * set emptycells is program-scoped (stata restores it automatically at program
       * exit); this restore is belt-and-braces against version drift only
@@ -3580,6 +3599,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   ereturn hidden local wdid_esrel "`esrelativeto'"
   ereturn hidden local wdid_timetrends "`timetrends'"
   ereturn hidden local wdid_fastnose "`fastnose'"
+  * replay contract version: bump this when the display contract changes (anything
+  * wooldid_display / wooldid_esplots read from e(), or how they interpret it);
+  * their gates exact-match this value, so a bump refuses cross-version replays
   ereturn hidden local wdid_replayv "1"
 
 
@@ -4633,8 +4655,12 @@ cap prog drop wooldid_display
 prog def wooldid_display
 version 16.0
   syntax , part(string)
-  if "`e(wdid_replayv)'" == "" {
-    dis as error "Error: the stored results were posted by a wooldid version without replay support; nothing can be redisplayed."
+  * replay contract gate: e(wdid_replayv) is the version of the display contract the
+  * store was written under. bump the posted value (in wooldid_worker) whenever the
+  * display contract changes; the exact match here refuses cross-version replays
+  * instead of misrendering a store this code no longer understands
+  if "`e(wdid_replayv)'" != "1" {
+    dis as error "Error: the stored results were posted by a wooldid version without replay support or with a different replay contract (e(wdid_replayv)='`e(wdid_replayv)'', this version requires '1'); nothing can be redisplayed. Refit wooldid."
     error 301
   }
 
@@ -4904,8 +4930,9 @@ version 16.0
   * later inside its own tempname frame with a misleading "relyr not found" (an absent
   * e() matrix silently reads as a 1x1 missing scalar), stranding a caller who typed
   * this directly from a non-default frame in the default frame
-  if "`e(wdid_replayv)'" == "" {
-    dis as error "Error: wooldid_esplots is internal to wooldid and needs a stored wooldid estimation in e(); run wooldid first."
+  * exact-match on the replay contract version, mirroring the wooldid_display gate
+  if "`e(wdid_replayv)'" != "1" {
+    dis as error "Error: wooldid_esplots is internal to wooldid and needs a stored wooldid estimation (replay contract '1') in e(); run wooldid first."
     error 301
   }
   cap confirm matrix e(wdidmainresults)
