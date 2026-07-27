@@ -4368,6 +4368,11 @@ prog def wooldid_ptp, eclass
 version 16.0
   syntax , levels(numlist) [esrel(string) dfr(string) pois(string) poisexp(string) tvar(string) ttrevar(string) ivar(string) wvar(string) cwm(string)]
 
+  * duplicate power levels (e.g. pretrendpower(80 80)) would otherwise be processed
+  * twice, yielding a duplicated row in e(roth_power_*) and in the displayed table;
+  * keep the first occurrence of each level, preserving the order given
+  local levels : list uniq levels
+
   local ptpref = `esrel'
   * degrees of freedom: use the regression's residual df when available (t and F
   * distributions, matching the critical values wooldid's own tables and joint tests
@@ -4606,6 +4611,12 @@ version 16.0
     cap ereturn scalar roth_W_`ptpty' = `ptpW'
   }
   if `ptpheader' == 0 dis as text "Caution: pretrendpower() was requested, but no event-study coefficient vector with a valid variance-covariance matrix was available (e.g. under timetrends); no diagnostics were computed."
+  * completion marker: the caller runs this program under cap noi and every ereturn
+  * above is individually cap'd, so an abort partway through the type loop would leave
+  * the earlier types' roth_* returns in e() with nothing marking the run incomplete.
+  * e(roth_ok) is set only here, after the loop has finished; any roth_* return present
+  * without e(roth_ok) therefore identifies a partially populated diagnostics pass.
+  cap ereturn scalar roth_ok = 1
 end
 
 
