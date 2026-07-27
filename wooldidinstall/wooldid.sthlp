@@ -279,7 +279,9 @@ linear-index (xb) scale ({it:poisexpresults} and {it:semielasticity} are not app
 {it:se} column is missing (degenerate zero variances are always reported as missing, never zero); with {cmd:subgroups()} a single full-sample table is returned; with time-varying
 {cmd:interactivecontrols()} the interaction coefficients absorb control variation and the cell-level reading is unreliable. Not available with {cmd:contreat()}, where the
 cohort-by-period interaction coefficients are dose-zero intercepts rather than treatment effects. Fully available under {it:fastnose} (the regression's own VCE is intact even
-though the {it:margins} stage skips variances), making {it:gteffects} the one inference surface that survives fast mode. {p_end}
+though the {it:margins} stage skips variances), making {it:gteffects} the one inference surface that survives fast mode. Two reading notes: the weighted-mean identity itself
+remains exact even under time-varying {cmd:interactivecontrols()} (the caveat there concerns interpreting individual cells, not the aggregation); and when the reported
+event-study window has no post-treatment horizons (e.g. {cmd:espostlength(0)}), {it:inwindow} is 0 on every post-treatment row by construction. {p_end}
 
 {pstd} {ul: Discussion of Unconditional Standard Errors:}
 The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates

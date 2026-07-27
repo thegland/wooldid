@@ -39,9 +39,8 @@ Landed as one coupled wave: 5a332ba (four battery configs pinned pre-fix), c0e17
 
 
 
-### F3. ATT(g,t) building-block table
-Under the Wooldridge approach the `i._i#i._t#1.targetflag` coefficients *are* the cohort-by-relative-period effects ATT(g,t) — with SEs already sitting in `e(b)`/`e(V)` at zero extra computation (linear case; xb scale for poisson). A `gteffects` option that extracts, labels (cohort × relyr), returns, and optionally displays this matrix would: enable arbitrary custom aggregations downstream, make output directly comparable to `csdid`/`xthdidregress` group-time tables, and give the `histogramcohorteffects` feature a rigorous sibling (the histogram currently uses `nose` margins). Mostly bookkeeping.
-
+### F3. ATT(g,t) building-block table — LANDED (2026-07-27, tranche 12 Wave B; see wooldid_solved_issues.md)
+Shipped as the `gteffects` option in b65b91b (+ gt_basic battery config, 6d2f33b): e(gteffects) returns one row per estimated cohort-by-relative-period cell (15 numeric columns incl. per-estimand weight totals that make the table exactly self-aggregating), mata-assembled, contreat() refused at parse, fully available under fastnose. Three-assessor design consensus; both post-landing verifiers PASS with zero identity violations (worst 1.8e-15). Notable verified bonus: the aggregation identity holds even under time-varying interactivecontrols.
 
 
 ### **L1905/1909 df hardcode:** 
