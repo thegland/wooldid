@@ -4260,8 +4260,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       local wdvtrng `t' < .
       if `"`if'"' != "" local wdvtrng (`wdvtrng') & ((`if') == 1)
       qui gstats sum `t' if `wdvtrng', meanonly
-      local wdvtlo = r(min) + `anticipation'
+      local wdvtmin = r(min)
+      local wdvtlo = `wdvtmin' + `anticipation'
       local wdvthi = r(max) + `oostreatedcontrols' + `anticipation'
+      * under timetrends the worker needs a two-period reference block, so it drops treated
+      * units with onsets at or below the SECOND observed period (mintp1, per-unit); lift the
+      * tier's lower bound to the second-smallest distinct t so fractional onsets in that
+      * band are screened by the worker's own drop rule rather than erroring here. exact for
+      * any period spacing (mintp1_i >= min{t : t > min(t)}); falls back to the first-period
+      * bound if the panel has a single distinct period
+      if "`timetrends'" != "" {
+        qui gstats sum `t' if (`wdvtrng') & `t' > `wdvtmin', meanonly
+        if r(N) > 0 local wdvtlo = r(min) + `anticipation'
+      }
       cap assert (`t' - `ttre_asgiven') == int(`t' - `ttre_asgiven') | `ttre_asgiven' >= . | `ttre_asgiven' <= `wdvtlo' | `ttre_asgiven' > `wdvthi' `ifassert'
       if _rc != 0 {
         dis as error "Error: t minus ttre takes non-integer values, so relative-period horizons cannot be constructed. Treatment onset times must sit on the same grid as the time variable; if the time variable itself is on a fractional grid (e.g. year + quarter/4), recode both to consecutive integers."
