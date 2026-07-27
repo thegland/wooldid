@@ -522,6 +522,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * the + 1 is to account for the 0 reference period
   if (`espre' + `espl'+ 1 < 3 & "`timetrends'" != "") | `espl' == 0 | `espre' == 0 local adversarial
 
+  * B16 guard: under esfixedbaseperiod + altmethod_adversarial the reference line is fit on
+  * the pre-period coefficients plus the planted reference row; with esrelativeto(-1) and a
+  * single pre horizon that fit sample is one row, so no line is estimable
+  if "`adversarial'" != "" & "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" & `esrelativeto' == -1 & `espre' <= 1 {
+    dis as text "Caution: adversarial pre-trend testing was cancelled: with esfixedbaseperiod, esrelativeto(-1), and a single pre-treatment horizon, only the reference row is available to fit the adversarial reference line."
+    local adversarial
+    local altmethod_adversarial
+  }
+
   ****** after the above estimability checks and processing, does the SG variable have surviving members?
   * while we're at it, figure out how many levels the sg variable takes on during the treatment period - will be useful down the line
 
@@ -1564,6 +1573,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           }
           if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
           if `finaladvtest' <= 2 {
+            dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
             local adversarial
             qui est restore ___wooldidfullmodel
             local postinject
@@ -1619,31 +1629,44 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               local altadv_restrict_num = `min_t'
             }
 
-            qui reg b t `altadv_restrict'
-            tempname adversarialB_`horizitem'
-            matrix `adversarialB_`horizitem''   = e(b)
-            qui predict double linearproject, xb
-            local testconstructor
-            * this ensures that when projecting forward we etst only the post-treatment period effects
-            forval advframe_i = 1(1)`bignorig' {
-              local horiztocheck = t[`advframe_i']
-              local proceed 0 
-              if "`altadv_restrict_num'" == "" local proceed 1
-              if "`altadv_restrict_num'" != "" {
-                if `horiztocheck' > `altadv_restrict_num' local proceed 1
-              }
-              if `proceed' == 1 {
-                local xbline = linearproject[`advframe_i']
-                local testconstructor `testconstructor' ([1.`targetflag']`horiztocheck'.`_t' = `xbline')
-             }
+            * B16 backstop: data gaps at the pre-treatment horizons can hollow out the
+            * altmethod fit sample even when the window arithmetic is fine; skip cleanly
+            qui count `altadv_restrict'
+            if r(N) < 2 {
+              dis as text "Caution: adversarial pre-trend testing was cancelled: after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the adversarial reference line."
+              frame change `defaultframe'
+              frame drop `adversarialframe'
+              qui est restore ___wooldidfullmodel
+              local adversarial
+              local postinject
             }
-            frame change `defaultframe'
-            frame drop `adversarialframe'
-            qui est restore __marginsmodel
-            qui test `testconstructor'
-            local adversarialP_`horizitem' =  r(p)
-            qui est drop __marginsmodel
-            qui est restore ___wooldidfullmodel
+            if "`adversarial'" == "adversarial" {
+              qui reg b t `altadv_restrict'
+              tempname adversarialB_`horizitem'
+              matrix `adversarialB_`horizitem''   = e(b)
+              qui predict double linearproject, xb
+              local testconstructor
+              * this ensures that when projecting forward we etst only the post-treatment period effects
+              forval advframe_i = 1(1)`bignorig' {
+                local horiztocheck = t[`advframe_i']
+                local proceed 0
+                if "`altadv_restrict_num'" == "" local proceed 1
+                if "`altadv_restrict_num'" != "" {
+                  if `horiztocheck' > `altadv_restrict_num' local proceed 1
+                }
+                if `proceed' == 1 {
+                  local xbline = linearproject[`advframe_i']
+                  local testconstructor `testconstructor' ([1.`targetflag']`horiztocheck'.`_t' = `xbline')
+               }
+              }
+              frame change `defaultframe'
+              frame drop `adversarialframe'
+              qui est restore __marginsmodel
+              qui test `testconstructor'
+              local adversarialP_`horizitem' =  r(p)
+              qui est drop __marginsmodel
+              qui est restore ___wooldidfullmodel
+            }
           }
           * end f test above
         }
@@ -2039,6 +2062,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             }
             if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
             if `finaladvtest' <= 1 {
+              dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
               local adversarial
               qui est restore ___wooldidfullmodel
               local postinject
@@ -2089,31 +2113,44 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 local altadv_restrict_num = `min_t'
               }
 
-              qui reg b t `altadv_restrict'
-              tempname adversarialB_C`horizitem'
-              matrix `adversarialB_C`horizitem'' = e(b)
-              qui predict double linearproject, xb
-              local testconstructor
-
-              forval advframe_i = 1(1)`bignorig' {
-                local horiztocheck = t[`advframe_i']
-                local proceed 0 
-                if "`altadv_restrict_num'" == "" local proceed 1
-                if "`altadv_restrict_num'" != "" {
-                  if `horiztocheck' > `altadv_restrict_num' local proceed 1
-                }
-                if `proceed' == 1 {
-                  local xbline = linearproject[`advframe_i']
-                  local testconstructor `testconstructor' (`horiztocheck'.`_t' = `xbline')
-                }
+              * B16 backstop: data gaps at the pre-treatment horizons can hollow out the
+              * altmethod fit sample even when the window arithmetic is fine; skip cleanly
+              qui count `altadv_restrict'
+              if r(N) < 2 {
+                dis as text "Caution: adversarial pre-trend testing was cancelled: after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the adversarial reference line."
+                frame change `defaultframe'
+                frame drop `adversarialframe'
+                qui est restore ___wooldidfullmodel
+                local adversarial
+                local postinject
               }
-              frame change `defaultframe'
-              frame drop `adversarialframe'
-              qui est restore __marginsmodel
-              qui test `testconstructor'
-              local adversarialP_C`horizitem' = r(p)
-              qui est drop __marginsmodel
-              qui est restore ___wooldidfullmodel
+              if "`adversarial'" == "adversarial" {
+                qui reg b t `altadv_restrict'
+                tempname adversarialB_C`horizitem'
+                matrix `adversarialB_C`horizitem'' = e(b)
+                qui predict double linearproject, xb
+                local testconstructor
+
+                forval advframe_i = 1(1)`bignorig' {
+                  local horiztocheck = t[`advframe_i']
+                  local proceed 0
+                  if "`altadv_restrict_num'" == "" local proceed 1
+                  if "`altadv_restrict_num'" != "" {
+                    if `horiztocheck' > `altadv_restrict_num' local proceed 1
+                  }
+                  if `proceed' == 1 {
+                    local xbline = linearproject[`advframe_i']
+                    local testconstructor `testconstructor' (`horiztocheck'.`_t' = `xbline')
+                  }
+                }
+                frame change `defaultframe'
+                frame drop `adversarialframe'
+                qui est restore __marginsmodel
+                qui test `testconstructor'
+                local adversarialP_C`horizitem' = r(p)
+                qui est drop __marginsmodel
+                qui est restore ___wooldidfullmodel
+              }
             }
             * end f test above
           }
@@ -2372,30 +2409,40 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                     local altadv_restrict if t <= `min_t'
                     local altadv_restrict_num = `min_t'
                   }
-                  qui reg b t  `altadv_restrict'
-                  tempname adversarialB_`horizitem'_s`sgcase'
-                  matrix `adversarialB_`horizitem'_s`sgcase'' = e(b)
-                  qui predict double linearproject, xb
-                  local testconstructor
-                  forval advframe_i = 1(1)`bignorig' {
-                    local horiztocheck = t[`advframe_i']
-                    local proceed 0 
-                    if "`altadv_restrict_num'" == "" local proceed 1
-                    if "`altadv_restrict_num'" != "" {
-                      if `horiztocheck' > `altadv_restrict_num' local proceed 1
-                    }
-                    if `proceed' == 1 {
-                      local xbline = linearproject[`advframe_i']
-                      local testconstructor `testconstructor' ([1.`targetflag']`horiztocheck'.`_t' = `xbline')
-                    }
+                  * B16 backstop: data gaps can hollow out the altmethod fit sample
+                  qui count `altadv_restrict'
+                  if r(N) < 2 {
+                    dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the reference line."
+                    frame change `defaultframe'
+                    frame drop `adversarialframe'
                   }
-                  frame change `defaultframe'
-                  frame drop `adversarialframe'
-                  qui est restore __marginsmodel
-                  qui test `testconstructor'
-                  local adversarialP_`horizitem'_s`sgcase' = r(p)
-                  qui est drop __marginsmodel
+                  else {
+                    qui reg b t  `altadv_restrict'
+                    tempname adversarialB_`horizitem'_s`sgcase'
+                    matrix `adversarialB_`horizitem'_s`sgcase'' = e(b)
+                    qui predict double linearproject, xb
+                    local testconstructor
+                    forval advframe_i = 1(1)`bignorig' {
+                      local horiztocheck = t[`advframe_i']
+                      local proceed 0
+                      if "`altadv_restrict_num'" == "" local proceed 1
+                      if "`altadv_restrict_num'" != "" {
+                        if `horiztocheck' > `altadv_restrict_num' local proceed 1
+                      }
+                      if `proceed' == 1 {
+                        local xbline = linearproject[`advframe_i']
+                        local testconstructor `testconstructor' ([1.`targetflag']`horiztocheck'.`_t' = `xbline')
+                      }
+                    }
+                    frame change `defaultframe'
+                    frame drop `adversarialframe'
+                    qui est restore __marginsmodel
+                    qui test `testconstructor'
+                    local adversarialP_`horizitem'_s`sgcase' = r(p)
+                    qui est drop __marginsmodel
+                  }
                 }
+                else dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': too few event-study coefficients."
               * the above ends f test; this restore is broken out in case the "not enough pre-trend coefs" clause triggers for the sg
               qui est restore ___wooldidfullmodel
               * the below ends the adversarial check, different form the inner one just so as to handle the est restore appropriately
@@ -2654,30 +2701,40 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                      local altadv_restrict_num = `min_t'
                    }
 
-                    qui reg b t  `altadv_restrict'
-                    tempname adversarialB_C`horizitem'_s`sgcase'
-                    matrix `adversarialB_C`horizitem'_s`sgcase'' = e(b)
-                    qui predict double linearproject, xb
-                    local testconstructor
-                    forval advframe_i = 1(1)`bignorig' {
-                      local horiztocheck = t[`advframe_i']
-                      local proceed 0 
-                      if "`altadv_restrict_num'" == "" local proceed 1
-                      if "`altadv_restrict_num'" != "" {
-                        if `horiztocheck' > `altadv_restrict_num' local proceed 1
-                      }
-                      if `proceed' == 1 {
-                        local xbline = linearproject[`advframe_i']
-                        local testconstructor `testconstructor' (`horiztocheck'.`_t' = `xbline')
-                      }
+                    * B16 backstop: data gaps can hollow out the altmethod fit sample
+                    qui count `altadv_restrict'
+                    if r(N) < 2 {
+                      dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the reference line."
+                      frame change `defaultframe'
+                      frame drop `adversarialframe'
                     }
-                    frame change `defaultframe'
-                    frame drop `adversarialframe'
-                    qui est restore __marginsmodel
-                    qui test `testconstructor'
-                    local adversarialP_C`horizitem'_s`sgcase' = r(p)
-                    qui est drop __marginsmodel
+                    else {
+                      qui reg b t  `altadv_restrict'
+                      tempname adversarialB_C`horizitem'_s`sgcase'
+                      matrix `adversarialB_C`horizitem'_s`sgcase'' = e(b)
+                      qui predict double linearproject, xb
+                      local testconstructor
+                      forval advframe_i = 1(1)`bignorig' {
+                        local horiztocheck = t[`advframe_i']
+                        local proceed 0
+                        if "`altadv_restrict_num'" == "" local proceed 1
+                        if "`altadv_restrict_num'" != "" {
+                          if `horiztocheck' > `altadv_restrict_num' local proceed 1
+                        }
+                        if `proceed' == 1 {
+                          local xbline = linearproject[`advframe_i']
+                          local testconstructor `testconstructor' (`horiztocheck'.`_t' = `xbline')
+                        }
+                      }
+                      frame change `defaultframe'
+                      frame drop `adversarialframe'
+                      qui est restore __marginsmodel
+                      qui test `testconstructor'
+                      local adversarialP_C`horizitem'_s`sgcase' = r(p)
+                      qui est drop __marginsmodel
+                    }
                   }
+                  else dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': too few event-study coefficients."
                   * the above ends f test; this restore is broken out in case the "not enough pre-trend coefs" clause triggers for the sg
                 qui est restore ___wooldidfullmodel
                 }
