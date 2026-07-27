@@ -220,7 +220,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * unchanged from before the option existed
   local anticshift
   if `anticipation' > 0 local anticshift - `anticipation'
-  qui gen `ttre' = `ttre_asgiven' `anticshift' if `ttre_asgiven' `anticshift' <= `maxyearobserved' + `oostreatedcontrols' & `ifstatement'
+  qui gen double `ttre' = `ttre_asgiven' `anticshift' if `ttre_asgiven' `anticshift' <= `maxyearobserved' + `oostreatedcontrols' & `ifstatement'
 
   * F13: the _i/_t construction below assumes cohort-level timing - exactly one treatment onset
   * per unit. rows of the same i carrying different onsets, or a mix of missing and non-missing
@@ -268,7 +268,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if "`timetrends'" == "timetrends" {
       tempvar mintp1
       tempvar tp1
-      qui gen `tp1' = `t' if `t' != `mint'
+      qui gen double `tp1' = `t' if `t' != `mint'
       qui gegen `mintp1' = min(`tp1' ) if `ifstatement' , by(`i')
       qui drop `tp1'
     }
@@ -310,7 +310,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if "`timetrends'" == "timetrends" {
       tempvar tp1g
       qui drop `mintp1'
-      qui gen `tp1g' = `t' if `t' != `mint'
+      qui gen double `tp1g' = `t' if `t' != `mint'
       qui gegen `mintp1' = min(`tp1g') if `ifstatement', by(`i')
       qui drop `tp1g'
     }
@@ -711,7 +711,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         }
         if   strpos("`latticetype'", "byTtre")!=0 {
           tempvar modified_ttre
-          qui gen `modified_ttre' = `ttre'
+          qui gen double `modified_ttre' = `ttre'
           qui replace `modified_ttre' = `minyearobserved' if `ttre' == .
           * minyearobserved is just any value not appearing in ttre; ttre is guaranteed to not include that value
         }
@@ -840,7 +840,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
     if strpos("`contreatcontrols'" , "byTtre" ) != 0 & strpos("`latticetype'", "byTtre")==0{
       tempvar modified_ttre
-      qui gen `modified_ttre' = `ttre'
+      qui gen double `modified_ttre' = `ttre'
       qui replace `modified_ttre' = `minyearobserved' if `ttre' == .
       * minyearobserved is just any value not appearing in ttre; ttre is guaranteed to not include that value
     }
