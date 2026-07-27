@@ -1,6 +1,6 @@
 * wooldid regression battery. Run from a fresh subdirectory of test/ (see test/README.md):
 *   mkdir test/run1 && cd test/run1 && "<stata>" -e do ../runbattery.do
-* Loads the CURRENT repo wooldid.ado, runs 18 configs, dumps all e() content
+* Loads the CURRENT repo wooldid.ado, runs 25 configs, dumps all e() content
 * (exact %21x hex) + rc + post-run varlist to <cfg>.csv in cwd.
 clear all
 set more off
@@ -176,6 +176,31 @@ qui replace ttre = `t2' if mod(i,7) == 0
 cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sgd2) jointtests
 local rc = _rc
 dumpres sg_degpre `rc'
+
+* B16 coverage (added 2026-07-26, blessed pre-fix): the esf adversarial reference-row
+* planting and the altmethod_adversarial pre-trend cut had no battery coverage; these
+* four pin the affected cells (adv_altb: below-window reference regime with altmethod;
+* adv_r2001: degenerate 1-row fit, rc 2001 at bless time; adv_gapa/adv_gapb: gap-year
+* data where the reference-gap hunt aborts (rc 198) or plants at the wrong horizon)
+freshstart "`DATA'/dta_binary"
+cap noi wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-3) esprelength(2) espostlength(2) adversarial altmethod_adversarial
+local rc = _rc
+dumpres adv_altb `rc'
+
+freshstart "`DATA'/dta_binary"
+cap noi wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-2) esprelength(1) espostlength(2) adversarial altmethod_adversarial
+local rc = _rc
+dumpres adv_r2001 `rc'
+
+freshstart "`DATA'/dta_path_relyrgap"
+cap noi wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-1) esprelength(4) espostlength(4) adversarial
+local rc = _rc
+dumpres adv_gapa `rc'
+
+freshstart "`DATA'/dta_path_relyrgap"
+cap noi wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-4) esprelength(3) espostlength(3) adversarial
+local rc = _rc
+dumpres adv_gapb `rc'
 
 di "BATTERY_DONE"
 exit, clear
