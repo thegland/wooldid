@@ -62,6 +62,14 @@ With `esprelength(1)` and a fixed reference below the window, the MAIN block's `
 ------ DO NOT WORK ON THINGS BELOW THIS LINE ---------
 --- ITEMS TO ADDRESS IN DUE TIME ---
 
+### Adjacent findings from the 2026-07-26 B16-main assessment wave (logged, not acted on)
+- **skiplocation multi-valued -> r(198) abort on PLAIN adversarial:** the reference-gap finder (`glevelsof(t) if missingfind == bignjump+1`) returns every 2-gap, so on gap-year panels (dta_path_relyrgap class) with esfixedbaseperiod + adversarial the `qui replace t = <list> - 1` line receives a multi-token value and aborts the whole run with a bare r(198). No altmethod needed — a realistic crash on realistic data. Candidate for promotion into the B16-main fix wave.
+- **skiplocation misidentifies a data gap as the reference gap:** on the same shapes with esrelativeto(-4), the b=0 reference row is planted at a DATA gap's horizon instead of the true reference horizon — a silently wrong fitted line. Same code sites; same wave.
+- **timetrends + esf + adversarial + altmethod returns a missing p in every cell** (rc 0) — consistent with the off-by-two zero-line fit documented in the B16-main assessment; will resolve or reclassify when the cut fix lands.
+- **anticipation() as a potential third crash route (untested):** it shifts effective onsets earlier and can drive min_t to 1, potentially reaching the same r(2001) via the data-driven route — for the fix wave's verifier.
+- **2-point altmethod fits have no power against pre-period non-linearity** (zero residuals by construction) — intentional to keep allowing them; worth one sentence in the help when the fix wave touches the sthlp.
+
+
 
 
 
