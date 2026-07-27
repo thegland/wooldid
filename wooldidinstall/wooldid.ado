@@ -5092,7 +5092,7 @@ version 16.0
           if "`saveplots'" != "" qui graph save "`saveplots'_`graph'_sg`sgcase'.gph", `replace'
         }
 
-        if "`saveplots'" != ""  qui save "`saveplots'_ES_`subgroups'`sgcase'.dta", `replace'
+        if "`saveplots'" != ""  qui save "`saveplots'_ES_`subgroups'_`sgcase'.dta", `replace'
         clear
       }
     }
