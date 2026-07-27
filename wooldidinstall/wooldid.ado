@@ -453,6 +453,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     qui replace `_t' = `_t'+ `min_t' + 1
 
     *redefine the ref period macro for future use and then do a little bit of housekeeping
+    * LOAD-BEARING: the four adversarial blocks plant the reference row(s) at t == refperiod
+    * via this identity (relyr = t - min_t - 1); if this definition moves, they must move with it
     local refperiod = `esrelativeto'+`min_t'+1
     qui drop `refperiodobserved'
     if "`timetrends'" == "timetrends" qui drop `ttrefperiodobserved'
@@ -1597,18 +1599,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             }
             else{
               qui replace b = 0 if b == .
-              qui gen missingfind = t - t[_n -1]
-              qui glevelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
-              qui drop missingfind
-              if "`skiplocation'" != "" {
-                qui replace t = `skiplocation' - 1 if _n == _N
-                if "`timetrends'" == "timetrends" qui replace t = `skiplocation' - 2 if _n == _N - 1
-              }
-              else{
-                qui gstats sum t, meanonly
-                qui replace t = r(min) -1 if _n == _N
-                if "`timetrends'" == "timetrends" qui replace t = r(min) - 2 if _n == _N - 1
-              }
+              * the esf reference horizon is analytic: relyr = t - min_t - 1 and the
+              * reference relyr is esrelativeto, so t == refperiod (worker L456). the
+              * timetrends second reference row sits one horizon below (worker L478).
+              qui replace t = `refperiod' if _n == _N
+              if "`timetrends'" == "timetrends" qui replace t = `refperiod' - 1 if _n == _N - 1
             }
 
 
@@ -1618,11 +1613,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
             if "`altmethod_adversarial'" != "" local altadv_restrict_num `espre'
             if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
-              qui sum t
-              local altmethod_min = r(min)
-              local altadv_restrict if t <= `espre'+`altmethod_min'-1
-              local altadv_restrict_num = `espre'+`altmethod_min'-1
-              * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
+              * esf: relyr = t - min_t - 1, so `t <= min_t' is exactly every pre-period
+              * coefficient plus the fixed reference row(s), in either reference regime
+              local altadv_restrict if t <= `min_t'
+              local altadv_restrict_num = `min_t'
             }
 
             qui reg b t `altadv_restrict'
@@ -2077,18 +2071,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               }
               else{
                 qui replace b = 0 if b == .
-                qui gen missingfind = t - t[_n -1]
-                qui glevelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
-                qui drop missingfind
-                if "`skiplocation'" != "" {
-                  qui replace t = `skiplocation' - 1 if _n == _N
-                  if "`timetrends'" == "timetrends" qui replace t = `skiplocation' - 2 if _n == _N - 1
-                }
-                else{
-                  qui gstats sum t, meanonly
-                  qui replace t = r(min) -1 if _n == _N
-                  if "`timetrends'" == "timetrends" qui replace t = r(min) - 2 if _n == _N - 1
-                }
+                * the esf reference horizon is analytic: relyr = t - min_t - 1 and the
+                * reference relyr is esrelativeto, so t == refperiod (worker L456). the
+                * timetrends second reference row sits one horizon below (worker L478).
+                qui replace t = `refperiod' if _n == _N
+                if "`timetrends'" == "timetrends" qui replace t = `refperiod' - 1 if _n == _N - 1
               }
 
               local altadv_restrict
@@ -2096,11 +2083,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               local altadv_restrict_num
               if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
               if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
-                qui sum t
-                local altmethod_min = r(min)
-                local altadv_restrict if t <= `espre'+`altmethod_min'-1
-                local altadv_restrict_num = `espre'+`altmethod_min'-1
-                * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
+                * esf: relyr = t - min_t - 1, so `t <= min_t' is exactly every pre-period
+                * coefficient plus the fixed reference row(s), in either reference regime
+                local altadv_restrict if t <= `min_t'
+                local altadv_restrict_num = `min_t'
               }
 
               qui reg b t `altadv_restrict'
@@ -2369,18 +2355,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   }
                   else{
                     qui replace b = 0 if b == .
-                    qui gen missingfind = t - t[_n -1]
-                    qui glevelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
-                    qui drop missingfind
-                    if "`skiplocation'" != "" {
-                      qui replace t = `skiplocation' - 1 if _n == _N
-                      if "`timetrends'" == "timetrends" qui replace t = `skiplocation' - 2 if _n == _N - 1
-                    }
-                    else{
-                      qui gstats sum t, meanonly
-                      qui replace t = r(min) -1 if _n == _N
-                      if "`timetrends'" == "timetrends" qui replace t = r(min) - 2 if _n == _N - 1
-                    }
+                    * the esf reference horizon is analytic: relyr = t - min_t - 1 and the
+                    * reference relyr is esrelativeto, so t == refperiod (worker L456). the
+                    * timetrends second reference row sits one horizon below (worker L478).
+                    qui replace t = `refperiod' if _n == _N
+                    if "`timetrends'" == "timetrends" qui replace t = `refperiod' - 1 if _n == _N - 1
                   }
 
                   local altadv_restrict
@@ -2388,17 +2367,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
                   if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
                   if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
-                     if "`skiplocation'" != "" {
-                       local altadv_restrict if t <=  `skiplocation'-1
-                       local altadv_restrict_num = `skiplocation'-1
-                       * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
-                     }
-                     else {
-                       qui sum t
-                       local altmethod_min = r(min)
-                       local altadv_restrict if t <= `espre'+`altmethod_min'-1
-                       local altadv_restrict_num = `espre'+`altmethod_min'-1
-                     }
+                    * esf: relyr = t - min_t - 1, so `t <= min_t' is exactly every pre-period
+                    * coefficient plus the fixed reference row(s), in either reference regime
+                    local altadv_restrict if t <= `min_t'
+                    local altadv_restrict_num = `min_t'
                   }
                   qui reg b t  `altadv_restrict'
                   tempname adversarialB_`horizitem'_s`sgcase'
@@ -2665,36 +2637,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                     }
                     else{
                       qui replace b = 0 if b == .
-                      qui gen missingfind = t - t[_n -1]
-                      qui glevelsof(t) if missingfind == `bignjump' + 1, clean local(skiplocation)
-                      qui drop missingfind
-                      if "`skiplocation'" != "" {
-                        qui replace t = `skiplocation' - 1 if _n == _N
-                        if "`timetrends'" == "timetrends" qui replace t = `skiplocation' - 2 if _n == _N - 1
-                      }
-                      else{
-                        qui gstats sum t, meanonly
-                        qui replace t = r(min) -1 if _n == _N
-                        if "`timetrends'" == "timetrends" qui replace t = r(min) - 2 if _n == _N - 1
-                      }
+                      * the esf reference horizon is analytic: relyr = t - min_t - 1 and the
+                      * reference relyr is esrelativeto, so t == refperiod (worker L456). the
+                      * timetrends second reference row sits one horizon below (worker L478).
+                      qui replace t = `refperiod' if _n == _N
+                      if "`timetrends'" == "timetrends" qui replace t = `refperiod' - 1 if _n == _N - 1
                     }
                    local altadv_restrict
                    local altadv_restrict_num
                    if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
                    if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
                    if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
-                      if "`skiplocation'" != "" {
-                        local altadv_restrict if t <=  `skiplocation'-1
-                        local altadv_restrict_num = `skiplocation'-1
-                        * this object is needed to adjust espre if using esf since the numbering doesnt align quite right
-                      }
-                      else {
-                        qui sum t
-                        local altmethod_min = r(min)
-                        local altadv_restrict if t <= `espre'+`altmethod_min'-1
-                        local altadv_restrict_num = `espre'+`altmethod_min'-1
-                      }
-                    }
+                     * esf: relyr = t - min_t - 1, so `t <= min_t' is exactly every pre-period
+                     * coefficient plus the fixed reference row(s), in either reference regime
+                     local altadv_restrict if t <= `min_t'
+                     local altadv_restrict_num = `min_t'
+                   }
 
                     qui reg b t  `altadv_restrict'
                     tempname adversarialB_C`horizitem'_s`sgcase'

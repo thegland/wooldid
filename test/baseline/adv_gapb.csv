@@ -19,7 +19,7 @@ scalar|r2_withinadj|+1.2fb627b96bfacX-002
 scalar|rmse|+1.de7b86982916eX-001
 scalar|rss|+1.1af7cb789dd85X+006
 scalar|N_dropped|+1.6800000000000X+006
-scalar|adversarial_pval_att|+1.244de669dabccX-007
+scalar|adversarial_pval_att|+1.e31987febaf25X-00a
 macro|cmd|wooldid
 macro|wdid_replayv|1
 macro|wdid_esrel|-4
@@ -143,8 +143,8 @@ mat|wdidmainresults|7|5|-1.98b28eb8d1800X-006
 mat|wdidmainresults|7|6|+1.0df53f970b3ccX+001
 mat|wdidmainresults|7|7|+1.0000000000000X+001
 matnames|adversarial_line_att|1x2|y1|t _cons
-mat|adversarial_line_att|1|1|+1.242bd9d370a39X-001
-mat|adversarial_line_att|1|2|-1.285bc4499eb81X+001
+mat|adversarial_line_att|1|1|+1.88eddea75f15bX-002
+mat|adversarial_line_att|1|2|-1.4842bd1edf15dX+000
 matnames|escomp|5x8|pre3 pre2 post0 post1 post2|ncohorts nunits nclusters nobs sumw_att wshare_att wshare_att_it relyr
 mat|escomp|1|1|+1.0000000000000X+000
 mat|escomp|1|2|+1.4000000000000X+003
