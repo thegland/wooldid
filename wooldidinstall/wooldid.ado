@@ -286,9 +286,30 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         qui drop `antictag'
       }
     }
-    if "`timetrends'" == "" qui replace `ifvar' = 0 if `ttre' <= `mint'
-    if "`timetrends'" == "timetrends" qui replace `ifvar' = 0 if `ttre' <= `mintp1'
+    * the drop is UNIT-level by construction (gegen max by i): with a within-unit-varying
+    * ttre (reachable only under safety(off), F13 forbids it otherwise) the old row-level
+    * form could remove a surviving unit's t==mint rows, leaving the per-unit mint/mintp1
+    * below stale and the reference-forcing clauses targeting a period that no longer
+    * exists - a silent collinearity route (dropped treated dummies, biased estimates)
+    tempvar nopre
+    if "`timetrends'" == "" qui gegen byte `nopre' = max(`ttre' <= `mint') if `ifstatement', by(`i')
+    if "`timetrends'" == "timetrends" qui gegen byte `nopre' = max(`ttre' <= `mintp1') if `ifstatement', by(`i')
+    qui replace `ifvar' = 0 if `nopre' == 1
+    qui drop `nopre'
     qui replace `ttre' = . if `ifvar' == 0
+    * invariant guard: recompute mint/mintp1 on the post-drop sample. with the unit-level
+    * drop above this is a provable no-op (drops remove whole units, so surviving units'
+    * first periods are unchanged); it stays as insurance that the reference-forcing
+    * clauses below can never target a period absent from the surviving sample
+    qui drop `mint'
+    qui gegen `mint' = min(`t') if `ifstatement', by(`i')
+    if "`timetrends'" == "timetrends" {
+      tempvar tp1g
+      qui drop `mintp1'
+      qui gen `tp1g' = `t' if `t' != `mint'
+      qui gegen `mintp1' = min(`tp1g') if `ifstatement', by(`i')
+      qui drop `tp1g'
+    }
 
 
     * construct _t, which contains dummies for treatment periods of interest - it will be specified in terms of relative periods
