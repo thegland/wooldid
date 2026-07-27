@@ -69,7 +69,11 @@ version 16.0
       cap est drop __marginsmodel
       if strpos("`wdsh_flags'", "keep") == 0 {
         if strpos("`wdsh_flags'", "fullmodel") != 0 cap est drop ___wooldidfullmodel
-        if strpos("`wdsh_flags'", "ppml") != 0 cap drop _ppmlhdfe_d
+        * frame-qualified: if the failure destroyed the snapshot frame, the restore above
+        * cap-fails and an unqualified drop would act on whatever frame is current -
+        * deleting an unrelated variable of this name there. qualified, it cap-fails
+        * benignly instead
+        if strpos("`wdsh_flags'", "ppml") != 0 cap frame `wdsh_frame': drop _ppmlhdfe_d
       }
     }
   }
@@ -949,10 +953,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   }
 
   * save the model; will be useful later
-  qui est sto ___wooldidfullmodel
-  * register this run's scratch objects with the shell's error-path cleanup epilogue
-  global WOOLDID_CLEANUP $WOOLDID_CLEANUP fullmodel
+  * register the data-variable obligation with the shell's error-path cleanup epilogue
+  * BEFORE storing: _ppmlhdfe_d already exists in the data at this point, and est sto
+  * itself can fail (a real trigger: the estimates directory at Stata's 300-store
+  * limit), which previously leaked the variable through the unregistered window
   if "`poisson'" == "poisson" & "`unconditionalse'" == "" & "`customvce'" == "" global WOOLDID_CLEANUP $WOOLDID_CLEANUP ppml
+  qui est sto ___wooldidfullmodel
+  global WOOLDID_CLEANUP $WOOLDID_CLEANUP fullmodel
   if "`verbose'" == "verbose" dis as text "Wooldid has finished regression estimation and is preparing to begin margins calculations."
 
 	* check on dropped obs
