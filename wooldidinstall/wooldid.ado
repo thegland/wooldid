@@ -1654,7 +1654,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             * B16 backstop: data gaps at the pre-treatment horizons can hollow out the
             * altmethod fit sample even when the window arithmetic is fine; skip cleanly
             qui count `altadv_restrict'
-            if r(N) < 2 {
+            * the `bignjump' planted reference row(s) always satisfy the cut, so require at
+            * least one REAL pre-period coefficient beyond them (under timetrends + esf the
+            * two planted zeros alone would otherwise pass and fit a fabricated (0,0) line)
+            if r(N) < 1 + `bignjump' {
               dis as text "Caution: adversarial pre-trend testing was cancelled: after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the adversarial reference line."
               frame change `defaultframe'
               frame drop `adversarialframe'
@@ -2139,7 +2142,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * B16 backstop: data gaps at the pre-treatment horizons can hollow out the
               * altmethod fit sample even when the window arithmetic is fine; skip cleanly
               qui count `altadv_restrict'
-              if r(N) < 2 {
+              * see the binary twin: planted reference rows must not satisfy the threshold alone
+              if r(N) < 1 + `bignjump' {
                 dis as text "Caution: adversarial pre-trend testing was cancelled: after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the adversarial reference line."
                 frame change `defaultframe'
                 frame drop `adversarialframe'
@@ -2434,7 +2438,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   }
                   * B16 backstop: data gaps can hollow out the altmethod fit sample
                   qui count `altadv_restrict'
-                  if r(N) < 2 {
+                  * planted reference rows must not satisfy the threshold alone (see MAIN twin)
+                  if r(N) < 1 + `bignjump' {
                     dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the reference line."
                     frame change `defaultframe'
                     frame drop `adversarialframe'
@@ -2726,7 +2731,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
                     * B16 backstop: data gaps can hollow out the altmethod fit sample
                     qui count `altadv_restrict'
-                    if r(N) < 2 {
+                    * planted reference rows must not satisfy the threshold alone (see MAIN twin)
+                    if r(N) < 1 + `bignjump' {
                       dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the reference line."
                       frame change `defaultframe'
                       frame drop `adversarialframe'

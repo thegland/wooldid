@@ -159,6 +159,43 @@ else if strpos(fileread("advg_t6.txt"), "adversarial pre-trend testing was cance
   local ++fails
 }
 
+* ---- T7: timetrends + esf: the two planted zero reference rows alone must not pass ----
+* treated units observed only from the second reference onward -> no real pre coefficient;
+* pre-tightening, the backstop counted the planted rows and fit a fabricated (0,0) line
+clear
+set obs 30
+gen i = _n
+gen ttre = cond(_n <= 10, 5, .)
+expand 10
+bysort i: gen t = _n
+gen te = 2*(t >= ttre & ttre < .)
+gen y = te + 0.05*i + 0.1*t*(ttre < .) + rnormal()
+drop te
+drop if ttre == 5 & t < 3
+qui log using advg_t7.txt, text replace name(advg)
+cap noi wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-1) esprelength(1) espostlength(2) timetrends adversarial altmethod_adversarial
+local rc7 = _rc
+qui log close advg
+if `rc7' != 0 {
+  dis as error "T7 FAIL: rc=" `rc7'
+  local ++fails
+}
+else {
+  cap confirm matrix e(adversarial_line_att)
+  if _rc == 0 {
+    dis as error "T7 FAIL: fabricated reference line posted from planted rows alone"
+    local ++fails
+  }
+  if "`e(adversarial_pval_att)'" != "" {
+    dis as error "T7 FAIL: adversarial_pval_att posted despite the planted-rows-only fit"
+    local ++fails
+  }
+  if strpos(fileread("advg_t7.txt"), "Caution: adversarial pre-trend testing was cancelled") == 0 {
+    dis as error "T7 FAIL: no cancellation Caution in the console output"
+    local ++fails
+  }
+}
+
 if `fails' == 0 dis "ADVGUARD_ALL_PASS"
 else dis as error "ADVGUARD_FAILS=`fails'"
 exit, clear
