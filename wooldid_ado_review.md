@@ -21,10 +21,6 @@ The B1-B23 campaign's lessons are codified in `review_process/` and `test/`; the
 ### Please work on these items:
 
 
- 
-# Please assess if the following items are still issues now: 
-
-
 
 ### B16 (main-block half) — the SG-crash half was RESOLVED in `4483758` (see wooldid_solved_issues.md)
 The two MAIN (non-SG) `altmethod_adversarial`+`esfixedbaseperiod` blocks compute the pre-trend-fit restriction as `espre + r(min) - 1`. When the fixed reference sits below the reported window (`esrelativeto < -1` with `esprelength <= |esrelativeto|-1`, so the ref row becomes the frame minimum), this excludes the relyr -1 coefficient from the fit and tests it as if post-treatment — a possible off-by-one. Deferred per the author's directive to fix only the rare SG-crash scenario in the skiplocation item; the MAIN blocks are the common path and were left untouched. Not bit-neutral if changed (would shift `adversarial_pval_*` on affected runs) -> needs its own careful wave + a re-blessed baseline config.
@@ -34,6 +30,7 @@ The two MAIN (non-SG) `altmethod_adversarial`+`esfixedbaseperiod` blocks compute
 - **Hand verification from e() exports alone** (`e(b_es_att)`/`e(V_es_att)`/`e(df_r)`): on `esrelativeto(-3) esprelength(2) + adversarial altmethod_adversarial`, HEAD's `adversarial_pval_att = 1.666e-25` reproduces as F(4,79) testing relyr {-1,0,1,2} against a two-point line (slope -0.0611); the documented behavior gives the three-point line (slope -0.0913) and F(3,79) over relyr {0,1,2}, p = 1.511e-22. The direction of the error is not one-signed across configs.
 - **Fix (recommended for a future implementation wave):** replace the cutoff with `t <= \`min_t'` — since relyr = t - min_t - 1, this is exactly "all pre coefficients plus the reference row(s)" in every regime, with or without timetrends, independent of which horizons are estimable. Apply at both MAIN sites and (recommended) both SG sites, which then collapses the skiplocation guard; the altmethod_min machinery becomes dead code. **Blast radius measured across 47 config pairs at rtol 0:** only `adversarial_pval_*`/`adversarial_line_*` move, and only on esf + below-window + altmethod runs; every default-regime, non-esf, and plain-adversarial config is byte-identical (all weights, both treatment modes, all estimands, uncond/customvce, subgroups, five pathological shapes). No battery or golden config reaches the affected regime (`esf_adv` is plain adversarial, reference-inside), so no re-bless — but two new pinned configs should be born with the fix (the silent-value cell and the crash-to-rc0 cell). One residual: regime-(a) panels with `min_t == 1` still produce a 1-row fit — closed by the guard in the item below, never by this fix; **the two fixes are coupled and belong in one wave** (see the coupling note below).
 - **Adjacent bugs found during assessment (recommend folding into the same wave; also logged below the line):** (A) `skiplocation` is built with `glevelsof` over every 2-gap, so on gap-year data (dta_path_relyrgap class) it comes back multi-valued and the `qui replace t = 4 7 - 1` aborts the whole run r(198) — this hits PLAIN `adversarial` + esf too, no altmethod needed: a realistic crash. (B) On the same shapes, skiplocation can misidentify a DATA gap as the reference gap and plant the b=0 reference row at the wrong horizon — a silently wrong fitted line. (C) The SG blocks' non-empty-skiplocation branch cuts at `skiplocation-1`, which matches the MAIN cut only at esrelativeto(-1); at esrelativeto(-2) the SG fit drops relyr -1 where MAIN keeps it (measured sign-flip in `adversarial_line_att_s1`).
+
 
 ### NEW (found during skiplocation verification, 2026-07-22): espre=1 + esf + adversarial + altmethod -> r(2001) in the MAIN adversarial block
 With `esprelength(1)` and a fixed reference below the window, the MAIN block's `espre + r(min) - 1` restriction selects a single pre-period row, so `qui reg b t` runs on 1 observation and aborts r(2001) ("insufficient observations"). Present identically in parent and the skiplocation fix (MAIN and SG), so pre-existing and NOT introduced by the fix; `espre==0` is unreachable (adversarial is cleared when espre==0, L785). Two skiplocation assessors/verifiers flagged it independently. Low priority, narrow trigger; a capture/guard on the MAIN adversarial `reg` (mirroring how the SG crash was handled) would close it someday.
@@ -52,15 +49,6 @@ With `esprelength(1)` and a fixed reference below the window, the MAIN block's `
 
 
 
-##### Please assess the following item for validity and the viability of implementing with harmless fixes, putting in extra work to check on margins documentation and examples to confirm that resuability would work and do not harm. Do not implement a fix yet. Please provide details on your assesment below. Focus a lot on feasibility and on what changes would need to be mdae to make things work.
-
-
-
-
-
-------------------------------------------------------
------- DO NOT WORK ON THINGS BELOW THIS LINE ---------
---- ITEMS TO ADDRESS IN DUE TIME ---
 
 ### Adjacent findings from the 2026-07-26 B16-main assessment wave (logged, not acted on)
 - **skiplocation multi-valued -> r(198) abort on PLAIN adversarial:** the reference-gap finder (`glevelsof(t) if missingfind == bignjump+1`) returns every 2-gap, so on gap-year panels (dta_path_relyrgap class) with esfixedbaseperiod + adversarial the `qui replace t = <list> - 1` line receives a multi-token value and aborts the whole run with a bare r(198). No altmethod needed — a realistic crash on realistic data. Candidate for promotion into the B16-main fix wave.
@@ -68,20 +56,6 @@ With `esprelength(1)` and a fixed reference below the window, the MAIN block's `
 - **timetrends + esf + adversarial + altmethod returns a missing p in every cell** (rc 0) — consistent with the off-by-two zero-line fit documented in the B16-main assessment; will resolve or reclassify when the cut fix lands.
 - **anticipation() as a potential third crash route (untested):** it shifts effective onsets earlier and can drive min_t to 1, potentially reaching the same r(2001) via the data-driven route — for the fix wave's verifier.
 - **2-point altmethod fits have no power against pre-period non-linearity** (zero residuals by construction) — intentional to keep allowing them; worth one sentence in the help when the fix wave touches the sthlp.
-
-
-
-
-
-
-### F6. Permutation / Conley–Taber inference for few *treated* clusters
-WCB itself degrades when the number of *treated* clusters is very small (MacKinnon–Webb) — the classic 1-treated-state policy evaluation. A permutation option (reassign placebo treatment timing across control clusters, build the null distribution of the ATT estimate) covers this gap; Conley–Taber (2011) is the citable framework. Cost: full re-estimation per draw (reghdfe makes this tolerable; gate behind `reps()`), and design decisions about staggered-timing permutation schemes. 
-
-Let's implement this, once again taking advantage of fast-mode style functionality (since only the coefficient). For permutation testing, let's offer a number of different approaches to doing randomization inference. 
-
-
-
-
 
 
 
@@ -93,6 +67,8 @@ Under the Wooldridge approach the `i._i#i._t#1.targetflag` coefficients *are* th
 ### **L1905/1909 df hardcode:** 
 the binary att pre-trend joint tests hardcode df(df_r) while their continuous/SG siblings thread marginsdof, so under unconditionalse+jointtests the binary tests use the conditional VCE. Fix = df + conditional vce(unconditional), NOT a blind marginsdof swap (impvalues sets marginsdof to nose).
 
+**ALREADY RESOLVED (2026-07-26, commit 7ea1533, tranche 10 / E1b):** exactly this fix shipped — a dedicated `jointmarginsdof' local (df + conditional vce(unconditional), deliberately not marginsdof) at both binary sites, with test/test_dffix.do as the tolerance-based acceptance suite (the unconditionalse path is not bit-reproducible at rtol 0). Measured: e(joint_horiz) and e(joint_horiz_i) move materially under unconditionalse+jointtests and are bit-inert everywhere else. No further work needed; see wooldid_solved_issues.md (E1 entry).
+
 
 ### **Duplicate SG colnames in e(b)/e(V)** 
 (e.g. ES_ame_SG2_post1 x4 in a continuous+sg config, both builds): now that e(V) can exist on such runs (47defa0), _b[]/test can hit ambiguous-name errors where they previously failed for want of V. Own ticket.
@@ -102,13 +78,13 @@ the binary att pre-trend joint tests hardcode df(df_r) while their continuous/SG
 ### A list of minor items sits below. For these, please implement fixes for these issues. Since they are simpler, you can use just 1 subagent for tehse items, rather than 3. Feel free to add more scrutiny to these though if anything turns out to be non-innocuous or more complicated than things look. 
 - **Poisson-path inference is z/chi2 by construction:** ppmlhdfe posts no e(df_r), wooldid passes df(.), and margins treats df(.) as no-df — so every margins p on the poisson path is a z/chi2, and e(pwsgs)'s hardcoded "t" column label is wrong there. Pre-existing; both joint-test engines inherit it identically. Can be solved by changing the column label in this case. 
 - **Fast-mode display cosmetics:** removing the joint-p lines merges bracketing blank lines; the header still reads "Standard Errors: cluster(i)" above an all-"." table (one verifier considers a reword mandatory; the author's same-format directive won — flagging the disagreement).
-- **fc0cadb commit-message omission (corrective):** the pre-leg prejoint blanking topology change was not called out; strictly corrective and unreachable in all battery configs.
+- **fc0cadb commit-message omission (corrective):** the pre-leg prejoint blanking topology change was not called out; strictly corrective and unreachable in all battery configs. *(No code action possible — the commit is history; the omission is recorded here and in the solved-issues E1/F9 entries. CLOSED as documentation.)*
 - **Poisson + subgroups header lacks a space:** "Poisson RegressionResults for Subgroup ..." (the sg-loop poistext has no trailing space, unlike the main header). Fixing changes console bytes — needs a pre-registered golden-corpus re-bless; do not fold into another change silently.
 - **sthlp / e() mismatches (doc):** the help documents e(joint_horizon_bysg), e(joint_horizon_i_byssg), e(joint_cont_horizon_bysg), e(joint_cont_horizon_i_bysg) as matrices — the code emits `ereturn local joint_horiz_s<sg>`-style macros instead.
 - **Adversarial silently cancelled when finaladvtest trips:** the user asked for adversarial, gets no p-value and no message. A one-line Caution at the 4 cancellation sites would fix.
 - **F7 partial-ereturn corner:** if wooldid_ptp failed mid-loop, earlier types' roth_* returns would persist with no marker (each individually cap'd; an e(roth_ok) flag would close it). Duplicate power levels (pretrendpower(80 80)) yield a duplicated row.
 - **Internal ttre tempvar is float:** odd calendar codes >2^24 (YYYYMMDD style) round at the gen site (r(461); parent-identical). A gen double would change existing behavior for such data — wants its own careful wave.
-- **contreatwithin silently overwrites the syntax local `safety`** (S1 pattern): F13's checks are shielded via the safetyinput copy, but every OTHER safety-gated check is still silently disabled under contreatwithin. Note - this is intended. Contreatwithin will always fail the safety checks originally turned off when safety(off) is specified, so by default it turns off the safety for you. No changes need be made, just flaggint this. 
+- **contreatwithin silently overwrites the syntax local `safety`** (S1 pattern): F13's checks are shielded via the safetyinput copy, but every OTHER safety-gated check is still silently disabled under contreatwithin. Note - this is intended. Contreatwithin will always fail the safety checks originally turned off when safety(off) is specified, so by default it turns off the safety for you. No changes need be made, just flaggint this. *(Acknowledged — recorded as intended behavior; the S5 screens deliberately gate on safetyinput so data-integrity checks survive the overwrite, while the estimability-relaxation checks intentionally do not. CLOSED, no action.)*
 - **Replay UX notes (author calls):** (1) after a run that fails at parse time, bare `wooldid` silently replays the PREVIOUS successful run (stock Stata semantics; documented in the sthlp) while a late failure gives the arity error — two different post-failure behaviors;  --- we want a failure at the parsing stage to trigger an error, not a replay (4) e(wdid_replayv) is presence-gated, not version-compared — any future change to the replay contract must bump and compare - please note this or address however would be appropriate.
 - **saveplots prefix + subgroup-value filename concatenation is ambiguous in principle** (`sg`+`20` vs `sg2`+`0`) — never observed colliding. Maybe fix by always injecting a '_' character, since SG values will always be integers.
 
@@ -116,6 +92,26 @@ the binary att pre-trend joint tests hardcode df(df_r) while their continuous/SG
 ### Please run subagents to assess each of these items and provide greater detail on the issue, when it fires, and what impact it has on the program. Please also asses fixes.
 - **Commensurability tier vs timetrends (one-t-unit band):** the tier's lower bound is min(t)+anticipation, but under timetrends the worker discards onsets at or below min(t)+1+anticipation (mintp1); a fractional onset in that one-unit band hard-errors r(459) where the worker would have dropped it. Conservative direction (error rather than silent continue), very narrow corner (s5_v2 confirmation); widen the bound by +1 under timetrends if it ever bites.
 - **mint fragility:** the pre-drop mint is reused after row-level drops between its computation and the reference-forcing clause, a latent collinearity trigger (the real cause of the F13 wave's P6 r(322)); F13 now masks its only reachable trigger rather than fixing it. P6-at-espre(0) predicted silent, untested.
+
+
+
+
+
+
+
+------------------------------------------------------
+------ DO NOT WORK ON THINGS BELOW THIS LINE ---------
+--- ITEMS TO ADDRESS IN DUE TIME ---
+
+
+
+
+
+
+### F6. Permutation / Conley–Taber inference for few *treated* clusters
+WCB itself degrades when the number of *treated* clusters is very small (MacKinnon–Webb) — the classic 1-treated-state policy evaluation. A permutation option (reassign placebo treatment timing across control clusters, build the null distribution of the ATT estimate) covers this gap; Conley–Taber (2011) is the citable framework. Cost: full re-estimation per draw (reghdfe makes this tolerable; gate behind `reps()`), and design decisions about staggered-timing permutation schemes. 
+
+Let's implement this, once again taking advantage of fast-mode style functionality (since only the coefficient). For permutation testing, let's offer a number of different approaches to doing randomization inference. 
 
 
 
