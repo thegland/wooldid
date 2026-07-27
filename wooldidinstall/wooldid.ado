@@ -4814,7 +4814,7 @@ version 16.0
       foreach sgcase in `sglist' {
         dis as result  " "
         local poistext
-        if "`poisson'" == "poisson" local poistext "Poisson Regression"
+        if "`poisson'" == "poisson" local poistext "Poisson Regression "
         dis as result  "`poistext'Results for Subgroup `subgroups' == `sgcase': `elasinj'"
         if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
         matlist e(wdidsgresults_`sgcase')
