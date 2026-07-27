@@ -4673,7 +4673,8 @@ version 16.0
 
   if "`part'" == "1" {
   dis as result  " "
-  dis as result  "Wooldid Estimation for Outcome: `y'; Standard Errors: `vcespecifier'"
+  if "`fastnose'" == "" dis as result  "Wooldid Estimation for Outcome: `y'; Standard Errors: `vcespecifier'"
+  else dis as result  "Wooldid Estimation for Outcome: `y'; Standard Errors: not computed (fast mode)"
   if "`fastnose'" != "" dis as text "SEs and related materials are not estimated in fast mode."
   dis as result  " "
   if "`Nclus'" != "." & "`Nclus'" != "" {
