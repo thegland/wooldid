@@ -3183,7 +3183,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           }
         }
       }
-      matrix colnames `pwsgs' =  estimate se t p lb_95ci ub_95ci
+      if "`poisson'" == "" matrix colnames `pwsgs' =  estimate se t p lb_95ci ub_95ci
+      if "`poisson'" == "poisson" matrix colnames `pwsgs' =  estimate se z p lb_95ci ub_95ci
 
     }
   }
