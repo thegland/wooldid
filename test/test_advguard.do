@@ -143,6 +143,22 @@ else {
   }
 }
 
+* ---- T6: no spurious cancellation Caution when adversarial was never requested ----
+* (the finaladvtest clearing branch runs unconditionally; its Caution must not)
+use "`DATA'/dta_binary", clear
+qui log using advg_t6.txt, text replace name(advg)
+cap noi wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-1) esprelength(1) espostlength(-999)
+local rc6 = _rc
+qui log close advg
+if `rc6' != 0 {
+  dis as error "T6 FAIL: rc=" `rc6'
+  local ++fails
+}
+else if strpos(fileread("advg_t6.txt"), "adversarial pre-trend testing was cancelled") != 0 {
+  dis as error "T6 FAIL: cancellation Caution printed on a run that never requested adversarial"
+  local ++fails
+}
+
 if `fails' == 0 dis "ADVGUARD_ALL_PASS"
 else dis as error "ADVGUARD_FAILS=`fails'"
 exit, clear

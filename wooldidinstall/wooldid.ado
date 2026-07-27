@@ -1592,7 +1592,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           }
           if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
           if `finaladvtest' <= 2 {
-            dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
+            * this branch also runs when adversarial was never requested (or was already
+            * cancelled upstream) - the clearing is a no-op then, so only Caution when
+            * an actually-pending adversarial test is being called off here
+            if "`adversarial'" == "adversarial" dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
             local adversarial
             qui est restore ___wooldidfullmodel
             local postinject
@@ -2081,7 +2084,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             }
             if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
             if `finaladvtest' <= 1 {
-              dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
+              * see the binary twin above: Caution only when a pending test is called off
+              if "`adversarial'" == "adversarial" dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
               local adversarial
               qui est restore ___wooldidfullmodel
               local postinject
