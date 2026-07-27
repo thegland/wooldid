@@ -1,6 +1,6 @@
 * wooldid regression battery. Run from a fresh subdirectory of test/ (see test/README.md):
 *   mkdir test/run1 && cd test/run1 && "<stata>" -e do ../runbattery.do
-* Loads the CURRENT repo wooldid.ado, runs 25 configs, dumps all e() content
+* Loads the CURRENT repo wooldid.ado, runs 27 configs, dumps all e() content
 * (exact %21x hex) + rc + post-run varlist to <cfg>.csv in cwd.
 clear all
 set more off
@@ -201,6 +201,34 @@ freshstart "`DATA'/dta_path_relyrgap"
 cap noi wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-4) esprelength(3) espostlength(3) adversarial
 local rc = _rc
 dumpres adv_gapb `rc'
+
+* dupcol coverage (added 2026-07-26, blessed pre-fix): continuous + subgroups where the
+* time-invariant dose makes the per-sg continuous pre-treatment margins come back
+* all-omitted, tripping the sg rowname filter (silently shifted/duplicated colnames in
+* e(b)/e(V)/e(wdidsgresults_*) on the pre-fix build: 45 columns, 42 unique names)
+clear
+set seed 447102
+set obs 50
+gen i = _n
+gen ttre = cond(_n<=13, 5, cond(_n<=26, 8, cond(_n<=38, 10, .)))
+expand 13
+bysort i: gen t = _n
+gen dose = 0.5 + mod(i,6) + 0.25*mod(i,7)/7
+gen post = (t >= ttre & ttre < .)
+gen y = 0.4*dose*post + 0.02*i + 0.08*t + sin(3*i + 2*t)
+gen sg = mod(i,3)
+drop post
+ereturn clear
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg)
+local rc = _rc
+dumpres cont_sg_tidose `rc'
+
+freshstart "`DATA'/dta_path_relyrgap"
+gen dose2 = 0.5 + mod(i,5) + 0.2*mod(i,3)
+gen sgr = mod(i,3)
+cap noi wooldid y i t ttre, contreat(dose2) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sgr)
+local rc = _rc
+dumpres cont_sg_gap `rc'
 
 di "BATTERY_DONE"
 exit, clear
