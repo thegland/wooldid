@@ -704,10 +704,11 @@ pre-trend test statistic), and {it:e(roth_nissize_{it:type})} (the actual size o
 (ATT), e(joint_horiz_i) (ATT_i), e(joint_Choriz) (AME; continuous treatments only), and e(joint_Choriz_i) (AME_i; continuous treatments only). {p_end}
 
 {synopt: Joint Tests by Subgroup & Time Period} Joint tests for the statistical significance of pre-treatment relative time period-specific event study effects are presented by
-subgroup, when used, in the matrices: e(joint_horizon_bysg), e(joint_horizon_i_byssg), e(joint_cont_horizon_bysg), and e(joint_cont_horizon_i_bysg). {p_end}
+subgroup, when used, in the local macros: e(joint_horiz_s{it:sgcase}), e(joint_horiz_i_s{it:sgcase}), e(joint_Choriz_s{it:sgcase}), and e(joint_Choriz_i_s{it:sgcase}), where {it:sgcase}
+is the value of the subgroup. {p_end}
 
 {synopt: Adversarial Line Tests:} P-values from joint tests of the hypothesis that all (non-reference) relative-time period treatment effect estimates fall on the same line
- are found in the local macros {it:e(adversarial_pval_att)}, {it:e(adversarial_pval_ame)}, {it:e(adversarial_pval_att_s[SG])}, etc. The coefficient and intercept of the line used in
+ are found in the scalars {it:e(adversarial_pval_att)}, {it:e(adversarial_pval_ame)}, {it:e(adversarial_pval_att_s[SG])}, etc. The coefficient and intercept of the line used in
  these tests may be found in matrices named {it:e(adversarial_line_att)}, etc. {p_end}
 
 {synopt: SG Effect Homogeneity Tests} For each estimate type (ATT, ATT_it, AME, etc.), the joint test that all subgroups have the same such post-treatment effect (namely, the
@@ -735,7 +736,7 @@ procedures.{p_end}
 
 {synopt:{it:e(estimate_type)}} A macro recording whether your treatment effect estimates use a pooled reference period or a fixed reference period. {p_end}
 
-{synopt:{it:Other Items:}} {it:e(ll)}, {it:e(ll_0)}, {it:e(rmse)}, {it:e(rss)}, {it:e(F)}, {it:e(chi2)} (poisson only), and {it:e(converged)} (poisson only) are passed through directly
+{synopt:{it:Other Items:}} {it:e(ll)}, {it:e(ll_0)}, {it:e(rmse)}, {it:e(rss)}, {it:e(F)}, and {it:e(chi2)} (poisson only) are passed through directly
 from the underlying regression estimator, wherever available. {p_end}
 
 {pstd} In addition to these objects returned in e(), if saveplots() is specified, a dataset containing the information used to produce event study plots along with .gph files containing
