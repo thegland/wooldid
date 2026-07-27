@@ -1,6 +1,6 @@
 * wooldid regression battery. Run from a fresh subdirectory of test/ (see test/README.md):
 *   mkdir test/run1 && cd test/run1 && "<stata>" -e do ../runbattery.do
-* Loads the CURRENT repo wooldid.ado, runs 27 configs, dumps all e() content
+* Loads the CURRENT repo wooldid.ado, runs 28 configs, dumps all e() content
 * (exact %21x hex) + rc + post-run varlist to <cfg>.csv in cwd.
 clear all
 set more off
@@ -229,6 +229,13 @@ gen sgr = mod(i,3)
 cap noi wooldid y i t ttre, contreat(dose2) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sgr)
 local rc = _rc
 dumpres cont_sg_gap `rc'
+
+* F3 coverage (added 2026-07-27, blessed on the feature build): pins e(gteffects) content
+* and the off-state e() surface of a weighted two-estimand run
+freshstart "`DATA'/dta_binary"
+cap noi wooldid y i t ttre [aw=w], att att_it cluster(i) esprelength(2) espostlength(2) gteffects
+local rc = _rc
+dumpres gt_basic `rc'
 
 di "BATTERY_DONE"
 exit, clear
