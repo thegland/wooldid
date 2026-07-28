@@ -283,6 +283,33 @@ though the {it:margins} stage skips variances), making {it:gteffects} the one in
 remains exact even under time-varying {cmd:interactivecontrols()} (the caveat there concerns interpreting individual cells, not the aggregation); and when the reported
 event-study window has no post-treatment horizons (e.g. {cmd:espostlength(0)}), {it:inwindow} is 0 on every post-treatment row by construction. {p_end}
 
+{phang}{opt permute(method)}: Randomization (permutation) inference in the Conley-Taber spirit, for settings - most importantly few treated clusters - where cluster-asymptotic standard errors are unreliable. The observed
+estimation runs exactly as usual (full inference, display, plots); afterwards, wooldid re-randomizes which clusters carry which treatment-onset dates, re-estimates the requested estimands under each counterfactual
+assignment (quiet fast-mode runs, since only point estimates are needed), and compares the observed estimate to the resulting null distribution. Requires {cmd:cluster()} with a single variable - the randomization
+unit - and every cluster must sit inside exactly one treatment-onset group (onset constant within cluster; never-treated is its own group). Two methods: {cmd:permute(shuffle)} permutes the observed onset labels
+across clusters, holding the number of clusters at each onset fixed ({cmd:permstrata(varname)} confines the shuffling to within strata, so each onset group keeps its composition with respect to the strata;
+clusters must be strict subsets of strata); {cmd:permute(probabilities)} draws each cluster's onset from user-supplied probabilities via {cmd:permprobs()}. Specify {cmd:permreps(#)} (draws with replacement) or,
+for shuffle only, {cmd:permexact} (enumerate every distinct assignment; a caution prints above 1,000 assignments and enumeration is refused above 10,000). The number of possible assignments is always computed and
+returned, with a caution when {cmd:permreps()} exceeds 10 percent of it. Outputs per estimand: a two-sided permutation p-value (sampled draws use the add-one Monte-Carlo form; exact enumerations report the plain
+share, with the observed assignment a member - note that in symmetric designs the mirror-image assignment ties the observed estimate in absolute value, so exact p-values have a floor of 2/M); the 5th-95th
+percentile band of the permuted-effect distribution (a NULL BAND under no effect, not a confidence interval for the parameter); and the standard deviation of that distribution (labelled SD). The raw draws are in
+{it:e(permdist)}. Replications that fail to estimate are excluded and counted ({it:e(perm_failed)}), with a caution above 10 percent and a refusal when fewer than max(20, half) succeed. Draws consume the session
+random-number stream: {cmd:set seed} beforehand for reproducibility. Under {cmd:subgroups()} the permutation statistics cover the pooled estimands only (rep runs skip the subgroup machinery). With
+{cmd:contreat()} the dose stays with its unit and only onset timing is re-randomized: the null being tested is that timing is as-if random given dose. Not compatible with {it:impvalues},
+{it:unconditionalse}, {it:contreatwithin}, or {it:oldsyntax}. {p_end}
+
+{phang}{opt permprobs(spec)}: The assignment-probability design for {cmd:permute(probabilities)}, structured as {cmd:(onsetvar level level ...)} followed by one {cmd:(clustervalue p p ...)} group per cluster.
+The first group names the actual timing variable and lists every in-sample onset level (never-treated is the level {cmd:.}) in the column order the probabilities use; each later group gives one cluster's
+probabilities over those levels (nonnegative, summing to 1). Every in-sample cluster value must appear exactly once. {cmd:permreps()} is required. The possible-assignment count reported is the product of the
+per-cluster support sizes; if the OBSERVED assignment has zero probability under the design, a caution notes that the p-value is a tail probability under that design distribution rather than a randomization
+test. {p_end}
+
+{phang}{opt permtstat}: Randomize on t-ratios instead of raw estimates. Rep runs then go through the full inference path (slower: fast mode cannot be exploited, and requesting {it:fastnose} alongside is refused);
+draws with undefined t-ratios count as failed. Because standard errors vary across assignments, the exact-test floor is 1/M rather than 2/M. {p_end}
+
+{phang}{opt permtci}: Additionally report an inverted-t 95% confidence interval: the observed estimate plus or minus the 95th percentile of the permuted absolute t-ratios times the observed standard error.
+Implies {cmd:permtstat}. Unavailable (with a caution) when the observed run has no usable standard error. {p_end}
+
 {pstd} {ul: Discussion of Unconditional Standard Errors:}
 The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates
 or continuous treatment variables. The standard errors {it:wooldid} presents for these final estimates are produced during the margins calculation stage
@@ -692,6 +719,11 @@ primary results has not been suppressed.{p_end}
 {synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods (relative year < 0) in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument.{p_end}
 
 {synopt:{it:e(gteffects)}} The cohort-by-relative-period building-block table produced by the {it:gteffects} option; see that option's description for the column layout.{p_end}
+
+{synopt:{it:Permutation inference}} When {cmd:permute()} is used: scalars {it:e(perm_p_{it:est})}, {it:e(perm_lb_{it:est})}/{it:e(perm_ub_{it:est})} (the 5th-95th percentile null band),
+{it:e(perm_sd_{it:est})}, and under {it:permtci} {it:e(perm_tlb_{it:est})}/{it:e(perm_tub_{it:est})}, for each requested estimand; run-level {it:e(perm_reps)}, {it:e(perm_completed)}, {it:e(perm_failed)},
+{it:e(perm_npossible)} (also as the string {it:e(perm_npossible_str)} for very large counts); macros {it:e(perm_method)} and {it:e(perm_stat)} (b or t); and the draw matrix {it:e(permdist)} (completed
+replications by estimand, returned for up to 10,000 draws).{p_end}
 
 {synopt:{it:e(escomp)}} Event-study composition diagnostics, one row per reported horizon (rows align one-for-one with the ES rows of {it:e(wdidmainresults)}; horizons without a surviving
 coefficient get no row). Columns: {it:ncohorts} (distinct treatment-onset values contributing), {it:nunits} (distinct units of {it:i} — equivalently, the number of unit-by-period
