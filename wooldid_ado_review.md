@@ -22,6 +22,36 @@ The B1-B23 campaign's lessons are codified in `review_process/` and `test/`; the
  
 
 
+### Help-file audit: wooldid.sthlp vs the current program (2026-07-28, three-auditor wave at HEAD f3b4602; full tables in scratchpad waves/sd_a1, sd_a2, sd_a3)
+
+**Overall verdict: the help file is in strong shape.** All 65 user options are documented and every stated incompatibility is enforced by a real gate (18 probed empirically with the documented rc); the e() Stored Results section has ZERO wrong names, wrong categories, or wrong presence conditions, with the new surfaces (b_es/V_es, gteffects' 15 columns, the entire permute family incl. t-scale semantics, roth_*) matching 1:1; and every numeric claim in the recently written sections checks out to the digit (permute's 1,000/10,000/add-one/percentile arithmetic measured exactly; the gteffects weighted-mean identity to 4.4e-16). The discrepancies: one outright-wrong sentence, a handful of refuted or stale prose claims, and missing documentation for behavior added this campaign.
+
+**WRONG (1 sentence):**
+- ~L819-820, replay section: "if a wooldid run fails, e() still holds the previous successful estimation ... so a replay at that point redisplays the earlier run." Stale since d349bb1: a failed call now sets a session marker and bare `wooldid` REFUSES with r(198) ("the stored results predate that failed call") until a successful run clears it. The premise (e() unchanged) is still true; the stated consequence is the opposite of what happens.
+
+**REFUTED / INACCURATE claims (probed):**
+- ~L349-351: saveplots "pass a directory through this string" - the option is syntax type `name`; `saveplots(subdir/stem)` exits r(198) "invalid name". Only plain stems work.
+- ~L901/L906: examples 8 and 9 carry a stray trailing ")" - example 8 fails verbatim with r(198) "option ) not allowed". (Also: no example #7; "quartiles" describes a 5-quantile lattice.)
+- ~L70: cluster documented "[numerical]" but the syntax accepts any varlist; a string cluster variable dies with a bare r(109) type mismatch rather than an informative refusal (except under permute(probabilities), which refuses cleanly).
+- ~L92: customweightmultiplier "[>=0 numerical]" - the >=0 domain is never enforced; negative multipliers pass silently.
+- L68: summary-table typo `semi:elasticitiy`. Stale header stamp ("version 1.3 2024-07-31"); "reghdfe version 5.7.3" stated but the code checks presence only.
+
+**Undocumented behavior (silent or new this campaign):**
+- esrelativeto > -1 under esf silently clamped to -1; contreatelasticitytype outside dydx/eyex/eydx/dyex silently coerced to dydx.
+- adversarial requires BOTH esprelength>=1 and espostlength>=1: the parse-level clear is SILENT (measured: espre(2) + espost 0 -> rc 0, no message, no pval); mid-run/per-SG cancellations DO print Cautions (the tranche-12 guards) but the help never says adversarial can be cancelled, and the promised 2-point-fit power note was never added.
+- permute(): the never-treated-must-be-plain-missing refusal (extended missings r459); the permreps>=20 parse floor; the completion-floor refusal being skipped under permexact.
+- espostlength(-999) (the post-period trip that wooldid's own Caution text recommends) is absent from the help, which says int>=0.
+- Under default safety, cfx plots for non-att estimands are not produced (gate on att-or-safety(off)); the help documents their naming without that requirement.
+- impvalues x adversarial and impvalues x customvce refusals appear in neither entry; makecfxplots' hard lattice()/cfxlattice() requirement is only implicit.
+- e() gaps: e(roth_ok) (added deliberately as the user-facing completion marker) missing from Stored Results; numpre per-subgroup variants; the makecfxplotsbysg per-SG cfx matrices; the joint-test entries read as unconditional but are gated on the jointtests option.
+
+**Index/cosmetic:**
+- The Options-by-Purpose table (~L66-93) omits gteffects, the entire permute family (7 options), and altmethod_adversarial; permreps/permexact/permstrata have no standalone entries; several newer options lack abbreviation highlighting (sub, perm, permpr, permts, permtc).
+- Line-64's never-treated parenthetical omits the anticipation/oostreatedcontrols adjustments and the timetrends second-period band (simplification, right in spirit); the subgroup name-length note omits the 7-digit makecfxplotsbysg tightening; the wdidmainresults/pwsgs column layouts are listed nowhere (so the poisson z-relabel is invisible - nothing contradicts, no claim exists).
+
+**Confirmed accurate (load-bearing samples):** verbose retention; the fastnose section end to end; all impvalues/pretrendpower/unconditionalse requirement lists; the permute and gteffects numeric surfaces; the saveplots file inventory (incl. the underscore pattern); the e(V) placeholder paragraph; the event_plot stubs and b_es repost recipe (SG rows do not collide).
+
+
 ### F6 permutation / randomization inference - COMPLETE (2026-07-27/28; see wooldid_solved_issues.md and review_process/f6_permutation_plan.md)
 Landed in eight commits (125bbd0, 86d37cb, e6b608a, 9f31b47, b544c55, e350220, 533052c, 099d93b): permute(shuffle) with permreps()/permexact and permstrata(); permute(probabilities) with the permprobs() grammar; permtstat and the inverted-t permtci; every check, caution, count, and output from the brief. Three-verifier wave clean: the inference reconstructs bitwise by hand (exact, strata, probabilities, and t-stat modes), the feature is bit-additive with the observed results untouched, and every failure path refuses with the observed results intact. perm_basic pins the e() surface in the battery; replay of a permutation run is byte-identical.
 
