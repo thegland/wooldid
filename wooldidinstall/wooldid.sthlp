@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.3 2024-07-31}{...}
+{* *! version 1.4 2026-07-28}{...}
 {vieweralsosee "reghdfe" "help reghdfe"}{...}
 {vieweralsosee "regress" "help regress"}{...}
 {vieweralsosee "ppmlhdfe" "help ppmlhdfe"}{...}
@@ -34,7 +34,8 @@ across subgroups, estimation of event study style estimates and related parallel
 continuous treatment (or treatment intensity) variable [experimental]. This suite also can produce event study plots, histograms of treatment effects by cohort, and plots of treatment
 effects across the distribution of a specified continuous treatment variable. Options for inference include inference using standard analytic clustered standard errors, inference using
 standard errors on average treatment effects that account for sampling variation in covariates (unconditional standard errors),
-and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
+Ibragimov and Muller (2010) style cluster-robust inference, and randomization (permutation) inference for settings - most importantly few treated clusters - where cluster-asymptotic
+inference is unreliable ({it:permute()}). A fast exploratory mode ({it:fastnose}) skips standard error estimation entirely for specification search.  {p_end}
 
 {pstd}{ul:Shortcuts:} {help wooldid##description:Description}, {help wooldid##options:Options}, {help wooldid##output:Working with Output},
 {help wooldid##comparison:Comparison with Related Estimators}, {help wooldid##examples:Examples},
@@ -61,21 +62,21 @@ at this link. {p_end}
 than to consist of treatment onset cohorts. Coarser cohort definitions tend to enable faster estimation, and you can specify coarse cohorts
  alongside unit-level fixed effects. Simulations suggest the estimator is most statistically efficient when {it:i} is set at the level at which you cluster. {p_end}
 {synopt : {it:t}}Time period identifier; must consist of integers greater than 0.{p_end}
-{synopt : {it:ttre}}Variable containing cohort-specific dates of treatment onset; missing indicates never-treated cohorts, cohorts treated before the sample begins are dropped. {it:ttre} must take a single value (or be missing on every row) within each unit of {it:i} over the estimation sample: {it:wooldid} builds relative time row by row from {it:ttre}, so a unit carrying different onsets on different rows - including an onset recorded only from the onset period onward, with missing values pre-treatment - would be silently split across cohorts. {it:wooldid} verifies this and exits with an informative error if it is violated (bypass with {it:safety(off)}). Onset times must also sit on the same grid as {it:t} - {it:t} minus {it:ttre} must be an integer wherever {it:ttre} is nonmissing (integer spacing is not required: biennial or five-year panels are fine). Fractional offsets previously survived to the estimation stage, where they either failed with opaque errors or silently mislabeled the onset period as pre-treatment; {it:wooldid} now rejects them at parse time (bypass with {it:safety(off)}). If every offending onset falls outside the usable estimation window (pre-sample, or beyond the last observed period), the rejection softens to a Caution, since such onsets are dropped or treated as never-treated downstream anyway. {p_end}
+{synopt : {it:ttre}}Variable containing cohort-specific dates of treatment onset; missing indicates never-treated cohorts, cohorts treated before the sample begins are dropped. Binary designs require a comparison group: some units must be never-treated or first treated after the estimation window (an informative error is raised otherwise; see {it:oostreatedcontrols}). Store {it:ttre} (and {it:t}) as {cmd:double} when onset codes are large: 8-digit calendar dates exceed float precision, so a float-stored onset variable is rounded before {it:wooldid} sees it, silently merging adjacent cohorts. {it:ttre} must take a single value (or be missing on every row) within each unit of {it:i} over the estimation sample: {it:wooldid} builds relative time row by row from {it:ttre}, so a unit carrying different onsets on different rows - including an onset recorded only from the onset period onward, with missing values pre-treatment - would be silently split across cohorts. {it:wooldid} verifies this and exits with an informative error if it is violated (bypass with {it:safety(off)}). Onset times must also sit on the same grid as {it:t} - {it:t} minus {it:ttre} must be an integer wherever {it:ttre} is nonmissing (integer spacing is not required: biennial or five-year panels are fine). Fractional offsets previously survived to the estimation stage, where they either failed with opaque errors or silently mislabeled the onset period as pre-treatment; {it:wooldid} now rejects them at parse time (bypass with {it:safety(off)}). If every offending onset falls outside the usable estimation window (pre-sample, or beyond the last observed period), the rejection softens to a Caution, since such onsets are dropped or treated as never-treated downstream anyway. {p_end}
 
 {phang} {ul:Options by Purpose:} {p_end}
 {synoptset 1 tabbed }{...}
-{synopt : {help wooldid##specifyestimand:Specifying the Estimand(s):}} {opt att} {opt att_it} {opt att_i} {opt att_itime} {opt semi:elasticitiy} {p_end}
+{synopt : {help wooldid##specifyestimand:Specifying the Estimand(s):}} {opt att} {opt att_it} {opt att_i} {opt att_itime} {opt semi:elasticity} {p_end}
 
-{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values} {opt fast:nose} {p_end}
+{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values} {opt fast:nose} {opt perm:ute(method)} {opt permreps(int)} {opt permex:act} {opt permstr:ata(variable)} {opt permpr:obs(spec)} {opt permts:tat} {opt permtc:i} {p_end}
 
 {synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem)} {opt replace} {opt sum:marystats}
 {opt pois:son} {opt poisexp:results}  {p_end}
 
 {synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt espre:length(int>=0)} {opt espost:length(int>=0)} {opt esr:elativeto(-int)}
- {opt joint:tests}   {opt adv:ersarial} {opt makep:lots} {opt oos:treatedcontrols(int>=0)} {opt antic:ipation(int>=0)} {opt pretrendpow:er(numlist)}  {p_end}
+ {opt joint:tests}   {opt adv:ersarial} {opt altmethod_adversarial} {opt makep:lots} {opt oos:treatedcontrols(int>=0)} {opt antic:ipation(int>=0)} {opt pretrendpow:er(numlist)}  {p_end}
 
-{synopt : {help wooldid##interactions:Subgroup Effects:}} {opt subgroups(variable[>=0 int])} {opt suppress:sgprimaryeffects}  {p_end}
+{synopt : {help wooldid##interactions:Subgroup Effects:}} {opt sub:groups(variable[>=0 int])} {opt suppress:sgprimaryeffects}  {p_end}
 
 {synopt : {help wooldid##continuous:Continuous Treatments:}} {opt contreat(variable[numerical])} {opt contreatelas:ticitytype(dydx, eydx, dyex, or eyex)}  {opt contreatw:ithin}
 {opt contreatp:oly(+int)} {opt lattice(variable[+int] OR latticetype latticenum)} {opt latticeig:noreweights} {opt makec:fxplots} {opt cfxlattice(variable[+int])}
@@ -90,7 +91,7 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 
 {synopt : {help wooldid##technical:Technical Features:}}
 {opt update} {opt customw:eightmultiplier(variable[>=0 numerical])}  {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
-{opt ver:bose} {opt emptycellsoverride} {opt safety(off)}   {opt oldsyntax}  {p_end}
+{opt ver:bose} {opt gte:ffects} {opt emptycellsoverride} {opt safety(off)}   {opt oldsyntax}  {p_end}
 
 
 
@@ -123,7 +124,7 @@ specified by the user. The overall average treatment effect would be obtained by
   (applying any sample weights). To target estimands other than the overall average treatment effect, this procedure can be modified by either
   introducing a set of weights (or modifying the pre-existing sample weights) when averaging the computed differences in the margins calculation or by restricting the sample so that the
   average only contains observations from a subgroup or time period of interest. The margins calculation can also be modified here to compute effects in terms of semi-elasticities.
-For more on the different estimand-types available, see {help wooldid##estimands:estimands}. {p_end}
+For more on the different estimand-types available, see {help wooldid##description:estimands}. {p_end}
  {pstd} With respect to inference, there are several approaches to standard error estimation available. The default estimates standard errors in the underlying regression and then obtains
  standard errors on the treatment effects produced by the margins calculation using the delta method. These errors are conditional standard errors in the sense that they are conditional
  on the data: the difference in fitted values potentially depends on the value of various covariates, and this approach takes these values as fixed when performing the margins calculation.
@@ -244,7 +245,8 @@ As such, this option should be slower to use on average. This option requires sp
 
 {phang}{opt customvce()}: Forces {it:wooldid} to switch to using either the {help regress} or {help poisson} command for underlying regression estimation,
 and then passes the user specified text without modification into the {it:vce()} option for these commands. This allows specifying a broader set of
-standard error calculation methods than allowed by the default high dimensional fixed effects estimation packages used by {it:wooldid}. {p_end}
+standard error calculation methods than allowed by the default high dimensional fixed effects estimation packages used by {it:wooldid}. Not compatible with {it:robust} or
+{it:cluster()}: specify the clustering or robustness desired inside the {it:vce()} text itself. {p_end}
 
 {phang}{opt imp:values}: Implements Ibragimov and Muller (2010) style cluster-robust inference for all estimates. The idea behind the Ibragimov and Muller approach is to compute
 cluster-specific treatment effect estimates, present their average as one's final treatment effect estimate, and conduct inference by t-testing the cluster-specific estimates against 0.
@@ -256,32 +258,15 @@ or (worse) cohort-time period cells. IM-style inference is not currently allowed
 {phang}{opt fast:nose}: Fast exploratory mode. Every {it:margins} call runs with {it:nose}, so no standard errors, test statistics, p-values, or confidence intervals are computed
 for any estimand: only point estimates are produced, the corresponding cells of the results tables display as missing (.), and the output carries the line "SEs and related materials
 are not estimated in fast mode." Intended for specification search on large panels, where the delta-method variance calculation inside {it:margins} dominates run time (measured
-speedups of roughly 2-4x on typical specifications, and far larger on poisson event-study runs, where fast mode completes in seconds configurations that otherwise run for tens of
+speedups of roughly 2-4x on typical specifications, and far larger on poisson event-study runs, where fast mode completes in seconds on configurations that otherwise run for tens of
 minutes); re-run the chosen specification without {it:fastnose} before reporting results. Under {it:fastnose}: {it:e(V)} is not posted ({it:e(properties)} is {it:b}), so {it:test},
 {it:lincom}, {it:esttab} standard errors, and anything else needing a variance-covariance matrix will refuse; {it:e(b_es_)}, {it:e(V_es_)}, and {it:e(numpre_)} are not returned, so
 {it:honestdid} and Roth-style diagnostics have no inputs; no joint tests of any kind are computed (including the subgroup homogeneity tests); the continuous-treatment-effects plot
 matrices carry only the point-estimate column, exactly as under {it:cfxplotnose}; and event-study plots are drawn without confidence bands. Not compatible with
-{it:unconditionalse}, {it:adversarial}, {it:jointtests}, {it:pretrendpower()}, or {it:impvalues} (each is refused with an error). Point estimates can differ from a full run in
+{it:unconditionalse}, {it:adversarial}, {it:jointtests}, {it:pretrendpower()}, {it:impvalues}, {it:permtstat}, or {it:permtci} (each is refused with an error). Point estimates can differ from a full run in
 roughly the last digit of precision (absolute differences on the order of 1e-15; relative differences are typically similar but can reach roughly 1e-13 on subgroup pairwise
 contrasts, whose differencing amplifies rounding, up to roughly 1e-14 under {it:timetrends}, and larger still in relative terms where an estimate is itself near zero), because
 {it:margins} follows a different computational path when the variance is skipped. {p_end}
-
-{phang}{opt gte:ffects}: Returns (and, for tables of up to 200 rows, prints) the individual cohort-by-relative-period effect estimates that every {it:wooldid} aggregate is built
-from, in {it:e(gteffects)} — one row per estimated {it:i}-by-relative-period cell, read directly off the underlying regression's coefficient vector at essentially zero additional
-computation. Columns: {it:i} (the cohort/unit identifier value), {it:onset} (that unit's effective treatment onset, after any {cmd:anticipation()} shift), {it:caltime} (the calendar
-period the cell covers), {it:relyr} (period relative to onset), {it:estimate}, {it:se}, {it:p}, {it:lb_95ci}, {it:ub_95ci}, {it:inwindow} (1 if the cell falls inside the reported
-event-study window), {it:nobs} (estimation-sample observations in the cell), and the cell's total estimation weight under each requested estimand ({it:w_att}, {it:w_att_it},
-{it:w_att_i}, {it:w_att_itime}; missing for estimands not requested). The weighted mean of {it:estimate} under any of these weight columns over the relevant cells reproduces the
-corresponding aggregate exactly, so the table supports arbitrary custom aggregations and is directly comparable to the group-time tables of {it:csdid} or {it:xthdidregress}
-(the cells are ATT(g,t)-style group-time effects when {it:i} indexes cohorts; with a fine unit-level {it:i} they are unit-by-period effects and the table can be large). Notes:
-standard errors are the regression's coefficient-level (conditional) VCE — {it:unconditionalse} and {it:impvalues} do not alter them; under {it:poisson} the estimates are on the
-linear-index (xb) scale ({it:poisexpresults} and {it:semielasticity} are not applied); under {it:timetrends} the coefficient-level variances are typically not identified and the
-{it:se} column is missing (degenerate zero variances are always reported as missing, never zero); with {cmd:subgroups()} a single full-sample table is returned; with time-varying
-{cmd:interactivecontrols()} the interaction coefficients absorb control variation and the cell-level reading is unreliable. Not available with {cmd:contreat()}, where the
-cohort-by-period interaction coefficients are dose-zero intercepts rather than treatment effects. Fully available under {it:fastnose} (the regression's own VCE is intact even
-though the {it:margins} stage skips variances), making {it:gteffects} the one inference surface that survives fast mode. Two reading notes: the weighted-mean identity itself
-remains exact even under time-varying {cmd:interactivecontrols()} (the caveat there concerns interpreting individual cells, not the aggregation); and when the reported
-event-study window has no post-treatment horizons (e.g. {cmd:espostlength(0)}), {it:inwindow} is 0 on every post-treatment row by construction. {p_end}
 
 {phang}{opt permute(method)}: Randomization (permutation) inference in the Conley-Taber spirit, for settings - most importantly few treated clusters - where cluster-asymptotic standard errors are unreliable. The observed
 estimation runs exactly as usual (full inference, display, plots); afterwards, wooldid re-randomizes which clusters carry which treatment-onset dates, re-estimates the requested estimands under each counterfactual
@@ -292,8 +277,9 @@ clusters must be strict subsets of strata); {cmd:permute(probabilities)} draws e
 for shuffle only, {cmd:permexact} (enumerate every distinct assignment; a caution prints above 1,000 assignments and enumeration is refused above 10,000). The number of possible assignments is always computed and
 returned, with a caution when {cmd:permreps()} exceeds 10 percent of it. Outputs per estimand: a two-sided permutation p-value (sampled draws use the add-one Monte-Carlo form; exact enumerations report the plain
 share, with the observed assignment a member - note that in symmetric designs the mirror-image assignment ties the observed estimate in absolute value, so exact p-values have a floor of 2/M); the 5th-95th
-percentile band of the permuted-effect distribution (a NULL BAND under no effect, not a confidence interval for the parameter); and the standard deviation of that distribution (labelled SD). The raw draws are in
-{it:e(permdist)}. Replications that fail to estimate are excluded and counted ({it:e(perm_failed)}), with a caution above 10 percent and a refusal when fewer than max(20, half) succeed. Draws consume the session
+percentile band of the permuted-effect distribution (a null band under no effect, not a confidence interval for the parameter); and the standard deviation of that distribution (labelled SD). The raw draws are in
+{it:e(permdist)}. {cmd:permreps()} must be at least 20. Replications that fail to estimate are excluded and counted ({it:e(perm_failed)}), with a caution above 10 percent and a refusal when fewer
+than max(20, half) succeed (exact enumerations are exempt from that floor). A degenerate null distribution (every completed draw equal) draws a caution. Draws consume the session
 random-number stream: {cmd:set seed} beforehand for reproducibility. Under {cmd:subgroups()} the permutation statistics cover the pooled estimands only (rep runs skip the subgroup machinery). With
 {cmd:contreat()} the dose stays with its unit and only onset timing is re-randomized: the null being tested is that timing is as-if random given dose. Permutation statistics cover the att-family estimands
 (the continuous-treatment ame quantities are not permuted in this version). Note also that reassigned onsets can change which periods are estimable in a given draw: each draw is the estimate wooldid
@@ -303,7 +289,7 @@ would compute under that counterfactual assignment, estimability screens include
 {phang}{opt permprobs(spec)}: The assignment-probability design for {cmd:permute(probabilities)}, structured as {cmd:(onsetvar level level ...)} followed by one {cmd:(clustervalue p p ...)} group per cluster.
 The first group names the actual timing variable and lists every in-sample onset level (never-treated is the level {cmd:.}) in the column order the probabilities use; each later group gives one cluster's
 probabilities over those levels (nonnegative, summing to 1). Every in-sample cluster value must appear exactly once. {cmd:permreps()} is required. The possible-assignment count reported is the product of the
-per-cluster support sizes; if the OBSERVED assignment has zero probability under the design, a caution notes that the p-value is a tail probability under that design distribution rather than a randomization
+per-cluster support sizes; if the observed assignment has zero probability under the design, a caution notes that the p-value is a tail probability under that design distribution rather than a randomization
 test. {p_end}
 
 {phang}{opt permtstat}: Randomize on t-ratios instead of raw estimates. Rep runs then go through the full inference path (slower: fast mode cannot be exploited, and requesting {it:fastnose} alongside is refused);
@@ -348,7 +334,7 @@ independence assumption.  {p_end}
 
 {phang}{opt save:plots(string)}: Save all graphs generated to .gph files beginning with the name specified in the option. Also saves .dta files beginning with the same
 name containing the data used to generate any requested event study plots. Graphs and datasets generated have a suffix appended to the name specifying the exact graph/dataset
-generated. By default, everything is saved to STATA's working directory, though you should be able to pass a directory through this string along with your filename.{p_end}
+generated. Everything is saved to Stata's working directory; the argument must be a plain name stem (paths are rejected by the option's syntax).{p_end}
 
 {phang}{opt replace}: When saving materials to the file names specified in {it:saveplots()}, overwrite any existing files with the specified names. {p_end}
 
@@ -359,7 +345,11 @@ pre-treatment period will also be shown. {p_end}
 
 {phang}{opt pois:son}: Implement the specified {it:wooldid} command using poisson regression, achieved by switching from the regression command {it:reghdfe} to {it:ppmlhdfe}. Treatment effects
 are presented in terms of differences in linear predictions (the poisson {it:predict(xb)} option). Poisson regression is especially useful in situations where one would like to use
-log(y) as an outcome, but where y contains natural 0s, as well as when treatment and control groups are only on parallel trends in proportions (e.g., one group is always 2x the other). {p_end}
+log(y) as an outcome, but where y contains natural 0s, as well as when treatment and control groups are only on parallel trends in proportions (e.g., one group is always 2x the other).
+Poisson estimation accepts pweights but not aweights (refused with an error). If {it:ppmlhdfe} fails on the initial specification, {it:wooldid} retries once with any time-trend,
+coarse-cohort-control, and continuous-treatment terms moved out of the absorbed-effects list into the regression itself (a caution prints); results are equivalent up to numerical
+implementation. A pre-existing variable named {it:_ppmlhdfe_d} is overwritten by {it:ppmlhdfe}'s own scaffolding on poisson runs and then removed by {it:wooldid}'s cleanup - treat
+that name as reserved in your data. {p_end}
 
 {phang}{opt poisexp:results}: When implementing poisson, present treatment effects in terms of differences in exponentiated linear predictions (the poisson "number of events" or {it:predict(n)}
 option). Results of this sort will thus not have a log-type interpretation. {p_end}
@@ -376,7 +366,8 @@ prior to treatment. Without {it:esfixedbaseperiod}, this option has no effect an
 {phang}{opt espre:length(integer)}: The number of pre-treatment relative time period-specific effects to be estimated. If any pre-treatment effects are requested and
 {it:esfixedbaseperiod} is specified, all relative time period effects between the {it:esrelativeto()} period and treatment onset will be presented.{p_end}
 
-{phang}{opt espost:length(integer)}: The number of post-treatment relative time period-specific effects to be estimated. {p_end}
+{phang}{opt espost:length(integer)}: The number of post-treatment relative time period-specific effects to be estimated. With {it:subgroups()} and {it:esprelength()} > 0, a value of
+0 is raised to 1 (a caution prints): subgroup estimation requires at least one post-treatment horizon. {p_end}
 
 {phang}{opt joint:tests}: Calculate joint statistical significance tests of all requested pre-treatment relative time period-specific effects. Caution: simulations suggest these
 tests tend to be particularly sensitive to whether you have a sufficient number of clusters in your sample for standard error estimation. {p_end}
@@ -438,7 +429,7 @@ treated cohorts' treatment periods to treated cohorts' average outcomes during a
 meaning that treated periods for a given cohort are compared to a reference period containing all pre-treatment observations for the cohort. If the user specifies the option
 {it:esfixedbaseperiod}, {it:wooldid} will switch to employing a fixed reference period, meaning that all treatment effect estimates will be formed by comparing treated cohorts' average outcomes
 in post-treatment periods to their outcomes in a particular pre-treatment reference period (specified in relative time period terms). By default, this pre-treatment reference period is the
-time period immediately prior to treatment (relative period -1), though the user can specify alternative behavior. For more on how this is implemented, see {help wooldid##discussion:discussion}.{p_end}
+time period immediately prior to treatment (relative period -1), though the user can specify alternative behavior. For more on how this is implemented, see {help wooldid##description:discussion}.{p_end}
 
 {pstd} With respect to which type of reference period should be used, fixed reference periods offer the virtue of transparency: all treated cohorts are compared to one reference period,
 which is the same for all cohorts in relative time terms. By contrast, pooled reference periods can be more opaque, with different cohorts having reference periods that contain
@@ -462,8 +453,8 @@ For the {it:att_i} and {it:att_itime} concepts, {it:att_it} type results will be
 {dlgtab:Subgroup Effects}
 
 {phang}{opt sub:groups()}: Specifies the subgroup (SG) variable, whose levels specify subgroups for which {it:wooldid} will compute subgroup specific estimates.
-The SG variable must consist of non-negative integer values (or missing values) and its levels must specify collections of cohorts i. For estimates to be valid, a given cohort i cannot
-be split across multiple subgroups. Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations. Because subgroup values are
+The SG variable must consist of non-negative integer values (or missing values) and its levels must specify collections of cohorts i. A given cohort i cannot be split across multiple
+subgroups: {it:wooldid} exits with an informative error if it is. Under {it:safety(off)} such a run proceeds using share weighting (see the subgroup discussion below). Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations. Because subgroup values are
 embedded in the names of stored results and plots, values 8 or more digits long can hit Stata's 31/32-character name limits and crash some option combinations with r(198); recode
 ID-style subgroup codes to small integers first (e.g., {cmd:egen newsg = group(oldsg)}).   {p_end}
 
@@ -482,8 +473,8 @@ for subgroup-specific estimates can fail when using clustered standard errors in
 {pstd} Each treated unit of {it:i} should lie wholly within one subgroup. Because subgroups never enter the regression itself (they only select and reweight the unit-by-period effect cells),
 a subgroup variable that varies {ul:within} a unit-by-period cell makes subgroup contrasts structurally unable to reflect within-cell subgroup differences, and {it:wooldid} exits with an
 informative error (bypass with {it:safety(off)}; the usual remedy is defining {it:i} at the finer level over which the subgroup varies, e.g. {it:egen newi = group(i sg)}). A subgroup variable
-that changes only over time within a unit is permitted, but note that for {it:att_i} and {it:att_itime} a straddling unit enters each subgroup weighted by its share of sample weight there
-rather than with equal unit weighting; {it:wooldid} prints a caution in that case. Observations with missing subgroup values remain allowed and belong to no subgroup. {p_end}
+that changes over time within a unit is likewise refused under default safety. With {it:safety(off)} such a run proceeds with share weighting - {it:att_i} and {it:att_itime} enter a split
+unit into each subgroup weighted by its share of sample weight there rather than with equal unit weighting, while by-subgroup {it:att} and {it:att_it} are unaffected - and a caution prints. Observations with missing subgroup values remain allowed and belong to no subgroup. {p_end}
 
 {pstd} A special case to consider is the difference-in-differences-in-differences (triple diff) case. In the triple diff case, all cohorts are categorized into two groups, with both groups
 existing among treated cohorts and control cohorts. The target estimand may be thought of as the difference in the diff-in-diff estimates obtained separately for each of the two groups. To
@@ -501,7 +492,7 @@ fixed effects (i.e., specifying {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}).
 (% change in y/unit change in continuous treatment), {it:dyex} gives the other semi-elasticity (change in y/% change in continuous treatment), and {it:dydx} is the default
 (not an elasticity). Note that successful estimation of these elasticities tends to require a larger sample, as well as y and contreat variables that are not sparsely distributed. {p_end}
 
-{phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option sets the option {it:safety} to off, turns off
+{phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option disables some of {it:safety}'s features (the estimability-relaxation checks; the data-integrity screens, such as onset constancy within units, still run unless {it:safety(off)} is given explicitly), turns off
 estimability checks that would otherwise cause {it:wooldid} to stop estimation in the absence of any untreated cohorts, and causes {it:wooldid} to skip sample cleaning routines that drop time
 periods for which a control cohort is not present.   {p_end}
 
@@ -552,7 +543,8 @@ Note that {it:makecfxplots} requires a continuous treatment ({it:contreat()}); p
 
 {phang}{opt cfxplott:ypes(pre post integers)}: A list of types of cfxplots to be produced. If {it:post} is among the types specified, plots will be produced giving
 treatment effects across the continuous treatment variable within the post-treatment period. If {it:pre} is among the types specified, plots will be produced within the pre-treatment period.
-If any integers are specified, plots will be produced just within the specified periods relative to treatment. If nothing is specified, the option post is assumed. {p_end}
+If any integers are specified, plots will be produced just within the specified periods relative to treatment. If nothing is specified, the option post is assumed. {it:pre} and
+relative-period integers outside the reported window require an event-study window: without {it:esfixedbaseperiod} or {it:esprelength()} > 0 they are dropped from the request. {p_end}
 
 {phang}{opt makecfxplotsbysg}: Produce continuous treatment effects plots for each group specified in the subgroup variable.   {p_end}
 
@@ -574,7 +566,7 @@ substantive assumptions. See more on this topic in the description section below
 the continuous treatment variable to always equal 0 outside of treated cohort-periods can be an appropriate way to handle cases where the variable is unknowable or undefined outside
 of treated cohort-periods. If this option is specified when the always 0 condition is not met, {it:wooldid} will return poorly identified estimates. {p_end}
 
-{pstd} {ul:On Specifying contreatcontrols() and lattice:} As discussed {help wooldid##discussion:here}, the regression equation {it:wooldid} adopts when estimating
+{pstd} {ul:On Specifying contreatcontrols() and lattice:} As discussed {help wooldid##description:here}, the regression equation {it:wooldid} adopts when estimating
 the effects of a continuous treatment variable is:
 Y_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt)) {p_end}
 
@@ -683,6 +675,24 @@ efficiency in the main regression or under certain other circumstances. {p_end}
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses, displays raw output from the regression estimated, and prints progress reports throughout the estimation process.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
 
+{phang}{opt gte:ffects}: Returns (and, for tables of up to 200 rows, prints) the individual cohort-by-relative-period effect estimates that every {it:wooldid} aggregate is built
+from, in {it:e(gteffects)} — one row per estimated {it:i}-by-relative-period cell, read directly off the underlying regression's coefficient vector at essentially zero additional
+computation. Columns: {it:i} (the cohort/unit identifier value), {it:onset} (that unit's effective treatment onset, after any {cmd:anticipation()} shift), {it:caltime} (the calendar
+period the cell covers), {it:relyr} (period relative to onset), {it:estimate}, {it:se}, {it:p}, {it:lb_95ci}, {it:ub_95ci}, {it:inwindow} (1 if the cell falls inside the reported
+event-study window), {it:nobs} (estimation-sample observations in the cell), and the cell's total estimation weight under each requested estimand ({it:w_att}, {it:w_att_it},
+{it:w_att_i}, {it:w_att_itime}; missing for estimands not requested). The weighted mean of {it:estimate} under any of these weight columns over the relevant cells reproduces the
+corresponding aggregate exactly, so the table supports arbitrary custom aggregations and is directly comparable to the group-time tables of {it:csdid} or {it:xthdidregress}
+(the cells are ATT(g,t)-style group-time effects when {it:i} indexes cohorts; with a fine unit-level {it:i} they are unit-by-period effects and the table can be large). Notes:
+standard errors are the regression's coefficient-level (conditional) VCE — {it:unconditionalse} and {it:impvalues} do not alter them; under {it:poisson} the estimates are on the
+linear-index (xb) scale ({it:poisexpresults} and {it:semielasticity} are not applied); under {it:timetrends} the coefficient-level variances are typically not identified and the
+{it:se} column is missing (degenerate zero variances are always reported as missing, never zero); with {cmd:subgroups()} a single full-sample table is returned; with time-varying
+{cmd:interactivecontrols()} the interaction coefficients absorb control variation and the cell-level reading is unreliable. Not available with {cmd:contreat()}, where the
+cohort-by-period interaction coefficients are dose-zero intercepts rather than treatment effects. Fully available under {it:fastnose} (the regression's own VCE is intact even
+though the {it:margins} stage skips variances), making {it:gteffects} the one inference surface that survives fast mode. If no cohort-by-period coefficients can be read off the
+fit (heavily collinear designs), no table is returned and a caution prints. Two reading notes: the weighted-mean identity itself
+remains exact even under time-varying {cmd:interactivecontrols()} (the caveat there concerns interpreting individual cells, not the aggregation); and when the reported
+event-study window has no post-treatment horizons (e.g. {cmd:espostlength(0)}), {it:inwindow} is 0 on every post-treatment row by construction. {p_end}
+
 {phang}{opt emptycellsoverride}: By default, {it:wooldid} tells Stata to drop interaction terms that correspond with empty cells, which is achieved by the command
 {it:set emptycells drop}, which improves estimation efficiency in this setting. This option overrides this behavior. This should only be of interest in conjunction
 with the option {it:verbose}. {p_end}
@@ -707,7 +717,7 @@ replaced with the suffix {it:post0}. This option reverts {it:wooldid} to using t
 The commands {it:est restore} and {it:est save} are compatible with {it:wooldid} for saving its output. The full set of {it:wooldid} output in e() can be viewed using the command
 {it:ereturn list}. {p_end}
 
-{pstd} The primary results are stored in the following matrices: {p_end}
+{pstd} The primary results are stored in the following matrices, scalars, and macros: {p_end}
 {synoptset 30 tabbed}{...}
 {synopt:{it:e(wdidmainresults)}} All primary and event study results.{p_end}
 
@@ -716,7 +726,7 @@ primary results has not been suppressed.{p_end}
 
 {synopt:{it:e(pwsgs)}} Pairwise differences between the subgroup-specific treatment effects, if subgroups are used.{p_end}
 
-{synopt:{it:e(b_es_{it:type})}, {it:e(V_es_{it:type})}} The event study coefficient vector and its {ul:full} variance-covariance matrix (carrying genuine off-diagonal covariances, unlike {it:e(V)}), relative-period-labeled as {it:pre#}/{it:post#} with the reference period omitted. Returned per estimand type: {it:att} (binary) and, with {cmd:contreat()}, {it:ame}, plus {it:att_it} / {it:ame_it} for the {it:att_it}, {it:att_i}, and {it:att_itime} estimands (which share a single event-study horizon internally). With {cmd:subgroups()}, per-subgroup versions {it:e(b_es_{it:type}_s{it:sgcase})} / {it:e(V_es_{it:type}_s{it:sgcase})} are returned as well. These matrices are valid inputs for {it:honestdid} (Rambachan-Roth robustness), and — after {it:ereturn post} — for {it:lincom} and {it:test}. They are not returned when a valid variance-covariance matrix is unavailable (e.g. under {cmd:impvalues}, or when the event-study standard errors are not identified).{p_end}
+{synopt:{it:e(b_es_{it:type})}, {it:e(V_es_{it:type})}} The event study coefficient vector and its {ul:full} variance-covariance matrix (carrying genuine off-diagonal covariances, unlike {it:e(V)}), relative-period-labeled as {it:pre#}/{it:post#} with the reference period omitted. Returned per estimand type: {it:att} (binary) and, with {cmd:contreat()}, {it:ame}, plus {it:att_it} / {it:ame_it} for the {it:att_it}, {it:att_i}, and {it:att_itime} estimands (which share a single event-study horizon internally). With {cmd:subgroups()}, per-subgroup versions {it:e(b_es_{it:type}_s{it:sgcase})} / {it:e(V_es_{it:type}_s{it:sgcase})} are returned as well. These matrices are valid inputs for {it:honestdid} (Rambachan-Roth robustness), and — after {it:ereturn post} — for {it:lincom} and {it:test}. They are not returned when a valid variance-covariance matrix is unavailable (e.g. under {cmd:impvalues} or {cmd:fastnose}, or when the event-study standard errors are not identified).{p_end}
 
 {synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods (relative year < 0) in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument.{p_end}
 
@@ -772,7 +782,8 @@ the test can be found in objects with names like {it:e(joint_pre_att_allsgssame)
 
 {synopt:R^2 measures} For standard estimation, these include e(r2), e(r2adj), e(r2_within), e(r2_withinadj). For poisson estimation, these include e(r2pseud), a pseudo-R^2 measure. {p_end}
 
-{synopt:{it:e(histogramestimates)}} The cohort i-specific treatment effects used to generate histograms, when requested.{p_end}
+{synopt:{it:e(histogramestimates)}} The cohort i-specific treatment effects used to generate histograms, when requested. Row names carry internal temporary-variable identifiers,
+not cohort values; the histogram itself is the intended output.{p_end}
 
 {synopt:{it:e(summarystats)}} Summary statistics on the outcome variable and (if present) continuous treatment variable, when requested. Some of the most commonly referenced summary
 statistics from this matrix are also returned directly as scalars into e(). {p_end}
@@ -814,10 +825,11 @@ to represent the missing reference period. {p_end}
 {pstd} {ul:Compatible Post-Estimation Commands:} {it:estimates save}, {it:estimates store}, {it:estimates restore}, {it:esttab}, and similar commands. {p_end}
 
 {pstd} {ul:Replay:} Typing {it:wooldid} by itself after a successful estimation redisplays the full stored results from {it:e()} - the header, summary statistics, all results tables,
-the joint, adversarial, and pre-trend power diagnostics - byte-for-byte as originally shown. Replay works after {it:estimates restore} of a stored {it:wooldid} model, after
+the joint, adversarial, and pre-trend power diagnostics, and the event-study composition, cohort-by-period, and randomization-inference blocks when present - byte-for-byte as originally shown. Replay works after {it:estimates restore} of a stored {it:wooldid} model, after
 {it:cleanmatrices}, and with no dataset in memory. It does not re-draw plots, does not repeat estimation-time Caution messages (which describe the estimation run, not the results),
-and accepts no options: any non-empty command line - including {it:wooldid, update} - is processed as a normal call. Note that if a {it:wooldid} run fails, {it:e()} still holds the
-previous successful estimation (standard Stata behavior), so a replay at that point redisplays the earlier run; check {it:e(cmdline)} if in doubt. Replay requires results posted by a
+and accepts no options: any non-empty command line - including {it:wooldid, update} - is processed as a normal call. If a {it:wooldid} call fails - at the parse stage or later - {it:e()} still holds the previous successful estimation
+(standard Stata behavior), but replay then refuses with an informative error until a {it:wooldid} call completes successfully: redisplaying results that predate the failed call would
+be misleading. Replay requires results posted by a
 {it:wooldid} version with replay support; internally, the display state travels in hidden {it:e(wdid_*)} macros, which are implementation details and not part of the documented
 {it:e()} surface. {p_end}
 
@@ -895,15 +907,21 @@ period 2 periods before treatment):{p_end}
 
 {p 10 10}   {cmd:wooldid y i t ttre, subgroups(ttre)}
 
+{phang}7) Event study with a fixed reference period, treating treatment as anticipated one period before its recorded onset, with Roth (2022) pre-trend power diagnostics
+at 50 and 80 percent power:{p_end}
+
+{p 10 10}   {cmd:wooldid y i t ttre, att cluster(i) espre(3) espost(3) esfixedbaseperiod anticipation(1) pretrendpower(50 80)}
+
 {phang}8) Difference-in-differences with a treatment intensity variable (one that is 0 outside the treatment period), estimated using a stepwise-linear function and a lattice with 5 quantiles
 (formed based on the treated group's treatment period), and generating continuous treatment effects plots for the post treatment period:{p_end}
 
-{p 10 10}   {cmd:wooldid y i t ttre, contreat(intensity) contreatcontrols(untreatedZero) makecfxplot lattice(baseTreatedPost 5))}
+{p 10 10}   {cmd:wooldid y i t ttre, contreat(intensity) contreatcontrols(untreatedZero) makecfxplot lattice(baseTreatedPost 5)}
 
-{phang}9) Difference-in-differences with a continuous treatment variable that varies within all cohorts, with a lattice containing 5 quartiles (formed separately by treatment group and
-by period), controlling for the continuous treatment variable by treatment group and by time period, with continuous treatment effects plots for the pre-treatment period:{p_end}
+{phang}9) Difference-in-differences with a continuous treatment variable that varies within all cohorts, with a lattice containing 5 quantiles (formed separately by treatment group and
+by period), controlling for the continuous treatment variable by treatment group and by time period, with continuous treatment effects plots for the pre-treatment period (which
+require an event-study window - here via {it:esprelength}):{p_end}
 
-{p 10 10}   {cmd:wooldid y i t ttre, contreat(contreatvar) contreatcontrols(byTreated byTime) makecfxplot lattice(byTreatedByTime 5) cfxplottypes(pre))}
+{p 10 10}   {cmd:wooldid y i t ttre, contreat(contreatvar) contreatcontrols(byTreated byTime) espre(3) espost(3) makecfxplot lattice(byTreatedByTime 5) cfxplottypes(pre)}
 
 {phang}10) Event study followed by a Rambachan & Roth (2023) HonestDiD pre-trends sensitivity analysis, using the full event-study variance-covariance matrix wooldid returns. (Requires the {stata ssc install honestdid:honestdid} package. A fixed reference period is recommended so the reference is a single omitted period.):{p_end}
 
@@ -914,6 +932,16 @@ by period), controlling for the continuous treatment variable by treatment group
 {p 10 10}   {cmd:matrix V = e(V_es_att)}
 
 {p 10 10}   {cmd:honestdid, numpre(`=e(numpre_att)') b(b) vcov(V) delta(rm) mvec(0.5(0.5)2)}
+
+{phang}11) Fast exploratory event study (point estimates only), also returning the cohort-by-relative-period building-block table:{p_end}
+
+{p 10 10}   {cmd:wooldid y i t ttre, att cluster(i) espre(2) espost(2) fastnose gteffects}
+
+{phang}12) Randomization inference: permute treatment-onset dates across clusters, holding onset-group counts fixed, with 500 replications (set the seed for reproducibility):{p_end}
+
+{p 10 10}   {cmd:set seed 12345}
+
+{p 10 10}   {cmd:wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(500)}
 
 
 
@@ -956,6 +984,8 @@ under development, so assistance finding and correcting bugs is much appreciated
 {title:Citations}
 
 {phang} Borusyak, Kirill, Xavier Jaravel, and Jann Spiess. Revisiting Event Study Designs: Robust and Efficient Estimation. Working Paper, 2023. {p_end}
+
+{phang} Rambachan, Ashesh and Jonathan Roth. A More Credible Approach to Parallel Trends. Review of Economic Studies, 2023, 90(5): 2555-2591. {p_end}
 
 {phang} Roth, Jonathan. Pretest with Caution: Event-Study Estimates after Testing for Parallel Trends. American Economic Review: Insights, 2022, 4(3): 305-322. {p_end}
 
