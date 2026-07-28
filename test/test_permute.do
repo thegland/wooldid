@@ -75,7 +75,7 @@ qui drop badstr
 preserve
 qui gen str8 sclus = "c" + string(i)
 cap wooldid y i t ttre, att cluster(sclus) permute(probabilities) permreps(50) permprobs((ttre 5 .) (1 .5 .5))
-xrc P6k1 198 _rc
+xrc P6k1 109 _rc
 restore
 cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(10)
 xrc P6l1 198 _rc
