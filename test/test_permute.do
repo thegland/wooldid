@@ -1,6 +1,6 @@
-* Targeted suite for F6 permutation inference. COMMIT-A SCOPE: option plumbing and
-* validation gates only - the engine refuses loudly until it lands (P7 pins that
-* refusal and will be rewritten when the engine commit arrives).
+* Targeted suite for F6 permutation inference: validation gates (P6*), the engine's
+* exact/sampled/strata inference (P1-P4), its e() surface and additivity (P7, P11),
+* cautions (P8), replay (P9), and determinism (P10).
 * Run from test/:  "<stata>" -e do test_permute.do   -> expect PERMUTE_ALL_PASS
 clear all
 set more off
@@ -79,14 +79,156 @@ cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50)
 xrc P6g1 459 _rc
 restore
 
-* ---- P7 (commit-A pin, REWRITTEN when the engine lands): a fully valid spec passes
-* every screen and hits the loud engine-not-yet-enabled refusal ----
-qui log using perm_p7.txt, text replace name(pm)
+* ---- helper panel: 6 clusters, 3 treated at t=4, strong effect ----
+cap program drop mkperm
+program define mkperm
+  args nclus ntreat eff
+  clear
+  set seed 4242
+  set sortseed 4242
+  qui set obs `nclus'
+  qui gen i = _n
+  qui gen ttre = cond(_n <= `ntreat', 4, .)
+  qui expand 8
+  qui bysort i: gen t = _n
+  qui gen y = `eff'*(t >= ttre & ttre < .) + 0.1*i + rnormal()
+end
+
+* ---- P2: exact enumeration, M = C(6,3) = 20; strong effect -> p = 2/20 (the
+* observed assignment and its mirror complement) ----
+mkperm 6 3 3
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact
+if _rc != 0 {
+  dis as error "P2 FAIL: rc=" _rc
+  global pf = $pf + 1
+}
+else {
+  if e(perm_npossible) != 20 | e(perm_completed) != 20 {
+    dis as error "P2 FAIL: npossible=" e(perm_npossible) " completed=" e(perm_completed)
+    global pf = $pf + 1
+  }
+  if abs(e(perm_p_att) - 0.10) > 1e-12 {
+    dis as error "P2 FAIL: exact p=" e(perm_p_att) " (expected 2/20)"
+    global pf = $pf + 1
+  }
+  if abs(e(perm_p_att)*20 - round(e(perm_p_att)*20)) > 1e-9 {
+    dis as error "P2 FAIL: exact p not a multiple of 1/M"
+    global pf = $pf + 1
+  }
+}
+
+* ---- P1: placebo (no effect) -> exact p large; the p-value machinery has power both ways ----
+mkperm 6 3 0
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact
+if _rc != 0 | e(perm_p_att) < 0.2 {
+  dis as error "P1 FAIL: rc=" _rc " placebo exact p=" e(perm_p_att)
+  global pf = $pf + 1
+}
+
+* ---- P3: sampled p is Monte-Carlo consistent with the exact p on the same panel ----
+mkperm 6 3 3
+qui wooldid y i t ttre, att cluster(i) permute(shuffle) permexact
+local pex = e(perm_p_att)
+set seed 31415
+qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(200)
+if abs(e(perm_p_att) - `pex') > 0.08 {
+  dis as error "P3 FAIL: sampled p=" e(perm_p_att) " vs exact `pex'"
+  global pf = $pf + 1
+}
+
+* ---- P4: strata - M is the within-strata product; every level keeps its per-stratum count ----
+clear
+set seed 55
+set sortseed 55
+qui set obs 8
+qui gen i = _n
+qui gen st = cond(_n <= 4, 1, 2)
+qui gen ttre = cond(mod(_n,2) == 1, 5, .)
+qui expand 8
+qui bysort i: gen t = _n
+qui gen y = 2*(t >= ttre & ttre < .) + 0.3*st + rnormal()
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact permstrata(st)
+if _rc != 0 | e(perm_npossible) != 36 | e(perm_completed) != 36 {
+  dis as error "P4 FAIL: rc=" _rc " npossible=" e(perm_npossible) " completed=" e(perm_completed) " (expected 6x6)"
+  global pf = $pf + 1
+}
+
+* ---- P7: the full e() surface on a sampled run ----
+mkperm 10 5 3
+set seed 2718
+cap noi wooldid y i t ttre, att att_it cluster(i) permute(shuffle) permreps(30)
+if _rc != 0 {
+  dis as error "P7 FAIL: rc=" _rc
+  global pf = $pf + 1
+}
+else {
+  local bad 0
+  if "`e(perm_method)'" != "shuffle" local ++bad
+  if e(perm_reps) != 30 local ++bad
+  if e(perm_completed) + e(perm_failed) != 30 local ++bad
+  if e(perm_npossible) != 252 local ++bad
+  foreach ee in att att_it {
+    if !(e(perm_p_`ee') >= 0 & e(perm_p_`ee') <= 1) local ++bad
+    if !(e(perm_lb_`ee') <= e(perm_ub_`ee')) local ++bad
+    if !(e(perm_sd_`ee') > 0 & e(perm_sd_`ee') < .) local ++bad
+  }
+  cap confirm matrix e(permdist)
+  if _rc != 0 local ++bad
+  else if rowsof(e(permdist)) != e(perm_completed) | colsof(e(permdist)) != 2 local ++bad
+  if `bad' != 0 {
+    dis as error "P7 FAIL: `bad' e() surface check(s)"
+    global pf = $pf + 1
+  }
+}
+
+* ---- P8: cautions - enumeration size and reps-vs-possible ----
+qui log using perm_p8.txt, text replace name(pm)
+mkperm 6 3 3
 cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50)
-local rc7 = _rc
 qui log close pm
-if `rc7' != 198 | strpos(fileread("perm_p7.txt"), "engine is not yet") == 0 {
-  dis as error "P7 FAIL: rc=`rc7' or the engine-pending refusal is missing"
+if strpos(fileread("perm_p8.txt"), "exceeds 10% of the") == 0 {
+  dis as error "P8 FAIL: reps>10%-of-possible caution missing"
+  global pf = $pf + 1
+}
+
+* ---- P9: replay reprints the permutation block ----
+mkperm 6 3 3
+qui wooldid y i t ttre, att cluster(i) permute(shuffle) permexact
+qui log using perm_p9.txt, text replace name(pm)
+cap noi wooldid
+qui log close pm
+if _rc != 0 | strpos(fileread("perm_p9.txt"), "Randomization Inference") == 0 {
+  dis as error "P9 FAIL: rc=" _rc " or replay block missing"
+  global pf = $pf + 1
+}
+
+* ---- P10: determinism under a set seed ----
+mkperm 6 3 3
+set seed 777
+qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(25)
+local pd1 = e(perm_p_att)
+set seed 777
+qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(25)
+if `pd1' != e(perm_p_att) {
+  dis as error "P10 FAIL: same seed gave different p"
+  global pf = $pf + 1
+}
+
+* ---- P11: additivity - the observed results are untouched by the permutation pass ----
+mkperm 6 3 3
+qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
+tempname bb vv
+matrix `bb' = e(b)
+matrix `vv' = e(V)
+local nn = e(N)
+mkperm 6 3 3
+qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20)
+if mreldif(`bb', e(b)) != 0 | mreldif(`vv', e(V)) != 0 | e(N) != `nn' {
+  dis as error "P11 FAIL: observed results moved under permute (b " mreldif(`bb', e(b)) ", V " mreldif(`vv', e(V)) ")"
+  global pf = $pf + 1
+}
+if "`e(cmd)'" != "wooldid" {
+  dis as error "P11 FAIL: e(cmd)=[`e(cmd)']"
   global pf = $pf + 1
 }
 

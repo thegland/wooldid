@@ -34,6 +34,7 @@ version 16.0
     wooldid_display , part(1)
     wooldid_display , part(roth)
     wooldid_display , part(2)
+    wooldid_display , part(perm)
     dis as result  " "
     exit
   }
@@ -78,6 +79,68 @@ version 16.0
     }
   }
   if `wdsh_rc' != 0 exit `wdsh_rc'
+
+  * F6: permutation inference - runs only after a fully successful estimation. the
+  * worker set wdp_on; re-running wooldid_validate materializes every normalized
+  * option here (the S5 c_local blanket), from which the rep command line is built.
+  * the observed results are stored, the rep loop re-runs wooldid quietly on permuted
+  * onset assignments, then the observed results are restored, the permutation
+  * summaries are appended to e() (this shell is eclass), and part(perm) prints them
+  if "`wdp_on'" == "1" {
+    qui wooldid_validate `0'
+    * rep option string: keep everything that shapes the point estimates; strip
+    * display/diagnostic/plot work and the permutation options themselves; reps run
+    * under fastnose (only coefficients are consumed). subgroups are stripped: v1
+    * permutation statistics cover the pooled estimands only
+    local wdp_ro `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `poisexpresults' `robust' `ccnoabsorb' `latticeignoreweights' `emptycellsoverride' fastnose
+    if "`cluster'" != "" local wdp_ro `wdp_ro' cluster(`cluster')
+    if `"`customvce'"' != "" local wdp_ro `wdp_ro' customvce(`customvce')
+    if "`fe'" != "" local wdp_ro `wdp_ro' fe(`fe')
+    if `"`coarsecohortcontrols'"' != "" local wdp_ro `wdp_ro' coarsecohortcontrols(`coarsecohortcontrols')
+    if "`ccc_absorb'" != "" local wdp_ro `wdp_ro' ccc_absorb(`ccc_absorb')
+    if "`controls'" != "" local wdp_ro `wdp_ro' controls(`controls')
+    if "`interactivecontrols'" != "" local wdp_ro `wdp_ro' interactivecontrols(`interactivecontrols')
+    if "`customweightmultiplier'" != "" local wdp_ro `wdp_ro' customweightmultiplier(`customweightmultiplier')
+    if "`contreat'" != "" local wdp_ro `wdp_ro' contreat(`contreat') contreatpoly(`contreatpoly')
+    if `"`contreatcontrols'"' != "" local wdp_ro `wdp_ro' contreatcontrols(`contreatcontrols')
+    if `"`lattice'"' != "" local wdp_ro `wdp_ro' lattice(`lattice')
+    if "`semielasticity'" == "eydx" local wdp_ro `wdp_ro' semielasticity
+    if "`contreat'" != "" & "`contreatelasticitytype'" != "" local wdp_ro `wdp_ro' contreatelasticitytype(`contreatelasticitytype')
+    if `esprelength' != 0 local wdp_ro `wdp_ro' esprelength(`esprelength')
+    if "`esposttrip'" == "no" local wdp_ro `wdp_ro' espostlength(-999)
+    else if `espostlength' != 0 local wdp_ro `wdp_ro' espostlength(`espostlength')
+    local wdp_ro `wdp_ro' esrelativeto(`esrelativeto')
+    if "`safety'" != "" local wdp_ro `wdp_ro' safety(`safety')
+    if `regtol' != 9 local wdp_ro `wdp_ro' regtol(`regtol')
+    if `oostreatedcontrols' != 0 local wdp_ro `wdp_ro' oostreatedcontrols(`oostreatedcontrols')
+    if `anticipation' != 0 local wdp_ro `wdp_ro' anticipation(`anticipation')
+    local wdp_est `att' `att_it' `att_i' `att_itime'
+    if "`wdp_est'" == "" local wdp_est att
+    tempname wdpobs wdpdist
+    qui est sto `wdpobs'
+    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist')
+    local wdp_rc = _rc
+    qui est restore `wdpobs'
+    cap est drop `wdpobs'
+    global WOOLDID_LASTRC
+    if `wdp_rc' != 0 exit `wdp_rc'
+    * append the permutation summaries to the restored observed results
+    ereturn local perm_method `permute'
+    ereturn hidden local wdid_permest `wdp_est'
+    ereturn scalar perm_reps = `wdp_r_reps'
+    ereturn scalar perm_completed = `wdp_r_done'
+    ereturn scalar perm_failed = `wdp_r_fail'
+    ereturn scalar perm_npossible = `wdp_r_npd'
+    ereturn local perm_npossible_str `wdp_r_nps'
+    foreach wdpe in `wdp_est' {
+      ereturn scalar perm_p_`wdpe' = `wdp_r_p_`wdpe''
+      ereturn scalar perm_lb_`wdpe' = `wdp_r_lb_`wdpe''
+      ereturn scalar perm_ub_`wdpe' = `wdp_r_ub_`wdpe''
+      ereturn scalar perm_sd_`wdpe' = `wdp_r_sd_`wdpe''
+    }
+    if `wdp_r_done' <= 10000 cap ereturn matrix permdist = `wdpdist'
+    wooldid_display , part(perm)
+  }
 end
 
 cap prog drop wooldid_worker
@@ -127,6 +190,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * extract the regression weights variable and setup macros for handling weights; if no weight variable, create one. require weights to be non-negative everywhere
   local w `exp'
+
+  * F6: hand the shell what it needs to orchestrate the permutation rep loop (the
+  * loop lives in the shell for compiled-size reasons; the c_local blanket excludes
+  * the if/weight pieces, so they are echoed here)
+  if "`permute'" != "" {
+    c_local wdp_on 1
+    c_local wdp_if `"`if'"'
+    c_local wdp_wt `weight'
+    c_local wdp_wx `w'
+  }
   local weightinserter [`weight' = `w']
   if "`w'" == "" {
     tempvar w
@@ -4093,7 +4166,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
   if "`permute'" != "" {
-    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') ifr(`if')
+    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ifr(`if')
     if _rc != 0 error _rc
   }
 
@@ -4506,7 +4579,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) ifr(string asis)]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ifr(string asis)]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -4523,6 +4596,10 @@ version 16.0
   }
   if "`cw'" != "" {
     dis as error "Error: permute() is not compatible with contreatwithin: randomization inference reassigns onset timing across clusters, which requires a comparison group."
+    error 198
+  }
+  if "`os'" == "1" {
+    dis as error "Error: permute() is not compatible with oldsyntax."
     error 198
   }
   if `permreps' < 0 {
@@ -4610,10 +4687,169 @@ version 16.0
     error 459
   }
 
-  * commit-A guard: validation passed, but the randomization engine has not landed yet
-  dis as error "Error: permute() passed validation, but the permutation engine is not yet enabled in this build."
-  error 198
 end
+
+
+*** F6: the permutation engine. builds the cluster->onset map, generates assignments
+*** (mata: wooldid_permx), runs the rep loop as nested quiet wooldid calls on a
+*** permuted onset column, and hands the summary statistics back to the shell via
+*** c_local (the shell restores the observed results and posts them to e())
+cap prog drop wooldid_permrun
+prog def wooldid_permrun
+version 16.0
+  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) repopts(string asis) wtype(string) wexp(string) ifr(string asis)]
+
+  * observed statistics come off the still-active observed e(). stored as SCALARS:
+  * a local's decimal round-trip re-parses one ulp off, which breaks the exact test's
+  * observed-is-a-member property (measured: b >= local-copy-of-b evaluates FALSE)
+  tempname wdpo1 wdpo2 wdpo3 wdpo4
+  local ec 0
+  foreach ee in `estimands' {
+    local ++ec
+    scalar `wdpo`ec'' = _b[main_`ee']
+  }
+
+  * one row per cluster: its onset level and (optional) stratum
+  tempvar smp
+  if `"`ifr'"' != "" {
+    qui gen byte `smp' = (`ifr')
+    qui replace `smp' = 0 if `smp' >= .
+  }
+  else qui gen byte `smp' = 1
+  qui replace `smp' = 0 if missing(`clus')
+  tempname mpfr
+  frame put `clus' `ttrevar' `permstrata' if `smp', into(`mpfr')
+  frame `mpfr' {
+    qui bysort `clus': keep if _n == 1
+    qui count
+    local wdpnclus = r(N)
+    if "`permstrata'" == "" {
+      tempvar onestr
+      qui gen byte `onestr' = 1
+      local permstrata `onestr'
+    }
+    qui sort `permstrata' `clus'
+    qui gen double __wdpassign = .
+  }
+
+  * assignments + counts (mata): fills the C x R matrix, sets wdp_R, the possible-
+  * assignment count (double + string), and caution flags
+  tempname wdpassign
+  mata: wooldid_permx("`mpfr'", "`ttrevar'", "`permstrata'", `permreps', ("`permexact'" != ""), "`wdpassign'")
+  if "`wdp_err'" != "" {
+    dis as error "`wdp_err'"
+    error 198
+  }
+  if "`wdp_caut1'" != "" dis as text "Caution: `wdp_caut1'"
+  if "`wdp_caut2'" != "" dis as text "Caution: `wdp_caut2'"
+
+  * link the map into the data once; each rep refreshes the onset column from it
+  tempvar lnk repons
+  qui frlink m:1 `clus', frame(`mpfr') generate(`lnk')
+  local ndone 0
+  local nfail 0
+  tempname res
+  matrix `res' = J(`wdp_R', `: word count `estimands'', .)
+  local wtif
+  if "`wtype'" != "" local wtif [`wtype'=`wexp']
+  if `"`ifr'"' != "" local wtif `wtif' if (`ifr')
+  local repcall `y' `i' `t'
+  * statistic-path consistency: draws are estimated under fastnose, whose point
+  * estimates differ from the full run's in the last digits (the F9 contract), so the
+  * comparison statistic comes from a rep-0 fastnose run of the TRUE assignment - this
+  * keeps the exact test's observed-is-a-member property bitwise. the display still
+  * shows the full run's estimate
+  cap qui wooldid `repcall' `ttrevar' `wtif' , `repopts'
+  if _rc == 0 {
+    local ec 0
+    foreach ee in `estimands' {
+      local ++ec
+      cap scalar `wdpo`ec'' = _b[main_`ee']
+    }
+  }
+  forval r = 1/`wdp_R' {
+    frame `mpfr': qui replace __wdpassign = el("`wdpassign'", _n, `r')
+    cap drop `repons'
+    qui frget `repons' = __wdpassign, from(`lnk')
+    cap qui wooldid `repcall' `repons' `wtif' , `repopts'
+    local badrep 0
+    if _rc != 0 local badrep 1
+    if `badrep' == 0 {
+      local ec 0
+      foreach ee in `estimands' {
+        local ++ec
+        cap matrix `res'[`r', `ec'] = _b[main_`ee']
+        if _rc != 0 local badrep 1
+      }
+    }
+    if `badrep' == 0 local ++ndone
+    else local ++nfail
+  }
+  cap drop `lnk'
+  cap drop `repons'
+  frame drop `mpfr'
+
+  if `ndone' < max(20, `wdp_R'/2) & "`permexact'" == "" {
+    dis as error "Error: only `ndone' of `wdp_R' permutation replications estimated successfully; too few for inference. Check whether reassigned onset configurations are frequently inestimable on these data."
+    error 459
+  }
+  if `nfail' > 0 & `nfail' > 0.1*`wdp_R' dis as text "Caution: `nfail' of `wdp_R' permutation replications failed to estimate and were excluded."
+
+  * summaries per estimand: add-one two-sided p (exact: plain share - the observed
+  * assignment is a member of the enumeration), 5th/95th percentile band, SD
+  tempname rsfr
+  tempname distk
+  matrix `distname' = J(`ndone', `: word count `estimands'', .)
+  local ec 0
+  foreach ee in `estimands' {
+    local ++ec
+    frame create `rsfr' double s
+    frame `rsfr' {
+      qui set obs `wdp_R'
+      qui replace s = el("`res'", _n, `ec')
+      qui drop if missing(s)
+      qui count if abs(s) >= abs(`wdpo`ec'')
+      local nex = r(N)
+      qui count
+      local nuse = r(N)
+      _pctile s, p(5 95)
+      local lb = r(r1)
+      local ub = r(r2)
+      qui sum s
+      local sdv = r(sd)
+    }
+    forval q = 1/`=rowsof(`distname')' {
+      * dense-pack the completed draws column-by-column below
+    }
+    frame drop `rsfr'
+    if "`permexact'" != "" local p_`ee' = `nex'/`nuse'
+    else local p_`ee' = (1 + `nex')/(`nuse' + 1)
+    c_local wdp_r_p_`ee' `p_`ee''
+    c_local wdp_r_lb_`ee' `lb'
+    c_local wdp_r_ub_`ee' `ub'
+    c_local wdp_r_sd_`ee' `sdv'
+  }
+  * dense permdist matrix (completed rows only), built once from res
+  local rr 0
+  forval r = 1/`wdp_R' {
+    if !missing(el("`res'", `r', 1)) {
+      local ++rr
+      local ec 0
+      foreach ee in `estimands' {
+        local ++ec
+        matrix `distname'[`rr', `ec'] = el("`res'", `r', `ec')
+      }
+    }
+  }
+  matrix colnames `distname' = `estimands'
+
+  c_local wdp_r_reps `wdp_R'
+  c_local wdp_r_done `ndone'
+  c_local wdp_r_fail `nfail'
+  c_local wdp_r_npd `wdp_npd'
+  c_local wdp_r_nps `wdp_nps'
+end
+
 
 
 cap prog drop wooldid_ptpcheck
@@ -5197,6 +5433,20 @@ version 16.0
     else dis as text "  (`gtrows' rows; table not printed - see e(gteffects))"
   }
   }
+  * F6: permutation-inference block - existence-gated on e(perm_method), so replay
+  * reproduces it and older stores print nothing
+  if "`part'" == "perm" {
+    if "`e(perm_method)'" != "" {
+      dis as result " "
+      dis as result "Randomization Inference (permute(`e(perm_method)')): `e(perm_completed)' of `e(perm_reps)' replications completed; `e(perm_npossible_str)' possible assignments."
+      dis as text "Two-sided permutation p-values; the interval is the 5th-95th percentile band of the permuted-effect distribution (a null band, not a parameter CI); SD is the permuted-effect standard deviation."
+      foreach wdpe in `e(wdid_permest)' {
+        dis as result "  `wdpe': estimate " %10.0g e(b)[1, colnumb(e(b), "main_`wdpe'")] "   p " %6.4f e(perm_p_`wdpe') "   null band [" %10.0g e(perm_lb_`wdpe') ", " %10.0g e(perm_ub_`wdpe') "]   SD " %10.0g e(perm_sd_`wdpe')
+      }
+      dis as result " "
+    }
+  }
+
 end
 
 * F11: event-study plots, moved out of wooldid_worker (per-program size ceiling). reads
@@ -5496,5 +5746,128 @@ void wooldid_gtx(string scalar gtiv, string scalar gttv, string scalar gttf,
     out = sort(out, (1, 4))
     st_matrix(outname, out)
     st_matrixcolstripe(outname, (J(15, 1, ""), ("i", "onset", "caltime", "relyr", "estimate", "se", "p", "lb_95ci", "ub_95ci", "inwindow", "nobs", "w_att", "w_att_it", "w_att_i", "w_att_itime")'))
+}
+end
+
+
+*** F6: assignment generation for permutation inference. fills <assignname> (C x R,
+*** frame row order) and c_locals: wdp_R, wdp_npd/wdp_nps (possible-assignment count,
+*** double and string), wdp_caut1/2 (cautions), wdp_err (fatal message, caller raises)
+cap mata: mata drop wooldid_permx()
+mata:
+void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
+                   real scalar reps, real scalar exact, string scalar assignname)
+{
+    real matrix D, A, blockperms
+    real colvector ons, str, idx, levels, counts, v
+    real scalar C, S, si, lnM, M, R, r, j, k, capexact, capwarn
+    string scalar nps
+    st_local("wdp_err", "")
+    st_local("wdp_caut1", "")
+    st_local("wdp_caut2", "")
+    string scalar curfr
+    curfr = st_framecurrent()
+    st_framecurrent(fr)
+    ons = st_data(., onsv)
+    str = st_data(., strv)
+    st_framecurrent(curfr)
+    C = rows(ons)
+    // possible-assignment count: product over strata of multiset-permutation counts
+    lnM = 0
+    for (si = 1; si <= rows(uniqrows(str)); si++) {
+        v = select(ons, str :== uniqrows(str)[si])
+        lnM = lnM + lnfactorial(rows(v))
+        levels = uniqrows(v)
+        for (k = 1; k <= rows(levels); k++) {
+            lnM = lnM - lnfactorial(sum(v :== levels[k] :| (v :>= . :& levels[k] :>= .)))
+        }
+    }
+    M = (lnM < 700 ? round(exp(lnM)) : .)
+    if (lnM < 34) nps = strofreal(round(exp(lnM)), "%20.0f")
+    else nps = strofreal(exp(lnM - floor(lnM/ln(10))*ln(10)), "%9.4f") + "e+" + strofreal(floor(lnM/ln(10)), "%3.0f")
+    st_local("wdp_npd", strofreal(M, "%20.0f"))
+    st_local("wdp_nps", strtrim(nps))
+    capexact = 10000
+    capwarn = 1000
+    if (exact) {
+        if (M >= . | M > capexact) {
+            st_local("wdp_err", "Error: permexact requires enumerating every assignment, but there are " + strtrim(nps) + " (ceiling: " + strofreal(capexact) + "). Use permreps().")
+            return
+        }
+        if (M > capwarn) st_local("wdp_caut1", "permexact is enumerating " + strtrim(nps) + " assignments (over " + strofreal(capwarn) + "); this may be slow.")
+        R = M
+    }
+    else {
+        R = reps
+        if (M < . & reps > 0.1*M) st_local("wdp_caut2", "permreps(" + strofreal(reps) + ") exceeds 10% of the " + strtrim(nps) + " possible assignments; consider permexact.")
+    }
+    st_local("wdp_R", strofreal(R))
+    A = J(C, R, .)
+    if (exact) {
+        // enumerate per-stratum multiset permutations, then take the cartesian product
+        A = wooldid_permx_enum(ons, str)
+    }
+    else {
+        for (r = 1; r <= R; r++) {
+            v = ons
+            for (si = 1; si <= rows(uniqrows(str)); si++) {
+                idx = selectindex(str :== uniqrows(str)[si])
+                v[idx] = jumble(ons[idx])
+            }
+            A[., r] = v
+        }
+    }
+    st_matrix(assignname, A)
+}
+
+real matrix wooldid_permx_enum(real colvector ons, real colvector str)
+{
+    real matrix A, B, S1
+    real colvector idx, sub
+    real scalar si, n1, n2, a, b
+    string colvector ustr
+    // per-stratum enumerations, combined by cartesian product
+    A = J(rows(ons), 0, .)
+    for (si = 1; si <= rows(uniqrows(str)); si++) {
+        idx = selectindex(str :== uniqrows(str)[si])
+        S1 = wooldid_permx_msp(sort(ons[idx], 1))
+        if (cols(A) == 0) {
+            A = J(rows(ons), cols(S1), .)
+            for (b = 1; b <= cols(S1); b++) A[idx, b] = S1[., b]
+        }
+        else {
+            n1 = cols(A)
+            n2 = cols(S1)
+            B = J(rows(ons), n1*n2, .)
+            for (a = 1; a <= n1; a++) {
+                for (b = 1; b <= n2; b++) {
+                    B[., (a-1)*n2 + b] = A[., a]
+                    B[idx, (a-1)*n2 + b] = S1[., b]
+                }
+            }
+            A = B
+        }
+    }
+    return(A)
+}
+
+real matrix wooldid_permx_msp(real colvector v)
+{
+    real matrix R, S
+    real colvector rest, lv
+    real scalar k, j
+    // all distinct permutations of multiset v (v sorted), columns = permutations
+    if (rows(v) == 1) return(v)
+    lv = uniqrows(v)
+    R = J(rows(v), 0, .)
+    for (k = 1; k <= rows(lv); k++) {
+        j = selectindex(v :== lv[k] :| (v :>= . :& lv[k] :>= .))[1]
+        if (j == rows(v)) rest = v[|1 \ j-1|]
+        else if (j == 1) rest = v[|2 \ .|]
+        else rest = v[|1 \ j-1|] \ v[|j+1 \ .|]
+        S = wooldid_permx_msp(rest)
+        R = R, (J(1, cols(S), lv[k]) \ S)
+    }
+    return(R)
 }
 end
