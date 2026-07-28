@@ -21,51 +21,12 @@ The B1-B23 campaign's lessons are codified in `review_process/` and `test/`; the
 ### Please work on these items:
 
 
-
-### Adjacent findings from the 2026-07-26 B16-main assessment wave (logged, not acted on)
-- **timetrends + adversarial returns a missing p in every cell** (rc 0) — RECLASSIFIED (2026-07-26, b16m_a3 run2 + confirmed unchanged by the landed cut/planting fix c0e17f8): the earlier off-by-two hypothesis was WRONG. Root cause: under `timetrends`, the final `qui test `testconstructor'` DROPS EVERY CONSTRAINT (r(drop)=1, r(df)=0), so F and p are missing. This happens in the POOLED regime too and with PLAIN adversarial (no altmethod, no esf, no reference planting involved) — `adversarial` is a silent no-op under `timetrends` in every regime measured (n09/n10/n11/n14/g03 probes). The cut fix did repair the fitted LINE under timetrends (n11 line (0,0) -> (-0.151, 0.824)); only the p is dead. Needs its own item: likely the projected-line constraints are collinear with the cohort trend terms the test conditions on — diagnose whether the test should target trend-adjusted contrasts or simply refuse with a Caution under timetrends.
-- **2-point altmethod fits have no power against pre-period non-linearity** (zero residuals by construction) — intentional to keep allowing them; worth one sentence in the help when the fix wave touches the sthlp.
-
-### Findings from the 2026-07-26 minor-items wave (logged, not acted on)
-- **SG joint-test returns are macros while their pooled siblings are scalars** (`ereturn local joint_horiz_s<sg>` at ~L3491-3494 vs `ereturn scalar` for the pooled joint tests) — looks accidental; converting to scalars is trivial but changes the e() surface (battery dumps `e(macros)`), so it wants its own small pre-registered wave. The sthlp was patched to document current behavior (macros) in the meantime.
-- **e(converged) is documented but never returned:** the worker harvests `converged` into a local (~L1134) but no `ereturn` ships it, on any path. One-word fix (add to the pass-through ereturn loop at ~L3458-3463) if wanted; the sthlp entry was removed for now — revert that doc hunk if the code fix is preferred.
-- **The `o.` omission marker defeats the SG truerow match** (proximate trigger of the fixed label-shift bug): the strip handles `bn.<sgvar>`/`.<sgvar>` but not the omitted-marker forms, so an all-omitted per-sg continuous pre-margins round is treated as "no pre row". Fixing it would ADD a (currently missing) all-omitted pretreatment:ame row to the SG tables — a dimension/value change, own ticket.
-- **poisson + subgroups + event-study windows is pathologically slow** (>12 min on the battery panel; pre-existing; fastnose is the workaround). Worth profiling someday.
-
-
-
-### A list of minor items sits below. For these, please implement fixes for these issues. Since they are simpler, you can use just 1 subagent for tehse items, rather than 3. Feel free to add more scrutiny to these though if anything turns out to be non-innocuous or more complicated than things look. 
 - **Internal ttre tempvar is float:** odd calendar codes >2^24 (YYYYMMDD style) round at the gen site (r(461); parent-identical). A gen double would change existing behavior for such data — wants its own careful wave. *(ASSESSED 2026-07-26 (m8_ttrefloat at 3f323a3): DEFERRED per the provably-inert mandate — and the item's premise is WRONG in a way that RAISES its severity to the major class (this is the ttre twin of the `_i` pooling bug fixed in 8c5bfd7). Measured: the r(461) fires only on sparse t grids; on dense YYYYMMDD-style grids the current build runs rc 0 and SILENTLY MERGES cohorts whose onsets float-round together (att -11% biased with a fabricated pre-trend spike; -64% under esf), and half-integer codes below 2^24 shift too; anticipation() can flip a wrong panel to accidentally-correct. A 4-site gen double prototype (L200 primary, L248 tp1, L670/L799 modified_ttre) is ready in waves/m8_ttrefloat: 17/17 float-exact configs bit-identical two-build, and large-code runs become byte-identical to their small-code recodes — but shipping MOVES rc-0 results (wrong -> correct), so it needs author graduation, plus a decision on the timetrends companion defect (raw t ~2e7 makes the i.i##c.t trend columns numerically inert on BOTH builds — not curable by storage type; center t or refuse loudly), plus optionally a validate-side loudness floor (float(ttre)!=ttre => Caution/error) as the do-no-harm minimum.)*
 
-
-### STILL OPEN, awaiting graduation (from the mint assessment, rated above the item it was found under)
-- **The esfixedbaseperiod-branch estimability drop (L429-431 class) can delete the very reference period a cohort was retained for, on CLEAN data with DEFAULT options** (realistic late-entering control group): safety on -> misdiagnosing r(322) ("...Specify contreatwithin..." on data with no continuous treatment); safety(off) -> silent att -1.01 where truth is +3.9. The pooled branch is immune (its controlcheck keys on _t==., which provably cannot remove a reference row). Suggested fix: re-verify refperiodobserved (or fold reference rows into controlcheck) after the L431 drop and remove affected cohorts with a message. Prototypes/evidence in waves/mint_a1; the landed mint fix verifier confirmed this branch is byte-identical pre/post 0c03010, so the finding stands exactly as assessed.
+Let's implement this with the gen double approach and create a tempvar version of t that is centered for use with the time trends - unless that would be harmful for regular values of t. 
 
 
 
-
-
-
-
-------------------------------------------------------
------- DO NOT WORK ON THINGS BELOW THIS LINE ---------
---- ITEMS TO ADDRESS IN DUE TIME ---
-
-
-
-
-
-
-### F6. Permutation / Conley–Taber inference for few *treated* clusters
-WCB itself degrades when the number of *treated* clusters is very small (MacKinnon–Webb) — the classic 1-treated-state policy evaluation. A permutation option (reassign placebo treatment timing across control clusters, build the null distribution of the ATT estimate) covers this gap; Conley–Taber (2011) is the citable framework. Cost: full re-estimation per draw (reghdfe makes this tolerable; gate behind `reps()`), and design decisions about staggered-timing permutation schemes. 
-
-Let's implement this, once again taking advantage of fast-mode style functionality (since only the coefficient). For permutation testing, let's offer a number of different approaches to doing randomization inference. 
-
-
-
----
-### S1. Treat syntax-parsed option locals as read-only; derive working copies
-B7 (cfxplotnose/cfxlattice overwritten mid-loop, silently truncating later estimands' results) and B4 (`ll` reused as an IM CI bound, corrupting e(ll)) were both shared-mutable-local bugs — inevitable in a 3,500-line single program where every local is visible everywhere. A simple discipline eliminates the class: never assign to a local that `syntax` created; when a section needs a variant (an option rewritten for margins, a default filled in), derive a section-prefixed copy (the B7 fix's `cfxseopt`/`cfxlatticeplot` pattern). A one-pass audit of every `local <syntaxoption> ...` assignment left in the file would find any remaining instances. Longer-term, factoring major sections (cfx plots, IM inference, the adversarial machinery, results display) into subprograms would give each its own local namespace and make this structural rather than disciplinary — it would also enable F11's replay refactor.
 
 
 
@@ -77,7 +38,29 @@ Multiple confirmed leak-on-error behaviors: `set emptycells drop` never restored
 
 
 
----
+
+------------------------------------------------------
+------ DO NOT WORK ON THINGS BELOW THIS LINE ---------
+--- ITEMS TO ADDRESS IN DUE TIME ---
+
+### For the final feature we will be adding in this sweep, we have a bit of a big one. To start, please build a detailed implementation plan for how to safely introduce this feature. Do not delegate this planning work to subagents - we need our full attention here!
+
+### F6. Permutation / Conley–Taber inference for few *treated* clusters
+Your suggestion: WCB itself degrades when the number of *treated* clusters is very small (MacKinnon–Webb) — the classic 1-treated-state policy evaluation. A permutation option (reassign placebo treatment timing across control clusters, build the null distribution of the ATT estimate) covers this gap; Conley–Taber (2011) is the citable framework. Cost: full re-estimation per draw (reghdfe makes this tolerable; gate behind `reps()`), and design decisions about staggered-timing permutation schemes. 
+
+My brief: Let's implement this, once again taking advantage of fast-mode style functionality (since only the coefficients matter here). Please start by imposing a check that clusters are subsets of treatment onset groups (i.e., levels of ttre). Please also impose checks that impvalues is not also requested, that unconditionalse is not specified, and that contreatwithin is not specified. For permutation testing, let's offer a number of different approaches to doing randomization inference. For one approach, re-randomize clusters to levels of ttre (including untreated), holding constant the number of clusters in each level of ttre. When doing this, allow users to specify a number of reps or to specify 'exact'. If they specify exact, calculate all possible assignments - but issue a caution if the number of assignments exceeds 1000. If they specify a number of reps, just rerandomize each time (sampling with replacement) - but issue a caution if the number of reps specified is >10% of the number of possible assignments, and always return the number of possible assignments (and the number of reps) in the output. Second, allow an alternative approach to randomizations where users pass a strata variable. Clusters will be strict subsets of a given stratum. When randomizing with this variable passed, only allow swapping of ttre among clusters that appear in the same strata. This should have the effect of forcing treatment onset groups (levels of ttre) to retain the same composition with respect to the strata (e.g., forcing each level of ttre to have the same number of large clusters vs small clusters, etc.). Ensure that the exact vs reps() system works here also. Finally, allow a third approach to randomization where users specify clusters' probability of falling in any treatment onset group (i.e., level of ttre), and then build randomizations by sampling from those probabilities. Users should be allowed to pass these probabilities as a string, structured as follows: "(ttre x y z .) (c1 .25 .25 .25 .25) (c2 .25 .25 .25 .25) ... (cN .25 .25 .25 .25)". In this sample string, the first parenthetical always begins with the name of the ttre variable (here listed as ttre, but the user should pass the actual name of their ttre variable) followed by each level of the ttre variable in some order (in my example, the ttre variable has 4 levels - x, y, z, and ., so 3 treatment onset dates and untreated). The ensuing parens are levels of the cluster variable, where c1 is the first value of the cluster variable, c2 is the second value, and so on, until the final Nth value of the cluster variable cN is listed. In each paren group after the first, the structure is (cluster_level probabilities). The probabilities I listed here are all example probabilities (in the example, always a uniform distribution across the different levels of ttre), but in theory a user could specify any valid set of probabilities that sum to 1. The first probability corresponds with the first level of ttre listed in the ttre paren (in the example, x), and so on. For implementing this, insist the user always specify reps(), but still provide the same info and cautions about how many cases can possibly be constructed for the exact tests. Finally, regardless of which method of randomization is used, please produce not just p-values, but also confidence intervals and SEs (of sorts). Please by default give the 5th and 95th percentiles of the observed permutation effect distribution for the CI, and the sd of the permutation effect distribution for the SE (labelling it as the SD, of course). Please give the user the option to more formally request an inverted t-stat style CI though. Finally, when doing these randomizations, by default, please use the 'fastnose' mode and use literal coefficients for randomization purposes. But please give users the option to randomize on t-stats (despite that it will take longer since fastnose features cannot be exploited). 
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Appendix: verification environment & evidence
 
