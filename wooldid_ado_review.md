@@ -19,49 +19,16 @@ The B1-B23 campaign's lessons are codified in `review_process/` and `test/`; the
 
 
 ### Please work on these items:
+ 
 
 
-- **Internal ttre tempvar is float:** odd calendar codes >2^24 (YYYYMMDD style) round at the gen site (r(461); parent-identical). A gen double would change existing behavior for such data — wants its own careful wave. *(ASSESSED 2026-07-26 (m8_ttrefloat at 3f323a3): DEFERRED per the provably-inert mandate — and the item's premise is WRONG in a way that RAISES its severity to the major class (this is the ttre twin of the `_i` pooling bug fixed in 8c5bfd7). Measured: the r(461) fires only on sparse t grids; on dense YYYYMMDD-style grids the current build runs rc 0 and SILENTLY MERGES cohorts whose onsets float-round together (att -11% biased with a fabricated pre-trend spike; -64% under esf), and half-integer codes below 2^24 shift too; anticipation() can flip a wrong panel to accidentally-correct. A 4-site gen double prototype (L200 primary, L248 tp1, L670/L799 modified_ttre) is ready in waves/m8_ttrefloat: 17/17 float-exact configs bit-identical two-build, and large-code runs become byte-identical to their small-code recodes — but shipping MOVES rc-0 results (wrong -> correct), so it needs author graduation, plus a decision on the timetrends companion defect (raw t ~2e7 makes the i.i##c.t trend columns numerically inert on BOTH builds — not curable by storage type; center t or refuse loudly), plus optionally a validate-side loudness floor (float(ttre)!=ttre => Caution/error) as the do-no-harm minimum.)*
-
-Let's implement this with the gen double approach and create a tempvar version of t that is centered for use with the time trends - unless that would be harmful for regular values of t. 
-
-
-
-
-
-
-
-### S6. A capture-wrapped worker with a cleanup epilogue (elevates B18/B22)
-Multiple confirmed leak-on-error behaviors: `set emptycells drop` never restored, temp frames left as the current frame on mid-run failure, `__marginsmodel`/`___wooldidfullmodel` stranded in the estimates dir, `_ppmlhdfe_d` left in the data on aborts between estimation and cleanup. The standard structural fix is the wrapper pattern: `wooldid` becomes a thin shell that snapshots session state (emptycells, current frame), calls `capture noisily wooldid_worker ...`, then unconditionally restores state and drops temp estimates/frames before re-raising the error. One contained refactor retires the whole B18/B22 family and makes every future mid-run error safe by default.
-
-
-
-
+### F6 permutation / randomization inference - COMPLETE (2026-07-27/28; see wooldid_solved_issues.md and review_process/f6_permutation_plan.md)
+Landed in eight commits (125bbd0, 86d37cb, e6b608a, 9f31b47, b544c55, e350220, 533052c, 099d93b): permute(shuffle) with permreps()/permexact and permstrata(); permute(probabilities) with the permprobs() grammar; permtstat and the inverted-t permtci; every check, caution, count, and output from the brief. Three-verifier wave clean: the inference reconstructs bitwise by hand (exact, strata, probabilities, and t-stat modes), the feature is bit-additive with the observed results untouched, and every failure path refuses with the observed results intact. perm_basic pins the e() surface in the battery; replay of a permutation run is byte-identical.
 
 
 ------------------------------------------------------
 ------ DO NOT WORK ON THINGS BELOW THIS LINE ---------
 --- ITEMS TO ADDRESS IN DUE TIME ---
-
-### Policy decisions requested (2026-07-27, from the S6 verification wave - measured, not speculative)
-- **P1: reserved-name guard for `_ppmlhdfe_d`?** Measured: on a poisson run, ppmlhdfe silently OVERWRITES a pre-existing user variable named `_ppmlhdfe_d` (rc 0, no message), and wooldid's normal success-path cleanup then deletes it - silent data destruction on a CLEAN run, upstream of any epilogue. Proposed: a validate-time refusal when the variable pre-exists (with a marker so wooldid's own retained copies from verbose runs still pass); fallback: document the name as reserved in the sthlp.
-- **P2: `__marginsmodel` / `___wooldidfullmodel` are de facto reserved estimate names.** A user's own store under either name is destroyed by any wooldid run (on success by the worker's own stores; on ANY failure - even a typo'd option - by the epilogue's ungated `cap est drop __marginsmodel`). Gate the epilogue drops on a created-this-run flag, or simply document the names as reserved?
-- **P3: should `wooldid, update` clear the replay-failure marker?** Today a successful update clears WOOLDID_LASTRC, so a bare `wooldid` after {fail -> update} replays results that predate the failed call. Gating the clear to successful ESTIMATION only would close it.
-
-### Parked open findings (compact; full detail in wooldid_solved_issues.md entries and the scratchpad waves; re-delete if parking was intended)
-- **esf-branch estimability drop deletes reference periods on CLEAN data, DEFAULT options** (from the mint assessment, rated above that item; prototypes in waves/mint_a1) - awaiting graduation.
-- **adversarial is a silent no-op under timetrends** (test drops every constraint; root-caused; all regimes) - needs its own item.
-- Minor candidates: SG joint tests are macros vs pooled scalars; e(converged) never shipped; the o.-marker truerow fix (adds a row - own ticket); poisson+sg+ES slowness; ptp internal crashes silently swallowed (roth_ok detects, no console signal).
-
-### For the final feature we will be adding in this sweep, we have a bit of a big one. To start, please build a detailed implementation plan for how to safely introduce this feature. Do not delegate this planning work to subagents - we need our full attention here!
-
-### F6. Permutation / Conley–Taber inference for few *treated* clusters
-Your suggestion: WCB itself degrades when the number of *treated* clusters is very small (MacKinnon–Webb) — the classic 1-treated-state policy evaluation. A permutation option (reassign placebo treatment timing across control clusters, build the null distribution of the ATT estimate) covers this gap; Conley–Taber (2011) is the citable framework. Cost: full re-estimation per draw (reghdfe makes this tolerable; gate behind `reps()`), and design decisions about staggered-timing permutation schemes. 
-
-My brief: Let's implement this, once again taking advantage of fast-mode style functionality (since only the coefficients matter here). Please start by imposing a check that clusters are subsets of treatment onset groups (i.e., levels of ttre). Please also impose checks that impvalues is not also requested, that unconditionalse is not specified, and that contreatwithin is not specified. For permutation testing, let's offer a number of different approaches to doing randomization inference. For one approach, re-randomize clusters to levels of ttre (including untreated), holding constant the number of clusters in each level of ttre. When doing this, allow users to specify a number of reps or to specify 'exact'. If they specify exact, calculate all possible assignments - but issue a caution if the number of assignments exceeds 1000. If they specify a number of reps, just rerandomize each time (sampling with replacement) - but issue a caution if the number of reps specified is >10% of the number of possible assignments, and always return the number of possible assignments (and the number of reps) in the output. Second, allow an alternative approach to randomizations where users pass a strata variable. Clusters will be strict subsets of a given stratum. When randomizing with this variable passed, only allow swapping of ttre among clusters that appear in the same strata. This should have the effect of forcing treatment onset groups (levels of ttre) to retain the same composition with respect to the strata (e.g., forcing each level of ttre to have the same number of large clusters vs small clusters, etc.). Ensure that the exact vs reps() system works here also. Finally, allow a third approach to randomization where users specify clusters' probability of falling in any treatment onset group (i.e., level of ttre), and then build randomizations by sampling from those probabilities. Users should be allowed to pass these probabilities as a string, structured as follows: "(ttre x y z .) (c1 .25 .25 .25 .25) (c2 .25 .25 .25 .25) ... (cN .25 .25 .25 .25)". In this sample string, the first parenthetical always begins with the name of the ttre variable (here listed as ttre, but the user should pass the actual name of their ttre variable) followed by each level of the ttre variable in some order (in my example, the ttre variable has 4 levels - x, y, z, and ., so 3 treatment onset dates and untreated). The ensuing parens are levels of the cluster variable, where c1 is the first value of the cluster variable, c2 is the second value, and so on, until the final Nth value of the cluster variable cN is listed. In each paren group after the first, the structure is (cluster_level probabilities). The probabilities I listed here are all example probabilities (in the example, always a uniform distribution across the different levels of ttre), but in theory a user could specify any valid set of probabilities that sum to 1. The first probability corresponds with the first level of ttre listed in the ttre paren (in the example, x), and so on. For implementing this, insist the user always specify reps(), but still provide the same info and cautions about how many cases can possibly be constructed for the exact tests. Finally, regardless of which method of randomization is used, please produce not just p-values, but also confidence intervals and SEs (of sorts). Please by default give the 5th and 95th percentiles of the observed permutation effect distribution for the CI, and the sd of the permutation effect distribution for the SE (labelling it as the SD, of course). Please give the user the option to more formally request an inverted t-stat style CI though. Finally, when doing these randomizations, by default, please use the 'fastnose' mode and use literal coefficients for randomization purposes. But please give users the option to randomize on t-stats (despite that it will take longer since fastnose features cannot be exploited). 
-
-
-
 
 
 
