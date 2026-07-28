@@ -88,11 +88,14 @@ version 16.0
   * summaries are appended to e() (this shell is eclass), and part(perm) prints them
   if "`wdp_on'" == "1" {
     qui wooldid_validate `0'
+    * permtci inverts the t-ratio permutation distribution, so it implies permtstat
+    if "`permtci'" != "" & "`permtstat'" == "" local permtstat permtstat
     * rep option string: keep everything that shapes the point estimates; strip
     * display/diagnostic/plot work and the permutation options themselves; reps run
     * under fastnose (only coefficients are consumed). subgroups are stripped: v1
     * permutation statistics cover the pooled estimands only
-    local wdp_ro `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `poisexpresults' `robust' `ccnoabsorb' `latticeignoreweights' `emptycellsoverride' fastnose
+    local wdp_ro `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `poisexpresults' `robust' `ccnoabsorb' `latticeignoreweights' `emptycellsoverride'
+    if "`permtstat'" == "" local wdp_ro `wdp_ro' fastnose
     if "`cluster'" != "" local wdp_ro `wdp_ro' cluster(`cluster')
     if `"`customvce'"' != "" local wdp_ro `wdp_ro' customvce(`customvce')
     if "`fe'" != "" local wdp_ro `wdp_ro' fe(`fe')
@@ -118,7 +121,7 @@ version 16.0
     if "`wdp_est'" == "" local wdp_est att
     tempname wdpobs wdpdist
     qui est sto `wdpobs'
-    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist')
+    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist')
     local wdp_rc = _rc
     qui est restore `wdpobs'
     cap est drop `wdpobs'
@@ -132,11 +135,22 @@ version 16.0
     ereturn scalar perm_failed = `wdp_r_fail'
     ereturn scalar perm_npossible = `wdp_r_npd'
     ereturn local perm_npossible_str `wdp_r_nps'
+    ereturn local perm_stat = cond("`permtstat'" != "", "t", "b")
     foreach wdpe in `wdp_est' {
       ereturn scalar perm_p_`wdpe' = `wdp_r_p_`wdpe''
       ereturn scalar perm_lb_`wdpe' = `wdp_r_lb_`wdpe''
       ereturn scalar perm_ub_`wdpe' = `wdp_r_ub_`wdpe''
       ereturn scalar perm_sd_`wdpe' = `wdp_r_sd_`wdpe''
+      if "`permtci'" != "" {
+        * inverted-t CI: observed b +/- (95th pctile of the permuted |t|) x observed se
+        local wdptb = _b[main_`wdpe']
+        local wdpts = _se[main_`wdpe']
+        if `wdpts' < . & `wdpts' > 0 & `wdp_r_q_`wdpe'' < . {
+          ereturn scalar perm_tlb_`wdpe' = `wdptb' - `wdp_r_q_`wdpe''*`wdpts'
+          ereturn scalar perm_tub_`wdpe' = `wdptb' + `wdp_r_q_`wdpe''*`wdpts'
+        }
+        else dis as text "Caution: the inverted-t CI for `wdpe' is unavailable (no usable observed standard error)."
+      }
     }
     if `wdp_r_done' <= 10000 cap ereturn matrix permdist = `wdpdist'
     wooldid_display , part(perm)
@@ -4166,7 +4180,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
   if "`permute'" != "" {
-    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') ifr(`if')
+    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') ifr(`if')
     if _rc != 0 error _rc
   }
 
@@ -4579,7 +4593,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) ifr(string asis)]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) ifr(string asis)]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -4602,10 +4616,8 @@ version 16.0
     dis as error "Error: permute() is not compatible with oldsyntax."
     error 198
   }
-  * temporary refusals: these arrive with the follow-up engine commits; until then
-  * they must refuse loudly rather than silently running a different method
-  if "`ts'" != "" | "`tc'" != "" {
-    dis as error "Error: permtstat and permtci are not yet enabled in this build."
+  if ("`ts'" != "" | "`tc'" != "") & "`fn'" != "" {
+    dis as error "Error: permtstat/permtci randomize on t-statistics, which fastnose does not compute."
     error 198
   }
   if `permreps' < 0 {
@@ -4716,7 +4728,7 @@ end
 cap prog drop wooldid_permrun
 prog def wooldid_permrun
 version 16.0
-  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) repopts(string asis) wtype(string) wexp(string) ifr(string asis)]
+  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis)]
 
   * observed statistics come off the still-active observed e(). stored as SCALARS:
   * a local's decimal round-trip re-parses one ulp off, which breaks the exact test's
@@ -4725,7 +4737,8 @@ version 16.0
   local ec 0
   foreach ee in `estimands' {
     local ++ec
-    scalar `wdpo`ec'' = _b[main_`ee']
+    if "`permtstat'" == "" scalar `wdpo`ec'' = _b[main_`ee']
+    else scalar `wdpo`ec'' = _b[main_`ee']/_se[main_`ee']
   }
 
   * one row per cluster: its onset level and (optional) stratum
@@ -4798,7 +4811,8 @@ version 16.0
     local ec 0
     foreach ee in `estimands' {
       local ++ec
-      cap scalar `wdpo`ec'' = _b[main_`ee']
+      if "`permtstat'" == "" cap scalar `wdpo`ec'' = _b[main_`ee']
+      else cap scalar `wdpo`ec'' = _b[main_`ee']/_se[main_`ee']
     }
   }
   forval r = 1/`wdp_R' {
@@ -4812,7 +4826,13 @@ version 16.0
       local ec 0
       foreach ee in `estimands' {
         local ++ec
-        cap matrix `res'[`r', `ec'] = _b[main_`ee']
+        if "`permtstat'" == "" cap matrix `res'[`r', `ec'] = _b[main_`ee']
+        else {
+          cap matrix `res'[`r', `ec'] = _b[main_`ee']/_se[main_`ee']
+          if _rc == 0 {
+            if missing(`res'[`r', `ec']) local badrep 1
+          }
+        }
         if _rc != 0 local badrep 1
       }
     }
@@ -4851,6 +4871,13 @@ version 16.0
       local ub = r(r2)
       qui sum s
       local sdv = r(sd)
+      local q95 .
+      if "`permtstat'" != "" {
+        qui gen double abss = abs(s)
+        _pctile abss, p(95)
+        local q95 = r(r1)
+        qui drop abss
+      }
     }
     forval q = 1/`=rowsof(`distname')' {
       * dense-pack the completed draws column-by-column below
@@ -4862,6 +4889,7 @@ version 16.0
     c_local wdp_r_lb_`ee' `lb'
     c_local wdp_r_ub_`ee' `ub'
     c_local wdp_r_sd_`ee' `sdv'
+    c_local wdp_r_q_`ee' `q95'
   }
   * dense permdist matrix (completed rows only), built once from res
   local rr 0
@@ -5474,8 +5502,10 @@ version 16.0
       dis as result " "
       dis as result "Randomization Inference (permute(`e(perm_method)')): `e(perm_completed)' of `e(perm_reps)' replications completed; `e(perm_npossible_str)' possible assignments."
       dis as text "Two-sided permutation p-values; the interval is the 5th-95th percentile band of the permuted-effect distribution (a null band, not a parameter CI); SD is the permuted-effect standard deviation."
+      if "`e(perm_stat)'" == "t" dis as text "Statistics are randomized on t-ratios (permtstat)."
       foreach wdpe in `e(wdid_permest)' {
         dis as result "  `wdpe': estimate " %10.0g e(b)[1, colnumb(e(b), "main_`wdpe'")] "   p " %6.4f e(perm_p_`wdpe') "   null band [" %10.0g e(perm_lb_`wdpe') ", " %10.0g e(perm_ub_`wdpe') "]   SD " %10.0g e(perm_sd_`wdpe')
+        if e(perm_tlb_`wdpe') < . dis as result "        inverted-t 95% CI [" %10.0g e(perm_tlb_`wdpe') ", " %10.0g e(perm_tub_`wdpe') "]"
       }
       dis as result " "
     }

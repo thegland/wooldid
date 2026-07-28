@@ -83,9 +83,9 @@ restore
 use "`DATA'/dta_binary", clear
 cap wooldid y i t ttre, att cluster(i) permute(probabilities) permexact permprobs((ttre 5 .) (1 .5 .5))
 xrc P6i1 198 _rc
-cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50) permtstat
+cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50) permtstat fastnose
 xrc P6i2 198 _rc
-cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50) permtci
+cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50) permtci fastnose
 xrc P6i3 198 _rc
 
 * ---- helper panel: 6 clusters, 3 treated at t=4, strong effect ----
@@ -244,6 +244,45 @@ qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(25)
 if `pd1' != e(perm_p_att) {
   dis as error "P10 FAIL: same seed gave different p"
   global pf = $pf + 1
+}
+
+* ---- P12: permtstat - t-ratio randomization; exact mirror symmetry pins p = 2/20 ----
+mkperm 6 3 3
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact permtstat
+if _rc != 0 {
+  dis as error "P12 FAIL: rc=" _rc
+  global pf = $pf + 1
+}
+else {
+  if "`e(perm_stat)'" != "t" {
+    dis as error "P12 FAIL: perm_stat=[`e(perm_stat)']"
+    global pf = $pf + 1
+  }
+  * the t statistic does not inherit the b-mirror symmetry (se varies across
+  * assignments), so the exact floor is 1/20: require p a positive multiple of 1/M
+  if !(e(perm_p_att) >= 0.05 - 1e-12 & abs(e(perm_p_att)*20 - round(e(perm_p_att)*20)) < 1e-9) {
+    dis as error "P12 FAIL: exact t-stat p=" e(perm_p_att)
+    global pf = $pf + 1
+  }
+}
+
+* ---- P13: permtci implies permtstat; the inverted-t CI exists and covers the estimate ----
+mkperm 6 3 3
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact permtci
+if _rc != 0 {
+  dis as error "P13 FAIL: rc=" _rc
+  global pf = $pf + 1
+}
+else {
+  local bad 0
+  if "`e(perm_stat)'" != "t" local ++bad
+  if !(e(perm_tlb_att) < . & e(perm_tub_att) < .) local ++bad
+  if !(e(perm_tlb_att) <= _b[main_att] & _b[main_att] <= e(perm_tub_att)) local ++bad
+  if !(e(perm_tlb_att) < e(perm_tub_att)) local ++bad
+  if `bad' != 0 {
+    dis as error "P13 FAIL: `bad' inverted-t CI check(s): [" e(perm_tlb_att) ", " e(perm_tub_att) "] vs " _b[main_att]
+    global pf = $pf + 1
+  }
 }
 
 * ---- P11: additivity - the observed results are untouched by the permutation pass ----
