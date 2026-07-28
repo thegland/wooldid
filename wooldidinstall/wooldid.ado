@@ -34,6 +34,7 @@ version 16.0
     wooldid_display , part(1)
     wooldid_display , part(roth)
     wooldid_display , part(2)
+    if "`e(perm_method)'" != "" dis as result " "
     wooldid_display , part(perm)
     dis as result  " "
     exit
@@ -154,6 +155,7 @@ version 16.0
     }
     if `wdp_r_done' <= 10000 cap ereturn matrix permdist = `wdpdist'
     wooldid_display , part(perm)
+    dis as result " "
   }
 end
 
@@ -4624,7 +4626,16 @@ version 16.0
     dis as error "Error: permreps() must be a positive integer."
     error 198
   }
+  if `permreps' > 0 & `permreps' < 20 {
+    dis as error "Error: permreps() must be at least 20: the engine refuses inference on fewer than 20 completed replications, so a smaller request can only ever burn the run."
+    error 198
+  }
   if "`permmethod'" == "probabilities" {
+    cap confirm numeric variable `clus'
+    if _rc != 0 {
+      dis as error "Error: permute(probabilities) requires a numeric cluster variable (the permprobs() grammar lists clusters by numeric value)."
+      error 198
+    }
     if `"`permprobs'"' == "" {
       dis as error "Error: permute(probabilities) requires permprobs()."
       error 198
@@ -4890,6 +4901,7 @@ version 16.0
       local ub = r(r2)
       qui sum s
       local sdv = r(sd)
+      if `sdv' == 0 dis as text "Caution: the permuted `ee' distribution is degenerate (every completed draw equals every other); the permutation p-value is uninformative."
       local q95 .
       if "`permtstat'" != "" {
         qui gen double abss = abs(s)
@@ -5518,12 +5530,12 @@ version 16.0
   * reproduces it and older stores print nothing
   if "`part'" == "perm" {
     if "`e(perm_method)'" != "" {
-      dis as result " "
       dis as result "Randomization Inference (permute(`e(perm_method)')): `e(perm_completed)' of `e(perm_reps)' replications completed; `e(perm_npossible_str)' possible assignments."
       dis as text "Two-sided permutation p-values; the interval is the 5th-95th percentile band of the permuted-effect distribution (a null band, not a parameter CI); SD is the permuted-effect standard deviation."
       if "`e(perm_stat)'" == "t" dis as text "Statistics are randomized on t-ratios (permtstat)."
       foreach wdpe in `e(wdid_permest)' {
-        dis as result "  `wdpe': estimate " %10.0g e(b)[1, colnumb(e(b), "main_`wdpe'")] "   p " %6.4f e(perm_p_`wdpe') "   null band [" %10.0g e(perm_lb_`wdpe') ", " %10.0g e(perm_ub_`wdpe') "]   SD " %10.0g e(perm_sd_`wdpe')
+        local wdpsc = cond("`e(perm_stat)'" == "t", " (t-scale)", "")
+        dis as result "  `wdpe': estimate " %10.0g e(b)[1, colnumb(e(b), "main_`wdpe'")] "   p " %6.4f e(perm_p_`wdpe') "   null band`wdpsc' [" %10.0g e(perm_lb_`wdpe') ", " %10.0g e(perm_ub_`wdpe') "]   SD`wdpsc' " %10.0g e(perm_sd_`wdpe')
         if e(perm_tlb_`wdpe') < . dis as result "        inverted-t 95% CI [" %10.0g e(perm_tlb_`wdpe') ", " %10.0g e(perm_tub_`wdpe') "]"
       }
       dis as result " "

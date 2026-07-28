@@ -71,6 +71,15 @@ cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50) permstrata(
 xrc P6f1 459 _rc
 qui drop badstr
 
+* ---- P6k: probabilities needs a numeric cluster; P6l: the permreps floor ----
+preserve
+qui gen str8 sclus = "c" + string(i)
+cap wooldid y i t ttre, att cluster(sclus) permute(probabilities) permreps(50) permprobs((ttre 5 .) (1 .5 .5))
+xrc P6k1 198 _rc
+restore
+cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(10)
+xrc P6l1 198 _rc
+
 * ---- P6j: extended missing codes in the timing variable are refused ----
 preserve
 qui replace ttre = .a if ttre >= . & mod(i, 2) == 0

@@ -295,7 +295,9 @@ share, with the observed assignment a member - note that in symmetric designs th
 percentile band of the permuted-effect distribution (a NULL BAND under no effect, not a confidence interval for the parameter); and the standard deviation of that distribution (labelled SD). The raw draws are in
 {it:e(permdist)}. Replications that fail to estimate are excluded and counted ({it:e(perm_failed)}), with a caution above 10 percent and a refusal when fewer than max(20, half) succeed. Draws consume the session
 random-number stream: {cmd:set seed} beforehand for reproducibility. Under {cmd:subgroups()} the permutation statistics cover the pooled estimands only (rep runs skip the subgroup machinery). With
-{cmd:contreat()} the dose stays with its unit and only onset timing is re-randomized: the null being tested is that timing is as-if random given dose. Not compatible with {it:impvalues},
+{cmd:contreat()} the dose stays with its unit and only onset timing is re-randomized: the null being tested is that timing is as-if random given dose. Permutation statistics cover the att-family estimands
+(the continuous-treatment ame quantities are not permuted in this version). Note also that reassigned onsets can change which periods are estimable in a given draw: each draw is the estimate wooldid
+would compute under that counterfactual assignment, estimability screens included. Under {it:permtstat}, {it:e(perm_lb/ub/sd_*)} and the displayed band/SD are on the t-ratio scale. Not compatible with {it:impvalues},
 {it:unconditionalse}, {it:contreatwithin}, or {it:oldsyntax}. {p_end}
 
 {phang}{opt permprobs(spec)}: The assignment-probability design for {cmd:permute(probabilities)}, structured as {cmd:(onsetvar level level ...)} followed by one {cmd:(clustervalue p p ...)} group per cluster.
