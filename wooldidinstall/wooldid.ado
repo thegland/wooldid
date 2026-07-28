@@ -4663,6 +4663,15 @@ version 16.0
   else qui gen byte `insmp' = !missing(`clus')
   qui replace `insmp' = 0 if `insmp' >= .
 
+  * the level accounting treats all missing codes as the single never-treated group,
+  * but enumeration/probability matching distinguishes extended missings; require the
+  * plain-missing convention outright
+  qui count if `insmp' & `ttrevar' > .
+  if r(N) > 0 {
+    dis as error "Error: permute() requires never-treated observations coded as plain missing (.) in the timing variable; `r(N)' in-sample observation(s) carry extended missing codes (.a, .b, ...)."
+    error 459
+  }
+
   * nesting (author's brief): each cluster must sit inside exactly one treatment-onset
   * level - onset constant within cluster, and treated/never-treated rows never mixed
   tempvar tmin tmax ntr nnv
@@ -4837,7 +4846,17 @@ version 16.0
       }
     }
     if `badrep' == 0 local ++ndone
-    else local ++nfail
+    else {
+      local ++nfail
+      * blank the whole row: a partially-failed rep (reachable under permtstat with a
+      * degenerate SE on one of several estimands) must not leak its good columns into
+      * the per-estimand summaries, and the permdist packing keys on column 1
+      local ec 0
+      foreach ee in `estimands' {
+        local ++ec
+        cap matrix `res'[`r', `ec'] = .
+      }
+    }
   }
   cap drop `lnk'
   cap drop `repons'

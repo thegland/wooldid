@@ -71,6 +71,13 @@ cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50) permstrata(
 xrc P6f1 459 _rc
 qui drop badstr
 
+* ---- P6j: extended missing codes in the timing variable are refused ----
+preserve
+qui replace ttre = .a if ttre >= . & mod(i, 2) == 0
+cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50)
+xrc P6j1 459 _rc
+restore
+
 * ---- P6g: nothing to randomize ----
 preserve
 qui replace ttre = 5 if ttre < .
