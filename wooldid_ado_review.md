@@ -52,6 +52,41 @@ The B1-B23 campaign's lessons are codified in `review_process/` and `test/`; the
 **Confirmed accurate (load-bearing samples):** verbose retention; the fastnose section end to end; all impvalues/pretrendpower/unconditionalse requirement lists; the permute and gteffects numeric surfaces; the saveplots file inventory (incl. the underscore pattern); the e(V) placeholder paragraph; the event_plot stubs and b_es repost recipe (SG rows do not collide).
 
 
+### Help-file audit, second pass: change-driven review of this month's edits (2026-07-28; auditors sr_b1/sr_b2/sr_b3 in scratchpad waves/; all items NEW vs the first audit above)
+
+**Method:** commit-by-commit walk of the 129-commit campaign vs the help (sr_b1), a full month-diff of the sthlp itself with SMCL render + old-vs-new contradiction sweep (sr_b2), and a runtime-message inventory + every example run verbatim + display-block comparison (sr_b3). SMCL renders cleanly; the three doc-only passages written earlier in the campaign (reserved estimate names, graph naming, the e(V) placeholder) show zero drift at HEAD; all display blocks match their prose; the help's one cited rc fires exactly as described.
+
+**CONTRADICTIONS (the fix-first class):**
+- **contreatwithin (~L504-506) says it "sets the option safety to off" - but six data-integrity screens deliberately SURVIVE that overwrite** (they gate on the user's own safety() input): onset-constancy, subgroup nesting, weight sign, lattice values, cfxlattice values, commensurability. Probed: contreatwithin + mixed-onset unit still refuses r(459); + negative aweight still refuses r(411); explicit safety(off) does bypass. A cross-reading user concludes the opposite of the truth. One qualifying clause fixes it.
+- The old subgroups sentence (~L465-466, "a given cohort i cannot be split across multiple subgroups", unqualified) contradicts the month-new straddling paragraph (~L484-485) that explicitly permits over-time subgroup variation with share-weighting.
+- The Description's inference enumeration (~L35-37, and again ~L127-132) still lists exactly clustered/unconditional/IM - permutation inference and fast mode are invisible from the front matter.
+
+**Help prepares the user for the wrong outcome (probed):**
+- **Example 9 does nothing even after the stray-paren fix**: cfxplottypes(pre) is silently dropped unless esfixedbaseperiod or esprelength>0 (the example has neither), so it runs rc 0 with no plots and no matrices and no message; the cfxplottypes() entry promises pre/relyr plots unconditionally.
+- customvce() + robust/cluster() refuses r(198); the entry states no incompatibility. poisson + aweights refuses r(198); stated nowhere.
+- fe() under customvce/unconditionalse: a runtime caution says absorbed FEs are incompatible, then the run CONTINUES with fe() contents inlined raw into reg/poisson - an unprefixed variable silently becomes a continuous regressor; the entries only say the estimator switches.
+
+**Undocumented behavior (new items):**
+- No storage-precision advice for the user's own timing variable: a float-stored 8-digit calendar ttre is rounded BEFORE wooldid sees it (silently merging cohorts - the exact failure the tranche-13 fix cured internally and cannot fix from outside); the help says only "integers greater than 0". One recast-double sentence warranted.
+- _ppmlhdfe_d is a de facto reserved DATA-variable name (a clean hdfe-poisson run silently destroys a pre-existing user variable of that name - probed); the reserved-names passage covers only the two scratch estimate names.
+- Binary designs' never-treated/out-of-window control-group requirement (informative r(459)) is stated nowhere in the sample-formation discussion.
+- espostlength(0) is overridden to 1 under subgroups + esprelength>0 (cautioned at runtime, undocumented); contreatwithin x byTime is a hard r(198) under default safety (help only advises against); all-missing-in-treated subgroups refuse r(459); the permute degenerate-distribution caution, the ppmlhdfe fail->retry model-respecification caution, and the gteffects empty-table caution are absent from their entries.
+- One-directional incompatibility lists between new sections: fastnose's list omits permtstat/permtci; the b_es/V_es not-returned conditions omit fastnose.
+- e(histogramestimates) rows are labeled with internal tempvar names, so cohort identity is unrecoverable from the matrix the help invites users to use.
+
+**Structure / citations / cosmetics:**
+- gteffects' entry sits inside the "Standard Errors" section despite being an output feature (and the index omission is already filed) - no scan path to it.
+- The Stored Results lead-in says "stored in the following matrices"; roughly half the campaign's additions are scalars/macros.
+- "Rambachan & Roth (2023)" is cited (example 10, b_es entry) but absent from Citations; the replay section's redisplay enumeration predates the escomp/gteffects/permutation blocks.
+- No example demonstrates fastnose, gteffects, permute, pretrendpower, or anticipation (only F2 got one).
+- Pre-existing (2024): dangling {help wooldid##estimands}/{##discussion} anchors. Voice: mixed Caution/caution capitalization within the new passages; ALL-CAPS emphasis unique to the F6/F4 additions; fastnose typo "completes in seconds configurations" (missing "on").
+
+### Summary of changes made to wooldid.sthlp during this campaign (30 commits, ~260 lines added net)
+
+**New feature documentation added:** F2 event-study VCV (e(b_es_)/e(V_es_)/e(numpre_), the honestdid recipe + example 10, the e(V) placeholder paragraph and its later -1e100 clarification, the partial-SE preservation note); F4 anticipation() (option entry, e(anticipation), the over-shift asymmetry note, the off-grid caution); F7 pretrendpower() (full Roth-diagnostics section: requirements, quadrature, NIS column incl. the later 4-pre-period cap and rank-deficiency disclosure, the roth_* returns); F8 escomp (option note + the 8-column e(escomp) entry); F11 replay (usage note + the wdid_* hidden-macro declaration); F9 fastnose (full section: contract, speedups, incompatibilities, ULP disclosure); F3 gteffects (option entry with the 15-column layout, identities, caveats + the two verified reading notes); F6 permute (the full randomization-inference section: methods, grammar, floors/ceilings/cautions, null-band wording, t-scale semantics, the e(perm_*) block).
+**Behavior/requirement corrections:** B13 lattice error documentation; B15 pweight exemption for unconditionalse; B19 graph naming (name(..., replace), no window redraw); B22/S6 reserved scratch estimate names; gtools promoted to documented hard dependency; the sg name-length caution; customweightmultiplier clarification; F13 within-i onset constancy + subgroup nesting requirements; S5 early-screen descriptions (two edits); the m4 e() category fixes (SG joint tests as macros, adversarial_pval as scalars, e(converged) removed).
+**Net effect:** the help grew from its 2024 baseline by roughly a quarter, all of it feature/requirement documentation; the second-pass audits above list what those edits missed or left inconsistent.
+
 ### F6 permutation / randomization inference - COMPLETE (2026-07-27/28; see wooldid_solved_issues.md and review_process/f6_permutation_plan.md)
 Landed in eight commits (125bbd0, 86d37cb, e6b608a, 9f31b47, b544c55, e350220, 533052c, 099d93b): permute(shuffle) with permreps()/permexact and permstrata(); permute(probabilities) with the permprobs() grammar; permtstat and the inverted-t permtci; every check, caution, count, and output from the brief. Three-verifier wave clean: the inference reconstructs bitwise by hand (exact, strata, probabilities, and t-stat modes), the feature is bit-additive with the observed results untouched, and every failure path refuses with the observed results intact. perm_basic pins the e() surface in the battery; replay of a permutation run is byte-identical.
 
