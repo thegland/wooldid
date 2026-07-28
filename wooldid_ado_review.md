@@ -43,6 +43,16 @@ Multiple confirmed leak-on-error behaviors: `set emptycells drop` never restored
 ------ DO NOT WORK ON THINGS BELOW THIS LINE ---------
 --- ITEMS TO ADDRESS IN DUE TIME ---
 
+### Policy decisions requested (2026-07-27, from the S6 verification wave - measured, not speculative)
+- **P1: reserved-name guard for `_ppmlhdfe_d`?** Measured: on a poisson run, ppmlhdfe silently OVERWRITES a pre-existing user variable named `_ppmlhdfe_d` (rc 0, no message), and wooldid's normal success-path cleanup then deletes it - silent data destruction on a CLEAN run, upstream of any epilogue. Proposed: a validate-time refusal when the variable pre-exists (with a marker so wooldid's own retained copies from verbose runs still pass); fallback: document the name as reserved in the sthlp.
+- **P2: `__marginsmodel` / `___wooldidfullmodel` are de facto reserved estimate names.** A user's own store under either name is destroyed by any wooldid run (on success by the worker's own stores; on ANY failure - even a typo'd option - by the epilogue's ungated `cap est drop __marginsmodel`). Gate the epilogue drops on a created-this-run flag, or simply document the names as reserved?
+- **P3: should `wooldid, update` clear the replay-failure marker?** Today a successful update clears WOOLDID_LASTRC, so a bare `wooldid` after {fail -> update} replays results that predate the failed call. Gating the clear to successful ESTIMATION only would close it.
+
+### Parked open findings (compact; full detail in wooldid_solved_issues.md entries and the scratchpad waves; re-delete if parking was intended)
+- **esf-branch estimability drop deletes reference periods on CLEAN data, DEFAULT options** (from the mint assessment, rated above that item; prototypes in waves/mint_a1) - awaiting graduation.
+- **adversarial is a silent no-op under timetrends** (test drops every constraint; root-caused; all regimes) - needs its own item.
+- Minor candidates: SG joint tests are macros vs pooled scalars; e(converged) never shipped; the o.-marker truerow fix (adds a row - own ticket); poisson+sg+ES slowness; ptp internal crashes silently swallowed (roth_ok detects, no console signal).
+
 ### For the final feature we will be adding in this sweep, we have a bit of a big one. To start, please build a detailed implementation plan for how to safely introduce this feature. Do not delegate this planning work to subagents - we need our full attention here!
 
 ### F6. Permutation / Conley–Taber inference for few *treated* clusters
