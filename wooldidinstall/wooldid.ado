@@ -822,7 +822,20 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * handle the time trend option
   local trendinjector
-  if "`timetrends'" == "timetrends"   local trendinjector i.`i'##c.`t'
+  * the trend enters through a mean-centered double copy of t: with raw calendar codes
+  * the demeaned i.i#c.t columns lose all precision and the trends go numerically inert
+  * (silently - rc 0, no caution; measured as low as t ~ 5e5, panel-dependent), and even
+  * at 4-digit years the raw form drifts under affine shifts of t where the centered
+  * form is exactly shift-invariant. centering is a pure reparameterization absorbed by
+  * the unit intercepts; measured movement on ordinary panels is machine precision.
+  * t is used as a continuous regressor NOWHERE else - every other formula use is
+  * factor/absorb/grouping and must stay raw
+  if "`timetrends'" == "timetrends" {
+    tempvar tcen
+    qui gstats sum `t' if `ifstatement', meanonly
+    qui gen double `tcen' = `t' - r(mean)
+    local trendinjector i.`i'##c.`tcen'
+  }
 	*note that we dont absorb this - pooled continuous variabels is a tricky matter sometimes
 
 

@@ -100,6 +100,32 @@ else {
   }
 }
 
+* ---- F8: timetrends on the dense large grid == its recode (trends no longer inert) ----
+mkbig 20200101 1 20200107 20200109
+cmprun F8 "att cluster(i) esprelength(2) espostlength(2) timetrends"
+
+* ---- F9: trends do real work at large t (tt vs no-tt must differ materially) ----
+mkbig 20200101 1 20200107 20200109
+qui replace y = y + 0.3*(t - 20200101)*(ttre < .)
+tempname bnt
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
+if _rc != 0 {
+  dis as error "F9 FAIL: no-tt rc=" _rc
+  global s6f = $s6f + 1
+}
+else {
+  matrix `bnt' = e(b)
+  cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) timetrends
+  if _rc != 0 {
+    dis as error "F9 FAIL: tt rc=" _rc
+    global s6f = $s6f + 1
+  }
+  else if reldif(`bnt'[1,1], e(b)[1,1]) < 1e-4 {
+    dis as error "F9 FAIL: timetrends numerically inert at large t (reldif=" reldif(`bnt'[1,1], e(b)[1,1]) ")"
+    global s6f = $s6f + 1
+  }
+}
+
 if $s6f == 0 dis "TTREFLOAT_ALL_PASS"
 else dis as error "TTREFLOAT_FAILS=$s6f"
 global s6f
