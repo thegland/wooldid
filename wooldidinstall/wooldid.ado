@@ -705,17 +705,25 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         error 459
       }
       qui drop `f13sgitmin' `f13sgitmax'
-      if "`att_i'" != "" | "`att_itime'" != "" {
-        tempvar f13sgimin f13sgimax
-        qui gegen double `f13sgimin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
-        qui gegen double `f13sgimax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
-        cap assert `f13sgimin' == `f13sgimax' if `ifstatement' & `ttre' != .
-        if _rc != 0 {
-          dis as text "Caution: the subgroup variable `subgroups' changes over time within some units. For att_i and att_itime, a unit appearing in more than one subgroup enters each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply; by-subgroup att and att_it results are unaffected. Consider whether a time-invariant subgroup definition (or a finer unit id) better matches your design."
-        }
-        qui drop `f13sgimin' `f13sgimax'
-      }
     }
+    * a unit split across multiple subgroups over time (subgroup varies within i across
+    * periods) is refused under default safety - a unit cannot belong to more than one
+    * subgroup, and the share-weighted fallback deserves an explicit opt-in. under
+    * safety(off) the run proceeds with share weighting and a caution (author directive,
+    * 2026-07-28; this check runs regardless of the safety setting)
+    tempvar f13sgimin f13sgimax
+    qui gegen double `f13sgimin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
+    qui gegen double `f13sgimax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
+    cap assert `f13sgimin' == `f13sgimax' if `ifstatement' & `ttre' != .
+    if _rc != 0 {
+      if "`safetyinput'" != "off" {
+        dis as error "Error: the subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time. A unit cannot belong to more than one subgroup."
+        dis as error "To proceed anyway, specify safety(off): by-subgroup att and att_it then weight each observation to its own subgroup as usual, while att_i and att_itime enter a split unit into each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply."
+        error 459
+      }
+      else dis as text "Caution: the subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time; proceeding under safety(off) using share weighting. att_i and att_itime enter a split unit into each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply; by-subgroup att and att_it results are unaffected."
+    }
+    qui drop `f13sgimin' `f13sgimax'
     * long subgroup values overflow stata's 31/32-character name limits when embedded in
     * constructed local/matrix/rowname/graph/e() names (the worst prefixes reach 24-25
     * characters: the makecfxplotsbysg tempnames, the adversarial-by-sg ereturns, and the
