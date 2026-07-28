@@ -118,7 +118,7 @@ version 16.0
     if "`wdp_est'" == "" local wdp_est att
     tempname wdpobs wdpdist
     qui est sto `wdpobs'
-    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist')
+    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist')
     local wdp_rc = _rc
     qui est restore `wdpobs'
     cap est drop `wdpobs'
@@ -4604,10 +4604,6 @@ version 16.0
   }
   * temporary refusals: these arrive with the follow-up engine commits; until then
   * they must refuse loudly rather than silently running a different method
-  if "`permute'" == "probabilities" {
-    dis as error "Error: permute(probabilities) is not yet enabled in this build; permute(shuffle) is available."
-    error 198
-  }
   if "`ts'" != "" | "`tc'" != "" {
     dis as error "Error: permtstat and permtci are not yet enabled in this build."
     error 198
@@ -4697,6 +4693,19 @@ version 16.0
     error 459
   }
 
+  * permute(probabilities): validate the permprobs() grammar against the data's actual
+  * onset levels and cluster values (the same mata parser the engine uses, run in
+  * check-only mode, so the two can never drift)
+  if "`permmethod'" == "probabilities" {
+    qui glevelsof `ttrevar' if `insmp', missing local(permonslvls)
+    qui glevelsof `clus' if `insmp', local(permclusvals)
+    local permperr
+    mata: wooldid_permp(st_local("permprobs"), "`ttrevar'", "`permonslvls'", "`permclusvals'", "", "")
+    if "`permperr'" != "" {
+      dis as error "`permperr'"
+      error 198
+    }
+  }
 end
 
 
@@ -4707,7 +4716,7 @@ end
 cap prog drop wooldid_permrun
 prog def wooldid_permrun
 version 16.0
-  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) repopts(string asis) wtype(string) wexp(string) ifr(string asis)]
+  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) repopts(string asis) wtype(string) wexp(string) ifr(string asis)]
 
   * observed statistics come off the still-active observed e(). stored as SCALARS:
   * a local's decimal round-trip re-parses one ulp off, which breaks the exact test's
@@ -4744,8 +4753,23 @@ version 16.0
 
   * assignments + counts (mata): fills the C x R matrix, sets wdp_R, the possible-
   * assignment count (double + string), and caution flags
-  tempname wdpassign
-  mata: wooldid_permx("`mpfr'", "`ttrevar'", "`permstrata'", `permreps', ("`permexact'" != ""), "`wdpassign'")
+  tempname wdpassign wdpP wdpL
+  if "`permute'" == "probabilities" {
+    * re-run the shared parser in engine mode: fills the probability matrix (rows in
+    * ascending cluster order = the map frame's order) and the level vector
+    frame `mpfr' {
+      qui glevelsof `ttrevar', missing local(permonslvls)
+      qui glevelsof `clus', local(permclusvals)
+    }
+    local permperr
+    mata: wooldid_permp(st_local("permprobs"), "`ttrevar'", "`permonslvls'", "`permclusvals'", "`wdpP'", "`wdpL'")
+    if "`permperr'" != "" {
+      dis as error "`permperr'"
+      error 198
+    }
+  }
+  mata: wooldid_permx("`mpfr'", "`ttrevar'", "`permstrata'", `permreps', ("`permexact'" != ""), "`wdpassign'", "`wdpP'", "`wdpL'")
+  if "`wdp_caut0'" != "" dis as text "Caution: `wdp_caut0'"
   if "`wdp_err'" != "" {
     dis as error "`wdp_err'"
     error 198
@@ -5766,7 +5790,8 @@ end
 cap mata: mata drop wooldid_permx()
 mata:
 void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
-                   real scalar reps, real scalar exact, string scalar assignname)
+                   real scalar reps, real scalar exact, string scalar assignname,
+                   string scalar pname, string scalar lname)
 {
     real matrix D, A, blockperms
     real colvector ons, str, idx, levels, counts, v
@@ -5782,6 +5807,11 @@ void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
     str = st_data(., strv)
     st_framecurrent(curfr)
     C = rows(ons)
+    st_local("wdp_caut0", "")
+    if (pname != "" & rows(st_matrix(pname)) > 0) {
+        wooldid_permxp(ons, st_matrix(pname), st_matrix(lname), reps, assignname)
+        return
+    }
     // possible-assignment count: product over strata of multiset-permutation counts
     lnM = 0
     for (si = 1; si <= rows(uniqrows(str)); si++) {
@@ -5879,5 +5909,193 @@ real matrix wooldid_permx_msp(real colvector v)
         R = R, (J(1, cols(S), lv[k]) \ S)
     }
     return(R)
+}
+end
+
+
+*** F6: probabilities-method draws (design distribution): per-cluster categorical
+*** draws from user-specified probabilities; count = product of support sizes
+cap mata: mata drop wooldid_permxp()
+mata:
+void wooldid_permxp(real colvector ons, real matrix P, real rowvector lvl,
+                    real scalar reps, string scalar assignname)
+{
+    real matrix A
+    real colvector cum
+    real scalar C, K, c, r, k, u, lnS, zp, obsk
+    string scalar nps
+    C = rows(ons)
+    K = cols(lvl)
+    lnS = 0
+    zp = 0
+    for (c = 1; c <= C; c++) {
+        lnS = lnS + ln(sum(P[c, .] :> 0))
+        obsk = 0
+        for (k = 1; k <= K; k++) {
+            if (ons[c] == lvl[k]) obsk = k
+        }
+        if (obsk == 0 | (obsk > 0 ? P[c, obsk] <= 0 : 0)) zp = 1
+    }
+    if (lnS < 34) nps = strofreal(round(exp(lnS)), "%20.0f")
+    else nps = strofreal(exp(lnS - floor(lnS/ln(10))*ln(10)), "%9.4f") + "e+" + strofreal(floor(lnS/ln(10)), "%3.0f")
+    st_local("wdp_npd", strofreal((lnS < 700 ? round(exp(lnS)) : .), "%20.0f"))
+    st_local("wdp_nps", strtrim(nps))
+    st_local("wdp_R", strofreal(reps))
+    if (exp(lnS) < . & reps > 0.1*exp(lnS)) st_local("wdp_caut2", "permreps(" + strofreal(reps) + ") exceeds 10% of the " + strtrim(nps) + " possible assignments in the design's support.")
+    if (zp) st_local("wdp_caut0", "the OBSERVED assignment has zero probability under the specified design, so the reported p-value is a tail probability under that design distribution, not a randomization test that includes the observed assignment.")
+    A = J(C, reps, .)
+    for (r = 1; r <= reps; r++) {
+        for (c = 1; c <= C; c++) {
+            cum = runningsum(P[c, .])'
+            u = runiform(1, 1)
+            for (k = 1; k <= K; k++) {
+                if (u <= cum[k] + 1e-12) {
+                    A[c, r] = lvl[k]
+                    k = K + 1
+                }
+            }
+        }
+    }
+    st_matrix(assignname, A)
+}
+end
+
+*** F6: the shared permprobs() parser: validates the grammar against the data's onset
+*** levels and cluster values; in engine mode (pname != "") also emits the probability
+*** matrix with rows in ascending cluster order and the level vector in user order.
+*** on any violation, sets the local permperr (caller raises r(198))
+cap mata: mata drop wooldid_permp()
+mata:
+void wooldid_permp(string scalar spec, string scalar onsname, string scalar lvlstr,
+                   string scalar clusstr, string scalar pname, string scalar lname)
+{
+    string vector grp, groups
+    string scalar cur
+    string rowvector tok, dlv, dcl
+    real rowvector lvl, seen, dl, dc
+    real matrix P
+    real colvector cval, ord
+    real scalar G, g, K, C, c, k, ssum, v, ing, hit
+    st_local("permperr", "")
+    grp = tokens(subinstr(subinstr(spec, "(", " __GRP__ ", .), ")", " __END__ ", .))
+    // regroup
+    groups = J(0, 1, "")
+    cur = ""
+    ing = 0
+    for (g = 1; g <= cols(grp); g++) {
+        if (grp[g] == "__GRP__") {
+            if (ing) {
+                st_local("permperr", "Error: permprobs() has a '(' inside a group; check the parentheses.")
+                return
+            }
+            ing = 1
+            cur = ""
+        }
+        else if (grp[g] == "__END__") {
+            if (!ing) {
+                st_local("permperr", "Error: permprobs() has an unmatched ')'.")
+                return
+            }
+            ing = 0
+            groups = groups \ cur
+        }
+        else if (ing) cur = cur + " " + grp[g]
+        else {
+            st_local("permperr", "Error: permprobs() has text outside parenthesized groups: " + grp[g])
+            return
+        }
+    }
+    if (ing) {
+        st_local("permperr", "Error: permprobs() has an unmatched '('.")
+        return
+    }
+    G = rows(groups)
+    if (G < 2) {
+        st_local("permperr", "Error: permprobs() needs the onset-level group plus one group per cluster.")
+        return
+    }
+    // group 1: onset varname + level order
+    tok = tokens(groups[1])
+    if (cols(tok) < 3) {
+        st_local("permperr", "Error: permprobs() first group must be (onsetvar level level ...).")
+        return
+    }
+    if (tok[1] != onsname) {
+        st_local("permperr", "Error: permprobs() first group names '" + tok[1] + "' but the timing variable is '" + onsname + "'.")
+        return
+    }
+    K = cols(tok) - 1
+    lvl = J(1, K, .)
+    for (k = 1; k <= K; k++) lvl[k] = strtoreal(tok[k+1])
+    // level set must equal the data's level set
+    dlv = tokens(lvlstr)
+    if (cols(dlv) != K) {
+        st_local("permperr", "Error: permprobs() lists " + strofreal(K) + " onset levels but the data (within sample) has " + strofreal(cols(dlv)) + ".")
+        return
+    }
+    dl = strtoreal(dlv)
+    for (k = 1; k <= K; k++) {
+        if (sum(dl :== lvl[k]) != 1) {
+            st_local("permperr", "Error: permprobs() onset level '" + tok[k+1] + "' does not match the data's onset levels (" + lvlstr + ").")
+            return
+        }
+    }
+    // cluster groups
+    C = G - 1
+    dcl = tokens(clusstr)
+    if (cols(dcl) != C) {
+        st_local("permperr", "Error: permprobs() has " + strofreal(C) + " cluster group(s) but the data (within sample) has " + strofreal(cols(dcl)) + " cluster value(s).")
+        return
+    }
+    cval = J(C, 1, .)
+    P = J(C, K, .)
+    for (g = 2; g <= G; g++) {
+        tok = tokens(groups[g])
+        if (cols(tok) != K + 1) {
+            st_local("permperr", "Error: permprobs() cluster group (" + groups[g] + " ) must have the cluster value plus exactly " + strofreal(K) + " probabilities.")
+            return
+        }
+        cval[g-1] = strtoreal(tok[1])
+        ssum = 0
+        for (k = 1; k <= K; k++) {
+            v = strtoreal(tok[k+1])
+            if (v >= . | v < 0) {
+                st_local("permperr", "Error: permprobs() has an invalid probability in group (" + groups[g] + " ).")
+                return
+            }
+            P[g-1, k] = v
+            ssum = ssum + v
+        }
+        if (abs(ssum - 1) > 1e-6) {
+            st_local("permperr", "Error: permprobs() probabilities for cluster value " + tok[1] + " sum to " + strofreal(ssum) + ", not 1.")
+            return
+        }
+    }
+    // cluster set must equal the data's, no duplicates
+    dc = strtoreal(dcl)
+    seen = J(1, C, 0)
+    for (c = 1; c <= C; c++) {
+        hit = 0
+        for (k = 1; k <= C; k++) {
+            if (dc[k] == cval[c]) {
+                if (seen[k]) {
+                    st_local("permperr", "Error: permprobs() lists cluster value " + strofreal(cval[c]) + " more than once.")
+                    return
+                }
+                seen[k] = 1
+                hit = 1
+            }
+        }
+        if (!hit) {
+            st_local("permperr", "Error: permprobs() cluster value " + strofreal(cval[c]) + " is not a value of the cluster variable (within sample).")
+            return
+        }
+    }
+    if (pname != "") {
+        // rows in ascending cluster order = the engine's map-frame order
+        ord = order(cval, 1)
+        st_matrix(pname, P[ord, .])
+        st_matrix(lname, lvl)
+    }
 }
 end

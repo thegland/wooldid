@@ -81,7 +81,7 @@ restore
 
 * ---- P6i: methods/options awaiting their engine commits refuse loudly ----
 use "`DATA'/dta_binary", clear
-cap wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(50) permprobs((ttre 5 .) (1 .5 .5))
+cap wooldid y i t ttre, att cluster(i) permute(probabilities) permexact permprobs((ttre 5 .) (1 .5 .5))
 xrc P6i1 198 _rc
 cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50) permtstat
 xrc P6i2 198 _rc
@@ -159,6 +159,29 @@ qui gen y = 2*(t >= ttre & ttre < .) + 0.3*st + rnormal()
 cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact permstrata(st)
 if _rc != 0 | e(perm_npossible) != 36 | e(perm_completed) != 36 {
   dis as error "P4 FAIL: rc=" _rc " npossible=" e(perm_npossible) " completed=" e(perm_completed) " (expected 6x6)"
+  global pf = $pf + 1
+}
+
+* ---- P5: permute(probabilities) - grammar, draws, counts, cautions ----
+mkperm 6 3 3
+set seed 31415
+cap noi wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(60) permprobs((ttre 4 .) (1 .5 .5) (2 .5 .5) (3 .5 .5) (4 .5 .5) (5 .5 .5) (6 .5 .5))
+if _rc != 0 | e(perm_npossible) != 64 | !(e(perm_p_att) >= 0 & e(perm_p_att) <= 1) {
+  dis as error "P5a FAIL: rc=" _rc " npossible=" e(perm_npossible) " p=" e(perm_p_att)
+  global pf = $pf + 1
+}
+mkperm 6 3 3
+cap wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(20) permprobs((ttre 4 .) (1 .6 .5) (2 .5 .5) (3 .5 .5) (4 .5 .5) (5 .5 .5) (6 .5 .5))
+xrc P5b 198 _rc
+cap wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(20) permprobs((ttre 4 .) (1 .5 .5) (2 .5 .5) (3 .5 .5) (4 .5 .5) (5 .5 .5) (99 .5 .5))
+xrc P5c 198 _rc
+cap wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(20) permprobs((wrongvar 4 .) (1 .5 .5) (2 .5 .5) (3 .5 .5) (4 .5 .5) (5 .5 .5) (6 .5 .5))
+xrc P5d 198 _rc
+qui log using perm_p5.txt, text replace name(pm)
+cap noi wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(30) permprobs((ttre 4 .) (1 0 1) (2 .5 .5) (3 .5 .5) (4 .5 .5) (5 .5 .5) (6 .5 .5))
+qui log close pm
+if _rc != 0 | strpos(fileread("perm_p5.txt"), "zero probability under the specified design") == 0 {
+  dis as error "P5e FAIL: rc=" _rc " or zero-probability caution missing"
   global pf = $pf + 1
 }
 
