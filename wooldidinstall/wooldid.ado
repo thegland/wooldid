@@ -4166,7 +4166,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
   if "`permute'" != "" {
-    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ifr(`if')
+    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') ifr(`if')
     if _rc != 0 error _rc
   }
 
@@ -4579,7 +4579,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ifr(string asis)]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) ifr(string asis)]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -4600,6 +4600,16 @@ version 16.0
   }
   if "`os'" == "1" {
     dis as error "Error: permute() is not compatible with oldsyntax."
+    error 198
+  }
+  * temporary refusals: these arrive with the follow-up engine commits; until then
+  * they must refuse loudly rather than silently running a different method
+  if "`permute'" == "probabilities" {
+    dis as error "Error: permute(probabilities) is not yet enabled in this build; permute(shuffle) is available."
+    error 198
+  }
+  if "`ts'" != "" | "`tc'" != "" {
+    dis as error "Error: permtstat and permtci are not yet enabled in this build."
     error 198
   }
   if `permreps' < 0 {

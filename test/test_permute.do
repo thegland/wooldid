@@ -79,6 +79,15 @@ cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50)
 xrc P6g1 459 _rc
 restore
 
+* ---- P6i: methods/options awaiting their engine commits refuse loudly ----
+use "`DATA'/dta_binary", clear
+cap wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(50) permprobs((ttre 5 .) (1 .5 .5))
+xrc P6i1 198 _rc
+cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50) permtstat
+xrc P6i2 198 _rc
+cap wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50) permtci
+xrc P6i3 198 _rc
+
 * ---- helper panel: 6 clusters, 3 treated at t=4, strong effect ----
 cap program drop mkperm
 program define mkperm
