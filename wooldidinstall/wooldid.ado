@@ -85,7 +85,7 @@ prog def wooldid_worker, eclass
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -3789,7 +3789,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -3908,6 +3908,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     dis as error "Error: gteffects is not available with contreat(): the cohort-by-period interaction coefficients are dose-zero intercepts under a continuous treatment, not treatment effects. Aggregate e(b_es_ame) or the cfx materials instead."
     error 198
   }
+
 
   *check conditions for using im p-values - for CFX plots, we have problems similar to with SGs, but even worse
   if "`impvalues'" != "" & "`makecfxplots'" != "" {
@@ -4073,6 +4074,28 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   local i = word("`varlist'",2)
   local t = word("`varlist'",3)
   local ttre_asgiven = word("`varlist'",4)
+
+  * F6: permutation-inference screens (the engine lands in a follow-up commit; until
+  * then wooldid_permctl ends in a loud not-yet-enabled refusal, so these options can
+  * never silently no-op). deep checks live in the subprogram to conserve this
+  * program's compiled-size headroom
+  if "`permute'" == "" {
+    local permstray
+    if `permreps' != 0 local permstray permreps()
+    if "`permexact'" != "" local permstray `permstray' permexact
+    if "`permtstat'" != "" local permstray `permstray' permtstat
+    if "`permtci'" != "" local permstray `permstray' permtci
+    if "`permstrata'" != "" local permstray `permstray' permstrata()
+    if `"`permprobs'"' != "" local permstray `permstray' permprobs()
+    if "`permstray'" != "" {
+      dis as error "Error: `permstray' require(s) the permute() option."
+      error 198
+    }
+  }
+  if "`permute'" != "" {
+    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') ifr(`if')
+    if _rc != 0 error _rc
+  }
 
   * capture the user's own safety() input before any internal relaxation (contreatwithin sets
   * the working copy to off further down); the identifying-assumption checks gate on this copy
@@ -4369,7 +4392,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * silently strand the worker on the stale syntax-parsed value. varlist/if/weight/exp
   * are excluded: the worker's own syntax call already parsed them identically and this
   * subprogram never alters them.
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose gteffects y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose gteffects permute permreps permexact permtstat permtci permstrata permprobs y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -4477,6 +4500,122 @@ end
 * ============================================================================
 
 * parse-time validation for pretrendpower()
+*** F6: parse-time screens for permutation inference (author's brief: cluster nesting
+*** in treatment-onset levels; refuse impvalues/unconditionalse/contreatwithin; reps
+*** xor exact; strata subset checks). kept out of wooldid_validate for size headroom.
+cap prog drop wooldid_permctl
+prog def wooldid_permctl
+version 16.0
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) ifr(string asis)]
+
+  local permmethod `permute'
+  if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
+    dis as error "Error: permute() must be permute(shuffle) or permute(probabilities). Strata and assignment probabilities have their own options: permstrata() and permprobs()."
+    error 198
+  }
+  if "`impv'" != "" {
+    dis as error "Error: permute() is not compatible with impvalues."
+    error 198
+  }
+  if "`uncond'" != "" {
+    dis as error "Error: permute() is not compatible with unconditionalse."
+    error 198
+  }
+  if "`cw'" != "" {
+    dis as error "Error: permute() is not compatible with contreatwithin: randomization inference reassigns onset timing across clusters, which requires a comparison group."
+    error 198
+  }
+  if `permreps' < 0 {
+    dis as error "Error: permreps() must be a positive integer."
+    error 198
+  }
+  if "`permmethod'" == "probabilities" {
+    if `"`permprobs'"' == "" {
+      dis as error "Error: permute(probabilities) requires permprobs()."
+      error 198
+    }
+    if "`permexact'" != "" {
+      dis as error "Error: permute(probabilities) supports permreps() only, not permexact."
+      error 198
+    }
+    if `permreps' <= 0 {
+      dis as error "Error: permute(probabilities) requires permreps()."
+      error 198
+    }
+  }
+  if "`permmethod'" == "shuffle" {
+    if `"`permprobs'"' != "" {
+      dis as error "Error: permprobs() is only for permute(probabilities)."
+      error 198
+    }
+    if "`permexact'" != "" & `permreps' > 0 {
+      dis as error "Error: specify permreps() or permexact, not both."
+      error 198
+    }
+    if "`permexact'" == "" & `permreps' <= 0 {
+      dis as error "Error: permute(shuffle) requires permreps() or permexact."
+      error 198
+    }
+  }
+  if wordcount("`clus'") != 1 {
+    dis as error "Error: permute() requires cluster() with a single variable - the unit whose treatment-onset assignment is randomized."
+    error 198
+  }
+
+  * sample for the data checks: the user's if-restriction, rows with a cluster value
+  tempvar insmp
+  if `"`ifr'"' != "" qui gen byte `insmp' = (`ifr') & !missing(`clus')
+  else qui gen byte `insmp' = !missing(`clus')
+  qui replace `insmp' = 0 if `insmp' >= .
+
+  * nesting (author's brief): each cluster must sit inside exactly one treatment-onset
+  * level - onset constant within cluster, and treated/never-treated rows never mixed
+  tempvar tmin tmax ntr nnv
+  qui gegen double `tmin' = min(`ttrevar') if `insmp', by(`clus')
+  qui gegen double `tmax' = max(`ttrevar') if `insmp', by(`clus')
+  qui gegen double `ntr' = total(!missing(`ttrevar')) if `insmp', by(`clus')
+  qui gegen double `nnv' = total(missing(`ttrevar')) if `insmp', by(`clus')
+  qui count if `insmp' & ((`ntr' > 0 & `nnv' > 0) | (`ntr' > 0 & `tmin' != `tmax'))
+  if r(N) > 0 {
+    dis as error "Error: permute() requires clusters to be subsets of treatment-onset groups (levels of the timing variable, with never-treated its own group), but `r(N)' in-sample observation(s) sit in clusters that mix onset values or mix treated and never-treated rows."
+    error 459
+  }
+
+  * strata: clusters must be strict subsets of strata
+  if "`permstrata'" != "" {
+    if "`permmethod'" != "shuffle" {
+      dis as error "Error: permstrata() is only for permute(shuffle)."
+      error 198
+    }
+    tempvar smin smax
+    qui gegen double `smin' = min(`permstrata') if `insmp', by(`clus')
+    qui gegen double `smax' = max(`permstrata') if `insmp', by(`clus')
+    qui count if `insmp' & (`smin' != `smax' | missing(`permstrata'))
+    if r(N) > 0 {
+      dis as error "Error: permstrata() requires every cluster to sit inside a single stratum with no missing stratum values (`r(N)' in-sample observation(s) violate this)."
+      error 459
+    }
+  }
+
+  * enough freedom to randomize: at least 2 clusters and 2 distinct onset groups
+  tempvar ctag consv
+  qui gegen byte `ctag' = tag(`clus') if `insmp'
+  qui count if `ctag' == 1
+  local permnclus = r(N)
+  qui gen double `consv' = cond(`ntr' > 0, `tmin', .) if `ctag' == 1
+  qui glevelsof `consv' if `ctag' == 1, missing local(permlvls)
+  local permnlvl : word count `permlvls'
+  if `permnclus' < 2 | `permnlvl' < 2 {
+    dis as error "Error: permute() found `permnclus' cluster(s) across `permnlvl' treatment-onset group(s); there is nothing to randomize."
+    error 459
+  }
+
+  * commit-A guard: validation passed, but the randomization engine has not landed yet
+  dis as error "Error: permute() passed validation, but the permutation engine is not yet enabled in this build."
+  error 198
+end
+
+
 cap prog drop wooldid_ptpcheck
 prog def wooldid_ptpcheck
 version 16.0
