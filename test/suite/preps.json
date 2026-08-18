@@ -1,25 +1,143 @@
 {
-  "gen_sg2": ["qui gen sg = mod(i,2)+1"],
-  "sgm_missif": ["qui gen sgm = mod(i,3)", "qui replace sgm = . if mod(i,11) == 0"],
-  "sgd2_degpre": ["qui sum t, meanonly", "local t2 = r(min) + 1", "qui gen sgd2 = 1", "qui replace sgd2 = 2 if mod(i,7) == 0", "qui replace ttre = `t2' if mod(i,7) == 0"],
-  "tidose_panel": [
-    "set seed 447102",
-    "set obs 50",
-    "gen i = _n",
-    "gen ttre = cond(_n<=13, 5, cond(_n<=26, 8, cond(_n<=38, 10, .)))",
-    "expand 13",
-    "bysort i: gen t = _n",
-    "gen dose = 0.5 + mod(i,6) + 0.25*mod(i,7)/7",
-    "gen post = (t >= ttre & ttre < .)",
-    "gen y = 0.4*dose*post + 0.02*i + 0.08*t + sin(3*i + 2*t)",
-    "gen sg = mod(i,3)",
-    "drop post",
-    "ereturn clear"
-  ],
-  "dose2_sgr": ["gen dose2 = 0.5 + mod(i,5) + 0.2*mod(i,3)", "gen sgr = mod(i,3)"],
-  "seed246813": ["set seed 246813"],
-  "sgf_nonint": ["qui gen sgf = cond(ttre < ., 1.5, 1)"],
-  "fract_ttre": ["qui replace ttre = ttre + 0.5 if ttre < ."],
-  "sgstr_straddle": ["qui gen sgstr = cond(t <= 2006, 1, 2) if ttre < .", "qui replace sgstr = 1 if ttre >= ."],
-  "badvals_if": ["qui replace i = -i if mod(i,13) == 0"]
+ "gen_sg2": [
+  "qui gen sg = mod(i,2)+1"
+ ],
+ "sgm_missif": [
+  "qui gen sgm = mod(i,3)",
+  "qui replace sgm = . if mod(i,11) == 0"
+ ],
+ "sgd2_degpre": [
+  "qui sum t, meanonly",
+  "local t2 = r(min) + 1",
+  "qui gen sgd2 = 1",
+  "qui replace sgd2 = 2 if mod(i,7) == 0",
+  "qui replace ttre = `t2' if mod(i,7) == 0"
+ ],
+ "tidose_panel": [
+  "set seed 447102",
+  "set obs 50",
+  "gen i = _n",
+  "gen ttre = cond(_n<=13, 5, cond(_n<=26, 8, cond(_n<=38, 10, .)))",
+  "expand 13",
+  "bysort i: gen t = _n",
+  "gen dose = 0.5 + mod(i,6) + 0.25*mod(i,7)/7",
+  "gen post = (t >= ttre & ttre < .)",
+  "gen y = 0.4*dose*post + 0.02*i + 0.08*t + sin(3*i + 2*t)",
+  "gen sg = mod(i,3)",
+  "drop post",
+  "ereturn clear"
+ ],
+ "dose2_sgr": [
+  "gen dose2 = 0.5 + mod(i,5) + 0.2*mod(i,3)",
+  "gen sgr = mod(i,3)"
+ ],
+ "seed246813": [
+  "set seed 246813"
+ ],
+ "sgf_nonint": [
+  "qui gen sgf = cond(ttre < ., 1.5, 1)"
+ ],
+ "fract_ttre": [
+  "qui replace ttre = ttre + 0.5 if ttre < ."
+ ],
+ "sgstr_straddle": [
+  "qui gen sgstr = cond(t <= 2006, 1, 2) if ttre < .",
+  "qui replace sgstr = 1 if ttre >= ."
+ ],
+ "badvals_if": [
+  "qui replace i = -i if mod(i,13) == 0"
+ ],
+ "ext_bin_ext_cleanmatrices": [
+  "matrix WDBT_SENTINEL = (1, 2 \\ 3, 4)",
+  "mata: WDBT_SENTINEL_MATA = (1, 2, 3)"
+ ],
+ "ext_contract10_fractional_time": [
+  "recast double t",
+  "replace t = 1.5 if t == 1"
+ ],
+ "ext_contract10_graph_drop_all": [
+  "twoway scatter y t in 1/36, name(WDBT_USER_GRAPH, replace)"
+ ],
+ "ext_contract10_if_outside_negative": [
+  "replace y_count_oracle = -1 if cohort == 12"
+ ],
+ "ext_contract10_inconsistent_ttre": [
+  "replace ttre = 7 if cohort == 1 & mod(wdbt_obs_id, 2) == 0"
+ ],
+ "ext_contract10_nonpositive_time": [
+  "replace t = 0 if t == 1"
+ ],
+ "ext_contract10_ppml_d_collision": [
+  "generate double _ppmlhdfe_d = 42"
+ ],
+ "ext_contract10_rcs_factor_fe": [
+  "replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < ."
+ ],
+ "ext_contract_fractional_lattice": [
+  "replace custom_lattice = 1.5 if custom_lattice == 1"
+ ],
+ "ext_contract_fractional_subgroup": [
+  "replace sg_three = 1.5 if cohort == 1"
+ ],
+ "ext_contract_split_subgroup": [
+  "replace sg_three = 2 if cohort == 1 & mod(wdbt_obs_id, 2) == 0"
+ ],
+ "ext_cov10_cont_within_vary": [
+  "keep if ttre < ."
+ ],
+ "ext_cov10_error_emptycells_restore": [
+  "set emptycells keep"
+ ],
+ "ext_cov10_rare_binary": [
+  "generate byte y_rare = unit_in_cohort <= cond(treated, 2, 1)"
+ ],
+ "ext_cov10_skewed_cost": [
+  "generate double y_cost = exp(2 + .03 * cohort + .025 * t + .30 * treated + .02 * cond(treated, relative_time, 0) + 1.40 * (unit_in_cohort == 12))"
+ ],
+ "ext_cov10_technical_options": [
+  "set emptycells keep"
+ ],
+ "ext_path10_cont_constant_dose": [
+  "generate double dose_constant = 1"
+ ],
+ "ext_path10_no_never_treated": [
+  "keep if ttre < ."
+ ],
+ "ext_path10_ppml_separation": [
+  "replace y_count_oracle = 0 if cohort == 1 & t == 6"
+ ],
+ "ext_path10_sparse_subgroup": [
+  "drop if sg_three == 1 & t < 5"
+ ],
+ "ext_san_input_missing": [
+  "replace y = . in 1",
+  "replace cohort = . in 2",
+  "replace t = . in 3",
+  "replace x1 = . in 4",
+  "replace person_id = . in 5",
+  "replace analytic_weight = . in 6",
+  "replace analytic_weight = 0 in 7",
+  "replace dose = . in 8",
+  "replace custom_lattice = . in 9"
+ ],
+ "ext_val10_fractional_ttre": [
+  "recast double ttre",
+  "replace ttre = 6.5 if cohort == 1"
+ ],
+ "ext_val10_mismatched_clock": [
+  "recast double ttre",
+  "replace ttre = 2006 if ttre < ."
+ ],
+ "ext_val10_zero_coded_never": [
+  "replace ttre = 0 if missing(ttre)"
+ ],
+ "ext_val_negative_weight": [
+  "replace analytic_weight = -1 in 1"
+ ],
+ "ext_val_nonpositive_id": [
+  "replace cohort = 0 if cohort == 1"
+ ],
+ "ext_val_poisson_negative_y": [
+  "replace y_count = -1 in 1"
+ ]
 }

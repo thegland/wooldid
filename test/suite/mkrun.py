@@ -100,6 +100,8 @@ def main():
     skip_missing = "--skip-missing-data" in args
 
     def resolve(ds):
+        if ds.endswith(".dta"):
+            ds = ds[:-4]
         for d in data_dirs:
             p = os.path.join(d, ds + ".dta")
             if os.path.exists(p):

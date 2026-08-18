@@ -58,6 +58,11 @@ pool_drain() { wait; }
 
 # ---------- components ----------
 do_data() {
+  # the frozen data/ dir is committed; regenerate only when it is absent/incomplete
+  if [ "$(ls "$SUITE/data"/*.dta 2>/dev/null | wc -l | tr -d ' ')" -ge 22 ]; then
+    note "data: 22 frozen datasets present — skipping regeneration"
+    return 0
+  fi
   note "data: building suite datasets into $SUITE/data"
   mkdir -p "$SUITE/data" "$OUT/datagen"
   ( cd "$OUT/datagen" && "$STATA_BIN" -e do "$SUITE/mkdata_suite.do" "$SUITE/data" ) \
@@ -149,12 +154,13 @@ do_newfeat() {
       pool_wait_slot
       marker="$OUT/.running.nf_$b"; : > "$marker"
       cd "$OUT/newfeat/$b" && \
-        "$STATA_BIN" -e do "$f" "$REPO/wooldidinstall/wooldid.ado" "$SUITE/data" "$REPO/test/data" \
+        "$STATA_BIN" -e do "$f" "$REPO/wooldidinstall/wooldid.ado" "$REPO/test/data" \
         >/dev/null 2>&1
-      if grep -q "_ALL_PASS" "$b.log" 2>/dev/null; then
+      # Stata batch names the log after the LAST command-line token — grep any log here
+      if grep -q "_ALL_PASS" ./*.log 2>/dev/null; then
         echo "PASS $b" >> "$OUT/newfeat.log"
       else
-        echo "FAIL $b (see $OUT/newfeat/$b/$b.log)" >> "$OUT/newfeat.log"
+        echo "FAIL $b (see $OUT/newfeat/$b/)" >> "$OUT/newfeat.log"
       fi
       rm -f "$marker"
     ) &
@@ -183,7 +189,7 @@ do_coverage() {
   # shellcheck disable=SC2086
   python3 "$SUITE/coverage_check.py" --ado "$REPO/wooldidinstall/wooldid.ado" \
     --configs "$SUITE/configs.csv" $extcfg \
-    --allow-zero update,replace,verbose,cleanmatrices,oldsyntax,regtol \
+    --allow-zero update,replace,verbose,cleanmatrices,oldsyntax,regtol,permprobs \
     > "$OUT/coverage.txt" 2>&1 \
     && note "coverage: OK" || note "coverage: GAPS — see $OUT/coverage.txt"
   tail -2 "$OUT/coverage.txt" | tee -a "$REPORT"

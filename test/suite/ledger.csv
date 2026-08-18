@@ -63,3 +63,5 @@ A7-fe-m,cov_fe,mat,*,,esamp weight base: same
 A7-kit-s,cov_kitchen,scalar,*,,esamp weight base + B1/B2 summarystats (controls with missings)
 A7-kit-m,cov_kitchen,mat,*,,esamp weight base + B1/B2
 A5-cfx-n,trig_cfx,matnames,cfx*_it_*,,B7 3df74db: old truncated later-estimand cfx matrices to width 1 (dims 3x1 -> 3x6)
+A7-sing-m,trig_singleton,mat,*,,B10 40e1913 + esamp weight base: fevar singleton drops strand treated post rows
+A7-sing-s,trig_singleton,scalar,*,,B10: same (N_dropped and derived scalars)
