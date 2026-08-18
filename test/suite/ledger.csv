@@ -31,15 +31,11 @@ C-SGlab-b2,cont_sg_gap,matnames,b,,dupcol 9d2e4df: same
 C-SGlab-s2,cont_sg_gap,matnames,wdidsgresults_*,,dupcol 9d2e4df: same
 A17-sgv-1,cont_sg_tidose,macro,properties,,e(V)-preserve 47defa0: old silently posted b-only when the per-SG VCV had missing diagonal cells; new posts e(V) with sentinel + Caution
 A17-sgv-2,cont_sg_gap,macro,properties,,e(V)-preserve 47defa0: same
-E-B12-p,pois,varlist,_ppmlhdfe_d,,B12 9d9d26f + S6 edebab1: old left ppmlhdfe's internal _ppmlhdfe_d variable in the user's data
-A12-tty-s,trig_tt_year,scalar,*,1e-6,tcen f7019c9: centered trend regressor; plain-path ~1e-8 rel at 4-digit years
-A12-tty-m,trig_tt_year,mat,*,1e-6,tcen f7019c9: same
+E-B12,*,varlist,_ppmlhdfe_d,,B12 9d9d26f + S6 edebab1: old left ppmlhdfe's internal _ppmlhdfe_d in the user's data on every clean poisson run (new drops it; verbose retains)
 A12-ttp-s,trig_tt_pois,scalar,*,1e-6,tcen f7019c9: poisson IRLS-tolerance class (rss/rmse ~3.5e-9)
-A12-ttp-m,trig_tt_pois,mat,*,1e-6,tcen f7019c9: same
 A12-ttb-s,trig_tt_big,scalar,*,,tcen f7019c9: old trends NUMERICALLY INERT at t~5e5 (rc 0 silently equal to no-timetrends)
 A12-ttb-m,trig_tt_big,mat,*,,tcen f7019c9: same
 A7-drop-m,trig_allest_drop,mat,*,,B10 40e1913: same
-A6-ext-s,trig_extmiss,scalar,*,,B9 2adf447: extended missings (== . vs >= .) changed weights/classification on old
 A6-ext-m,trig_extmiss,mat,*,,B9 2adf447: same
 A18-jt,trig_uncond_jt,scalar,joint_*,,E1b 7ea1533: joint tests now use the unconditional VCE the user asked for
 A5-cfx-m,trig_cfx,mat,cfx*,,B7 3df74db: old truncated cfx matrices to width 1 on estimands after the first
@@ -51,17 +47,44 @@ A16-imd-p,trig_imdegen,macro,properties,,IM guard 16263da: e(properties) b V -> 
 A17-part-w,trig_imdeg_part,mat,wdidmainresults,,e(V)-preserve 47defa0: partial degeneracy rows (old silent b-only)
 A17-part-p,trig_imdeg_part,macro,properties,,e(V)-preserve 47defa0: e(properties) b -> b V
 A17-part-b,trig_imdeg_part,mat,b,1e-4,svmat class amplified on single-cluster far horizons (worst ~2.4e-6 rel observed)
-A10-big-s,trig_bigcodes,scalar,*,,gen-double _i 8c5bfd7 + ttre 5a97f70: old float-pooled unit IDs / merged YYYYMMDD cohorts
-A10-big-m,trig_bigcodes,mat,*,,gen-double: same
-A10-big-n,trig_bigcodes,matnames,*,,gen-double: cohort merging changed matrix dims/labels on old
-A8b-icb-s,cov_icbad,scalar,*,,B21(b) 3cb0c41: old float copies broke engineered collinearity -> rc0 garbage without e(V)
-A8b-icb-m,cov_icbad,mat,*,,B21(b): same
-A7-cov-s,cov_controls,scalar,*,,esamp weight base: scattered-missing controls shrink the fitted sample
-A7-cov-m,cov_controls,mat,*,,esamp weight base: same
-A7-fe-s,cov_fe,scalar,*,,esamp weight base: fe() singleton drops
-A7-fe-m,cov_fe,mat,*,,esamp weight base: same
 A7-kit-s,cov_kitchen,scalar,*,,esamp weight base + B1/B2 summarystats (controls with missings)
 A7-kit-m,cov_kitchen,mat,*,,esamp weight base + B1/B2
 A5-cfx-n,trig_cfx,matnames,cfx*_it_*,,B7 3df74db: old truncated later-estimand cfx matrices to width 1 (dims 3x1 -> 3x6)
-A7-sing-m,trig_singleton,mat,*,,B10 40e1913 + esamp weight base: fevar singleton drops strand treated post rows
-A7-sing-s,trig_singleton,scalar,*,,B10: same (N_dropped and derived scalars)
+# --- ext bundle configs: LARGE documented classes (must precede the bounded generic rows) ---
+B4-ext-1,ext_bin_ext_impvalues,scalar,ll,,B4 4de841d: old clobbered ll with an IM CI bound under impvalues
+B4-ext-2,ext_cov10_cont_impvalues,scalar,ll,,B4 4de841d: same
+DDG-pw-1,ext_cov10_rcs_pweight_ddd_c1,mat,pwsgs,,OLD-BUILD DEFECT surfaced by this suite: v1.3 stored missing SG-pairwise cells as maxdouble (8.99e307) via its float svmat chain; degenerate near-zero-SE cells tail-amplified (HEAD posts clean values via the E1 posted-pwcompare rewrite)
+DDG-pw-2,ext_cov10_rcs_pweight_ddd_c2,mat,pwsgs,,same maxdouble/degenerate-SE artifact
+DDG-jt-1,ext_cov10_rcs_pweight_ddd_c1,scalar,joint_*,,same artifact in the allsgssame joint scalars
+DDG-jt-2,ext_cov10_rcs_pweight_ddd_c2,scalar,joint_*,,same artifact
+# --- ext bundle configs: bounded storage-noise classes (B21 gen-double + svmat float->double) ---
+# ceilings measured on the 2026-08-18 full run; documented wrong-answer classes are >=1e-2
+X-adv-p,ext_*,scalar,adversarial_pval_*,1e-3,svmat 6267522 + B21 3cb0c41 storage class; measured ceiling 2.0e-5
+X-adv-l,ext_*,mat,adversarial_line_*,1e-3,same; ceiling 1.6e-4
+X-est-b,ext_*,mat,b,1e-3,B21 gen-double (IC/ringer/weight float->double copies); ceiling 1.33e-4 (interactivecontrols cases)
+X-est-V,ext_*,mat,V,1e-3,same; ceiling 2.0e-6
+X-est-w,ext_*,mat,wdidmainresults,1e-3,same; ceiling 1.33e-4
+X-est-sg,ext_*,mat,wdidsgresults_*,1e-3,same; ceiling 4.2e-5
+X-est-pw,ext_*,mat,pwsgs,1e-3,same + tail amplification; ceiling 2.2e-7 outside the ddd maxdouble configs
+X-est-hist,ext_*,mat,histogramestimates,1e-4,same; ceiling 6.7e-9
+X-est-cfx,ext_*,mat,cfx*,1e-4,same; ceiling 9.3e-9
+X-joint-s,ext_*,scalar,joint_*,1e-3,tail-amplified joint-test p (B21 documented 4.4e-6-rel class); ceiling 4.1e-6
+X-joint-m,ext_*,macro,joint_*,1e-3,same p stored as e() macros (numeric-compared)
+X-fit-F,ext_*,scalar,F,1e-4,B21 regressor-copy class; ceiling 2.1e-7
+X-fit-rss,ext_*,scalar,rss,1e-4,same; ceiling 5.9e-8
+X-fit-rmse,ext_*,scalar,rmse,1e-4,same; ceiling 3.0e-8
+X-fit-ll0,ext_*,scalar,ll_0,1e-4,same; ceiling 5.2e-8
+X-fit-ll,ext_*,scalar,ll,1e-4,same noise class on non-impvalues configs; ceiling ~5e-8
+X-fit-r2,ext_*,scalar,r2*,1e-4,same; ceiling 3.2e-9
+X-fit-chi2,ext_*,scalar,chi2,1e-4,same; ceiling 1.9e-9
+B21-cwm-b,cov_cwm,mat,b,1e-6,B21 3cb0c41: cwm weight copies float->double; ceiling 4.4e-8
+B21-cwm-w,cov_cwm,mat,wdidmainresults,1e-6,B21 3cb0c41: same; ceiling 8.7e-8
+A17-uz,ext_cont_ext_untreatedzero,macro,properties,,e(V)-preserve 47defa0: plain-continuous missing *_ame SEs — old silent b-only; new posts V with sentinel
+A17-cd,ext_path10_cont_constant_dose,macro,properties,,e(V)-preserve 47defa0: same (constant-dose degenerate shape)
+DDG-pw-3,ext_cov10_rcs_twoway_cluster_c1,mat,pwsgs,,v1.3 maxdouble missing-cell artifact + degenerate-SE tails (see DDG-pw-1)
+DDG-jt-3,ext_cov10_rcs_twoway_cluster_c1,scalar,joint_*,,same artifact
+DDG-pw-4,ext_cov10_rcs_twoway_cluster_c2,mat,pwsgs,,same artifact (residual -8.9e-16 garbage SE cell -> clean 0)
+A16-imd-Vn,trig_imdegen,matnames,V,,IM guard 16263da: e(V) dropped on full degeneracy (matnames side of the removal)
+A16-imd-b,trig_imdegen,mat,b,1e-6,svmat class on the impvalues path; ceiling 3.0e-8
+A12-ttb-p,trig_tt_big,macro,properties,,tcen f7019c9 documented signature: working trends omit e(V) (old trends were inert -> V present)
+A12-ttb-vn,trig_tt_big,matnames,V,,tcen f7019c9: matnames side of the V drop

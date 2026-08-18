@@ -116,14 +116,15 @@ def load_ledger(path):
             rows.append(r)
     return rows
 
-def load_rc_expect(path):
+def load_rc_expect(paths):
     exp = {}
-    with open(path, newline="") as f:
-        for r in csv.DictReader(f):
-            if not r.get("config") or r["config"].startswith("#"):
-                continue
-            exp[r["config"]] = (r.get("rc_old", "").strip() or "0",
-                                r.get("rc_new", "").strip() or "0")
+    for path in paths:
+        with open(path, newline="") as f:
+            for r in csv.DictReader(f):
+                if not r.get("config") or r["config"].startswith("#"):
+                    continue
+                exp[r["config"]] = (r.get("rc_old", "").strip() or "0",
+                                    r.get("rc_new", "").strip() or "0")
     return exp
 
 def main():
@@ -131,10 +132,12 @@ def main():
     args = sys.argv[1:]
     def optval(flag, default=None):
         return args[args.index(flag) + 1] if flag in args else default
+    def allvals(flag):
+        return [args[i + 1] for i, a in enumerate(args) if a == flag]
     old_dir, new_dir = args[0], args[1]
     rtol = float(optval("--rtol", "1e-10"))
     ledger = load_ledger(optval("--ledger")) if "--ledger" in args else []
-    rc_expect = load_rc_expect(optval("--configs")) if "--configs" in args else {}
+    rc_expect = load_rc_expect(allvals("--configs"))
     verbose = "--verbose" in args
     stale_check = "--no-stale-check" not in args  # disable on SUBSET runs only
 
@@ -220,7 +223,15 @@ def main():
                               and max(abs(a), abs(b)) > 0 else None)
                         classify(kind, k, f"scalar {k}: {a} -> {b}", rd)
                 elif O[kind][k] != N[kind][k]:
-                    classify(kind, k, f"{kind} {k}: [{O[kind][k]}] -> [{N[kind][k]}]")
+                    rd = None
+                    if kind == "macro":
+                        try:
+                            a, b = float(O[kind][k]), float(N[kind][k])
+                            if max(abs(a), abs(b)) > 0:
+                                rd = abs(a - b) / max(abs(a), abs(b))
+                        except ValueError:
+                            pass
+                    classify(kind, k, f"{kind} {k}: [{O[kind][k]}] -> [{N[kind][k]}]", rd)
         if (O["varlist"] or "") != (N["varlist"] or ""):
             bs, ns = set((O["varlist"] or "").split()), set((N["varlist"] or "").split())
             for v in sorted(ns - bs):

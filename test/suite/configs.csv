@@ -39,7 +39,7 @@ trig_sgadv_deeppre,trig,dta_s_deeppre,y i t ttre,,,,att cluster(i) subgroups(sg)
 trig_tt_year,trig,dta_s_ttyear,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) timetrends,,,,A12 small: tcen ~1e-8 class
 trig_tt_big,trig,dta_s_ttbig,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) timetrends,,,,A12 large: old trends numerically inert
 trig_tt_pois,trig,dta_s_ttyear,ycount i t ttre,,,,att cluster(i) poisson esprelength(1) espostlength(1) timetrends,,,1,A12 poisson: IRLS rss/rmse class
-trig_bigcodes,trig,dta_s_bigcodes,y i t ttre,,,,att att_it cluster(i) esprelength(2) espostlength(2) histogramcohorteffects,,,,A10+A11: float pooling / cohort merging on old
+trig_bigcodes,trig,dta_s_bigcodes,y i t ttre,,,,att att_it cluster(i) esprelength(2) espostlength(2) histogramcohorteffects,461,0,,A11 5a97f70: old ABORTS r461 on the YYYYMMDD grid (documented abort variant; the silent-pooling variant was proven in the 8c5bfd7 campaign work)
 trig_imdegen,trig,dta_s_imdegen,y i t ttre,,,,att cluster(clus) esprelength(1) espostlength(1) impvalues,,,,A16: IM degeneracy guard (old se~0; new missing + V dropped)
 trig_imdeg_part,trig,dta_path_imbalanced,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(9) impvalues,,,,A17: partial degeneracy (old b-only; new V with sentinel)
 trig_mintsent_off,trig,dta_s_mintsent,y i t ttre_sent,,,,att cluster(i) esprelength(2) espostlength(2) safety(off),,,,A15: sentinel-0 onset coding (ttre_sent) biased on old under safety(off)
@@ -51,7 +51,7 @@ cov_fe,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(2) espostlen
 cov_ic,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) interactivecontrols(icvar),,,,
 cov_icbad,covars,dta_s_covars,y i t ttre,,,,att cluster(i) interactivecontrols(icbad),,,,A8b: old rc0 garbage without e(V); new clean
 cov_ccc,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) coarsecohortcontrols(c.x1),,,,
-cov_ccc_absorb,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) coarsecohortcontrols(c.x1) ccc_absorb(x2),,,,
+cov_ccc_absorb,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) ccc_absorb(x2),198,198,,PARITY DEFECT TICKET: ccc_absorb runs the regression then dies r198 bare invalid-syntax in the margins phase on BOTH builds (option had zero coverage anywhere before this suite)
 cov_cwm,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) customweightmultiplier(cwmvar),,,,
 cov_kitchen,covars,dta_s_covars,y i t ttre,aw=w,,,att att_it cluster(i) esprelength(2) espostlength(2) controls(x1 x2) customweightmultiplier(cwmvar) jointtests summarystats,,,,
 # ---- plots: e()-visible plot machinery with graphics off (README roadmap item 1) ----
