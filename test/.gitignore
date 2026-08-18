@@ -1,0 +1,14 @@
+# Regenerable test outputs — never commit run artifacts.
+# Battery/suite run directories (each holds %21x dumps from one run):
+run_*/
+# Stata batch transcripts and scratch logs:
+*.log
+# Log-scrape sentinel artifacts written by the targeted test_*.do suites:
+advg_*.txt
+fn_*.txt
+gt_*.txt
+perm_*.txt
+sgsp_*.txt
+# Plot outputs from test_fastnose.do:
+fnplot_ES*
+.DS_Store
