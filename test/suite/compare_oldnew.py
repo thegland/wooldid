@@ -3,49 +3,49 @@
 
 Usage:
   compare_oldnew.py OLD_DIR NEW_DIR [--rtol 1e-10] [--ledger ledger.csv]
-                    [--configs configs.csv] [--verbose]
+                    [--configs configs.csv]... [--only comp1,comp2]
+                    [--no-stale-check] [--verbose]
 
-Both dirs hold %21x dumps written by the suite runner (same format as test/runbattery.do:
-rc|, prov|, varlist|, scalar|name|%21x, macro|name|val, matnames|m|RxC|rn|cn, mat|m|r|c|%21x).
+Both dirs hold %21x dumps written by the suite runner (mkrun.py shards): rc|, prov|,
+varlist|, scalar|name|%21x, macro|name|val, matnames|m|RxC|rn|cn, mat|m|r|c|%21x,
+and a trailing end|<config> sentinel.
 
 Comparison semantics (differs from the bit-exact regression compare in test/compare.py):
-  - rc: if the two builds' rcs differ, OR either rc is nonzero, the config is judged on rc
-    ALONE (an erroring old build leaves residual internal margins e() state — content is
-    meaningless). The rc pair must match the per-config expectations in configs.csv
-    (columns rc_old / rc_new, blank = 0); an expected pair is EXPLAINED, anything else is
-    UNEXPLAINED. Without --configs, only rc_old==rc_new==0 proceeds to content.
-  - Content (both rcs 0): objects present in BOTH dumps compared at --rtol (default 1e-10,
-    the project indifference threshold; NO absolute floor). Objects only in NEW are
-    informational ADDITIONS (new features). Objects only in OLD are REMOVALS = failures
-    unless ledgered (the old e() surface is a strict subset of the new one by audit).
-  - Ledger rows explain differences: a row matches by config glob + kind + object-name
-    glob, and — when its rtol field is nonempty — only BOUNDS the difference (|a-b| <=
-    row_rtol * max(|a|,|b|)). A matching diff is EXPLAINED[id]. Rows with empty rtol
-    explain any difference of that object (reserve for documented LARGE fixes).
-  - STALE ledger rows: a row whose config glob matched at least one compared config but
-    which never fired is reported STALE and fails the run (keeps the ledger honest).
+  - UNIVERSE: the set of configs to compare comes from the --configs CSVs (restricted by
+    --only components if given). A universe config missing from either dir is a failure;
+    a dump present for a config NOT in the universe is a failure (stale run dir).
+  - INTEGRITY: dumps without the end| sentinel are MALFORMED failures (truncated by a
+    timeout kill). Each side's dumps must carry ONE provenance (label|sha) — mixed
+    vintages are a failure. The prov pair is printed in the summary.
+  - rc: if the two builds' rcs differ, OR either rc is nonzero, the config is judged on
+    the rc pair ALONE against the per-config rc_old/rc_new expectations (blank = 0); an
+    expected pair is EXPLAINED, anything else UNEXPLAINED. (An erroring old build leaves
+    residual internal margins e() state — content would be noise.)
+  - Content (both rcs 0): shared objects compared at --rtol (default 1e-10, NO absolute
+    floor). Stata missing codes in %21x (exponent-3ff patterns) decode to sentinel
+    STRINGS ('.', '.a', ...) so a missing-code flip can never be explained by a bounded
+    ledger row. New-only objects are informational ADDITIONS; old-only objects are
+    REMOVALS = failures unless ledgered (old e() surface is a strict subset by audit).
+  - Ledger rows explain differences: match by config glob + kind + object-name glob; a
+    row with a numeric rtol only BOUNDS a finite numeric difference (never strings,
+    removals, or NaN); empty rtol explains any difference (reserved for documented LARGE
+    fixes). --verbose prints each bounded row's worst fired reldiff vs its bound.
+  - STALE: a ledger row whose config glob matched a compared config but never fired
+    fails the run (disable on subset runs with --no-stale-check). Rows whose glob
+    matches NO compared config are reported UNSCOPED (fatal only when stale-checking).
 
-Ledger CSV columns:
-  id,config,kind,pattern,rtol,reason
-    id      - short fix id (e.g. A1-B1)
-    config  - config-name glob (fnmatch)
-    kind    - scalar | macro | matnames | mat | varlist
-    pattern - object-name glob (for mat rows: the matrix name)
-    rtol    - optional bound for numeric diffs (empty = any difference matches)
-    reason  - one line: what fix, which commit
-
-Exit 0 iff no UNEXPLAINED differences and no STALE ledger rows.
+Ledger CSV columns: id,config,kind,pattern,rtol,reason.
+Exit 0 iff no UNEXPLAINED differences, no integrity/provenance failures, no STALE rows.
 """
-import sys, os, glob, csv, fnmatch, re
+import sys, os, glob, csv, fnmatch, re, math
 
 TEMPVAR = re.compile(r"__0000[0-9A-Za-z]+")
 
 def canon_tempvars(s):
     """Replace Stata tempvar tokens (__0000XX) with order-of-appearance placeholders.
 
-    cfx matrices embed tempvar names in their row/colnames; the two builds allocate
-    different counters, so raw names always differ. Distinct tempvars within one string
-    stay distinguishable (__TMP1, __TMP2, ...)."""
+    cfx matrices embed tempvar names in row/colnames; the two builds allocate different
+    counters, so raw names always differ. Distinct tempvars stay distinguishable."""
     seen = {}
     def sub(m):
         t = m.group(0)
@@ -55,7 +55,9 @@ def canon_tempvars(s):
     return TEMPVAR.sub(sub, s)
 
 def hex2f(s):
-    """Parse Stata %21x to float; missing-value sentinels and unparseables stay strings."""
+    """Parse Stata %21x to float. Stata MISSING codes ('.', '.a'..'.z') are stored as
+    +1.<k in top 3 hex digits>X+3ff — decode them to sentinel strings so they compare
+    by identity, never numerically. Other unparseables also stay strings."""
     s = s.strip()
     if s.startswith(".") and len(s) <= 2:
         return s
@@ -65,7 +67,14 @@ def hex2f(s):
         if t.startswith("+") or t.startswith("-"):
             t = t[1:]
         mant, exp = t.split("X")
-        v = float.fromhex("0x" + mant + "p" + str(int(exp, 16)))
+        e = int(exp, 16)
+        if e == 0x3ff and not neg and mant.startswith("1."):
+            frac = int(mant[2:], 16)
+            width = len(mant) - 2  # hex digits after the point (13 in %21x)
+            top3, rest = divmod(frac, 16 ** (width - 3))
+            if rest == 0 and top3 <= 26:
+                return "." if top3 == 0 else "." + chr(ord("a") + top3 - 1)
+        v = float.fromhex("0x" + mant + "p" + str(e))
         return -v if neg else v
     except Exception:
         return s
@@ -83,13 +92,19 @@ def _selftest():
     assert hex2f("+1.8000000000000X+001") == 3.0
     assert hex2f("-1.0000000000000X-001") == -0.5
     assert hex2f(".") == "." and hex2f(".a") == ".a"
+    assert hex2f("+1.0000000000000X+3ff") == "."          # system missing decodes
+    assert hex2f("+1.0010000000000X+3ff") == ".a"         # extended missing decodes
+    assert hex2f("+1.01a0000000000X+3ff") == ".z"
+    assert isinstance(hex2f("+1.fffffffffffffX+3fe"), float)  # true maxdouble stays numeric
+    assert isinstance(hex2f("+1.0010000000001X+3ff"), float)  # non-pattern 3ff stays numeric
     assert close(1.0, 1.0 + 1e-11, 1e-10) and not close(1.0, 1.0 + 1e-9, 1e-10)
-    assert not close(1e-14, 2e-14, 1e-10), "no absolute floor: small magnitudes stay strict"
+    assert not close(1e-14, 2e-14, 1e-10), "no absolute floor"
     assert not close(0.0, 1e-300, 1e-10)
+    assert not close(".", ".a", 1e-3) and close(".", ".", 0)
 
 def load(path):
-    d = {"scalar": {}, "macro": {}, "mat": {}, "matnames": {}, "rc": None,
-         "varlist": None, "prov": ""}
+    d = {"scalar": {}, "esamp": {}, "macro": {}, "mat": {}, "matnames": {},
+         "rc": None, "varlist": None, "prov": "", "end": False, "files": ""}
     for line in open(path, encoding="utf-8", errors="replace"):
         line = line.rstrip("\n")
         if not line:
@@ -97,7 +112,10 @@ def load(path):
         p = line.split("|")
         if p[0] == "rc": d["rc"] = p[1] if len(p) > 1 else ""
         elif p[0] == "prov": d["prov"] = "|".join(p[1:])
+        elif p[0] == "end": d["end"] = True
         elif p[0] == "varlist": d["varlist"] = p[1] if len(p) > 1 else ""
+        elif p[0] == "esamp": d["esamp"][p[1]] = hex2f(p[2])
+        elif p[0] == "files": d["files"] = "|".join(p[1:])
         elif p[0] == "scalar": d["scalar"][p[1]] = hex2f(p[2])
         elif p[0] == "macro": d["macro"][p[1]] = "|".join(p[2:])
         elif p[0] == "matnames": d["matnames"][p[1]] = canon_tempvars("|".join(p[2:]))
@@ -107,25 +125,32 @@ def load(path):
 def load_ledger(path):
     rows = []
     with open(path, newline="") as f:
-        for i, r in enumerate(csv.DictReader(f)):
+        for r in csv.DictReader(f):
             if not r.get("id") or r["id"].startswith("#"):
                 continue
             r["_rtol"] = float(r["rtol"]) if r.get("rtol", "").strip() else None
             r["_fired"] = False
             r["_scoped"] = False
+            r["_worst"] = 0.0
             rows.append(r)
     return rows
 
-def load_rc_expect(paths):
-    exp = {}
+def load_universe(paths, only):
+    """Config universe from the CSVs: name -> (component, rc_old, rc_new)."""
+    uni = {}
     for path in paths:
         with open(path, newline="") as f:
             for r in csv.DictReader(f):
                 if not r.get("config") or r["config"].startswith("#"):
                     continue
-                exp[r["config"]] = (r.get("rc_old", "").strip() or "0",
+                if r["config"] in uni:
+                    sys.exit(f"duplicate config across CSVs: {r['config']}")
+                if only and r["component"] not in only:
+                    continue
+                uni[r["config"]] = (r["component"],
+                                    r.get("rc_old", "").strip() or "0",
                                     r.get("rc_new", "").strip() or "0")
-    return exp
+    return uni
 
 def main():
     _selftest()
@@ -137,19 +162,25 @@ def main():
     old_dir, new_dir = args[0], args[1]
     rtol = float(optval("--rtol", "1e-10"))
     ledger = load_ledger(optval("--ledger")) if "--ledger" in args else []
-    rc_expect = load_rc_expect(allvals("--configs"))
+    only = set(optval("--only").split(",")) if "--only" in args else None
+    universe = load_universe(allvals("--configs"), only)
+    full_universe = load_universe(allvals("--configs"), None) if only else universe
+    if not universe:
+        sys.exit("empty config universe — pass --configs (and check --only)")
     verbose = "--verbose" in args
     stale_check = "--no-stale-check" not in args  # disable on SUBSET runs only
 
     def ledger_find(cfg, kind, name, reldiff):
-        """First ledger row matching this diff; bounded rows must bound the diff."""
         for r in ledger:
             if not fnmatch.fnmatch(cfg, r["config"]): continue
             if r["kind"] != kind: continue
             if not fnmatch.fnmatch(name, r["pattern"]): continue
-            if r["_rtol"] is not None and (reldiff is None or reldiff > r["_rtol"]):
-                continue  # bounded rows only explain numeric diffs within their bound
+            if r["_rtol"] is not None:
+                if reldiff is None or math.isnan(reldiff) or reldiff > r["_rtol"]:
+                    continue  # bounded rows only explain finite numeric diffs in-bound
             r["_fired"] = True
+            if reldiff is not None and not math.isnan(reldiff):
+                r["_worst"] = max(r["_worst"], reldiff)
             return r
         return None
 
@@ -157,18 +188,39 @@ def main():
     ncfg = {os.path.basename(f)[:-4] for f in glob.glob(os.path.join(new_dir, "*.csv"))}
     unexplained = explained = additions = 0
     verdicts = {}
-    for cfg in sorted(ocfg | ncfg):
-        # scope ledger staleness to configs that actually ran
+    provs = {"old": set(), "new": set()}
+
+    # integrity: stray dumps for configs outside the FULL universe (stale run dirs);
+    # on --only runs, other components' dumps are expected and not strays
+    for side, present in (("old", ocfg), ("new", ncfg)):
+        for stray in sorted(present - set(full_universe)):
+            print(f"[{stray}] STRAY dump on {side} side (not in the config universe — "
+                  f"stale run dir?)")
+            unexplained += 1
+
+    for cfg in sorted(universe):
+        comp, exp_old, exp_new = universe[cfg]
         for r in ledger:
             if fnmatch.fnmatch(cfg, r["config"]):
                 r["_scoped"] = True
         if cfg not in ocfg or cfg not in ncfg:
-            print(f"[{cfg}] MISSING on {'new' if cfg in ocfg else 'old'} side")
+            side = "BOTH" if (cfg not in ocfg and cfg not in ncfg) else \
+                   ("new" if cfg in ocfg else "old")
+            print(f"[{cfg}] MISSING dump ({side} side)")
             unexplained += 1
             verdicts[cfg] = "MISSING"
             continue
         O = load(os.path.join(old_dir, cfg + ".csv"))
         N = load(os.path.join(new_dir, cfg + ".csv"))
+        provs["old"].add(O["prov"])
+        provs["new"].add(N["prov"])
+        if not O["end"] or not N["end"]:
+            side = "old" if not O["end"] else "new"
+            print(f"[{cfg}] MALFORMED dump ({side} side missing end| sentinel — "
+                  f"truncated by a timeout kill?)")
+            unexplained += 1
+            verdicts[cfg] = "MALFORMED"
+            continue
         lines, adds = [], []
 
         def classify(kind, name, msg, reldiff=None):
@@ -181,12 +233,9 @@ def main():
                 unexplained += 1
                 lines.append(("U", f"UNEXPLAINED {msg}"))
 
-        # --- rc gate ---
-        exp_old, exp_new = rc_expect.get(cfg, ("0", "0"))
         rc_o, rc_n = O["rc"] or "", N["rc"] or ""
         rc_ok = (rc_o == exp_old and rc_n == exp_new)
         if rc_o != rc_n or rc_o != "0" or rc_n != "0":
-            # rc-only judgement (erroring builds leave residual e() state)
             if rc_ok:
                 if rc_o != rc_n:
                     explained += 1
@@ -198,8 +247,7 @@ def main():
                 unexplained += 1
                 lines.append(("U", f"UNEXPECTED rc pair: old {rc_o} (expected {exp_old}), "
                                    f"new {rc_n} (expected {exp_new})"))
-            statmap = {True: "RC_EXPLAINED", False: "RC_UNEXPLAINED"}
-            verdicts[cfg] = statmap[rc_ok]
+            verdicts[cfg] = "RC_EXPLAINED" if rc_ok else "RC_UNEXPLAINED"
             print(f"[{cfg}] {verdicts[cfg]}")
             for _, l in lines:
                 print("    " + l)
@@ -207,31 +255,36 @@ def main():
         if not rc_ok:
             classify("rc", "rc", f"rc 0/0 but expectations say {exp_old}/{exp_new} "
                                  f"(stale configs.csv expectation?)")
+        if not O["scalar"] and not O["mat"] and not O["macro"]:
+            classify("rc", "rc", "rc 0 but the old dump has ZERO e() objects — "
+                                 "estimation output lost?")
 
-        # --- content compare (both rc 0) ---
-        for kind in ("scalar", "macro", "matnames"):
+        for kind in ("scalar", "esamp", "macro", "matnames"):
             for k in sorted(set(O[kind]) | set(N[kind])):
                 if k not in O[kind]:
                     adds.append(f"{kind} {k}")
                 elif k not in N[kind]:
                     classify(kind, k, f"{kind} {k}: REMOVED in new (was {O[kind][k]})")
-                elif kind == "scalar":
+                elif kind in ("scalar", "esamp"):
                     a, b = O[kind][k], N[kind][k]
                     if not close(a, b, rtol):
                         rd = (abs(a - b) / max(abs(a), abs(b))
                               if not isinstance(a, str) and not isinstance(b, str)
                               and max(abs(a), abs(b)) > 0 else None)
-                        classify(kind, k, f"scalar {k}: {a} -> {b}", rd)
+                        classify(kind, k, f"{kind} {k}: {a} -> {b}", rd)
                 elif O[kind][k] != N[kind][k]:
                     rd = None
                     if kind == "macro":
                         try:
                             a, b = float(O[kind][k]), float(N[kind][k])
-                            if max(abs(a), abs(b)) > 0:
+                            if (max(abs(a), abs(b)) > 0 and math.isfinite(a)
+                                    and math.isfinite(b)):
                                 rd = abs(a - b) / max(abs(a), abs(b))
                         except ValueError:
                             pass
                     classify(kind, k, f"{kind} {k}: [{O[kind][k]}] -> [{N[kind][k]}]", rd)
+        if O["files"] != N["files"]:
+            classify("files", "*", f"saveplots files: [{O['files']}] -> [{N['files']}]")
         if (O["varlist"] or "") != (N["varlist"] or ""):
             bs, ns = set((O["varlist"] or "").split()), set((N["varlist"] or "").split())
             for v in sorted(ns - bs):
@@ -268,12 +321,8 @@ def main():
                      None if has_str else worst)
 
         n_un = sum(1 for t, _ in lines if t == "U")
-        if not lines:
-            verdicts[cfg] = "MATCH"
-        elif n_un == 0:
-            verdicts[cfg] = "EXPLAINED"
-        else:
-            verdicts[cfg] = "DIFFERS"
+        verdicts[cfg] = ("MATCH" if not lines else
+                         "EXPLAINED" if n_un == 0 else "DIFFERS")
         additions += len(adds)
         print(f"[{cfg}] {verdicts[cfg]}" + (f" (+{len(adds)} new-only objects)" if adds else ""))
         for t, l in lines:
@@ -282,16 +331,45 @@ def main():
         if verbose and adds:
             print("    ADDITIONS: " + ", ".join(adds))
 
+    # provenance uniformity per side
+    prov_fail = 0
+    for side in ("old", "new"):
+        ps = provs[side] - {""}
+        if len(ps) > 1:
+            print(f"PROVENANCE FAILURE: {side}-side dumps carry {len(ps)} distinct "
+                  f"prov stamps: {sorted(ps)}")
+            prov_fail += 1
+        elif ps:
+            p = next(iter(ps))
+            if not p.startswith(side + "|"):
+                print(f"PROVENANCE FAILURE: {side}-side dumps labeled '{p}'")
+                prov_fail += 1
+            else:
+                print(f"prov[{side}] = {p}")
+
     stale = [r for r in ledger if r["_scoped"] and not r["_fired"]] if stale_check else []
     for r in stale:
         print(f"STALE ledger row {r['id']} ({r['config']} {r['kind']} {r['pattern']}): "
               f"never fired on any matching config")
+    unscoped = [r for r in ledger if not r["_scoped"]]
+    for r in unscoped:
+        print(f"UNSCOPED ledger row {r['id']} ({r['config']}): glob matched no compared "
+              f"config" + (" [fatal]" if stale_check else " [subset run — informational]"))
+    if verbose:
+        for r in ledger:
+            if r["_fired"] and r["_rtol"] is not None:
+                print(f"ledger {r['id']}: worst fired reldiff {r['_worst']:.2e} "
+                      f"(bound {r['_rtol']:.0e})")
     counts = {}
     for v in verdicts.values():
         counts[v] = counts.get(v, 0) + 1
     print("VERDICTS " + " ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+    print(f"COMPARED {len(verdicts)} of {len(universe)} configured")
     print(f"SUMMARY unexplained={unexplained} explained={explained} "
-          f"additions={additions} stale_ledger={len(stale)}")
-    sys.exit(0 if unexplained == 0 and not stale else 1)
+          f"additions={additions} stale_ledger={len(stale)} "
+          f"unscoped={len(unscoped)} prov_fail={prov_fail}")
+    bad_exit = (unexplained > 0 or prov_fail > 0 or bool(stale)
+                or (stale_check and bool(unscoped)) or len(verdicts) == 0)
+    sys.exit(1 if bad_exit else 0)
 
 main()

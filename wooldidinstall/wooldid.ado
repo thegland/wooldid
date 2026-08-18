@@ -5857,6 +5857,8 @@ end
 *** frame row order) and c_locals: wdp_R, wdp_npd/wdp_nps (possible-assignment count,
 *** double and string), wdp_caut1/2 (cautions), wdp_err (fatal message, caller raises)
 cap mata: mata drop wooldid_permx()
+cap mata: mata drop wooldid_permx_enum()
+cap mata: mata drop wooldid_permx_msp()
 mata:
 void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
                    real scalar reps, real scalar exact, string scalar assignname,

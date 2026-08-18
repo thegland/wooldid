@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""External-config MINER for the wooldid dual-build test suite.
+"""
+# REGENERATION POLICY: this miner writes configs_ext.GEN.csv and preps_ext.GEN.json —
+# never the curated configs_ext.csv / preps.json, which carry hand-verified rc pins and
+# hand-authored prep keys. To adopt regenerated output, DIFF it against the curated
+# files and merge deliberately (the curated rc pins win unless re-verified empirically).
+External-config MINER for the wooldid dual-build test suite.
 
 Reads the external colleagues' bundle
   wooldid_external/wooldid_test_comparison_code
 (manifests + case .do files) and emits runner configs:
 
-  configs_ext.csv  columns:
+  configs_ext.gen.csv  columns:
     config,component,dataset,weight,ifcond,prep,varlist,options,rc_old,rc_new,msg_old,slow
-  preps.json       prep key -> list of Stata lines (run after loading dataset,
+  preps_ext.gen.json       prep key -> list of Stata lines (run after loading dataset,
                    before the wooldid call)
 
 Design notes
@@ -450,7 +455,7 @@ def lattice_config(token, bins):
 def main():
     if not BUNDLE.is_dir():
         print(f"NOTE: external bundle not found at {BUNDLE}; nothing to mine. "
-              f"configs_ext.csv left untouched.")
+              f"configs_ext.gen.csv left untouched.")
         return 0
 
     manifest = BUNDLE / "tests" / "manifest"
@@ -583,18 +588,18 @@ def main():
     # ---- emit ---------------------------------------------------------------
     cols = ["config", "component", "dataset", "weight", "ifcond", "prep",
             "varlist", "options", "rc_old", "rc_new", "msg_old", "slow"]
-    with open(OUTDIR / "configs_ext.csv", "w", newline="", encoding="utf-8") as fh:
+    with open(OUTDIR / "configs_ext.gen.csv", "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=cols)
         w.writeheader()
         for row in rows:
             w.writerow(row)
-    with open(OUTDIR / "preps.json", "w", encoding="utf-8") as fh:
+    with open(OUTDIR / "preps_ext.gen.json", "w", encoding="utf-8") as fh:
         json.dump(preps_out, fh, indent=1, sort_keys=True)
     with open(OUTDIR / "skipped_cases.txt", "w", encoding="utf-8") as fh:
         for cid, why in skipped:
             fh.write(f"{cid}\t{why}\n")
-    print(f"wrote {OUTDIR/'configs_ext.csv'} ({len(rows)} configs), "
-          f"preps.json ({len(preps_out)} keys), skipped_cases.txt ({len(skipped)})")
+    print(f"wrote {OUTDIR/'configs_ext.gen.csv'} ({len(rows)} configs), "
+          f"preps_ext.gen.json ({len(preps_out)} keys), skipped_cases.txt ({len(skipped)})")
     return 0
 
 

@@ -24,6 +24,21 @@ program define dumpres
   file write `fh' "prov|{LABEL}|{SHA}" _n
   qui ds
   file write `fh' `"varlist|`r(varlist)'"' _n
+  * e(sample) digest: N + per-variable sums over the realized sample (order-independent,
+  * so internal re-sorts cannot fake a match; a sample-composition change shows even
+  * when b/V coincidentally agree)
+  cap qui count if e(sample)
+  if _rc == 0 {
+    local v : di %21x r(N)
+    file write `fh' "esamp|__N|`v'" _n
+    foreach var of varlist _all {
+      cap qui sum `var' if e(sample), meanonly
+      if _rc == 0 {
+        local v : di %21x r(sum)
+        file write `fh' "esamp|`var'|`v'" _n
+      }
+    }
+  }
   local escalars : e(scalars)
   foreach s of local escalars {
     local v : di %21x e(`s')
@@ -51,6 +66,10 @@ program define dumpres
     }
     cap matrix drop `M'
   }
+  local svfiles : dir . files "svp*"
+  local svfiles : list sort svfiles
+  file write `fh' `"files|`svfiles'"' _n
+  file write `fh' "end|`cfg'" _n
   file close `fh'
 end
 '''
@@ -76,6 +95,10 @@ def main():
     ado = os.path.abspath(optval("--ado"))
     label = optval("--label")
     sha = optval("--sha", "unknown")
+    import re as _re
+    if not _re.fullmatch(r"[0-9a-f]{7,40}(-dirty)?", sha):
+        print(f"WARNING: --sha '{sha}' is not a git sha — dumps will fail the "
+              f"comparer's provenance conventions in orchestrated runs")
     data_dirs = [os.path.abspath(d) for d in allvals("--data")]
     outdir = os.path.abspath(optval("--outdir"))
     comps = set(optval("--components", "").split(",")) if optval("--components") else None
@@ -115,6 +138,13 @@ def main():
         lines.append("set seed 98765")
         lines.append("set sortseed 98765")
         lines.append("ereturn clear")
+        # scrub session state a previous config in this shard may have left:
+        # wooldid's own globals (new build only — build-asymmetric by construction),
+        # user matrices/scalars from preps, and stored estimates
+        lines.append("cap macro drop WOOLDID_LASTRC WOOLDID_CLEANUP")
+        lines.append("cap matrix drop _all")
+        lines.append("cap scalar drop _all")
+        lines.append("cap estimates drop _all")
         if r.get("dataset", "").strip():
             p = resolve(r["dataset"].strip())
             if p is None:

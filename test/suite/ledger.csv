@@ -1,90 +1,121 @@
 id,config,kind,pattern,rtol,reason
-# Expected old-vs-new divergences. Empty rtol = any difference in the object is explained
-# (reserve for documented LARGE fixes); a numeric rtol BOUNDS what the row may explain.
-# Rows that never fire on a matching config are reported STALE and fail the compare.
-# Full narrative: wooldid_solved_issues.md; draft: /tmp/wooldid_suite_survey/divergence_ledger_draft.md
-A1-B1,*,mat,summarystats,,B1 015ae88: old y_control/c_control rows duplicated pre-treatment stats; B2 0188b8f: old sub-sample IQR cells used full-sample IQR
-A2-B2,*,scalar,*_iqr,,B2 0188b8f: e(*pre_iqr)-family scalars carried the full-sample IQR on old
+# Expected old-vs-new divergences. Row order matters (first match wins): documented
+# LARGE rows (empty rtol = any difference) come FIRST; bounded storage-noise tiers come
+# LAST and only explain finite numeric diffs within their bound (never strings, missing
+# codes, removals, or NaN). Bounds are ~10x the ceilings measured on the 2026-08-18 runs
+# and are noise-vs-wrong-answer separators, NOT forward tolerance policy (the rtol-0
+# battery guards HEAD regressions). A scoped row that stops firing goes STALE and fails
+# the run. Narrative for every citation: wooldid_solved_issues.md.
+# ---------------- documented LARGE fixes (unbounded, tightly scoped) ----------------
+A1-B1a,basic,mat,summarystats,,B1 015ae88 control-row + B2 0188b8f IQR fixes
+A1-B1b,pw_ss,mat,summarystats,,B1/B2: same
+A1-B1c,cont_ss,mat,summarystats,,B1/B2: same (contreat rows too)
+A1-B1d,adm_base,mat,summarystats,,B1/B2: same (realistic admin panel)
+A1-B1e,ext_*,mat,summarystats,,B1/B2: same (bundle summarystats cases)
+A2-B2a,basic,scalar,*_iqr,,B2 0188b8f: sub-sample IQR scalars carried the full-sample IQR on old
+A2-B2b,pw_ss,scalar,*_iqr,,B2: same
+A2-B2c,cont_ss,scalar,*_iqr,,B2: same
+A2-B2d,adm_base,scalar,*_iqr,,B2: same
+A2-B2e,ext_*,scalar,*_iqr,,B2: same
 A3-B4,impv,scalar,ll,,B4 4de841d: old clobbered ll with an IM CI bound under impvalues
-A3-B4b,trig_imdegen,scalar,ll,,B4 4de841d: same ll clobber (impvalues config)
-A9-svmat-b,impv,mat,b,1e-6,svmat 6267522: float->double storage ~4e-8 rel on IM estimates
-A9-svmat-V,impv,mat,V,1e-6,svmat 6267522: float->double storage on IM VCV diagonal
-A9-svmat-w,impv,mat,wdidmainresults,1e-6,svmat 6267522: float->double storage on IM result rows
+A3-B4b,trig_imdegen,scalar,ll,,B4: same
+A3-B4c,adm_impv,scalar,ll,,B4: same
+B4-ext-1,ext_bin_ext_impvalues,scalar,ll,,B4: same
+B4-ext-2,ext_cov10_cont_impvalues,scalar,ll,,B4: same
 A13-esfadv-p,esf_adv,scalar,adversarial_pval_*,,B16 family c0e17f8/05a243b + svmat: esf adversarial pre-trend fit changed
-A13-esfadv-l,esf_adv,mat,adversarial_line_*,,B16 family: adversarial line refit
-A13-altb-p,adv_altb,scalar,adversarial_pval_*,,B16 c0e17f8: below-window reference regime cut one pre coefficient out of the old fit
-A13-altb-l,adv_altb,mat,adversarial_line_*,,B16 c0e17f8: same
+A13-esfadv-l,esf_adv,mat,adversarial_line_*,,B16 family: same
+A13-altb-p,adv_altb,scalar,adversarial_pval_*,,B16 c0e17f8: below-window reference regime cut one pre coefficient from the old fit
+A13-altb-l,adv_altb,mat,adversarial_line_*,,B16: same
 A13-gapb-p,adv_gapb,scalar,adversarial_pval_*,,B16 c0e17f8: old planted the reference at a data gap (p 0.00892 -> 0.00184)
-A13-gapb-l,adv_gapb,mat,adversarial_line_*,,B16 c0e17f8: same
-A8-B21-b,allest_aw,mat,b,1e-6,B21 3cb0c41 + svmat: gen-double/storage noise on att_i/att_itime cells (~1e-8 rel)
-A8-B21-V,allest_aw,mat,V,1e-6,B21 3cb0c41 + svmat: same
-A8-B21-w,allest_aw,mat,wdidmainresults,1e-6,B21 3cb0c41 + svmat: same
-A8-sgit-b,sg_attitime,mat,b,1e-6,B21/svmat storage noise (att_itime + subgroups)
-A8-sgit-V,sg_attitime,mat,V,1e-6,B21/svmat storage noise
-A8-sgit-p,sg_attitime,mat,pwsgs,1e-4,B21/svmat storage noise in pairwise SG table (p cells tail-amplified to ~3e-6 rel)
-A8-sgit-w,sg_attitime,mat,wdidmainresults,1e-6,B21/svmat storage noise
-A8-sgit-s,sg_attitime,mat,wdidsgresults_*,1e-6,B21/svmat storage noise
-A8-sgit-j,sg_attitime,scalar,joint_att_itime_allsgssame,1e-4,B21 documented: one joint scalar moves ~4e-6 rel (tail-amplified)
+A13-gapb-l,adv_gapb,mat,adversarial_line_*,,B16: same
 C-SGlab-b,cont_sg_tidose,matnames,b,,dupcol 9d2e4df: old silently padded short rowname lists (labels wrong; values positional-identical)
 C-SGlab-s,cont_sg_tidose,matnames,wdidsgresults_*,,dupcol 9d2e4df: same
 C-SGlab-b2,cont_sg_gap,matnames,b,,dupcol 9d2e4df: same
 C-SGlab-s2,cont_sg_gap,matnames,wdidsgresults_*,,dupcol 9d2e4df: same
-A17-sgv-1,cont_sg_tidose,macro,properties,,e(V)-preserve 47defa0: old silently posted b-only when the per-SG VCV had missing diagonal cells; new posts e(V) with sentinel + Caution
+A17-sgv-1,cont_sg_tidose,macro,properties,,e(V)-preserve 47defa0: old silently posted b-only on missing per-SG VCV diagonals; new posts e(V) with sentinel + Caution
 A17-sgv-2,cont_sg_gap,macro,properties,,e(V)-preserve 47defa0: same
-E-B12,*,varlist,_ppmlhdfe_d,,B12 9d9d26f + S6 edebab1: old left ppmlhdfe's internal _ppmlhdfe_d in the user's data on every clean poisson run (new drops it; verbose retains)
-A12-ttp-s,trig_tt_pois,scalar,*,1e-6,tcen f7019c9: poisson IRLS-tolerance class (rss/rmse ~3.5e-9)
-A12-ttb-s,trig_tt_big,scalar,*,,tcen f7019c9: old trends NUMERICALLY INERT at t~5e5 (rc 0 silently equal to no-timetrends)
-A12-ttb-m,trig_tt_big,mat,*,,tcen f7019c9: same
-A7-drop-m,trig_allest_drop,mat,*,,B10 40e1913: same
-A6-ext-m,trig_extmiss,mat,*,,B9 2adf447: same
-A18-jt,trig_uncond_jt,scalar,joint_*,,E1b 7ea1533: joint tests now use the unconditional VCE the user asked for
-A5-cfx-m,trig_cfx,mat,cfx*,,B7 3df74db: old truncated cfx matrices to width 1 on estimands after the first
-A15-mint-s,trig_mintsent_off,scalar,*,,mint 0c03010: old silently biased under sentinel-coded onsets with safety(off)
-A15-mint-m,trig_mintsent_off,mat,*,,mint 0c03010: same
-A16-imd-V,trig_imdegen,mat,V,,IM guard 16263da: full degeneracy -> new drops e(V) (old posted zero-diag V)
-A16-imd-w,trig_imdegen,mat,wdidmainresults,,IM guard 16263da: se/t/p/CI -> missing on new (old reported collapsed ~0 SE)
-A16-imd-p,trig_imdegen,macro,properties,,IM guard 16263da: e(properties) b V -> b
+A17-uz,ext_cont_ext_untreatedzero,macro,properties,,e(V)-preserve 47defa0: plain-continuous missing *_ame SEs — old silent b-only
+A17-cd,ext_path10_cont_constant_dose,macro,properties,,e(V)-preserve 47defa0: same (constant-dose degenerate shape)
 A17-part-w,trig_imdeg_part,mat,wdidmainresults,,e(V)-preserve 47defa0: partial degeneracy rows (old silent b-only)
 A17-part-p,trig_imdeg_part,macro,properties,,e(V)-preserve 47defa0: e(properties) b -> b V
-A17-part-b,trig_imdeg_part,mat,b,1e-4,svmat class amplified on single-cluster far horizons (worst ~2.4e-6 rel observed)
-A7-kit-s,cov_kitchen,scalar,*,,esamp weight base + B1/B2 summarystats (controls with missings)
-A7-kit-m,cov_kitchen,mat,*,,esamp weight base + B1/B2
-A5-cfx-n,trig_cfx,matnames,cfx*_it_*,,B7 3df74db: old truncated later-estimand cfx matrices to width 1 (dims 3x1 -> 3x6)
-# --- ext bundle configs: LARGE documented classes (must precede the bounded generic rows) ---
-B4-ext-1,ext_bin_ext_impvalues,scalar,ll,,B4 4de841d: old clobbered ll with an IM CI bound under impvalues
-B4-ext-2,ext_cov10_cont_impvalues,scalar,ll,,B4 4de841d: same
-DDG-pw-1,ext_cov10_rcs_pweight_ddd_c1,mat,pwsgs,,OLD-BUILD DEFECT surfaced by this suite: v1.3 stored missing SG-pairwise cells as maxdouble (8.99e307) via its float svmat chain; degenerate near-zero-SE cells tail-amplified (HEAD posts clean values via the E1 posted-pwcompare rewrite)
-DDG-pw-2,ext_cov10_rcs_pweight_ddd_c2,mat,pwsgs,,same maxdouble/degenerate-SE artifact
-DDG-jt-1,ext_cov10_rcs_pweight_ddd_c1,scalar,joint_*,,same artifact in the allsgssame joint scalars
-DDG-jt-2,ext_cov10_rcs_pweight_ddd_c2,scalar,joint_*,,same artifact
-# --- ext bundle configs: bounded storage-noise classes (B21 gen-double + svmat float->double) ---
-# ceilings measured on the 2026-08-18 full run; documented wrong-answer classes are >=1e-2
-X-adv-p,ext_*,scalar,adversarial_pval_*,1e-3,svmat 6267522 + B21 3cb0c41 storage class; measured ceiling 2.0e-5
-X-adv-l,ext_*,mat,adversarial_line_*,1e-3,same; ceiling 1.6e-4
-X-est-b,ext_*,mat,b,1e-3,B21 gen-double (IC/ringer/weight float->double copies); ceiling 1.33e-4 (interactivecontrols cases)
-X-est-V,ext_*,mat,V,1e-3,same; ceiling 2.0e-6
-X-est-w,ext_*,mat,wdidmainresults,1e-3,same; ceiling 1.33e-4
-X-est-sg,ext_*,mat,wdidsgresults_*,1e-3,same; ceiling 4.2e-5
-X-est-pw,ext_*,mat,pwsgs,1e-3,same + tail amplification; ceiling 2.2e-7 outside the ddd maxdouble configs
-X-est-hist,ext_*,mat,histogramestimates,1e-4,same; ceiling 6.7e-9
-X-est-cfx,ext_*,mat,cfx*,1e-4,same; ceiling 9.3e-9
-X-joint-s,ext_*,scalar,joint_*,1e-3,tail-amplified joint-test p (B21 documented 4.4e-6-rel class); ceiling 4.1e-6
-X-joint-m,ext_*,macro,joint_*,1e-3,same p stored as e() macros (numeric-compared)
-X-fit-F,ext_*,scalar,F,1e-4,B21 regressor-copy class; ceiling 2.1e-7
-X-fit-rss,ext_*,scalar,rss,1e-4,same; ceiling 5.9e-8
-X-fit-rmse,ext_*,scalar,rmse,1e-4,same; ceiling 3.0e-8
-X-fit-ll0,ext_*,scalar,ll_0,1e-4,same; ceiling 5.2e-8
-X-fit-ll,ext_*,scalar,ll,1e-4,same noise class on non-impvalues configs; ceiling ~5e-8
-X-fit-r2,ext_*,scalar,r2*,1e-4,same; ceiling 3.2e-9
-X-fit-chi2,ext_*,scalar,chi2,1e-4,same; ceiling 1.9e-9
-B21-cwm-b,cov_cwm,mat,b,1e-6,B21 3cb0c41: cwm weight copies float->double; ceiling 4.4e-8
-B21-cwm-w,cov_cwm,mat,wdidmainresults,1e-6,B21 3cb0c41: same; ceiling 8.7e-8
-A17-uz,ext_cont_ext_untreatedzero,macro,properties,,e(V)-preserve 47defa0: plain-continuous missing *_ame SEs — old silent b-only; new posts V with sentinel
-A17-cd,ext_path10_cont_constant_dose,macro,properties,,e(V)-preserve 47defa0: same (constant-dose degenerate shape)
-DDG-pw-3,ext_cov10_rcs_twoway_cluster_c1,mat,pwsgs,,v1.3 maxdouble missing-cell artifact + degenerate-SE tails (see DDG-pw-1)
-DDG-jt-3,ext_cov10_rcs_twoway_cluster_c1,scalar,joint_*,,same artifact
-DDG-pw-4,ext_cov10_rcs_twoway_cluster_c2,mat,pwsgs,,same artifact (residual -8.9e-16 garbage SE cell -> clean 0)
-A16-imd-Vn,trig_imdegen,matnames,V,,IM guard 16263da: e(V) dropped on full degeneracy (matnames side of the removal)
-A16-imd-b,trig_imdegen,mat,b,1e-6,svmat class on the impvalues path; ceiling 3.0e-8
-A12-ttb-p,trig_tt_big,macro,properties,,tcen f7019c9 documented signature: working trends omit e(V) (old trends were inert -> V present)
+A16-imd-V,trig_imdegen,mat,V,,IM guard 16263da: full degeneracy -> new drops e(V) (old posted zero-diag V)
+A16-imd-Vn,trig_imdegen,matnames,V,,IM guard 16263da: matnames side of the V drop
+A16-imd-w,trig_imdegen,mat,wdidmainresults,,IM guard 16263da: se/t/p/CI -> missing on new (old reported collapsed ~0 SE)
+A16-imd-p,trig_imdegen,macro,properties,,IM guard 16263da: e(properties) b V -> b
+A12-ttb-s,trig_tt_big,scalar,*,,tcen f7019c9: old trends NUMERICALLY INERT at t~5e5 (rc 0 silently equal to no-timetrends). ACCEPTED BLIND SPOT: total-divergence config
+A12-ttb-m,trig_tt_big,mat,*,,tcen f7019c9: same
+A12-ttb-e,trig_tt_big,esamp,*,,tcen f7019c9: sample may re-form under working trends
+A12-ttb-p,trig_tt_big,macro,properties,,tcen f7019c9 documented signature: working trends omit e(V) (old inert trends kept it)
 A12-ttb-vn,trig_tt_big,matnames,V,,tcen f7019c9: matnames side of the V drop
+A7-drop-m,trig_allest_drop,mat,*,,B10 40e1913 + esamp weight base: estimand weights now on e(sample); plain att stays ~equal. ACCEPTED BLIND SPOT: total-divergence config
+A7-sing-m,trig_singleton,mat,*,,B10 class probe: fe() singleton strands (near-parity on first run; the esamp digest now watches the sample itself)
+A7-kit-s,cov_kitchen,scalar,*,,esamp weight base + B1/B2 (controls with missings). ACCEPTED BLIND SPOT: total-divergence config
+A7-kit-m,cov_kitchen,mat,*,,esamp weight base + B1/B2: same
+A6-ext-m,trig_extmiss,mat,*,,B9 2adf447: extended missings (== . vs >= .) changed weights/classification on old. ACCEPTED BLIND SPOT: total-divergence config
+A6-ext-e,trig_extmiss,esamp,*,,B9 2adf447: the classification change moves the realized sample itself
+A18-jt,trig_uncond_jt,scalar,joint_*,,E1b 7ea1533: joint tests now use the unconditional VCE the user asked for
+A5-cfx-m,trig_cfx,mat,cfx*,,B7 3df74db: old truncated cfx matrices to width 1 on estimands after the first
+A5-cfx-n,trig_cfx,matnames,cfx*_it_*,,B7 3df74db: dims 3x1 -> 3x6
+A15-mint-s,trig_mintsent_off,scalar,*,,mint 0c03010: old silently biased under sentinel-coded onsets with safety(off). ACCEPTED BLIND SPOT: total-divergence config
+A15-mint-m,trig_mintsent_off,mat,*,,mint 0c03010: same
+A15-mint-e,trig_mintsent_off,esamp,*,,mint 0c03010: new drops the sentinel-coded units from the sample
+DDG-pw-1,ext_cov10_rcs_pweight_ddd_c1,mat,pwsgs,,v1.3 returns MISSING pairwise-SG cells (degenerate/rank-deficient tests; %21x missing codes) where HEAD returns valid values via the E1 posted-pwcompare + rank guard; plus one residual -8.9e-16 garbage SE cell -> clean 0
+DDG-pw-2,ext_cov10_rcs_pweight_ddd_c2,mat,pwsgs,,same missing-cells-recovered class
+DDG-pw-3,ext_cov10_rcs_twoway_cluster_c1,mat,pwsgs,,same
+DDG-pw-4,ext_cov10_rcs_twoway_cluster_c2,mat,pwsgs,,same
+DDG-jt-1,ext_cov10_rcs_pweight_ddd_c1,scalar,joint_*,,same class in the allsgssame joint scalars
+DDG-jt-2,ext_cov10_rcs_pweight_ddd_c2,scalar,joint_*,,same
+DDG-jt-3,ext_cov10_rcs_twoway_cluster_c1,scalar,joint_*,,same
+E-B12,*,varlist,_ppmlhdfe_d,,B12 9d9d26f + S6 edebab1: old left ppmlhdfe's internal _ppmlhdfe_d in the user's data on clean poisson runs (new drops it; verbose retains)
+C-esfn,adm_svpsg,files,*,,saveplots x subgroups: filenames now separate the subgroup variable and value (06e1a5b)
+# ---------------- bounded storage-noise tiers (B21 gen-double + svmat float->double) ----------------
+# interactivecontrols configs first: float->double REGRESSOR copies move coefficients
+# up to ~1.33e-4 rel (measured ceiling; the new values are the correct ones)
+XIC-b,ext_*interactive*,mat,b,1e-3,B21 IC-copy class; measured ceiling 1.33e-4
+XIC-V,ext_*interactive*,mat,V,1e-3,B21 IC-copy class
+XIC-w,ext_*interactive*,mat,wdidmainresults,1e-3,B21 IC-copy class
+XIC-f,ext_*interactive*,scalar,*,1e-3,B21 IC-copy class (fit stats move with the regressors)
+A9-svmat-b,impv,mat,b,1e-6,svmat 6267522: ~4e-8 rel on IM estimates
+A9-svmat-V,impv,mat,V,1e-6,svmat 6267522
+A9-svmat-w,impv,mat,wdidmainresults,1e-6,svmat 6267522
+A17-part-b,trig_imdeg_part,mat,b,1e-4,svmat class amplified on single-cluster far horizons (ceiling 2.4e-6)
+A16-imd-b,trig_imdegen,mat,b,1e-6,svmat class on the impvalues path (ceiling 3.0e-8)
+A8-B21-b,allest_aw,mat,b,1e-6,B21 3cb0c41 + svmat: att_i/att_itime storage noise (~1e-8 rel)
+A8-B21-V,allest_aw,mat,V,1e-6,B21: same
+A8-B21-w,allest_aw,mat,wdidmainresults,1e-6,B21: same
+A8-sgit-b,sg_attitime,mat,b,1e-6,B21/svmat storage noise (att_itime + subgroups)
+A8-sgit-V,sg_attitime,mat,V,1e-6,B21/svmat
+A8-sgit-p,sg_attitime,mat,pwsgs,1e-4,B21/svmat (p cells tail-amplified to ~3e-6 rel)
+A8-sgit-w,sg_attitime,mat,wdidmainresults,1e-6,B21/svmat
+A8-sgit-s,sg_attitime,mat,wdidsgresults_*,1e-6,B21/svmat
+A8-sgit-j,sg_attitime,scalar,joint_att_itime_allsgssame,1e-4,B21 documented: joint scalar ~4.4e-6 rel tail-amplified
+B21-cwm-b,cov_cwm,mat,b,1e-6,B21: cwm weight copies float->double (ceiling 4.4e-8)
+B21-cwm-w,cov_cwm,mat,wdidmainresults,1e-6,B21: same (ceiling 8.7e-8)
+B21-adm-b,adm_aw,mat,b,1e-6,B21 class on the realistic admin panel (aw all-estimand)
+B21-adm-V,adm_aw,mat,V,1e-6,B21 class
+B21-adm-w,adm_aw,mat,wdidmainresults,1e-6,B21 class
+A9-adm-b,adm_impv,mat,b,1e-5,svmat class on the realistic admin panel
+A9-adm-V,adm_impv,mat,V,1e-5,svmat class
+A9-adm-w,adm_impv,mat,wdidmainresults,1e-5,svmat class
+A12-ttp-s,trig_tt_pois,scalar,*,1e-6,tcen f7019c9: poisson IRLS-tolerance class (rss/rmse ~3.5e-9)
+A12-ttp-m,trig_tt_pois,mat,*,1e-6,tcen f7019c9: same
+X-adv-p,ext_*,scalar,adversarial_pval_*,2e-4,svmat/B21 storage class; measured ceiling 2.0e-5 (continuous tails)
+X-adv-l,ext_*,mat,adversarial_line_*,1e-3,same; ceiling 1.6e-4
+X-est-b,ext_*,mat,b,1e-5,B21/svmat storage class (non-IC configs; IC rows above)
+X-est-V,ext_*,mat,V,1e-5,same; non-IC ceiling ~2e-9
+X-est-w,ext_*,mat,wdidmainresults,1e-5,same
+X-est-sg,ext_*,mat,wdidsgresults_*,4e-4,same; ceiling 4.2e-5
+X-est-pw,ext_*,mat,pwsgs,2e-6,same; ceiling 2.2e-7 outside the DDG configs
+X-est-hist,ext_*,mat,histogramestimates,1e-7,same; ceiling 6.7e-9
+X-est-cfx,ext_*,mat,cfx*,1e-7,same; ceiling 9.3e-9
+X-joint-s,ext_*,scalar,joint_*,5e-5,tail-amplified joint-test p; ceiling 4.1e-6
+X-joint-m,ext_*,macro,joint_*,5e-5,same p stored as e() macros (numeric-compared)
+X-fit-F,ext_*,scalar,F,2e-6,B21 regressor-copy class; ceiling 2.1e-7
+X-fit-rss,ext_*,scalar,rss,2e-6,same; ceiling 5.9e-8
+X-fit-rmse,ext_*,scalar,rmse,2e-6,same; ceiling 3.0e-8
+X-fit-ll0,ext_*,scalar,ll_0,2e-6,same; ceiling 5.2e-8
+X-fit-ll,ext_*,scalar,ll,2e-6,same noise class on non-impvalues configs
+X-fit-r2,ext_*,scalar,r2*,1e-7,same; ceiling 3.2e-9
+X-fit-chi2,ext_*,scalar,chi2,1e-7,same; ceiling 1.9e-9
+adm-adv-p,adm_esf_adv,scalar,adversarial_pval_*,2e-4,svmat storage class on the realistic panel
+adm-adv-l,adm_esf_adv,mat,adversarial_line_*,1e-3,same

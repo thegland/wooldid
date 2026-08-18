@@ -1,0 +1,28 @@
+harness_returns_edge	serializer self-test, not a wooldid case
+harness_returns_no_v	serializer self-test, not a wooldid case
+harness_returns_failure	serializer self-test, not a wooldid case
+pilot_binary	smoke pilot, redundant with batteries
+pilot_cont_control	smoke pilot, redundant with batteries
+pilot_cont_within	smoke pilot, redundant with batteries
+pilot_cont_dense	smoke pilot, redundant with batteries
+oracle_manual_2x2	oracle assertion library -- future work
+oracle_row_order	oracle assertion library -- future work
+oracle_outcome_shift	oracle assertion library -- future work
+oracle_outcome_scale	oracle assertion library -- future work
+oracle_id_relabel	oracle assertion library -- future work
+oracle_poly1_default	oracle assertion library -- future work
+oracle_lattice_equiv	oracle assertion library -- future work
+oracle_aba_contamination	oracle assertion library -- future work
+oracle_result_identities	oracle assertion library -- future work
+oracle_aggregation	oracle assertion library -- future work
+oracle10_ppml_xb	oracle assertion library -- future work
+oracle10_ppml_exp	oracle assertion library -- future work
+oracle10_aggregation_exact	oracle assertion library -- future work
+oracle10_timetrends	oracle assertion library -- future work
+oracle10_if_equiv	oracle assertion library -- future work
+oracle10_calendar_scale	oracle assertion library -- future work
+oracle10_row_duplication	oracle assertion library -- future work
+oracle10_presample_treated_drop	oracle assertion library -- future work
+oracle10_pweight_target	oracle assertion library -- future work
+oracle10_missing_reference_drop	oracle assertion library -- future work
+oracle10_im_unequal_clusters	oracle assertion library -- future work
