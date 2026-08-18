@@ -1,0 +1,69 @@
+id,config,kind,pattern,rtol,reason
+# Expected old-vs-new divergences. Empty rtol = any difference in the object is explained
+# (reserve for documented LARGE fixes); a numeric rtol BOUNDS what the row may explain.
+# Rows that never fire on a matching config are reported STALE and fail the compare.
+# Full narrative: wooldid_solved_issues.md; draft: /tmp/wooldid_suite_survey/divergence_ledger_draft.md
+A1-B1,*,mat,summarystats,,B1 015ae88: old y_control/c_control rows duplicated pre-treatment stats; B2 0188b8f: old sub-sample IQR cells used full-sample IQR
+A2-B2,*,scalar,*_iqr,,B2 0188b8f: e(*pre_iqr)-family scalars carried the full-sample IQR on old
+A3-B4,impv,scalar,ll,,B4 4de841d: old clobbered ll with an IM CI bound under impvalues
+A3-B4b,trig_imdegen,scalar,ll,,B4 4de841d: same ll clobber (impvalues config)
+A3-B4c,trig_imdeg_part,scalar,ll,,B4 4de841d: same ll clobber (impvalues config)
+A9-svmat-b,impv,mat,b,1e-6,svmat 6267522: float->double storage ~4e-8 rel on IM estimates
+A9-svmat-V,impv,mat,V,1e-6,svmat 6267522: float->double storage on IM VCV diagonal
+A9-svmat-w,impv,mat,wdidmainresults,1e-6,svmat 6267522: float->double storage on IM result rows
+A13-esfadv-p,esf_adv,scalar,adversarial_pval_*,,B16 family c0e17f8/05a243b + svmat: esf adversarial pre-trend fit changed
+A13-esfadv-l,esf_adv,mat,adversarial_line_*,,B16 family: adversarial line refit
+A13-altb-p,adv_altb,scalar,adversarial_pval_*,,B16 c0e17f8: below-window reference regime cut one pre coefficient out of the old fit
+A13-altb-l,adv_altb,mat,adversarial_line_*,,B16 c0e17f8: same
+A13-gapb-p,adv_gapb,scalar,adversarial_pval_*,,B16 c0e17f8: old planted the reference at a data gap (p 0.00892 -> 0.00184)
+A13-gapb-l,adv_gapb,mat,adversarial_line_*,,B16 c0e17f8: same
+A8-B21-b,allest_aw,mat,b,1e-6,B21 3cb0c41 + svmat: gen-double/storage noise on att_i/att_itime cells (~1e-8 rel)
+A8-B21-V,allest_aw,mat,V,1e-6,B21 3cb0c41 + svmat: same
+A8-B21-w,allest_aw,mat,wdidmainresults,1e-6,B21 3cb0c41 + svmat: same
+A8-sgit-b,sg_attitime,mat,b,1e-6,B21/svmat storage noise (att_itime + subgroups)
+A8-sgit-V,sg_attitime,mat,V,1e-6,B21/svmat storage noise
+A8-sgit-p,sg_attitime,mat,pwsgs,1e-4,B21/svmat storage noise in pairwise SG table (p cells tail-amplified to ~3e-6 rel)
+A8-sgit-w,sg_attitime,mat,wdidmainresults,1e-6,B21/svmat storage noise
+A8-sgit-s,sg_attitime,mat,wdidsgresults_*,1e-6,B21/svmat storage noise
+A8-sgit-j,sg_attitime,scalar,joint_att_itime_allsgssame,1e-4,B21 documented: one joint scalar moves ~4e-6 rel (tail-amplified)
+C-SGlab-b,cont_sg_tidose,matnames,b,,dupcol 9d2e4df: old silently padded short rowname lists (labels wrong; values positional-identical)
+C-SGlab-s,cont_sg_tidose,matnames,wdidsgresults_*,,dupcol 9d2e4df: same
+C-SGlab-b2,cont_sg_gap,matnames,b,,dupcol 9d2e4df: same
+C-SGlab-s2,cont_sg_gap,matnames,wdidsgresults_*,,dupcol 9d2e4df: same
+A17-sgv-1,cont_sg_tidose,macro,properties,,e(V)-preserve 47defa0: old silently posted b-only when the per-SG VCV had missing diagonal cells; new posts e(V) with sentinel + Caution
+A17-sgv-2,cont_sg_gap,macro,properties,,e(V)-preserve 47defa0: same
+E-B12-p,pois,varlist,_ppmlhdfe_d,,B12 9d9d26f + S6 edebab1: old left ppmlhdfe's internal _ppmlhdfe_d variable in the user's data
+E-B12-s,trig_pois_sep,varlist,_ppmlhdfe_d,,B12 9d9d26f + S6 edebab1: same
+A12-tty-s,trig_tt_year,scalar,*,1e-6,tcen f7019c9: centered trend regressor; plain-path ~1e-8 rel at 4-digit years
+A12-tty-m,trig_tt_year,mat,*,1e-6,tcen f7019c9: same
+A12-ttp-s,trig_tt_pois,scalar,*,1e-6,tcen f7019c9: poisson IRLS-tolerance class (rss/rmse ~3.5e-9)
+A12-ttp-m,trig_tt_pois,mat,*,1e-6,tcen f7019c9: same
+A12-ttb-s,trig_tt_big,scalar,*,,tcen f7019c9: old trends NUMERICALLY INERT at t~5e5 (rc 0 silently equal to no-timetrends)
+A12-ttb-m,trig_tt_big,mat,*,,tcen f7019c9: same
+A7-drop-s,trig_allest_drop,scalar,*,,B10 40e1913 + esamp weight base: estimand weights now on e(sample); plain att should stay ~equal (spot-check in triage)
+A7-drop-m,trig_allest_drop,mat,*,,B10 40e1913: same
+A7-sep-s,trig_pois_sep,scalar,*,,B10 via ppmlhdfe separation drops
+A7-sep-m,trig_pois_sep,mat,*,,B10 via ppmlhdfe separation drops
+A6-ext-s,trig_extmiss,scalar,*,,B9 2adf447: extended missings (== . vs >= .) changed weights/classification on old
+A6-ext-m,trig_extmiss,mat,*,,B9 2adf447: same
+A18-jt,trig_uncond_jt,scalar,joint_*,,E1b 7ea1533: joint tests now use the unconditional VCE the user asked for
+A5-cfx-m,trig_cfx,mat,cfx*,,B7 3df74db: old truncated cfx matrices to width 1 on estimands after the first
+A15-mint-s,trig_mintsent_off,scalar,*,,mint 0c03010: old silently biased under sentinel-coded onsets with safety(off)
+A15-mint-m,trig_mintsent_off,mat,*,,mint 0c03010: same
+A16-imd-V,trig_imdegen,mat,V,,IM guard 16263da: full degeneracy -> new drops e(V) (old posted zero-diag V)
+A16-imd-w,trig_imdegen,mat,wdidmainresults,,IM guard 16263da: se/t/p/CI -> missing on new (old reported collapsed ~0 SE)
+A16-imd-p,trig_imdegen,macro,properties,,IM guard 16263da: e(properties) b V -> b
+A17-part-w,trig_imdeg_part,mat,wdidmainresults,,e(V)-preserve 47defa0: partial degeneracy rows (old silent b-only)
+A17-part-p,trig_imdeg_part,macro,properties,,e(V)-preserve 47defa0: e(properties) b -> b V
+A17-part-b,trig_imdeg_part,mat,b,1e-6,svmat class on the impvalues path
+A10-big-s,trig_bigcodes,scalar,*,,gen-double _i 8c5bfd7 + ttre 5a97f70: old float-pooled unit IDs / merged YYYYMMDD cohorts
+A10-big-m,trig_bigcodes,mat,*,,gen-double: same
+A10-big-n,trig_bigcodes,matnames,*,,gen-double: cohort merging changed matrix dims/labels on old
+A8b-icb-s,cov_icbad,scalar,*,,B21(b) 3cb0c41: old float copies broke engineered collinearity -> rc0 garbage without e(V)
+A8b-icb-m,cov_icbad,mat,*,,B21(b): same
+A7-cov-s,cov_controls,scalar,*,,esamp weight base: scattered-missing controls shrink the fitted sample
+A7-cov-m,cov_controls,mat,*,,esamp weight base: same
+A7-fe-s,cov_fe,scalar,*,,esamp weight base: fe() singleton drops
+A7-fe-m,cov_fe,mat,*,,esamp weight base: same
+A7-kit-s,cov_kitchen,scalar,*,,esamp weight base + B1/B2 summarystats (controls with missings)
+A7-kit-m,cov_kitchen,mat,*,,esamp weight base + B1/B2

@@ -1,3 +1,17 @@
+# wooldid test assets
+
+Two layers live here:
+- **The regression battery** (this file, below): the per-fix bit-exactness tool.
+- **The comprehensive testing & assessment suite** (`suite/` — see `suite/README.md`):
+  the campaign-level harness comparing current wooldid against published v1.3 (git
+  `main`) at rtol 1e-10 with a documented expected-divergence ledger, plus new-feature
+  cross-checks (HonestDiD, external randomization inference, identities) and the
+  option-surface coverage assertion. Run it once after a large battery of changes;
+  run its labeled subparts for targeted work.
+- **The targeted cert suites** (`test_*.do` + `check_validate_sync.py`): self-checking
+  per-feature certification scripts (`<NAME>_ALL_PASS` sentinel); the suite's `cert`
+  component runs them all.
+
 # wooldid regression battery
 
 A bit-exact regression harness built during the 2026-07 bugfix campaign (B1–B23), in which
@@ -7,7 +21,7 @@ deterministic data and dumps **every** e() scalar, macro, and matrix cell in Sta
 runs therefore detects *any* change in returned results, down to the last bit.
 
 ## Layout
-- `runbattery.do` — runs the 18 configurations against the repo's `wooldidinstall/wooldid.ado`.
+- `runbattery.do` — runs the 29 configurations against the repo's `wooldidinstall/wooldid.ado`.
 - `data/` — frozen input datasets (binary, continuous, tiny, simple; deterministic seeds).
 - `mkdata.do` — regenerates `data/` from scratch (run from `test/`). Only needed if the
   datasets are ever deliberately changed — doing so invalidates `baseline/`.
@@ -30,7 +44,7 @@ cd test && mkdir run1 && cd run1
 "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp" -e do ../runbattery.do
 python3 ../compare.py ../baseline .
 ```
-Expected: `18/18 IDENTICAL, TOTAL_DIFF_GROUPS=0` for a change that should not alter results.
+Expected: `29/29 IDENTICAL, TOTAL_DIFF_GROUPS=0` for a change that should not alter results.
 When a fix intentionally changes output, the diff must match the predicted signature exactly
 (e.g. B12's only signature was one variable leaving the poisson config's varlist) — then the
 new outputs become the baseline: `cp run1/*.csv baseline/` and commit with the fix.

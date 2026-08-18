@@ -1,0 +1,25 @@
+{
+  "gen_sg2": ["qui gen sg = mod(i,2)+1"],
+  "sgm_missif": ["qui gen sgm = mod(i,3)", "qui replace sgm = . if mod(i,11) == 0"],
+  "sgd2_degpre": ["qui sum t, meanonly", "local t2 = r(min) + 1", "qui gen sgd2 = 1", "qui replace sgd2 = 2 if mod(i,7) == 0", "qui replace ttre = `t2' if mod(i,7) == 0"],
+  "tidose_panel": [
+    "set seed 447102",
+    "set obs 50",
+    "gen i = _n",
+    "gen ttre = cond(_n<=13, 5, cond(_n<=26, 8, cond(_n<=38, 10, .)))",
+    "expand 13",
+    "bysort i: gen t = _n",
+    "gen dose = 0.5 + mod(i,6) + 0.25*mod(i,7)/7",
+    "gen post = (t >= ttre & ttre < .)",
+    "gen y = 0.4*dose*post + 0.02*i + 0.08*t + sin(3*i + 2*t)",
+    "gen sg = mod(i,3)",
+    "drop post",
+    "ereturn clear"
+  ],
+  "dose2_sgr": ["gen dose2 = 0.5 + mod(i,5) + 0.2*mod(i,3)", "gen sgr = mod(i,3)"],
+  "seed246813": ["set seed 246813"],
+  "sgf_nonint": ["qui gen sgf = cond(ttre < ., 1.5, 1)"],
+  "fract_ttre": ["qui replace ttre = ttre + 0.5 if ttre < ."],
+  "sgstr_straddle": ["qui gen sgstr = cond(t <= 2006, 1, 2) if ttre < .", "qui replace sgstr = 1 if ttre >= ."],
+  "badvals_if": ["qui replace i = -i if mod(i,13) == 0"]
+}

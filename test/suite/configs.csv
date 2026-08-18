@@ -1,0 +1,75 @@
+config,component,dataset,varlist,weight,ifcond,prep,options,rc_old,rc_new,slow,note
+# ---- core: the 29 regression-battery configs, dual-build ----
+basic,core,dta_binary,y i t ttre,,,,att cluster(i) esprelength(3) espostlength(3) summarystats jointtests,,,,
+allest_aw,core,dta_binary,y i t ttre,aw=w,,,att att_it att_i att_itime cluster(i) esprelength(2) espostlength(2),,,,
+esf_adv,core,dta_binary,y i t ttre,,,,att cluster(i) esprelength(3) espostlength(3) esfixedbaseperiod esrelativeto(-2) adversarial,,,,
+sg_attit,core,dta_binary,y i t ttre,,,,att_it cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests,,,,
+sg_attitime,core,dta_binary,y i t ttre,,,,att_itime cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests,,,,
+impv,core,dta_binary,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) impvalues,,,,
+pois,core,dta_binary,ycount i t ttre,,,,att cluster(i) poisson,,,1,
+pw_ss,core,dta_binary,y i t ttre,pw=w,,,att cluster(i) esprelength(2) espostlength(2) summarystats,,,,
+aw_uncond,core,dta_binary,y i t ttre,aw=w,,,att robust unconditionalse esprelength(2) espostlength(2),,,,
+tiny,core,dta_tiny,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1),,,,
+esptrip,core,dta_binary,y i t ttre,,,,att cluster(i) subgroups(sg) esprelength(2) espostlength(-999),,,,
+cont_basic,core,dta_cont,y i t ttre,,,,contreat(intensity) contreatcontrols(basic) esfixedbaseperiod esprelength(3) espostlength(3) cluster(i),,,,
+cont_uz,core,dta_cont,y i t ttre,,,,contreat(intensity_uz) contreatcontrols(untreatedZero) safety(off) cluster(i) esprelength(2) espostlength(2),,,,
+cont_uz_ss,core,dta_cont,y i t ttre,,,,contreat(intensity_uz) contreatcontrols(untreatedZero) safety(off) cluster(i) esprelength(2) espostlength(2) summarystats,198,0,,B5: old crashed r198 ereturning undefined local
+cont_lat,core,dta_cont,y i t ttre,aw=w,,,contreat(intensity) contreatcontrols(basic) lattice(all 3) cluster(i) esprelength(2) espostlength(2),,,,
+cont_ss,core,dta_cont,y i t ttre,,,,contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) summarystats,,,,
+simple1,core,dta_simple1,y i t ttre,,,,att cluster(i) subgroup(ttre),,,,
+simple_esf,core,dta_simple1,y i t ttre,,,,att cluster(i) subgroup(ttre) esprelength(3) espostlength(3) esfixedbaseperiod,,,,
+cont_sg,core,dta_cont,y i t ttre,,,gen_sg2,contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests,,,,
+sg_missif,core,dta_binary,y i t ttre,,w > 0,sgm_missif,att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sgm) jointtests,,,,
+sg_degpre,core,dta_binary,y i t ttre,,,sgd2_degpre,att cluster(i) esprelength(2) espostlength(2) subgroups(sgd2) jointtests,,,,
+adv_altb,core,dta_binary,y i t ttre,,,,att cluster(i) esfixedbaseperiod esrelativeto(-3) esprelength(2) espostlength(2) adversarial altmethod_adversarial,,,,
+adv_r2001,core,dta_binary,y i t ttre,,,,att cluster(i) esfixedbaseperiod esrelativeto(-2) esprelength(1) espostlength(2) adversarial altmethod_adversarial,2001,0,,B16: old degenerate 1-row fit rc2001; new clean skip + Caution
+adv_gapa,core,dta_path_relyrgap,y i t ttre,,,,att cluster(i) esfixedbaseperiod esrelativeto(-1) esprelength(4) espostlength(4) adversarial,198,0,,B16: old gap-hunt abort r198
+adv_gapb,core,dta_path_relyrgap,y i t ttre,,,,att cluster(i) esfixedbaseperiod esrelativeto(-4) esprelength(3) espostlength(3) adversarial,,,,B16: silent wrong p on old (value ledger row)
+cont_sg_tidose,core,,y i t ttre,,,tidose_panel,contreat(dose) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg),,,,dupcol: matnames-only diffs (ledger C-SGlab)
+cont_sg_gap,core,dta_path_relyrgap,y i t ttre,,,dose2_sgr,contreat(dose2) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sgr),,,,dupcol: matnames-only diffs (ledger C-SGlab)
+gt_basic,core,dta_binary,y i t ttre,aw=w,,,att att_it cluster(i) esprelength(2) espostlength(2) gteffects,198,0,,new-only option gteffects
+perm_basic,core,dta_binary,y i t ttre,,,seed246813,att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20),198,0,,new-only option permute
+# ---- trig: divergence-ledger trigger configs (draft section J) ----
+trig_allest_drop,trig,dta_path_imbalanced,y i t ttre,,,,att att_it att_i att_itime cluster(i) esprelength(2) espostlength(2) fe(extraFE),,,,A7-B10: fe singleton drops make e(sample) < screened sample
+trig_pois_sep,trig,dta_path_sep,ycount i t ttre,,,,att att_it cluster(i) poisson esprelength(2) espostlength(2),,,1,A7 via ppmlhdfe separation drops
+trig_extmiss,trig,dta_s_extmiss,y i t ttre,,,,att att_it att_itime cluster(i) esprelength(2) espostlength(2),,,,A6-B9: extended missings in y/t/w
+trig_uncond_jt,trig,dta_binary,y i t ttre,aw=w,,,att robust unconditionalse esprelength(2) espostlength(2) jointtests,,,,A18-E1b: joint tests under unconditional VCE
+trig_cfx,trig,dta_cont,y i t ttre,,,,att att_it contreat(intensity) contreatcontrols(basic) lattice(all 3) makecfxplots cfxplottypes(post 2) safety(off) cluster(i) esprelength(2) espostlength(2),,,,A5-B7: cfx matrix width 1 vs 6 on second estimand
+trig_sgadv_deeppre,trig,dta_s_deeppre,y i t ttre,,,,att cluster(i) subgroups(sg) esfixedbaseperiod esrelativeto(-3) esprelength(2) adversarial altmethod_adversarial,2000,0,,A14: SG skiplocation crash on old
+trig_tt_year,trig,dta_s_ttyear,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) timetrends,,,,A12 small: tcen ~1e-8 class
+trig_tt_big,trig,dta_s_ttbig,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) timetrends,,,,A12 large: old trends numerically inert
+trig_tt_pois,trig,dta_s_ttyear,ycount i t ttre,,,,att cluster(i) poisson esprelength(1) espostlength(1) timetrends,,,1,A12 poisson: IRLS rss/rmse class
+trig_bigcodes,trig,dta_s_bigcodes,y i t ttre,,,,att att_it cluster(i) esprelength(2) espostlength(2) histogramcohorteffects,,,,A10+A11: float pooling / cohort merging on old
+trig_imdegen,trig,dta_s_imdegen,y i t ttre,,,,att cluster(clus) esprelength(1) espostlength(1) impvalues,,,,A16: IM degeneracy guard (old se~0; new missing + V dropped)
+trig_imdeg_part,trig,dta_path_imbalanced,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(9) impvalues,,,,A17: partial degeneracy (old b-only; new V with sentinel)
+trig_mintsent_off,trig,dta_s_mintsent,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) safety(off),,,,A15: sentinel-onset bias on old under safety(off)
+trig_mintsent_def,trig,dta_s_mintsent,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2),0,459,,B-F13: new refuses within-unit-varying ttre
+# ---- covars: closes the zero-coverage gap on shared covariate options ----
+cov_controls,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) controls(x1 x2),,,,scattered-missing controls shrink e(sample) (A7 class)
+cov_fe,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) fe(fecat),,,,fe singleton drops (A7 class)
+cov_ic,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) interactivecontrols(icvar),,,,
+cov_icbad,covars,dta_s_covars,y i t ttre,,,,att cluster(i) interactivecontrols(icbad),,,,A8b: old rc0 garbage without e(V); new clean
+cov_ccc,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) coarsecohortcontrols(c.x1),,,,
+cov_ccc_absorb,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) coarsecohortcontrols(c.x1) ccc_absorb(x2),,,,
+cov_cwm,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) customweightmultiplier(cwmvar),,,,
+cov_kitchen,covars,dta_s_covars,y i t ttre,aw=w,,,att att_it cluster(i) esprelength(2) espostlength(2) controls(x1 x2) customweightmultiplier(cwmvar) jointtests summarystats,,,,
+# ---- plots: e()-visible plot machinery with graphics off (README roadmap item 1) ----
+plot_bin,plots,dta_binary,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) makeplots histogramcohorteffects,,,,
+plot_cont,plots,dta_cont,y i t ttre,,,,att contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) makecfxplots,,,,
+plot_sg,plots,dta_binary,y i t ttre,,,,att cluster(i) subgroups(sg) esprelength(2) espostlength(2) makeplots,,,,
+# ---- screens: rc-contract deck (old rc vs new rc by design) ----
+scr_strclus,screens,dta_s_strclus,y i t ttre,,,,att cluster(strc) esprelength(1) espostlength(1),0,109,,B-clus: cluster() now numeric-only
+scr_nonintsg,screens,dta_binary,y i t ttre,,,sgf_nonint,att cluster(i) esprelength(1) espostlength(1) subgroups(sgf),198,411,,B-B20: clear error for non-integer sg
+scr_uncond_alone,screens,dta_binary,y i t ttre,,,,att unconditionalse esprelength(1) espostlength(1),322,198,,B-B15: early informative refusal
+scr_lat0,screens,dta_cont,y i t ttre,,,,contreat(intensity) contreatcontrols(basic) lattice(all 0) cluster(i),0,198,,A19: old silently remapped lattice(all 0)
+scr_latnocon,screens,dta_binary,y i t ttre,,,,att cluster(i) lattice(all 3),0,198,,B-lattc: lattice without contreat silently ignored on old
+scr_cfxbad,screens,dta_cont,y i t ttre,,,,contreat(intensity) contreatcontrols(basic) cluster(i) makecfxplots cfxplottypes(psot),111,198,,B-B17: junk cfxplottypes token
+scr_esrel_noesf,screens,dta_binary,y i t ttre,,,,att cluster(i) esrelativeto(-2) esprelength(2) espostlength(2),,,,B-S5scr: Caution-only on new; values should match
+scr_fracttre,screens,dta_binary,y i t ttre,,,fract_ttre,att cluster(i) esprelength(1) espostlength(1),0,459,,B-S5scr: in-window fractional onset (old mislabeled silently)
+scr_sgsplit,screens,dta_binary,y i t ttre,,,sgstr_straddle,att cluster(i) esprelength(1) espostlength(1) subgroups(sgstr),0,459,,B-SGsplit: straddler refused under default safety
+scr_sgsplit_off,screens,dta_binary,y i t ttre,,,sgstr_straddle,att cluster(i) esprelength(1) espostlength(1) subgroups(sgstr) safety(off),,,,B-SGsplit: att/att_it expected EQUAL under safety(off)
+scr_makecfx_nocon,screens,dta_binary,y i t ttre,,,,att cluster(i) makecfxplots,0,198,,B-S5scr: makecfxplots without contreat was a silent no-op
+scr_badif,screens,dta_binary,y i t ttre,,i > 0,badvals_if,att cluster(i) esprelength(1) espostlength(1),,0,,B-B23: old false-positive error on excluded bad rows (old rc TBD on first run)
+scr_antic,screens,dta_binary,y i t ttre,,,,att cluster(i) anticipation(1) esprelength(1) espostlength(1),198,0,,new-only option anticipation()
+scr_fastnose,screens,dta_binary,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) fastnose,198,0,,new-only option fastnose
+scr_ptp,screens,dta_binary,y i t ttre,,,,att cluster(i) esfixedbaseperiod esprelength(3) espostlength(2) pretrendpower(80),198,0,,new-only option pretrendpower()
