@@ -91,8 +91,11 @@ mixed-vintage dumps cannot be compared.
 - Documented carve-out classes above 1e-10, all bounded in the ledger with measured
   ceilings recorded in the reason column: svmat/predict float→double (~4e-8 rel
   estimates, tail-amplified p), B21 gen-double (~1e-8 rel; interactivecontrols
-  regressor copies up to ~1.3e-4), timetrends-poisson IRLS (~3.5e-9). Timetrends on the
-  reghdfe path at calendar-year scale agrees **within 1e-10** (no carve-out needed).
+  regressor copies up to ~1.3e-4), timetrends-poisson IRLS (run-varying: within 1e-10
+  one run, ~1.2e-5 the next — bounded 1e-4). Degenerate near-zero-SE cells amplify ULP
+  noise run-varyingly (pwsgs observed at 2.2e-7 and 1.1e-4 across runs), so those
+  bounds are calibrated across runs, with the evidence in each row's reason. Timetrends
+  on the reghdfe path at calendar-year scale agrees **within 1e-10** (no carve-out).
 - `unconditionalse`/`customvce(cluster)` are 1–2 ulp non-reproducible run-to-run on
   BOTH builds — inside 1e-10, but never compare those cells at `--rtol 0`.
 
