@@ -97,11 +97,15 @@ def main():
             sys.exit(f"duplicate config name: {r['config']}")
         seen.add(r["config"])
 
+    skip_missing = "--skip-missing-data" in args
+
     def resolve(ds):
         for d in data_dirs:
             p = os.path.join(d, ds + ".dta")
             if os.path.exists(p):
                 return p
+        if skip_missing:
+            return None
         sys.exit(f"dataset not found in any data dir: {ds}")
 
     def block(r):
@@ -110,7 +114,11 @@ def main():
         lines.append("set sortseed 98765")
         lines.append("ereturn clear")
         if r.get("dataset", "").strip():
-            lines.append(f'use "{resolve(r["dataset"].strip())}", clear')
+            p = resolve(r["dataset"].strip())
+            if p is None:
+                print(f"SKIPPED (missing dataset {r['dataset']}): {r['config']}")
+                return None
+            lines.append(f'use "{p}", clear')
         else:
             lines.append("clear")
         prep = r.get("prep", "").strip()
@@ -141,14 +149,17 @@ def main():
     for (comp, slow), rs in sorted(groups.items()):
         for i in range(0, len(rs), shard_size):
             chunk = rs[i:i + shard_size]
+            blocks = [b for b in (block(r) for r in chunk) if b is not None]
+            if not blocks:
+                continue
             name = f"shard_{comp}{'_slow' if slow else ''}_{i // shard_size:02d}.do"
             with open(os.path.join(outdir, name), "w") as f:
                 f.write(header)
-                for r in chunk:
-                    f.write(block(r) + "\n")
+                for b in blocks:
+                    f.write(b + "\n")
                 f.write('di "SHARD_DONE"\n')
                 f.write("exit, clear\n")
-            manifest.append(f"{name}|{len(chunk)}|{'slow' if slow else 'fast'}")
+            manifest.append(f"{name}|{len(blocks)}|{'slow' if slow else 'fast'}")
     with open(os.path.join(outdir, "shards.manifest"), "w") as f:
         f.write("\n".join(manifest) + "\n")
     print(f"wrote {len(manifest)} shards for {len(rows)} configs to {outdir}")

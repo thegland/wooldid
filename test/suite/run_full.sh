@@ -102,9 +102,11 @@ do_oldnew() {
   pool_drain
   note "oldnew: pool results: $(sort "$OUT/pool.log" | uniq -c | tr '\n' ';' )"
   note "oldnew: comparing"
+  local staleflag=""
+  [ -n "$only" ] && staleflag="--no-stale-check"
   # shellcheck disable=SC2086
   python3 "$SUITE/compare_oldnew.py" "$OUT/run_old" "$OUT/run_new" --rtol 1e-10 \
-    --ledger "$SUITE/ledger.csv" --configs "$SUITE/configs.csv" \
+    --ledger "$SUITE/ledger.csv" --configs "$SUITE/configs.csv" $staleflag \
     > "$OUT/oldnew_compare.txt" 2>&1
   local rc=$?
   tail -3 "$OUT/oldnew_compare.txt" | tee -a "$REPORT"

@@ -31,7 +31,7 @@ gt_basic,core,dta_binary,y i t ttre,aw=w,,,att att_it cluster(i) esprelength(2) 
 perm_basic,core,dta_binary,y i t ttre,,,seed246813,att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20),198,0,,new-only option permute
 # ---- trig: divergence-ledger trigger configs (draft section J) ----
 trig_allest_drop,trig,dta_path_imbalanced,y i t ttre,,,,att att_it att_i att_itime cluster(i) esprelength(2) espostlength(2) fe(extraFE),,,,A7-B10: fe singleton drops make e(sample) < screened sample
-trig_pois_sep,trig,dta_path_sep,ycount i t ttre,,,,att att_it cluster(i) poisson esprelength(2) espostlength(2),,,1,A7 via ppmlhdfe separation drops
+trig_pois_sep,trig,dta_path_sep,ycount i t ttre,,,,att att_it cluster(i) poisson esprelength(2) espostlength(2),322,322,1,separation shape errs r322 on BOTH builds (parity pin; A7 covered by trig_allest_drop/cov_*)
 trig_extmiss,trig,dta_s_extmiss,y i t ttre,,,,att att_it att_itime cluster(i) esprelength(2) espostlength(2),,,,A6-B9: extended missings in y/t/w
 trig_uncond_jt,trig,dta_binary,y i t ttre,aw=w,,,att robust unconditionalse esprelength(2) espostlength(2) jointtests,,,,A18-E1b: joint tests under unconditional VCE
 trig_cfx,trig,dta_cont,y i t ttre,,,,att att_it contreat(intensity) contreatcontrols(basic) lattice(all 3) makecfxplots cfxplottypes(post 2) safety(off) cluster(i) esprelength(2) espostlength(2),,,,A5-B7: cfx matrix width 1 vs 6 on second estimand
@@ -55,7 +55,7 @@ cov_cwm,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(2) espostle
 cov_kitchen,covars,dta_s_covars,y i t ttre,aw=w,,,att att_it cluster(i) esprelength(2) espostlength(2) controls(x1 x2) customweightmultiplier(cwmvar) jointtests summarystats,,,,
 # ---- plots: e()-visible plot machinery with graphics off (README roadmap item 1) ----
 plot_bin,plots,dta_binary,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) makeplots histogramcohorteffects,,,,
-plot_cont,plots,dta_cont,y i t ttre,,,,att contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) makecfxplots,,,,
+plot_cont,plots,dta_cont,y i t ttre,,,,att contreat(intensity) contreatcontrols(basic) lattice(all 3) cluster(i) esprelength(2) espostlength(2) makecfxplots,,,,
 plot_sg,plots,dta_binary,y i t ttre,,,,att cluster(i) subgroups(sg) esprelength(2) espostlength(2) makeplots,,,,
 # ---- screens: rc-contract deck (old rc vs new rc by design) ----
 scr_strclus,screens,dta_s_strclus,y i t ttre,,,,att cluster(strc) esprelength(1) espostlength(1),0,109,,B-clus: cluster() now numeric-only
@@ -63,13 +63,14 @@ scr_nonintsg,screens,dta_binary,y i t ttre,,,sgf_nonint,att cluster(i) espreleng
 scr_uncond_alone,screens,dta_binary,y i t ttre,,,,att unconditionalse esprelength(1) espostlength(1),322,198,,B-B15: early informative refusal
 scr_lat0,screens,dta_cont,y i t ttre,,,,contreat(intensity) contreatcontrols(basic) lattice(all 0) cluster(i),0,198,,A19: old silently remapped lattice(all 0)
 scr_latnocon,screens,dta_binary,y i t ttre,,,,att cluster(i) lattice(all 3),0,198,,B-lattc: lattice without contreat silently ignored on old
-scr_cfxbad,screens,dta_cont,y i t ttre,,,,contreat(intensity) contreatcontrols(basic) cluster(i) makecfxplots cfxplottypes(psot),111,198,,B-B17: junk cfxplottypes token
+scr_cfxbad,screens,dta_cont,y i t ttre,,,,contreat(intensity) contreatcontrols(basic) cluster(i) makecfxplots cfxplottypes(psot),198,198,,B-B17: junk token errs on BOTH builds (parity pin; verified 2026-08-18)
+scr_cfxvar,screens,dta_cont,y i t ttre,,,,contreat(intensity) contreatcontrols(basic) lattice(all 3) cluster(i) makecfxplots cfxplottypes(w),0,198,,B-B17: variable-named token gave old a mislabeled MEANINGLESS plot rc0; new refuses
 scr_esrel_noesf,screens,dta_binary,y i t ttre,,,,att cluster(i) esrelativeto(-2) esprelength(2) espostlength(2),,,,B-S5scr: Caution-only on new; values should match
 scr_fracttre,screens,dta_binary,y i t ttre,,,fract_ttre,att cluster(i) esprelength(1) espostlength(1),0,459,,B-S5scr: in-window fractional onset (old mislabeled silently)
 scr_sgsplit,screens,dta_binary,y i t ttre,,,sgstr_straddle,att cluster(i) esprelength(1) espostlength(1) subgroups(sgstr),0,459,,B-SGsplit: straddler refused under default safety
 scr_sgsplit_off,screens,dta_binary,y i t ttre,,,sgstr_straddle,att cluster(i) esprelength(1) espostlength(1) subgroups(sgstr) safety(off),,,,B-SGsplit: att/att_it expected EQUAL under safety(off)
-scr_makecfx_nocon,screens,dta_binary,y i t ttre,,,,att cluster(i) makecfxplots,0,198,,B-S5scr: makecfxplots without contreat was a silent no-op
-scr_badif,screens,dta_binary,y i t ttre,,i > 0,badvals_if,att cluster(i) esprelength(1) espostlength(1),,0,,B-B23: old false-positive error on excluded bad rows (old rc TBD on first run)
+scr_makecfx_nocon,screens,dta_binary,y i t ttre,,,,att cluster(i) makecfxplots,198,198,,makecfxplots without contreat errs on BOTH builds (parity pin; verified 2026-08-18)
+scr_badif,screens,dta_binary,y i t ttre,,i > 0,badvals_if,att cluster(i) esprelength(1) espostlength(1),411,0,,B-B23: old false-positive r411 on bad rows excluded via if (verified 2026-08-18)
 scr_antic,screens,dta_binary,y i t ttre,,,,att cluster(i) anticipation(1) esprelength(1) espostlength(1),198,0,,new-only option anticipation()
 scr_fastnose,screens,dta_binary,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) fastnose,198,0,,new-only option fastnose
 scr_ptp,screens,dta_binary,y i t ttre,,,,att cluster(i) esfixedbaseperiod esprelength(3) espostlength(2) pretrendpower(80),198,0,,new-only option pretrendpower()

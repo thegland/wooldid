@@ -36,7 +36,23 @@ Ledger CSV columns:
 
 Exit 0 iff no UNEXPLAINED differences and no STALE ledger rows.
 """
-import sys, os, glob, csv, fnmatch
+import sys, os, glob, csv, fnmatch, re
+
+TEMPVAR = re.compile(r"__0000[0-9A-Za-z]+")
+
+def canon_tempvars(s):
+    """Replace Stata tempvar tokens (__0000XX) with order-of-appearance placeholders.
+
+    cfx matrices embed tempvar names in their row/colnames; the two builds allocate
+    different counters, so raw names always differ. Distinct tempvars within one string
+    stay distinguishable (__TMP1, __TMP2, ...)."""
+    seen = {}
+    def sub(m):
+        t = m.group(0)
+        if t not in seen:
+            seen[t] = f"__TMP{len(seen) + 1}"
+        return seen[t]
+    return TEMPVAR.sub(sub, s)
 
 def hex2f(s):
     """Parse Stata %21x to float; missing-value sentinels and unparseables stay strings."""
@@ -84,7 +100,7 @@ def load(path):
         elif p[0] == "varlist": d["varlist"] = p[1] if len(p) > 1 else ""
         elif p[0] == "scalar": d["scalar"][p[1]] = hex2f(p[2])
         elif p[0] == "macro": d["macro"][p[1]] = "|".join(p[2:])
-        elif p[0] == "matnames": d["matnames"][p[1]] = "|".join(p[2:])
+        elif p[0] == "matnames": d["matnames"][p[1]] = canon_tempvars("|".join(p[2:]))
         elif p[0] == "mat": d["mat"][(p[1], int(p[2]), int(p[3]))] = hex2f(p[4])
     return d
 
@@ -120,6 +136,7 @@ def main():
     ledger = load_ledger(optval("--ledger")) if "--ledger" in args else []
     rc_expect = load_rc_expect(optval("--configs")) if "--configs" in args else {}
     verbose = "--verbose" in args
+    stale_check = "--no-stale-check" not in args  # disable on SUBSET runs only
 
     def ledger_find(cfg, kind, name, reldiff):
         """First ledger row matching this diff; bounded rows must bound the diff."""
@@ -254,7 +271,7 @@ def main():
         if verbose and adds:
             print("    ADDITIONS: " + ", ".join(adds))
 
-    stale = [r for r in ledger if r["_scoped"] and not r["_fired"]]
+    stale = [r for r in ledger if r["_scoped"] and not r["_fired"]] if stale_check else []
     for r in stale:
         print(f"STALE ledger row {r['id']} ({r['config']} {r['kind']} {r['pattern']}): "
               f"never fired on any matching config")
