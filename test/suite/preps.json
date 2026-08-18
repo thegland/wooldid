@@ -139,5 +139,8 @@
  ],
  "ext_val_poisson_negative_y": [
   "replace y_count = -1 in 1"
+ ],
+ "adm_sub": [
+  "qui keep if mod(fips - 1000*floor(fips/1000), 7) == 1"
  ]
 }

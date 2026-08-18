@@ -44,15 +44,12 @@ A16-imd-w,trig_imdegen,mat,wdidmainresults,,IM guard 16263da: se/t/p/CI -> missi
 A16-imd-p,trig_imdegen,macro,properties,,IM guard 16263da: e(properties) b V -> b
 A12-ttb-s,trig_tt_big,scalar,*,,tcen f7019c9: old trends NUMERICALLY INERT at t~5e5 (rc 0 silently equal to no-timetrends). ACCEPTED BLIND SPOT: total-divergence config
 A12-ttb-m,trig_tt_big,mat,*,,tcen f7019c9: same
-A12-ttb-e,trig_tt_big,esamp,*,,tcen f7019c9: sample may re-form under working trends
 A12-ttb-p,trig_tt_big,macro,properties,,tcen f7019c9 documented signature: working trends omit e(V) (old inert trends kept it)
 A12-ttb-vn,trig_tt_big,matnames,V,,tcen f7019c9: matnames side of the V drop
 A7-drop-m,trig_allest_drop,mat,*,,B10 40e1913 + esamp weight base: estimand weights now on e(sample); plain att stays ~equal. ACCEPTED BLIND SPOT: total-divergence config
-A7-sing-m,trig_singleton,mat,*,,B10 class probe: fe() singleton strands (near-parity on first run; the esamp digest now watches the sample itself)
 A7-kit-s,cov_kitchen,scalar,*,,esamp weight base + B1/B2 (controls with missings). ACCEPTED BLIND SPOT: total-divergence config
 A7-kit-m,cov_kitchen,mat,*,,esamp weight base + B1/B2: same
 A6-ext-m,trig_extmiss,mat,*,,B9 2adf447: extended missings (== . vs >= .) changed weights/classification on old. ACCEPTED BLIND SPOT: total-divergence config
-A6-ext-e,trig_extmiss,esamp,*,,B9 2adf447: the classification change moves the realized sample itself
 A18-jt,trig_uncond_jt,scalar,joint_*,,E1b 7ea1533: joint tests now use the unconditional VCE the user asked for
 A5-cfx-m,trig_cfx,mat,cfx*,,B7 3df74db: old truncated cfx matrices to width 1 on estimands after the first
 A5-cfx-n,trig_cfx,matnames,cfx*_it_*,,B7 3df74db: dims 3x1 -> 3x6
@@ -67,6 +64,7 @@ DDG-jt-1,ext_cov10_rcs_pweight_ddd_c1,scalar,joint_*,,same class in the allsgssa
 DDG-jt-2,ext_cov10_rcs_pweight_ddd_c2,scalar,joint_*,,same
 DDG-jt-3,ext_cov10_rcs_twoway_cluster_c1,scalar,joint_*,,same
 E-B12,*,varlist,_ppmlhdfe_d,,B12 9d9d26f + S6 edebab1: old left ppmlhdfe's internal _ppmlhdfe_d in the user's data on clean poisson runs (new drops it; verbose retains)
+E-B12e,*,esamp,_ppmlhdfe_d,,B12/S6: the leaked variable also appears in old's e(sample) digest
 C-esfn,adm_svpsg,files,*,,saveplots x subgroups: filenames now separate the subgroup variable and value (06e1a5b)
 # ---------------- bounded storage-noise tiers (B21 gen-double + svmat float->double) ----------------
 # interactivecontrols configs first: float->double REGRESSOR copies move coefficients
@@ -96,16 +94,15 @@ B21-adm-V,adm_aw,mat,V,1e-6,B21 class
 B21-adm-w,adm_aw,mat,wdidmainresults,1e-6,B21 class
 A9-adm-b,adm_impv,mat,b,1e-5,svmat class on the realistic admin panel
 A9-adm-V,adm_impv,mat,V,1e-5,svmat class
-A9-adm-w,adm_impv,mat,wdidmainresults,1e-5,svmat class
-A12-ttp-s,trig_tt_pois,scalar,*,1e-6,tcen f7019c9: poisson IRLS-tolerance class (rss/rmse ~3.5e-9)
-A12-ttp-m,trig_tt_pois,mat,*,1e-6,tcen f7019c9: same
+A9-adm-w,adm_impv,mat,wdidmainresults,1e-4,svmat class; IM t/p cells tail-amplify (ceiling 1.66e-5)
+A12-ttp-s,trig_tt_pois,scalar,*,1e-4,tcen f7019c9 poisson: ppmlhdfe IRLS iteration noise is RUN-VARYING (within 1e-10 one run, 1.24e-5 the next)
 X-adv-p,ext_*,scalar,adversarial_pval_*,2e-4,svmat/B21 storage class; measured ceiling 2.0e-5 (continuous tails)
 X-adv-l,ext_*,mat,adversarial_line_*,1e-3,same; ceiling 1.6e-4
-X-est-b,ext_*,mat,b,1e-5,B21/svmat storage class (non-IC configs; IC rows above)
+X-est-b,ext_*,mat,b,2e-4,B21/svmat class (non-IC); elasticity transforms amplify (ceilings 4.4e-8 and 1.34e-5 across runs)
 X-est-V,ext_*,mat,V,1e-5,same; non-IC ceiling ~2e-9
-X-est-w,ext_*,mat,wdidmainresults,1e-5,same
+X-est-w,ext_*,mat,wdidmainresults,2e-4,same (ceilings track mat b)
 X-est-sg,ext_*,mat,wdidsgresults_*,4e-4,same; ceiling 4.2e-5
-X-est-pw,ext_*,mat,pwsgs,2e-6,same; ceiling 2.2e-7 outside the DDG configs
+X-est-pw,ext_*,mat,pwsgs,1e-3,B21/svmat class; degenerate-SE cells amplify ULP noise RUN-VARYINGLY (observed ceilings 2.2e-7 and 1.12e-4 across two runs)
 X-est-hist,ext_*,mat,histogramestimates,1e-7,same; ceiling 6.7e-9
 X-est-cfx,ext_*,mat,cfx*,1e-7,same; ceiling 9.3e-9
 X-joint-s,ext_*,scalar,joint_*,5e-5,tail-amplified joint-test p; ceiling 4.1e-6
@@ -119,3 +116,9 @@ X-fit-r2,ext_*,scalar,r2*,1e-7,same; ceiling 3.2e-9
 X-fit-chi2,ext_*,scalar,chi2,1e-7,same; ceiling 1.9e-9
 adm-adv-p,adm_esf_adv,scalar,adversarial_pval_*,2e-4,svmat storage class on the realistic panel
 adm-adv-l,adm_esf_adv,mat,adversarial_line_*,1e-3,same
+ULP-ppw-b,adm_pois_pw,mat,b,1e-6,ppmlhdfe+pweight IRLS class: run-varying ULP noise just above 1e-10 (documented non-reproducible family)
+ULP-ppw-V,adm_pois_pw,mat,V,1e-6,same
+ULP-ppw-w,adm_pois_pw,mat,wdidmainresults,1e-6,same
+ULP-upw-b,adm_uncond_pw,mat,b,1e-6,unconditionalse ULP class (documented 1-2 ulp non-reproducible; cross-build slightly larger)
+ULP-upw-V,adm_uncond_pw,mat,V,1e-6,same
+ULP-upw-w,adm_uncond_pw,mat,wdidmainresults,1e-5,same; t/p cells amplify (ceiling 2.9e-7)

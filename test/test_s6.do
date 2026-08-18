@@ -111,6 +111,37 @@ frame change default
 frame drop s6work
 frame drop s6deco
 
+* ---- S5: cleanmatrices vs a validation-rejected call - user matrices and mata survive ----
+* The S5m fix moved all parse-time validation (wooldid_validate) BEFORE the
+* cleanmatrices wipe, so a call refused at validation must leave user matrices and
+* mata objects untouched. fastnose+jointtests is a documented parse-time refusal (198).
+* A clean call with cleanmatrices must still succeed (its wipe is the documented one).
+use "`DATA'/dta_binary", clear
+matrix s5umat = (1,2\3,4)
+mata: s5uobj = (5,6\7,8)
+cap wooldid y i t ttre, att cluster(i) fastnose jointtests cleanmatrices
+if _rc == 0 {
+  dis as error "S5 FAIL: fastnose+jointtests+cleanmatrices was not refused"
+  local ++fails
+}
+cap confirm matrix s5umat
+if _rc != 0 {
+  dis as error "S5 FAIL: user matrix wiped by the rejected cleanmatrices call (rc=" _rc ")"
+  local ++fails
+}
+cap mata: assert(s5uobj[2,2] == 8)
+if _rc != 0 {
+  dis as error "S5 FAIL: user mata object wiped by the rejected cleanmatrices call (rc=" _rc ")"
+  local ++fails
+}
+* recovery: a clean run with cleanmatrices succeeds (note: it wipes matrices/mata by
+* design, so this is the last block of the suite)
+cap noi wooldid y i t ttre, att cluster(i) cleanmatrices
+if _rc != 0 {
+  dis as error "S5 FAIL: clean cleanmatrices run rc=" _rc
+  local ++fails
+}
+
 if `fails' == 0 dis "S6_ALL_PASS"
 else dis as error "S6_FAILS=`fails'"
 exit, clear

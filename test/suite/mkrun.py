@@ -69,6 +69,9 @@ program define dumpres
   local svfiles : dir . files "svp*"
   local svfiles : list sort svfiles
   file write `fh' `"files|`svfiles'"' _n
+  foreach svf of local svfiles {
+    cap erase `svf'
+  }
   file write `fh' "end|`cfg'" _n
   file close `fh'
 end

@@ -82,10 +82,11 @@ every era. Do NOT use a bare `s/wooldid/wooldid_old/g` — it would rewrite
   every task.** Run what probes your specific question. The testing-and-assessment suite
   has clearly labeled components — `battery` (bit-exact vs baseline), `cert` (the
   targeted test_*.do suites), `oldnew` (dual-build v1.3-vs-HEAD comparison, subsettable
-  with ONLY=core/trig/covars/plots/screens/ext*), `newfeat` (HonestDiD / randomization-
-  inference / identity cross-checks), and `coverage` — see `test/suite/README.md`
-  (including its "Which subpart should I run?" table). Run the relevant subparts rather
-  than the whole thing; the full suite is reserved for campaign-level assessments.
+  with ONLY=core/trig/covars/adm/plots/screens/patho/ext*), `compare` (re-judge existing
+  dumps, no Stata), `newfeat` (HonestDiD / randomization-inference / identity
+  cross-checks), and `coverage` — see `test/suite/README.md` (including its "Which
+  subpart should I run?" table). Run the relevant subparts rather than the whole thing;
+  the full suite (~20-30 min) is the campaign-checkpoint tool.
 - Build targeted test cases for the specific issue at hand; do not limit yourself to
   datasets already in the suite.
 - The coverage grid (`review_process/assessment_grid.md`) is a tool, not a toll: use it

@@ -47,6 +47,11 @@ gen double x2 = .98 * x1 + rnormal() * .05
 replace x1 = . if runiform() < .01
 replace y = . if runiform() < .02
 gen double ycount = rpoisson(exp(-1.5 + .2 * treatnow + .1 * region))
+* cohort-level id for wooldid's i argument: the estimator's cell-dummy grid scales with
+* levels(i) x periods, so unit-level i at 2,000 counties implies a ~22,500-dummy model
+* (exceeds set maxvar 20000 -> r907). Realistic-scale usage groups i at the cohort level;
+* a subsampled unit-level-i config (adm_unit_i) covers the fine-i pattern.
+gen cohid = cond(ttre == ., 1, ttre - 2000)
 drop u entry exit ceff treatnow relyr effect
 
 * ---- deterministic self-test (hard asserts; abort = no sentinel printed) ----
@@ -71,6 +76,8 @@ qui count if __nyr < 15
 assert r(N) > 0
 drop __nyr
 bysort fips (ttre): assert ttre[1] == ttre[_N]
+bysort cohid (ttre): assert ttre[1] == ttre[_N]
+assert inlist(cohid, 1, 9, 12, 15)
 
 save "`outdir'/dta_s_admin.dta", replace
 di as result "MKDATA_ADMIN_SELFTEST_PASS"

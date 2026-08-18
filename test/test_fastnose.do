@@ -147,6 +147,34 @@ if `rc1' != 0 | _rc != 0 {
   dis as error "T5 FAIL: rc est=" `rc1' " rep=" _rc
   local ++fails
 }
+* the actual replay comparison: the two logs must be LINE-IDENTICAL from the
+* "Wooldid Estimation" banner to EOF. The only benign difference is the pre-banner
+* region, which echoes the estimation command line in fn_est.txt but the bare
+* `wooldid` replay call in fn_rep.txt (verified byte-identical from the banner onward
+* on the certified build; both logs are written by the same session, so the wrap
+* width is identical too).
+local t5same 0
+local t5n 0
+cap confirm file fn_est.txt
+local frc1 = _rc
+cap confirm file fn_rep.txt
+if `frc1' != 0 | _rc != 0 {
+  dis as error "T5 FAIL: replay log files missing (rc `frc1'/" _rc ")"
+  local ++fails
+}
+else {
+  mata: a_ = cat("fn_est.txt") \ ""; b_ = cat("fn_rep.txt") \ ""
+  mata: ia_ = selectindex(strpos(a_, "Wooldid Estimation") :== 1); ib_ = selectindex(strpos(b_, "Wooldid Estimation") :== 1)
+  mata: hb_ = (rows(ia_) > 0) & (rows(ib_) > 0)
+  mata: sa_ = a_[|(ia_ \ 1)[1] \ rows(a_)|]; sb_ = b_[|(ib_ \ 1)[1] \ rows(b_)|]
+  mata: n_ = rows(sa_)
+  mata: st_local("t5same", strofreal(hb_ & (n_ > 20) & (sa_ == sb_))); st_local("t5n", strofreal(n_))
+  if `t5same' != 1 {
+    dis as error "T5 FAIL: replay log differs from the estimation log from the banner onward (banner-to-EOF lines in fn_est: `t5n')"
+    local ++fails
+  }
+  else dis "T5 info: replay byte-identical from the banner onward (`t5n' lines)"
+}
 
 * ---- T6: makeplots under fastnose - plots draw without bands, no rarea failure ----
 use "`DATA'/dta_binary", clear
