@@ -45,6 +45,11 @@ trig_imdeg_part,trig,dta_path_imbalanced,y i t ttre,,,,att cluster(i) esprelengt
 trig_mintsent_off,trig,dta_s_mintsent,y i t ttre_sent,,,,att cluster(i) esprelength(2) espostlength(2) safety(off),,,,A15: sentinel-0 onset coding (ttre_sent) biased on old under safety(off)
 trig_mintsent_def,trig,dta_s_mintsent,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2),0,459,,B-F13: onset-only-post coding refused by new (verified r459)
 trig_singleton,trig,dta_s_singleton,y i t ttre,,,,att att_it cluster(i) esprelength(2) espostlength(2) fe(fevar),,,,A7: fevar strands singletons incl 2 treated post rows (att_it weights move)
+patho_nonever,patho,dta_path_nonever,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1),459,459,,no never-treated units: documented design rejection (author ruling cb199c8)
+patho_nocontrols,patho,dta_path_nocontrols,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1),459,459,,all units treated at one onset: no controls error path
+patho_nopre,patho,dta_path_nopre,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1),,,,cohort without pre-periods + extended-missing sg
+patho_nopost,patho,dta_path_nopost,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) oostreatedcontrols(1),,,,out-of-sample onset with oos controls
+patho_onepercell,patho,dta_path_onepercell,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1),,,,single-obs ttre-year cells
 # ---- covars: closes the zero-coverage gap on shared covariate options ----
 cov_controls,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) controls(x1 x2),,,,scattered-missing controls shrink e(sample) (A7 class)
 cov_fe,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) fe(fecat),,,,fe singleton drops (A7 class)
