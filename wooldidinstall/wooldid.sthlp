@@ -338,7 +338,7 @@ generated. Everything is saved to Stata's working directory; the argument must b
 
 {phang}{opt replace}: When saving materials to the file names specified in {it:saveplots()}, overwrite any existing files with the specified names. {p_end}
 
-{phang}{opt sum:marystats}: Compute and present summary statistics of the outcome variable y and, if present, of the continuous treatment variable contreat.
+{phang}{opt sum:marystats}: Compute and present summary statistics of the outcome variable y and, if present, of the continuous treatment variable contreat. Also displays the event-study composition matrix's coverage scalars (the reference-normalization pool's N, treated-unit and onset-cohort counts, and att-style weight mass, plus the same for the entire treated estimation sample; see {it:e(escomp_*)} under Stored Results).
 Summary statistics are computed overall, within the treatment group by time period (post-treatment vs pre-treatment), and within the control group. If a
 fixed reference period is not being used and pre-treatment relative time period effects are requested, statistics on the size of the reference group relative to the rest of the
 pre-treatment period will also be shown. {p_end}
@@ -390,13 +390,17 @@ event-study coefficients using their full variance-covariance matrix from {it:e(
 {it:e(adversarial_line_{it:type})}, which is an unweighted fit over all horizons); the minimum linear pre-trend each pre-test would detect with the requested power ({it:mdt_wald} powers
 the joint pre-trend test, an F test with the regression's residual degrees of freedom; {it:mdt_nis} powers the test that any pre-period coefficient is individually significant — the
 convention of Roth's {it:pretrends} package, whose size is also reported since it exceeds its nominal level when there are several pre-periods); and the bias each such trend would imply
-for the pooled estimate {ul:if it continued into the post-treatment period} (the minimum detectable trend itself depends only on the design's precision, never on the estimated
-coefficients). Requires {cmd:esfixedbaseperiod} (under the pooled reference the single omitted reference period the linear-trend normalization needs is not defined) and at least one
+for that block's pooled estimand {ul:if it continued into the post-treatment period} (the minimum detectable trend itself depends only on the design's precision, never on the estimated
+coefficients). When only {it:att_i} or {it:att_itime} is requested, the reported block is the shared {it:att_it} event-study curve ({it:ame_it} under {cmd:contreat()}) standing in for them: its
+hbar and bias columns describe {it:att_it}-family post-period weighting only and do {ul:not} quantify the bias such a trend would imply for the requested {it:att_i}/{it:att_itime}
+(or {it:ame_i}/{it:ame_itime}) estimands, whose post-period weights differ. With {cmd:subgroups()}, diagnostics are computed for the overall event-study types only ({it:att}, {it:att_it},
+{it:ame}, {it:ame_it}); subgroup event-study objects ({it:e(b_es_*_s#)}/{it:e(V_es_*_s#)}) are not analyzed and no {it:e(roth_*_s#)} results are returned. Requires {cmd:esfixedbaseperiod} (under the pooled reference the single omitted reference period the linear-trend normalization needs is not defined) and at least one
 pre-treatment event-study coefficient; not compatible with {cmd:impvalues}. Results are returned in {it:e(roth_power_{it:type})} and companion scalars (see Stored Results) and skipped
 with a caution when the pre-period variance-covariance block is unavailable (e.g. under {cmd:timetrends}) or carries missing or non-positive variance entries; rank-deficient blocks are
 handled with a generalized inverse and reduced degrees of freedom, with a caution (note that on an exactly rank-deficient block every reported statistic reflects only the linearly
 independent subset of pre-period coefficients the generalized inverse retains - not a summary of all pre-period evidence - and depends on which columns are retained, so treat those
-numbers as one representative of an underdetermined family and interpret with care). The exact-quadrature {it:mdt_nis} column is computed only for up to 4 pre-periods (its cost grows
+numbers as one representative of an underdetermined family and interpret with care). A requested power level at or below the NIS test's actual size is achievable by a zero trend, so {it:mdt_nis} and {it:bias_nis} are exactly 0 there (a missing cell always means the
+computation was unavailable, never a boundary answer). The exact-quadrature {it:mdt_nis} column is computed only for up to 4 pre-periods (its cost grows
 steeply with dimension); for larger designs, feed {it:e(b_es_{it:type})}/{it:e(V_es_{it:type})}/{it:e(numpre_{it:type})} to Roth's {it:pretrends} package, which implements the same
 convention with a normal critical value. When the underlying estimator posts no residual degrees of freedom (e.g. the
 ppmlhdfe path), the joint test and minimum detectable trends use chi-squared rather than F distributions and the slope CI uses a normal critical value. Under {cmd:poisson} without
@@ -758,8 +762,8 @@ outside the reported event-study window.{p_end}
 {synopt:{it:e(anticipation)}} The anticipation shift applied to the treatment onset, returned when {cmd:anticipation()} is active.{p_end}
 
 {synopt:{it:e(roth_power_{it:type})}} With {cmd:pretrendpower()}: one row per requested power level, columns {it:power}, {it:mdt_wald}, {it:mdt_nis} (the minimum detectable linear
-pre-trend under the joint-Wald and any-individually-significant pre-tests respectively), and {it:bias_wald}, {it:bias_nis} (the pooled-estimate bias such a trend would imply if it
-continued post-treatment, i.e. mdt × (hbar − reference)). Companion scalars: {it:e(roth_slope_{it:type})}, {it:e(roth_slope_se_{it:type})}, {it:e(roth_slope_ll/ul_{it:type})} (the GLS
+pre-trend under the joint-Wald and any-individually-significant pre-tests respectively), and {it:bias_wald}, {it:bias_nis} (the bias such a trend would imply for that block's pooled estimand if it
+continued post-treatment, i.e. mdt × (hbar − reference); for {it:att_i}/{it:att_itime} requests the att_it block stands in and its bias columns describe att_it weighting only). Companion scalars: {it:e(roth_slope_{it:type})}, {it:e(roth_slope_se_{it:type})}, {it:e(roth_slope_ll/ul_{it:type})} (the GLS
 pre-trend slope and 95% CI), {it:e(roth_prep_{it:type})} (the joint pre-trend test p-value), {it:e(roth_hbar_{it:type})} (the estimand-weighted mean post-treatment relative period over
 the full post support of the estimation sample), {it:e(roth_npre_{it:type})}, {it:e(roth_keff_{it:type})} (pre-period count and effective rank), {it:e(roth_W_{it:type})} (the joint
 pre-trend test statistic), and {it:e(roth_nissize_{it:type})} (the actual size of the any-individually-significant pre-test).{p_end}

@@ -4555,6 +4555,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     dis as error "Error: esrelativeto() must be a negative integer (a pre-onset reference period) when esfixedbaseperiod is specified."
     error 198
   }
+  * NFADV-07: altmethod_adversarial is a modifier of adversarial; every gate and work
+  * branch keys on the adversarial flag, so the standalone spelling ran rc 0 as a silent
+  * no-op. error rather than imply, matching the modifier-without-parent convention
+  * (lattice()-without-contreat, contreatwithin-without-contreat)
+  if "`altmethod_adversarial'" != "" & "`adversarial'" == "" {
+    dis as error "Error: altmethod_adversarial modifies the adversarial pre-trends test; specify the adversarial option as well (or remove altmethod_adversarial)."
+    error 198
+  }
 
   * ---- return the parsed options and every derived/normalized local to the worker ----
   * blanket-by-construction: every option the syntax line defines is listed (plus the
@@ -4873,6 +4881,15 @@ version 16.0
     }
     qui sort `permstrata' `clus'
     qui gen double __wdpassign = .
+    * NFPERM-02: freeze the generation-time row identity. the assignment matrix is
+    * generated in the (strata, cluster) sort order above, but frlink below RE-SORTS
+    * this frame by the cluster key (frlink is sortpreserve for the master frame only),
+    * so a positional _n read at application time attaches assignments to the WRONG
+    * clusters whenever ascending cluster order crosses stratum order - silently wrong
+    * stratified inference (probed: crossing-strata exact designs reported p=0 with the
+    * observed assignment absent from their own enumeration). __wdprow keys each row to
+    * its generation-time matrix row, making any later reorder harmless
+    qui gen long __wdprow = _n
   }
 
   * assignments + counts (mata): fills the C x R matrix, sets wdp_R, the possible-
@@ -4939,7 +4956,7 @@ version 16.0
     }
   }
   forval r = 1/`wdp_R' {
-    frame `mpfr': qui replace __wdpassign = el("`wdpassign'", _n, `r')
+    frame `mpfr': qui replace __wdpassign = el("`wdpassign'", __wdprow, `r')
     cap drop `repons'
     qui frget `repons' = __wdpassign, from(`lnk')
     cap qui wooldid `repcall' `repons' `wtif' , `repopts'
@@ -5257,6 +5274,14 @@ version 16.0
       * NIS-based minimum detectable trend, by bisection on the exact rejection
       * probability (deterministic quadrature; self-checked against the target)
       if `ptpnisok' {
+        * NFPTP-04: a requested power level at or below the NIS test's null rejection
+        * rate (its size) is achieved by a zero trend - the mathematically exact boundary
+        * answer. formerly these cells were left missing, indistinguishable from a
+        * numerical failure
+        if `ptplev'/100 <= real("`ptpnissize'") {
+          matrix `ptpmat'[`ptplr', 3] = 0
+          if !missing(`ptphbar') matrix `ptpmat'[`ptplr', 5] = 0
+        }
         if `ptplev'/100 > real("`ptpnissize'") {
           local ptpglo = 0
           local ptpghi = 8*`ptpse'
@@ -5307,7 +5332,22 @@ version 16.0
     if !`ptpnisok' & `ptpk' > 4 dis as text "    note: mdt_nis and the NIS-test size are omitted (`ptpk' pre-periods exceed the exact-quadrature budget of 4); mdt_wald is unaffected. For the NIS convention at larger k, feed e(b_es_`ptpty')/e(V_es_`ptpty')/e(numpre_`ptpty') to Roth's pretrends package."
     dis as result "    weighted mean post-treatment relative period (hbar) = " %-9.0g `ptphbar'
     dis as result "    minimum detectable linear trend, and the bias such a trend would imply for the"
-    dis as result "    pooled estimate if it continued into the post-treatment period:"
+    dis as result "    `ptpty' pooled estimand if it continued into the post-treatment period:"
+    * NFPTP-03: the att_it/ame_it block is the shared event-study curve; when the user
+    * requested att_i/att_itime the block stands in for them but its hbar/bias columns
+    * use att_it-family post-period weights - say so rather than implying the requested
+    * pooled estimand's own weighting. exact-token match (att_i is a prefix of att_it
+    * and att_itime; cf. the cfxplottypes exact-token precedent)
+    if inlist("`ptpty'", "att_it", "ame_it") {
+      local ptpsurr
+      local ptpests `e(wdid_estimands)'
+      if `: list posof "att_i" in ptpests' > 0 local ptpsurr att_i
+      if `: list posof "att_itime" in ptpests' > 0 local ptpsurr `ptpsurr' att_itime
+      if "`ptpsurr'" != "" {
+        if "`ptpty'" == "ame_it" local ptpsurr = subinstr("`ptpsurr'", "att", "ame", .)
+        dis as text "    note: this `ptpty'-weighted diagnostic stands in for the requested `ptpsurr' estimand(s); its hbar and bias columns use `ptpty' post-period weights."
+      }
+    }
     matlist `ptpmat', format(%12.4g)
     dis as text "    note: mdt_wald powers the joint pre-trend test above; mdt_nis powers the test that any"
     dis as text "    pre-period coefficient is individually significant (the convention of Roth's pretrends package)."
@@ -5461,6 +5501,15 @@ version 16.0
     dis as result  " "
     dis as result  "Event-Study Composition by Horizon (Full Estimation Sample; also in e(escomp)):"
     matlist e(escomp), format(%12.4g)
+    * DOC-03: the six coverage scalars were computed and returned but never displayed;
+    * cap-confirm gate (they post under cap, so benign absence is possible - skip
+    * silently, matching the surrounding style). neutral pool wording: "reference
+    * period" would be accurate in at most one of the four reference regimes
+    cap confirm scalar e(escomp_refN)
+    if _rc == 0 {
+      dis as text "  Reference-normalization pool: N = " %-9.0g e(escomp_refN) " ; treated units = " %-6.0g e(escomp_refnunits) " ; onset cohorts = " %-6.0g e(escomp_refncoh) " ; att-style weight = " %-9.0g e(escomp_refW)
+      dis as text "  Entire treated estimation sample: N = " %-9.0g e(escomp_trtN) " ; att-style weight = " %-9.0g e(escomp_trtW)
+    }
   }
 
   * show the joint  tests
@@ -5529,7 +5578,22 @@ version 16.0
     if !`ptpnisok' & `ptpk' > 4 dis as text "    note: mdt_nis and the NIS-test size are omitted (`ptpk' pre-periods exceed the exact-quadrature budget of 4); mdt_wald is unaffected. For the NIS convention at larger k, feed e(b_es_`ptpty')/e(V_es_`ptpty')/e(numpre_`ptpty') to Roth's pretrends package."
     dis as result "    weighted mean post-treatment relative period (hbar) = " %-9.0g `ptphbar'
     dis as result "    minimum detectable linear trend, and the bias such a trend would imply for the"
-    dis as result "    pooled estimate if it continued into the post-treatment period:"
+    dis as result "    `ptpty' pooled estimand if it continued into the post-treatment period:"
+    * NFPTP-03: the att_it/ame_it block is the shared event-study curve; when the user
+    * requested att_i/att_itime the block stands in for them but its hbar/bias columns
+    * use att_it-family post-period weights - say so rather than implying the requested
+    * pooled estimand's own weighting. exact-token match (att_i is a prefix of att_it
+    * and att_itime; cf. the cfxplottypes exact-token precedent)
+    if inlist("`ptpty'", "att_it", "ame_it") {
+      local ptpsurr
+      local ptpests `e(wdid_estimands)'
+      if `: list posof "att_i" in ptpests' > 0 local ptpsurr att_i
+      if `: list posof "att_itime" in ptpests' > 0 local ptpsurr `ptpsurr' att_itime
+      if "`ptpsurr'" != "" {
+        if "`ptpty'" == "ame_it" local ptpsurr = subinstr("`ptpsurr'", "att", "ame", .)
+        dis as text "    note: this `ptpty'-weighted diagnostic stands in for the requested `ptpsurr' estimand(s); its hbar and bias columns use `ptpty' post-period weights."
+      }
+    }
     matlist e(roth_power_`ptpty'), format(%12.4g)
     dis as text "    note: mdt_wald powers the joint pre-trend test above; mdt_nis powers the test that any"
     dis as text "    pre-period coefficient is individually significant (the convention of Roth's pretrends package)."
