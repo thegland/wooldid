@@ -4412,15 +4412,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       error 198
     }
     if "`safetyinput'" != "off" {
-      cap assert (`cfxlattice' >= 0 & int(`cfxlattice') == `cfxlattice') | `cfxlattice' >= . `ifassert'
+      * VAL-G12A/G12B: both screens tolerate rows with a missing recorded onset - every
+      * executed CFX subpop requires internal ttre != . (never-treated rows feed no plot),
+      * so values there can neither crash margins nor silently shift a plotted average.
+      * mirrors the ttre_asgiven >= . tolerance of the commensurability screen below
+      cap assert (`cfxlattice' >= 0 & int(`cfxlattice') == `cfxlattice') | `cfxlattice' >= . | `ttre_asgiven' >= . `ifassert'
       if _rc != 0 {
-        dis as error "Error: the cfxlattice() variable must contain only non-negative integers (margins allows only non-negative integers in over())."
+        dis as error "Error: the cfxlattice() variable must contain only non-negative integers on observations with a nonmissing treatment onset (margins allows only non-negative integers in over())."
         error 411
       }
-      local wdvcfxmiss `cfxlattice' >= .
+      local wdvcfxmiss `cfxlattice' >= . & `ttre_asgiven' < .
       if `"`if'"' != "" local wdvcfxmiss (`wdvcfxmiss') & ((`if') == 1)
       qui count if `wdvcfxmiss'
-      if r(N) > 0 dis as text "Caution: the cfxlattice() variable is missing on `r(N)' observation(s); margins omits those observations when computing the continuous treatment effect plot points, so the plotted averages reflect only the nonmissing-cfxlattice subsample."
+      if r(N) > 0 dis as text "Caution: the cfxlattice() variable is missing on `r(N)' observation(s) with a nonmissing treatment onset; margins omits those observations when computing the continuous treatment effect plot points, so the plotted averages reflect only the nonmissing-cfxlattice subsample."
     }
   }
 

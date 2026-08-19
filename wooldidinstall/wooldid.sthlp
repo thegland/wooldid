@@ -536,9 +536,10 @@ variable or, if specified, the variable in {it:cfxlattice()}. These plots are on
 do not crosscut cohorts (or, less stringently, cohort-periods, for ATT_it). {p_end}
 
 {phang}{opt cfxlattice(varname)}: A variable containing the bins in which effects are to be calculated for the continuous treatment effects plots. If not specified,
-the lattice variable will be used. The variable must be numeric and contain only non-negative integers ({it:margins} accepts only non-negative integers in {it:over()};
-the value check can be bypassed with {it:safety(off)}). If it has missing values, {it:wooldid} prints a Caution: {it:margins} silently omits those observations from the
-plotted bin averages. These screens apply only when {it:makecfxplots} is actually requested; {it:cfxlattice()} without {it:makecfxplots} has no effect and draws a Caution.
+the lattice variable will be used. The variable must be numeric and, on observations with a nonmissing treatment onset within the sample restriction, contain only
+non-negative integers ({it:margins} accepts only non-negative integers in {it:over()}; the value check can be bypassed with {it:safety(off)}). Values on never-treated
+observations are ignored: no continuous treatment effects plot uses those rows. If the variable has missing values on observations with a nonmissing onset, {it:wooldid}
+prints a Caution: {it:margins} silently omits those observations from the plotted bin averages. These screens apply only when {it:makecfxplots} is actually requested; {it:cfxlattice()} without {it:makecfxplots} has no effect and draws a Caution.
 Note that {it:makecfxplots} requires a continuous treatment ({it:contreat()}); previously, requesting it with {it:cfxlattice()} alone was silently ignored. {p_end}
 
 {phang}{opt cfxplott:ypes(pre post integers)}: A list of types of cfxplots to be produced. If {it:post} is among the types specified, plots will be produced giving
