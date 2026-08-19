@@ -89,7 +89,7 @@ version 16.0
   * summaries are appended to e() (this shell is eclass), and part(perm) prints them
   if "`wdp_on'" == "1" {
     qui wooldid_validate `0'
-    * permtci inverts the t-ratio permutation distribution, so it implies permtstat
+    * permtci's critical value comes from the permuted |t| distribution, so it implies permtstat
     if "`permtci'" != "" & "`permtstat'" == "" local permtstat permtstat
     * rep option string: keep everything that shapes the point estimates; strip
     * display/diagnostic/plot work and the permutation options themselves; reps run
@@ -120,9 +120,9 @@ version 16.0
     if `anticipation' != 0 local wdp_ro `wdp_ro' anticipation(`anticipation')
     local wdp_est `att' `att_it' `att_i' `att_itime'
     if "`wdp_est'" == "" local wdp_est att
-    tempname wdpobs wdpdist
+    tempname wdpobs wdpdist wdpcomp
     qui est sto `wdpobs'
-    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist')
+    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist') compname(`wdpcomp')
     local wdp_rc = _rc
     qui est restore `wdpobs'
     cap est drop `wdpobs'
@@ -154,6 +154,11 @@ version 16.0
       }
     }
     if `wdp_r_done' <= 10000 cap ereturn matrix permdist = `wdpdist'
+    * NFPERM-12 (lean kernel): the comparison statistics actually used for the tail
+    * counts, so p-values are reconstructable from e() alone. matrix-handle transport -
+    * a c_local decimal round-trip re-parses one ulp off (see the rep-0 comment in
+    * wooldid_permrun), which would break bitwise reconstruction
+    cap ereturn matrix perm_comparator = `wdpcomp'
     wooldid_display , part(perm)
     dis as result " "
   }
@@ -4769,7 +4774,11 @@ version 16.0
 
   * sample for the data checks: the user's if-restriction, rows with a cluster value
   tempvar insmp
-  if `"`ifr'"' != "" qui gen byte `insmp' = (`ifr') & !missing(`clus')
+  * NFPERM-03: exact-one rule ((exp)==1), matching estimation's if-semantics (8d7bd01):
+  * native truth admitted rows with if-values like 2 or missing into the randomization
+  * design that never enter estimation (false r459 nesting errors on bare-flag ifs;
+  * design-population drift). byte-parallel with permrun's smp below
+  if `"`ifr'"' != "" qui gen byte `insmp' = ((`ifr') == 1) & !missing(`clus')
   else qui gen byte `insmp' = !missing(`clus')
   qui replace `insmp' = 0 if `insmp' >= .
 
@@ -4847,7 +4856,7 @@ end
 cap prog drop wooldid_permrun
 prog def wooldid_permrun
 version 16.0
-  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis)]
+  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis) compname(string)]
 
   * observed statistics come off the still-active observed e(). stored as SCALARS:
   * a local's decimal round-trip re-parses one ulp off, which breaks the exact test's
@@ -4863,7 +4872,8 @@ version 16.0
   * one row per cluster: its onset level and (optional) stratum
   tempvar smp
   if `"`ifr'"' != "" {
-    qui gen byte `smp' = (`ifr')
+    * NFPERM-03: exact-one rule, byte-parallel with permctl's insmp
+    qui gen byte `smp' = ((`ifr') == 1)
     qui replace `smp' = 0 if `smp' >= .
   }
   else qui gen byte `smp' = 1
@@ -4947,13 +4957,41 @@ version 16.0
   * keeps the exact test's observed-is-a-member property bitwise. the display still
   * shows the full run's estimate
   cap qui wooldid `repcall' `ttrevar' `wtif' , `repopts'
-  if _rc == 0 {
+  * NFPERM-10: the comparator fit and its scalars must be valid. formerly a rep-0
+  * failure fell through silently (retaining full-run-provenance scalars, breaking the
+  * exact test's bitwise observed-is-a-member property), and a missing comparison
+  * statistic (e.g. a degenerate observed SE under permtstat) silently zeroed every
+  * tail count - exact p = 0 with no message. the shell restores the observed
+  * estimation results bit-intact on these error paths
+  if _rc == 1 error 1
+  if _rc != 0 {
+    dis as error "Error: the rep-0 comparison run of the observed assignment failed (rc `=_rc'); permutation inference is impossible. The observed estimation results are unaffected."
+    error 459
+  }
+  local ec 0
+  foreach ee in `estimands' {
+    local ++ec
+    if "`permtstat'" == "" cap scalar `wdpo`ec'' = _b[main_`ee']
+    else cap scalar `wdpo`ec'' = _b[main_`ee']/_se[main_`ee']
+    if _rc != 0 {
+      dis as error "Error: the observed comparison statistic for `ee' could not be read from the rep-0 run; permutation inference is impossible."
+      error 459
+    }
+    if missing(`wdpo`ec'') {
+      dis as error "Error: the observed comparison statistic for `ee' is missing (unidentified observed estimate or standard error); permutation inference is impossible."
+      error 459
+    }
+  }
+  * NFPERM-12 (lean kernel): export the comparison statistics actually used for the
+  * tail counts, guarded valid above; the caller posts them as e(perm_comparator)
+  if "`compname'" != "" {
+    matrix `compname' = J(1, `: word count `estimands'', .)
     local ec 0
     foreach ee in `estimands' {
       local ++ec
-      if "`permtstat'" == "" cap scalar `wdpo`ec'' = _b[main_`ee']
-      else cap scalar `wdpo`ec'' = _b[main_`ee']/_se[main_`ee']
+      matrix `compname'[1, `ec'] = `wdpo`ec''
     }
+    matrix colnames `compname' = `estimands'
   }
   forval r = 1/`wdp_R' {
     frame `mpfr': qui replace __wdpassign = el("`wdpassign'", __wdprow, `r')
@@ -4966,7 +5004,14 @@ version 16.0
       local ec 0
       foreach ee in `estimands' {
         local ++ec
-        if "`permtstat'" == "" cap matrix `res'[`r', `ec'] = _b[main_`ee']
+        if "`permtstat'" == "" {
+          cap matrix `res'[`r', `ec'] = _b[main_`ee']
+          * NFPERM-10: mirror the t-branch missing check so whole-row blanking keeps a
+          * single completed-row set (nuse == ndone for every column)
+          if _rc == 0 {
+            if missing(`res'[`r', `ec']) local badrep 1
+          }
+        }
         else {
           cap matrix `res'[`r', `ec'] = _b[main_`ee']/_se[main_`ee']
           if _rc == 0 {
@@ -4997,7 +5042,11 @@ version 16.0
     dis as error "Error: only `ndone' of `wdp_R' permutation replications estimated successfully; too few for inference. Check whether reassigned onset configurations are frequently inestimable on these data."
     error 459
   }
-  if `nfail' > 0 & `nfail' > 0.1*`wdp_R' dis as text "Caution: `nfail' of `wdp_R' permutation replications failed to estimate and were excluded."
+  * NFPERM-01 (lean residue): under permexact ANY failure means the enumeration is
+  * incomplete, so the caution fires at nfail > 0 with wording that states the
+  * substance; sampled mode keeps the 10% threshold (adjudicated accounting design)
+  if `nfail' > 0 & "`permexact'" != "" dis as text "Caution: `nfail' of `wdp_R' enumerated assignments failed to estimate, so the exact enumeration is incomplete; the reported exact p-value is a share over completed assignments only (the observed-is-a-member and 2/M-floor readings no longer apply)."
+  else if `nfail' > 0 & `nfail' > 0.1*`wdp_R' dis as text "Caution: `nfail' of `wdp_R' permutation replications failed to estimate and were excluded."
 
   * summaries per estimand: add-one two-sided p (exact: plain share - the observed
   * assignment is a member of the enumeration), 5th/95th percentile band, SD
@@ -5020,7 +5069,11 @@ version 16.0
       local lb = r(r1)
       local ub = r(r2)
       qui sum s
-      local sdv = r(sd)
+      * NFPERM-11: an exact enumeration IS the complete population of assignments, so
+      * report the population SD (denominator M); sampled draws keep the n-1 sample SD.
+      * r(Var) is full double precision - no display-rounding hazard
+      if "`permexact'" != "" local sdv = sqrt(r(Var)*(r(N)-1)/r(N))
+      else local sdv = r(sd)
       if `sdv' == 0 dis as text "Caution: the permuted `ee' distribution is degenerate (every completed draw equals every other); the permutation p-value is uninformative."
       local q95 .
       if "`permtstat'" != "" {
@@ -5541,9 +5594,31 @@ version 16.0
 
   if "`part'" == "roth" {
   * replay-only: redisplay the Roth (2022) pre-trend power block from e(roth_*) without
-  * re-running the quadrature (the NIS computation can cost minutes). estimation-time
-  * Cautions from wooldid_ptp are deliberately not replayed. on the live path the worker
-  * calls wooldid_ptp itself between part(1) and part(2), so this part is never run live
+  * re-running the quadrature (the NIS computation can cost minutes). cautions that are
+  * reconstructible from posted e() ARE replayed (rank-deficiency from roth_keff vs
+  * roth_npre; interrupted-pass and completed-but-unavailable states from roth_ok);
+  * per-type estimation-time skip cautions remain live-only. on the live path the worker
+  * calls wooldid_ptp itself between part(1) and part(2), so this part is never run live.
+  * NOTE (deliberate replay-contract exception): the roth_ok reads below consult an e()
+  * member without a wdid_replayv bump - the only affected window is same-day pre-marker
+  * dev stores, and the degradation is a conservative caution + skip, versus a bump
+  * refusing every older store
+  * NFPTP-07: e(roth_ok) is written after a completed diagnostics pass; the worker runs
+  * wooldid_ptp under cap noi with individually-cap'd ereturns, so an abort partway
+  * through the type loop leaves earlier types' roth_* in e() with no marker. formerly
+  * nothing read the marker, so replay presented an interrupted pass as complete
+  local rothany 0
+  foreach ptpty in att att_it ame ame_it {
+    cap confirm matrix e(roth_power_`ptpty')
+    if _rc == 0 local rothany 1
+  }
+  if `rothany' & e(roth_ok) != 1 {
+    dis as text "Caution: the stored pretrendpower() diagnostics are incomplete (the diagnostics pass was interrupted); partial results are not replayed. Refit wooldid to recompute them."
+  }
+  else if `rothany' == 0 & e(roth_ok) == 1 {
+    dis as text "Caution: pretrendpower() was requested, but no event-study coefficient vector with a valid variance-covariance matrix was available (e.g. under timetrends); no diagnostics were computed."
+  }
+  else if `rothany' & e(roth_ok) == 1 {
   local dfr = e(df_r)
   local ptpdfok 0
   if "`dfr'" != "" & "`dfr'" != "." {
@@ -5565,6 +5640,9 @@ version 16.0
     local ptpW = e(roth_W_`ptpty')
     local ptpnisok = ("`e(roth_nissize_`ptpty')'" != "")
     local ptpnissize = e(roth_nissize_`ptpty')
+    * NFPTP-02/07: the rank-deficiency disclosure is reconstructible from e() and is
+    * now replayed (byte-identical text and position: live prints it pre-header)
+    if `ptpkeff' < `ptpk' dis as text "Caution: the `ptpty' pre-period variance-covariance block is rank-deficient (rank `ptpkeff' of `ptpk'). The slope, its CI, the joint test (now `ptpkeff' degrees of freedom), and the detectable-trend columns then reflect only the linearly independent subset of pre-period coefficients a generalized inverse retains - NOT a summary of all pre-period evidence - and can differ arbitrarily from statistics built on the discarded coefficients; interpret with care."
     if `ptpheader' == 0 {
       dis as result " "
       dis as result "Pre-Trend Power Diagnostics (Roth 2022):"
@@ -5598,6 +5676,7 @@ version 16.0
     dis as text "    note: mdt_wald powers the joint pre-trend test above; mdt_nis powers the test that any"
     dis as text "    pre-period coefficient is individually significant (the convention of Roth's pretrends package)."
     if "`poisson'" == "poisson" & "`e(wdid_poisexp)'" == "" dis as text "    note: poisson event-study coefficients are on the linear-index (xb) scale, and so are these diagnostics."
+  }
   }
   }
 
@@ -5700,11 +5779,18 @@ version 16.0
       dis as result "Randomization Inference (permute(`e(perm_method)')): `e(perm_completed)' of `e(perm_reps)' replications completed; `e(perm_npossible_str)' possible assignments."
       dis as text "Two-sided permutation p-values; the interval is the 5th-95th percentile band of the permuted-effect distribution (a null band, not a parameter CI); SD is the permuted-effect standard deviation."
       if "`e(perm_stat)'" == "t" dis as text "Statistics are randomized on t-ratios (permtstat)."
+      local wdptcihedge 0
       foreach wdpe in `e(wdid_permest)' {
         local wdpsc = cond("`e(perm_stat)'" == "t", " (t-scale)", "")
         dis as result "  `wdpe': estimate " %10.0g e(b)[1, colnumb(e(b), "main_`wdpe'")] "   p " %6.4f e(perm_p_`wdpe') "   null band`wdpsc' [" %10.0g e(perm_lb_`wdpe') ", " %10.0g e(perm_ub_`wdpe') "]   SD`wdpsc' " %10.0g e(perm_sd_`wdpe')
-        if e(perm_tlb_`wdpe') < . dis as result "        inverted-t 95% CI [" %10.0g e(perm_tlb_`wdpe') ", " %10.0g e(perm_tub_`wdpe') "]"
+        if e(perm_tlb_`wdpe') < . {
+          dis as result "        inverted-t 95% CI [" %10.0g e(perm_tlb_`wdpe') ", " %10.0g e(perm_tub_`wdpe') "]"
+          local wdptcihedge 1
+        }
       }
+      * NFPERM-08 (honesty hedge, once per run): the inverted-t CI is an approximation,
+      * not a sharp-null randomization-test inversion
+      if `wdptcihedge' dis as text "The inverted-t CI is a fixed-zero-null pivotality approximation (it relies on the permuted t-ratio distribution approximating the t-ratio's distribution under shifted nulls); it is not a sharp-null randomization-test inversion."
       dis as result " "
     }
   }

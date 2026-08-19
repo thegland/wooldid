@@ -271,15 +271,18 @@ contrasts, whose differencing amplifies rounding, up to roughly 1e-14 under {it:
 {phang}{opt permute(method)}: Randomization (permutation) inference in the Conley-Taber spirit, for settings - most importantly few treated clusters - where cluster-asymptotic standard errors are unreliable. The observed
 estimation runs exactly as usual (full inference, display, plots); afterwards, wooldid re-randomizes which clusters carry which treatment-onset dates, re-estimates the requested estimands under each counterfactual
 assignment (quiet fast-mode runs, since only point estimates are needed), and compares the observed estimate to the resulting null distribution. Requires {cmd:cluster()} with a single variable - the randomization
-unit - and every cluster must sit inside exactly one treatment-onset group (onset constant within cluster; never-treated is its own group; never-treated onsets must be coded as plain missing {cmd:.} - tagged missing codes {cmd:.a}-{cmd:.z} are refused, recode them to {cmd:.} first). Two methods: {cmd:permute(shuffle)} permutes the observed onset labels
+unit (the randomization design consists of the clusters having at least one row where the {it:if} expression evaluates to exactly 1 with a nonmissing cluster value; rows {it:wooldid}
+later removes by its deterministic markout, e.g. missing outcomes or zero weights, still count toward the design and its possible-assignment count) - and every cluster must sit inside exactly one treatment-onset group (onset constant within cluster; never-treated is its own group; never-treated onsets must be coded as plain missing {cmd:.} - tagged missing codes {cmd:.a}-{cmd:.z} are refused, recode them to {cmd:.} first). Two methods: {cmd:permute(shuffle)} permutes the observed onset labels
 across clusters, holding the number of clusters at each onset fixed ({cmd:permstrata(varname)} confines the shuffling to within strata, so each onset group keeps its composition with respect to the strata;
 clusters must be strict subsets of strata); {cmd:permute(probabilities)} draws each cluster's onset from user-supplied probabilities via {cmd:permprobs()}. Specify {cmd:permreps(#)} (draws with replacement) or,
 for shuffle only, {cmd:permexact} (enumerate every distinct assignment; a caution prints above 1,000 assignments and enumeration is refused above 10,000). The number of possible assignments is always computed and
 returned, with a caution when {cmd:permreps()} exceeds 10 percent of it; a design admitting only one possible assignment (e.g. every stratum onset-homogeneous, or every {cmd:permprobs()} row deterministic) is refused - there is nothing to randomize. Outputs per estimand: a two-sided permutation p-value (sampled draws use the add-one Monte-Carlo form; exact enumerations report the plain
 share, with the observed assignment a member - note that in symmetric designs the mirror-image assignment ties the observed estimate in absolute value, so exact p-values have a floor of 2/M); the 5th-95th
-percentile band of the permuted-effect distribution (a null band under no effect, not a confidence interval for the parameter); and the standard deviation of that distribution (labelled SD). The raw draws are in
+percentile band of the permuted-effect distribution (a null band under no effect, not a confidence interval for the parameter); and the standard deviation of that distribution (labelled SD; exact enumerations report the population SD - denominator M - of the complete enumerated distribution, while sampled draws report the n-1 sample SD). The raw draws are in
 {it:e(permdist)}. {cmd:permreps()} must be at least 20. Replications that fail to estimate are excluded and counted ({it:e(perm_failed)}), with a caution above 10 percent and a refusal when fewer
-than max(20, half) succeed (exact enumerations are exempt from that floor). A degenerate null distribution (every completed draw equal) draws a caution. Draws consume the session
+than max(20, half) succeed (exact enumerations are exempt from that floor, but any exact-mode failure draws a caution: the enumeration is then incomplete and the reported exact
+p-value is a share over completed assignments only, so the plain-share / observed-is-a-member / 2/M-floor reading above no longer applies). A degenerate null distribution (every completed draw equal) draws a caution. A missing or unreadable observed comparison statistic (e.g. a degenerate observed standard error under
+{it:permtstat}) is refused loudly with r(459) rather than silently zeroing the tail counts. Draws consume the session
 random-number stream: {cmd:set seed} beforehand for reproducibility. Under {cmd:subgroups()} the permutation statistics cover the pooled estimands only (rep runs skip the subgroup machinery). With
 {cmd:contreat()} the dose stays with its unit and only onset timing is re-randomized: the null being tested is that timing is as-if random given dose. Permutation statistics cover the att-family estimands
 (the continuous-treatment ame quantities are not permuted in this version). Note also that reassigned onsets can change which periods are estimable in a given draw: each draw is the estimate wooldid
@@ -296,7 +299,9 @@ test. {p_end}
 draws with undefined t-ratios count as failed. Because standard errors vary across assignments, the exact-test floor is 1/M rather than 2/M. {p_end}
 
 {phang}{opt permtci}: Additionally report an inverted-t 95% confidence interval: the observed estimate plus or minus the 95th percentile of the permuted absolute t-ratios times the observed standard error.
-Implies {cmd:permtstat}. Unavailable (with a caution) when the observed run has no usable standard error. {p_end}
+This is a fixed-zero-null pivotality approximation - it relies on the permuted t-ratio distribution approximating the t-ratio's distribution under shifted nulls - and is not a
+sharp-null randomization-test inversion. Implies {cmd:permtstat}. Unavailable (with a caution) when the observed run has no usable standard error, and refused loudly when the
+observed comparison statistic itself is missing. {p_end}
 
 {pstd} {ul: Discussion of Unconditional Standard Errors:}
 The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates
@@ -740,7 +745,11 @@ primary results has not been suppressed.{p_end}
 
 {synopt:{it:Permutation inference}} When {cmd:permute()} is used: scalars {it:e(perm_p_{it:est})}, {it:e(perm_lb_{it:est})}/{it:e(perm_ub_{it:est})} (the 5th-95th percentile null band),
 {it:e(perm_sd_{it:est})}, and under {it:permtci} {it:e(perm_tlb_{it:est})}/{it:e(perm_tub_{it:est})}, for each requested estimand; run-level {it:e(perm_reps)}, {it:e(perm_completed)}, {it:e(perm_failed)},
-{it:e(perm_npossible)} (also as the string {it:e(perm_npossible_str)} for very large counts); macros {it:e(perm_method)} and {it:e(perm_stat)} (b or t); and the draw matrix {it:e(permdist)} (completed
+{it:e(perm_npossible)} (also as the string {it:e(perm_npossible_str)} for very large counts); macros {it:e(perm_method)} and {it:e(perm_stat)} (b or t); the comparator matrix
+{it:e(perm_comparator)} (1 x k in estimand order, on the {it:e(perm_stat)} scale: the same-path rep-0 comparison statistics actually used for the tail counts - computed on the fast
+no-SE path unless {it:permtstat}, so they can differ from the displayed estimates in the last digits; a failed or missing rep-0 statistic is refused loudly rather than substituted -
+with p-values exactly reconstructable as count/{it:e(perm_completed)} of draws with |draw| >= |comparator| for exact enumerations, and (1 + count)/({it:e(perm_completed)} + 1),
+add-one in both numerator and denominator, for sampled draws); and the draw matrix {it:e(permdist)} (completed
 replications by estimand, returned for up to 10,000 draws).{p_end}
 
 {synopt:{it:e(escomp)}} Event-study composition diagnostics, one row per reported horizon (rows align one-for-one with the ES rows of {it:e(wdidmainresults)}; horizons without a surviving
@@ -766,7 +775,10 @@ pre-trend under the joint-Wald and any-individually-significant pre-tests respec
 continued post-treatment, i.e. mdt × (hbar − reference); for {it:att_i}/{it:att_itime} requests the att_it block stands in and its bias columns describe att_it weighting only). Companion scalars: {it:e(roth_slope_{it:type})}, {it:e(roth_slope_se_{it:type})}, {it:e(roth_slope_ll/ul_{it:type})} (the GLS
 pre-trend slope and 95% CI), {it:e(roth_prep_{it:type})} (the joint pre-trend test p-value), {it:e(roth_hbar_{it:type})} (the estimand-weighted mean post-treatment relative period over
 the full post support of the estimation sample), {it:e(roth_npre_{it:type})}, {it:e(roth_keff_{it:type})} (pre-period count and effective rank), {it:e(roth_W_{it:type})} (the joint
-pre-trend test statistic), and {it:e(roth_nissize_{it:type})} (the actual size of the any-individually-significant pre-test).{p_end}
+pre-trend test statistic), and {it:e(roth_nissize_{it:type})} (the actual size of the any-individually-significant pre-test). {it:e(roth_ok)} = 1 marks a completed diagnostics
+pass: a type absent from the roth_* results was then legitimately skipped or unavailable, and roth_ok = 1 with no {it:e(roth_power_*)} matrix at all means the diagnostics were
+requested but none were computable (that caution is replayed). A roth_* object present {ul:without} {it:e(roth_ok)} marks an interrupted pass; replay then prints a caution and
+does not render the partial block.{p_end}
 
 {pstd} In addition to these core results, the following materials are also returned in e(): {p_end}
 {synopt: Joint Tests by Horizon} Joint tests for the statistical significance of pre-treatment relative time period-specific event study effects are presented in the scalars e(joint_horiz)
