@@ -510,9 +510,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   }
   else{
     * enter the es fixed base period case - esfixedbaseperiod
-    * by default, estimates are relative to the first time period prior to treatment (-1); we default to this if unacceptable input is given
+    * by default, estimates are relative to the first time period prior to treatment (-1);
+    * values above -1 are rejected in wooldid_validate (formerly they were silently clamped
+    * to -1 here, running with a different reference period than requested)
     * we also modify esprelength to stretch to the relative period
-    if `esrelativeto' > -1 local esrelativeto -1
     if `esrelativeto' < -1 & `esprelength' > 0 & `esprelength' < abs(`esrelativeto') {
       local esprelength = abs(`esrelativeto') -1
     }
@@ -4234,8 +4235,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   ****** process other aspects of the command syntax
 
-  * if no elasticity type specified, assume regular non-elasticity estimates
-  if "`contreatelasticitytype'" != "eyex" & "`contreatelasticitytype'" != "dyex" & "`contreatelasticitytype'" != "eydx" local contreatelasticitytype dydx
+  * if no elasticity type specified, assume regular non-elasticity estimates; a supplied
+  * but unrecognized value is rejected by the domain screen at the end of this program
+  * (formerly any unrecognized value collapsed silently to dydx)
+  if "`contreatelasticitytype'" == "" local contreatelasticitytype dydx
   if "`semielasticity'" == "" {
     local semielasticity dydx
   }
@@ -4481,6 +4484,40 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * gate above rejects jointtests, so this is redundant today - it is kept explicit so a
     * future relaxation of that gate cannot silently re-enable a joint test under nose
     local suppressjointtests suppressjointtests
+  }
+
+  * ---- option-domain screens (issue-file batch VAL-G19/G21A/G21B/G21C/G21E) ----
+  * appended after all pre-existing checks so no existing multi-error call's first message
+  * moves. each closes a silent-accept path: these inputs previously ran rc 0 with
+  * silently different semantics than requested.
+  * contreatwithin without contreat() was silently ignored AND disabled the worker's
+  * binary-design estimability checks (which gate on the bare flag)
+  if "`contreatwithin'" != "" & "`contreat'" == "" {
+    dis as error "Error: you cannot request contreatwithin without specifying a continuous treatment variable via contreat()."
+    error 198
+  }
+  * a supplied but unrecognized elasticity type formerly collapsed silently to dydx
+  if !inlist("`contreatelasticitytype'", "dydx", "eyex", "eydx", "dyex") {
+    dis as error "Error: contreatelasticitytype() must be dydx, eyex, eydx, or dyex."
+    error 198
+  }
+  * syntax's int type rejects fractions/missing but admits 0 and negatives, which
+  * formerly ran identically to order 1
+  if `contreatpoly' < 1 {
+    dis as error "Error: contreatpoly() must be a positive integer."
+    error 198
+  }
+  * tested on the raw user value (safetyinput): contreat+contreatwithin rewrites the
+  * working copy to off above, which would mask an invalid user token here
+  if "`safetyinput'" != "" & !inlist("`safetyinput'", "on", "off") {
+    dis as error "Error: safety() must be on or off."
+    error 198
+  }
+  * under esfixedbaseperiod the worker formerly clamped esrelativeto() values above -1
+  * to -1 silently; the reference period must lie strictly before onset
+  if "`esfixedbaseperiod'" != "" & `esrelativeto' > -1 {
+    dis as error "Error: esrelativeto() must be a negative integer (a pre-onset reference period) when esfixedbaseperiod is specified."
+    error 198
   }
 
   * ---- return the parsed options and every derived/normalized local to the worker ----

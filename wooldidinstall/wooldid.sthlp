@@ -91,7 +91,7 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 
 {synopt : {help wooldid##technical:Technical Features:}}
 {opt update} {opt customw:eightmultiplier(variable[>=0 numerical])}  {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
-{opt ver:bose} {opt gte:ffects} {opt emptycellsoverride} {opt safety(off)}   {opt oldsyntax}  {p_end}
+{opt ver:bose} {opt gte:ffects} {opt emptycellsoverride} {opt safety(on|off)}   {opt oldsyntax}  {p_end}
 
 
 
@@ -361,7 +361,7 @@ option). Results of this sort will thus not have a log-type interpretation. {p_e
 {phang}{opt esf:ixedbaseperiod}: Use a fixed reference period for estimation, rather than a pooled reference period.   {p_end}
 
 {phang}{opt esr:elativeto(-integer)}: The relative time period used as the fixed reference period, if a fixed reference period is being used. The default is -1, the time period immediately
-prior to treatment. Without {it:esfixedbaseperiod}, this option has no effect and a Caution is printed. {p_end}
+prior to treatment. Values above -1 (the onset period or later) are rejected with an error: the fixed reference period must lie strictly before onset. Without {it:esfixedbaseperiod}, this option has no effect and a Caution is printed. {p_end}
 
 {phang}{opt espre:length(integer)}: The number of pre-treatment relative time period-specific effects to be estimated. If any pre-treatment effects are requested and
 {it:esfixedbaseperiod} is specified, all relative time period effects between the {it:esrelativeto()} period and treatment onset will be presented.{p_end}
@@ -490,13 +490,13 @@ fixed effects (i.e., specifying {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}).
 {phang}{opt contreatelas:ticitytype(dydx/eyex/eydx/dyex)}: Specifies which type of treatment effect to compute. {it:eyex} corresponds with computing the elasticity
 (% change in y/% change in contreat), {it:eydx} corresponds with semi-elasticities comparable to what can be produced for the main effect of treatment
 (% change in y/unit change in continuous treatment), {it:dyex} gives the other semi-elasticity (change in y/% change in continuous treatment), and {it:dydx} is the default
-(not an elasticity). Note that successful estimation of these elasticities tends to require a larger sample, as well as y and contreat variables that are not sparsely distributed. {p_end}
+(not an elasticity). A supplied value outside this list is rejected with an error. Note that successful estimation of these elasticities tends to require a larger sample, as well as y and contreat variables that are not sparsely distributed. {p_end}
 
 {phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option disables some of {it:safety}'s features (the estimability-relaxation checks; the data-integrity screens, such as onset constancy within units, still run unless {it:safety(off)} is given explicitly), turns off
 estimability checks that would otherwise cause {it:wooldid} to stop estimation in the absence of any untreated cohorts, and causes {it:wooldid} to skip sample cleaning routines that drop time
-periods for which a control cohort is not present.   {p_end}
+periods for which a control cohort is not present. Requires {opt contreat(varname)}: because this option disables those checks, requesting it without a continuous treatment is rejected with an error rather than silently ignored.   {p_end}
 
-{phang}{opt contreatp:oly(integer)}: Includes polynomial terms in {it:contreat} of the specified degree. Be cautious using higher degree polynomials. {p_end}
+{phang}{opt contreatp:oly(integer)}: Includes polynomial terms in {it:contreat} of the specified degree, which must be a positive integer (default 1; 0 and negative values are rejected). Be cautious using higher degree polynomials. {p_end}
 
 {phang}{opt lattice(latticevar OR latticetype latticenum)}: Specifies a lattice variable, a variable specifying groups of observations across which the effect of {it:contreat} is
 allowed to vary, even within cohort-periods and within the reference period. If just the name of a variable is passed to {it:lattice()}, this variable will be used as the lattice variable.
@@ -697,7 +697,8 @@ event-study window has no post-treatment horizons (e.g. {cmd:espostlength(0)}), 
 {it:set emptycells drop}, which improves estimation efficiency in this setting. This option overrides this behavior. This should only be of interest in conjunction
 with the option {it:verbose}. {p_end}
 
-{phang}{opt safety(string)}: When {it:safety(off)} is not explicitly specified, {it:wooldid} will caution the user or halt estimation when {it:wooldid} is likely to yield unreliable estimates.
+{phang}{opt safety(on|off)}: When {it:safety(off)} is not explicitly specified, {it:wooldid} will caution the user or halt estimation when {it:wooldid} is likely to yield unreliable estimates.
+Only {it:on} and {it:off} are accepted values; anything else is rejected with an error (formerly, unrecognized values were silently treated as {it:on}).
 Most important among these checks are tests for whether or not a variable intended to capture the treatment effect in a given i-t cell was dropped from the underlying regression for
 multicolinearity, as may occur if one's fixed effects or continuous treatment control variables partial out one of the main effects. Identification failures of this sort will generally be detected,
 though not necessarily when the problem concerns continuous treatments being analyzed with a lattice or with polynomial terms.   {p_end}
