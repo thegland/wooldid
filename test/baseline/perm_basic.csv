@@ -33,7 +33,7 @@ macro|wdid_permest|att
 macro|perm_method|shuffle
 macro|depvar|y
 macro|properties|b V
-macro|cmdline|y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20)
+macro|cmdline|wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20)
 macro|estimate_type|pooled_reference_period
 macro|wdid_vcespec|cluster(i)
 macro|wdid_estimands|att   

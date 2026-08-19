@@ -26,7 +26,7 @@ macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_vcespec|vce(robust)
 macro|estimate_type|pooled_reference_period
-macro|cmdline|y i t ttre [aw=w], att robust unconditionalse esprelength(2) espostlength(2)
+macro|cmdline|wooldid y i t ttre [aw=w], att robust unconditionalse esprelength(2) espostlength(2)
 macro|properties|b V
 macro|depvar|y
 matnames|b|1x6|y1|main_att pretreatment_att ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1

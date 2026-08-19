@@ -31,7 +31,7 @@ macro|wdid_estimands|att
 macro|wdid_contreat|intensity
 macro|wdid_vcespec|cluster(i)
 macro|estimate_type|fixed_reference_period
-macro|cmdline|y i t ttre, contreat(intensity) contreatcontrols(basic) esfixedbaseperiod esprelength(3) espostlength(3) cluster(i)
+macro|cmdline|wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) esfixedbaseperiod esprelength(3) espostlength(3) cluster(i)
 macro|properties|b V
 macro|depvar|y
 matnames|b|1x16|y1|main_att pretreatment_att main_ame pretreatment_ame ES_att_pre4 ES_att_pre3 ES_att_pre2 ES_att_post0 ES_att_post1 ES_att_post2 ES_ame_pre4 ES_ame_pre3 ES_ame_pre2 ES_ame_post0 ES_ame_post1 ES_ame_post2

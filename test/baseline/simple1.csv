@@ -25,7 +25,7 @@ macro|wdid_sglist|3 7
 macro|wdid_sgvar|ttre
 macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
-macro|cmdline|y i t ttre, att cluster(i) subgroup(ttre)
+macro|cmdline|wooldid y i t ttre, att cluster(i) subgroup(ttre)
 macro|properties|b V
 macro|depvar|y
 matnames|b|1x3|y1|main_att main_SG3_att main_SG7_att

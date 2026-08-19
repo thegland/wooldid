@@ -43,7 +43,7 @@ macro|wdid_estimands|att
 macro|wdid_contreat|intensity_uz
 macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
-macro|cmdline|y i t ttre, contreat(intensity_uz) contreatcontrols(untreatedZero) safety(off) cluster(i) esprelength(2) espostlength(2) summarystats
+macro|cmdline|wooldid y i t ttre, contreat(intensity_uz) contreatcontrols(untreatedZero) safety(off) cluster(i) esprelength(2) espostlength(2) summarystats
 macro|properties|b
 macro|depvar|y
 matnames|b|1x12|y1|main_att pretreatment_att main_ame pretreatment_ame ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_ame_pre2 ES_ame_pre1 ES_ame_post0 ES_ame_post1

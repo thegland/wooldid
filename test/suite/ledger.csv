@@ -63,6 +63,7 @@ A18-jt,trig_uncond_jt,scalar,joint_*,,E1b 7ea1533: joint tests now use the uncon
 A5-cfx-m,trig_cfx,mat,cfx*,,B7 3df74db: old truncated cfx matrices to width 1 on estimands after the first
 A5-cfx-n,trig_cfx,matnames,cfx*_it_*,,B7 3df74db: dims 3x1 -> 3x6; stripes now also differ by design (NFFAST-02 lattice_# keys)
 A6-cfxstripe,*,matnames,cfx*,,NFFAST-02: new build renames cfx row stripes from margins tempvar subnames (volatile every run) to stable lattice_# keys with null roweq; numeric cells covered by their own rows
+CORE10-cmdline,*,macro,cmdline,,CORE-10: e(cmdline) now begins with the command name (uniform 8-byte prefix)
 # NFES-02: configs whose new-only e() objects grew by es_ndegen_* (informational
 # additions never reach the comparer's diff path; recorded here for the record):
 # ext_cont_ext_untreatedzero gains e(es_ndegen_ame) = 2 (structurally-degenerate pre rows

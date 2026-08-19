@@ -30,7 +30,7 @@ macro|wdid_semielas|dydx
 macro|wdid_estimands|att att_it att_i att_itime
 macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
-macro|cmdline|y i t ttre [aw=w], att att_it att_i att_itime cluster(i) esprelength(2) espostlength(2)
+macro|cmdline|wooldid y i t ttre [aw=w], att att_it att_i att_itime cluster(i) esprelength(2) espostlength(2)
 macro|properties|b V
 macro|depvar|y
 matnames|b|1x16|y1|main_att main_att_it main_att_i main_att_itime pretreatment_att pretreatment_att_it pretreatment_att_i pretreatment_att_itime ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_att_it_pre2 ES_att_it_pre1 ES_att_it_post0 ES_att_it_post1

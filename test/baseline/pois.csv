@@ -19,7 +19,7 @@ macro|wdid_estimands|att
 macro|wdid_poisson|poisson
 macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
-macro|cmdline|ycount i t ttre, att cluster(i) poisson
+macro|cmdline|wooldid ycount i t ttre, att cluster(i) poisson
 macro|properties|b V
 macro|depvar|ycount
 matnames|b|1x1|y1|main_att

@@ -35,7 +35,7 @@ macro|wdid_sglist|3 7
 macro|wdid_sgvar|ttre
 macro|wdid_vcespec|cluster(i)
 macro|estimate_type|fixed_reference_period
-macro|cmdline|y i t ttre, att cluster(i) subgroup(ttre) esprelength(3) espostlength(3) esfixedbaseperiod
+macro|cmdline|wooldid y i t ttre, att cluster(i) subgroup(ttre) esprelength(3) espostlength(3) esfixedbaseperiod
 macro|properties|b V
 macro|depvar|y
 matnames|b|1x22|y1|main_att pretreatment_att ES_att_pre4 ES_att_pre3 ES_att_pre2 ES_att_post0 ES_att_post1 ES_att_post2 main_SG3_att pretreatment_SG3_att ES_att_SG3_pre2 ES_att_SG3_post0 ES_att_SG3_post1 ES_att_SG3_post2 main_SG7_att pretreatment_SG7_att ES_att_SG7_pre4 ES_att_SG7_pre3 ES_att_SG7_pre2 ES_att_SG7_post0 ES_att_SG7_post1 ES_att_SG7_post2

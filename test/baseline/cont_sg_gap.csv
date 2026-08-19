@@ -39,7 +39,7 @@ macro|wdid_sgvar|sgr
 macro|wdid_contreat|dose2
 macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
-macro|cmdline|y i t ttre, contreat(dose2) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sgr)
+macro|cmdline|wooldid y i t ttre, contreat(dose2) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sgr)
 macro|properties|b V
 macro|depvar|y
 matnames|b|1x45|y1|main_att pretreatment_att main_ame pretreatment_ame ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_ame_pre2 ES_ame_pre1 ES_ame_post0 ES_ame_post1 main_SG0_att pretreatment_SG0_att main_SG0_ame ES_att_SG0_pre2 ES_att_SG0_pre1 ES_att_SG0_post0 ES_att_SG0_post1 ES_ame_SG0_pre2 ES_ame_SG0_pre1 ES_ame_SG0_post0 ES_ame_SG0_post1 main_SG1_att pretreatment_SG1_att main_SG1_ame ES_att_SG1_pre2 ES_att_SG1_pre1 ES_att_SG1_post0 ES_att_SG1_post1 ES_ame_SG1_pre2 ES_ame_SG1_pre1 ES_ame_SG1_post0 ES_ame_SG1_post1 main_SG2_att pretreatment_SG2_att main_SG2_ame ES_att_SG2_pre2 ES_att_SG2_pre1 ES_att_SG2_post0 ES_att_SG2_post1 ES_ame_SG2_pre2 ES_ame_SG2_pre1 ES_ame_SG2_post0 ES_ame_SG2_post1

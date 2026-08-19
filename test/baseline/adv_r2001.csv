@@ -31,7 +31,7 @@ macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_vcespec|cluster(i)
 macro|estimate_type|fixed_reference_period
-macro|cmdline|y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-2) esprelength(1) espostlength(2) adversarial altmethod_adversarial
+macro|cmdline|wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-2) esprelength(1) espostlength(2) adversarial altmethod_adversarial
 macro|properties|b V
 macro|depvar|y
 matnames|b|1x5|y1|main_att pretreatment_att ES_att_pre1 ES_att_post0 ES_att_post1

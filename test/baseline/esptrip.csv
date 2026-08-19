@@ -35,7 +35,7 @@ macro|wdid_sglist|1 2
 macro|wdid_sgvar|sg
 macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
-macro|cmdline|y i t ttre, att cluster(i) subgroups(sg) esprelength(2) espostlength(-999)
+macro|cmdline|wooldid y i t ttre, att cluster(i) subgroups(sg) esprelength(2) espostlength(-999)
 macro|properties|b V
 macro|depvar|y
 matnames|b|1x12|y1|main_att pretreatment_att ES_att_pre2 ES_att_pre1 main_SG1_att pretreatment_SG1_att ES_att_SG1_pre2 ES_att_SG1_pre1 main_SG2_att pretreatment_SG2_att ES_att_SG2_pre2 ES_att_SG2_pre1

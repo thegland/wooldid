@@ -3392,7 +3392,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     cap ereturn scalar escomp_trtN = `f8trtN'
     cap ereturn scalar escomp_trtW = `f8trtW'
   }
-  ereturn local cmdline `"`0'"'
+  * CORE-10: prefix the command name so e(cmdline) matches the Stata convention (the
+  * worker's `0' is never rewritten, so this single posting site is authoritative)
+  ereturn local cmdline `"wooldid `0'"'
   local estimate_type "pooled_reference_period"
   if "`esfixedbaseperiod'" != "" local estimate_type "fixed_reference_period"
   ereturn local estimate_type "`estimate_type'"

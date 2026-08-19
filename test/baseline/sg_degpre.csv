@@ -35,7 +35,7 @@ macro|wdid_sgvar|sgd2
 macro|wdid_vcespec|cluster(i)
 macro|joint_horiz_s1|.501304671751402
 macro|estimate_type|pooled_reference_period
-macro|cmdline|y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sgd2) jointtests
+macro|cmdline|wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sgd2) jointtests
 macro|properties|b V
 macro|depvar|y
 matnames|b|1x14|y1|main_att pretreatment_att ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 main_SG1_att ES_att_SG1_pre2 ES_att_SG1_pre1 ES_att_SG1_post0 ES_att_SG1_post1 main_SG2_att ES_att_SG2_post0 ES_att_SG2_post1
