@@ -88,6 +88,8 @@ mat|V|6|3|+0.0000000000000X-3ff
 mat|V|6|4|+0.0000000000000X-3ff
 mat|V|6|5|+0.0000000000000X-3ff
 mat|V|6|6|+1.13bb636a513faX-007
+matnames|perm_comparator|1x1|r1|att
+mat|perm_comparator|1|1|+1.a5a586283fb6cX-001
 matnames|permdist|20x1|r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 r16 r17 r18 r19 r20|att
 mat|permdist|1|1|-1.f57e543d5dfc0X-004
 mat|permdist|2|1|+1.0b8de635e9fa8X-002

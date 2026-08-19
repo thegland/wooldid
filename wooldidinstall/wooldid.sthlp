@@ -406,7 +406,7 @@ handled with a generalized inverse and reduced degrees of freedom, with a cautio
 independent subset of pre-period coefficients the generalized inverse retains - not a summary of all pre-period evidence - and depends on which columns are retained, so treat those
 numbers as one representative of an underdetermined family and interpret with care). A requested power level at or below the NIS test's actual size is achievable by a zero trend, so {it:mdt_nis} and {it:bias_nis} are exactly 0 there (a missing cell always means the
 computation was unavailable, never a boundary answer). The exact-quadrature {it:mdt_nis} column is computed only for up to 4 pre-periods (its cost grows
-steeply with dimension); for larger designs, feed {it:e(b_es_{it:type})}/{it:e(V_es_{it:type})}/{it:e(numpre_{it:type})} to Roth's {it:pretrends} package, which implements the same
+steeply with dimension); for larger designs, feed {it:e(b_es_{it:type})}/{it:e(V_es_{it:type})}/{it:e(numpre_{it:type})} to Roth's {it:pretrends} package (subject to the same positional-geometry conditions as the honestdid handoff — see the {it:e(b_es)} Stored Results entry), which implements the same
 convention with a normal critical value. When the underlying estimator posts no residual degrees of freedom (e.g. the
 ppmlhdfe path), the joint test and minimum detectable trends use chi-squared rather than F distributions and the slope CI uses a normal critical value. Under {cmd:poisson} without
 {cmd:poisexpresults}, the diagnostics are on the linear-index (xb) scale like the event-study coefficients themselves. {p_end}
@@ -665,7 +665,9 @@ in conjunction with the option {it:contreatcontrols(basic)}, or any option other
 {phang}{opt customw:eightmultiplier(varname)}: When computing various treatment effects using the margins calculation (see step 2 {help wooldid##description:here}), the weights normally 
 used to produce the requested type of treatment effect (ATT, ATT_i, etc.) will be multiplied by this variable. When requesting an ATT without specifying sample weights, this is 
 equivalent to estimating all regressions without weights, but then using these weights when averaging treatment effects to obtain the ATT. This allows production of certain 
-bespoke types of treatment effects. {p_end}
+bespoke types of treatment effects. Values must be non-negative on in-sample observations (negative values would silently corrupt the weight masses and estimates; they are rejected
+with an error, bypassable with {it:safety(off)}); missing values drop the observation. Under {cmd:impvalues} the reported event effects are equal-weight averages of per-cluster
+margins, so the {it:e(escomp)} weight-share columns describe sample weight composition, not the Ibragimov-Muller cross-cluster aggregation. {p_end}
 
 {phang}{opt clean:matrices}: If specified, {it:wooldid} will clear out all matrices storied in STATA's main memory and in mata. Occasionally, {it:wooldid} enters a state where it repeatedly
 crashes for difficult to determine reasons (relating to {it:reghdfe} crashing and leaving certain content in mata). Doing this can sometimes recover {it:wooldid} from this problem. {p_end}
@@ -737,9 +739,17 @@ primary results has not been suppressed.{p_end}
 
 {synopt:{it:e(pwsgs)}} Pairwise differences between the subgroup-specific treatment effects, if subgroups are used.{p_end}
 
-{synopt:{it:e(b_es_{it:type})}, {it:e(V_es_{it:type})}} The event study coefficient vector and its {ul:full} variance-covariance matrix (carrying genuine off-diagonal covariances, unlike {it:e(V)}), relative-period-labeled as {it:pre#}/{it:post#} with the reference period omitted. Returned per estimand type: {it:att} (binary) and, with {cmd:contreat()}, {it:ame}, plus {it:att_it} / {it:ame_it} for the {it:att_it}, {it:att_i}, and {it:att_itime} estimands (which share a single event-study horizon internally). With {cmd:subgroups()}, per-subgroup versions {it:e(b_es_{it:type}_s{it:sgcase})} / {it:e(V_es_{it:type}_s{it:sgcase})} are returned as well. These matrices are valid inputs for {it:honestdid} (Rambachan-Roth robustness), and — after {it:ereturn post} — for {it:lincom} and {it:test}. They are not returned when a valid variance-covariance matrix is unavailable (e.g. under {cmd:impvalues} or {cmd:fastnose}, or when the event-study standard errors are not identified).{p_end}
+{synopt:{it:e(b_es_{it:type})}, {it:e(V_es_{it:type})}} The event study coefficient vector and its {ul:full} variance-covariance matrix (carrying genuine off-diagonal covariances, unlike {it:e(V)}), relative-period-labeled as {it:pre#}/{it:post#} with the reference period omitted. Returned per estimand type: {it:att} (binary) and, with {cmd:contreat()}, {it:ame}, plus {it:att_it} / {it:ame_it} for the {it:att_it}, {it:att_i}, and {it:att_itime} estimands (which share a single event-study horizon internally). With {cmd:subgroups()}, per-subgroup versions {it:e(b_es_{it:type}_s{it:sgcase})} / {it:e(V_es_{it:type}_s{it:sgcase})} are returned as well. After {it:ereturn post} these matrices are valid inputs for {it:lincom} and {it:test}. A {ul:direct positional handoff} to {it:honestdid} (Rambachan-Roth robustness) additionally requires ALL of:
+{cmd:esfixedbaseperiod} with the default {cmd:esrelativeto(-1)}; no {cmd:timetrends}; at least one pre- and one post-treatment coefficient; horizons consecutive apart from the intended
+jump over the omitted -1 reference (checkable signature on the colnames: {it:pre1} absent, rightmost pre column is {it:pre2}, {it:post0} present, no other gaps); and a covariance with no
+structurally degenerate rows (see {it:e(es_ndegen_{it:type})} below; honestdid inference inherits whatever VCE you specified). {it:numpre} is purely positional and cannot communicate
+gaps, non-(-1) references, or the (default) pooled cohort-specific reference — those geometries hand honestdid the wrong event-time geometry {ul:silently} and need a user-supplied
+transformation. Check the regime via {it:e(estimate_type)} == "fixed_reference_period" and the numeric spacing via the {it:relyr} column of {it:e(escomp)}/{it:e(escomp_s{it:sgcase})}.
+The matrices are returned whenever at least one horizon has an identified variance; horizons whose standard errors are not identified then carry zero (structural-zero) or missing
+diagonal rows, flagged by a Caution and by {it:e(es_ndegen_{it:type})} (the count of degenerate rows, posted only when such rows exist — its absence marks a clean covariance). Fully
+non-identified VCVs ({cmd:impvalues}, {cmd:fastnose}, typically {cmd:timetrends}) are not returned.{p_end}
 
-{synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods (relative year < 0) in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument.{p_end}
+{synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods (relative year < 0) in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument (subject to the geometry conditions in the {it:e(b_es)} entry above).{p_end}
 
 {synopt:{it:e(gteffects)}} The cohort-by-relative-period building-block table produced by the {it:gteffects} option; see that option's description for the column layout.{p_end}
 
@@ -754,16 +764,21 @@ replications by estimand, returned for up to 10,000 draws).{p_end}
 
 {synopt:{it:e(escomp)}} Event-study composition diagnostics, one row per reported horizon (rows align one-for-one with the ES rows of {it:e(wdidmainresults)}; horizons without a surviving
 coefficient get no row). Columns: {it:ncohorts} (distinct treatment-onset values contributing), {it:nunits} (distinct units of {it:i} — equivalently, the number of unit-by-period
-coefficients averaged at that horizon), {it:nclusters} (distinct clusters, when a single {cmd:cluster()} variable is used; missing otherwise), {it:nobs} (estimation-sample observations),
+coefficients averaged at that horizon; that identity is enforced for plain binary treated-cell coefficients under default safety by the hard dropped-coefficient error — it can fail under
+{it:safety(off)} or {it:contreatwithin}, and in continuous/interacted designs the screen cautions rather than errors), {it:nclusters} (distinct clusters, when a single {cmd:cluster()} variable is used; missing otherwise), {it:nobs} (estimation-sample observations),
 {it:sumw_att} (total {it:att}-style weight: sample weight times any {cmd:customweightmultiplier()}), {it:wshare_att} and {it:wshare_att_it} (the horizon's share of the reported-window
 treated weight under the {it:att} and {it:att_it} weighting concepts respectively; each column sums to 1 across the reported horizons), and {it:relyr}. With {cmd:subgroups()},
-per-subgroup versions {it:e(escomp_s{it:sgcase})} are returned as well. Composition shifts across horizons are a common cause of jumpy event-study profiles; note this is a diagnostic aid,
-not a test — flat composition columns rule composition out as the cause of a jump, but moving columns do not by themselves establish composition bias (that additionally requires effect
+per-subgroup versions {it:e(escomp_s{it:sgcase})} are returned as well. Composition shifts across horizons are a common cause of jumpy event-study profiles; note this is a descriptive counts-and-totals screen,
+not a test — flat composition columns rule out changes in these {ul:reported} summaries (a cohort entering or leaving, a unit-count or weight-mass shift), but they do not rule out
+turnover of {ul:which} units contribute at unchanged counts (identities are not stored), moving columns do not by themselves establish composition bias (that additionally requires effect
 heterogeneity across the cohorts entering or leaving), and composition change {ul:within} a coarse {it:i} is visible only through {it:nobs}/{it:sumw_att}, not the count columns. The table
 is displayed when {cmd:summarystats} is specified.{p_end}
 
 {synopt:{it:e(escomp_refN)}, {it:e(escomp_refnunits)}, {it:e(escomp_refncoh)}, {it:e(escomp_refW)}} Observation count, distinct treated units, distinct onset cohorts, and total
-{it:att}-style weight in the reference pool (treated units' reference-period rows of the estimation sample) — available under both the pooled- and fixed-reference-period regimes.{p_end}
+{it:att}-style weight in the complete reference-normalization pool. Under the pooled regime that pool is the union of treated rows earlier than the requested pre-window
+({it:relyr} < -{it:esprelength}) {ul:and} each treated unit's forced first in-sample observation (first two under {cmd:timetrends}) — the forced rows exist even when the requested
+window covers every period. Under {cmd:esfixedbaseperiod} it is the {cmd:esrelativeto()} period plus, under {cmd:timetrends}, the immediately preceding trend-anchor period (two relative
+periods, not the named reference alone). Available under both regimes.{p_end}
 
 {synopt:{it:e(escomp_trtN)}, {it:e(escomp_trtW)}} Observation count and total {it:att}-style weight over the entire treated estimation sample, for assessing how much treated weight lies
 outside the reported event-study window.{p_end}
@@ -809,7 +824,8 @@ statistics from this matrix are also returned directly as scalars into e(). {p_e
 {synopt: CFX Plot Info} Information used to generate the continuous treatment effects plots. The information used to produce each plot will be stored in a matrix with the following naming
 pattern: e(cfx[item]_[type]), where [item] is either one of att, att_i, att_it, or att_itime (for overall average treatment effects) or one of ame, ame_i, ame_it, or ame_itime (for marginal
 effects of the continuous treatment). Meanwhile, [type] is either cfxpost (estimated in the post-treatment period), cfxpre (estimated in the pre-treatment period), or relyrZ (estimated in
-relative time period Z, where the letter n represents a negative sign). {p_end}
+relative time period Z, where the letter n represents a negative sign). Matrix rows are keyed {it:lattice_#} (the lattice or {cmd:cfxlattice()} level, in {it:margins} order) with a null
+row equation; the same keys apply to the one-column matrices produced under {cmd:cfxplotnose}/{cmd:fastnose}, and AME rows no longer carry the dose-variable equation name. {p_end}
 
 {synopt:{it:e(sample)}} A function characterizing the estimation sample used; useful for identifying which observations are dropped by {it:wooldid} during its sample formation and sanitation
 procedures.{p_end}
@@ -843,18 +859,20 @@ to represent the missing reference period. {p_end}
 {pstd} {ul:Compatible Post-Estimation Commands:} {it:estimates save}, {it:estimates store}, {it:estimates restore}, {it:esttab}, and similar commands. {p_end}
 
 {pstd} {ul:Replay:} Typing {it:wooldid} by itself after a successful estimation redisplays the full stored results from {it:e()} - the header, summary statistics, all results tables,
-the joint, adversarial, and pre-trend power diagnostics, and the event-study composition, cohort-by-period, and randomization-inference blocks when present - byte-for-byte as originally shown. Replay works after {it:estimates restore} of a stored {it:wooldid} model, after
-{it:cleanmatrices}, and with no dataset in memory. It does not re-draw plots, does not repeat estimation-time Caution messages (which describe the estimation run, not the results),
-and accepts no options: any non-empty command line - including {it:wooldid, update} - is processed as a normal call. If a {it:wooldid} call fails - at the parse stage or later - {it:e()} still holds the previous successful estimation
+the joint, adversarial, and pre-trend power diagnostics, and the event-study composition, cohort-by-period, and randomization-inference blocks when present - byte-for-byte as originally shown. Replay works after {it:estimates restore} of a stored {it:wooldid} model (subject to the failed-call
+refusal below), after {it:cleanmatrices}, and with no dataset in memory. It does not re-draw plots, does not repeat estimation-time Caution messages (which describe the estimation run, not the results),
+and accepts no options: any non-empty command line - including {it:wooldid, update} - is processed as a normal call. If a {it:wooldid} call fails anywhere in its main pass - parsing, estimation, diagnostics, display, or plots - {it:e()} still holds the previous successful estimation
 (standard Stata behavior), but replay then refuses with an informative error until a {it:wooldid} call completes successfully: redisplaying results that predate the failed call would
-be misleading. Replay requires results posted by a
+be misleading. The refusal is session-scoped (an internal {it:WOOLDID_LASTRC} marker; {it:WOOLDID_*} global names are reserved by {it:wooldid}): it also blocks replay of models
+explicitly selected with {it:estimates restore} until some {it:wooldid} call completes. If a failure instead occurs in the separate post-estimation randomization-inference phase of a
+{cmd:permute()} call, that call's own completed ordinary estimation is restored, valid, and remains replayable (the permutation request itself failed loudly). Replay requires results posted by a
 {it:wooldid} version with replay support; internally, the display state travels in hidden {it:e(wdid_*)} macros, which are implementation details and not part of the documented
 {it:e()} surface. {p_end}
 
 {pstd} {ul:Incompatible Post-Estimation Commands:} {it:lincom}, {it:test}, and all other post-estimation commands that rely on receiving a valid variance-covariance matrix from
 an estimator. While {it:wooldid} does return a coefficient vector ({it:e(b)}) and a variance-covariance matrix ({it:e(V)}), these are for display purposes only. The variance-covariance
 matrix has all off-diagonal elements set to 0, meaning that while {it:esttab} and the like will present correct estimates using these inputs, efforts to combine or otherwise test different
-estimates will not, in general, yield valid results. This limitation applies to the summary {it:e(b)}/{it:e(V)}; the event-study coefficients are additionally returned with a genuine full variance-covariance matrix in {it:e(b_es_{it:type})} / {it:e(V_es_{it:type})} (see Stored Results), and {it:lincom}, {it:test}, and {it:honestdid} {ul:are} valid when applied to those. For {it:lincom}/{it:test}, first repost the event study with {it:ereturn post e(b_es_{it:type}) e(V_es_{it:type})}. {p_end}
+estimates will not, in general, yield valid results. This limitation applies to the summary {it:e(b)}/{it:e(V)}; the event-study coefficients are additionally returned with a genuine full variance-covariance matrix in {it:e(b_es_{it:type})} / {it:e(V_es_{it:type})} (see Stored Results), and {it:lincom} and {it:test} {ul:are} valid when applied to those (inspect the diagonal first when {it:e(es_ndegen_{it:type})} is present: structurally degenerate rows carry zero or missing variance). {it:honestdid} is valid only under the positional-geometry conditions listed in the {it:e(b_es)} Stored Results entry. For {it:lincom}/{it:test}, first repost the event study with {it:ereturn post e(b_es_{it:type}) e(V_es_{it:type})}. {p_end}
 
 
 
@@ -941,7 +959,7 @@ require an event-study window - here via {it:esprelength}):{p_end}
 
 {p 10 10}   {cmd:wooldid y i t ttre, contreat(contreatvar) contreatcontrols(byTreated byTime) espre(3) espost(3) makecfxplot lattice(byTreatedByTime 5) cfxplottypes(pre)}
 
-{phang}10) Event study followed by a Rambachan & Roth (2023) HonestDiD pre-trends sensitivity analysis, using the full event-study variance-covariance matrix wooldid returns. (Requires the {stata ssc install honestdid:honestdid} package. A fixed reference period is recommended so the reference is a single omitted period.):{p_end}
+{phang}10) Event study followed by a Rambachan & Roth (2023) HonestDiD pre-trends sensitivity analysis, using the full event-study variance-covariance matrix wooldid returns. (Requires the {stata ssc install honestdid:honestdid} package. A fixed reference period at the default {it:esrelativeto(-1)} is {ul:required} for this positional handoff — the example relies on the reference being the single omitted period at relative time -1; see the {it:e(b_es)} Stored Results entry for the full geometry conditions.):{p_end}
 
 {p 10 10}   {cmd:wooldid y i t ttre, att espre(4) espost(4) esfixedbaseperiod}
 

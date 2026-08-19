@@ -285,8 +285,20 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   local ifstatement `ifvar' == 1
 
-
-
+  * NFCOMP-02: the customweightmultiplier() domain is documented as >= 0 but was never
+  * enforced - a negative value silently corrupts weight masses, estimates, and the
+  * escomp shares under the default iweight plumbing (probed rc 0, no message). checked
+  * on the estimation-aware domain (ifstatement folds the markout, so negative values
+  * confined to deterministically-discarded rows stay tolerated - the G15A precedent);
+  * missing values pass (already marked out above). safetyinput-gated per the F13/S5
+  * gated-screen convention for data-integrity checks
+  if "`customweightmultiplier'" != "" & "`safetyinput'" != "off" {
+    cap assert `customweightmultiplier' >= 0 if `ifstatement'
+    if _rc != 0 {
+      dis as error "Error: the customweightmultiplier() variable contains negative values on in-sample observations; the documented domain is non-negative (missing values are dropped). To ignore this error, specify safety(off)."
+      error 411
+    }
+  }
 
 
   *********************************************************************************************************************************
@@ -3372,8 +3384,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * here so the matrix has fixed width regardless of which estimands were requested). rows come
   * from the SAME relyrcolumn / relyrcolumn_s<sg> sources as the reported ES matrices, so they
   * align one-for-one with the ES_* blocks (horizons without a surviving coefficient get no row).
-  * composition is a diagnostic aid, not a test: flat columns rule composition out as the cause of
-  * a jumpy profile; moving columns do not by themselves establish composition bias.
+  * composition is a descriptive counts-and-totals screen, not a test: flat columns rule out
+  * changes in these REPORTED summaries (a cohort entering/leaving, a unit-count or weight-mass
+  * shift); they do not rule out turnover of WHICH units contribute at unchanged counts, since
+  * identities are not stored. moving columns do not by themselves establish composition bias.
   * this block runs NO margins call and NO e-class command, so the active e() is untouched and no
   * est restore is needed. it DOES clear r(); nothing between here and the ereturn post consumes
   * r(). gtools by() is hash-based: the user's sort order is not disturbed.
@@ -3639,15 +3653,27 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         foreach f2t of local f2rl {
           if substr("`f2t'",1,3) == "pre" local ++f2np
         }
-        * skip a fully non-identified VCV (e.g. timetrends): no positive-finite diagonal
+        * skip a fully non-identified VCV (e.g. timetrends): no positive-finite diagonal.
+        * NFES-02: also count the degenerate rows (zero/missing/negative diagonals) -
+        * partially degenerate families still POST (adjudicated: structural zeros are
+        * genuine margins output), but silently shipping them under a joint-inference-
+        * advertised name was the gap: caution + machine-readable marker below
         local f2ok 0
-        forval f2d = 1/`=colsof(`f2vm')' {
+        local f2nbad 0
+        local f2k = colsof(`f2vm')
+        forval f2d = 1/`f2k' {
           if `f2vm'[`f2d',`f2d'] > 0 & `f2vm'[`f2d',`f2d'] < . local f2ok 1
+          else local ++f2nbad
         }
         if `f2ok' {
           cap ereturn matrix b_es_`f2ky' = `f2bm'
           cap ereturn matrix V_es_`f2ky' = `f2vm'
+          local f2vrc = _rc
           cap ereturn scalar numpre_`f2ky' = `f2np'
+          if `f2vrc' == 0 & `f2nbad' > 0 {
+            dis as text "Caution: e(V_es_`f2ky') contains `f2nbad' of `f2k' horizons with zero or missing variance (structurally degenerate rows); inspect the diagonal before joint inference - honestdid/lincom on those rows is not meaningful."
+            cap ereturn scalar es_ndegen_`f2ky' = `f2nbad'
+          }
         }
       }
     }
@@ -3799,7 +3825,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   ereturn matrix wdidmainresults = `wdidpooled'
 
   *** finally, return the CFX plots
+  * NFFAST-02: the margins-inherited row stripes embed wooldid tempvar names (volatile
+  * across runs - two identical calls returned identical numbers under different row
+  * identifiers, breaking documented downstream row-name joins); rename to stable
+  * lattice_# keys before posting
   foreach matrix in `cfxmatricestoreturn' {
+    wooldid_cfxstripe ``matrix''
     ereturn matrix `matrix' = ``matrix''
   }
 
@@ -5439,6 +5470,31 @@ end
 * through the pairwise comparisons (split so the eclass wooldid_ptp call can stay in
 * the caller between them); part(roth) redisplays the Roth diagnostics from e(roth_*)
 * on replay without re-running the quadrature.
+* NFFAST-02: rename CFX matrix row stripes from margins' tempvar-embedded subnames
+* (e.g. "1bn.__000ABC" - volatile every run) to stable lattice_# keys, and null the row
+* equations. lives outside wooldid_worker (compiled-size ceiling). the lattice level is
+* read from the matrix's own row subnames - no r() capture (margins' r(by#) is not a
+* documented stored result). validation guarantees nonnegative integer levels, so the
+* generated names are always valid; a parse failure is loud, never silent
+cap prog drop wooldid_cfxstripe
+prog def wooldid_cfxstripe
+version 16.0
+  args cfxm
+  local rn : rowfullnames `cfxm'
+  local newnames
+  foreach rtok of local rn {
+    local rsub `rtok'
+    if strpos("`rtok'", ":") > 0 local rsub = substr("`rtok'", strpos("`rtok'", ":") + 1, .)
+    if !regexm("`rsub'", "^([0-9]+)(bn|b|o)?\.") {
+      dis as error "Error: wooldid could not parse the CFX matrix row name '`rtok'' into a lattice level; please report this."
+      error 498
+    }
+    local newnames `newnames' lattice_`=regexs(1)'
+  }
+  matrix rownames `cfxm' = `newnames'
+  matrix roweq `cfxm' = _
+end
+
 cap prog drop wooldid_display
 prog def wooldid_display
 version 16.0
@@ -5449,6 +5505,17 @@ version 16.0
   * instead of misrendering a store this code no longer understands
   if "`e(wdid_replayv)'" != "1" {
     dis as error "Error: the stored results were posted by a wooldid version without replay support or with a different replay contract (e(wdid_replayv)='`e(wdid_replayv)'', this version requires '1'); nothing can be redisplayed. Refit wooldid."
+    error 301
+  }
+  * NFRPL-03: mirror wooldid_esplots' existence guard - on a corrupt/fabricated store the
+  * matlist below would otherwise render a synthetic 1x1 "." table (an absent e() matrix
+  * reads as a missing scalar). every genuine wooldid post carries the matrix, so this
+  * cannot fire on a valid store. scope decision (deliberate, realistic-vs-pathological):
+  * the central matrix only - the summarystats/wdidsgresults/pwsgs matlist sites remain
+  * fabrication-exposed
+  cap confirm matrix e(wdidmainresults)
+  if _rc != 0 {
+    dis as error "Error: the stored results no longer contain e(wdidmainresults); rerun wooldid."
     error 301
   }
 
