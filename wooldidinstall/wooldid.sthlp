@@ -410,8 +410,8 @@ is recreated, and {it:wooldid} graphs from an earlier, differently-configured ru
 {phang}{opt oos:treatedcontrols(integer)}: By default, {it:wooldid} uses cohorts treated after the end of the sample the same way as never-treated control cohorts (i.e., such cohorts are
 "out-of-sample treated controls"). When this option is specified with a value of T, cohorts treated within T periods of the end of sample are instead handled the same as other treated cohorts.
 Such cohorts are potentially allowed to contribute to pre-treatment relative time period-specific effects when this option is specified,
-but not otherwise. Note that if {it:esfixedbaseperiod} is specified, the out-of-sample-treated cohorts will be dropped if the specified reference period is not observed
-within the sample for these cohorts. When {it:anticipation()} is also specified, the out-of-sample window applies to the {ul:effective} (shifted) onset, so a cohort whose recorded onset
+but not otherwise. Note that if {it:esfixedbaseperiod} is specified, the out-of-sample-treated cohorts will be dropped if the specified reference period is not usable for these cohorts
+(not observed within the sample, or removed because no comparison unit exists in that calendar period). When {it:anticipation()} is also specified, the out-of-sample window applies to the {ul:effective} (shifted) onset, so a cohort whose recorded onset
 lies just beyond the window can become usable once its effective onset falls within it. {p_end}
 
 {phang}{opt antic:ipation(integer)}: Treats the effective treatment onset as {it:ttre} − #, so that periods in which units may act in anticipation of a known upcoming treatment are counted
@@ -420,7 +420,7 @@ is constructed, and is exactly equivalent to re-running {it:wooldid} after repla
 all event-study horizons are counted from the {ul:effective} onset, so relative period 0 is # periods before the recorded onset, and you may wish to raise {it:espostlength()} by # to keep
 the same number of genuine post-treatment horizons. Note an inherent asymmetry: specifying too SMALL an anticipation length leaves a loud residual pre-trend signal, but too LARGE a value attenuates the estimated effects with clean pre-trends and no diagnostic - prefer the smallest defensible value. Notes: # is expressed in the units of {it:t} (not in panel-period counts — with, e.g., biennial data an odd # lands between observed
 periods, and {it:wooldid} prints a caution); units whose effective onset falls at or before their first usable period are dropped (with a caution reporting the count), and under
-{cmd:esfixedbaseperiod}, units whose {ul:shifted} reference period falls on a period they are not observed in are dropped, with a caution when the drop is attributable to the shift
+{cmd:esfixedbaseperiod}, units whose {ul:shifted} reference period falls on a period unusable for them (not observed, or dropped for lack of a comparison unit) are dropped, with a caution when the drop is attributable to the shift
 itself; with {cmd:subgroups({it:ttre})}, subgroup labels remain the recorded (unshifted) onset values. When active, the shift is recorded in {it:e(anticipation)}. Negative values are
 not allowed. {p_end}
 

@@ -524,8 +524,41 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     qui gen `_t' = `t' - `ttre' if `ifstatement'
 
 
+    * VAL-G10B: the calendar-support screen runs FIRST, before the reference checks.
+    * support-first is a fixed point: support is furnished only by never-treated rows,
+    * which the reference screens never drop, so running support first cannot create new
+    * unsupported periods. the old order could delete a group's only reference row AFTER
+    * that group had passed the reference check, sending a structurally broken sample
+    * downstream to die opaquely at the dropped-dummy screen (r322) - or run silently
+    * wrong under safety(off) on some shapes
+    * produce a check that each relative time effect is estimable in that there is an untreated cohort for it
+    * controlcheck2 will be 1 if there is at least one in sample non treated unit in a given period
+    * this logic works b/c we are in esfixedbaseperiod land and we really do care about each period - we aren't pooling anything
+    * as above, don't do this if only using within-treated cohort continuous treatment variation
+    if "`contreatwithin'" == "" {
+      tempvar controlcheck
+      tempvar controlcheck2
+      qui gen `controlcheck' = `ttre' ==. & `ifstatement'
+      qui gegen `controlcheck2' = max(`controlcheck') if `ifstatement' , by(`t')
+      qui replace `ifvar'  = 0 if `controlcheck2' == 0
+      if "`safety'" != "off"  {
+        cap assert `controlcheck2' != 0
+        if _rc != 0 {
+          dis as text "Caution: estimability checks found time periods exist in sample without a control unit, causing them to be dropped."
+          if "`contreat'" != "" dis as text "If intending to only use within treated-cohorts variation in your continuous treatment variable, specify option contreatwithin to avoid these checks."
+        }
+      }
+      qui drop `controlcheck' `controlcheck2'
+    }
+
+    * update _t and ttre
+    qui replace `_t' = . if `ifvar' == 0
+    qui replace `ttre'  = . if `ifvar' == 0
+
+
     * here we implement a check to see whether or not the reference period exists for a given cohort
-    * if not, we do not use the cohort
+    * if not, we do not use the cohort (support-dropped periods no longer count as observed
+    * reference rows: ttre was set missing above on support-dropped rows)
     tempvar refperiodobserved_temp
     tempvar refperiodobserved
     qui gen `refperiodobserved_temp' = `_t' == `refperiod' if `ifstatement' & `ttre' != .
@@ -548,31 +581,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       qui drop `ttrefperiodobserved_temp'
       qui replace `ifvar' = 0 if `ttrefperiodobserved' == 0  & `ttre' != .
     }
-    * update _t and ttre
-    qui replace `_t' = . if `ifvar' == 0
-    qui replace `ttre'  = . if `ifvar' == 0
-
-
-    * produce a check that each relative time effect is estimable in that there is an untreated cohort for it
-    * controlcheck2 will be 1 if there is at least one in sample non treated unit in a given period
-    * this logic works b/c we are in esfixedbaseperiod land and we really do care about each period - we aren't pooling anything
-    * as above, don't do this if only using within-treated cohort continuous treatment variation
-    if "`contreatwithin'" == "" {
-      tempvar controlcheck
-      tempvar controlcheck2
-      qui gen `controlcheck' = `ttre' ==. & `ifstatement'
-      qui gegen `controlcheck2' = max(`controlcheck') if `ifstatement' , by(`t')
-      qui replace `ifvar'  = 0 if `controlcheck2' == 0
-      if "`safety'" != "off"  {
-        cap assert `controlcheck2' != 0
-        if _rc != 0 {
-          dis as text "Caution: estimability checks found time periods exist in sample without a control unit, causing them to be dropped."
-          if "`contreat'" != "" dis as text "If intending to only use within treated-cohorts variation in your continuous treatment variable, specify option contreatwithin to avoid these checks."
-        }
-      }
-      qui drop `controlcheck' `controlcheck2'
-    }
-
     * update _t and ttre
     qui replace `_t' = . if `ifvar' == 0
     qui replace `ttre'  = . if `ifvar' == 0
@@ -4604,7 +4612,7 @@ version 16.0
     tempvar antictag
     qui gegen `antictag' = tag(`ivar') if `refobs' == 0 & `ttrevar' != . & `rawrefobs' == 1
     qui count if `antictag' == 1
-    dis as text "Caution: anticipation(`antic') places the effective reference period of `r(N)' unit(s) on a period they are not observed in; those unit(s) and their `anticdropobs' observations are dropped (their reference period would have been observed without the anticipation shift)."
+    dis as text "Caution: anticipation(`antic') places the effective reference period of `r(N)' unit(s) on a period unusable for them (not observed, or dropped for lack of a comparison unit); those unit(s) and their `anticdropobs' observations are dropped (their reference period would have been usable without the anticipation shift)."
     qui drop `antictag'
   }
   qui drop `rawref' `rawrefobs'
