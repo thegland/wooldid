@@ -271,11 +271,11 @@ contrasts, whose differencing amplifies rounding, up to roughly 1e-14 under {it:
 {phang}{opt permute(method)}: Randomization (permutation) inference in the Conley-Taber spirit, for settings - most importantly few treated clusters - where cluster-asymptotic standard errors are unreliable. The observed
 estimation runs exactly as usual (full inference, display, plots); afterwards, wooldid re-randomizes which clusters carry which treatment-onset dates, re-estimates the requested estimands under each counterfactual
 assignment (quiet fast-mode runs, since only point estimates are needed), and compares the observed estimate to the resulting null distribution. Requires {cmd:cluster()} with a single variable - the randomization
-unit - and every cluster must sit inside exactly one treatment-onset group (onset constant within cluster; never-treated is its own group). Two methods: {cmd:permute(shuffle)} permutes the observed onset labels
+unit - and every cluster must sit inside exactly one treatment-onset group (onset constant within cluster; never-treated is its own group; never-treated onsets must be coded as plain missing {cmd:.} - tagged missing codes {cmd:.a}-{cmd:.z} are refused, recode them to {cmd:.} first). Two methods: {cmd:permute(shuffle)} permutes the observed onset labels
 across clusters, holding the number of clusters at each onset fixed ({cmd:permstrata(varname)} confines the shuffling to within strata, so each onset group keeps its composition with respect to the strata;
 clusters must be strict subsets of strata); {cmd:permute(probabilities)} draws each cluster's onset from user-supplied probabilities via {cmd:permprobs()}. Specify {cmd:permreps(#)} (draws with replacement) or,
 for shuffle only, {cmd:permexact} (enumerate every distinct assignment; a caution prints above 1,000 assignments and enumeration is refused above 10,000). The number of possible assignments is always computed and
-returned, with a caution when {cmd:permreps()} exceeds 10 percent of it. Outputs per estimand: a two-sided permutation p-value (sampled draws use the add-one Monte-Carlo form; exact enumerations report the plain
+returned, with a caution when {cmd:permreps()} exceeds 10 percent of it; a design admitting only one possible assignment (e.g. every stratum onset-homogeneous, or every {cmd:permprobs()} row deterministic) is refused - there is nothing to randomize. Outputs per estimand: a two-sided permutation p-value (sampled draws use the add-one Monte-Carlo form; exact enumerations report the plain
 share, with the observed assignment a member - note that in symmetric designs the mirror-image assignment ties the observed estimate in absolute value, so exact p-values have a floor of 2/M); the 5th-95th
 percentile band of the permuted-effect distribution (a null band under no effect, not a confidence interval for the parameter); and the standard deviation of that distribution (labelled SD). The raw draws are in
 {it:e(permdist)}. {cmd:permreps()} must be at least 20. Replications that fail to estimate are excluded and counted ({it:e(perm_failed)}), with a caution above 10 percent and a refusal when fewer
@@ -284,11 +284,11 @@ random-number stream: {cmd:set seed} beforehand for reproducibility. Under {cmd:
 {cmd:contreat()} the dose stays with its unit and only onset timing is re-randomized: the null being tested is that timing is as-if random given dose. Permutation statistics cover the att-family estimands
 (the continuous-treatment ame quantities are not permuted in this version). Note also that reassigned onsets can change which periods are estimable in a given draw: each draw is the estimate wooldid
 would compute under that counterfactual assignment, estimability screens included. Under {it:permtstat}, {it:e(perm_lb/ub/sd_*)} and the displayed band/SD are on the t-ratio scale. Not compatible with {it:impvalues},
-{it:unconditionalse}, {it:contreatwithin}, or {it:oldsyntax}. {p_end}
+{it:unconditionalse}, {it:contreatwithin}, {it:contreatcontrols(untreatedZero)} (replications reassign onset while the dose path stays fixed, contradicting untreatedZero's dose-zero-outside-treatment premise), or {it:oldsyntax}. {p_end}
 
 {phang}{opt permprobs(spec)}: The assignment-probability design for {cmd:permute(probabilities)}, structured as {cmd:(onsetvar level level ...)} followed by one {cmd:(clustervalue p p ...)} group per cluster.
 The first group names the actual timing variable and lists every in-sample onset level (never-treated is the level {cmd:.}) in the column order the probabilities use; each later group gives one cluster's
-probabilities over those levels (nonnegative, summing to 1). Every in-sample cluster value must appear exactly once. {cmd:permreps()} is required. The possible-assignment count reported is the product of the
+probabilities over those levels (nonnegative, summing to 1; rows within the acceptance tolerance of 1e-6 are rescaled to sum exactly 1 before drawing). Every in-sample cluster value must appear exactly once. {cmd:permreps()} is required. The possible-assignment count reported is the product of the
 per-cluster support sizes; if the observed assignment has zero probability under the design, a caution notes that the p-value is a tail probability under that design distribution rather than a randomization
 test. {p_end}
 

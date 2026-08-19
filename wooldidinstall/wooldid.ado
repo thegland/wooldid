@@ -4212,7 +4212,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
   if "`permute'" != "" {
-    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') ifr(`if')
+    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if')
     if _rc != 0 error _rc
   }
 
@@ -4676,7 +4676,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) ifr(string asis)]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis)]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -4693,6 +4693,16 @@ version 16.0
   }
   if "`cw'" != "" {
     dis as error "Error: permute() is not compatible with contreatwithin: randomization inference reassigns onset timing across clusters, which requires a comparison group."
+    error 198
+  }
+  * NFPERM-15: untreatedZero's model formulation requires the dose to be zero outside
+  * treated cohort-periods; replications reassign onset while the dose path stays frozen,
+  * so every rep would violate that structural premise and silently contaminate the null
+  * distribution. plain equality suffices: validate already forces untreatedZero to be
+  * the sole contreatcontrols token. contreat in general stays ALLOWED (adjudicated:
+  * the null is timing-as-if-random given dose)
+  if `"`cc'"' == "untreatedZero" {
+    dis as error "Error: permute() is not compatible with contreatcontrols(untreatedZero): replications reassign treatment onset while the dose path stays fixed, violating untreatedZero's requirement that the dose be zero outside treated cohort-periods."
     error 198
   }
   if "`os'" == "1" {
@@ -4887,6 +4897,18 @@ version 16.0
   if "`wdp_err'" != "" {
     dis as error "`wdp_err'"
     error 198
+  }
+  * NFPERM-09: conditionally degenerate designs (every stratum onset-homogeneous, or every
+  * permprobs() row deterministic) pass the global freedom precheck but admit exactly one
+  * possible assignment; they formerly ran to completion reporting a useless p (p=1, or
+  * p=1/(R+1) when a deterministic table targets a non-observed assignment). both
+  * generators report the support count in wdp_npd, and M==1 iff lnM==0 exactly (the
+  * per-stratum lnfactorial terms cancel exactly; smallest nondegenerate M is 2), so the
+  * numeric compare cannot false-fire. placed BEFORE the reps-vs-support cautions so a
+  * degenerate run is refused rather than first advised to consider permexact
+  if real("`wdp_npd'") == 1 {
+    dis as error "Error: the requested randomization design admits only one possible assignment (every stratum is onset-homogeneous, or every permprobs() row is deterministic); there is nothing to randomize."
+    error 459
   }
   if "`wdp_caut1'" != "" dis as text "Caution: `wdp_caut1'"
   if "`wdp_caut2'" != "" dis as text "Caution: `wdp_caut2'"
@@ -6119,7 +6141,7 @@ void wooldid_permp(string scalar spec, string scalar onsname, string scalar lvls
     real rowvector lvl, seen, dl, dc
     real matrix P
     real colvector cval, ord
-    real scalar G, g, K, C, c, k, ssum, v, ing, hit
+    real scalar G, g, K, C, c, k, j, ssum, v, ing, hit
     st_local("permperr", "")
     grp = tokens(subinstr(subinstr(spec, "(", " __GRP__ ", .), ")", " __END__ ", .))
     // regroup
@@ -6170,7 +6192,30 @@ void wooldid_permp(string scalar spec, string scalar onsname, string scalar lvls
     }
     K = cols(tok) - 1
     lvl = J(1, K, .)
-    for (k = 1; k <= K; k++) lvl[k] = strtoreal(tok[k+1])
+    for (k = 1; k <= K; k++) {
+        // NFPERM-05: strict token rule. only the literal "." names the never-treated
+        // level; any other token must parse to a nonmissing number. previously a garbage
+        // token strtoreal'd to missing, silently aliasing the never-treated level, and a
+        // duplicate listed level passed the one-way membership check - either way a
+        // realized onset level silently vanished from the randomization design (rc 0)
+        if (tok[k+1] == ".") lvl[k] = .
+        else {
+            lvl[k] = strtoreal(tok[k+1])
+            if (lvl[k] >= .) {
+                st_local("permperr", "Error: permprobs() onset level token '" + tok[k+1] + "' is not a number or the never-treated marker '.'.")
+                return
+            }
+        }
+        // duplicate rejection (mata missing == missing is true, so this also catches a
+        // second '.'); together with the count and exactly-once membership checks below
+        // this makes listed-vs-realized levels a bijection
+        for (j = 1; j < k; j++) {
+            if (lvl[j] == lvl[k]) {
+                st_local("permperr", "Error: permprobs() lists onset level '" + tok[k+1] + "' more than once.")
+                return
+            }
+        }
+    }
     // level set must equal the data's level set
     dlv = tokens(lvlstr)
     if (cols(dlv) != K) {
@@ -6214,6 +6259,14 @@ void wooldid_permp(string scalar spec, string scalar onsname, string scalar lvls
             st_local("permperr", "Error: permprobs() probabilities for cluster value " + tok[1] + " sum to " + strofreal(ssum) + ", not 1.")
             return
         }
+        // NFPERM-06: normalize the row so its cumulative sum ends exactly at 1 (within
+        // ~K*eps, absorbed by the draw loop's +1e-12 cushion). rows accepted a hair
+        // under 1 by the tolerance formerly left a deficit tail where a uniform draw
+        // matched no probability column, leaving the assignment cell missing - which
+        // downstream is wooldid's never-treated code (silent). division by a positive
+        // ssum preserves zero/positive sign patterns, so the observed-support check and
+        // support counts are unaffected; exact-sum rows are bitwise unchanged (ssum==1)
+        if (ssum != 1) P[g-1, .] = P[g-1, .] :/ ssum
     }
     // cluster set must equal the data's, no duplicates
     dc = strtoreal(dcl)
