@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.4 2026-07-28}{...}
+{* *! version 1.4 2026-08-19}{...}
 {vieweralsosee "reghdfe" "help reghdfe"}{...}
 {vieweralsosee "regress" "help regress"}{...}
 {vieweralsosee "ppmlhdfe" "help ppmlhdfe"}{...}
@@ -840,7 +840,7 @@ row equation; the same keys apply to the one-column matrices produced under {cmd
 {synopt:{it:e(sample)}} A function characterizing the estimation sample used; useful for identifying which observations are dropped by {it:wooldid} during its sample formation and sanitation
 procedures.{p_end}
 
-{synopt:{it:e(cmdline)}} The input you fed to {it:wooldid} on the command line.{p_end}
+{synopt:{it:e(cmdline)}} The full {it:wooldid} command line for the successful estimation, beginning with the command name.{p_end}
 
 {synopt:{it:e(estimate_type)}} A macro recording whether your treatment effect estimates use a pooled reference period or a fixed reference period. {p_end}
 

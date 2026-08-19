@@ -8,7 +8,8 @@ This program offers a suite of tools in Stata for implementing difference-in-dif
 - Estimation of subgroup/treatment-arm specific effects, including comparisons of effects across subgroups, tests for homogeneity of treatment effects across subgroups, and subgroup specific pre-trend tests
 - Estimation of the average marginal treatment effect of a continuous treatment variable (experimental) 
 - Production of event study plots, histograms of treatment effects by cohorts, and plots of treatment effects across the distribution of a continuous treatment variable
-- Inference using clustered standard errors, using unconditional standard errors, and using Ibragimov and Muller (2010) style cluster-robust inference
+- Inference using clustered standard errors, using unconditional standard errors, using Ibragimov and Muller (2010) style cluster-robust inference, and using Conley-Taber-spirit randomization (permutation) inference for settings with few treated clusters
+- Roth (2022) pre-trend power diagnostics and a cohort-by-relative-period effects table (gteffects)
 - Estimation of treatment effect elasticities and of treatment effects using poisson estimation 
 
 &nbsp;
@@ -108,6 +109,7 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 ##### Technical Features: 
 - fastnose - fast exploratory mode: point estimates only (no SEs, CIs, p-values, or joint tests), roughly 2-4x faster and far more on poisson event-study runs
 - replay - typing wooldid by itself after an estimation redisplays the full stored results from e() (no options; plots are not redrawn)
+- permute(_method_) - randomization (permutation) inference: re-randomizes which clusters carry which treatment-onset dates (shuffle or user-supplied probabilities, sampled or exact enumeration, optional strata), re-estimates under each counterfactual assignment, and compares the observed estimate to the resulting null distribution (permreps(), permexact, permstrata(), permprobs(), permtstat, permtci)
 - update - update your local installation of wooldid using the most recent version of wooldid available on GitHub
 - verbose - print updates as estimation progresses and save the results from the underlying regression estimated to a model called ___wooldidfullmodel
 - safety() - if set to "off", turns off various safety features that block estimation when wooldid detects a situation where it may yield unreliable results
