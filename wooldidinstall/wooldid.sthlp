@@ -453,7 +453,7 @@ For the {it:att_i} and {it:att_itime} concepts, {it:att_it} type results will be
 {dlgtab:Subgroup Effects}
 
 {phang}{opt sub:groups()}: Specifies the subgroup (SG) variable, whose levels specify subgroups for which {it:wooldid} will compute subgroup specific estimates.
-The SG variable must consist of non-negative integer values (or missing values) and its levels must specify collections of cohorts i. A given cohort i cannot be split across multiple
+The SG variable must contain only non-negative integers (or missing values) on in-sample observations of treated units - both pre- and post-onset rows; values on never-treated observations and on rows wooldid's deterministic screens discard (e.g. missing outcomes) are ignored by the check, since no subgroup computation uses them and its levels must specify collections of cohorts i. A given cohort i cannot be split across multiple
 subgroups: {it:wooldid} exits with an informative error if it is. Under {it:safety(off)} such a run proceeds using share weighting (see the subgroup discussion below). Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations. Because subgroup values are
 embedded in the names of stored results and plots, values 8 or more digits long can hit Stata's 31/32-character name limits and crash some option combinations with r(198); recode
 ID-style subgroup codes to small integers first (e.g., {cmd:egen newsg = group(oldsg)}).   {p_end}

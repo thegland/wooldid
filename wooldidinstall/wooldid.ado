@@ -669,6 +669,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * while we're at it, figure out how many levels the sg variable takes on during the treatment period - will be useful down the line
 
   if "`subgroups'" != "" {
+    * VAL-G15A: negative-value screen, moved here from wooldid_validate. domain =
+    * in-sample rows (ifstatement folds the deterministic markout, curing false
+    * rejections on e.g. missing-outcome rows) of units with a nonmissing internal
+    * onset - both pre- and post-onset rows, because the SG pre-trend margins consume
+    * pre-onset rows too; strictly looser than the old raw-if domain (never-treated,
+    * marked-out, and out-of-window-onset rows newly tolerated; nothing newly rejected).
+    * placed before the sglist screens so negative values error first and never enter
+    * sglist. the integer screen below keeps its own adjudicated t >= ttre domain
+    cap assert `subgroups' >= 0 | `subgroups' >= . if `ifstatement' & `ttre' < .
+    if _rc != 0 {
+      dis as error "Error: the subgroups() variable contains negative values on in-sample rows of treated units (pre- or post-onset); subgroup values must be non-negative integers (or missing) there."
+      error 411
+    }
     qui glevelsof(`subgroups') if `ifstatement' & `t' >= `ttre' , clean local(sglist)
     if wordcount("`sglist'") == 0 {
       dis as error  "Error: subgroups are specified, but contains no values within sample during the treatment period."
@@ -4347,14 +4360,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
 
-  * subgroups cannot be negative
-  if "`subgroups'" != "" {
-    cap assert `subgroups' >= 0 `ifassert'
-    if _rc != 0 {
-      dis as error "Error: the subgroup variable contains negative values; it must contain only non-negative integers."
-      error 411
-    }
-  }
+  * VAL-G15A: the negative-subgroup screen moved into the worker (beside the integer
+  * screen) so it runs on the estimation-aware domain (ifstatement folds markout;
+  * internal ttre < . spans exactly the rows any over(subgroups) subpop can consume).
+  * the raw-if-domain check that lived here falsely rejected runs whose only negative
+  * values sat on deterministically-discarded rows (e.g. missing outcomes).
 
   * ---- S5: additional early screens for inputs that previously failed late with ----
   * ---- opaque messages or were silently mis-handled. placed AFTER all pre-existing ----
