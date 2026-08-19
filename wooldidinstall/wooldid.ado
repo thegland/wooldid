@@ -330,8 +330,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       qui gstats sum `f13badi', meanonly
       local f13badid = strtrim(string(r(min), "%18.0g"))
       dis as error "Error: the treatment onset variable `ttre_asgiven' is not constant within `i' (smallest offending `i': `f13badid')."
-      dis as error "wooldid requires exactly one treatment onset per unit: rows of the same `i' carrying different onsets, or a mix of missing and non-missing onsets, are silently split across cohorts, and part of the unit can be used as its own control."
-      dis as error "Common causes: an onset recorded only from the onset period onward (fill it in on every in-sample row of a treated unit, including pre-treatment rows); two different units sharing one `i' value; or unit IDs stored as float, which pools distinct large IDs (recast double `i'). Alternatively, restrict the estimation sample with if()."
+      dis as error "wooldid requires exactly one treatment onset per group defined by `i': rows of the same `i' carrying different onsets, or a mix of missing and non-missing onsets, are silently split across cohorts, and part of the group can be used as its own control."
+      dis as error "Common causes: an onset recorded only from the onset period onward (fill it in on every in-sample row of a treated group, including pre-treatment rows); underlying units with different onsets combined under one `i' value; or IDs stored as float, which pools distinct large IDs (recast double `i'). Alternatively, restrict the estimation sample with if()."
       dis as error "To ignore this error, specify safety(off)."
       error 459
     }
@@ -4286,15 +4286,24 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     local cfxpre 0
     local cfxrelyrlist
     if "`cfxplottypes'" == "" local cfxplottypes post
-    if strpos("`cfxplottypes'","post") != 0 local cfxpost 1
-    local cfxplottypes = subinstr("`cfxplottypes'","post"," ",.)
-    if strpos("`cfxplottypes'","pre") != 0 & ("`esfixedbaseperiod'" == "esfixedbaseperiod" | `esprelength' > 0 ) local cfxpre 1
-    local cfxplottypes = subinstr("`cfxplottypes'","pre"," ",.)
+    * VAL-G13A: exact-token parse. the old substring matching accepted garbage tokens
+    * (postpost counted as post, 2post2 became 2 2), and fractional numeric entries fell
+    * through both cap'd window filters silently (rc 0, no plot, no message). keywords are
+    * matched exactly per token; numeric tokens must be non-missing integers, loudly.
     foreach item in `cfxplottypes' {
-      * entries other than the (already-stripped) post/pre keywords must be numeric: a stray token
-      * would otherwise be evaluated as a variable reference below -- crashing with an unexplained
-      * r(111) if no such variable exists, or silently injecting the variable into the plot list if
-      * one does (stata does not short-circuit |, so the reference-period comparison always runs)
+      if "`item'" == "post" {
+        local cfxpost 1
+        continue
+      }
+      if "`item'" == "pre" {
+        * without esf or pre-periods, pre is dropped (documented precondition in the sthlp)
+        if "`esfixedbaseperiod'" == "esfixedbaseperiod" | `esprelength' > 0 local cfxpre 1
+        continue
+      }
+      * remaining entries must be numeric: a stray token would otherwise be evaluated as a
+      * variable reference below -- crashing with an unexplained r(111) if no such variable
+      * exists, or silently injecting the variable into the plot list if one does (stata
+      * does not short-circuit |, so the reference-period comparison always runs)
       cap confirm number `item'
       if _rc != 0 {
         dis as error "Error: cfxplottypes() contains an unrecognized entry: `item'"
@@ -4305,9 +4314,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       * the raw token is later embedded in matrix names, where + is an invalid character;
       * strip it so +2 means 2 (and the post-loop dedup then also collapses +2 with 2)
       if substr("`item'",1,1) == "+" local item = substr("`item'",2,.)
+      if `item' >= . | int(`item') != `item' {
+        dis as error "Error: cfxplottypes() contains a missing or non-integer entry: `item'"
+        dis as error "Valid cfxplottypes() entries are post, pre, and/or integers specifying relative time periods."
+        error 198
+      }
       if "`esfixedbaseperiod'" == "" | `item' != `esrelativeto' {
-        cap if int(`item')==`item' & `item' >= 0 & (`item' <= `espostlength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
-        cap if int(`item')==`item' & `item' < 0 & (abs(`item') <= `esprelength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
+        if `item' >= 0 & (`item' <= `espostlength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
+        if `item' < 0 & (abs(`item') <= `esprelength' | "`esfixedbaseperiod'" == "esfixedbaseperiod") local cfxrelyrlist `cfxrelyrlist' `item'
       }
     }
     * a repeated relyr entry would build the same result matrix twice; the final ereturn loop
