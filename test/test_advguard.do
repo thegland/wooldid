@@ -100,12 +100,34 @@ else {
   }
 }
 
-* ---- T2b: same gap panel, plain adversarial -> must still produce a p ----
+* ---- T2b: same gap panel, plain adversarial -> honest refusal with a retained line ----
+* the gap leaves only the two post-treatment coefficients: two points always lie on
+* some line, so the composite null has no testable residual dimension (q = 0). the
+* recalibrated primary test (NFADV-01) refuses with a Caution and keeps the display
+* line; the old plug-in `test' manufactured a p here by freezing the fitted line
+qui log using advg_t2b.txt, text replace name(advg)
 use `hole2', clear
 cap noi wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-1) esprelength(1) espostlength(2) adversarial
-if _rc != 0 | "`e(adversarial_pval_att)'" == "" {
-  dis as error "T2b FAIL: rc=" _rc " pval=[`e(adversarial_pval_att)'] (plain path must be untouched)"
+local rc2b = _rc
+qui log close advg
+if `rc2b' != 0 {
+  dis as error "T2b FAIL: rc=" `rc2b'
   local ++fails
+}
+else {
+  if "`e(adversarial_pval_att)'" != "" {
+    dis as error "T2b FAIL: pval=[`e(adversarial_pval_att)'] posted with no testable residual dimension (q=0)"
+    local ++fails
+  }
+  cap confirm matrix e(adversarial_line_att)
+  if _rc != 0 {
+    dis as error "T2b FAIL: the display line must survive the degenerate-covariance refusal"
+    local ++fails
+  }
+  if strpos(fileread("advg_t2b.txt"), "the composite-null covariance is degenerate") == 0 {
+    dis as error "T2b FAIL: no degenerate-covariance Caution in the console output"
+    local ++fails
+  }
 }
 
 * ---- T3: viable altmethod cell -> guard must not overfire ----

@@ -68,7 +68,6 @@ version 16.0
       * user in the default frame, not the frame wooldid was called from
       qui frame
       if "`r(currentframe)'" != "`wdsh_frame'" cap frame change `wdsh_frame'
-      cap est drop __marginsmodel
       if strpos("`wdsh_flags'", "keep") == 0 {
         if strpos("`wdsh_flags'", "fullmodel") != 0 cap est drop ___wooldidfullmodel
         * frame-qualified: if the failure destroyed the snapshot frame, the restore above
@@ -612,8 +611,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     qui replace `_t' = `_t'+ `min_t' + 1
 
     *redefine the ref period macro for future use and then do a little bit of housekeeping
-    * LOAD-BEARING: the four adversarial blocks plant the reference row(s) at t == refperiod
-    * via this identity (relyr = t - min_t - 1); if this definition moves, they must move with it
+    * LOAD-BEARING: wooldid_advstat plants the adversarial reference row(s) at
+    * t == esrelativeto + min_t + 1 via this same identity (relyr = t - min_t - 1);
+    * if this definition moves, that subprogram must move with it
     local refperiod = `esrelativeto'+`min_t'+1
     qui drop `refperiodobserved'
     if "`timetrends'" == "timetrends" qui drop `ttrefperiodobserved'
@@ -689,6 +689,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     local adversarial
     local altmethod_adversarial
   }
+
+  * NFADV-01/02: the adversarial p-value is esf-scoped (like pretrendpower); under the
+  * pooled reference the fitted line is still computed and returned, without inference
+  if "`adversarial'" != "" & "`esfixedbaseperiod'" == "" dis as text "Caution: the adversarial pre-trend p-value requires esfixedbaseperiod (the pooled reference has no single omitted period); the fitted line is reported without a p-value."
 
   ****** after the above estimability checks and processing, does the SG variable have surviving members?
   * while we're at it, figure out how many levels the sg variable takes on during the treatment period - will be useful down the line
@@ -1623,10 +1627,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`fastnose'" != "" local marginsdof nose
   tempname f9tab
 
-  * if doing adversarial checks, inject the "post" statement where needed
-  local postinject
-  if "`adversarial'" == "adversarial" local postinject post
-
   * initialize some times
   local joint_horiz_i
   local joint_Choriz_i
@@ -1767,7 +1767,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         tempname ___`horizitem'_horiz
 
         if "`impvalues'" == "" {
-          qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `_t' >= `horizonstarter' & `_t' <= `horizonend' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof' `postinject'
+          qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `_t' >= `horizonstarter' & `_t' <= `horizonend' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof'
           local matrixstartgrab = floor(`=colsof(r(b))'/2)+1
           matrix `f9tab' = r(table)
           if rowsof(`f9tab') < 6 {
@@ -1791,11 +1791,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               else          local f2rl_`f2k' `f2rl_`f2k'' post`f2rv'
             }
           }
-          if "`postinject'" == "post" qui est sto __marginsmodel
-
-          * this implements the f test that all points are well explained by a single line fit on the pre-period coefficients
-          * the finaladvtest is for the adversarial test being estimable - mainly just an issue w/ SGs later. sometimes we have enough coefs to do the
-          *     test overall, but not in a particular sg. since this is the overall section, if it triggers badly here, call off adversarial as a whole
+          * NFADV-01/02/05: the adversarial statistics and display line live in
+          * wooldid_advstat (worker size headroom); the finaladvtest estimability guard
+          * stays here - mainly an issue w/ SGs later: sometimes we have enough coefs to
+          * do the test overall, but not in a particular sg. since this is the overall
+          * section, if it triggers badly here, call off adversarial as a whole
           *     threshold of 2 here b/c that corresponds w/ 1 coef (targetflag==0 will get dummy columns )
           local finaladvtest
           cap confirm matrix r(b)
@@ -1809,103 +1809,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             * an actually-pending adversarial test is being called off here
             if "`adversarial'" == "adversarial" dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
             local adversarial
-            qui est restore ___wooldidfullmodel
-            local postinject
           }
           if "`adversarial'" == "adversarial"     {
-            tempname adversarialframe
-            tempname pretrendregmat
-            matrix `pretrendregmat' = r(b)[1,`matrixstartgrab'..`=colsof(r(b))']
-            matrix `pretrendregmat' = `pretrendregmat''
-            frame create `adversarialframe'
-            frame change `adversarialframe'
-            qui svmat double `pretrendregmat'
-            qui rename `pretrendregmat'1 b
-            qui gen t = .
-            local bignorig = _N
-            local bign = _N
-            forval interpret_t = 1(1)`bign' {
-              local special_pos = strpos(r(by`interpret_t'),".") - 1
-              local special_pos = substr(r(by`interpret_t'),1,`special_pos')
-              qui replace t = `special_pos' if _n == `interpret_t'
-            }
-            local bignjump = 1
-
-						*for timetrends, add 2 0 ref periods for esf; not otherwise. for pooled, still count only 1 ref period
-						*the best way to do this for pooled is ambiguous, but makes sense since it isnt strictly limited to 2 periods here
-            if "`timetrends'" == "timetrends" & "`esfixedbaseperiod'" == "esfixedbaseperiod" local bignjump = 2
-            local bign = `bign' + `bignjump'
-            qui set obs `bign'
-            if "`esfixedbaseperiod'" == "" {
-              qui gstats sum t, meanonly
-              qui replace b = 0 if b == .
-              qui replace t = r(min) - 1 if _n == _N
-            }
-            else{
-              qui replace b = 0 if b == .
-              * the esf reference horizon is analytic: relyr = t - min_t - 1 and the
-              * reference relyr is esrelativeto, so t == refperiod (worker L456). the
-              * timetrends second reference row sits one horizon below (worker L478).
-              qui replace t = `refperiod' if _n == _N
-              if "`timetrends'" == "timetrends" qui replace t = `refperiod' - 1 if _n == _N - 1
-            }
-
-
-            * an alternate implementation might estimate the regression below using only pre-treatment coefficients, projecting them forward
-            local altadv_restrict
-            local altadv_restrict_num
-            if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
-            if "`altmethod_adversarial'" != "" local altadv_restrict_num `espre'
-            if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
-              * esf: relyr = t - min_t - 1, so `t <= min_t' is exactly every pre-period
-              * coefficient plus the fixed reference row(s), in either reference regime
-              local altadv_restrict if t <= `min_t'
-              local altadv_restrict_num = `min_t'
-            }
-
-            * B16 backstop: data gaps at the pre-treatment horizons can hollow out the
-            * altmethod fit sample even when the window arithmetic is fine; skip cleanly
-            qui count `altadv_restrict'
-            * the `bignjump' planted reference row(s) always satisfy the cut, so require at
-            * least one REAL pre-period coefficient beyond them (under timetrends + esf the
-            * two planted zeros alone would otherwise pass and fit a fabricated (0,0) line)
-            if r(N) < 1 + `bignjump' {
-              dis as text "Caution: adversarial pre-trend testing was cancelled: after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the adversarial reference line."
-              frame change `defaultframe'
-              frame drop `adversarialframe'
-              qui est restore ___wooldidfullmodel
-              local adversarial
-              local postinject
-            }
-            if "`adversarial'" == "adversarial" {
-              qui reg b t `altadv_restrict'
+            wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial')
+            local advstatus `r(status)'
+            * a gap-cancelled altmethod fit calls off adversarial as a whole (overall section)
+            if "`advstatus'" == "gapskip" local adversarial
+            else {
+              if "`advstatus'" == "ok" local adversarialP_`horizitem' = r(p)
               tempname adversarialB_`horizitem'
-              matrix `adversarialB_`horizitem''   = e(b)
-              qui predict double linearproject, xb
-              local testconstructor
-              * this ensures that when projecting forward we etst only the post-treatment period effects
-              forval advframe_i = 1(1)`bignorig' {
-                local horiztocheck = t[`advframe_i']
-                local proceed 0
-                if "`altadv_restrict_num'" == "" local proceed 1
-                if "`altadv_restrict_num'" != "" {
-                  if `horiztocheck' > `altadv_restrict_num' local proceed 1
-                }
-                if `proceed' == 1 {
-                  local xbline = linearproject[`advframe_i']
-                  local testconstructor `testconstructor' ([1.`targetflag']`horiztocheck'.`_t' = `xbline')
-               }
-              }
-              frame change `defaultframe'
-              frame drop `adversarialframe'
-              qui est restore __marginsmodel
-              qui test `testconstructor'
-              local adversarialP_`horizitem' =  r(p)
-              qui est drop __marginsmodel
-              qui est restore ___wooldidfullmodel
+              matrix `adversarialB_`horizitem'' = r(line)
             }
           }
-          * end f test above
+          * end adversarial pre-trend handling
         }
 
         *constraints on margins setup requires looping through horizons for doing the impvalues approach. reason is you aren't allowed to do over (two sets of variables) without extra setup
@@ -2266,7 +2182,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           tempname ___C`horizitem'_horiz
 
           if "`impvalues'" == "" {
-            qui  margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof' `postinject'
+            qui  margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof'
             matrix `f9tab' = r(table)
             if rowsof(`f9tab') < 6 {
               matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
@@ -2289,9 +2205,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 else          local f2rl_`f2k' `f2rl_`f2k'' post`f2rv'
               }
             }
-            if "`postinject'" == "post" qui est sto __marginsmodel
-
-            * this implements the f test that all points are well explained by a single line fit on the pre-period, constrained to run through 0
+            * NFADV-01/02/05: adversarial statistics + display line via wooldid_advstat
+            * (see the binary twin above; only the estimability guard stays in-worker)
             local finaladvtest
             cap confirm matrix r(b)
             if _rc == 0 {
@@ -2302,96 +2217,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * see the binary twin above: Caution only when a pending test is called off
               if "`adversarial'" == "adversarial" dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
               local adversarial
-              qui est restore ___wooldidfullmodel
-              local postinject
             }
             if "`adversarial'" == "adversarial"    {
-              tempname adversarialframe
-              tempname pretrendregmat
-              matrix `pretrendregmat' = r(b)[1,1..`=colsof(r(b))']
-              matrix `pretrendregmat' = `pretrendregmat''
-              frame create `adversarialframe'
-              frame change `adversarialframe'
-              qui svmat double `pretrendregmat'
-              qui rename `pretrendregmat'1 b
-              qui gen t = .
-              local bignorig = _N
-              local bign = _N
-              forval interpret_t = 1(1)`bign' {
-                local special_pos = strpos(r(by`interpret_t'),".") - 1
-                local special_pos = substr(r(by`interpret_t'),1,`special_pos')
-                qui replace t = `special_pos' if _n == `interpret_t'
-              }
-              local bignjump = 1
-              if "`timetrends'" == "timetrends" & "`esfixedbaseperiod'" == "esfixedbaseperiod" local bignjump = 2
-              local bign = `bign' + `bignjump'
-              qui set obs `bign'
-              if "`esfixedbaseperiod'" == "" {
-                qui gstats sum t, meanonly
-                qui replace b = 0 if b == .
-                qui replace t = r(min) - 1 if _n == _N
-              }
-              else{
-                qui replace b = 0 if b == .
-                * the esf reference horizon is analytic: relyr = t - min_t - 1 and the
-                * reference relyr is esrelativeto, so t == refperiod (worker L456). the
-                * timetrends second reference row sits one horizon below (worker L478).
-                qui replace t = `refperiod' if _n == _N
-                if "`timetrends'" == "timetrends" qui replace t = `refperiod' - 1 if _n == _N - 1
-              }
-
-              local altadv_restrict
-              if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
-              local altadv_restrict_num
-              if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
-              if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
-                * esf: relyr = t - min_t - 1, so `t <= min_t' is exactly every pre-period
-                * coefficient plus the fixed reference row(s), in either reference regime
-                local altadv_restrict if t <= `min_t'
-                local altadv_restrict_num = `min_t'
-              }
-
-              * B16 backstop: data gaps at the pre-treatment horizons can hollow out the
-              * altmethod fit sample even when the window arithmetic is fine; skip cleanly
-              qui count `altadv_restrict'
-              * see the binary twin: planted reference rows must not satisfy the threshold alone
-              if r(N) < 1 + `bignjump' {
-                dis as text "Caution: adversarial pre-trend testing was cancelled: after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the adversarial reference line."
-                frame change `defaultframe'
-                frame drop `adversarialframe'
-                qui est restore ___wooldidfullmodel
-                local adversarial
-                local postinject
-              }
-              if "`adversarial'" == "adversarial" {
-                qui reg b t `altadv_restrict'
+              wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial')
+              local advstatus `r(status)'
+              if "`advstatus'" == "gapskip" local adversarial
+              else {
+                if "`advstatus'" == "ok" local adversarialP_C`horizitem' = r(p)
                 tempname adversarialB_C`horizitem'
-                matrix `adversarialB_C`horizitem'' = e(b)
-                qui predict double linearproject, xb
-                local testconstructor
-
-                forval advframe_i = 1(1)`bignorig' {
-                  local horiztocheck = t[`advframe_i']
-                  local proceed 0
-                  if "`altadv_restrict_num'" == "" local proceed 1
-                  if "`altadv_restrict_num'" != "" {
-                    if `horiztocheck' > `altadv_restrict_num' local proceed 1
-                  }
-                  if `proceed' == 1 {
-                    local xbline = linearproject[`advframe_i']
-                    local testconstructor `testconstructor' (`horiztocheck'.`_t' = `xbline')
-                  }
-                }
-                frame change `defaultframe'
-                frame drop `adversarialframe'
-                qui est restore __marginsmodel
-                qui test `testconstructor'
-                local adversarialP_C`horizitem' = r(p)
-                qui est drop __marginsmodel
-                qui est restore ___wooldidfullmodel
+                matrix `adversarialB_C`horizitem'' = r(line)
               }
             }
-            * end f test above
+            * end adversarial pre-trend handling
           }
 
           *constraints on margins setup requires looping through horizons
@@ -2522,7 +2359,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               *     then this margins should be estimable since we would have seen the sg's cohorts dropped earlier
               *     if there was no post period or an insufficient pre-period
               * problem: this doens't guarantee we see the same relative periods, however
-              qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof' `postinject'
+              qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof'
               local matrixstartgrab = floor(`=colsof(r(b))'/2)+1
               tempname ___`horizitem'_horiz_s`sgcase'
               matrix `f9tab' = r(table)
@@ -2593,9 +2430,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * we construct relyrcolumn_s`sgcase' because not all sgs have all relyrs, necessarily
 
               * handle the adversarial pre-trends test
-              if "`postinject'" == "post" qui est sto __marginsmodel
-
-              * this implements the f test that all points are well explained by a single line fit on the pre-period, constrained to run through 0
+              * NFADV-01/02/05: statistics + display line via wooldid_advstat (see the
+              * overall binary site); a gap-cancelled fit only skips THIS subgroup
               local finaladvtest
               cap confirm matrix r(b)
               if _rc == 0 {
@@ -2604,88 +2440,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
               if "`adversarial'" == "adversarial"   {
                 if  `finaladvtest' > 2  {
-                  tempname adversarialframe
-                  tempname pretrendregmat
-                  matrix `pretrendregmat' = r(b)[1,`matrixstartgrab'..`=colsof(r(b))']
-                  matrix `pretrendregmat' = `pretrendregmat''
-                  frame create `adversarialframe'
-                  frame change `adversarialframe'
-                  qui svmat double `pretrendregmat'
-                  qui rename `pretrendregmat'1 b
-                  qui gen t = .
-                  local bignorig = _N
-                  local bign = _N
-                  forval interpret_t = 1(1)`bign' {
-                    local special_pos = strpos(r(by`interpret_t'),".") - 1
-                    local special_pos = substr(r(by`interpret_t'),1,`special_pos')
-                    qui replace t = `special_pos' if _n == `interpret_t'
-                  }
-                  local bignjump = 1
-                  if "`timetrends'" == "timetrends" & "`esfixedbaseperiod'" == "esfixedbaseperiod" local bignjump = 2
-                  local bign = `bign' + `bignjump'
-                  qui set obs `bign'
-                  if "`esfixedbaseperiod'" == "" {
-                    qui gstats sum t, meanonly
-                    qui replace b = 0 if b == .
-                    qui replace t = r(min) - 1 if _n == _N
-                  }
-                  else{
-                    qui replace b = 0 if b == .
-                    * the esf reference horizon is analytic: relyr = t - min_t - 1 and the
-                    * reference relyr is esrelativeto, so t == refperiod (worker L456). the
-                    * timetrends second reference row sits one horizon below (worker L478).
-                    qui replace t = `refperiod' if _n == _N
-                    if "`timetrends'" == "timetrends" qui replace t = `refperiod' - 1 if _n == _N - 1
-                  }
-
-                  local altadv_restrict
-                  local altadv_restrict_num
-                  if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
-                  if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
-                  if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
-                    * esf: relyr = t - min_t - 1, so `t <= min_t' is exactly every pre-period
-                    * coefficient plus the fixed reference row(s), in either reference regime
-                    local altadv_restrict if t <= `min_t'
-                    local altadv_restrict_num = `min_t'
-                  }
-                  * B16 backstop: data gaps can hollow out the altmethod fit sample
-                  qui count `altadv_restrict'
-                  * planted reference rows must not satisfy the threshold alone (see MAIN twin)
-                  if r(N) < 1 + `bignjump' {
-                    dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the reference line."
-                    frame change `defaultframe'
-                    frame drop `adversarialframe'
-                  }
-                  else {
-                    qui reg b t  `altadv_restrict'
+                  wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase')
+                  local advstatus `r(status)'
+                  if "`advstatus'" != "gapskip" {
+                    if "`advstatus'" == "ok" local adversarialP_`horizitem'_s`sgcase' = r(p)
                     tempname adversarialB_`horizitem'_s`sgcase'
-                    matrix `adversarialB_`horizitem'_s`sgcase'' = e(b)
-                    qui predict double linearproject, xb
-                    local testconstructor
-                    forval advframe_i = 1(1)`bignorig' {
-                      local horiztocheck = t[`advframe_i']
-                      local proceed 0
-                      if "`altadv_restrict_num'" == "" local proceed 1
-                      if "`altadv_restrict_num'" != "" {
-                        if `horiztocheck' > `altadv_restrict_num' local proceed 1
-                      }
-                      if `proceed' == 1 {
-                        local xbline = linearproject[`advframe_i']
-                        local testconstructor `testconstructor' ([1.`targetflag']`horiztocheck'.`_t' = `xbline')
-                      }
-                    }
-                    frame change `defaultframe'
-                    frame drop `adversarialframe'
-                    qui est restore __marginsmodel
-                    qui test `testconstructor'
-                    local adversarialP_`horizitem'_s`sgcase' = r(p)
-                    qui est drop __marginsmodel
+                    matrix `adversarialB_`horizitem'_s`sgcase'' = r(line)
                   }
                 }
                 else dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': too few event-study coefficients."
-              * the above ends f test; this restore is broken out in case the "not enough pre-trend coefs" clause triggers for the sg
-              qui est restore ___wooldidfullmodel
-              * the below ends the adversarial check, different form the inner one just so as to handle the est restore appropriately
               }
             }
           }
@@ -2861,7 +2624,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               cap confirm  matrix `___`horizitem'_Choriz_s`sgcase''
               * this prevents estimating horizons if done already for a non att
               if _rc != 0 {
-                qui margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof' `postinject'
+                qui margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof'
                 tempname ___`horizitem'_Choriz_s`sgcase'
                 matrix `f9tab' = r(table)
                 if rowsof(`f9tab') < 6 {
@@ -2886,9 +2649,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   }
                 }
                 * handle the adversarial pre-trends test
-                if "`postinject'" == "post" qui est sto __marginsmodel
-
-                * this implements the f test that all points are well explained by a single line fit on the pre-period, constrained to run through 0
+                * NFADV-01/02/05: statistics + display line via wooldid_advstat (see the
+                * overall binary site); a gap-cancelled fit only skips THIS subgroup
                 local finaladvtest
                 cap confirm matrix r(b)
                 if _rc == 0 {
@@ -2897,87 +2659,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
                 if "`adversarial'" == "adversarial"   {
                   if  `finaladvtest' > 1  {
-                    tempname adversarialframe
-                    tempname pretrendregmat
-                    matrix `pretrendregmat' = r(b)[1,1..`=colsof(r(b))']
-                    matrix `pretrendregmat' = `pretrendregmat''
-                    frame create `adversarialframe'
-                    frame change `adversarialframe'
-                    qui svmat double `pretrendregmat'
-                    qui rename `pretrendregmat'1 b
-                    qui gen t = .
-                    local bignorig = _N
-                    local bign = _N
-                    forval interpret_t = 1(1)`bign' {
-                      local special_pos = strpos(r(by`interpret_t'),".") - 1
-                      local special_pos = substr(r(by`interpret_t'),1,`special_pos')
-                      qui replace t = `special_pos' if _n == `interpret_t'
-                    }
-                    local bignjump = 1
-                    if "`timetrends'" == "timetrends" & "`esfixedbaseperiod'" == "esfixedbaseperiod" local bignjump = 2
-                    local bign = `bign' + `bignjump'
-                    qui set obs `bign'
-                    if "`esfixedbaseperiod'" == "" {
-                      qui gstats sum t, meanonly
-                      qui replace b = 0 if b == .
-                      qui replace t = r(min) - 1 if _n == _N
-                    }
-                    else{
-                      qui replace b = 0 if b == .
-                      * the esf reference horizon is analytic: relyr = t - min_t - 1 and the
-                      * reference relyr is esrelativeto, so t == refperiod (worker L456). the
-                      * timetrends second reference row sits one horizon below (worker L478).
-                      qui replace t = `refperiod' if _n == _N
-                      if "`timetrends'" == "timetrends" qui replace t = `refperiod' - 1 if _n == _N - 1
-                    }
-                   local altadv_restrict
-                   local altadv_restrict_num
-                   if "`altmethod_adversarial'" != "" local altadv_restrict if t <= `espre'
-                   if "`altmethod_adversarial'" != "" local altadv_restrict_num  `espre'
-                   if "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" {
-                     * esf: relyr = t - min_t - 1, so `t <= min_t' is exactly every pre-period
-                     * coefficient plus the fixed reference row(s), in either reference regime
-                     local altadv_restrict if t <= `min_t'
-                     local altadv_restrict_num = `min_t'
-                   }
-
-                    * B16 backstop: data gaps can hollow out the altmethod fit sample
-                    qui count `altadv_restrict'
-                    * planted reference rows must not satisfy the threshold alone (see MAIN twin)
-                    if r(N) < 1 + `bignjump' {
-                      dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the reference line."
-                      frame change `defaultframe'
-                      frame drop `adversarialframe'
-                    }
-                    else {
-                      qui reg b t  `altadv_restrict'
+                    wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase')
+                    local advstatus `r(status)'
+                    if "`advstatus'" != "gapskip" {
+                      if "`advstatus'" == "ok" local adversarialP_C`horizitem'_s`sgcase' = r(p)
                       tempname adversarialB_C`horizitem'_s`sgcase'
-                      matrix `adversarialB_C`horizitem'_s`sgcase'' = e(b)
-                      qui predict double linearproject, xb
-                      local testconstructor
-                      forval advframe_i = 1(1)`bignorig' {
-                        local horiztocheck = t[`advframe_i']
-                        local proceed 0
-                        if "`altadv_restrict_num'" == "" local proceed 1
-                        if "`altadv_restrict_num'" != "" {
-                          if `horiztocheck' > `altadv_restrict_num' local proceed 1
-                        }
-                        if `proceed' == 1 {
-                          local xbline = linearproject[`advframe_i']
-                          local testconstructor `testconstructor' (`horiztocheck'.`_t' = `xbline')
-                        }
-                      }
-                      frame change `defaultframe'
-                      frame drop `adversarialframe'
-                      qui est restore __marginsmodel
-                      qui test `testconstructor'
-                      local adversarialP_C`horizitem'_s`sgcase' = r(p)
-                      qui est drop __marginsmodel
+                      matrix `adversarialB_C`horizitem'_s`sgcase'' = r(line)
                     }
                   }
                   else dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': too few event-study coefficients."
-                  * the above ends f test; this restore is broken out in case the "not enough pre-trend coefs" clause triggers for the sg
-                qui est restore ___wooldidfullmodel
                 }
               }
             }
@@ -3763,10 +3453,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
  if "`adversarial'" != "" {
    foreach scenario in _ _C {
      foreach type in att att_it {
-       if "`adversarialP`scenario'`type''" != "" {
+       * NFADV-01/02: independent gates - the display line survives when inference is
+       * unavailable (pooled reference regime, degenerate covariance)
+       cap confirm matrix `adversarialB`scenario'`type''
+       if _rc == 0 {
          local typetext `type'
          if "`scenario'" == "_C" local typetext = subinstr("`typetext'","att","ame",.)
-         ereturn scalar adversarial_pval_`typetext' = `adversarialP`scenario'`type''
+         if "`adversarialP`scenario'`type''" != "" ereturn scalar adversarial_pval_`typetext' = `adversarialP`scenario'`type''
          ereturn matrix adversarial_line_`typetext' =   `adversarialB`scenario'`type''
        }
      }
@@ -3785,10 +3478,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         if "`adversarial'" != "" {
           foreach scenario in _ _C {
             foreach type in att att_it {
-              if "`adversarialP`scenario'`type'_s`sgcase''" != "" {
+              * NFADV-01/02: independent gates (see the overall twin above)
+              cap confirm matrix `adversarialB`scenario'`type'_s`sgcase''
+              if _rc == 0 {
                 local typetext `type'
                 if "`scenario'" == "_C" local typetext = subinstr("`typetext'","att","ame",.)
-                ereturn scalar adversarial_pval_`typetext'_s`sgcase' = `adversarialP`scenario'`type'_s`sgcase''
+                if "`adversarialP`scenario'`type'_s`sgcase''" != "" ereturn scalar adversarial_pval_`typetext'_s`sgcase' = `adversarialP`scenario'`type'_s`sgcase''
                 ereturn matrix adversarial_line_`typetext'_s`sgcase' =   `adversarialB`scenario'`type'_s`sgcase''
               }
             }
@@ -3905,11 +3600,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     matrix drop _all
   }
 
-  * __marginsmodel is a scratch intermediate; the adversarial branches that store it do
-  * not all reach their own est drop (the finaladvtest short-circuits skip it), so drop
-  * it unconditionally here (B22; this also removes the _est___marginsmodel marker
-  * variable the store planted in the dataset)
-  cap est drop __marginsmodel
   if "`verbose'" != "verbose" qui est drop ___wooldidfullmodel
   * clean up after ppmlhdfe. under verbose, retain _ppmlhdfe_d alongside the retained
   * ___wooldidfullmodel (author directive, 2026-07). note this alone does not make
@@ -5864,6 +5554,114 @@ version 16.0
 
 end
 
+* NFADV-01/02/05: the adversarial pre-trend machinery. One caller replaces the four
+* near-identical frame/svmat/`test' blocks in wooldid_worker (per-program size ceiling).
+* Inputs are the F2 event-study capture of the SAME margins run (b 1xk, V kxk full
+* covariance), the aligned relative-time column relyr (kx1), min_t, esrelativeto, and
+* the reference-regime/timetrends/altmethod flags. It does two things:
+*  (1) fits the DISPLAY LINE by the same unweighted OLS `reg b t' the old in-worker
+*      frames ran - identical rows (real horizon coefficients in horizon order, then
+*      the planted zero-valued reference row(s)) and the identical internal regressor
+*      t = relyr + min_t + 1 (the worker's LOAD-BEARING identity), so the published
+*      slope is bit-identical to the old one - and re-expresses the intercept at
+*      relative time 0 (NFADV-05: the old _cons was the fitted value at relyr =
+*      -min_t-1), publishing columns [slope, intercept_rt0];
+*  (2) computes a CALIBRATED p-value on the event-study covariance, esfixedbaseperiod
+*      only (the pooled reference has no single omitted period; the worker prints one
+*      Caution per run and the line is returned without inference). Primary = a
+*      minimum-distance test of the composite null that all horizon effects lie on
+*      SOME line (NFADV-01: the old code froze the fitted line as text constants in
+*      `test', a weighted chi-square whose null size depends on the margins VCV).
+*      Altmethod = the post coefficients tested against the pre-period-line forecasts
+*      using the FULL forecast covariance S = V_QQ + A V_PP A' - A V_PQ - V_QP A'
+*      (NFADV-02: the old code used V_QQ alone, anti-conservative). The statistics
+*      live in mata (wooldid_advx, end of file); F vs chi-squared reference follows
+*      the wooldid_ptp df_r convention.
+* Returns r(status): "ok" (line + p), "nop" (line only), "gapskip" (nothing - the B16
+* gap backstop: the altmethod fit sample has no real pre-period coefficient).
+cap prog drop wooldid_advstat
+prog def wooldid_advstat, rclass
+version 16.0
+  syntax , b(string) v(string) relyr(string) mint(string) esrel(string) [dfr(string) esf(string) tt(string) alt(string) sg(string)]
+
+  * B16 gap backstop (altmethod): the planted reference row(s) always satisfy the
+  * pre-period cut, so require at least one REAL pre-period coefficient beyond them
+  * (both regimes' cuts reduce to relyr <= -1: esf uses t <= min_t and the pooled
+  * regime uses t <= espre with espre = min_t)
+  if "`alt'" != "" {
+    mata: st_local("advnpre", strofreal(sum(st_matrix("`relyr'") :<= -1)))
+    if `advnpre' < 1 {
+      if "`sg'" == "" dis as text "Caution: adversarial pre-trend testing was cancelled: after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the adversarial reference line."
+      else dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sg': after accounting for gaps in the data, too few pre-treatment coefficients remain to fit the reference line."
+      return local status gapskip
+      exit
+    }
+  }
+
+  * the display line. rows are assembled exactly as the old adversarial frames were:
+  * real coefficients first (b transposed against t = relyr + min_t + 1), then the
+  * planted reference row(s) - esf: relyr = esrelativeto (preceded by esrelativeto - 1
+  * under timetrends); pooled: one horizon below the earliest real horizon present.
+  * missing coefficients become 0, as the old frame's `replace b = 0 if b == .' did.
+  local k = rowsof(`relyr')
+  tempname advF advB advL
+  matrix `advF' = `b'' , (`relyr' + J(`k',1,`mint'+1))
+  forval advi = 1/`k' {
+    if `advF'[`advi',1] >= . matrix `advF'[`advi',1] = 0
+  }
+  if "`esf'" != "" {
+    if "`tt'" != "" matrix `advF' = `advF' \ (0, `esrel'+`mint')
+    matrix `advF' = `advF' \ (0, `esrel'+`mint'+1)
+  }
+  else {
+    mata: st_local("advminr", strofreal(min(st_matrix("`relyr'"))))
+    matrix `advF' = `advF' \ (0, `advminr'+`mint')
+  }
+  qui frame
+  local advfr0 `r(currentframe)'
+  tempname advfr
+  frame create `advfr'
+  frame change `advfr'
+  qui svmat double `advF'
+  local advcut
+  if "`alt'" != "" local advcut if `advF'2 <= `mint'
+  qui reg `advF'1 `advF'2 `advcut'
+  matrix `advB' = e(b)
+  frame change `advfr0'
+  frame drop `advfr'
+  * the little reg clobbered e(); put the main model back (stored at worker start)
+  qui est restore ___wooldidfullmodel
+  matrix `advL' = (`advB'[1,1], `advB'[1,2] + (`mint'+1)*`advB'[1,1])
+  matrix colnames `advL' = slope intercept_rt0
+  matrix rownames `advL' = y1
+
+  * inference (esf only; on the F2 covariance, in mata)
+  local advstatus nop
+  if "`esf'" != "" {
+    local advdfr .
+    if "`dfr'" != "" & "`dfr'" != "." {
+      if real("`dfr'") > 0 & real("`dfr'") < . local advdfr `dfr'
+    }
+    tempname advP
+    local advpstat
+    mata: wooldid_advx("`b'", "`v'", "`relyr'", `esrel', ("`tt'"!=""), ("`alt'"!=""), `advdfr', "`advP'")
+    if "`advpstat'" == "ok" {
+      return scalar p = scalar(`advP')
+      local advstatus ok
+    }
+    else {
+      * covers rank-0/degenerate covariance (e.g. timetrends), missing entries, a
+      * residual outside the covariance's column space, and no testable residual
+      * dimensions (e.g. only two real horizons under the primary composite null)
+      if "`sg'" == "" dis as text "Caution: adversarial: the composite-null covariance is degenerate; no p-value computed."
+      else dis as text "Caution: adversarial: the composite-null covariance is degenerate for subgroup `sg'; no p-value computed."
+    }
+  }
+  return local status `advstatus'
+  return matrix line = `advL'
+end
+
+
 * F11: event-study plots, moved out of wooldid_worker (per-program size ceiling). reads
 * e() plus the two per-call options only; runs inside its own tempname frame and returns
 * to the caller's frame on the normal path. on an error inside this program, stata
@@ -6511,5 +6309,122 @@ void wooldid_permp(string scalar spec, string scalar onsname, string scalar lvls
         st_matrix(pname, P[ord, .])
         st_matrix(lname, lvl)
     }
+}
+end
+
+
+*** NFADV-01/02: the adversarial p-value statistics, called by wooldid_advstat (kept
+*** out of wooldid_worker to conserve compiled-size headroom; the cap mata drop makes
+*** the file safely re-loadable within a session). Inputs are the F2 event-study
+*** capture (b 1xk, V kxk) and the aligned relative-time column vector; planted
+*** reference rows carry b = 0 with zero variance. Sets st_local advpstat = "ok" and
+*** the scalar `pn' on success, advpstat = "degen" otherwise (never errors).
+***
+*** alt == 0, primary (NFADV-01): minimum-distance test of the composite null that
+*** all horizon effects lie on SOME line, E[b] = X gamma with X = [1, relyr] and
+*** gamma unknown. gamma is estimated by GLS under a generalized inverse of V; the
+*** minimized distance W = min_g (b - Xg)' V^+ (b - Xg) is computed in the whitened
+*** eigenspace of V (z = L^-1/2 U' b, M = L^-1/2 U' X, W = ||z - M ghat||^2), which
+*** is exactly chi-squared with q = rank(V) - rank(M) degrees of freedom under the
+*** null. The planted zero-variance reference rows receive zero weight under V^+ and
+*** so are mathematically inert here (they are constants equal to their expectation);
+*** omitting them from the computation is identical to including them.
+***
+*** alt == 1, altmethod (NFADV-02): the forecast test. P = the altmethod fit set
+*** (real relyr <= -1 plus the planted reference row(s)), Q = the real post horizons.
+*** A = Z_Q (Z_P' Z_P)^-1 Z_P' is the unweighted-OLS forecast operator (the same fit
+*** as the display line's pre-period cut), d = b_Q - A b_P, and the test covariance
+*** propagates the fitted line's uncertainty and the pre/post covariance:
+*** S = V_QQ + A V_PP A' - A V_PQ - V_QP A'; W = d' S^+ d, q = rank(S). The S^+,
+*** rank, and the residual-in-column-space check share one eigensystem and one
+*** scale-aware tolerance (a residual component outside col(S) is a degeneracy, not
+*** a testable direction).
+***
+*** Both statistics use Ftail(q, dfr, W/q) when dfr is a valid residual df and
+*** chi2tail(q, W) otherwise (the wooldid_ptp convention).
+cap mata: mata drop wooldid_advx()
+mata:
+void wooldid_advx(string scalar bn, string scalar vn, string scalar rn,
+                  real scalar esrel, real scalar tt, real scalar alt,
+                  real scalar dfr, string scalar pn)
+{
+    real colvector b, rel, z, g, r, sel, idxP, idxQ, bP, relP, d, c, resid
+    real matrix V, X, U, T, M, ZP, ZQ, ZZi, Aop, VPP, VPQ, VQQ, S, US
+    real rowvector lam, sv, lamS
+    real scalar k1, np, npr, nq, scale, tol, rankM, q, W, p
+    st_local("advpstat", "degen")
+    b = st_matrix(bn)'
+    V = st_matrix(vn)
+    rel = st_matrix(rn)
+    if (hasmissing(V) | hasmissing(b) | hasmissing(rel)) return
+    if (alt == 0) {
+        X = J(rows(rel), 1, 1), rel
+        V = (V + V')/2
+        U = .
+        lam = .
+        symeigensystem(V, U, lam)
+        scale = max(abs(lam))
+        if (scale <= 0 | scale >= .) return
+        tol = scale*1e-12
+        sel = selectindex(lam' :> tol)
+        k1 = rows(sel)
+        if (k1 == 0) return
+        T = diag(1:/sqrt(lam[sel]')) * U[., sel]'
+        z = T*b
+        M = T*X
+        sv = svdsv(M)
+        rankM = sum(sv :> max(sv)*1e-12)
+        q = k1 - rankM
+        if (q <= 0) return
+        g = svsolve(M, z)
+        r = z - M*g
+        W = r'r
+    }
+    else {
+        idxP = selectindex(rel :<= -1)
+        idxQ = selectindex(rel :>= 0)
+        npr = rows(idxP)
+        nq = rows(idxQ)
+        if (npr == 0 | nq == 0) return
+        bP = b[idxP] \ 0
+        relP = rel[idxP] \ esrel
+        if (tt) {
+            bP = bP \ 0
+            relP = relP \ (esrel - 1)
+        }
+        np = rows(relP)
+        ZP = J(np, 1, 1), relP
+        ZQ = J(nq, 1, 1), rel[idxQ]
+        ZZi = invsym(ZP'ZP)
+        if (ZZi[1,1] == 0 | ZZi[2,2] == 0) return
+        Aop = ZQ*ZZi*ZP'
+        VPP = J(np, np, 0)
+        VPP[|1,1 \ npr,npr|] = V[idxP, idxP]
+        VPQ = J(np, nq, 0)
+        VPQ[|1,1 \ npr,nq|] = V[idxP, idxQ]
+        VQQ = V[idxQ, idxQ]
+        d = b[idxQ] - Aop*bP
+        S = VQQ + Aop*VPP*Aop' - Aop*VPQ - VPQ'*Aop'
+        S = (S + S')/2
+        US = .
+        lamS = .
+        symeigensystem(S, US, lamS)
+        scale = max(abs(lamS))
+        if (scale <= 0 | scale >= .) return
+        tol = scale*1e-12
+        sel = selectindex(lamS' :> tol)
+        q = rows(sel)
+        if (q == 0) return
+        c = US[., sel]'d
+        resid = d - US[., sel]*c
+        if (norm(resid) > 1e-8*max((norm(d), sqrt(scale)))) return
+        W = sum(c:^2 :/ lamS[sel]')
+    }
+    if (W >= .) return
+    if (dfr < .) p = Ftail(q, dfr, W/q)
+    else p = chi2tail(q, W)
+    if (p >= .) return
+    st_numscalar(pn, p)
+    st_local("advpstat", "ok")
 }
 end

@@ -19,7 +19,7 @@ scalar|r2_withinadj|+1.96cd05071f3fdX-003
 scalar|rmse|+1.0519a995312caX-001
 scalar|rss|+1.4bd65e9d9a68eX+006
 scalar|N_dropped|+0.0000000000000X-3ff
-scalar|adversarial_pval_att|+1.65da3335557fcX-043
+scalar|adversarial_pval_att|+1.94b7917c06251X-011
 macro|cmd|wooldid
 macro|wdid_replayv|1
 macro|wdid_esrel|-2
@@ -102,9 +102,9 @@ mat|wdidmainresults|5|4|+1.f79bdc59e95f6X-027
 mat|wdidmainresults|5|5|+1.2ba46ea965faaX-001
 mat|wdidmainresults|5|6|+1.ebca78344145eX-001
 mat|wdidmainresults|5|7|+1.0000000000000X+000
-matnames|adversarial_line_att|1x2|y1|t _cons
+matnames|adversarial_line_att|1x2|y1|slope intercept_rt0
 mat|adversarial_line_att|1|1|-1.f1b3ed9555622X-004
-mat|adversarial_line_att|1|2|+1.b37d6fe2aab5eX-001
+mat|adversarial_line_att|1|2|-1.f1b3ed9555620X-003
 matnames|escomp|3x8|pre1 post0 post1|ncohorts nunits nclusters nobs sumw_att wshare_att wshare_att_it relyr
 mat|escomp|1|1|+1.0000000000000X+001
 mat|escomp|1|2|+1.9000000000000X+005

@@ -377,22 +377,28 @@ prior to treatment. Values above -1 (the onset period or later) are rejected wit
 {phang}{opt joint:tests}: Calculate joint statistical significance tests of all requested pre-treatment relative time period-specific effects. Caution: simulations suggest these
 tests tend to be particularly sensitive to whether you have a sufficient number of clusters in your sample for standard error estimation. {p_end}
 
-{phang}{opt adv:ersarial}: Tests the joint hypothesis that all estimated relative time period-specific effects fall on a single line, where the line is chosen rather adversarially.
-Specifically, the line against which estimates are tested is that chosen by the OLS regression of {it:coef_rt} on {it:time_rt} where {it:coef_rt} is the estimated coefficient in
-relative time period
-{it:rt} and where {it:time_rt} is equal to the relative time period. Note that the variable {it:coef_rt} includes values of 0 for the reference period (or periods, if {it:timetrends} and
-{it:esfixedbaseperiod} are specified). The final p-values presented are from the F-test of the the joint null hypothesis that all non-reference period relative-time period specific effects
-are equal to the fitted values from the OLS best fit line. These tests will not be conducted if an insufficient number of relative time period-specific treatment effects are requested
-(either overall, or within specific subgroups). {p_end}
+{phang}{opt adv:ersarial}: Tests the composite null hypothesis that all estimated relative time period-specific effects fall on a single line - some line, with slope and intercept
+unknown - a null that is adversarial toward finding pre-trend violations in that the line is chosen to fit the estimates as well as possible. The p-value comes from a calibrated
+minimum-distance test on the event-study coefficients and their full variance-covariance matrix (the same objects returned in {it:e(b_es_type)} and {it:e(V_es_type)}): the nuisance
+line is estimated by generalized least squares under a generalized inverse of that covariance, and the minimized quadratic distance is referred to an F distribution whose numerator
+degrees of freedom equal the residual rank (the rank of the event-study covariance minus the number of line parameters identified), with the regression's residual degrees of freedom
+in the denominator (a chi-squared reference is used when no residual degrees of freedom are available). The p-value requires {it:esfixedbaseperiod}: under the pooled reference regime
+no single omitted period exists, so a caution is printed and the fitted line is reported without a p-value. If the event-study covariance is degenerate (as is typical under
+{it:timetrends}), a caution is printed and no p-value is computed. For display, wooldid also reports a line fit by the unweighted OLS regression of {it:coef_rt} on {it:time_rt},
+where {it:coef_rt} is the estimated coefficient in relative time period {it:rt} and {it:time_rt} is the relative time period; the variable {it:coef_rt} includes values of 0 for the
+reference period (or periods, if {it:timetrends} and {it:esfixedbaseperiod} are specified). These tests will not be conducted if an insufficient number of relative time
+period-specific treatment effects are requested (either overall, or within specific subgroups). {p_end}
 
-{phang}{opt altmethod_adversarial}: Alternate method of implementing the test above, which projects a trend forward using the pre-treatment coefficients only, and
-then which only tests to see if the post-treatment coefficients collectively fall in line with the projected values. This likely reflects a weaker test than
-the primary implementaiton, but may be preferred under certain circumstances. {p_end}
+{phang}{opt altmethod_adversarial}: Alternate method of implementing the test above, which projects a trend forward using the pre-treatment coefficients only (plus the planted
+zero-valued reference row or rows), and then tests whether the post-treatment coefficients collectively fall in line with the projected values. The test propagates the full
+forecast covariance: writing the post-treatment coefficients as {it:b_Q}, the pre-treatment fit set as {it:b_P}, and the linear operator taking {it:b_P} to the forecasts as {it:A},
+the forecast error {it:b_Q - A b_P} is tested against its complete covariance {it:V_QQ + A V_PP A' - A V_PQ - V_QP A'}, so uncertainty in the fitted pre-period line and the
+pre/post covariance both count against the null. Like the primary implementation, the p-value requires {it:esfixedbaseperiod}. {p_end}
 
 {phang}{opt pretrendpow:er(numlist)}: Reports Roth (2022)-style pre-trend power diagnostics for each requested power level (specified in percent as integers strictly between 5 and 100,
 e.g. {it:pretrendpower(50 80 90 95)}): a GLS estimate of the linear pre-trend slope with its standard error and confidence interval (fit through the reference period on the pre-treatment
 event-study coefficients using their full variance-covariance matrix from {it:e(V_es_{it:type})} — a more efficient and validly-inferenced line than the display-oriented
-{it:e(adversarial_line_{it:type})}, which is an unweighted fit over all horizons); the minimum linear pre-trend each pre-test would detect with the requested power ({it:mdt_wald} powers
+{it:e(adversarial_line_{it:type})}, which is an unweighted fit over all horizons, or over the pre-period horizons only under {it:altmethod_adversarial}); the minimum linear pre-trend each pre-test would detect with the requested power ({it:mdt_wald} powers
 the joint pre-trend test, an F test with the regression's residual degrees of freedom; {it:mdt_nis} powers the test that any pre-period coefficient is individually significant — the
 convention of Roth's {it:pretrends} package, whose size is also reported since it exceeds its nominal level when there are several pre-periods); and the bias each such trend would imply
 for that block's pooled estimand {ul:if it continued into the post-treatment period} (the minimum detectable trend itself depends only on the design's precision, never on the estimated
@@ -687,9 +693,11 @@ efficiency in the main regression or under certain other circumstances. {p_end}
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses, displays raw output from the regression estimated, and prints progress reports throughout the estimation process.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
 
-{phang}{opt gte:ffects}: Returns (and, for tables of up to 200 rows, prints) the individual cohort-by-relative-period effect estimates that every {it:wooldid} aggregate is built
-from, in {it:e(gteffects)} — one row per estimated {it:i}-by-relative-period cell, read directly off the underlying regression's coefficient vector at essentially zero additional
-computation. Columns: {it:i} (the cohort/unit identifier value), {it:onset} (that unit's effective treatment onset, after any {cmd:anticipation()} shift), {it:caltime} (the calendar
+{phang}{opt gte:ffects}: Returns (and, for tables of up to 200 rows, prints) the individual cohort-by-relative-period effect estimates underlying {it:wooldid}'s aggregates
+(the exact building blocks for the plain binary designs the identity notes below describe; under transformations, time-varying interactive controls, or {cmd:impvalues} the aggregates
+are not simple reweightings of these rows), in {it:e(gteffects)} — one row per estimated {it:i}-by-relative-period cell, read directly off the underlying regression's coefficient vector at essentially zero additional
+computation. Note that a coefficient dropped by the regression (collinearity omission) simply has no row: the table does not distinguish a partially identified horizon from a complete
+one on its own - under default safety the dropped-coefficient screen errors first, but under {it:safety(off)} compare the row count against the expected cohort-by-period cells. Columns: {it:i} (the cohort/unit identifier value), {it:onset} (that unit's effective treatment onset, after any {cmd:anticipation()} shift), {it:caltime} (the calendar
 period the cell covers), {it:relyr} (period relative to onset), {it:estimate}, {it:se}, {it:p}, {it:lb_95ci}, {it:ub_95ci}, {it:inwindow} (1 if the cell falls inside the reported
 event-study window), {it:nobs} (estimation-sample observations in the cell), and the cell's total estimation weight under each requested estimand ({it:w_att}, {it:w_att_it},
 {it:w_att_i}, {it:w_att_itime}; missing for estimands not requested). The weighted mean of {it:estimate} under any of these weight columns over the relevant cells reproduces the
@@ -803,9 +811,11 @@ does not render the partial block.{p_end}
 subgroup, when used, in the local macros: e(joint_horiz_s{it:sgcase}), e(joint_horiz_i_s{it:sgcase}), e(joint_Choriz_s{it:sgcase}), and e(joint_Choriz_i_s{it:sgcase}), where {it:sgcase}
 is the value of the subgroup. {p_end}
 
-{synopt: Adversarial Line Tests:} P-values from joint tests of the hypothesis that all (non-reference) relative-time period treatment effect estimates fall on the same line
- are found in the scalars {it:e(adversarial_pval_att)}, {it:e(adversarial_pval_ame)}, {it:e(adversarial_pval_att_s[SG])}, etc. The coefficient and intercept of the line used in
- these tests may be found in matrices named {it:e(adversarial_line_att)}, etc. {p_end}
+{synopt: Adversarial Line Tests:} P-values from the composite-null tests that all (non-reference) relative-time period treatment effect estimates fall on the same line
+ are found in the scalars {it:e(adversarial_pval_att)}, {it:e(adversarial_pval_ame)}, {it:e(adversarial_pval_att_s[SG])}, etc.; they are posted only under {it:esfixedbaseperiod}
+ and only when the event-study covariance is not degenerate (a caution is printed otherwise). The display-oriented fitted line is always returned in matrices named
+ {it:e(adversarial_line_att)}, etc., with columns {it:slope} and {it:intercept_rt0}; {it:intercept_rt0} is the fitted value at numeric relative time 0, regardless of wooldid's
+ internal nonnegative time coding. {p_end}
 
 {synopt: SG Effect Homogeneity Tests} For each estimate type (ATT, ATT_it, AME, etc.), the joint test that all subgroups have the same such post-treatment effect (namely, the
 same effect as the lowest numbered SG) may be found in the scalar {it:e(joint_att_allsgssame)} and analogously named scalars for other treatment effect types. For pre-treatment effects,
