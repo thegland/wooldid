@@ -21,6 +21,9 @@ version 16.0
     * global (namespaced like WOOLDID_CLEANUP) set to the failing rc in the shell's
     * rc-gated epilogue below whenever a wooldid invocation fails - at the parse
     * stage or anywhere later - and cleared there on any successful completion.
+    * (one deliberate exception, per NFRPL-01: a post-estimation permutation-phase
+    * failure restores the still-valid observed results and clears the marker on its
+    * way out, so those results remain replayable.)
     * while it is set, the stored e() results predate the user's latest (failed)
     * attempt, so redisplaying them silently would be misleading. exiting here
     * leaves the marker set: replay stays refused until a wooldid call completes
@@ -242,7 +245,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * create a variable signifying sample membership and update it to reflect restrictions imposed by the user in "`if'"
   * as well as the following restrictions: non missing i & t identifiers, non missing outcomes, non-missing weights, weights are positive and exceed zero, non missing controls, non missing cluster variables,
-  * note: this does not apply to direct pass controls and fe
+  * note: the loop below extends the non-missingness restriction to the variables inside fe(), controls(), and the other passed varlists (factor notation stripped)
 	tempvar ifvar
   if "`if'" != ""{
 		qui gen `ifvar' = `if'
@@ -607,7 +610,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     local max_t = r(max) + 1
 
 
-    * set _t into all positive terms to allow usge in regressions
+    * set _t into all positive terms to allow usage in regressions
     qui replace `_t' = `_t'+ `min_t' + 1
 
     *redefine the ref period macro for future use and then do a little bit of housekeeping
@@ -1002,7 +1005,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 		local contreatcontrolinserterFE
 		local contreatcontrolinserter
 
-    * handle basic, byTreated, byTtre, and byCohort in order since these are successively more intensive and supersede eachother
+    * handle basic, byTreated, byTtre, and byCohort in order since these are successively more intensive and supersede each other
 
     * basic just partials out the baseline effect of your contreat control. implicitly, this effect is pooled in your control group and reference period
     * this text initializes contreatcontrolinserterfe correctly if using basic w/o a lattice
@@ -1627,7 +1630,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`fastnose'" != "" local marginsdof nose
   tempname f9tab
 
-  * initialize some times
+  * initialize the joint-test p-value locals
   local joint_horiz_i
   local joint_Choriz_i
 
@@ -2358,7 +2361,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * re: estimability by sg. given each sg is composed of cohorts, if the sg exists in sample, then
               *     then this margins should be estimable since we would have seen the sg's cohorts dropped earlier
               *     if there was no post period or an insufficient pre-period
-              * problem: this doens't guarantee we see the same relative periods, however
+              * problem: this doesn't guarantee we see the same relative periods, however
               qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof'
               local matrixstartgrab = floor(`=colsof(r(b))'/2)+1
               tempname ___`horizitem'_horiz_s`sgcase'
@@ -2378,7 +2381,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 local f2v_`f2k' `f2vmat'
                 local f2keys `f2keys' `f2k'
               }
-              *the above will be udpated w/ rownames / relyrs by the below
+              *the above will be updated w/ rownames / relyrs by the below
 
               * SGs need not have the same number of relative periods appear for each
               * this code block below figures out what relative periods appear for them
@@ -2487,7 +2490,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
 
 
-    * joint test the sg effect estimates against eachother - are they the same or different?
+    * joint test the sg effect estimates against each other - are they the same or different?
     * do not suppress these like normal joint tests; this is a key point of using SGs
     * in theory this could be expanded further as well
     * E1: ONE posted margins pass per (estimand x pre/post) now serves BOTH the pairwise
@@ -2707,7 +2710,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
 
-      *************** joint test the sg AMEs  against eachother -
+      *************** joint test the sg AMEs  against each other -
       * E1: see the binary twin above - one posted pwcompare pass per (estimand x pre/post)
       * serves both the pairwise table and the all-subgroups-equal joint test
       if wordcount("`sglist'") > 1 {
@@ -3262,7 +3265,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * the plan is just to push through result estimates and SEs to e(b) and e(V)
   * without giving any information about covariance (which we did not estimate anyway)
-  * this means we will get the correct coef and SE when using esttab... but you won't be able to test estimates against eachother, use lincom to combine estimates, etc.
+  * this means we will get the correct coef and SE when using esttab... but you won't be able to test estimates against each other, use lincom to combine estimates, etc.
   if "`subgroups'" != "" {
     if "`suppresssgprimaryeffects'" == "" {
       local sgnum 0
@@ -3674,7 +3677,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     error 198
   }
 
-  *Confirm correct weight usge if using poisson
+  *Confirm correct weight usage if using poisson
   if "`weight'" == "aweight" & "`poisson'" == "poisson" {
     dis as error "Error: poisson only accepts pweights, not aweights."
     error 198
@@ -3844,7 +3847,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
 
-  * extract contreatcontrol type and error out if misspecifeid
+  * extract contreatcontrol type and error out if misspecified
   if "`contreatcontrols'" != "" {
     foreach word in `contreatcontrols' {
       if inlist("`word'",  "byTreated", "byTtre", "byCohort", "byTime") == 0 & inlist("`word'","basic","untreatedZero") == 0 {
@@ -3922,10 +3925,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   local t = word("`varlist'",3)
   local ttre_asgiven = word("`varlist'",4)
 
-  * F6: permutation-inference screens (the engine lands in a follow-up commit; until
-  * then wooldid_permctl ends in a loud not-yet-enabled refusal, so these options can
-  * never silently no-op). deep checks live in the subprogram to conserve this
-  * program's compiled-size headroom
+  * F6: permutation-inference screens. deep checks live in the subprogram
+  * (wooldid_permctl) to conserve this program's compiled-size headroom
   if "`permute'" == "" {
     local permstray
     if `permreps' != 0 local permstray permreps()
@@ -4398,14 +4399,6 @@ end
 
 
 
-* ============================================================================
-* F7 subprograms: Roth (2022) pre-trend power diagnostics.
-* Implemented as subprograms because wooldid_worker sits close to Stata's
-* per-program compiled-size ceiling (verified: sizable inline additions make
-* the ado fail to load with r(1000)).
-* ============================================================================
-
-* parse-time validation for pretrendpower()
 *** F6: parse-time screens for permutation inference (author's brief: cluster nesting
 *** in treatment-onset levels; refuse impvalues/unconditionalse/contreatwithin; reps
 *** xor exact; strata subset checks). kept out of wooldid_validate for size headroom.
@@ -4840,7 +4833,14 @@ version 16.0
 end
 
 
+* ============================================================================
+* F7 subprograms: Roth (2022) pre-trend power diagnostics.
+* Implemented as subprograms because wooldid_worker sits close to Stata's
+* per-program compiled-size ceiling (verified: sizable inline additions make
+* the ado fail to load with r(1000)).
+* ============================================================================
 
+* parse-time validation for pretrendpower()
 cap prog drop wooldid_ptpcheck
 prog def wooldid_ptpcheck
 version 16.0
@@ -5967,7 +5967,7 @@ end
 
 *** F6: assignment generation for permutation inference. fills <assignname> (C x R,
 *** frame row order) and c_locals: wdp_R, wdp_npd/wdp_nps (possible-assignment count,
-*** double and string), wdp_caut1/2 (cautions), wdp_err (fatal message, caller raises)
+*** double and string), wdp_caut0/1/2 (cautions), wdp_err (fatal message, caller raises)
 cap mata: mata drop wooldid_permx()
 cap mata: mata drop wooldid_permx_enum()
 cap mata: mata drop wooldid_permx_msp()
