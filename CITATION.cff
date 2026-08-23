@@ -9,7 +9,7 @@ authors:
 abstract: >-
   A suite of tools in Stata for implementing difference-in-differences style
   analyses with staggered treatment onset using the two-way fixed effects
-  approach proposed in Wooldridge (2021) and the high dimensional fixed
+  approach proposed in Wooldridge (2025) and the high dimensional fixed
   effects estimators developed by Correia (2017). Features include estimation
   of overall average treatment effects, event study style estimates,
   pre-trend tests, subgroup/treatment-arm specific effects, continuous

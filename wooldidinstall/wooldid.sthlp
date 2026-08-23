@@ -28,7 +28,7 @@
 {viewerjumpto "Disclaimer" "wooldid##disclaimer"}{...}
 {title:Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions}
 
-{pstd} {bf:wooldid} -- Suite for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2021)
+{pstd} {bf:wooldid} -- Suite for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2025)
 and the high dimensional fixed effects estimators developed by Correia (2017). Features include estimation of various types of average treatment effects, comparison of treatment effects
 across subgroups, estimation of event study style estimates and related parallel trends assumption tests, and estimation of average and marginal treatment effects in the presence of a
 continuous treatment (or treatment intensity) variable [experimental]. This suite also can produce event study plots, histograms of treatment effects by cohort, and plots of treatment
@@ -99,7 +99,7 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 {title:Description of Estimation Approach}
 
 {pstd}
-{bf:wooldid} estimates various types of difference-in-differences treatment effects in the vein of Wooldridge (2021), with extensions to handle continuous treatments and estimation of effects by
+{bf:wooldid} estimates various types of difference-in-differences treatment effects in the vein of Wooldridge (2025), with extensions to handle continuous treatments and estimation of effects by
 subgroup or treatment arm. The program does not currently accommodate cases where treatment is reversible -- once treated, cohorts must remain treated.{p_end}
 
 {pstd}
@@ -158,7 +158,7 @@ the regression is saturated with i-t indicator variables and all treatment effec
 or dosage. When cohorts are coarse -- i.e., there are multiple units within each cohort-period cell -- and when a continuous treatment variable varies
 within i-t cells, estimates of the effect of the continuous treatment variable can be computed within each treated i-t cell. To ensure treatment effect
 heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed.
-Note that this approach is a bit speculative and is not covered in Wooldridge (2021), though Wooldridge has
+Note that this approach is a bit speculative and is not covered in Wooldridge (2025), though Wooldridge has
 {browse "https://twitter.com/jmwooldridge/status/1695115782739435922?s=61&t=pXC6R4euc7LaN6MMB5VApQ":informally suggested}
 handling continuous treatments using interactions between treated cell indicators and the continuous treatment variable. {p_end}
 
@@ -310,7 +310,7 @@ using the delta method, taking the observed values of the relevant variables as 
 in those observed values (i.e., unconditional standard errors; see the discussion of {it:vce(unconditional)} in {help margins}). Whether one should wish to take the observed values of one's
 covariates as fixed likely varies from context to context. {p_end}
 
-{pstd} Does using unconditional standard errors make a large difference? Wooldridge (2021) expresses the view that conditional and unconditional standard errors often should be similar.
+{pstd} Does using unconditional standard errors make a large difference? Wooldridge (2025) expresses the view that conditional and unconditional standard errors often should be similar.
 Intuitively, this ought to be true whenever samples are large enough that sampling variation in covariates is ignorable (more precisely, ignorable within cohort-time period cells).
 Unconditional standard errors may be more impactful, however, when samples are small, or when sample weights make particular observations very influential. Additionally, when
 using unconditional standard errors, subgroup-specific estimates (as obtained using {it:subgroups()} or when computing event study estimates) can be sensitive to data from observations
@@ -653,7 +653,7 @@ specified using factor notation, so that {it:wooldid} knows if they are to be in
 indicator variables. Second, the variables are de-meaned by cohort (i) and then treatment effects are permitted to vary linearly with the de-meaned variables. This is achieved by including
 interactions between the de-meaned controls and all Tz_it dummies included in the model. The specification used is similar to as with {it:coarsecohortcontrols}, but differs in that these terms
 are marked so that variation associated with them is reported as part of the treatment effects (as opposed to being partialled out from the treatment effects). This specification most closely
-mimics the approach to including covariates that appears in Wooldridge (2021). When using only one interactive control, ATTs obtained using this option should be similar to those obtained
+mimics the approach to including covariates that appears in Wooldridge (2025). When using only one interactive control, ATTs obtained using this option should be similar to those obtained
 when specifying that variable as a continuous treatment variable and then separately including controls that interact the continuous treatment variable with time dummy variables. {p_end}
 
 
@@ -851,9 +851,9 @@ from the underlying regression estimator, wherever available. {p_end}
 all graphs generated will be saved to a file with your specified name in STATA's working directory. {p_end}
 
 {pstd} If the option {it:verbose} is specified, the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called {it:___wooldidfullmodel}, which can be
-accessed using standard {it:estimates restore} type syntax. Note that {it:___wooldidfullmodel} and {it:__marginsmodel} are reserved scratch estimate names: {it:wooldid} overwrites and
-removes stored estimates carrying these names on every run, including runs that end in an error (under {it:verbose}, {it:___wooldidfullmodel} is retained on failed runs as well, for
-inspection). Do not store your own estimates under these names. Under {it:verbose} with {it:poisson} (in the high-dimensional-fixed-effects estimation path), the {it:_ppmlhdfe_d} scaffolding
+accessed using standard {it:estimates restore} type syntax. Note that {it:___wooldidfullmodel} is a reserved scratch estimate name: {it:wooldid} overwrites and
+removes a stored estimate carrying this name on every run, including runs that end in an error (under {it:verbose}, {it:___wooldidfullmodel} is retained on failed runs as well, for
+inspection). Do not store your own estimates under this name. Under {it:verbose} with {it:poisson} (in the high-dimensional-fixed-effects estimation path), the {it:_ppmlhdfe_d} scaffolding
 variable that {it:ppmlhdfe} creates is also retained in the dataset rather than dropped at exit. Note that coefficient-level replay of the stored model ({it:lincom}, {it:test},
 {it:matrix list e(b)}) works, but data-touching replay ({it:predict}, {it:margins}) does not: the model's regressors are internally constructed temporary variables that no longer exist
 after {it:wooldid} returns. {p_end}
@@ -890,7 +890,7 @@ estimates will not, in general, yield valid results. This limitation applies to 
 {title:Comparison to Related Estimators}
 
 {pstd} {ul:Comparing Output to hdidregress twfe:}
-The STATA 18 command {help hdidregress} has an option for implementing Wooldridge (2021) style estimates. Its implementation takes the Mundlak approach to estimation
+The STATA 18 command {help hdidregress} has an option for implementing Wooldridge (2025) style estimates. Its implementation takes the Mundlak approach to estimation
 and uses the command {help regress}, in conjunction with {help margins}, to compute estimates. Estimates from {it:hdidregress twfe} with the option {it:notyet}
 (i.e., allowing use of not-yet treated cohorts as controls) should be comparable to estimates from {it:wooldid} using the {it:att} estimand-type, a pooled
 reference period (i.e., not using {it:esfixedbaseperiod}), unconditional standard errors, and sample weights which (if present) do not vary within units.
@@ -905,7 +905,7 @@ match between the two methods, a {it:wooldid} user will have to manually adjust 
 {it:wooldid} user will need to specify i.t#c.control to replicate the behavior of including that control in {it:hdidregress}).  {p_end}
 
 {pstd} {ul:Comparing Output to did_imputation:}
-The Borusyak, Jaravel, and Spiess (2023) difference-in-differences imputation estimator is implemented in the package {help did_imputation}. Wooldridge (2021)
+The Borusyak, Jaravel, and Spiess (2023) difference-in-differences imputation estimator is implemented in the package {help did_imputation}. Wooldridge (2025)
 proves some equivalence results between their estimator and the Wooldridge estimator. For binary treatments, {it:wooldid} will yield the same estimates as
 {it:did_imputation} given that one uses the {it:att} estimand-type, uses a pooled reference period (i.e., not using {it:esfixedbaseperiod}), does not
 use unconditional standard errors, and does not use controls. With controls, {it:wooldid} and {it:did_imputation} will still yield the same results provided
@@ -1040,7 +1040,7 @@ Boston College Department of Economics. https://ideas.repec.org/c/boc/bocode/s45
 
 {phang} Ibragimov, Rustam and Muller, Ulrich K. t-Statistic Based Correlation and Heterogeneity Robust Inference. Journal of Business & Economic Statistics, 2010. {p_end}
 
-{phang} Wooldridge, Jeffrey M. Two-Way Fixed Effects, the Two-Way Mundlak Regression, and Difference-in-differences Estimators. Working Paper, 2021. https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345 {p_end}
+{phang} Wooldridge, Jeffrey M. Two-Way Fixed Effects, the Two-Way Mundlak Regression, and Difference-in-differences Estimators. Empirical Economics, 2025. {p_end}
 
 
 
