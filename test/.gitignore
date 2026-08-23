@@ -7,10 +7,20 @@ suite/out/
 *.log
 # Log-scrape sentinel artifacts written by the targeted test_*.do suites:
 advg_*.txt
+advstat_*.txt
+cfxlat_*.txt
+cfxtok_*.txt
+esfsup_*.txt
 fn_*.txt
 gt_*.txt
 perm_*.txt
+perm2_*.txt
+ptpd_*.txt
+ptpr_*.txt
+sgdom_*.txt
 sgsp_*.txt
+vald_*.txt
+w3f_*.txt
 # Plot outputs from test_fastnose.do:
 fnplot_ES*
 .DS_Store
