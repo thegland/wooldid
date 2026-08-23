@@ -2362,6 +2362,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * problem: this doesn't guarantee we see the same relative periods, however
               qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof'
               local matrixstartgrab = floor(`=colsof(r(b))'/2)+1
+              * capture the adversarial estimability count NOW, while r(b) is authoritative:
+              * the single-relyr-level glevelsof fallback below is rclass and wipes r(b)
+              local finaladvtest  `=colsof(r(b))'
               tempname ___`horizitem'_horiz_s`sgcase'
               matrix `f9tab' = r(table)
               if rowsof(`f9tab') < 6 {
@@ -2433,11 +2436,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * handle the adversarial pre-trends test
               * NFADV-01/02/05: statistics + display line via wooldid_advstat (see the
               * overall binary site); a gap-cancelled fit only skips THIS subgroup
-              local finaladvtest
-              cap confirm matrix r(b)
-              if _rc == 0 {
-                local finaladvtest  `=colsof(r(b))'
-              }
+              * (finaladvtest was captured beside matrixstartgrab above: a late
+              * cap-confirm read of r(b) here found glevelsof's r() instead whenever the
+              * single-relyr-level fallback had fired - harmless only because that case
+              * is <= 2 columns and fails the > 2 gate either way)
               if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
               if "`adversarial'" == "adversarial"   {
                 if  `finaladvtest' > 2  {
