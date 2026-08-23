@@ -1224,7 +1224,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     local relyrlist
     tempname relyrcolumn
     local bvars: colnames e(b)
-    local relyrlst
     local horizlist
     local horizonend = `horizonstarter' + `espre' + `espl' -1
     forval horiz = `horizonstarter'(1)`horizonend' {
@@ -1345,7 +1344,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`regtype'" != "poisson" local rss = e(rss)
   if "`poisson'" == "poisson" {
     local r2pseud = e(r2_p)
-    local converged = e(converged)
     local chi2 = e(chi2)
   }
   else {
@@ -3268,10 +3266,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * this means we will get the correct coef and SE when using esttab... but you won't be able to test estimates against each other, use lincom to combine estimates, etc.
   if "`subgroups'" != "" {
     if "`suppresssgprimaryeffects'" == "" {
-      local sgnum 0
       foreach sgcase in `sglist' {
         matrix `ebformer' = `ebformer' \ `wdid_sg`sgcase''
-        local ++sgnum
         local rownamespool_sginj = subinstr("`rownamessg`sgcase''",":","_SG`sgcase'_",.)
         local rownamespool `rownamespool' `rownamespool_sginj'
       }
@@ -4574,16 +4570,8 @@ prog def wooldid_permrun
 version 16.0
   syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis) compname(string)]
 
-  * observed statistics come off the still-active observed e(). stored as SCALARS:
-  * a local's decimal round-trip re-parses one ulp off, which breaks the exact test's
-  * observed-is-a-member property (measured: b >= local-copy-of-b evaluates FALSE)
+  * comparison-statistic scalars, filled by the mandatory rep-0 run below (NFPERM-10)
   tempname wdpo1 wdpo2 wdpo3 wdpo4
-  local ec 0
-  foreach ee in `estimands' {
-    local ++ec
-    if "`permtstat'" == "" scalar `wdpo`ec'' = _b[main_`ee']
-    else scalar `wdpo`ec'' = _b[main_`ee']/_se[main_`ee']
-  }
 
   * one row per cluster: its onset level and (optional) stratum
   tempvar smp
@@ -4598,8 +4586,6 @@ version 16.0
   frame put `clus' `ttrevar' `permstrata' if `smp', into(`mpfr')
   frame `mpfr' {
     qui bysort `clus': keep if _n == 1
-    qui count
-    local wdpnclus = r(N)
     if "`permstrata'" == "" {
       tempvar onestr
       qui gen byte `onestr' = 1
@@ -4671,7 +4657,9 @@ version 16.0
   * estimates differ from the full run's in the last digits (the F9 contract), so the
   * comparison statistic comes from a rep-0 fastnose run of the TRUE assignment - this
   * keeps the exact test's observed-is-a-member property bitwise. the display still
-  * shows the full run's estimate
+  * shows the full run's estimate. the statistics are held in tempname SCALARS: a
+  * local's decimal round-trip re-parses one ulp off, which breaks the
+  * observed-is-a-member property (measured: b >= local-copy-of-b evaluates FALSE)
   cap qui wooldid `repcall' `ttrevar' `wtif' , `repopts'
   * NFPERM-10: the comparator fit and its scalars must be valid. formerly a rep-0
   * failure fell through silently (retaining full-run-provenance scalars, breaking the
@@ -4767,7 +4755,6 @@ version 16.0
   * summaries per estimand: add-one two-sided p (exact: plain share - the observed
   * assignment is a member of the enumeration), 5th/95th percentile band, SD
   tempname rsfr
-  tempname distk
   matrix `distname' = J(`ndone', `: word count `estimands'', .)
   local ec 0
   foreach ee in `estimands' {
@@ -4798,9 +4785,6 @@ version 16.0
         local q95 = r(r1)
         qui drop abss
       }
-    }
-    forval q = 1/`=rowsof(`distname')' {
-      * dense-pack the completed draws column-by-column below
     }
     frame drop `rsfr'
     if "`permexact'" != "" local p_`ee' = `nex'/`nuse'
@@ -5742,7 +5726,6 @@ version 16.0
 
     }
     else{
-      local initialflagt `esrelativeto'
       qui   gstats sum relyr, meanonly
       local max = r(max)
       local min = r(min)
@@ -5837,7 +5820,6 @@ version 16.0
             local xlabelstarter `xlabelstarter' )
         }
         else{
-          local initialflagt `esrelativeto'
           qui   gstats sum relyr, meanonly
           local max = r(max)
           local min = r(min)
@@ -5976,9 +5958,9 @@ void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
                    real scalar reps, real scalar exact, string scalar assignname,
                    string scalar pname, string scalar lname)
 {
-    real matrix D, A, blockperms
-    real colvector ons, str, idx, levels, counts, v
-    real scalar C, S, si, lnM, M, R, r, j, k, capexact, capwarn
+    real matrix A
+    real colvector ons, str, idx, levels, v
+    real scalar C, si, lnM, M, R, r, k, capexact, capwarn
     string scalar nps
     st_local("wdp_err", "")
     st_local("wdp_caut1", "")
@@ -6046,9 +6028,8 @@ void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
 real matrix wooldid_permx_enum(real colvector ons, real colvector str)
 {
     real matrix A, B, S1
-    real colvector idx, sub
+    real colvector idx
     real scalar si, n1, n2, a, b
-    string colvector ustr
     // per-stratum enumerations, combined by cartesian product
     A = J(rows(ons), 0, .)
     for (si = 1; si <= rows(uniqrows(str)); si++) {
