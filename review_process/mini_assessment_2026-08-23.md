@@ -160,7 +160,26 @@ two-thirds stale — `contreatelasticitytype(notAType)` and `safety(nonsense)` b
 hard r198 screens in the VAL-G21 closures; only poisexpresults-without-poisson
 remains a silent accept.
 
-## 5. Section verdicts (condensed)
+## 5. Post-commit adversarial verification
+
+One adversarial diff reviewer attacked all five ado/docs commits with a refute-first
+mandate: **5/5 UNREFUTED**. Highlights: the comment-only commit proven by
+comment-stripped byte-identity of parent vs commit blobs (no block comments,
+continuations, or #delimit exist to smuggle code into `*` lines); the permrun
+seeding-loop deletion proven by a full-program read (zero wdpo references before the
+rep-0 overwrite; every intervening exit is a hard error; overwrite-failure exits fire
+before any read); the r()-state attack on the wdpnclus deletion found every r() read
+downstream dominated by its own setter; the contreat message gate proven by
+brace-depth tracking to be literally the enclosing block's own condition; the esplots
+insert byte-identical to its production sibling after whitespace strip, with `min`'s
+only downstream consumer the twoway xlabel() option. Residual observation (pre-existing,
+harmless direction, left as-is): the sthlp reserved-name sentence says the scratch
+estimate is removed "on every run, including runs that end in an error", but a run
+failing before the store neither overwrites nor removes a pre-existing user estimate
+(the shell drop is flag-gated on the store having happened) — the warning overstates
+only in the direction that makes users more cautious.
+
+## 6. Section verdicts (condensed)
 
 Every lens returned "clean after 16 tranches" modulo the items above: shell/validate
 syntax-line parity and the c_local closure verified complete; the four estimation
