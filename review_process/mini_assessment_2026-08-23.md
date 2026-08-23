@@ -110,6 +110,34 @@ correctness (adversarial calibration, RI validity — next phase), performance.
   windows. Hazard-hygiene candidate for the deep phase: capture colsof while r(b) is
   authoritative (the f2bmat/f2vmat pattern three lines up).
 
+## 2b. Author rulings on the tickets (2026-08-23) and their outcomes
+
+- **T-M1: ignore** (author ruling; item stands recorded above for any future pass).
+- **T-M2: author challenged the analysis ("checking the actual matrices would show
+  otherwise"); the matrix check CONFIRMS the defect.** Through an instrumented
+  scratchpad build on the exact battery `cont_sg` configuration (frozen
+  `dta_cont.dta` + identical option string), the r(p) returned by the sg-continuous
+  overjoint contrast is **1×1** with the real joint pre-trend p at [1,1] — sg1:
+  6.209e-06, sg2: 4.109e-07 — while the code reads [1,2]. Stata's expression-context
+  matrix subscripting silently returns missing for out-of-range cells (probed:
+  `A[1,2]` on a 1×1 matrix gives "." with rc 0), so `e(joint_Choriz_s*)` stores "."
+  and the console prints "." where those p-values exist. In the same run the main
+  continuous site (structurally identical margins, reads [1,1]) returned .00308048
+  into e(joint_Choriz), and the main binary site's r(p) is 1×2 with its p at [1,2]
+  (base column missing) — confirming the per-shape index convention the siblings
+  follow. The fix is [1,2]→[1,1] at the two sg-continuous sites; it changes e()
+  values ("." → real p) and `test/baseline/cont_sg.csv` pins the defective "."
+  (sole pinning config), so it awaits the author's fix-now-vs-defer call. Note the
+  full old-vs-new assessment CANNOT catch this class on its own: the old build
+  shares the bug, so both sides show matching "." cells.
+- **T-M3: ignore for now** (author ruling; revisit in the efficiency pass).
+- **T-M4: author graduated; IMPLEMENTED** — finaladvtest is now captured beside
+  matrixstartgrab while r(b) is authoritative, with the late block reduced to the
+  empty/dot fallback. Two-build verification: byte-identical %21x e() dumps and
+  caution streams on a normal sg+esf+adversarial config AND a crafted
+  fallback-firing config (single in-window-horizon subgroup, firing proven in both
+  builds by the one-column e(b_es_att_s2) signature).
+
 ## 3. Finder claims refuted during adjudication
 
 - **Permutation count-string "e+ 15" interior-space claim**: mata's `strofreal`
