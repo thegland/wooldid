@@ -5838,6 +5838,7 @@ version 16.0
 					if "`timetrends'" == "timetrends" qui replace rownamesvar = "reference" if _n == _N - 1
 
           if `esrelativeto' < `min' local min `esrelativeto'
+          if "`timetrends'" == "timetrends" if `esrelativeto' -1  < `min' local min = `esrelativeto' - 1
           local xlabelstarter xlabel(
             forval xlabeltick = `min'(1)`max' {
               local asterisk
