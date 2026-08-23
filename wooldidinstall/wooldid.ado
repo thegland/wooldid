@@ -443,7 +443,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           qui replace `_t' = . if `t' == `mint'
           dis as text " "
           dis as text "Caution: reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
-          dis as text "This does not break estimation, but event study estimates can carry counter intuitive meanings and reflect effect levels by cohort."
+          dis as text "This does not break estimation, but event study estimates can carry counterintuitive meanings and reflect effect levels by cohort."
           dis as text "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
           dis as text "(Or request estimates for fewer pre-treatment horizons.)"
           dis as text " "
@@ -463,7 +463,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           qui replace `_t' = . if `t' <= `mintp1'
           dis as text " "
           dis as text "Caution: reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
-          dis as text "This does not break estimation, but event study estimates can carry counter intuitive meanings and reflect effect levels by cohort."
+          dis as text "This does not break estimation, but event study estimates can carry counterintuitive meanings and reflect effect levels by cohort."
           dis as text "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
           dis as text "(Or: request estimates for fewer pre-treatment horizons, drop request to include timetrends.)"
           dis as text " "
@@ -633,7 +633,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       cap assert r(max) > `refperiod'
       if _rc != 0 local failure 1
       if `failure' == 1 dis as error  "Error: cannot find sufficient pre- and post-treatment periods for the treated units."
-      if `failure' == 1 & "`timetrends'" == "timetrends"  dis as error  "Note that inclusion of cohort-specific time trends increases the required number of pre-treatment units."
+      if `failure' == 1 & "`timetrends'" == "timetrends"  dis as error  "Note that inclusion of cohort-specific time trends increases the required number of pre-treatment periods."
       if `failure' == 1 & `anticipation' > 0 dis as error  "Note: anticipation(`anticipation') shifted every effective onset earlier; a shift larger than the available pre-period window can leave no estimable treated periods."
       if `failure' == 1 error 459
     }
@@ -716,7 +716,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
     qui glevelsof(`subgroups') if `ifstatement' & `t' >= `ttre' , clean local(sglist)
     if wordcount("`sglist'") == 0 {
-      dis as error  "Error: subgroups are specified, but contains no values within sample during the treatment period."
+      dis as error  "Error: subgroups() is specified, but the subgroup variable contains no values within sample during the treatment period."
       error 459
     }
     * subgroup values reaching the treated estimation sample must be integer-valued: a non-integer
@@ -726,7 +726,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * observations) stay tolerated exactly as before, and missing values pass (int(.) == .)
     cap assert `subgroups' == int(`subgroups') if `ifstatement' & `t' >= `ttre'
     if _rc != 0 {
-      dis as error "The subgroup variable contains non-integer values within the treated estimation sample; it must contain only non-negative integers."
+      dis as error "Error: the subgroup variable contains non-integer values within the treated estimation sample; it must contain only non-negative integers."
       error 411
     }
     * F13: subgroup containment. sg never enters the regression - the unit-by-period cell
@@ -933,7 +933,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * controls for coarse case - i.e., where we interacted them with the treatment dummies. ccc_absorb puts them into absorb - only viable for continuous controls of course
   * the astute eye will notice that coarsecontrolinserter w/ categorical controls should partial out the main treatment effects
-  * this does not occur b/c this statement is placed toward the end of the regression statement, meaning multicolinearity forces drops among the controls
+  * this does not occur b/c this statement is placed toward the end of the regression statement, meaning multicollinearity forces drops among the controls
   local coarsecontrolinserter
   local ccc_absorbinserter
   if "`coarsecohortcontrols'" != "" local coarsecontrolinserter i.`_i'#i.`_t'#(`coarsecohortcontrols')
@@ -1240,7 +1240,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   }
 
 
-  * here, we check and see if the main treatment effects have been dropped from the regression for multicolinearity - my tests for this are imperfect, but still useful
+  * here, we check and see if the main treatment effects have been dropped from the regression for multicollinearity - my tests for this are imperfect, but still useful
   if "`safety'" != "off"  {
     local bvars: colnames e(b)
     local catastrophe 0
@@ -1295,7 +1295,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
             if `wordcountproblem' <= 3 {
               local problem_t = `problem_t' - `min_t' - 1
-              dis as error  "Error: a treated cohort-period dummy coefficient was dropped for multicolinearity."
+              dis as error  "Error: a treated cohort-period dummy coefficient was dropped for multicollinearity."
               if "`verbose'" != "" dis as error  "The specific problematic coefficient is: ``testbvar''"
               if "`verbose'" != "" dis as error  "For reference, _i is `_i', _t is `_t', and targetflag is `targetflag'"
               dis as error  "The problem seems to be with the treatment dummy for `i' == `problem_i', relative-`t' == `problem_t'"
@@ -1310,7 +1310,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * > 3 implies we have more than _i, _t, and targetflag (the variable that is 1 for obs contributed to an estimate and 0 otherwise) forming the dropped variable
               * this implies it is not a main effect treatment dummy
               local problem_t = `problem_t' - `min_t' - 1
-              if `catastrophe' == 0 dis as text  "Caution: a treatment period coefficient interacted with something (likely, a term implementing a continuous treatment variable or an interactive control variable) was dropped for multicolinearity."
+              if `catastrophe' == 0 dis as text  "Caution: a treatment period coefficient interacted with something (likely, a term implementing a continuous treatment variable or an interactive control variable) was dropped for multicollinearity."
               if `catastrophe' == 0 & "`lattice'" != "" dis as text  "If using a lattice, this is likely innocuous."
               if `catastrophe' == 0 dis as text  "This could imply your results are not identified, depending on exactly what was dropped."
               if `catastrophe' == 0 dis as text  "Re-estimate with option verbose for details on what was dropped."
@@ -1327,7 +1327,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       }
     }
     }
-    if `catastrophe' > 0 dis as text "Note: the multicolinearity warning above was triggered `catastrophe' times total."
+    if `catastrophe' > 0 dis as text "Note: the multicollinearity caution above was triggered `catastrophe' times total."
     if `bigcatastrophe' == 1 error 322
   }
 
@@ -1648,7 +1648,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
   * loop through requested estimate types - basically just different weights
   foreach item in `att' `att_it' `att_i' `att_itime' {
-    if "`verbose'" == "verbose" dis as text "Wooldid is now computing `item' estimates for full sample, including event study estimates."
+    if "`verbose'" == "verbose" dis as text "Wooldid is now computing `item' estimates for the full sample, including event study estimates."
 
     tempname ___`item'
     * use margins to produce the post treatment average effect within the treated group. captured via targetflag = 1 & t >= treatment period
@@ -1907,7 +1907,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`contreat'" != "" {
 
     foreach item in `att' `att_it' `att_i' `att_itime' {
-      if "`verbose'" == "verbose" dis as text "Wooldid is now working on average marginal effect estimation and production of any requested continuous treatment effects plots, including plots by subgroup."
+      if "`verbose'" == "verbose" dis as text "Wooldid is now working on `item'-weighted average marginal effect estimation and production of any requested continuous treatment effects plots, including plots by subgroup."
       tempname ___C`item'
       * posttreatment average marginal effect of the continuous treatment variable generated here - just a matter of specifying contreat vs targetflag to get an AME of some sort
       * we also no longer need the skip-half-the-matrix adjustment, because w/ a continuous variable things are not computed at 0 and 1
@@ -2042,11 +2042,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           local nametext `cfxplotcase'
           if "`cfxplotcase'" == "cfxpost" & `cfxpost' ==1 {
             local cfxif & `t' >= `ttre' & `ttre' != .
-            local titletext "Post-Treatment `effecttype' Across the `contreat' distribution"
+            local titletext "Post-treatment `effecttype' Across the `contreat' distribution"
           }
           if "`cfxplotcase'" == "cfxpre" & `cfxpre' ==1 {
             local cfxif & `t' < `ttre' & `ttre' != .
-            local titletext "Pre-Treatment `effecttype' Across the `contreat' distribution"
+            local titletext "Pre-treatment `effecttype' Across the `contreat' distribution"
           }
           if "`cfxplotcase'" != "cfxpre" & "`cfxplotcase'" != "cfxpost" {
             local cfxif & `_t' - `min_t' - 1 == `cfxplotcase' & `ttre' != .
@@ -2295,7 +2295,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
     }
   }
-  if "`verbose'" == "verbose" dis as text "Wooldid has finished production of average continuous treatment effects plots and all full treatment sample average marginal effects."
+  if "`verbose'" == "verbose" & "`contreat'" != "" dis as text "Wooldid has finished production of average continuous treatment effects plots and all full treatment sample average marginal effects."
 
 
 
@@ -3650,7 +3650,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   }
   if "`missingpackages'" != "" error 198
 
-  if "`verbose'" == "verbose" dis as text "Wooldid is processing input in preparation of regression estimation."
+  if "`verbose'" == "verbose" dis as text "Wooldid is processing input in preparation for regression estimation."
 
  * This controls the names we use for ES plots; the new syntax is more compatible with the program event_plot
  if "`oldsyntax'" == "oldsyntax" {
@@ -3689,7 +3689,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`safety'" != "off" & "`unconditionalse'" == "unconditionalse" & ("`weight'" == "aweight" ) {
     dis " "
     dis as text "Caution: unconditional standard errors may be unreliable with aweights."
-    dis as text "Set option safety(off) to suppress this warning message."
+    dis as text "Set option safety(off) to suppress this caution."
     dis " "
   }
 
@@ -3883,7 +3883,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
     else{
       dis as text "Caution: interpretation of continuous treatment effects plots for estimands other than the ATT is difficult unless i-t cells (and sometimes cohorts i) are wholly contained within lattice bins."
-      dis as text "As such, wooldid will not produce these plots unless you specify safety = off."
+      dis as text "As such, wooldid will not produce these plots unless you specify safety(off)."
     }
   }
 
@@ -5253,7 +5253,7 @@ version 16.0
   }
   if "`poisson'" == "" {
     if "`r2_within'" != "." {
-      dis as result  "R2 = " %-6.4f `r2' ";  R2adj = " %-6.4f `r2adj' "; R2-within = " %-6.4f `r2_within' ";  R2-withinadj = " %-6.4f `r2_withinadj'
+      dis as result  "R2 = " %-6.4f `r2' ";  R2adj = " %-6.4f `r2adj' ";  R2-within = " %-6.4f `r2_within' ";  R2-withinadj = " %-6.4f `r2_withinadj'
     }
     else{
       dis as result  "R2 = " %-6.4f `r2' ";  R2adj = " %-6.4f `r2adj'
@@ -5488,7 +5488,7 @@ version 16.0
       if "`contreat'" != "" {
         foreach item in `estimandlist' {
           local itemtext = subinstr("`item'","att","ame",.)
-          if "`e(joint_`itemtext'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same `itemtext': " %-8.4f e(joint_`itemtext'_allsgssame)
+          if "`e(joint_`itemtext'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same `itemtext': " %-6.4f e(joint_`itemtext'_allsgssame)
           if "`e(joint_pre_`itemtext'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same pre-treatment `itemtext': " %-6.4f e(joint_pre_`itemtext'_allsgssame)
         }
         dis as result  " "
