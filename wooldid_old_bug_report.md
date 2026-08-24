@@ -10,7 +10,7 @@ Builds: **old** = published wooldid v1.3 (`git main`, prov `old|301b706`) vs
 present. Sources of record: divergence ledger `test/suite/ledger.csv` (row ids cited
 throughout), per-config firing log `test/suite/out/oldnew_compare_verbose.txt`, proof
 narratives `wooldid_solved_issues.md`, prior certification
-`test/suite/REPORT_2026-08-18.md`, preregistration `test/suite/out/PREREG_2026-08-23.md`,
+`test/suite/REPORT_2026-08-18.md`, preregistration `test/suite/PREREG_2026-08-23.md`,
 run record `test/suite/out/SUITE_REPORT.md`.
 
 ---
