@@ -82,7 +82,7 @@ mixed-vintage dumps cannot be compared.
   reldiff against its bound.
 - **Accepted blind spots (documented):** the total-divergence trigger configs
   (`trig_tt_big`, `trig_allest_drop`, `trig_extmiss`, `trig_mintsent_off`,
-  `cov_kitchen`) carry unbounded `*` rows by design — they exist to prove a documented
+  `trig_esfsup_ref`, `cov_kitchen`) carry unbounded `*` rows by design — they exist to prove a documented
   LARGE fix fires, not to constrain its magnitude. Everything else is bounded or named.
 
 ## Tolerance policy
