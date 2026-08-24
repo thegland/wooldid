@@ -127,9 +127,33 @@ correctness (adversarial calibration, RI validity — next phase), performance.
   (base column missing) — confirming the per-shape index convention the siblings
   follow. The fix is [1,2]→[1,1] at the two sg-continuous sites; it changes e()
   values ("." → real p) and `test/baseline/cont_sg.csv` pins the defective "."
-  (sole pinning config), so it awaits the author's fix-now-vs-defer call. Note the
-  full old-vs-new assessment CANNOT catch this class on its own: the old build
-  shares the bug, so both sides show matching "." cells.
+  (sole pinning config). Note the full old-vs-new assessment CANNOT catch this
+  class on its own: the old build shares the bug, so both sides show matching "."
+  cells.
+
+  **AUTHOR RULING (2026-08-23): DEFER — address during the full assessment run,
+  under a mandated evidence protocol.** Second-round verification (author requested
+  full-run proof, skeptical of the toy-vs-full distinction): two cases × two builds
+  — the battery `cont_sg` configuration and a purpose-built well-structured case
+  (8 coarse cohorts × 20 units × 12 periods, unit-level dose varying within
+  cohort-period cells, clean parallel pre-trends by construction, subgroup-specific
+  post effects), each run through the stock build (untouched standard console
+  output) and an instrumented build (r(p)/r(b) dumped mid-run immediately before
+  the exact read lines). Every continuous r(p) — main and per-sg, 2- and 3-horizon
+  — is 1×1 with the real joint p at [1,1] (clean case per-sg p's .053/.469; battery
+  case 6.2e-06/4.1e-07); the binary sites' r(p) is 1×2 with the vacuous
+  0b.targetflag base column at [1,1] and the real p at [1,2], which is the whole
+  sibling index convention. Stock output prints "." on the per-sg ame joint lines
+  while att twins are real; stock values match the blessed baseline bit-for-bit.
+
+  **REQUIRED PROTOCOL for the fix wave (per the author):** before shipping
+  [1,2]→[1,1] at the two sites, produce dumps of the FULL wooldid console output
+  AND the relevant matrices (r(p) and r(b) at the sg-continuous joint-test sites,
+  captured mid-run via an instrumented scratch build) from AT LEAST 3 different
+  example dataset runs, including datasets rich enough to rule out data-input
+  degeneracy as the driver of anything observed; then implement, re-bless
+  `cont_sg.csv` (sole pinning baseline), and document the resulting old-vs-new
+  suite diff explicitly (the comparison alone cannot flag an old-shared defect).
 - **T-M3: ignore for now** (author ruling; revisit in the efficiency pass).
 - **T-M4: author graduated; IMPLEMENTED** — finaladvtest is now captured beside
   matrixstartgrab while r(b) is authoritative, with the late block reduced to the
@@ -182,6 +206,15 @@ as e() macros while full-sample counterparts are scalars (known ledgered
 escalation); CITATION.cff is not on the acd9f7e release checklist (its 2023 dates
 must be refreshed at actual release); permrun's wdpo1-4 comparator tempnames cap at
 four estimands (implicit coupling).
+
+Added post-ruling (from the T-M2 verification runs): the continuous SG-equality
+joint tests print "." alongside T-M2's per-sg lines — "all SGs have the same ame"
+and "...pre-treatment ame" are missing-valued in BOTH probe cases while their att
+twins are real, and the blessed cont_sg baseline pins those scalars as MISSING
+(%21x `+1.0…X+3ff` decodes to Stata missing, not 1.0 — longstanding state, not a
+regression). The clean case's subgroup dose effects differ by construction, so
+rejection, not ".", is the expected outcome there. Distinct site family from T-M2
+(the E1 chain/contrast machinery, not the [1,2] read); undiagnosed; deep-phase item.
 
 Standing-ticket correction: `test/suite/REPORT_2026-08-18.md` ticket 4 is now
 two-thirds stale — `contreatelasticitytype(notAType)` and `safety(nonsense)` became
