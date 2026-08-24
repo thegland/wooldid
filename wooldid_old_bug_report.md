@@ -5,6 +5,17 @@ full assessment run traces to a documented, verified bugfix in old wooldid or to
 documented intended change. No unexplained divergence remains; no regression in current
 wooldid was found.
 
+**2026-08-24 extension (§5):** the new-feature statistical-validation phase. Clean
+bills of health for randomization inference (exactly sized, 7/7 preregistered MC
+configs), pretrendpower's power claims (externally corroborated by Roth's `pretrends`
+package), the F2 event-study b/V returns (reghdfe oracle at machine precision), the
+honestdid handoff, and fastnose parity — plus one headline documented issue class
+(NF-1/NF-2/NF-3): V_es-based joint tests (adversarial, jointtests, roth pre-trend
+Wald, and all continuous-treatment ame ES inference) are severely oversized when the
+cluster VCE is blind to within-cell variation, a long-standing property shared with
+old wooldid, now mechanism-proven and quantified. Fixes deferred to the bug-fixing
+chunk by work-file order.
+
 Builds: **old** = published wooldid v1.3 (`git main`, prov `old|301b706`) vs
 **new** = git HEAD (prov `new|e53671f`). Environment: Stata 19 MP, macOS, gtools
 present. Sources of record: divergence ledger `test/suite/ledger.csv` (row ids cited
@@ -607,3 +618,182 @@ macros, `d2a398e`..), permute/gteffects/ptp returns on their configs, and NFES-0
 commit sha, solved-issues entry, ledger row id, or config name; the underlying
 verification narratives (assessor/verifier waves, parent probes, battery evidence)
 are in `wooldid_solved_issues.md` and the campaign ledger.*
+---
+
+# 5. New-feature statistical validation (2026-08-24 extension)
+
+The assessment's second phase (work-file chunk "New Features") validated the surfaces
+with no old-build analogue by EXTERNAL and STATISTICAL means: preregistered
+Monte-Carlo size/power calibration (`test/suite/PREREG_NEWFEAT_2026-08-24.md`,
+committed 4a39dc1 BEFORE any run; MC component `test/suite/mc/`, 29d3d26), external
+oracles (Roth's `pretrends` package v0.5.1, honestdid v1.1.2, a reghdfe common-onset
+oracle), and deterministic parity grids. Four new permanent suite scripts (f8ac51d,
+110f8f5) bring the `newfeat` component to 7/7 PASS; five new battery configs pin the
+previously-unpinned new-feature surfaces at rtol 0 (c5d00d2). Every MC rep records
+its seed; each row reproduces standalone.
+
+## 5.1 VALIDATED — clean bills of health
+
+- **Randomization inference (`permute()` family): exactly sized, 7/7 preregistered
+  configs PASS.** M=400 each, B=99 (or exact enumeration): shuffle baseline
+  (18/400 rej at nominal .05, band [11,29]); AR(1) rho=.7 within-cluster errors
+  (18) and 1..4x heteroskedastic clusters + permtstat + permtci (18) — the
+  cluster-asymptotics-hostile cases where RI's finite-sample exactness is the
+  selling point; strata (22); probabilities with its 3^10 assignment space (20;
+  inestimable-draw exclusion behaves as the conditioning argument requires);
+  permexact's 20-assignment enumeration (20/400 = .0500 on the nose); analytic
+  weights (23). Secondaries all clean: the 5-95 null band covers the comparator
+  356-361/400 (band [348,372]) in every config; the inverted-t permtci covers the
+  true zero effect 382/400 (band [371,389]); grid-uniformity chi-square flags
+  nothing. The external draw-stream re-implementation (`ri_crosscheck.do`, 5 blocks)
+  passes on the same build.
+- **pretrendpower power claims: PASS both arms.** Planting a linear pre-trend equal
+  to the run's reported mdt_wald yields 83.8% rejection of the pre-trend Wald test
+  (band [.72,.87]); planting mdt_nis yields 82.0% for the any-pre-significant (NIS)
+  test. Roth's own `pretrends` package, fed wooldid's e(b_es)/e(V_es)/e(numpre),
+  agrees: conventions match at 1e-12, mdt_nis vs the package's slope-for-power at
+  reldif 8.2e-4..2.1e-3, package power evaluated at wooldid's mdt_nis(80) =
+  .809..816. (The package reports no data-fitted slope, so wooldid's GLS
+  e(roth_slope) has no package analogue to compare — structural N/A.)
+- **F2 event-study b/V returns: externally reproduced at machine precision.** A
+  common-onset reghdfe TWFE event study (single-treated-cohort formulation)
+  reproduces e(b_es_att) at mreldif ~1e-16, e(V_es_att) BITWISE on 3 of 4 variants
+  (aw, asymmetric window, poisson via ppmlhdfe included), and the att aggregation
+  (treated-obs/aweight-sum weighted post average) at ~1e-16
+  (`newfeat/reghdfe_oracle.do`).
+- **honestdid handoff: validated on an 11-case grid** (binary base, anticipation,
+  asymmetric windows, aw, per-subgroup ES, admin panel, rich datasets, dta_cont),
+  delta(rm) AND delta(sd): the Original row reproduces the wooldid post0 CI at
+  reldif 0.0 in 22/22 extractions; layout, mvec, and rm-monotonicity clean
+  (`newfeat/honestdid_grid.do`).
+- **fastnose: full parity.** 22-config grid (subgroups, poisson, contreat, weights,
+  anticipation, estimands, lattice, gteffects): zero violations of the two-arm gate
+  (|diff|<=1e-12 OR magnitude-rel<=1e-10); worst abs 7.1e-15, inside the documented
+  fast-path envelope. All 7 incompatible-option refusals pinned at rc 198 with the
+  fastnose-specific screens verified (`newfeat/fastnose_grid.do`).
+- **anticipation / escomp / gteffects / replay**: shift-identity, recompute-from-data,
+  aggregation-identity, and byte-replay checks all pass (existing identity_extras +
+  cert suites, re-run green this chunk); new battery pins cover fastnose+gteffects,
+  pretrendpower, anticipation, permtstat+permtci, permute(probabilities).
+
+## 5.2 NF-1 (HEADLINE ISSUE): V_es-based joint tests are severely oversized under
+## cohort-level clustering — adversarial, jointtests, and the roth pre-trend Wald
+
+**Finding (preregistered FAIL class).** With `cluster(i)` at the cohort level, the
+flat-null rejection rate of `adversarial` at nominal 5% is:
+
+| design (all null true) | adversarial @.05 | joint_horiz @.05 |
+|---|---|---|
+| G=40, singleton cohorts, 4/4 window (A1, M=1000) | **20.5%** | 11.3% |
+| G=40, planted-line null (A2) | **23.1%** | (33.8% = genuine power, its null differs) |
+| altmethod, flat / planted (A3a/A3b) | **12.6% / 11.2%** | 12.3% |
+| G=40, AR(1) errors (A6) | **23.2%** | 15.2% |
+| G=200, singleton (D1, M=240) | **11.7%** | 8.7% |
+| G=40, 8 units/cohort (D2, M=250) | **48.4%** | 36.0% |
+| G=100, 8 units/cohort (D4, M=250) | **44.8%** | 32.0% |
+| G=40, singleton, 2/2 window (D3) | 6.4% | 6.8% |
+| G=40, 8 units/cohort, 2/2 window (D5) | **24.8%** | 21.2% |
+| G=10, singleton (A5) | 2.4% (conservative) | **65.7%** |
+
+The roth pre-trend Wald (`e(roth_prep)`) shows the same inflation (14.0% at .05 on
+the ptp design's gamma=0 arms), and the reported NIS size understates the empirical
+any-pre-significant rate (reported mean .1325 vs empirical .2132, n=408 — outside
+the binomial band). Chi-square grid-uniformity is destroyed in every failing arm.
+
+**Verified mechanism (direct MC measurement, V1/V2/D5 arms + INV-1 report
+`review_process/inv1_v_es_ame_2026-08-24.md`).** The Mundlak specification gives
+every treated cohort x relative-period cell its own coefficient; under cohort-level
+clustering each cell sits inside ONE cluster, so the OLS normal equations zero the
+within-cell residual moments and the plug-in CRVE score of every cell coefficient
+vanishes. The damage is DIRECTIONAL: per-horizon reported variances are only mildly
+low (Var_true/mean reported diag = 1.0-1.2 singleton; 1.5-2.3 multi-unit), but the
+covariance's small-eigenvalue directions — exactly the cross-horizon CONTRASTS the
+line-fit residual lives in — claim ~7-20x less variance than the truth (mean
+reported smallest eigenvalue .0206/.0014/.0033 in V1/V2/D5 vs true adjacent-contrast
+variance ~.20/.026/.024). The whitened minimum-distance statistic explodes in those
+directions. Singleton designs look "better" only because their EXACTLY-zero
+directions are dropped by the 1e-12 whitening tolerance (and at G=10 enough drop to
+make the F(q, 9) reference conservative); multi-unit cells leave small-but-wrong
+eigenvalues in play — the worst case (48-60%). Larger G barely helps (D1 ~10%,
+D4 ~42%): this is not a finite-G asymptotics defect but a structurally-blind V.
+The test CODE is sound: under `robust` on iid multi-unit data the same adversarial
+test is correctly sized (A4 att: 5.75% at .05, PASS; joint_horiz 5.95%).
+
+**Old-build status:** the specification, clustering, and V are identical in old
+wooldid (INV-1 probe8); the oversizing is a SHARED long-standing property, newly
+QUANTIFIED here, not a regression. The sthlp already cautions that these tests are
+sensitive to the number of clusters; the true dependence is on cluster-saturated
+cells and test dimension, and the magnitudes above are far beyond a rounding caveat.
+
+**Disposition: DOCUMENTED, fix deferred to the bug-fixing chunk** (work-file order:
+"we will work on solving identified bugs later"). Candidate remedies for that chunk,
+in rising ambition: (a) sthlp rewrite stating the design conditions under which the
+adversarial/joint p-values are trustworthy (clustering finer than cohort-by-period
+cells, or robust/unclustered errors; narrow windows do NOT rescue multi-unit
+designs); (b) detect cell-saturated clustering and print a specific caution on
+every V_es-consuming p-value (adversarial, jointtests, pretrendpower, and the
+honestdid handoff note); (c) a cluster-bootstrap or CR3/jackknife V for the ES
+block; (d) eigenvalue-floor regularization inside wooldid_advstat (defensible but
+ad hoc). Note remedy (b)'s detection predicate is cheap: every treated (i, relyr)
+cell inside a single cluster of the specified cluster().
+
+## 5.3 NF-2: rank-1 e(V_es_ame) under cohort-level clustering (defect-class);
+## old build posted an INVALID adversarial ame p there — new build refuses
+
+The extreme case of NF-1 (full report: `review_process/inv1_v_es_ame_2026-08-24.md`):
+with `contreat()`, each treated cell carries its own dose slope while the pooled
+baseline dose slope phi is absorbed; under cohort-level clustering the CRVE slope
+block collapses EXACTLY to Var(phi_hat)*11', so e(V_es_ame) is rank 1, every ame SE
+(main, pretreatment, all ES horizons) equals SE(phi_hat), and cross-horizon
+contrasts carry zero reported variance while the true covariance is full rank and
+~5x larger (120-rep MC). Consequences: honestdid/lincom/test consumers of
+e(V_es_ame) silently ingest a meaningless covariance; the adversarial ame test has
+no testable dimensions. **New wooldid correctly refuses** ("composite-null
+covariance is degenerate; no p-value computed"). **Old wooldid POSTED
+e(adversarial_pval_ame)=.6147 on the same degenerate V** via a generalized-inverse
+test — an invalid p, i.e. the refusal is a genuine old-bug fix, invisible to the
+old-vs-new comparison because no suite config combined cohort-clustered contreat
+with adversarial (the ext_* configs that post ame p's are unclustered).
+Unclustered/robust/finer-than-cell configs produce a full-rank, internally-sound
+V_es_ame. Fix candidates fold into NF-1's; the F2 sthlp entry deserves the caveat
+regardless.
+
+## 5.4 NF-3: ame-side tests remain oversized even under robust VCE
+
+A4 (30 cohorts x 6 units, dose varying within cell, iid errors, `robust`): the att
+side is correctly sized (5.75%), but `adversarial` on the ame event study rejects
+**31.5%** at nominal 5% and the ame joint pre-trend test (`joint_Choriz`) **22.0%**
+(M=504; the ame p posts every rep here — full-rank V). Root cause family: per-cell
+dose slopes are estimated from few observations; their HC variance is biased down
+(leverage), and the 6-8 dimensional quadratic forms amplify it. Continuous-treatment
+ES inference is therefore oversized in EVERY tested configuration — degenerate
+under cohort clustering (NF-2), inflated under robust. Same disposition as NF-1.
+
+## 5.5 Documentation-grade notes and upstream findings
+
+- **Singleton-cell V_es_att is a structurally different estimator** (oracle O16):
+  with unit-level i (every treated cell a singleton), treated residuals vanish and
+  V_es carries control-cluster noise only (SE ratios 0.84-1.07 vs the pooled event
+  study; b and att still match at 1e-15). Candidate sthlp caveat on the
+  honestdid/pretrendpower handoffs for singleton-cell designs.
+- **honestdid C-LF robust confidence sets can be legitimately EMPTY** on data with
+  sharply significant pre-trends (observed on binary_fine and dta_cont, pre-t
+  -4.1/-5.5): a documented Rambachan-Roth outcome, not a handoff defect (Original
+  row reproduces exactly on the same inputs). Encoded as an explicit allowlist in
+  honestdid_grid.do (preregistered-deviation note in the script header).
+- **Upstream honestdid v1.1.2 bug:** delta(sd) crashes with mata assert 3498 in
+  _flciFindWorstCaseBiasGivenH on the binary_mixed_imbalanced case (parallel AND
+  sequential paths); delta(rm) runs clean on the same b/V. Candidate courtesy
+  report to the package maintainer.
+- **Preregistration deviations, both documented in-file:** the M5 "every robust row
+  finite" rule gained the legitimately-empty allowlist; A4 was fixed post-INV-1
+  (before any A4 rep fired) to the sound robust-VCE class.
+
+## 5.6 Where the artifacts live
+
+Prereg + amendment: `test/suite/PREREG_NEWFEAT_2026-08-24.md`. MC drivers/analyzer:
+`test/suite/mc/` (judged report: `mc/out/mc_report.md`; per-rep CSVs with seeds in
+`mc/out/`, gitignored — regenerate with `./run_mc.sh all`). New suite scripts:
+`test/suite/newfeat/{reghdfe_oracle,honestdid_grid,pretrends_crosscheck,fastnose_grid}.do`.
+INV-1 mechanism report: `review_process/inv1_v_es_ame_2026-08-24.md`. Battery pins:
+`test/baseline/{fn_gt,ptp_two,antic_es,perm_tstat,perm_probs}.csv`.
