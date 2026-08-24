@@ -758,6 +758,17 @@ Unclustered/robust/finer-than-cell configs produce a full-rank, internally-sound
 V_es_ame. Fix candidates fold into NF-1's; the F2 sthlp entry deserves the caveat
 regardless.
 
+**Runnable demonstration:** `review_process/demo_vesame_pathology.do` (from the repo
+root: `"<stata>" -e do review_process/demo_vesame_pathology.do`; deterministic, ~15s).
+On a 30-cohort x 6-unit irregular-dose null panel it shows, under `cluster(i)`: all
+eight ES_ame horizons (and the main/pretreatment ame rows in the printed table) with
+the IDENTICAL SE 0.059040286 while the estimates differ freely; min pairwise
+correlation of e(V_es_ame) = 0.99999999999999; eigenvalues .0279 vs 6e-17 (rank 1);
+the (post0 - pre2) contrast with reported variance -2.3e-17 against an estimate
+difference of 0.491. The same data under `robust` gives horizon-specific SEs of
+0.166-0.211 — roughly 3x the clustered figure, making the understatement visible
+directly — and a full-rank V (eigenvalues .0245-.0605).
+
 ## 5.4 NF-3: ame-side tests remain oversized even under robust VCE
 
 A4 (30 cohorts x 6 units, dose varying within cell, iid errors, `robust`): the att
@@ -797,3 +808,26 @@ Prereg + amendment: `test/suite/PREREG_NEWFEAT_2026-08-24.md`. MC drivers/analyz
 `test/suite/newfeat/{reghdfe_oracle,honestdid_grid,pretrends_crosscheck,fastnose_grid}.do`.
 INV-1 mechanism report: `review_process/inv1_v_es_ame_2026-08-24.md`. Battery pins:
 `test/baseline/{fn_gt,ptp_two,antic_es,perm_tstat,perm_probs}.csv`.
+
+## 5.7 Ticket index — every documented-not-fixed item, for author consideration
+
+All of these were deliberately left unfixed this chunk (work-file order: bug-fixing
+follows in the next chunk); each cites its evidence above. Tickets NF-1a..NF-1c and
+NF-2/NF-3 share one root cause (the V_es pathology) and one remedy menu (§5.2 a-d).
+
+| ticket | surface | symptom (measured) | where |
+|---|---|---|---|
+| NF-1a | `adversarial` p (att) under cohort-level cluster() | 20.5-23.2% rejection at nominal 5% (G=40, incl. AR(1)); 48.4% with 8-unit cohorts; 44.8% at G=100; 24.8% even at a 2/2 window multi-unit; altmethod 11-13% | §5.2 |
+| NF-1b | `jointtests` pre-trend p (`joint_horiz`; old feature, same V) | 11.3-36.0% at G=40 configs; **65.7% at G=10** (flat null) | §5.2 table |
+| NF-1c | `pretrendpower` reported p/size scalars (`e(roth_prep)`, `e(roth_nissize)`) | prep rejects 14.0% at nominal 5% under the null; reported nissize .1325 vs empirical .2132 (power claims themselves PASS) | §5.2 |
+| NF-2 | ALL displayed ame SEs + returned `e(V_es_ame)` under cohort-level cluster() | every ame SE identical (= SE of the absorbed baseline dose slope); V exactly rank 1; contrasts get zero reported variance; true variances ~5x, full rank; honestdid/lincom/test ingest it silently. Old build shares the V and additionally POSTED an invalid g-inverse adversarial ame p (.6147) where new refuses (verified in probe8_old.log) | §5.3 + demo .do |
+| NF-3 | ame-side tests under ANY tested VCE (incl. robust) | adversarial-ame 31.5%, `joint_Choriz` 22.0% at nominal 5% on iid multi-unit data with robust (att side simultaneously correct at 5.75%) | §5.4 |
+| (prior chunk, unchanged) | continuous-SG `joint_Choriz_s*` stored missing via the r(p)[1,2] read (T-M2) + the allsgssame-ame missing scalars | deferred 2026-08-23 by author ruling with a mandated >=3-dataset console+matrix evidence protocol; same jointtests-family neighborhood, untouched this chunk by design | §2; solved-issues ledger |
+
+Documentation-grade notes (no wooldid defect; candidate sthlp caveats / upstream
+reports) are in §5.5: the singleton-cell V_es structural property, honestdid v1.1.2's
+delta(sd) mata-assert crash, legitimately-empty Rambachan-Roth C-LF sets, and the
+pretrends package's absent data-fitted slope.
+
+Explicitly NOT tickets: randomization inference, fastnose, gteffects, escomp, replay,
+and anticipation came through the full validation with zero documented bugs (§5.1).
