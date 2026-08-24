@@ -3,6 +3,8 @@
 run_*/
 # Comprehensive-suite run outputs (dumps, logs, reports):
 suite/out/
+# MC calibration run outputs (per-rep CSVs, shard logs, judged report):
+suite/mc/out/
 # Stata batch transcripts and scratch logs:
 *.log
 # Log-scrape sentinel artifacts written by the targeted test_*.do suites:
