@@ -1,6 +1,6 @@
 * wooldid regression battery. Run from a fresh subdirectory of test/ (see test/README.md):
 *   mkdir test/run1 && cd test/run1 && "<stata>" -e do ../runbattery.do
-* Loads the CURRENT repo wooldid.ado, runs 29 configs, dumps all e() content
+* Loads the CURRENT repo wooldid.ado, runs 34 configs, dumps all e() content
 * (exact %21x hex) + rc + post-run varlist to <cfg>.csv in cwd.
 clear all
 set more off

@@ -21,7 +21,7 @@ deterministic data and dumps **every** e() scalar, macro, and matrix cell in Sta
 runs therefore detects *any* change in returned results, down to the last bit.
 
 ## Layout
-- `runbattery.do` — runs the 29 configurations against the repo's `wooldidinstall/wooldid.ado`.
+- `runbattery.do` — runs the 34 configurations against the repo's `wooldidinstall/wooldid.ado`.
 - `data/` — frozen input datasets (binary, continuous, tiny, simple; deterministic seeds).
 - `mkdata.do` — regenerates `data/` from scratch (run from `test/`). Only needed if the
   datasets are ever deliberately changed — doing so invalidates `baseline/`.
@@ -44,7 +44,7 @@ cd test && mkdir run1 && cd run1
 "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp" -e do ../runbattery.do
 python3 ../compare.py ../baseline .
 ```
-Expected: `29/29 IDENTICAL, TOTAL_DIFF_GROUPS=0` for a change that should not alter results.
+Expected: `34/34 IDENTICAL, TOTAL_DIFF_GROUPS=0` for a change that should not alter results.
 When a fix intentionally changes output, the diff must match the predicted signature exactly
 (e.g. B12's only signature was one variable leaving the poisson config's varlist) — then the
 new outputs become the baseline: `cp run1/*.csv baseline/` and commit with the fix.

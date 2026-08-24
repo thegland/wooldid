@@ -26,7 +26,7 @@ The orchestrator **exits nonzero if any component fails** and appends every verd
 | `oldnew` | THE dual-build comparison: stages old (git `main`) and new (**git `HEAD`** — never the working tree), runs every config on both in separate Stata processes, dumps e() + e(sample) digests in %21x, compares with `compare_oldnew.py` | both | ~15 min pooled |
 | `compare` | re-judges EXISTING dumps against the current ledger/configs (no Stata) — the triage loop tool | — | seconds |
 | `cert` | the targeted `test/test_*.do` suites + `check_validate_sync.py` — HEAD certification (fresh logs enforced; column-1 `*_ALL_PASS` + no `*_FAILS=` grading) | new | ~2 min pooled |
-| `newfeat` | cross-checks in `suite/newfeat/`: external randomization-inference re-implementation (exact, sampled, unequal-count, t-stat, probabilities), HonestDiD integration, feature identities incl. the V_es total-variance check | new | ~2 min |
+| `newfeat` | cross-checks in `suite/newfeat/` (7 scripts): external randomization-inference re-implementation (exact, sampled, unequal-count, t-stat, probabilities), HonestDiD integration + the 11-case honestdid grid, the Roth `pretrends`-package crosscheck, the reghdfe common-onset oracle (b_es/V_es at machine precision), the 22-config fastnose parity grid, feature identities incl. the V_es total-variance check | new | ~8 min |
 | `battery` | the standing bit-exact regression vs `test/baseline` (`--rtol 0`) | new | ~3 min |
 | `coverage` | static assertion: every syntax-line option exercised by ≥1 config, with **clean-rc gating** (an option covered only by erroring configs is flagged ERR-ONLY) and dead allow-zero detection; allow-zero = `update,permprobs` only | — | seconds |
 
@@ -38,6 +38,11 @@ entry/exit, lognormal population weights — carries the only coverage anywhere 
 unconditionalse+pweight, and the saveplots×subgroups filename pin), `plots`, `screens`
 (rc-contract deck), `patho` (the pathological shapes), and the mined
 `extgrid`/`extlattice`/`extcase`/`extval`.
+
+A separate DEEP-VALIDATION component lives in `mc/` (own orchestrator `mc/run_mc.sh`,
+own README): preregistered Monte-Carlo size/power calibration of the statistical
+claims — RI p-value exactness, adversarial line-test size, pretrendpower power.
+Deliberately NOT part of `all` (~1.5 h); run it when inference machinery changes.
 
 ## Usage
 
