@@ -135,6 +135,31 @@ for cfg, m in ADV.items():
         j05 = sum(1 for p in pj if p <= .05 + EPS)
         L.append(f"| {cfg} joint_horiz (sec) | INFO | rej@.05={j05}/{len(pj)} ({j05/len(pj):.4f}) |")
 
+# ---------------- M2 AMENDMENT A4: continuous adversarial under robust VCE ----------------
+a4rows = load("A4")
+if a4rows:
+    ok_rows = [r for r in a4rows if r["rc"] == "0"]
+    bad_rc = len(a4rows) - len(ok_rows)
+    for col, label in [("padv", "A4 att"), ("pame", "A4 ame")]:
+        ps = [num(r, col) for r in ok_rows]
+        missing_p = sum(1 for p in ps if p is None)
+        ps = [p for p in ps if p is not None]
+        r05 = sum(1 for p in ps if p <= .05 + EPS)
+        r10 = sum(1 for p in ps if p <= .10 + EPS)
+        stat, flag = chi2_grid(ps)
+        det = (f"n={len(a4rows)} rc!=0:{bad_rc} p-missing:{missing_p} rej@.05={r05} rej@.10={r10} "
+               f"rate=({r05/max(1,len(ps)):.4f},{r10/max(1,len(ps)):.4f}) chi2={stat:.1f}{'*' if flag else ''}")
+        ok = (15 <= r05 <= 35) and (36 <= r10 <= 64) and bad_rc == 0 and missing_p == 0
+        rt05, rt10 = r05 / max(1, len(ps)), r10 / max(1, len(ps))
+        marg = (.025 <= rt05 <= .085) and (.070 <= rt10 <= .135) and bad_rc == 0
+        verdict(f"{label} size", ok, marginal=marg, detail=det)
+    for col, label in [("pjoint", "A4 joint_horiz"), ("pjointC", "A4 joint_Choriz")]:
+        pj = [num(r, col) for r in ok_rows]
+        pj = [p for p in pj if p is not None]
+        if pj:
+            j05 = sum(1 for p in pj if p <= .05 + EPS)
+            L.append(f"| {label} (sec) | INFO | rej@.05={j05}/{len(pj)} ({j05/len(pj):.4f}) |")
+
 # ---------------- M3b: pretrendpower power ----------------
 L.append("\n## M3b — pretrendpower power arms (bands: W/N rejection in [.72,.87] of 400; "
          "Z NIS-rate within binomial 95% of mean reported nissize)\n")

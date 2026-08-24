@@ -82,6 +82,13 @@ do_adv() {
   check_shards A5 8 63 || FAIL=1
 }
 
+do_adv2() {
+  note "adv2: A4 continuous adversarial under robust VCE (M=504; AMENDMENT A4)"
+  run_shards mc_adv2.do A4 8 63 27000000
+  wait
+  check_shards A4 8 63 || FAIL=1
+}
+
 do_pilot() {
   note "pilot: ptp gamma=0 (104 reps)"
   run_shards mc_ptp.do pilot 8 13 31000000 0
@@ -118,10 +125,11 @@ for c in "$@"; do
     pretest) do_pretest ;;
     ri) do_ri ;;
     adv) do_adv ;;
+    adv2) do_adv2 ;;
     pilot) do_pilot ;;
     arms) do_arms ;;
     analyze) do_analyze ;;
-    all) do_pretest; [ $FAIL -eq 0 ] && { do_ri; do_adv; do_pilot; do_arms; do_analyze; } ;;
+    all) do_pretest; [ $FAIL -eq 0 ] && { do_ri; do_adv; do_adv2; do_pilot; do_arms; do_analyze; } ;;
     *) echo "unknown component: $c"; exit 2 ;;
   esac
 done

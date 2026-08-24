@@ -151,6 +151,27 @@ aggregation (reldif <= 1e-8). If the prototype fails to match, the oracle is dro
 with the mismatch documented — the honestdid grid + identity checks still cover the
 surface. If it matches: variants aw + asymmetric window (+ poisson only if cheap).
 
+## AMENDMENT A4 (2026-08-24, post-INV-1, before any A4 rep fired — documented deviation)
+
+INV-1 resolved as a DEFECT-class finding: under cohort-level cluster(i), the CRVE
+scores of every cell-specific dose-slope coefficient are identically zero (each
+saturated treated cell sits inside one cluster), so e(V_es_ame) collapses to exactly
+rank 1 = Var(phi_baseline)*11' and NO cohort-clustered contreat config can ever
+exercise a well-posed adversarial-ame p (the refusal is correct given that V; the MC
+probe verified the true covariance is full rank and ~5x larger). Sound config classes
+(probe-verified): unclustered/robust, or clustering strictly finer than the
+cohort-by-period cells. A4 is therefore fixed as:
+
+- A4: 30 cohorts x 6 units x 12 periods, dose varying within cohort-period cells,
+  flat null, iid errors, `robust` VCE, adversarial + jointtests; M = 504; collect
+  e(adversarial_pval_att), e(adversarial_pval_ame), e(joint_horiz), e(joint_Choriz).
+  PRIMARY bands: the M=500 counts of §M2 applied to BOTH the att and the ame p
+  (alpha=.05 -> [15,35]; alpha=.10 -> [36,64]; marginal corridors as in §M2).
+
+Driver: mc_adv2.do (separate from mc_adv.do so the already-running A1-A6 family is
+untouched). The cohort-clustered ame pathology itself is documented in the campaign
+bug report, not fixed this chunk (author directive: bug-fixing follows later).
+
 ## Outcome classification
 
 Each check lands in: PASS | MARGINAL (documented, secondary flag or corridor) |
