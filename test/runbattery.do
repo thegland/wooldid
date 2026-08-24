@@ -246,5 +246,40 @@ cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permut
 local rc = _rc
 dumpres perm_basic `rc'
 
+* New-feature benchmark pins (added 2026-08-24, blessed in-commit; PREREG_NEWFEAT
+* chunk): close the battery's coverage gaps for fastnose, pretrendpower,
+* anticipation, permtstat/permtci, and permute(probabilities). Appended AFTER all
+* prior configs so earlier dumps are bit-unaffected; permute configs set their own
+* seed (perm_basic precedent).
+freshstart "`DATA'/dta_binary"
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) fastnose gteffects
+local rc = _rc
+dumpres fn_gt `rc'
+
+freshstart "`DATA'/dta_binary"
+cap noi wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(3) esfixedbaseperiod pretrendpower(50 80)
+local rc = _rc
+dumpres ptp_two `rc'
+
+freshstart "`DATA'/dta_binary"
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) anticipation(1)
+local rc = _rc
+dumpres antic_es `rc'
+
+freshstart "`DATA'/dta_binary"
+set seed 135791
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permtstat permtci
+local rc = _rc
+dumpres perm_tstat `rc'
+
+* 10-cluster subset spanning all three onset blocks (2005: i 1-25, 2008: 26-50,
+* never: 51-80); permprobs needs one row per in-sample cluster value
+freshstart "`DATA'/dta_binary"
+qui keep if inlist(i, 1, 2, 3, 26, 27, 28, 51, 52, 53, 54)
+set seed 975310
+cap noi wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(30) permprobs((ttre 2005 2008 .) (1 .3 .3 .4) (2 .3 .3 .4) (3 .3 .3 .4) (26 .3 .3 .4) (27 .3 .3 .4) (28 .3 .3 .4) (51 .3 .3 .4) (52 .3 .3 .4) (53 .3 .3 .4) (54 .3 .3 .4))
+local rc = _rc
+dumpres perm_probs `rc'
+
 di "BATTERY_DONE"
 exit, clear
