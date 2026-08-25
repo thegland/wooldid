@@ -118,9 +118,13 @@ def main():
             pred = (cfg.get("predictions") or {}).get(qty)
             hit = score_prediction(rate_pct, pred)
             predtxt = "n/a" if pred is None else f"{pred['point_pct']:.1f}% [{pred['band_low_pct']:.1f},{pred['band_high_pct']:.1f}] {hit}"
+            # full CDF: pass-by-cancellation (a structurally blind V dragged through
+            # the band by a lenient reference) shows up as a SHAPE, not a point
+            cdf = " ".join(f"{a}:{sum(1 for p in ps if p <= a + EPS)/max(1,len(ps)):.3f}"
+                           for a in (.01, .025, .05, .10, .20))
             det = (f"n={n} rc!=0:{bad_rc} p-miss:{missing_p} rej@.05={r05}/{m} "
                    f"({rate_pct:.2f}%) band{list(b05)} rej@.10={r10} band{list(b10)} "
-                   f"chi2={stat:.1f}{'*' if flag else ''}")
+                   f"chi2={stat:.1f}{'*' if flag else ''} CDF[{cdf}]")
             L.append(f"| {qty} | {v} | {predtxt} | {det} |")
             results[f"{name}:{qty}"] = {"verdict": v, "rate_pct": rate_pct,
                                         "chi2_flag": flag, "pred": hit, "n": n}

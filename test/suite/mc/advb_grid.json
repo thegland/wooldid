@@ -1,0 +1,786 @@
+{
+ "campaign": "AB - adversarial line-test size boundary",
+ "prereg": "test/suite/PREREG_ADVBOUND_2026-08-25.md",
+ "configs": [
+  {
+   "config": "AB1",
+   "M": 1000,
+   "label": "central question: does clustering finer than the cell kill containment?",
+   "spec": "G=30 U=6 T=12 cluster(unitid) err=iid binary stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 125,
+   "base_seed": 8200001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": true,
+   "quantities": [
+    [
+     "adversarial",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial": {
+     "point_pct": 5.6,
+     "band_low_pct": 4.0,
+     "band_high_pct": 8.0
+    }
+   }
+  },
+  {
+   "config": "AB2",
+   "M": 1000,
+   "label": "pure-binary isolation of A4's 5.75% (the only measured PASS)",
+   "spec": "G=30 U=6 T=12 robust err=iid binary stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 125,
+   "base_seed": 8200001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "robust",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": true,
+   "quantities": [
+    [
+     "adversarial",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial": {
+     "point_pct": 5.7,
+     "band_low_pct": 4.0,
+     "band_high_pct": 8.0
+    }
+   }
+  },
+  {
+   "config": "AB2a",
+   "M": 1000,
+   "label": "robust ladder low end; deconfounds leverage from inversion noise",
+   "spec": "G=30 U=2 T=12 robust err=iid binary stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 125,
+   "base_seed": 8500001,
+   "G": 30,
+   "U": 2,
+   "T": 12,
+   "vce": "robust",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": true,
+   "quantities": [
+    [
+     "adversarial",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial": {
+     "point_pct": 5.8,
+     "band_low_pct": 4.0,
+     "band_high_pct": 8.5
+    }
+   }
+  },
+  {
+   "config": "AB3",
+   "M": 1000,
+   "label": "cell-size floor under fine clustering",
+   "spec": "G=30 U=2 T=12 cluster(unitid) err=iid binary stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 125,
+   "base_seed": 8500001,
+   "G": 30,
+   "U": 2,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": true,
+   "quantities": [
+    [
+     "adversarial",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial": {
+     "point_pct": 8.0,
+     "band_low_pct": 4.5,
+     "band_high_pct": 14.0
+    }
+   }
+  },
+  {
+   "config": "AB4",
+   "M": 1000,
+   "label": "FLAGSHIP: most favorable regime constructible",
+   "spec": "G=30 U=20 T=12 cluster(unitid) err=iid binary stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 125,
+   "base_seed": 8600001,
+   "G": 30,
+   "U": 20,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": true,
+   "quantities": [
+    [
+     "adversarial",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial": {
+     "point_pct": 5.2,
+     "band_low_pct": 3.8,
+     "band_high_pct": 7.0
+    }
+   }
+  },
+  {
+   "config": "AB5",
+   "M": 504,
+   "label": "report-only: few clusters; widest theorist split (D-1)",
+   "spec": "G=5 U=4 T=12 cluster(unitid) err=iid binary stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8700001,
+   "G": 5,
+   "U": 4,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 17.0,
+     "band_low_pct": 3.0,
+     "band_high_pct": 35.0
+    }
+   }
+  },
+  {
+   "config": "AB6",
+   "M": 1000,
+   "label": "dependence the VCE handles (AR(1) rho=.7)",
+   "spec": "G=30 U=6 T=12 cluster(unitid) err=ar1 binary stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 125,
+   "base_seed": 8300001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "ar1",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": true,
+   "quantities": [
+    [
+     "adversarial",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial": {
+     "point_pct": 6.6,
+     "band_low_pct": 4.2,
+     "band_high_pct": 10.5
+    }
+   }
+  },
+  {
+   "config": "AB7a",
+   "M": 504,
+   "label": "report-only: VCE violated, small shock (3.8% of error var)",
+   "spec": "G=30 U=6 T=12 cluster(unitid) err=cohortshock binary stag=0 scs=0.2 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8400001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "cohortshock",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 0.2,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 12.0,
+     "band_low_pct": 7.0,
+     "band_high_pct": 22.0
+    }
+   }
+  },
+  {
+   "config": "AB7b",
+   "M": 504,
+   "label": "report-only: VCE violated, larger shock (20%)",
+   "spec": "G=30 U=6 T=12 cluster(unitid) err=cohortshock binary stag=0 scs=0.5 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8400001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "cohortshock",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 0.5,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 48.0,
+     "band_low_pct": 30.0,
+     "band_high_pct": 70.0
+    }
+   }
+  },
+  {
+   "config": "AB8",
+   "M": 504,
+   "label": "report-only: robust under AR(1) - conservative or anti-conservative?",
+   "spec": "G=30 U=6 T=12 robust err=ar1 binary stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8300001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "robust",
+   "err": "ar1",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 0.6,
+     "band_low_pct": 0.0,
+     "band_high_pct": 3.0
+    }
+   }
+  },
+  {
+   "config": "AB9",
+   "M": 504,
+   "label": "report-only: THE AME RULING - do big cells rescue ame adversarial?",
+   "spec": "G=30 U=20 T=12 robust err=iid contreat stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8600001,
+   "G": 30,
+   "U": 20,
+   "T": 12,
+   "vce": "robust",
+   "err": "iid",
+   "mode": "contreat",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ],
+    [
+     "ame_adversarial",
+     "pame"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ],
+    [
+     "joint_Choriz",
+     "pjointC"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 5.3,
+     "band_low_pct": 3.8,
+     "band_high_pct": 7.0
+    },
+    "ame_adversarial": {
+     "point_pct": 8.5,
+     "band_low_pct": 5.5,
+     "band_high_pct": 13.0
+    }
+   }
+  },
+  {
+   "config": "AB10",
+   "M": 504,
+   "label": "report-only: does fine clustering help the ame at all? (D-4)",
+   "spec": "G=30 U=6 T=12 cluster(unitid) err=iid contreat stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8200001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "contreat",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ],
+    [
+     "ame_adversarial",
+     "pame"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ],
+    [
+     "joint_Choriz",
+     "pjointC"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 5.8,
+     "band_low_pct": 3.8,
+     "band_high_pct": 9.0
+    },
+    "ame_adversarial": {
+     "point_pct": 34.0,
+     "band_low_pct": 22.0,
+     "band_high_pct": 50.0
+    }
+   }
+  },
+  {
+   "config": "AB11",
+   "M": 1000,
+   "label": "does the shipped alternative behave in a good regime?",
+   "spec": "G=30 U=6 T=12 cluster(unitid) err=iid binary stag=0 scs=1 pwr=0 altmethod_adversarial",
+   "shards": 8,
+   "reps_per_shard": 125,
+   "base_seed": 8200001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "altmethod_adversarial",
+   "certification_arm": true,
+   "quantities": [
+    [
+     "adversarial",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial": {
+     "point_pct": 5.7,
+     "band_low_pct": 3.8,
+     "band_high_pct": 8.5
+    }
+   }
+  },
+  {
+   "config": "AB12",
+   "M": 504,
+   "label": "report-only: NEGATIVE CONTROL, calibrates the driver against D2/D4",
+   "spec": "G=30 U=6 T=12 cluster(i) err=iid binary stag=0 scs=1 pwr=0 safety(off)",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8200001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(i)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "safety(off)",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 49.0,
+     "band_low_pct": 35.0,
+     "band_high_pct": 65.0
+    }
+   }
+  },
+  {
+   "config": "AB13",
+   "M": 1000,
+   "label": "m-ladder middle rung (m=2, cell 6) - THE DECISIVE FALSIFIER (D-2)",
+   "spec": "G=30 U=6 T=12 cluster(cl2) err=iid binary stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 125,
+   "base_seed": 8200001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(cl2)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": true,
+   "quantities": [
+    [
+     "adversarial",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial": {
+     "point_pct": 11.0,
+     "band_low_pct": 5.5,
+     "band_high_pct": 20.0
+    }
+   }
+  },
+  {
+   "config": "AB14a",
+   "M": 504,
+   "label": "report-only: POWER at PWR=0.05",
+   "spec": "G=30 U=6 T=12 cluster(unitid) err=iid binary stag=0 scs=1 pwr=0.05",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8200001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0.05,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 75.0,
+     "band_low_pct": 45.0,
+     "band_high_pct": 95.0
+    }
+   }
+  },
+  {
+   "config": "AB14b",
+   "M": 504,
+   "label": "report-only: POWER at PWR=0.20 (abandon trigger A2)",
+   "spec": "G=30 U=6 T=12 cluster(unitid) err=iid binary stag=0 scs=1 pwr=0.2",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8200001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0.2,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 99.5,
+     "band_low_pct": 95.0,
+     "band_high_pct": 100.0
+    }
+   }
+  },
+  {
+   "config": "AB15",
+   "M": 1000,
+   "label": "staggered onsets {6,7} - single-factor twin of AB1 (D-7)",
+   "spec": "G=30 U=6 T=12 cluster(unitid) err=iid binary stag=1 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 125,
+   "base_seed": 8200001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 1,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": true,
+   "quantities": [
+    [
+     "adversarial",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial": {
+     "point_pct": 6.0,
+     "band_low_pct": 4.0,
+     "band_high_pct": 9.5
+    }
+   }
+  },
+  {
+   "config": "AB16",
+   "M": 1000,
+   "label": "G=10 with 6-unit cells: few cohorts, adequate clusters",
+   "spec": "G=10 U=6 T=12 cluster(unitid) err=iid binary stag=0 scs=1 pwr=0",
+   "shards": 8,
+   "reps_per_shard": 125,
+   "base_seed": 8800001,
+   "G": 10,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": true,
+   "quantities": [
+    [
+     "adversarial",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial": {
+     "point_pct": 6.8,
+     "band_low_pct": 4.5,
+     "band_high_pct": 10.0
+    }
+   }
+  }
+ ],
+ "decision_rule": {
+  "cluster_type_keys": [
+   "AB1:adversarial",
+   "AB3:adversarial",
+   "AB4:adversarial",
+   "AB6:adversarial",
+   "AB11:adversarial",
+   "AB13:adversarial",
+   "AB15:adversarial",
+   "AB16:adversarial"
+  ],
+  "text": "Apply in order, first trigger decides. V0 integrity FAIL on any certification arm -> NO RULING. V1 rate(AB12) < 25 -> NO RULING (driver not reproducing the known containment failure). A1 NOT CERTIFIED(AB4) -> ABANDON. A2 AB14b power < 90% -> ABANDON. A3 rate(AB1) > 8.0 -> ABANDON. A4 rate(AB6) > 8.0 -> ABANDON. A5 rate(AB15) > 8.0 -> ABANDON. Otherwise KEEP, GATED at m* = min clusters-per-cell over certified cluster-VCE arms, n* = min cluster count, cell* = min cell size over certified robust arms. AME sub-ruling: keep ame adversarial iff AB9 ame rej@.05 in [15,35] and chi2 <= 21.666, else WITHDRAW to RI/bootstrap/IM. ALT sub-ruling: keep altmethod iff CERTIFIED(AB11)."
+ }
+}

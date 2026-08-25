@@ -35,6 +35,7 @@ for c in grid["configs"]:
     print("|".join(str(x) for x in [
         c["config"], c["shards"], c["reps_per_shard"], c["base_seed"],
         c["G"], c["U"], c["T"], c["vce"], c["err"], c["mode"],
+        c.get("stag", 0), c.get("scs", 1), c.get("pwr", 0),
         c.get("extra", "")]))
 PY
 }
@@ -47,21 +48,24 @@ if [ "${1:-}" = "analyze" ]; then ANALYZE_ONLY=1; ARGS=(); fi
 if [ "$ANALYZE_ONLY" -eq 0 ]; then
   note "AB campaign start (pool=$JOBS, ado=$ADO)"
   [ -f "$GRID" ] || { note "missing $GRID — the preregistered grid must exist first"; exit 2; }
-  while IFS='|' read -r cfg ns reps base G U T vce err mode extra; do
+  while IFS='|' read -r cfg ns reps base G U T vce err mode stag scs pwr extra; do
     [ -z "$cfg" ] && continue
-    note "$cfg: G=$G U=$U T=$T vce=$vce err=$err mode=$mode extra='$extra' (${ns}x${reps} reps)"
+    note "$cfg: G=$G U=$U T=$T vce=$vce err=$err mode=$mode stag=$stag scs=$scs pwr=$pwr extra='$extra' (${ns}x${reps} reps)"
     for s in $(seq 1 "$ns"); do
       pool_wait
       (
         d="$OUT/logs/${cfg}_s${s}"; mkdir -p "$d"
-        cd "$d" && "$STATA_BIN" -e do "$MC/mc_advb.do" "$ADO" "$cfg" "$s" "$reps" \
-          "$base" "$OUT" "$G" "$U" "$T" "$vce" "$err" "$mode" $extra >/dev/null 2>&1
+        # -b (not -e): batch log is named from the do-file/args rather than requiring a
+        # non-numeric final token; a trailing numeric arg makes -e exit silently
+        cd "$d" && "$STATA_BIN" -b do "$MC/mc_advb.do" "$ADO" "$cfg" "$s" "$reps" \
+          "$base" "$OUT" "$G" "$U" "$T" "$vce" "$err" "$mode" \
+          "$stag" "$scs" "$pwr" $extra >/dev/null 2>&1
       ) &
     done
   done < <(plan "${ARGS[@]+"${ARGS[@]}"}")
   wait
   note "all shards finished; checking completeness"
-  while IFS='|' read -r cfg ns reps base G U T vce err mode extra; do
+  while IFS='|' read -r cfg ns reps base G U T vce err mode stag scs pwr extra; do
     [ -z "$cfg" ] && continue
     ok=1
     for s in $(seq 1 "$ns"); do
