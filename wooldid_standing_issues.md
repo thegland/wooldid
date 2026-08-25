@@ -69,6 +69,9 @@ main/pre ~1.0 coincidence; the partial-containment false negative (below).
 | R5 (P4) | Small-cell leverage bias (G5): sthlp caveat + printed note when cells are small; consider opt-in CR2/HC3-style corrections; default unchanged. Magnitudes are shape-qualified (single 30x6x12 shape measured; ratios should approach 1 with larger cells). | doc + opt-in code | sthlp; optional new sub-option. |
 | R6 (P4) | d3-class: NAMED refusal of the ame block ("dose has no within-cell variation; ame not identified") + steer, instead of structural-zero rows behind generic cautions. The existing catastrophe counter already detects the condition. | say-not-estimable + steer | one screen + message; ext/patho configs re-pin where they hit it. |
 | R7 (P4) | contreatwithin-with-controls: screen or document the estimation-inertness. Separate sub-ticket: the byCohort+ame POINT estimand is normalization-dependent across solvers (audited: reghdfe .723 vs regress .554, att invariant) — decide what that estimand IS before offering SEs for it. | misspecification-steer / design decision | screens + sthlp; the byCohort sub-ticket may alter estimates (author decision). |
+
+
+
 | R8 (P4) | sthlp design-conditions rewrite for ALL V_es consumers (honestdid/pretrendpower handoffs included), folding the singleton-cell O16 caveat; plus a user note that a stale 2024-07-31 wooldid.ado in the PLUS adopath can shadow interactive sessions. | doc | sthlp only. |
 
 Priority: P1 = R1 + gated R4 (stops silent-wrong and repairs the blackout collateral
@@ -181,8 +184,12 @@ STILL OPEN in family A after this implementation:
   se ~8.7e-09 / p ~1e-188 uncautioned) corroborates.
 - SI-A2 (= R7): byCohort ame POINT estimands are solver-normalization-dependent
   (audited reghdfe .723 vs regress .554; V1 demonstrated O(1) shifts under the R4
-  refit — the caution now discloses it). Decide the estimand before offering points
-  there; contreatwithin-on-controls inertness rides along.
+  refit — the caution now discloses it). PARTIALLY GUARDED 2026-08-25 by the Group B
+  screen (7e61af6, review_process/amese/GROUP_B_PATCHES.md): zero uncovered-pool
+  dose variation now REFUSES r459 naming the cohort; thin variation cautions with a
+  regtol() steer. Remaining open: the estimand-definition question itself (the
+  well-identified byCohort ame is fine; what the near-threshold decomposition MEANS
+  is still an author call) and contreatwithin-on-controls inertness.
 - SI-A3 (= R5): small-cell leverage bias under robust/cluster(unit) (0.68-0.97) —
   sthlp caveat + opt-in CR2/HC3 consideration.
 - SI-A4 (= R6): d3-class named refusal (unidentified ame presented as 0-rows).
