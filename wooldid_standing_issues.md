@@ -87,6 +87,55 @@ non-reproducible standalone for ame quantities (distributionally harmless — un
 labels exchangeable; att invariance audited); the structure pass's "1x1 rank 0"
 lines mean e(V_es_ame) ABSENT (matrix-coercion artifact, interpretation unaffected).
 
+### A.5 The author's coarse() matched-pair example (2026-08-24 addendum)
+
+The author's bonus example (contreat(dose) contreatcontrols(basic) vs
+coarse(c.dose), same data, robust / cluster(unit) / cluster(i)) was run verbatim
+and probed (review_process/amese/probes/ bonus.do/bonus2.do). It introduces no
+revision to the classification — it is a clean single-dataset demonstration of the
+diagnosis's central split, and it sharpens three answers:
+
+1. WHAT IS GOING ON: the two cluster(i) legs are the two faces of ONE mechanism.
+   coarse(c.dose) puts a visible dose slope in EVERY (_i,_t) cell (traced: 
+   `i._i#i._t#(c.dose)`, incl. the pooled-control cells) with no absorbed pooled
+   ringer; its cluster(i) CRVE is so thoroughly score-dead that Stata's
+   ereturn-post screen zeroes it WHOLE (probe: reghdfe e(V) bitwise zero on all
+   577 diagonals) -> wooldid's honest "not identified 4 of 4" blackout = regime
+   G3/G4. contreat's cluster(i) CRVE survives the same screen because the absorbed
+   pooled ringer routes control-cohort dose variation into one clean variance
+   block -> the silent regime G1: ameSE = 59.04 on this draw = SE_cl(phi-hat)
+   identically for every ame quantity (rank 1 of 2), and the "normal-looking" att
+   SE (143 vs 170 robust) is the G1a ~0.7-understated att, not a healthy one.
+   Which face a design lands on is numerical happenstance (G4 tripped 37% of
+   reps), not a substantive difference.
+2. NOT MISSPECIFICATION, AND THE byTime APPEARANCE IS AN ILLUSION: the DGP is
+   null and the AME estimand is well-defined — nothing here is model
+   misspecification; it is the variance estimator's score support. The
+   observation that byTime-style contreat controls "don't show issues" is exactly
+   the G2 trap: byTime+cluster(i) posts full-rank, horizon-varying, plausible-
+   looking SEs that equal SE_cl(phi_t-hat) to all displayed digits and measure
+   0.38-0.69 of truth. It LOOKS the healthiest and is the most dangerous member
+   of the family.
+3. DOES coarse() IMPLY NO SEs SHOULD BE PRODUCED FOR contreat UNDER cluster(i)?
+   For the plug-in CRVE: YES — coarse's blackout is the honest answer for both
+   legs, which is precisely remedy R1 (make contreat's cluster(i) behavior match
+   the refusal, deterministically and with a design-specific message). In
+   principle: NO — a correct cohort-level SE exists (R2: cluster bootstrap of the
+   margins functional, or cross-cohort dispersion of per-cohort AMEs), so the
+   refusal should name the alternative. On the "what would the design-based
+   econometricians say" question: the Abadie-Athey-Imbens-Wooldridge clustering
+   framework points the same way — if cohort-level dependence/assignment is the
+   reason to cluster, valid variance must come from BETWEEN-cohort variation of
+   cohort-level statistics, which the plug-in CRVE on a cell-saturated regression
+   cannot see; and with ~15 treated cohorts any cohort-level inference is
+   few-cluster inference, where bootstrap-t/IM-style dispersion methods are the
+   standard recommendation regardless.
+   Note on the example's middle pair: `cluster(unit)` there is unit = 1..6 within
+   cohort, i.e. SIX cross-cutting clusters — cells span clusters so no
+   annihilation (hence "sensible"-looking), but 6-cluster CRVE inference has its
+   own small-G caveat; the grid's cluster(unitid) (180 unique units) is the
+   better-behaved analogue and sits in G5 (~0.7-0.97 with leverage bias).
+
 ### Legacy ticket mapping
 
 SI-1 (adversarial size) and SI-2/SI-3 (jointtests/ptp scalars) are consequences of
