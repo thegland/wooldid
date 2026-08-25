@@ -219,18 +219,76 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   bare "invalid syntax" r198 in the margins phase (`cov_ccc_absorb`). Standing
   defect since REPORT_2026-08-18 ticket 2; the T-M1 ccnoabsorb corner note is
   adjacent context. §2.1.
+  - **REPORTED BACK 2026-08-25 (author challenged; investigation confirms the
+    author on substance).** The author's cohort-level example runs clean on both
+    builds (ATT 1.42 vs true 1.5; `ccc_absorb(dose)` and `coarse(c.dose)`
+    point-identical). The failing config's minimal ingredient is `ccc_absorb()` +
+    **unit-level `i`**: `absorb(i._i#i._t#c.(x))` puts a control slope in every
+    treated cohort-period cell, and with unit-level `i` each such cell is a single
+    observation — reghdfe drops all treated rows as singletons, so the spec is
+    unestimable **by construction**, not an estimator bug. The defect is only the
+    delivery: with no treated dummies in e(b) the horizon scan leaves `relyrlist`
+    empty and `matrix ... = ()'` throws the bare r198 (the dropped-dummy screen
+    misses it because the levels are absent, not `o.`-marked). PROPOSED (awaiting
+    ruling, not implemented): an informative treated-sample-survival error
+    steering to coarser `i`/fe()/coarsecohortcontrols, an empty-`relyrlist` guard,
+    and a passing cohort-level `ccc_absorb` suite config (the option has zero
+    passing coverage today). Full report:
+    `~/.claude/jobs/640b9294/tmp/si6/si6_report.md`. No T-M1 interaction.
 - **SI-7 — `o.`-omission-marker naming fragility.** `ext_contract10_rcs_factor_fe`
   is green-by-pin (0 -> 198, "5o. invalid name") — the pin does NOT certify the
   behavior as intended; the colleagues' Stata 17 old build hit the same error, our
   Stata 19 old build escapes by omission-pattern luck. Related: the dupcol entry's
   `o.`-marker truerow-strip trigger (report §1.11) is its own future corner. §2.2.
+  - **DIAGNOSED 2026-08-25 (author asked "concretely, what fails?"; report
+    `~/.claude/jobs/640b9294/tmp/si7/si7_report.md`, probe evidence alongside).**
+    (a) Exact failure: the subgroup event-study block rebuilds relative periods
+    by string-stripping the colnames of `margins, over(_t) subpop(&sg)` r(table);
+    when a subgroup×horizon margin is NOT estimable its column comes back
+    omission-marked (`5bno.__000003`), the sanitizer strips `bn` but not `o`,
+    and `local relyrinj = 5o. -6 -1` (worker L2546) throws the bare r198. Not a
+    dropped regression coefficient — e(b) is full, zero `o.` flags. (b) The old
+    build's rc 0 is NOT good behavior: its returned tables are degenerate
+    (all-zero clustered VCV, every SE/t/p/CI missing, pre-trend "estimates" =
+    machine zeros ~9e-16, sg1's pretreatment row silently absent) — survival by
+    accident because its margins name happens to parse as a number. (c) Minimal
+    failing set: `att` + `subgroups()` + any ES horizon whose subgroup-level
+    margin is inestimable — an ordinary spec (e.g. `subgroups(g)` with
+    `fe(i.g##i.t)`, which absorbs subgroup pre-trends by construction, or a
+    subgroup simply lacking a horizon). safety-on cannot catch it today: the
+    deliberate omission screen reads e(b), not margins output. (d) Regression
+    vs luck: the fragile chain is byte-identical in both builds; the flip is
+    numeric — B21's float→double w_att (3cb0c41) exposed a knife-edge that a
+    one-line toggle reproduces in BOTH directions (new+float → rc 0, old+double
+    → rc 198); untouched old also crashes on the unweighted variant and on
+    Stata 17. B21 exposed the crash, it did not create it. (e) Boundary:
+    wooldid's DELIBERATE omission-pattern exploitation lives in reads of the
+    regression's e(b) (o.-excluding regexes, the safety screen); the ACCIDENT
+    is that margins-over() colnames can also carry omission markers, and the
+    subgroup ES path is the one place such a name flows into an arithmetic
+    evaluator instead of a filter. PROPOSED (awaiting ruling, none
+    implemented): strip/guard `o` markers in the sg-horizon parser and report
+    omitted horizons with a caution (mirroring the pooled path); or derive sg
+    relyrs from e(b) names like the pooled path; optionally warn on fe()
+    interacting the subgroups variable with time; re-label the suite pin
+    (post-fix expectation = rc 0 with the sg1 pre-period reported as omitted,
+    NOT restoration of the old degenerate table).
 - **SI-8 — unit-level `i` at realistic scale dies late with cryptic r(907).**
   Cell-dummy grid exceeds maxvar (~2,000 counties x periods); correct usage is
   cohort-level `i`, but the failure is late and unexplained. Ticket: a pre-flight
   size check with an informative message steering to coarser `i`. §2.3 (ticket T-A).
+  - **IMPLEMENTED 2026-08-25 per author ruling (083ea89).** Under default safety:
+    >100 distinct `i` values → caution steering to fe() + coarser `i` (cohorts /
+    onset groups); estimated variable demand > c(maxvar) → early informative
+    r(907) with the same steer. Both skipped under safety(off). Cert:
+    `test/test_si89.do` T3–T5 (SI89_ALL_PASS); sthlp safety() paragraph synced.
 - **SI-9 — `poisexpresults` without `poisson` silently accepted on both builds.**
   The last member of the REPORT_2026-08-18 ticket-4 validation-gap family (the
   other two closed by b42b71f). Candidate r198 screen. §2.7.
+  - **IMPLEMENTED 2026-08-25 per author ruling (083ea89).** Option-contract
+    r(198): "poisexpresults requires poisson to have any effect". Suite pin
+    `ext_contract10_poisexp_without_poisson` rc_new 0→198 (8f7e830); positive
+    poisexpresults+poisson path re-checked in cert T2. sthlp synced.
 - **SI-10 — T-M2: continuous-SG joint pre-trend p stored as literal missing.**
   The sg-continuous overjoint `r(p)` is 1x1 with the real p at [1,1] (instrumented:
   sg1 6.209e-06, sg2 4.109e-07); the `[1,2]` read silently discards it and
@@ -241,11 +299,43 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   at the two sites (~L2685/L2696 vintage), re-bless `cont_sg.csv` (sole baseline
   pinning the "."), and document the old-vs-new suite diff explicitly (old shares
   the bug; the comparison alone can never flag it). §2.6.
+  - **DEMO DELIVERED 2026-08-25 (author-requested; d0f2625):**
+    `review_process/demo_tm2_sgjoint.do` — planted sg-differentiated dose
+    pre-trends; att sg joint p's real (sg3 = 5.7e-05), every ame twin "."
+    (Exhibit A); the 1x1-continuous vs 1x2-binary r(p) geometry reproduced on
+    plain `reg` + `margins` (Exhibit B). The mandated fix protocol is unchanged
+    and still pending.
 - **SI-11 — `allsgssame`-ame joint tests missing-valued on both builds.** The
   continuous SG-equality tests ("all SGs have the same ame"/"...pre-treatment ame")
   are missing in both probe cases AND pinned missing in the blessed cont_sg
   baseline, where the clean case expects rejection. Separate site family from SI-10
   (E1 chain machinery), undiagnosed — needs its own diagnosis first. §2.6 adjacent.
+  - **DIAGNOSED 2026-08-25 (author-directed extensive diagnosis; report
+    `~/.claude/jobs/640b9294/tmp/si11/si11_diagnosis.md`). NOT a code defect —
+    it is the family-A (G1) cluster-in-cell covariance degeneracy, already
+    handled by Group A.** Direct answer to the author's clustering question:
+    **turn clustering off and the missingness disappears** — under robust, no
+    vce, and cluster(unit) the SG-equality ame tests return real, sane values
+    on BOTH builds (a truly-false null rejected at 6e-41; a true null p=.667).
+    Mechanism: under cohort-level cluster(i)+contreat the posted margins
+    covariance of the per-SG AMEs is exactly rank 1 (measured: every e(V)
+    entry identical), so the equality contrast has exactly zero estimated
+    variance; `test` drops the zero-variance constraints (r(drop)=1, r(df)=0)
+    and the overjoint fallback returns r(p)[1,1]="." — or, when rank detection
+    only half-fires, silent garbage (5.2e-80 / 1.03e-109, bit-matched to the
+    banked pins). The chain machinery itself (wooldid_sgchain, rank guard, the
+    continuous [1,1] read) verified correct — no T-M2-class indexing issue
+    here (r(p) confirmed 1x1). The att twin "works" only because att cells
+    lack the annihilated slope channel (near-rank-1; ties to open SI-A1). At
+    HEAD, the amescrub/R3 gate correctly skips the chain under containment
+    with the explanatory caution; the ungated `unconditionalse` carve-out
+    probed clean on both builds. PROPOSED (awaiting ruling, none implemented):
+    F0 close as diagnosed + one sthlp sentence; F1 optional hardening — on
+    r(drop)==1 skip the overjoint fallback (it posts residual-rank garbage)
+    with a caution; F2 optional tidy — suppress "."-valued locals at the
+    ereturn site and cap the uncapped r(p)[1,1] read to match its pre twin.
+    No valid plug-in number exists under containment; bootstrap/IM dispersion
+    (the approved future R2 work) remains the only principled restoration.
 
 ## C. Documentation-grade actions (no estimator change)
 
@@ -257,19 +347,40 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   note near the honestdid example that Rambachan-Roth C-LF robust sets can be
   legitimately EMPTY on data with strong pre-trends (observed; not a handoff
   defect). §5.5, oracle O16.
+  - **Author ruling 2026-08-25:** (i) demo + commentary delivered —
+    `review_process/demo_singleton_ves.do` (d0f2625): same common-onset data as
+    unit-level `i` vs pooled cohort; att reldif 4.2e-16, ES SE ratios 0.84–1.07.
+    When it arises: any design where `i` is a unit-level identifier, i.e.
+    wooldid's most ordinary binary usage — each treated cell is fit exactly by
+    its own dummy, so the clustered V_es is built from control-side residual
+    variation only; it matters mainly for the honestdid/pretrendpower handoffs,
+    which receive a structurally different covariance than the pooled-cohort
+    formulation of the same event study. (ii) family-A design-conditions sthlp
+    language: DEFERRED until after the Group A/B testing settles. (iii) skipped
+    per author.
 - **SI-13 — upstream courtesy report.** honestdid v1.1.2 crashes (mata assert 3498
   in `_flciFindWorstCaseBiasGivenH`, parallel AND sequential paths) on
   binary_mixed_imbalanced delta(sd) while delta(rm) runs clean on the same b/V.
   Reproducible; report to the package maintainer. External action only. §5.5.
+  - **DONE 2026-08-25:** author is handling the upstream report directly; no
+    further action in this repo.
 
 ## D. Suite-side residuals (test infrastructure, not wooldid defects)
 
 - **SI-14 — NFADV unpost-path coverage.** The pooled-reference/degenerate-q
   adversarial unpost paths are ledgered only for `ext_*` configs; no core/adm
   config exercises them. Add one. §4 gap 1.
+  - **ADDED 2026-08-25 per author ruling (8f7e830):** `cov_advpool` (adversarial
+    without esfixedbaseperiod → the pooled-reference unpost path) + 3 scoped
+    ledger rows (NFADV-core-p/-l/-ln) mirroring the ext_* family.
 - **SI-15 — `cov_icbad` under-triggers B21(b).** Engineered-collinearity levels
   ~1e6 are float-representable; a ~1e8 variant would pin the class old-side. §4
   gap 2.
+  - **ADDED 2026-08-25 per author ruling (8f7e830):** `cov_icbad2` (icbad8 prep,
+    levels ×100 → ~1.02e8 > 2^24) + 5 wildcard rows and the README
+    accepted-blind-spot listing (G10B precedent). Both new configs validate on
+    the full suite run now in flight; stale-row amendments, if any, follow the
+    AMESE-R4-b precedent.
 
 ---
 
