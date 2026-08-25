@@ -2,7 +2,9 @@
 
 Derived 2026-08-24 from `wooldid_old_bug_report.md` (the 2026-08-23 report of record
 plus its §5 new-feature-validation extension). This file lists ONLY what remains to
-be addressed; nothing here is fixed yet. Excluded by construction: everything in §1
+be addressed; nothing here is fixed yet. (Status annotations added 2026-08-25:
+items marked IMPLEMENTED/DONE/ADDED are complete and await only author review;
+items marked DIAGNOSED/REPORTED BACK carry proposals awaiting an author ruling.) Excluded by construction: everything in §1
 (fixed old bugs), §3 (intended changes), §5.1 (validated-clean surfaces), the pure
 records of §2 (items 4, 5, 8: environment pins, the corrected-T1 reading, parity
 pins), and the author-ruled ignores from the mini assessment (T-M1; T-M3 waits for
