@@ -62,7 +62,7 @@ end
 * ---------------- configs ----------------
 
 freshstart "`DATA'/dta_binary"
-cap noi wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(3) summarystats jointtests
+cap noi wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(3) summarystats jointtests safety(off)
 local rc = _rc
 dumpres basic `rc'
 
@@ -77,12 +77,12 @@ local rc = _rc
 dumpres esf_adv `rc'
 
 freshstart "`DATA'/dta_binary"
-cap noi wooldid y i t ttre, att_it cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests
+cap noi wooldid y i t ttre, att_it cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests safety(off)
 local rc = _rc
 dumpres sg_attit `rc'
 
 freshstart "`DATA'/dta_binary"
-cap noi wooldid y i t ttre, att_itime cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests
+cap noi wooldid y i t ttre, att_itime cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests safety(off)
 local rc = _rc
 dumpres sg_attitime `rc'
 
@@ -156,14 +156,14 @@ dumpres simple_esf `rc'
 * sg_degpre pins the degenerate no-pre-period state (absent pre joints, post-only pwsgs)
 freshstart "`DATA'/dta_cont"
 qui gen sg = mod(i,2)+1
-cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests
+cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests safety(off)
 local rc = _rc
 dumpres cont_sg `rc'
 
 freshstart "`DATA'/dta_binary"
 qui gen sgm = mod(i,3)
 qui replace sgm = . if mod(i,11) == 0
-cap noi wooldid y i t ttre if w > 0, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sgm) jointtests
+cap noi wooldid y i t ttre if w > 0, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sgm) jointtests safety(off)
 local rc = _rc
 dumpres sg_missif `rc'
 
@@ -173,7 +173,7 @@ local t2 = r(min) + 1
 qui gen sgd2 = 1
 qui replace sgd2 = 2 if mod(i,7) == 0
 qui replace ttre = `t2' if mod(i,7) == 0
-cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sgd2) jointtests
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sgd2) jointtests safety(off)
 local rc = _rc
 dumpres sg_degpre `rc'
 

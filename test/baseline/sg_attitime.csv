@@ -37,7 +37,7 @@ macro|wdid_vcespec|cluster(i)
 macro|joint_horiz_i_s2|.33352542783821
 macro|joint_horiz_i_s1|.8765646252981073
 macro|estimate_type|pooled_reference_period
-macro|cmdline|wooldid y i t ttre, att_itime cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests
+macro|cmdline|wooldid y i t ttre, att_itime cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests safety(off)
 macro|properties|b V
 macro|depvar|y
 matnames|b|1x18|y1|main_att_itime pretreatment_att_itime ES_att_it_pre2 ES_att_it_pre1 ES_att_it_post0 ES_att_it_post1 main_SG1_att_itime pretreatment_SG1_att_itime ES_att_it_SG1_pre2 ES_att_it_SG1_pre1 ES_att_it_SG1_post0 ES_att_it_SG1_post1 main_SG2_att_itime pretreatment_SG2_att_itime ES_att_it_SG2_pre2 ES_att_it_SG2_pre1 ES_att_it_SG2_post0 ES_att_it_SG2_post1
