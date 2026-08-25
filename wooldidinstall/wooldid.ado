@@ -1127,32 +1127,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   qui gen byte `esamp' = e(sample)
   local df_r = e(df_r)
 
-  * AMESE R4: catch Stata's ereturn-post variance screen zeroing the whole VCE (the
-  * quiet estimation call swallows the only warning). Detection is unconditional;
-  * an att-side rescue refit through the explicit-dummies regress path is gated on a
-  * feasibility check (the fallback materializes the absorbed FEs as dummies).
-  if "`fastnose'" == "" {
-    wooldid_amescreen , mode(vzero)
-    if r(vzero) == 1 {
-      qui glevelsof `i' if `esamp'
-      local amevzi : word count `r(levels)'
-      qui glevelsof `t' if `esamp'
-      local amevzt : word count `r(levels)'
-      * the original estimation dropped nothing that matters for feasibility counting;
-      * the explicit-dummies refit is regress-only (poisson fallback would be a
-      * different estimator) and gated so it cannot blow past maxvar at scale
-      if "`poisson'" != "poisson" & `amevzi' + `amevzt' <= 450 {
-        dis as text "Caution: wooldid is re-estimating through the explicit-dummies fallback to recover the standard errors that survive (see the preceding caution; recovered cluster-robust variances for treated-cell quantities remain subject to the cell-containment caution if it also appears)."
-        qui reg `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `vcespecifier'
-        cap est drop ___wooldidfullmodel
-        qui est sto ___wooldidfullmodel
-        cap drop `esamp'
-        qui gen byte `esamp' = e(sample)
-        local df_r = e(df_r)
-      }
-    }
-  }
-
   * AMESE R1 (standing-issues family A): the structural cell-containment predicate.
   * Fires only with contreat + a cluster-type VCE, never under fastnose (no variances),
   * impvalues (IM dispersion inference is valid under containment), or unconditionalse
@@ -1168,6 +1142,33 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if "`amescrubclus'" != "" {
       wooldid_amescreen , mode(detect) icell(`_i') tcell(`_t') tflag(`targetflag') esamp(`esamp') clusvars(`amescrubclus') contreat(`contreat')
       local amescrub = r(fire)
+    }
+  }
+
+  * AMESE R4: catch Stata's ereturn-post variance screen zeroing the whole VCE (the
+  * quiet estimation call swallows the only warning). Detection + caution are
+  * unconditional (outside fast mode); the att-rescue REFIT through the
+  * explicit-dummies regress path is deliberately NARROW: it runs only under a firing
+  * containment predicate (the blackout-collateral cases this remedy exists for -
+  * binary timetrends' designed b-only fallback is NOT overridden), only for a
+  * single-variable cluster() (official regress has no multi-way cluster), never for
+  * poisson, and behind a maxvar feasibility count.
+  if "`fastnose'" == "" {
+    wooldid_amescreen , mode(vzero)
+    if r(vzero) == 1 & `amescrub' == 1 & "`poisson'" != "poisson" & wordcount("`cluster'") == 1 & "`customvce'" == "" {
+      qui glevelsof `i' if `esamp'
+      local amevzi : word count `r(levels)'
+      qui glevelsof `t' if `esamp'
+      local amevzt : word count `r(levels)'
+      if `amevzi' + `amevzt' <= 450 {
+        dis as text "Caution: wooldid is re-estimating through the explicit-dummies fallback to recover the standard errors that survive (see the preceding caution; recovered cluster-robust variances for treated-cell quantities remain subject to the cell-containment caution)."
+        qui reg `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `vcespecifier'
+        cap est drop ___wooldidfullmodel
+        qui est sto ___wooldidfullmodel
+        cap drop `esamp'
+        qui gen byte `esamp' = e(sample)
+        local df_r = e(df_r)
+      }
     }
   }
 
