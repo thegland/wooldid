@@ -13,57 +13,86 @@ report (`review_process/inv1_v_es_ame_2026-08-24.md`), the mini-assessment proto
 
 ---
 
-## A. The V_es inference pathology family (one root cause, one remedy menu)
+## A. The V_es / AME inference pathology family — FULL DIAGNOSIS (2026-08-24 grid)
 
-Root cause (mechanism-proven, §5.2-§5.4 + INV-1): saturated cohort-by-relative-period
-cells inside single clusters zero the CRVE scores, understating the event-study
-covariance DIRECTIONALLY — cross-horizon contrast directions carry 7-20x less
-reported than true variance while diagonals look only 1-2x off. Every
-V_es-consuming multi-dimensional test inherits over-rejection. The test statistic
-code itself is sound (robust-VCE att-side sizes at 5.75%).
+Diagnosed by author directive via a preregistered 26-case x 256-rep MC-truth grid
+(designs x contreatcontrols x VCE; PREREG_AMESE_2026-08-24.md, bands locked before
+results), a deterministic structure pass, an att-side supplement (2 x 258, paired
+seeds), TWO locked-prediction theory reviews (incidental-parameters; design-based),
+a blind third theorist, a code-path audit, and an adversarial referee whose required
+edits are incorporated below. Artifacts: review_process/amese/ (theoryA_locked,
+theoryB_locked, blind_theorist, code_audit, referee, mc_results) + the INV-1 report.
+Bucket definitions applied under ONE lens throughout (the referee's mandate): a
+"correct SE" is one that tracks the sampling variability of the LABELED quantity
+under the design; where a within-method reading would change the bucket, it is noted.
 
-Shared remedy menu (§5.2, rising ambition): (a) sthlp design-conditions rewrite
-(when are these p-values trustworthy: clustering finer than the cells, or
-robust/unclustered; narrow windows do NOT rescue multi-unit designs); (b) detect
-cell-saturated clustering (cheap predicate: every treated (i, relyr) cell inside a
-single cluster of the specified cluster()) and print a specific caution on every
-V_es-consuming p-value and on the honestdid handoff; (c) cluster-bootstrap or
-CR3/jackknife V for the ES block; (d) eigenvalue-floor regularization inside
-wooldid_advstat (defensible but ad hoc). Any fix here moves real results: battery
-adv_*/esf_adv pins and the oldnew adversarial surfaces re-bless with documentation.
+### A.1 Final classification (the author's four buckets)
 
-- **SI-1 (NF-1a) — adversarial line test oversized under cohort-level cluster().**
-  Flat-null rejection at nominal 5%: 20.5-23.2% (G=40 singleton, incl. AR(1) and
-  planted-line nulls), 48.4% (G=40, 8-unit cohorts), 44.8% (G=100 multi-unit),
-  24.8% (2/2 window multi-unit), 11.7% (G=200 singleton); altmethod 11.2-12.6%;
-  conservative (2.4%) at G=10. Evidence: §5.2 rate table, M=1000/config MC.
-- **SI-2 (NF-1b) — `jointtests` pre-trend p (`joint_horiz`) oversized.** Same V,
-  old feature: 11.3-36.0% at nominal 5% across the G=40 arms; **65.7% at G=10**.
-  The sthlp's existing few-clusters caution radically understates this. §5.2.
-- **SI-3 (NF-1c) — `pretrendpower` reported p/size scalars inherit the pathology.**
-  `e(roth_prep)` rejects 14.0% at nominal 5% under the null on the saturated
-  design; reported `e(roth_nissize)` .1325 vs empirical .2132. The power claims
-  (mdt columns) themselves validated and need no change. §5.2.
-- **SI-4 (NF-2, demo issue) — all ame SEs identical + rank-1 `e(V_es_ame)` under
-  cohort-level cluster().** Every displayed ame SE (main, pretreatment, every ES
-  horizon) equals the SE of the absorbed baseline dose slope; e(V_es_ame) is
-  EXACTLY rank 1, so every cross-horizon contrast carries zero reported variance
-  while true variances are ~5x larger and full rank; honestdid/lincom/test ingest
-  the matrix silently. Old wooldid shares the V and additionally POSTED an invalid
-  g-inverse adversarial-ame p (.6147, verified in probe8_old.log) where new
-  correctly refuses — so the refusal half is already fixed; the standing defect is
-  computing/posting that V (and those SEs) without warning. The F2 sthlp entry
-  needs the caveat regardless of remedy choice. Runnable reproduction:
-  `review_process/demo_vesame_pathology.do` (identical SEs 0.059040286 x8,
-  correlation 1.0, eigenvalues .0279 vs 6e-17, contrast variance -2.3e-17 against
-  an estimate difference of 0.491; robust rerun: SEs 0.166-0.211, full rank).
-  Evidence: §5.3 + INV-1 report.
-- **SI-5 (NF-3) — ame-side tests oversized under EVERY tested VCE, incl. robust.**
-  On iid multi-unit data with `robust`: adversarial-ame 31.5%, `joint_Choriz`
-  22.0% at nominal 5%, while the att side is simultaneously correct (5.75%) —
-  small-cell dose-slope variance bias amplified by the 6-8 dimensional quadratic
-  forms. Continuous-treatment ES inference currently has NO configuration with
-  trustworthy joint p-values. §5.4.
+| grp | design x options | measured (SE/truth ratios etc.) | bucket | verdict detail |
+|---|---|---|---|---|
+| G1 | cluster(i) + basic (unit-dose or time-dose data); also within-arm on unit-dose | e(V_es_ame) exact rank 1; every ame SE = SE_cl(pooled phi-hat); ratios: ES horizons ~0.20, pretreat ~0.40, main ~0.52 (ratio^2 tracks #cells averaged); SILENT | (iii) | The AME estimand is fine and a correct SE is estimable (R2) — but not by plug-in CRVE here (cell scores identically zero). The posted number is a CORRECT SE of the WRONG object (the absorbed baseline dose slope) mis-attributed to every ame quantity — the named nearest-(ii) miss; under a strict within-requested-method reading this is (iv). |
+| G1a | ATT side under cluster(i), same designs (att supplement, paired seeds) | att ratios 0.66-0.75 across all 10 att quantities; robust att 0.93-1.04 | (iii) | The pathology is NOT ame-only: cohort-clustered att SEs are ~25-30% understated (milder than ame's ~80% because att cells lack the slope channel). This is the microfoundation of NF-1's att-side 20%+ joint-test rejections. |
+| G2 | cluster(i) + byTime | FULL-RANK V, horizon-varying SEs — but each horizon SE = SE_cl(phi_t-hat) to all displayed digits (confirmed on two shapes/seeds); ratios 0.38-0.69 | (iii) | The full rank is SPOOFED by the period-varying baseline block; within-cell noise still 100% annihilated. Kills any rank/eigenvalue guard design. |
+| G3 | cluster(i) + byCohort | total blackout: reghdfe e(V) arrives bitwise ZERO (Stata's `ereturn post` screen zeroes a nonsymmetric/highly-singular V WHOLE); "not identified 20 of 20" caution; no e(V_es_ame), no e(b_es_ame) | (iii) | ame side = G1. The att collateral: att variances are computable via the regress path but are themselves G1a-understated (~0.7) — so the R4 repair restores them only WITH the R1 caveat, never as certified-valid. The honest caution is the right instinct; losing att inference entirely is not. |
+| G4 | all-treated staggered + cluster(i) (within-style) | stochastic blackout 95/256 reps (37%; 3 of 4 frozen realizations); posting reps are G1 rank-1 (all SEs = SE_cl(phi-hat) exactly); main/pre ratio ~1.0 is a COMPOSITIONAL COINCIDENCE, ES ~0.61-0.76 | (iii) | All-or-nothing numerical behavior on an over-parameterized design; R1's structural predicate makes handling deterministic. |
+| G5 | cluster(unitid) or robust, d1/d2, all contreatcontrols | ratios 0.68-0.97 (typical 0.72-0.91); full rank, horizon-varying; one case at the WRONG boundary | (iii) [relabeled from "(i) with caveat" on referee ruling: the preregistered band itself excludes "approximately correct"] | Textbook CR1/HC1 small-cell leverage bias (6-obs cells, 2 within-cell params): ~8-13pt under-coverage at the margins. Displayed-SE remedy is R5 (caveat + opt-in correction); the joint tests built on these V (NF-3: 20-35% at 5%, measured in the NF-1/NF-3 MCs, not this grid) require R3. att under robust is essentially correct (0.93-1.04). |
+| G6 | all-treated + cluster(unit)/robust | ratios 0.86-1.11 — inside the preregistered band | (i) pointwise | Compositional improvement (truth weight shifts onto the well-estimated baseline block), not a repair of the leverage bias; joint tests remain uncertified. Shape-qualified. |
+| G7 | dose constant within cohort-period cells (d3), any VCE | deterministic: 165 collinearity drops; ame rows shown as structural-ZERO point estimates with missing SEs behind generic cautions | (iv) | The within-cell AME estimand is genuinely unidentified, and no option rescues it (lattice only refines cells — audited). Correct output: a NAMED refusal of the ame block + steer (R6). wooldid rightly posts no SE; wrongly presents fabricated 0 estimates unflagged. |
+| G8 | contreatwithin on data WITH controls | bitwise identical to basic (estimation-inert) | n/a | A user requesting within-identification is silently not getting it — screen or document (R7). |
+| G9 | cluster(i) + cell-correlated errors (d1c) | = G1 (rank-1, ratios 0.18-0.46) with knife-edge stochastic blackouts (33/256 MC reps ~13%; 1 of 16 frozen realizations); robust survives at 0.75-1.05 because treated-cell dummies absorb the cell-level shocks | (iii) | Sharpest normative case: cluster(i) is the CONCEPTUALLY right level yet numerically worst. Default remedy = a valid cluster-level estimator (R2); a steer to robust is CONDITIONAL on the dependence model (valid for pure cell-level shocks, invalid under unit-serial dependence) and must be worded so. |
+
+Bucket (ii) is EMPTY on this grid; the two nearest misses are named in G1 and G3.
+Old wooldid shares every pathology above (same spec/VCE paths) and additionally
+posted the invalid g-inverse adversarial-ame p that current wooldid refuses.
+
+### A.2 Theory scorecard (locked predictions vs measurement)
+
+Confirmed by all three theory reads: the cluster(i) three-way signature (rank-1
+silent / byCohort blackout / byTime full-rank-posted), within==basic inertness, d3
+unidentifiability, robust/unit-cluster leverage-bias direction. Quantitative scoring:
+theory A's cu/rb band 0.65-0.85 vs measured 0.68-0.97 (best); theory B's 0.8-1.0
+slightly high-biased; both under-predicted the cluster(i) severity (measured ES ~0.2).
+Resolved disagreements (referee-mandated, now explicit): the G5 bucket goes to the
+blind theorist's (iii) over the draft's "(i)-with-caveat"; the d1c robust-steer goes
+to theory B's position with the referee's conditionality refinement. Measured but
+unpredicted by anyone: the ereturn-post V-zeroing blackout channel; the compositional
+main/pre ~1.0 coincidence; the partial-containment false negative (below).
+
+### A.3 Remedy set R1-R8 (renamed to avoid feature-ID collisions), with response type and blast radius
+
+| id | remedy | response type | blast radius |
+|---|---|---|---|
+| R1 (P1) | STRUCTURAL detect + refuse: predicate = ANY treated (i, relyr) cell wholly inside one cluster of cluster() ["any", not "every" — the referee DEMONSTRATED a partial-containment false negative: mixed cluster variable, full-rank V, no caution, spurious p=1.2e-08 on a true null]. On firing: suppress plug-in ame SEs, e(V_es_ame), and the V_es-based ame tests; print a design-specific caution naming mechanism + remedies. Belt-and-braces: also screen margins r(table) for the blanking behaviors. NEVER guard on rank/eigenvalues (G2). | say-not-estimable | wooldid.ado validate/worker; battery cont_* pins re-bless (cluster(i) configs change output); oldnew ledger rows; sthlp. LARGE — the flagship change. |
+| R2 (P3) | Replacement estimator, opt-in first: cluster bootstrap of the margins functional, or analytic cross-cohort dispersion of per-cohort AMEs (IM-style). Audit confirms ingredients are in hand at the margins site (cell slopes in e(b), weights in r(Jacobian), Var_cl(phi-hat)). Context: the F1/boottest wild-bootstrap route was previously ruled infeasible for the stored model — this is a different, self-contained bootstrap of the margins functional. | code-fix (new option) | new option + newfeat validation; no re-bless until made default. |
+| R3 (P2) | Joint tests on V_es (adversarial, jointtests, roth prep, NIS size, AND the pretrendpower mdt columns — input validity): refuse under the R1 predicate; elsewhere (small-cell cu/rb) bootstrap/CR3 the V or refuse above a dimension threshold. 20-35% rejection at nominal 5% is not caveat material. | code-fix | advstat/jointtests/ptp paths; battery adv_*/esf_adv/ptp_two pins re-bless; NF-1/NF-2/NF-3 tickets close together. |
+| R4 (P1, gated) | Blackout repair: detect e(V)==0 after the reghdfe call (the ereturn-post zeroing signature; unswallow the warning wooldid's qui hides), restore the ATT block only, via the existing regress fallback path — under the R1 predicate the restored att SEs carry the G1a caveat (~0.7 understatement), and the ame side stays refused (referee: an ungated repair would resurrect the rank-1 ame SEs the zeroing usefully suppressed). | code-fix | worker post-estimation block; G3/G4/G9 blackout behavior changes; cautions re-worded. |
+| R5 (P4) | Small-cell leverage bias (G5): sthlp caveat + printed note when cells are small; consider opt-in CR2/HC3-style corrections; default unchanged. Magnitudes are shape-qualified (single 30x6x12 shape measured; ratios should approach 1 with larger cells). | doc + opt-in code | sthlp; optional new sub-option. |
+| R6 (P4) | d3-class: NAMED refusal of the ame block ("dose has no within-cell variation; ame not identified") + steer, instead of structural-zero rows behind generic cautions. The existing catastrophe counter already detects the condition. | say-not-estimable + steer | one screen + message; ext/patho configs re-pin where they hit it. |
+| R7 (P4) | contreatwithin-with-controls: screen or document the estimation-inertness. Separate sub-ticket: the byCohort+ame POINT estimand is normalization-dependent across solvers (audited: reghdfe .723 vs regress .554, att invariant) — decide what that estimand IS before offering SEs for it. | misspecification-steer / design decision | screens + sthlp; the byCohort sub-ticket may alter estimates (author decision). |
+| R8 (P4) | sthlp design-conditions rewrite for ALL V_es consumers (honestdid/pretrendpower handoffs included), folding the singleton-cell O16 caveat; plus a user note that a stale 2024-07-31 wooldid.ado in the PLUS adopath can shadow interactive sessions. | doc | sthlp only. |
+
+Priority: P1 = R1 + gated R4 (stops silent-wrong and repairs the blackout collateral
+in one coherent behavior change); P2 = R3 (test validity); P3 = R2 (restores
+inference the refusals remove); P4 = R5-R8. R1/R3/R4 are one design decision
+executed together — they share the predicate, the messages, and one re-bless wave.
+
+### A.4 Method limitations (recorded)
+
+Single panel shape (30 cohorts x 6 units x 12 periods): G5/G6 magnitudes, blackout
+rates, and the d1c-robust performance are shape-sensitive; bucket assignments and
+mechanisms are not. T=256 gives ~4.4% SD noise (no verdict is within noise of
+flipping). Joint-test rejection rates cited from the NF-1/NF-3 MCs, not this grid.
+Harness: expand/bysort tie order after a wooldid call makes individual reps
+non-reproducible standalone for ame quantities (distributionally harmless — unit
+labels exchangeable; att invariance audited); the structure pass's "1x1 rank 0"
+lines mean e(V_es_ame) ABSENT (matrix-coercion artifact, interpretation unaffected).
+
+### Legacy ticket mapping
+
+SI-1 (adversarial size) and SI-2/SI-3 (jointtests/ptp scalars) are consequences of
+G1/G1a/G2/G5 and close via R3 (+R1). SI-4 (demo issue) = G1's silent rank-1 regime —
+the demo file remains the canonical reproduction; its fix is R1 (+R2 for restored
+inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+R3+R5.
 
 ## B. Functional defects on both builds (invisible to the old-vs-new comparison)
 
