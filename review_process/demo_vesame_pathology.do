@@ -1,3 +1,10 @@
+* NOTE (post-R1, 2026-08-24): wooldid now DETECTS this design (the cell-containment
+* predicate), prints an explanatory caution, sets the ame SEs/tests to missing, and
+* withholds e(V_es_ame) while still posting e(b_es_ame). Exhibit A below therefore no
+* longer shows the silent identical SEs on current builds — it shows the refusal.
+* To reproduce the original pathological OUTPUT, run Exhibit A against a pre-R1 build
+* (e.g. git show <pre-R1 sha>:wooldidinstall/wooldid.ado). Exhibit B is unchanged.
+*
 * demo_vesame_pathology.do — minimal demonstration of NF-2 (wooldid_old_bug_report.md
 * §5.3): under cohort-level cluster(i) with contreat(), EVERY reported ame standard
 * error (main ame, pretreatment ame, every ES_ame horizon) is the same number — the SE

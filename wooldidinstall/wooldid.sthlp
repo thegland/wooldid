@@ -662,6 +662,17 @@ to include the continuous treatment variable itself among your controls, as this
 a control with values identical to that of the continuous treatment variable: it just needs to have a different variable name. It is recommended that any custom such controls be specified
 in conjunction with the option {it:contreatcontrols(basic)}, or any option other than {it:untreatedZero}. {p_end}
 
+{pstd} {ul:Caution Regarding Continuous Treatments and Cluster-Robust Standard Errors:} With {cmd:contreat()}, the regression gives every treated cohort-by-period cell its own
+treatment-intensity slope. When any such cell lies entirely within a single cluster of the specified {cmd:cluster()} (which is automatic when clustering on the cohort identifier
+{it:i} itself), the cluster-robust variance estimator is structurally blind to within-cell variation in the continuous treatment: the "standard errors" it would deliver for the ame-family
+quantities do not measure their sampling variability (in the {it:contreatcontrols(basic)}/{it:byTime} cases they collapse to the variance of the absorbed baseline dose control, one number
+repeated across every ame quantity — including configurations where the covariance appears full rank). {it:wooldid} detects this design, prints an explanatory caution, sets the ame-family
+standard errors, tests, and joint diagnostics (adversarial ame p-values, ame joint pre-trend tests, subgroup ame comparisons, ame pre-trend power) to missing, and withholds
+{it:e(V_es_ame*)} while still returning the unaffected point estimates and {it:e(b_es_ame*)}. Valid ame inference under such designs: {it:impvalues} (cross-cluster dispersion inference,
+which remains valid); {it:vce(robust)} when errors are independent across observations (not appropriate under within-unit serial dependence); or clustering on a variable strictly finer
+than the cohort-by-period cells. Note that binary-treatment (att) standard errors under cohort-level clustering are also somewhat understated on such saturated designs (a milder, documented
+phenomenon); wooldid does not suppress them. {p_end}
+
 
 {marker technical}{...}
 {dlgtab:Technical Features}
@@ -755,7 +766,9 @@ gaps, non-(-1) references, or the (default) pooled cohort-specific reference —
 transformation. Check the regime via {it:e(estimate_type)} == "fixed_reference_period" and the numeric spacing via the {it:relyr} column of {it:e(escomp)}/{it:e(escomp_s{it:sgcase})}.
 The matrices are returned whenever at least one horizon has an identified variance; horizons whose standard errors are not identified then carry zero (structural-zero) or missing
 diagonal rows, flagged by a Caution and by {it:e(es_ndegen_{it:type})} (the count of degenerate rows, posted only when such rows exist — its absence marks a clean covariance). Fully
-non-identified VCVs ({cmd:impvalues}, {cmd:fastnose}, typically {cmd:timetrends}) are not returned.{p_end}
+non-identified VCVs ({cmd:impvalues}, {cmd:fastnose}, typically {cmd:timetrends}) are not returned. Additionally, when the cell-containment caution fires (see the continuous-treatments
+standard-error caution above), {it:e(V_es_ame*)} is withheld — the captured covariance is not the sampling covariance of the ame estimates — while {it:e(b_es_ame*)} still posts; att-side
+event-study objects are unaffected.{p_end}
 
 {synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods (relative year < 0) in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument (subject to the geometry conditions in the {it:e(b_es)} entry above).{p_end}
 

@@ -1127,6 +1127,50 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   qui gen byte `esamp' = e(sample)
   local df_r = e(df_r)
 
+  * AMESE R4: catch Stata's ereturn-post variance screen zeroing the whole VCE (the
+  * quiet estimation call swallows the only warning). Detection is unconditional;
+  * an att-side rescue refit through the explicit-dummies regress path is gated on a
+  * feasibility check (the fallback materializes the absorbed FEs as dummies).
+  if "`fastnose'" == "" {
+    wooldid_amescreen , mode(vzero)
+    if r(vzero) == 1 {
+      qui glevelsof `i' if `esamp'
+      local amevzi : word count `r(levels)'
+      qui glevelsof `t' if `esamp'
+      local amevzt : word count `r(levels)'
+      * the original estimation dropped nothing that matters for feasibility counting;
+      * the explicit-dummies refit is regress-only (poisson fallback would be a
+      * different estimator) and gated so it cannot blow past maxvar at scale
+      if "`poisson'" != "poisson" & `amevzi' + `amevzt' <= 450 {
+        dis as text "Caution: wooldid is re-estimating through the explicit-dummies fallback to recover the standard errors that survive (see the preceding caution; recovered cluster-robust variances for treated-cell quantities remain subject to the cell-containment caution if it also appears)."
+        qui reg `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `vcespecifier'
+        cap est drop ___wooldidfullmodel
+        qui est sto ___wooldidfullmodel
+        cap drop `esamp'
+        qui gen byte `esamp' = e(sample)
+        local df_r = e(df_r)
+      }
+    }
+  }
+
+  * AMESE R1 (standing-issues family A): the structural cell-containment predicate.
+  * Fires only with contreat + a cluster-type VCE, never under fastnose (no variances),
+  * impvalues (IM dispersion inference is valid under containment), or unconditionalse
+  * (different estimand; excluded from suppression by design). When it fires, every
+  * downstream ame-family capture nulls its se/t/p/ci cells (the existing sentinel
+  * machinery renders them as missing SEs), the ame-side V_es tests are skipped, and
+  * e(V_es_ame*) is withheld while e(b_es_ame*) still posts.
+  local amescrub 0
+  if "`contreat'" != "" & "`impvalues'" == "" & "`unconditionalse'" == "" & "`fastnose'" == "" {
+    local amescrubclus
+    if "`cluster'" != "" local amescrubclus `cluster'
+    if "`amescrubclus'" == "" & word(`"`customvce'"', 1) == "cluster" local amescrubclus : subinstr local customvce "cluster" "", word count(local amescrubn)
+    if "`amescrubclus'" != "" {
+      wooldid_amescreen , mode(detect) icell(`_i') tcell(`_t') tflag(`targetflag') esamp(`esamp') clusvars(`amescrubclus') contreat(`contreat')
+      local amescrub = r(fire)
+    }
+  }
+
   *****************************************************************************************************************
   ******************************  PRODUCE THE WEIGHTS FOR CREATING VARIOUS OUTCOMES  ******************************
   *****************************************************************************************************************
@@ -1919,6 +1963,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           matrix rownames `f9tab' = b se t pvalue ll ul
         }
         matrix `___C`item'' = `f9tab'[1..6,1]'
+        * AMESE R1: under cell containment the CRVE ame variance is not the ame's
+        if `amescrub' {
+          forval amej = 2/6 {
+            matrix `___C`item''[1, `amej'] = .
+          }
+        }
       }
 
       if "`impvalues'" == "impvalues" {
@@ -1966,6 +2016,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             matrix rownames `f9tab' = b se t pvalue ll ul
           }
           matrix `___C`item'_pre' = `f9tab'[1..6,1]'
+          * AMESE R1 scrub (see the main-ame twin)
+          if `amescrub' {
+            forval amej = 2/6 {
+              matrix `___C`item'_pre'[1, `amej'] = .
+            }
+          }
         }
 
         if "`impvalues'" == "impvalues" {
@@ -2190,6 +2246,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               matrix rownames `f9tab' = b se t pvalue ll ul
             }
             matrix `___C`horizitem'_horiz' = (`f9tab'[1..6, 1..`=colsof(r(b))']',`relyrcolumn')
+            * AMESE R1 scrub: null the se/t/p/ci columns of every ame ES horizon
+            if `amescrub' {
+              forval amer = 1/`=rowsof(`___C`horizitem'_horiz')' {
+                forval amej = 2/6 {
+                  matrix `___C`horizitem'_horiz'[`amer', `amej'] = .
+                }
+              }
+            }
             * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
             if "`marginsdof'" != "nose" {
               tempname f2bmat f2vmat
@@ -2219,7 +2283,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               if "`adversarial'" == "adversarial" dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
               local adversarial
             }
-            if "`adversarial'" == "adversarial"    {
+            if "`adversarial'" == "adversarial" & `amescrub' == 0   {
               wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial')
               local advstatus `r(status)'
               if "`advstatus'" == "gapskip" local adversarial
@@ -2278,7 +2342,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
       ****** produce joint tests of pre-treatment AMEs by horizon - same method as for non continuous treatment
       * note - pret 1 case will suppress these already from att level processing
-      if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'"=="" {
+      * AMESE R3: under cell containment the joint pre-trend tests inherit the same
+      * invalid ame covariance, so they are skipped (see the R1 caution)
+      if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'"=="" & `amescrub' == 0 {
         if "`att'" == "att"  {
           qui margins [`weight'=`w_att'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != .  &  (`_t' == 0 |`_t' >= `horizonstarter')     ) contrast(overjoint) `poismarginstext' `marginsdof'
           local joint_Choriz = r(p)[1,1]
@@ -2605,6 +2671,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             matrix rownames `f9tab' = b se t pvalue ll ul
           }
           matrix `___C`item'_s' = `f9tab'[1..6,1..`=colsof(r(b))']'
+          * AMESE R1 scrub (rows 2..6 = se/t/p/ci across all subgroup columns)
+          if `amescrub' {
+            forval amer = 1/`=rowsof(`___C`item'_s')' {
+              forval amej = 2/6 {
+                matrix `___C`item'_s'[`amer', `amej'] = .
+              }
+            }
+          }
 
           * pretreatment average marginal effect of the continuous treatment variable
           if (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) {
@@ -2616,6 +2690,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               matrix rownames `f9tab' = b se t pvalue ll ul
             }
             matrix `___C`item'_pre_s' = `f9tab'[1..6,1..`=colsof(r(b))']'
+            * AMESE R1 scrub (see the posttreatment twin)
+            if `amescrub' {
+              forval amer = 1/`=rowsof(`___C`item'_pre_s')' {
+                forval amej = 2/6 {
+                  matrix `___C`item'_pre_s'[`amer', `amej'] = .
+                }
+              }
+            }
           }
 
           * average marginal effects by horizon
@@ -2635,6 +2717,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   matrix rownames `f9tab' = b se t pvalue ll ul
                 }
                 matrix `___`horizitem'_Choriz_s`sgcase'' = ( `f9tab'[1..6, 1..`=colsof(r(b))']',`relyrcolumn_s`sgcase'')
+                * AMESE R1 scrub: null se/t/p/ci columns of the per-sg ame ES rows
+                if `amescrub' {
+                  forval amer = 1/`=rowsof(`___`horizitem'_Choriz_s`sgcase'')' {
+                    forval amej = 2/6 {
+                      matrix `___`horizitem'_Choriz_s`sgcase''[`amer', `amej'] = .
+                    }
+                  }
+                }
                 * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
                 if "`marginsdof'" != "nose" {
                   tempname f2bmat f2vmat
@@ -2660,7 +2750,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   local finaladvtest  `=colsof(r(b))'
                 }
                 if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
-                if "`adversarial'" == "adversarial"   {
+                if "`adversarial'" == "adversarial" & `amescrub' == 0  {
                   if  `finaladvtest' > 1  {
                     wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase')
                     local advstatus `r(status)'
@@ -2679,7 +2769,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         }
 
         * produce joint tests of pre-treatment AMES by horizon by sg
-        if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'"=="" {
+        * (AMESE R3: skipped under cell containment — same invalid covariance)
+        if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'"=="" & `amescrub' == 0 {
           foreach sgcase in `sglist' {
             if "`att'" == "att" {
               qui margins  [`weight'=`w_att'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & `subgroups' == `sgcase'   &  (`_t' == 0 |`_t' >= `horizonstarter')   ) contrast(overjoint) `poismarginstext' `marginsdof'
@@ -2715,8 +2806,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       * serves both the pairwise table and the all-subgroups-equal joint test
       if wordcount("`sglist'") > 1 {
         * F9: see the binary twin - no post, no joint test under fast mode
+        * AMESE R3: same disablement under cell containment (the SG-equality joint
+        * tests run on the invalid ame covariance); pairwise point estimates keep
+        * flowing, with their se/t/p/ci cells scrubbed below
         local sgpost post
         if "`fastnose'" != "" local sgpost
+        if `amescrub' == 1 local sgpost
 
         foreach item in `att' `att_it' `att_i' `att_itime' {
 
@@ -2728,6 +2823,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             matrix rownames `f9tab' = b se t pvalue ll ul
           }
           matrix `pwsgs_C`item''  = `f9tab'[1..6,1..`=colsof(r(table_vs))']'
+          * AMESE R1 scrub
+          if `amescrub' {
+            forval amer = 1/`=rowsof(`pwsgs_C`item'')' {
+              forval amej = 2/6 {
+                matrix `pwsgs_C`item''[`amer', `amej'] = .
+              }
+            }
+          }
           if "`sgpost'" != "" {
             wooldid_sgchain
             * rank guard: see the binary twin
@@ -2764,6 +2867,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 matrix rownames `f9tab' = b se t pvalue ll ul
               }
               matrix `prepwsgs_C`item''  =  `f9tab'[1..6,1..`=colsof(r(table_vs))']'
+              * AMESE R1 scrub
+              if `amescrub' {
+                forval amer = 1/`=rowsof(`prepwsgs_C`item'')' {
+                  forval amej = 2/6 {
+                    matrix `prepwsgs_C`item''[`amer', `amej'] = .
+                  }
+                }
+              }
               * see the binary twin: stacking is gated on this flag, not the joint p
               local prepwok_C`item' 1
               if "`sgpost'" != "" {
@@ -3276,6 +3387,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
 
+  * AMESE generic guard: identical-SE collapse signature scan (caution only; the
+  * structural predicate above is the enforcement layer, and already-scrubbed runs
+  * have nothing left to scan)
+  if ("`cluster'" != "" | word(`"`customvce'"', 1) == "cluster") & `amescrub' == 0 & "`fastnose'" == "" {
+    wooldid_amescreen , mode(sescan) semat(`ebformer')
+  }
+
   matrix `eb' = `ebformer'[1..`=rowsof(`ebformer')',1]'
   matrix `ev' = diag(hadamard(`ebformer'[1..`=rowsof(`ebformer')',2],`ebformer'[1..`=rowsof(`ebformer')',2]))
   matrix rownames `ev' = :
@@ -3358,8 +3476,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         }
         if `f2ok' {
           cap ereturn matrix b_es_`f2ky' = `f2bm'
-          cap ereturn matrix V_es_`f2ky' = `f2vm'
-          local f2vrc = _rc
+          * AMESE R1: withhold e(V_es_ame*) under cell containment — the captured V is
+          * not the sampling covariance of the ame estimates (honestdid/lincom/test
+          * consumers would ingest it silently); the points still post above
+          local f2vrc 111
+          if !(`amescrub' & strpos("`f2ky'", "ame") == 1) {
+            cap ereturn matrix V_es_`f2ky' = `f2vm'
+            local f2vrc = _rc
+          }
           cap ereturn scalar numpre_`f2ky' = `f2np'
           if `f2vrc' == 0 & `f2nbad' > 0 {
             dis as text "Caution: e(V_es_`f2ky') contains `f2nbad' of `f2k' horizons with zero or missing variance (structurally degenerate rows); inspect the diagonal before joint inference - honestdid/lincom on those rows is not meaningful."
@@ -5647,6 +5771,102 @@ version 16.0
   }
   return local status `advstatus'
   return matrix line = `advL'
+end
+
+
+* AMESE (standing-issues family A, R1/R4): screens for cluster-robust variance
+* pathologies around the continuous-treatment (ame) machinery. Lives outside
+* wooldid_worker for per-program size headroom. Two modes:
+*   detect: the STRUCTURAL predicate — with a cluster-type VCE and contreat() active,
+*     if ANY treated cohort-by-period cell of the realized estimation sample lies
+*     wholly inside a single cluster, the plug-in CRVE cannot see within-cell dose
+*     variation: the ame "standard errors" it would deliver collapse toward the
+*     variance of the absorbed baseline dose control (in the basic/byTime cases they
+*     ARE that variance, identically across every ame quantity), so they do not
+*     measure the sampling variability of the ame estimates. ANY-cell semantics is
+*     load-bearing: partial containment (a cluster variable nesting only some cells)
+*     still contaminates the V while presenting a full-rank matrix. Rank/eigenvalue
+*     guards are deliberately NOT used (the byTime case posts a full-rank V that is
+*     still 100 percent blind to within-cell noise). Returns r(fire), r(ncells) and
+*     prints the explanatory caution once when firing.
+*   vzero: detects the estimation VCE arriving as an all-zero matrix — Stata's
+*     `ereturn post` screen zeroes a nonsymmetric/highly-singular VCE WHOLESALE
+*     (destroying valid entries in transit) and the quiet estimation call swallows
+*     the only warning. Returns r(vzero) and prints its caution when firing.
+* The predicate is never evaluated on the fastnose path (no variances exist there),
+* under impvalues (IM inference is cross-cluster dispersion — the estimator class
+* that remains valid under cell saturation), or under unconditionalse (a different
+* estimand whose margins variance carries live sampling-of-X components; excluded
+* from suppression by design — see the R1 design note).
+cap prog drop wooldid_amescreen
+prog def wooldid_amescreen, rclass
+version 16.0
+  syntax , mode(string) [icell(string) tcell(string) tflag(string) esamp(string) clusvars(string) contreat(string) sgnote(string) semat(string)]
+  if "`mode'" == "detect" {
+    local fire 0
+    local ncells 0
+    tempvar amecl ametag
+    foreach cv of local clusvars {
+      cap drop `amecl'
+      qui gegen double `amecl' = nunique(`cv') if `esamp' & `tflag' == 1, by(`icell' `tcell')
+      cap drop `ametag'
+      qui gegen byte `ametag' = tag(`icell' `tcell') if `esamp' & `tflag' == 1 & `amecl' == 1
+      qui count if `ametag' == 1
+      if r(N) > 0 {
+        local fire 1
+        if r(N) > `ncells' local ncells = r(N)
+      }
+    }
+    if `fire' {
+      dis as text "Caution: with standard errors clustered on `clusvars', every observation of `ncells' treated cohort-by-period cell(s) lies within a single cluster, so the cluster-robust variance is blind to within-cell variation in `contreat'. The continuous-treatment (ame) standard errors this would produce do not measure the sampling variability of the ame estimates (they collapse toward the variance of the absorbed baseline dose control), so wooldid has set the ame standard errors, tests, and joint diagnostics to missing and is not returning e(V_es_ame*); ame point estimates are unaffected and e(b_es_ame*) is still returned. To obtain ame inference: impvalues provides cluster-level inference from the cross-cluster dispersion of per-cluster estimates; vce(robust) is valid when errors are independent across observations (not under within-unit serial dependence); or cluster() on a variable strictly finer than the cohort-by-period cells."
+    }
+    return scalar fire = `fire'
+    return scalar ncells = `ncells'
+    exit
+  }
+  if "`mode'" == "sescan" {
+    * generalizable belt-and-braces guard: >=3 reported standard errors that are
+    * pairwise identical to ~14 digits under a cluster-type VCE is the signature of a
+    * degenerate variance being mis-attributed across quantities (legitimately
+    * identical SEs arise on balanced UNCLUSTERED designs, hence the caller's gate).
+    * Caution only - the structural predicate is the enforcement layer.
+    tempname sesc
+    matrix `sesc' = `semat'
+    local sn = rowsof(`sesc')
+    local sdup 0
+    if `sn' >= 3 {
+      forval sa = 1/`=`sn'-1' {
+        local sva = `sesc'[`sa', 2]
+        if `sva' >= . | `sva' == 0 continue
+        local smatch 1
+        forval sb = `=`sa'+1'/`sn' {
+          local svb = `sesc'[`sb', 2]
+          if `svb' < . & `svb' != 0 & reldif(`sva', `svb') <= 1e-12 local ++smatch
+        }
+        if `smatch' > `sdup' local sdup = `smatch'
+      }
+    }
+    if `sdup' >= 3 {
+      dis as text "Caution: `sdup' reported standard errors are numerically identical to ~14 digits under a cluster-type VCE - a signature of a degenerate variance being attributed across multiple quantities. Treat the affected standard errors and tests with suspicion; this pattern typically means the clustered variance cannot separate those quantities' sampling variation."
+    }
+    return scalar ndup = `sdup'
+    exit
+  }
+  if "`mode'" == "vzero" {
+    local vzero 0
+    tempname vchk
+    cap matrix `vchk' = e(V)
+    if _rc == 0 {
+      mata: st_local("vzero", strofreal(max(abs(st_matrix(st_local("vchk")))) == 0))
+    }
+    if `vzero' {
+      dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix: Stata's variance screen zeroes a nonsymmetric or highly singular VCE wholesale, which destroys the valid entries along with the degenerate ones (the quiet estimation call swallows Stata's own warning). Standard errors from this model are unavailable`sgnote'. Re-running with vce(robust), or with cluster() on a variable strictly finer than the cohort-by-period cells, avoids the degeneracy that triggers the screen."
+    }
+    return scalar vzero = `vzero'
+    exit
+  }
+  dis as error "wooldid_amescreen: unknown mode `mode'"
+  error 198
 end
 
 
