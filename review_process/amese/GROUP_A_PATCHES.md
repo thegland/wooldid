@@ -67,3 +67,14 @@ then be annotated as reverted rather than deleted.
   visible to the battery (the re-blessed baselines encode it).
 - The T-M2 defect sites no longer execute on cohort-clustered contreat configs
   (R3 suppresses their block); the banked evidence (a603f38) predates that.
+
+## Rider: author message revisions (2026-08-25)
+
+The author's revised caution/error texts (all five screens) plus two display-
+precedence rules (the all-zero-VCE caution and the identical-SE caution defer to the
+cell-containment caution when it displayed; the refit caution became self-contained)
+landed in a follow-on commit spanning both patch groups — see `git log --oneline`
+for the "author message revisions" commit. Console-only plus the sthlp steer sync
+(bootstrap SEs / IM p-values / randomization inference / finer clustering); no
+compared surface moved (cert 13/13, battery 34/34 rtol-0). A revert of this group
+should either include that commit's relevant hunks or accept the revised texts.

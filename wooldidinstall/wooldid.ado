@@ -1169,7 +1169,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * single-variable cluster() (official regress has no multi-way cluster), never for
   * poisson, and behind a maxvar feasibility count.
   if "`fastnose'" == "" {
-    wooldid_amescreen , mode(vzero)
+    wooldid_amescreen , mode(vzero) r1fired(`amescrub')
     if r(vzero) == 1 & `amescrub' == 1 & "`poisson'" != "poisson" & wordcount("`cluster'") == 1 & "`customvce'" == "" & "`fe'" == "" & "`ccc_absorbinserter'" == "" {
       * cap: on huge-cardinality i the levels list can overflow the macro length
       * (rc 920) - treat as refit-infeasible rather than aborting the run
@@ -1180,7 +1180,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       cap qui glevelsof `t' if `esamp'
       if _rc == 0 local amevzt : word count `r(levels)'
       if `amevzi' + `amevzt' <= 450 {
-        dis as text "Caution: wooldid is re-estimating through the explicit-dummies fallback to recover the standard errors that survive (see the preceding caution; recovered cluster-robust variances for treated-cell quantities remain subject to the cell-containment caution)."
+        dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix; wooldid is re-estimating through the explicit-dummies fallback to recover the standard errors that survive (recovered cluster-robust variances for treated-cell quantities remain subject to the cell-containment caution above)."
         qui reg `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `vcespecifier'
         cap est drop ___wooldidfullmodel
         qui est sto ___wooldidfullmodel
@@ -5842,7 +5842,7 @@ end
 cap prog drop wooldid_amescreen
 prog def wooldid_amescreen, rclass
 version 16.0
-  syntax , mode(string) [icell(string) tcell(string) tflag(string) esamp(string) clusvars(string) contreat(string) sgnote(string) semat(string) iorig(string) tvar(string)]
+  syntax , mode(string) [icell(string) tcell(string) tflag(string) esamp(string) clusvars(string) contreat(string) sgnote(string) semat(string) iorig(string) tvar(string) r1fired(string)]
   if "`mode'" == "detect" {
     local fire 0
     local ncells 0
@@ -5859,7 +5859,7 @@ version 16.0
       }
     }
     if `fire' {
-      dis as text "Caution: with standard errors clustered on `clusvars', every observation of `ncells' treated cohort-by-period cell(s) lies within a single cluster, so the cluster-robust variance is blind to within-cell variation in `contreat'. The continuous-treatment (ame) standard errors this would produce do not measure the sampling variability of the ame estimates (they collapse toward the variance of the absorbed baseline dose control), so wooldid has set the ame standard errors, tests, and joint diagnostics to missing and is not returning e(V_es_ame*); att point estimates and inference are unaffected; ame point estimates are reported as computed (note that under cohort-specific dose controls the ame decomposition is solver-normalization-dependent) and e(b_es_ame*) is still returned. To obtain ame inference: impvalues provides cluster-level inference from the cross-cluster dispersion of per-cluster estimates; vce(robust) is valid when errors are independent across observations (not under within-unit serial dependence); or cluster() on a variable strictly finer than the cohort-by-period cells."
+      dis as text "Caution: with standard errors clustered on `clusvars', `ncells' treated i-t cell(s) lie completely within a single cluster, preventing valid analytic estimation of SEs for AME estimates (and with some adverse implications for the ATTs as well). Consider switching to use of bootstrap SEs, IM p-values, or randomization inference if finer clustering levels are non-viable."
     }
     return scalar fire = `fire'
     return scalar ncells = `ncells'
@@ -5901,8 +5901,8 @@ version 16.0
     }
     if `bcmin' < . {
       local fail 1
-      dis as error "Error: the continuous treatment variable `contreat' has no variation across the untreated/reference-period observations of treated cohort `=`bcmin'' (smallest offending cohort), so the cohort-specific baseline dose slope required by contreatcontrols(byCohort) cannot be estimated for that cohort, and its AME decomposition would be arbitrary."
-      dis as error "Examine this cohort's `contreat' values in its untreated/reference periods, and drop the cohort from the estimation sample before proceeding."
+      dis as error "Error: the continuous treatment variable `contreat' has no variation across the untreated/reference-period observations of treated cohort `=`bcmin'', so the cohort-specific baseline dose slope required by contreatcontrols(byCohort) cannot be estimated for that cohort."
+      dis as error "Examine this cohort's `contreat' values in its untreated/reference periods, and consider dropping the cohort from the estimation sample before proceeding."
     }
     else {
       qui gstats sum `contreat' if `esamp'
@@ -5914,7 +5914,7 @@ version 16.0
         qui count if `bctag' == 1
         local bck = r(N)
         qui gstats sum `iorig' if `bctr' & `bcref' == 1 & `bcsd' > 0 & `bcsd' < 1e-3*`bcsamp' & `bcsd' < ., meanonly
-        dis as text "Caution: under contreatcontrols(byCohort), `bck' treated cohort(s) (smallest: `=r(min)') have untreated/reference-period variation in `contreat' below 1/1000 of its sample standard deviation. The cohort-specific baseline dose slopes are nearly unidentified there, so AME estimation is likely computationally fragile: consider increasing regtol() (a larger value tightens the estimation convergence tolerance), or examine and drop the affected cohort(s)."
+        dis as text "Caution: under contreatcontrols(byCohort), `bck' treated cohort(s) (smallest: `=r(min)') have untreated/reference-period variation in `contreat' below 1/1000 of its sample standard deviation. The cohort-specific baseline dose slopes are nearly unidentified there, so AME estimation is likely computationally fragile: consider increasing regtol(), or examine and drop the affected cohort(s)."
       }
     }
     return scalar fail = `fail'
@@ -5947,7 +5947,7 @@ version 16.0
       }
     }
     if `sdup' >= 3 {
-      dis as text "Caution: `sdup' reported standard errors are numerically identical to ~14 digits under a cluster-type VCE - a signature of a degenerate variance being attributed across multiple quantities. Treat the affected standard errors and tests with suspicion; this pattern typically means the clustered variance cannot separate those quantities' sampling variation."
+      dis as text "Caution: `sdup' reported standard errors appear to be identical under a cluster-type VCE. This usually indicates a failure of analytic clustered standard error estimation; consider using a different approach to SE estimation (or consider clustering at a finer level of aggregation)."
     }
     return scalar ndup = `sdup'
     exit
@@ -5959,8 +5959,10 @@ version 16.0
     if _rc == 0 {
       mata: st_local("vzero", strofreal(max(abs(st_matrix(st_local("vchk")))) == 0))
     }
-    if `vzero' {
-      dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix: Stata's variance screen zeroes a nonsymmetric or highly singular VCE wholesale, which destroys the valid entries along with the degenerate ones (the quiet estimation call swallows Stata's own warning). Standard errors from this model are unavailable`sgnote'. Re-running with vce(robust), with a different cluster() choice, or with a simpler specification may avoid the degeneracy that triggers the screen."
+    * the caution defers to the more precise cell-containment caution when that one
+    * already displayed (r1fired); detection is still returned for the refit logic
+    if `vzero' & "`r1fired'" != "1" {
+      dis as text "Caution: estimation returned an all-zero variance-covariance matrix. The issue is likely related to continuous treatment effect estimation coupled with use of analytic clustered SEs, with clusters occuring at a high level of aggregation. Consider switching to use of bootstrap SEs, IM p-values, or randomization inference if finer clustering levels are non-viable."
     }
     return scalar vzero = `vzero'
     exit

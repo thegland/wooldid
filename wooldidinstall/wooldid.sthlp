@@ -668,9 +668,9 @@ treatment-intensity slope. When any such cell lies entirely within a single clus
 quantities do not measure their sampling variability (in the {it:contreatcontrols(basic)}/{it:byTime} cases they collapse to the variance of the absorbed baseline dose control, one number
 repeated across every ame quantity — including configurations where the covariance appears full rank). {it:wooldid} detects this design, prints an explanatory caution, sets the ame-family
 standard errors, tests, and joint diagnostics (adversarial ame p-values, ame joint pre-trend tests, subgroup ame comparisons, ame pre-trend power) to missing, and withholds
-{it:e(V_es_ame*)} while still returning the unaffected point estimates and {it:e(b_es_ame*)}. Valid ame inference under such designs: {it:impvalues} (cross-cluster dispersion inference,
-which remains valid); {it:vce(robust)} when errors are independent across observations (not appropriate under within-unit serial dependence); or clustering on a variable strictly finer
-than the cohort-by-period cells. Note that binary-treatment (att) standard errors under cohort-level clustering are also somewhat understated on such saturated designs (a milder, documented
+{it:e(V_es_ame*)} while still returning the unaffected point estimates and {it:e(b_es_ame*)}. Valid ame inference under such designs: bootstrap standard errors, IM p-values
+({it:impvalues} — cross-cluster dispersion inference, which remains valid), randomization inference, {it:vce(robust)} when errors are independent across observations (not appropriate
+under within-unit serial dependence), or clustering on a variable strictly finer than the cohort-by-period cells. Note that binary-treatment (att) standard errors under cohort-level clustering are also somewhat understated on such saturated designs (a milder, documented
 phenomenon); wooldid does not suppress them. {p_end}
 
 

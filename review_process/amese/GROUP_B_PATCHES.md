@@ -30,3 +30,14 @@ ext_cont_ext_controls_cohort_time (probed directly on its fixture: screen silent
 rc 0 — zero suite surface change, no re-bless, no ledger rows).
 
 Revert: git revert of this single commit; no baselines or ledger rows involved.
+
+## Rider: author message revisions (2026-08-25)
+
+The author's revised caution/error texts (all five screens) plus two display-
+precedence rules (the all-zero-VCE caution and the identical-SE caution defer to the
+cell-containment caution when it displayed; the refit caution became self-contained)
+landed in a follow-on commit spanning both patch groups — see `git log --oneline`
+for the "author message revisions" commit. Console-only plus the sthlp steer sync
+(bootstrap SEs / IM p-values / randomization inference / finer clustering); no
+compared surface moved (cert 13/13, battery 34/34 rtol-0). A revert of this group
+should either include that commit's relevant hunks or accept the revised texts.
