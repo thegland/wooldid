@@ -699,7 +699,8 @@ with variables being inappropriately dropped from the regression. {p_end}
 
 {phang}{opt ccc_absorb()}: An alternate version of coarsecohortcontrols() that admits only continuous variables and passes the controls to the {it:absorb()} statement when using
 a high dimensional fixed effects estimator. This is often less efficient than the alternative approach in terms of computation time, but can be important in terms of memory
-efficiency in the main regression or under certain other circumstances. {p_end}
+efficiency in the main regression or under certain other circumstances. Note: be extra careful to ensure that specifications featuring ccc_absorb() are identified; not all cases
+of identification failure in this case are bound to be automatically detected. {p_end}
 
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses, displays raw output from the regression estimated, and prints progress reports throughout the estimation process.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}

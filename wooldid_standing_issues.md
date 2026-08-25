@@ -237,6 +237,13 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
     and a passing cohort-level `ccc_absorb` suite config (the option has zero
     passing coverage today). Full report:
     `review_process/si_reports/si6_ccc_absorb_report.md`. No T-M1 interaction.
+  - **CLOSED 2026-08-25 by author ruling.** The sthlp ccc_absorb() entry now
+    carries the author's exact caution ("be extra careful to ensure that
+    specifications featuring ccc_absorb() are identified; not all cases of
+    identification failure in this case are bound to be automatically
+    detected"). No screens or other tests to be implemented: the name
+    coarsecohortcontrols itself flags that the option is for coarse cohorts
+    (`i` containing multiple observations).
 - **SI-7 — `o.`-omission-marker naming fragility.** `ext_contract10_rcs_factor_fe`
   is green-by-pin (0 -> 198, "5o. invalid name") — the pin does NOT certify the
   behavior as intended; the colleagues' Stata 17 old build hit the same error, our
@@ -338,6 +345,8 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
     ereturn site and cap the uncapped r(p)[1,1] read to match its pre twin.
     No valid plug-in number exists under containment; bootstrap/IM dispersion
     (the approved future R2 work) remains the only principled restoration.
+  - **CLOSED 2026-08-25 by author ruling: solved by the Group A work.** F0/F1/F2
+    all declined — no sthlp change, no hardening. No further action.
 
 ## C. Documentation-grade actions (no estimator change)
 
