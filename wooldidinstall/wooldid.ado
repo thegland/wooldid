@@ -1138,7 +1138,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`contreat'" != "" & "`impvalues'" == "" & "`unconditionalse'" == "" & "`fastnose'" == "" {
     local amescrubclus
     if "`cluster'" != "" local amescrubclus `cluster'
-    if "`amescrubclus'" == "" & word(`"`customvce'"', 1) == "cluster" local amescrubclus : subinstr local customvce "cluster" "", word count(local amescrubn)
+    local amecvw = word(`"`customvce'"', 1)
+    if "`amescrubclus'" == "" & strlen("`amecvw'") >= 2 & strpos("cluster", "`amecvw'") == 1 {
+      local amescrubclus : subinstr local customvce "`amecvw'" "", word
+    }
     if "`amescrubclus'" != "" {
       wooldid_amescreen , mode(detect) icell(`_i') tcell(`_t') tflag(`targetflag') esamp(`esamp') clusvars(`amescrubclus') contreat(`contreat')
       local amescrub = r(fire)
@@ -1156,10 +1159,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`fastnose'" == "" {
     wooldid_amescreen , mode(vzero)
     if r(vzero) == 1 & `amescrub' == 1 & "`poisson'" != "poisson" & wordcount("`cluster'") == 1 & "`customvce'" == "" {
-      qui glevelsof `i' if `esamp'
-      local amevzi : word count `r(levels)'
-      qui glevelsof `t' if `esamp'
-      local amevzt : word count `r(levels)'
+      * cap: on huge-cardinality i the levels list can overflow the macro length
+      * (rc 920) - treat as refit-infeasible rather than aborting the run
+      local amevzi 99999
+      local amevzt 99999
+      cap qui glevelsof `i' if `esamp'
+      if _rc == 0 local amevzi : word count `r(levels)'
+      cap qui glevelsof `t' if `esamp'
+      if _rc == 0 local amevzt : word count `r(levels)'
       if `amevzi' + `amevzt' <= 450 {
         dis as text "Caution: wooldid is re-estimating through the explicit-dummies fallback to recover the standard errors that survive (see the preceding caution; recovered cluster-robust variances for treated-cell quantities remain subject to the cell-containment caution)."
         qui reg `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `vcespecifier'
@@ -2155,7 +2162,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             matrix rownames `f9tab' = b se t pvalue ll ul
           }
           matrix `cfx`itemtext'_`nametext'' = `f9tab'[1..`cfxmatendpoint',1..`=colsof(r(table))']'
-          qui marginsplot, recastci(rarea) ciopts(color(navy%50)) plotopts(color(navy)) `cfx_xtitle' ytitle("`ytext'")  scale(.85) title("`titletext'") name("cfx`itemtext'_`nametext'", replace)
+          * AMESE R1: the ame cfx inference columns come from the same refused CRVE
+          if `amescrub' & `cfxmatendpoint' > 1 {
+            forval amer = 1/`=rowsof(`cfx`itemtext'_`nametext'')' {
+              forval amej = 2/`cfxmatendpoint' {
+                matrix `cfx`itemtext'_`nametext''[`amer', `amej'] = .
+              }
+            }
+          }
+          local amecfxci recastci(rarea) ciopts(color(navy%50))
+          if `amescrub' local amecfxci noci
+          qui marginsplot, `amecfxci' plotopts(color(navy)) `cfx_xtitle' ytitle("`ytext'")  scale(.85) title("`titletext'") name("cfx`itemtext'_`nametext'", replace)
           if "`saveplots'" != "" qui graph save "`saveplots'_cfx`itemtext'_`nametext'.gph", `replace'
           local cfxmatricestoreturn `cfxmatricestoreturn' cfx`itemtext'_`nametext' cfx`item'_`nametext'
         }
@@ -2221,7 +2238,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 matrix rownames `f9tab' = b se t pvalue ll ul
               }
               matrix `cfx`itemtext'_`nametext'_sg`sgcase'' = `f9tab'[1..`cfxmatendpoint',1..`=colsof(r(b))']'
-              qui marginsplot, plotopts(color(navy)) recastci(rarea) ciopts(color(navy%50)) `cfx_xtitle' ytitle("`ytext'") title("`titletext'")  scale(.85) name("cfx`itemtext'_`nametext'_sg`sgcase'", replace)
+              * AMESE R1 scrub (see the main cfx ame twin)
+              if `amescrub' & `cfxmatendpoint' > 1 {
+                forval amer = 1/`=rowsof(`cfx`itemtext'_`nametext'_sg`sgcase'')' {
+                  forval amej = 2/`cfxmatendpoint' {
+                    matrix `cfx`itemtext'_`nametext'_sg`sgcase''[`amer', `amej'] = .
+                  }
+                }
+              }
+              local amecfxci recastci(rarea) ciopts(color(navy%50))
+              if `amescrub' local amecfxci noci
+              qui marginsplot, plotopts(color(navy)) `amecfxci' `cfx_xtitle' ytitle("`ytext'") title("`titletext'")  scale(.85) name("cfx`itemtext'_`nametext'_sg`sgcase'", replace)
               if "`saveplots'" != "" qui graph save "`saveplots'_cfx`itemtext'_`nametext'_sg`sgcase'.gph", `replace'
               local cfxmatricestoreturn `cfxmatricestoreturn'   cfx`itemtext'_`nametext'_sg`sgcase' cfx`item'_`nametext'_sg`sgcase'
             }
@@ -3391,7 +3418,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * AMESE generic guard: identical-SE collapse signature scan (caution only; the
   * structural predicate above is the enforcement layer, and already-scrubbed runs
   * have nothing left to scan)
-  if ("`cluster'" != "" | word(`"`customvce'"', 1) == "cluster") & `amescrub' == 0 & "`fastnose'" == "" {
+  local amecvw2 = word(`"`customvce'"', 1)
+  if ("`cluster'" != "" | (strlen("`amecvw2'") >= 2 & strpos("cluster", "`amecvw2'") == 1)) & `amescrub' == 0 & "`fastnose'" == "" {
     wooldid_amescreen , mode(sescan) semat(`ebformer')
   }
 
@@ -5838,11 +5866,15 @@ version 16.0
     if `sn' >= 3 {
       forval sa = 1/`=`sn'-1' {
         local sva = `sesc'[`sa', 2]
+        local sba = `sesc'[`sa', 1]
         if `sva' >= . | `sva' == 0 continue
         local smatch 1
         forval sb = `=`sa'+1'/`sn' {
           local svb = `sesc'[`sb', 2]
-          if `svb' < . & `svb' != 0 & reldif(`sva', `svb') <= 1e-12 local ++smatch
+          local sbb = `sesc'[`sb', 1]
+          * identical SE with a DIFFERING point estimate is the mis-attribution
+          * signature; identical (b, se) pairs are legitimately coincident estimands
+          if `svb' < . & `svb' != 0 & reldif(`sva', `svb') <= 1e-12 & reldif(`sba', `sbb') > 1e-9 local ++smatch
         }
         if `smatch' > `sdup' local sdup = `smatch'
       }
