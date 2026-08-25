@@ -136,6 +136,60 @@ diagnosis's central split, and it sharpens three answers:
    own small-G caveat; the grid's cluster(unitid) (180 unique units) is the
    better-behaved analogue and sits in G5 (~0.7-0.97 with leverage bias).
 
+### A.6 IMPLEMENTATION RECORD (2026-08-25): R1 + R3 + R4 LANDED; R2 skipped by ruling
+
+Author ruling implemented across commits 7054878 (core), ea69544 (R4 narrowing),
+c184ea0 (cert convention), the V-wave fix commits, and the AMESE ledger commits:
+- R1: structural cell-containment predicate (ANY treated cohort-by-period cell wholly
+  inside one cluster of cluster()/customvce-cluster incl. Stata abbreviations), fired
+  only with contreat and never under fastnose/impvalues/unconditionalse. On fire: an
+  explanatory caution names the mechanism and the three valid alternatives
+  (impvalues — probe-verified valid dispersion inference; conditional robust; finer
+  clustering); every ame-family se/t/p/ci cell is scrubbed to missing across main/
+  pretreatment/ES/subgroup/pairwise/cfx surfaces (plots drop CI bands via noci);
+  e(V_es_ame*) withheld while e(b_es_ame*) posts; ame-side V_es tests skipped
+  (adversarial ame, joint_Choriz*, SG-equality ame chain; ptp ame keys self-gate).
+- R4: unconditional detection of Stata's ereturn-post V-zeroing (with an explanatory
+  caution; the swallowed reghdfe warning surfaced); an att-rescue refit through the
+  explicit-dummies regress path, gated NARROW: firing predicate + single cluster() +
+  no customvce/poisson/fe()/ccc_absorb + maxvar feasibility. The former byCohort
+  20-of-20 blackouts now return att inference.
+- Generic guard: the identical-SE collapse signature caution (>=3 identical SEs with
+  DIFFERING point estimates under a cluster-type VCE).
+- R2 (bootstrap/dispersion estimator): SKIPPED per author ruling.
+Verification: 10-scenario cert suite (fires incl. the referee's partial-containment
+acid data; silent under robust/cluster(unit)/impvalues/fastnose/binary); battery
+34/34 rtol-0 with the 8 fire-list configs re-blessed; full oldnew 450/450 with 26
+scoped AMESE ledger rows, 0 unexplained/stale/unscoped; a 3-verifier wave
+(review_process/amese/verifier1-3) whose findings were all fixed or ruled:
+cfx-ame leak fixed; refit narrowed off fe()/ccc_absorb (bare-factor linearization);
+glevelsof capture (rc-920 hard-abort at scale); sescan differing-estimates
+signature (two demonstrated false-positive classes cured); cluster-abbreviation
+parse; ledger reason/bound amendments. T-M2's mandated evidence was banked PRE-R3
+(review_process/tm2_evidence/, commit a603f38) since R3 suppresses the defect sites
+on the pinning config.
+
+STILL OPEN in family A after this implementation:
+- SI-A1 (was NF-1b/att side): att-side understatement under cohort-level clustering
+  (G1a: 0.66-0.75) and the att joint tests' oversizing — deliberately NOT touched
+  (standard-usage surface; needs its own ruling). V1's DQ6 (pwsgs att rows with
+  se ~8.7e-09 / p ~1e-188 uncautioned) corroborates.
+- SI-A2 (= R7): byCohort ame POINT estimands are solver-normalization-dependent
+  (audited reghdfe .723 vs regress .554; V1 demonstrated O(1) shifts under the R4
+  refit — the caution now discloses it). Decide the estimand before offering points
+  there; contreatwithin-on-controls inertness rides along.
+- SI-A3 (= R5): small-cell leverage bias under robust/cluster(unit) (0.68-0.97) —
+  sthlp caveat + opt-in CR2/HC3 consideration.
+- SI-A4 (= R6): d3-class named refusal (unidentified ame presented as 0-rows).
+- SI-A5: non-containment V-zero blackouts (e.g. lattice+cluster(unitid) 4-of-4) are
+  pre-existing shared behavior, now with an explanatory caution but NO refit (out of
+  the narrow gate by design); revisit if the author wants rescue there too.
+- ENVIRONMENT HAZARD (user action): a stale 2024-07-31 wooldid.ado exists BOTH in
+  the Stata PLUS adopath and at /Users/hegland/Documents/Research/wooldidinstall/
+  (outside the repo) — the latter silently absorbed a bad relative path during this
+  wave and certified the wrong build until caught. Recommend deleting or renaming
+  both stale copies.
+
 ### Legacy ticket mapping
 
 SI-1 (adversarial size) and SI-2/SI-3 (jointtests/ptp scalars) are consequences of
