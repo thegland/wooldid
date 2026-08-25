@@ -138,6 +138,11 @@ diagnosis's central split, and it sharpens three answers:
 
 ### A.6 IMPLEMENTATION RECORD (2026-08-25): R1 + R3 + R4 LANDED; R2 skipped by ruling
 
+The implementation pool is named the **Group A Patches** — the canonical commit
+manifest with tiers and the revert procedure is
+`review_process/amese/GROUP_A_PATCHES.md` (author is testing these in extra cases;
+revert stays a clean single step).
+
 Author ruling implemented across commits 7054878 (core), ea69544 (R4 narrowing),
 c184ea0 (cert convention), the V-wave fix commits, and the AMESE ledger commits:
 - R1: structural cell-containment predicate (ANY treated cohort-by-period cell wholly
@@ -184,11 +189,15 @@ STILL OPEN in family A after this implementation:
 - SI-A5: non-containment V-zero blackouts (e.g. lattice+cluster(unitid) 4-of-4) are
   pre-existing shared behavior, now with an explanatory caution but NO refit (out of
   the narrow gate by design); revisit if the author wants rescue there too.
-- ENVIRONMENT HAZARD (user action): a stale 2024-07-31 wooldid.ado exists BOTH in
-  the Stata PLUS adopath and at /Users/hegland/Documents/Research/wooldidinstall/
-  (outside the repo) — the latter silently absorbed a bad relative path during this
-  wave and certified the wrong build until caught. Recommend deleting or renaming
-  both stale copies.
+- TESTING RULE (author-clarified 2026-08-25, supersedes the earlier deletion
+  recommendation): the wooldid copies in the Stata PLUS adopath and at
+  /Users/hegland/Documents/Research/wooldidinstall/ (outside the repo) are the LIVE
+  external version BY DESIGN — they mirror what outside users access and what Stata
+  loads by default, and update only when the repo's edits go live. They must NOT be
+  modified. Consequence for all testing in this repo: never trust default adopath
+  resolution — always load the development build explicitly via
+  `do <repo>/wooldidinstall/wooldid.ado` (this bit twice during the Group A wave:
+  agent probes and a cert-suite path slip silently ran the live build).
 
 ### Legacy ticket mapping
 
