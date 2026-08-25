@@ -1494,7 +1494,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         }
       }
       if `amelive' == 0 & `amedrop' > 0 {
-        dis as text "Caution: every treated cohort-period dose-slope term for the continuous treatment variable `contreat' was dropped for multicollinearity (see the caution counts above); this occurs, for example, when `contreat' is constant within each cohort. The within-cell average marginal effects (ame) that wooldid reports for continuous treatments are NOT IDENTIFIED in this design - the regression's ame entries are structural zeros, not estimates - so wooldid is reporting the ame results as missing and skipping the ame-based tests. The att-side results are unaffected."
+        dis as text "Caution: every treated cohort-period dose-slope term for the continuous treatment variable `contreat' was dropped for multicollinearity (see the caution counts above); this occurs, for example, when `contreat' is constant within each cohort. The within-cell average marginal effects (ame) that wooldid reports for continuous treatments are NOT IDENTIFIED in this design - the regression's ame entries are structural zeros, not estimates - so wooldid is reporting the ame results as missing and skipping the ame-based tests (only the raw e(b) coefficient vector retains the structural zeros: Stata cannot post missing coefficients). The att-side results are unaffected."
         dis as text "Consider whether a coarser definition of `i' (so that cohort-period cells contain dose variation) matches your design, or estimate binary att effects without contreat(). You can ignore this check if you specify safety(off), but be careful: with safety(off) the ame output will contain the structural zeros."
         local amevoid 1
         local amescrub 1
@@ -3534,6 +3534,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         local rownamespool_sginj = subinstr("`rownamessg`sgcase''",":","_SG`sgcase'_",.)
         local rownamespool `rownamespool' `rownamespool_sginj'
       }
+    }
+  }
+
+  * SI-A4/R6: ereturn post cannot accept missing coefficients, so the voided ame
+  * entries re-enter e(b) as the regression's structural zeros (that one raw surface
+  * is out of reach - the named caution says so); every wooldid-native surface
+  * (display, wdidmainresults, sg matrices, plots) keeps them missing
+  if `amevoid' {
+    forval r6r = 1/`=rowsof(`ebformer')' {
+      if `ebformer'[`r6r', 1] >= . matrix `ebformer'[`r6r', 1] = 0
     }
   }
 
