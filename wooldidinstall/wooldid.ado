@@ -2847,7 +2847,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               qui margins  [`weight'=`w_att'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & `subgroups' == `sgcase'   &  (`_t' == 0 |`_t' >= `horizonstarter')   ) contrast(overjoint) `poismarginstext' `marginsdof'
               cap confirm matrix r(p)
               if _rc == 0 {
-                local joint_Choriz_s`sgcase' = r(p)[1,2]
+                * the continuous overjoint r(p) is 1x1 (no base column), so the real p
+                * sits at [1,1] - unlike the binary twins' 1x2 geometry read at [1,2]
+                local joint_Choriz_s`sgcase' = r(p)[1,1]
               }
               else{
                 local joint_Choriz_s`sgcase'
@@ -2858,7 +2860,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               qui margins [`weight'=`w_att_it'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & `subgroups' == `sgcase'  &  (`_t' == 0 |`_t' >= `horizonstarter')    ) contrast(overjoint) `poismarginstext' `marginsdof'
               cap confirm matrix r(p)
               if _rc == 0 {
-                local joint_Choriz_i_s`sgcase' = r(p)[1,2]
+                local joint_Choriz_i_s`sgcase' = r(p)[1,1]
               }
               else{
                 local joint_Choriz_i_s`sgcase'
