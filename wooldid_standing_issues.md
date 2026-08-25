@@ -234,14 +234,14 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
     steering to coarser `i`/fe()/coarsecohortcontrols, an empty-`relyrlist` guard,
     and a passing cohort-level `ccc_absorb` suite config (the option has zero
     passing coverage today). Full report:
-    `~/.claude/jobs/640b9294/tmp/si6/si6_report.md`. No T-M1 interaction.
+    `review_process/si_reports/si6_ccc_absorb_report.md`. No T-M1 interaction.
 - **SI-7 — `o.`-omission-marker naming fragility.** `ext_contract10_rcs_factor_fe`
   is green-by-pin (0 -> 198, "5o. invalid name") — the pin does NOT certify the
   behavior as intended; the colleagues' Stata 17 old build hit the same error, our
   Stata 19 old build escapes by omission-pattern luck. Related: the dupcol entry's
   `o.`-marker truerow-strip trigger (report §1.11) is its own future corner. §2.2.
   - **DIAGNOSED 2026-08-25 (author asked "concretely, what fails?"; report
-    `~/.claude/jobs/640b9294/tmp/si7/si7_report.md`, probe evidence alongside).**
+    `review_process/si_reports/si7_omission_marker_report.md`).**
     (a) Exact failure: the subgroup event-study block rebuilds relative periods
     by string-stripping the colnames of `margins, over(_t) subpop(&sg)` r(table);
     when a subgroup×horizon margin is NOT estimable its column comes back
@@ -311,7 +311,7 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   baseline, where the clean case expects rejection. Separate site family from SI-10
   (E1 chain machinery), undiagnosed — needs its own diagnosis first. §2.6 adjacent.
   - **DIAGNOSED 2026-08-25 (author-directed extensive diagnosis; report
-    `~/.claude/jobs/640b9294/tmp/si11/si11_diagnosis.md`). NOT a code defect —
+    `review_process/si_reports/si11_allsgssame_diagnosis.md`). NOT a code defect —
     it is the family-A (G1) cluster-in-cell covariance degeneracy, already
     handled by Group A.** Direct answer to the author's clustering question:
     **turn clustering off and the missingness disappears** — under robust, no
