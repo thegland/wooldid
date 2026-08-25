@@ -6,8 +6,7 @@
 * fastnose, binary-only). Assertions are on the e() surface: fired runs carry missing
 * ame SEs with points intact, e(b_es_ame) WITHOUT e(V_es_ame), and no ame joint/
 * adversarial scalars; unfired runs carry real ame SEs and a posted V_es_ame.
-* Run from a fresh subdirectory of test/:  "<stata>" -e do ../test_amescreen.do
-*   -> expect AMESCREEN_ALL_PASS
+* Run from test/:  "<stata>" -e do test_amescreen.do   -> expect AMESCREEN_ALL_PASS
 clear all
 set more off
 set maxvar 20000
@@ -16,7 +15,7 @@ set linesize 255
 set seed 2010
 set sortseed 2010
 
-local REPO "../.."
+local REPO ".."
 do "`REPO'/wooldidinstall/wooldid.ado"
 
 global pf 0
