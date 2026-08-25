@@ -225,12 +225,49 @@ STILL OPEN in family A after this implementation:
   regtol() steer. Remaining open: the estimand-definition question itself (the
   well-identified byCohort ame is fine; what the near-threshold decomposition MEANS
   is still an author call) and contreatwithin-on-controls inertness.
+  - **CLOSED 2026-08-25 by author ruling:** the imposition of identification
+    requirements (the Group B screen) implicitly resolves this; closure covers
+    both the estimand-definition question and the G8 contreatwithin-inertness
+    observation that lived inside it.
 - SI-A3 (= R5): small-cell leverage bias under robust/cluster(unit) (0.68-0.97) —
   sthlp caveat + opt-in CR2/HC3 consideration.
+  - **CLOSED 2026-08-25 by author ruling:** one-sentence sthlp warning added at
+    the contreat() entry (i-t cells need many observations relative to the
+    within-cell parameters estimated; the jointtests entry already carries the
+    joint-test version). No opt-in correction: intuitive to most researchers.
 - SI-A4 (= R6): d3-class named refusal (unidentified ame presented as 0-rows).
+  - **IMPLEMENTED 2026-08-25 per author ruling.** Detection rides the existing
+    multicollinearity drop screen (the audit's own fix-site): a compact scan of
+    e(b) colnames counts live vs omitted treated-cell dose terms — omitted
+    continuous interactions carry the `co.` marker (a naive `c.`+`o.` match
+    never fires; caught on the frozen dataset) — and a data-shape predicate is
+    provably WRONG (probe of record: every suite continuous dataset has zero
+    within-cell dose variation, because ordinary usage is singleton cells where
+    the ame is identified through the slope parameterization; only the DROPS
+    mark the d3 class). On all-dropped + none-live: a named caution (mechanism
+    + coarser-i / drop-contreat steer + safety(off) escape note), then the ame
+    block is voided — the R1 scrub machinery reused with its column floor
+    lowered to include the POINT column (fabricated structural zeros must not
+    print), and e(b_es_ame*) withheld along with V under void (not trusting
+    f2ok=0 across the class). att untouched by construction. untreatedZero
+    exception implemented structurally: the scan scopes to targetflag==1
+    terms, so expected zero-dose reference periods never count (cert C2 proves
+    no false fire under DEFAULT safety). Verification of record on
+    review_process/amese/probes/d3_r1.dta: old = silent fabricated ame zeros;
+    new = named caution + ame rows missing; att rows bit-identical. Cert:
+    test_amescreen C1/C2 (ALL_PASS); suite: trig_d3void + SIA4-d3 ledger row.
+    untreatedZero SE answer (author asked): under cohort clustering, cont_uz
+    sits in the AMESE R4 family — OLD suffered a total ereturn-post V blackout
+    (b-only); NEW's containment+R4 machinery detects, refits, and revives att
+    inference with the ame side cautioned (rows AMESE-R4-l/r/p-cont_uz).
+    Under robust/fine clustering untreatedZero inherits only the standard
+    small-cell condition now documented by SI-A3's sentence; nothing
+    untreatedZero-specific beyond that in any campaign measurement.
 - SI-A5: non-containment V-zero blackouts (e.g. lattice+cluster(unitid) 4-of-4) are
   pre-existing shared behavior, now with an explanatory caution but NO refit (out of
   the narrow gate by design); revisit if the author wants rescue there too.
+  - **CLOSED 2026-08-25 by author ruling:** no rescue needed; the explanatory
+    caution stands as the final behavior.
 - TESTING RULE (author-clarified 2026-08-25, supersedes the earlier deletion
   recommendation): the wooldid copies in the Stata PLUS adopath and at
   /Users/hegland/Documents/Research/wooldidinstall/ (outside the repo) are the LIVE
@@ -421,7 +458,11 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
     variation only; it matters mainly for the honestdid/pretrendpower handoffs,
     which receive a structurally different covariance than the pooled-cohort
     formulation of the same event study. (ii) family-A design-conditions sthlp
-    language: DEFERRED until after the Group A/B testing settles. (iii) skipped
+    language: DONE 2026-08-25 per author ruling — the continuous-treatments
+    caution section now opens with the author's framing (valid clustered SEs
+    cannot be obtained analytically for the ame-family quantities when
+    clustering at the cohort level or above, necessitating bootstrapping or
+    other methods). (iii) skipped
     per author.
 - **SI-13 — upstream courtesy report.** honestdid v1.1.2 crashes (mata assert 3498
   in `_flciFindWorstCaseBiasGivenH`, parallel AND sequential paths) on
