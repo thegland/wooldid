@@ -1,0 +1,827 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 19.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2025 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 8-core  perpetual
+Serial number: 501906220782
+  Licensed to: Thomas Hegland
+               UMD
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+. do probeB1.do 
+
+. * theoryB verification probe (single dataset, NOT a Monte Carlo)
+. * Purpose: verify three deterministic/algebraic structural predictions on one
+>  d1-style draw:
+. *   (P1) byCohort + cluster(i): visible-slope CRVE block annihilated -> ame S
+> Es ~ machine zero
+. *   (P2) byTime  + cluster(i): V_es_ame full rank, horizon-varying SEs, adver
+> sarial POSTS
+. *   (P3) within-arm (basic+contreatwithin+safety(off)) numerically identical 
+> to basic
+. * plus re-confirm (P0) basic + cluster(i) rank-1 collapse with all SEs = SE(p
+> hihat).
+. clear all
+
+. set more off
+
+. set maxvar 20000
+
+
+. * IMPORTANT: a stale wooldid.ado (2024-07-31) lives in the PLUS adopath and w
+> ins over
+. * `adopath +` (which appends). Load the repo build directly so in-memory prog
+> rams win.
+. qui do "/Users/hegland/Documents/Research/wooldid_dev/wooldidinstall/wooldid.
+> ado"
+
+. set seed 987654321
+
+. set sortseed 987654321
+
+. 
+. * ---- d1-style DGP: 30 cohorts, 6 units/cohort, t=1..12, even i treated at t
+> =6
+. set obs 180
+Number of observations (_N) was 0, now 180.
+
+. gen i = ceil(_n/6)
+
+. gen unitid = 1000 + _n
+
+. gen dose = rnormal(1,1)          // unit-level dose, constant within unit ove
+> r time (d1)
+
+. gen cohfe = rnormal(0,1)
+
+. bysort i (unitid): replace cohfe = cohfe[1]
+(150 real changes made)
+
+. expand 12
+(1,980 observations created)
+
+. bysort unitid: gen t = _n
+
+. gen ttre = 6 if mod(i,2)==0
+(1,080 missing values generated)
+
+. gen y = cohfe + .05*t + rnormal(0,1)   // dose NEVER enters y
+
+. tempfile d1
+
+. save `d1'
+file /var/folders/ls/yldcbdg94wq_f401f_nynbsc0000gn/T//St26639.000002 saved
+    as .dta format
+
+. 
+. capture program drop vsummary
+
+. program define vsummary
+  1.   * summarize e(V_es_ame): diag range, eigenvalues, min offdiag corr
+.   cap matrix VV = e(V_es_ame)
+  2.   if _rc != 0 {
+  3.     dis as result "V_es_ame: NOT POSTED"
+  4.     exit
+  5.   }
+  6.   matrix bb = e(b_es_ame)
+  7.   local k = colsof(VV)
+  8.   dis as result "V dims: " rowsof(VV) " x " `k'
+  9.   * count missing entries; build a missing-patched copy for eigen
+.   local nmiss 0
+ 10.   matrix VP = VV
+ 11.   forval a = 1/`k' {
+ 12.     forval bq = 1/`k' {
+ 13.       if VV[`a',`bq'] >= . {
+ 14.         local ++nmiss
+ 15.         matrix VP[`a',`bq'] = 0
+ 16.       }
+ 17.     }
+ 18.   }
+ 19.   dis as result "n missing entries: " `nmiss'
+ 20.   local dmin = .
+ 21.   local dmax = .
+ 22.   forval a = 1/`k' {
+ 23.     if VV[`a',`a'] < `dmin' local dmin = VV[`a',`a']
+ 24.     if (VV[`a',`a'] > `dmax' & VV[`a',`a'] < .) | `dmax' == . local dmax =
+>  VV[`a',`a']
+ 25.   }
+ 26.   local cmin = .
+ 27.   local cmax = .
+ 28.   forval a = 1/`k' {
+ 29.     forval bq = 1/`k' {
+ 30.       if `a' < `bq' & VV[`a',`bq'] < . & VV[`a',`a'] > 0 & VV[`bq',`bq'] >
+>  0 {
+ 31.         local cc = VV[`a',`bq']/sqrt(VV[`a',`a']*VV[`bq',`bq'])
+ 32.         if `cc' < `cmin' | `cmin' == . local cmin = `cc'
+ 33.         if (`cc' > `cmax' & `cc' < .) | `cmax' == . local cmax = `cc'
+ 34.       }
+ 35.     }
+ 36.   }
+ 37.   dis as result "V diag min/max: " `dmin' " / " `dmax'
+ 38.   dis as result "offdiag corr min/max: " `cmin' " / " `cmax'
+ 39.   cap matrix symeigen X L = VP
+ 40.   if _rc == 0 {
+ 41.     dis as result "eigenvalues (missing-patched V):"
+ 42.     matrix list L, format(%14.0g)
+ 43.   }
+ 44.   else dis as result "symeigen failed rc " _rc
+ 45.   dis as result "raw V_es_ame:"
+ 46.   matrix list VV, format(%12.0g)
+ 47.   dis as result "b_es_ame:"
+ 48.   matrix list bb, format(%12.0g)
+ 49.   dis as result "adversarial_pval_ame = " e(adversarial_pval_ame)
+ 50.   dis as result "es_ndegen_ame = " e(es_ndegen_ame)
+ 51. end
+
+. 
+. * ---------------- RUN 1: basic + cluster(i)
+. use `d1', clear
+
+. dis as result "===== RUN1 basic cluster(i) ====="
+===== RUN1 basic cluster(i) =====
+
+. wooldid y i t ttre, att cluster(i) contreat(dose) contreatcontrols(basic) esp
+> relength(4) espostlength(4) esfixedbaseperiod adversarial
+Caution: adversarial: the composite-null covariance is degenerate; no p-value c
+> omputed.
+ 
+Wooldid Estimation for Outcome: y; Standard Errors: cluster(i)
+ 
+N clusters = 30; N = 2160 (0 obs dropped from initial sample)
+R2 = 0.6013;  R2adj = 0.5186;  R2-within = 0.1628;  R2-withinadj = 0.0082
+ 
+ 
+Main Results (Full Estimation Sample): 
+
+             |  estimate         se          t          p    lb_95ci 
+-------------+-------------------------------------------------------
+main         |                                                       
+         att | -.1159346   .1100458  -1.053512   .3008054  -.3410036 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         att | -.2662261   .1147891  -2.319262   .0276268  -.5009962 
+-------------+-------------------------------------------------------
+main         |                                                       
+         ame | -.0430609   .0393952   -1.09305   .2833689  -.1236331 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         ame |  .0261188   .0393952   .6629948   .5125697  -.0544534 
+-------------+-------------------------------------------------------
+ES_att       |                                                       
+        pre5 | -.2002719   .1832891  -1.092656   .2835392  -.5751402 
+        pre4 | -.1736606   .1559228   -1.11376   .2745285  -.4925586 
+        pre3 | -.1389813   .1817569  -.7646545   .4506551   -.510716 
+        pre2 | -.5519905   .1269232  -4.349012    .000154  -.8115775 
+       post0 | -.0145918   .1461739   -.099825   .9211701  -.3135509 
+       post1 | -.1308129   .1177426  -1.111007   .2756921  -.3716236 
+       post2 | -.1390452   .1295902  -1.072961   .2921361  -.4040869 
+       post3 |  .2291684   .1879327   1.219417   .2325113  -.1551971 
+-------------+-------------------------------------------------------
+ES_ame       |                                                       
+        pre5 |  .1699106   .0393952   4.312981     .00017   .0893384 
+        pre4 | -.1141017   .0393952  -2.896336   .0071102  -.1946738 
+        pre3 |  .2631314   .0393952    6.67928   2.52e-07   .1825592 
+        pre2 | -.2144652   .0393952  -5.443946   7.39e-06  -.2950373 
+       post0 | -.2079791   .0393952  -5.279305   .0000117  -.2885513 
+       post1 | -.0262198   .0393952  -.6655598    .510952   -.106792 
+       post2 |  -.187026   .0393952  -4.747435   .0000512  -.2675982 
+       post3 |  .1050433   .0393952   2.666402   .0124051   .0244712 
+
+             |   ub_95ci      relyr 
+-------------+---------------------
+main         |                     
+         att |  .1091344          . 
+-------------+---------------------
+pretreatment |                     
+         att | -.0314559          . 
+-------------+---------------------
+main         |                     
+         ame |  .0375113          . 
+-------------+---------------------
+pretreatment |                     
+         ame |   .106691          . 
+-------------+---------------------
+ES_att       |                     
+        pre5 |  .1745964         -5 
+        pre4 |  .1452374         -4 
+        pre3 |  .2327534         -3 
+        pre2 | -.2924034         -2 
+       post0 |  .2843673          0 
+       post1 |  .1099978          1 
+       post2 |  .1259964          2 
+       post3 |   .613534          3 
+-------------+---------------------
+ES_ame       |                     
+        pre5 |  .2504828         -5 
+        pre4 | -.0335295         -4 
+        pre3 |  .3437035         -3 
+        pre2 |  -.133893         -2 
+       post0 |  -.127407          0 
+       post1 |  .0543523          1 
+       post2 | -.1064538          2 
+       post3 |  .1856155          3 
+ 
+p-value for joint test of null that all (non-reference) att coefficients are on
+>  a single line: 0.0109
+ 
+ 
+
+. vsummary
+V dims: 8 x 8
+n missing entries: 0
+V diag min/max: .00155198 / .00155198
+offdiag corr min/max: 1 / 1
+eigenvalues (missing-patched V):
+
+L[1,8]
+                e1              e2              e3              e4
+r1   .012415835896   6.0179976e-18   3.7497234e-18   3.0644446e-18
+
+                e5              e6              e7              e8
+r1   2.9286048e-19  -9.6544355e-19  -1.6658850e-18  -1.8866716e-18
+raw V_es_ame:
+
+symmetric VV[8,8]
+              pre5         pre4         pre3         pre2        post0
+ pre5  .0015519795
+ pre4  .0015519795  .0015519795
+ pre3  .0015519795  .0015519795  .0015519795
+ pre2  .0015519795  .0015519795  .0015519795  .0015519795
+post0  .0015519795  .0015519795  .0015519795  .0015519795  .0015519795
+post1  .0015519795  .0015519795  .0015519795  .0015519795  .0015519795
+post2  .0015519795  .0015519795  .0015519795  .0015519795  .0015519795
+post3  .0015519795  .0015519795  .0015519795  .0015519795  .0015519795
+
+             post1        post2        post3
+post1  .0015519795
+post2  .0015519795  .0015519795
+post3  .0015519795  .0015519795  .0015519795
+b_es_ame:
+
+bb[1,8]
+            pre5          pre4          pre3          pre2         post0
+r1   .1699106175  -.1141016502   .2631313782  -.2144651714  -.2079791315
+
+           post1         post2         post3
+r1  -.0262198403  -.1870260051   .1050433446
+adversarial_pval_ame = .
+es_ndegen_ame = .
+
+. matrix B1 = e(b_es_ame)
+
+. matrix V1 = e(V_es_ame)
+
+. 
+. * ---------------- RUN 2: byCohort + cluster(i)
+. use `d1', clear
+
+. dis as result "===== RUN2 byCohort cluster(i) ====="
+===== RUN2 byCohort cluster(i) =====
+
+. wooldid y i t ttre, att cluster(i) contreat(dose) contreatcontrols(byCohort) 
+> esprelength(4) espostlength(4) esfixedbaseperiod adversarial
+Caution: adversarial: the composite-null covariance is degenerate; no p-value c
+> omputed.
+Caution: adversarial: the composite-null covariance is degenerate; no p-value c
+> omputed.
+Caution: standard errors were not identified for 20 of 20 reported estimates, s
+> o no variance-covariance matrix e(V) was posted. Point estimates remain in e(
+> b); per-estimate results remain in e(wdidmainresults) and the displayed table
+> s.
+ 
+Wooldid Estimation for Outcome: y; Standard Errors: cluster(i)
+ 
+N clusters = 30; N = 2160 (0 obs dropped from initial sample)
+R2 = 0.6085;  R2adj = 0.5195;  R2-within = 0.1616;  R2-withinadj = 0.0043
+ 
+ 
+Main Results (Full Estimation Sample): 
+
+             |  estimate         se          t          p    lb_95ci 
+-------------+-------------------------------------------------------
+main         |                                                       
+         att | -.1159346          .          .          .          . 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         att | -.2662261          .          .          .          . 
+-------------+-------------------------------------------------------
+main         |                                                       
+         ame | -.1476755          .          .          .          . 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         ame | -.0784959          .          .          .          . 
+-------------+-------------------------------------------------------
+ES_att       |                                                       
+        pre5 | -.2002719          .          .          .          . 
+        pre4 | -.1736606          .          .          .          . 
+        pre3 | -.1389813          .          .          .          . 
+        pre2 | -.5519905          .          .          .          . 
+       post0 | -.0145918          .          .          .          . 
+       post1 | -.1308129          .          .          .          . 
+       post2 | -.1390452          .          .          .          . 
+       post3 |  .2291684          .          .          .          . 
+-------------+-------------------------------------------------------
+ES_ame       |                                                       
+        pre5 |   .065296          .          .          .          . 
+        pre4 | -.2187163          .          .          .          . 
+        pre3 |  .1585167          .          .          .          . 
+        pre2 | -.3190798          .          .          .          . 
+       post0 | -.3125938          .          .          .          . 
+       post1 | -.1308345          .          .          .          . 
+       post2 | -.2916406          .          .          .          . 
+       post3 |  .0004287          .          .          .          . 
+
+             |   ub_95ci      relyr 
+-------------+---------------------
+main         |                     
+         att |         .          . 
+-------------+---------------------
+pretreatment |                     
+         att |         .          . 
+-------------+---------------------
+main         |                     
+         ame |         .          . 
+-------------+---------------------
+pretreatment |                     
+         ame |         .          . 
+-------------+---------------------
+ES_att       |                     
+        pre5 |         .         -5 
+        pre4 |         .         -4 
+        pre3 |         .         -3 
+        pre2 |         .         -2 
+       post0 |         .          0 
+       post1 |         .          1 
+       post2 |         .          2 
+       post3 |         .          3 
+-------------+---------------------
+ES_ame       |                     
+        pre5 |         .         -5 
+        pre4 |         .         -4 
+        pre3 |         .         -3 
+        pre2 |         .         -2 
+       post0 |         .          0 
+       post1 |         .          1 
+       post2 |         .          2 
+       post3 |         .          3 
+ 
+ 
+ 
+
+. vsummary
+V dims: 1 x 1
+n missing entries: 1
+V diag min/max: . / .
+offdiag corr min/max: . / .
+eigenvalues (missing-patched V):
+
+symmetric L[1,1]
+    e1
+r1   0
+raw V_es_ame:
+
+symmetric VV[1,1]
+    c1
+r1   .
+b_es_ame:
+
+symmetric bb[1,1]
+    c1
+r1   .
+adversarial_pval_ame = .
+es_ndegen_ame = .
+
+. 
+. * ---------------- RUN 3: byTime + cluster(i)
+. use `d1', clear
+
+. dis as result "===== RUN3 byTime cluster(i) ====="
+===== RUN3 byTime cluster(i) =====
+
+. wooldid y i t ttre, att cluster(i) contreat(dose) contreatcontrols(byTime) es
+> prelength(4) espostlength(4) esfixedbaseperiod adversarial
+ 
+Wooldid Estimation for Outcome: y; Standard Errors: cluster(i)
+ 
+N clusters = 30; N = 2160 (0 obs dropped from initial sample)
+R2 = 0.6034;  R2adj = 0.5181;  R2-within = 0.1608;  R2-withinadj = 0.0050
+ 
+ 
+Main Results (Full Estimation Sample): 
+
+             |  estimate         se          t          p    lb_95ci 
+-------------+-------------------------------------------------------
+main         |                                                       
+         att | -.1008997   .1104669  -.9133934   .3685674  -.3268299 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         att | -.2698149   .1206835  -2.235724   .0332317  -.5166403 
+-------------+-------------------------------------------------------
+main         |                                                       
+         ame | -.0112764   .0634532  -.1777123   .8601845  -.1410527 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         ame | -.0166348   .0515195  -.3228828   .7491006  -.1220041 
+-------------+-------------------------------------------------------
+ES_att       |                                                       
+        pre5 | -.2144305   .1889309  -1.134968    .265683  -.6008376 
+        pre4 | -.1996122   .1500577  -1.330236   .1938076  -.5065146 
+        pre3 | -.1274691   .1890177  -.6743763   .5054129  -.5140536 
+        pre2 | -.5377479   .1304806  -4.121288   .0002875  -.8046106 
+       post0 | -.0048786   .1593074  -.0306236   .9757795  -.3306988 
+       post1 | -.0648367   .1134499  -.5715009   .5720634  -.2968679 
+       post2 | -.1228513   .1275148  -.9634279   .3432983  -.3836484 
+       post3 |  .2179154   .1901478   1.146032    .261151  -.1709805 
+-------------+-------------------------------------------------------
+ES_ame       |                                                       
+        pre5 |  .0848536   .1243209   .6825366   .5003159  -.1694112 
+        pre4 |  -.246358   .1171797  -2.102395   .0443158  -.4860173 
+        pre3 |  .2808171   .1024436   2.741187   .0103729   .0712964 
+        pre2 | -.1858518   .0710003  -2.617618   .0139245  -.3310638 
+       post0 | -.1974935   .1536904  -1.285008   .2089583  -.5118257 
+       post1 |   .209448   .1073608    1.95088   .0607933  -.0101295 
+       post2 | -.1506026   .0863504  -1.744088   .0917364   -.327209 
+       post3 |  .0316152   .1175283   .2690006   .7898338  -.2087572 
+
+             |   ub_95ci      relyr 
+-------------+---------------------
+main         |                     
+         att |  .1250304          . 
+-------------+---------------------
+pretreatment |                     
+         att | -.0229895          . 
+-------------+---------------------
+main         |                     
+         ame |  .1184999          . 
+-------------+---------------------
+pretreatment |                     
+         ame |  .0887345          . 
+-------------+---------------------
+ES_att       |                     
+        pre5 |  .1719767         -5 
+        pre4 |  .1072902         -4 
+        pre3 |  .2591155         -3 
+        pre2 | -.2708852         -2 
+       post0 |  .3209417          0 
+       post1 |  .1671944          1 
+       post2 |  .1379457          2 
+       post3 |  .6068113          3 
+-------------+---------------------
+ES_ame       |                     
+        pre5 |  .3391183         -5 
+        pre4 | -.0066987         -4 
+        pre3 |  .4903377         -3 
+        pre2 | -.0406398         -2 
+       post0 |  .1168388          0 
+       post1 |  .4290255          1 
+       post2 |  .0260037          2 
+       post3 |  .2719875          3 
+ 
+p-value for joint test of null that all (non-reference) att coefficients are on
+>  a single line: 0.0104
+p-value for joint test of null that all (non-reference) ame coefficients are on
+>  a single line: 0.0001
+ 
+ 
+
+. vsummary
+V dims: 8 x 8
+n missing entries: 0
+V diag min/max: .00504105 / .02362075
+offdiag corr min/max: -.66367368 / .44318992
+eigenvalues (missing-patched V):
+
+L[1,8]
+               e1             e2             e3             e4             e5
+r1  .037953511196  .024469102645   .01324251422  .010054766236   .00544053813
+
+               e6             e7             e8
+r1  .004193666865  .003604455404  .002180320281
+raw V_es_ame:
+
+symmetric VV[8,8]
+               pre5          pre4          pre3          pre2         post0
+ pre5   .0154556846
+ pre4   .0044598985   .0137310736
+ pre3  -.0060143068  -.0000563681   .0104946898
+ pre2  -.0024453472   .0003495397   .0025794457   .0050410469
+post0   .0075550523   .0063241507   -.006264603   .0010299583   .0236207497
+post1   .0032204814    .002473801  -.0006233352  -.0004823767   .0073127795
+post2     .00163708  -.0028615496  -.0033382714  -.0002572021   .0041782645
+post3   .0011917233  -.0091400651  -.0019245417  -.0030625125  -.0036407268
+
+              post1         post2         post3
+post1   .0115263429
+post2   .0009974481   .0074563866
+post3   .0003025307   .0033922967    .013812901
+b_es_ame:
+
+bb[1,8]
+            pre5          pre4          pre3          pre2         post0
+r1   .0848535656  -.2463579739   .2808170757  -.1858517749  -.1974934566
+
+           post1         post2         post3
+r1   .2094480173   -.150602643   .0316151826
+adversarial_pval_ame = .00011072
+es_ndegen_ame = .
+
+. 
+. * ---------------- RUN 4: within-arm = basic + contreatwithin + safety(off) +
+>  cluster(i)
+. use `d1', clear
+
+. dis as result "===== RUN4 within cluster(i) ====="
+===== RUN4 within cluster(i) =====
+
+. wooldid y i t ttre, att cluster(i) contreat(dose) contreatcontrols(basic) con
+> treatwithin safety(off) esprelength(4) espostlength(4) esfixedbaseperiod adve
+> rsarial
+Caution: adversarial: the composite-null covariance is degenerate; no p-value c
+> omputed.
+ 
+Wooldid Estimation for Outcome: y; Standard Errors: cluster(i)
+ 
+N clusters = 30; N = 2160 (0 obs dropped from initial sample)
+R2 = 0.6013;  R2adj = 0.5186;  R2-within = 0.1628;  R2-withinadj = 0.0082
+ 
+ 
+Main Results (Full Estimation Sample): 
+
+             |  estimate         se          t          p    lb_95ci 
+-------------+-------------------------------------------------------
+main         |                                                       
+         att | -.1159346   .1100458  -1.053512   .3008054  -.3410036 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         att | -.2662261   .1147891  -2.319262   .0276268  -.5009962 
+-------------+-------------------------------------------------------
+main         |                                                       
+         ame | -.0430609   .0393952   -1.09305   .2833689  -.1236331 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         ame |  .0261188   .0393952   .6629948   .5125697  -.0544534 
+-------------+-------------------------------------------------------
+ES_att       |                                                       
+        pre5 | -.2002719   .1832891  -1.092656   .2835392  -.5751402 
+        pre4 | -.1736606   .1559228   -1.11376   .2745285  -.4925586 
+        pre3 | -.1389813   .1817569  -.7646545   .4506551   -.510716 
+        pre2 | -.5519905   .1269232  -4.349012    .000154  -.8115775 
+       post0 | -.0145918   .1461739   -.099825   .9211701  -.3135509 
+       post1 | -.1308129   .1177426  -1.111007   .2756921  -.3716236 
+       post2 | -.1390452   .1295902  -1.072961   .2921361  -.4040869 
+       post3 |  .2291684   .1879327   1.219417   .2325113  -.1551971 
+-------------+-------------------------------------------------------
+ES_ame       |                                                       
+        pre5 |  .1699106   .0393952   4.312981     .00017   .0893384 
+        pre4 | -.1141017   .0393952  -2.896336   .0071102  -.1946738 
+        pre3 |  .2631314   .0393952    6.67928   2.52e-07   .1825592 
+        pre2 | -.2144652   .0393952  -5.443946   7.39e-06  -.2950373 
+       post0 | -.2079791   .0393952  -5.279305   .0000117  -.2885513 
+       post1 | -.0262198   .0393952  -.6655598    .510952   -.106792 
+       post2 |  -.187026   .0393952  -4.747435   .0000512  -.2675982 
+       post3 |  .1050433   .0393952   2.666402   .0124051   .0244712 
+
+             |   ub_95ci      relyr 
+-------------+---------------------
+main         |                     
+         att |  .1091344          . 
+-------------+---------------------
+pretreatment |                     
+         att | -.0314559          . 
+-------------+---------------------
+main         |                     
+         ame |  .0375113          . 
+-------------+---------------------
+pretreatment |                     
+         ame |   .106691          . 
+-------------+---------------------
+ES_att       |                     
+        pre5 |  .1745964         -5 
+        pre4 |  .1452374         -4 
+        pre3 |  .2327534         -3 
+        pre2 | -.2924034         -2 
+       post0 |  .2843673          0 
+       post1 |  .1099978          1 
+       post2 |  .1259964          2 
+       post3 |   .613534          3 
+-------------+---------------------
+ES_ame       |                     
+        pre5 |  .2504828         -5 
+        pre4 | -.0335295         -4 
+        pre3 |  .3437035         -3 
+        pre2 |  -.133893         -2 
+       post0 |  -.127407          0 
+       post1 |  .0543523          1 
+       post2 | -.1064538          2 
+       post3 |  .1856155          3 
+ 
+p-value for joint test of null that all (non-reference) att coefficients are on
+>  a single line: 0.0109
+ 
+ 
+
+. vsummary
+V dims: 8 x 8
+n missing entries: 0
+V diag min/max: .00155198 / .00155198
+offdiag corr min/max: 1 / 1
+eigenvalues (missing-patched V):
+
+L[1,8]
+                e1              e2              e3              e4
+r1   .012415835896   6.0179976e-18   3.7497234e-18   3.0644446e-18
+
+                e5              e6              e7              e8
+r1   2.9286048e-19  -9.6544355e-19  -1.6658850e-18  -1.8866716e-18
+raw V_es_ame:
+
+symmetric VV[8,8]
+              pre5         pre4         pre3         pre2        post0
+ pre5  .0015519795
+ pre4  .0015519795  .0015519795
+ pre3  .0015519795  .0015519795  .0015519795
+ pre2  .0015519795  .0015519795  .0015519795  .0015519795
+post0  .0015519795  .0015519795  .0015519795  .0015519795  .0015519795
+post1  .0015519795  .0015519795  .0015519795  .0015519795  .0015519795
+post2  .0015519795  .0015519795  .0015519795  .0015519795  .0015519795
+post3  .0015519795  .0015519795  .0015519795  .0015519795  .0015519795
+
+             post1        post2        post3
+post1  .0015519795
+post2  .0015519795  .0015519795
+post3  .0015519795  .0015519795  .0015519795
+b_es_ame:
+
+bb[1,8]
+            pre5          pre4          pre3          pre2         post0
+r1   .1699106175  -.1141016502   .2631313782  -.2144651714  -.2079791315
+
+           post1         post2         post3
+r1  -.0262198403  -.1870260051   .1050433446
+adversarial_pval_ame = .
+es_ndegen_ame = .
+
+. matrix B4 = e(b_es_ame)
+
+. matrix V4 = e(V_es_ame)
+
+. dis as result "within-vs-basic mreldif(b) = " mreldif(B4,B1)
+within-vs-basic mreldif(b) = 0
+
+. dis as result "within-vs-basic mreldif(V) = " mreldif(V4,V1)
+within-vs-basic mreldif(V) = 0
+
+. 
+. * ---------------- RUN 5: byCohort + robust (sanity: full rank, positive SEs)
+. use `d1', clear
+
+. dis as result "===== RUN5 byCohort robust ====="
+===== RUN5 byCohort robust =====
+
+. wooldid y i t ttre, att robust contreat(dose) contreatcontrols(byCohort) espr
+> elength(4) espostlength(4) esfixedbaseperiod adversarial
+ 
+Wooldid Estimation for Outcome: y; Standard Errors: vce(robust)
+ 
+N = 2160 (0 obs dropped from initial sample)
+R2 = 0.6085;  R2adj = 0.5195;  R2-within = 0.1616;  R2-withinadj = 0.0043
+ 
+ 
+Main Results (Full Estimation Sample): 
+
+             |  estimate         se          t          p    lb_95ci 
+-------------+-------------------------------------------------------
+main         |                                                       
+         att | -.1159346   .1425552  -.8132612   .4161784    -.39553 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         att | -.2662261   .1517655  -1.754194   .0795714  -.5638857 
+-------------+-------------------------------------------------------
+main         |                                                       
+         ame | -.1476755   .1196099  -1.234643   .2171282   -.382268 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         ame | -.0784959   .1246511  -.6297245   .5289566  -.3229757 
+-------------+-------------------------------------------------------
+ES_att       |                                                       
+        pre5 | -.2002719   .1980177  -1.011384    .311972  -.5886467 
+        pre4 | -.1736606    .211838  -.8197803   .4124525  -.5891414 
+        pre3 | -.1389813   .2007752  -.6922232   .4888885  -.5327644 
+        pre2 | -.5519905   .1945724  -2.836941    .004607   -.933608 
+       post0 | -.0145918   .1935258  -.0753998   .9399052  -.3941566 
+       post1 | -.1308129   .1940841  -.6740009   .5003993  -.5114727 
+       post2 | -.1390452   .1944931  -.7149109    .474759  -.5205072 
+       post3 |  .2291684   .2061198   1.111822   .2663667   -.175097 
+-------------+-------------------------------------------------------
+ES_ame       |                                                       
+        pre5 |   .065296   .1537976   .4245578    .671211  -.2363494 
+        pre4 | -.2187163   .1706277  -1.281834     .20007  -.5533707 
+        pre3 |  .1585167   .1528129   1.037326   .2997267  -.1411973 
+        pre2 | -.3190798   .1611649  -1.979834   .0478778  -.6351748 
+       post0 | -.3125938   .1837718  -1.700989   .0891219  -.6730279 
+       post1 | -.1308345   .1492682  -.8765061   .3808746  -.4235962 
+       post2 | -.2916406   .1728438  -1.687308   .0917215  -.6306415 
+       post3 |  .0004287   .1582052   .0027098   .9978382  -.3098613 
+
+             |   ub_95ci      relyr 
+-------------+---------------------
+main         |                     
+         att |  .1636608          . 
+-------------+---------------------
+pretreatment |                     
+         att |  .0314336          . 
+-------------+---------------------
+main         |                     
+         ame |  .0869169          . 
+-------------+---------------------
+pretreatment |                     
+         ame |   .165984          . 
+-------------+---------------------
+ES_att       |                     
+        pre5 |   .188103         -5 
+        pre4 |  .2418202         -4 
+        pre3 |  .2548019         -3 
+        pre2 |  -.170373         -2 
+       post0 |   .364973          0 
+       post1 |   .249847          1 
+       post2 |  .2424167          2 
+       post3 |  .6334339          3 
+-------------+---------------------
+ES_ame       |                     
+        pre5 |  .3669413         -5 
+        pre4 |  .1159381         -4 
+        pre3 |  .4582308         -3 
+        pre2 | -.0029848         -2 
+       post0 |  .0478404          0 
+       post1 |  .1619272          1 
+       post2 |  .0473602          2 
+       post3 |  .3107187          3 
+ 
+p-value for joint test of null that all (non-reference) att coefficients are on
+>  a single line: 0.0994
+p-value for joint test of null that all (non-reference) ame coefficients are on
+>  a single line: 0.0130
+ 
+ 
+
+. vsummary
+V dims: 8 x 8
+n missing entries: 0
+V diag min/max: .02228099 / .03377208
+offdiag corr min/max: .38438103 / .53526301
+eigenvalues (missing-patched V):
+
+L[1,8]
+               e1             e2             e3             e4             e5
+r1   .11224043048   .02065393998  .017331555981  .015634972506  .013353930523
+
+               e6             e7             e8
+r1  .012183377605  .011284881857   .01036727257
+raw V_es_ame:
+
+symmetric VV[8,8]
+              pre5         pre4         pre3         pre2        post0
+ pre5  .0236537069
+ pre4  .0122094063  .0291138064
+ pre3  .0122094063  .0122094063  .0233517842
+ pre2  .0122094063  .0122094063  .0122094063  .0259741367
+post0  .0122094063  .0122094063  .0122094063  .0122094063  .0337720781
+post1  .0122094063  .0122094063  .0122094063  .0122094063  .0122094063
+post2  .0122094063  .0122094063  .0122094063  .0122094063  .0122094063
+post3  .0122094063  .0122094063  .0122094063  .0122094063  .0122094063
+
+             post1        post2        post3
+post1   .022280994
+post2  .0122094063   .029874966
+post3  .0122094063  .0122094063  .0250288893
+b_es_ame:
+
+bb[1,8]
+            pre5          pre4          pre3          pre2         post0
+r1   .0652959739  -.2187162938   .1585167345   -.319079815  -.3125937752
+
+           post1         post2         post3
+r1  -.1308344839  -.2916406487   .0004287009
+adversarial_pval_ame = .01303343
+es_ndegen_ame = .
+
+. 
+. dis as result "PROBE COMPLETE"
+PROBE COMPLETE
+
+. 
+end of do-file

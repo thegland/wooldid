@@ -1,0 +1,70 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 19.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2025 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 8-core  perpetual
+Serial number: 501906220782
+  Licensed to: Thomas Hegland
+               UMD
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+. do probe_postexp2.do 
+
+. * probe_postexp2 — POSTEXP addendum: symmetric-but-INDEFINITE V cases.
+. clear all
+
+. set more off
+
+. set linesize 255
+
+. cap program drop postexp
+
+. program define postexp, eclass
+  1.   args case
+  2.   tempname b V
+  3.   matrix `b' = (1, 2, 3)
+  4.   * S6: symmetric, indefinite via off-diagonals at tiny scale (eigs 3e-22, -1e-22, 1)
+.   if "`case'" == "S6" matrix `V' = (1e-22, 2e-22, 0 \ 2e-22, 1e-22, 0 \ 0, 0, 1)
+  5.   * S7: symmetric, indefinite at O(1) scale (eigs 3, -1, 1)
+.   if "`case'" == "S7" matrix `V' = (1, 2, 0 \ 2, 1, 0 \ 0, 0, 1)
+  6.   * S8: symmetric PSD with mixed scales incl an exact-zero block plus healthy block
+.   if "`case'" == "S8" matrix `V' = (0, 0, 0 \ 0, 0, 0 \ 0, 0, 1)
+  7.   matrix colnames `b' = x1 x2 x3
+  8.   matrix colnames `V' = x1 x2 x3
+  9.   matrix rownames `V' = x1 x2 x3
+ 10.   ereturn post `b' `V'
+ 11. end
+
+. foreach c in S6 S7 S8 {
+  2.   cap noi postexp `c'
+  3.   dis "POSTEXP2|`c'|rc=" _rc
+  4.   cap noi mata: d = diagonal(st_matrix("e(V)")); printf("POSTEXP2|`c'|eV diag: %12.0g %12.0g %12.0g|allzero=%g\n", d[1], d[2], d[3], all(st_matrix("e(V)") :== 0))
+  5. }
+warning: variance matrix is nonsymmetric or highly singular.
+POSTEXP2|S6|rc=0
+POSTEXP2|S6|eV diag:            0            0            0|allzero=1
+warning: variance matrix is nonsymmetric or highly singular.
+POSTEXP2|S7|rc=0
+POSTEXP2|S7|eV diag:            0            0            0|allzero=1
+POSTEXP2|S8|rc=0
+POSTEXP2|S8|eV diag:            0            0            1|allzero=0
+
+. dis "PROBE_POSTEXP2_DONE"
+PROBE_POSTEXP2_DONE
+
+. 
+end of do-file

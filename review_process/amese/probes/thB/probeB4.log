@@ -1,0 +1,646 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 19.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2025 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 8-core  perpetual
+Serial number: 501906220782
+  Licensed to: Thomas Hegland
+               UMD
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+. do probeB4.do 
+
+. * theoryB probe 4: d3 deterministic behavior (cell-constant dose) + d1 robust
+> /unit-cluster sanity
+. clear all
+
+. set more off
+
+. set maxvar 20000
+
+
+. qui do "/Users/hegland/Documents/Research/wooldid_dev/wooldidinstall/wooldid.
+> ado"
+
+. set seed 24681357
+
+. set sortseed 24681357
+
+. 
+. * base panel
+. set obs 180
+Number of observations (_N) was 0, now 180.
+
+. gen i = ceil(_n/6)
+
+. gen unitid = 1000 + _n
+
+. gen udose = rnormal(1,1)          // unit-level dose for d1
+
+. gen cohfe = rnormal(0,1)
+
+. bysort i (unitid): replace cohfe = cohfe[1]
+(150 real changes made)
+
+. expand 12
+(1,980 observations created)
+
+. bysort unitid: gen t = _n
+
+. gen ttre = 6 if mod(i,2)==0
+(1,080 missing values generated)
+
+. gen y = cohfe + .05*t + rnormal(0,1)
+
+. * d3a: cohort-level dose, time-invariant
+. gen d3adose = mod(i,7) + 0.5
+
+. * d3b: cohort-by-period dose (cell-constant, time-varying)
+. gen d3bdose = mod(i,7) + 0.3*mod(t,4) + 0.5
+
+. tempfile base
+
+. save `base'
+file /var/folders/ls/yldcbdg94wq_f401f_nynbsc0000gn/T//St27259.000002 saved
+    as .dta format
+
+. 
+. capture program drop f2check
+
+. program define f2check
+  1.   foreach mm in b_es_ame V_es_ame {
+  2.     cap matrix chk = e(`mm')
+  3.     if _rc == 0 & rowsof(chk) + colsof(chk) > 2 dis as result "  e(`mm'): 
+> " rowsof(chk) " x " colsof(chk)
+  4.     else dis as result "  e(`mm'): ABSENT"
+  5.     cap matrix drop chk
+  6.   }
+  7.   cap matrix chk2 = e(V_es_ame)
+  8.   if colsof(chk2) > 1 {
+  9.     mata: V = st_matrix("chk2"); printf("  diag min %10.6g max %10.6g\n", 
+> min(diagonal(V)), max(diagonal(V)))
+ 10.     mata: ev = symeigenvalues(st_matrix("chk2")); printf("  eig max %10.6g
+>  min %10.3g\n", max(ev), min(ev))
+ 11.   }
+ 12.   cap matrix drop chk2
+ 13.   dis as result "  adversarial_pval_ame = " e(adversarial_pval_ame)
+ 14. end
+
+. 
+. use `base', clear
+
+. dis as result "===== D3A basic cluster(i)  [cohort-constant dose] ====="
+===== D3A basic cluster(i)  [cohort-constant dose] =====
+
+. cap noi wooldid y i t ttre, att cluster(i) contreat(d3adose) contreatcontrols
+> (basic) esprelength(4) espostlength(4) esfixedbaseperiod adversarial
+Caution: a treatment period coefficient interacted with something (likely, a te
+> rm implementing a continuous treatment variable or an interactive control var
+> iable) was dropped for multicollinearity.
+This could imply your results are not identified, depending on exactly what was
+>  dropped.
+Re-estimate with option verbose for details on what was dropped.
+Note: the multicollinearity caution above was triggered 165 times total.
+Caution: adversarial: the composite-null covariance is degenerate; no p-value c
+> omputed.
+Caution: standard errors were not identified for 10 of 20 reported estimates. e
+> (V) contains placeholder entries for the affected estimates that display as m
+> issing standard errors; all other estimates retain their variances in e(V). S
+> ee e(wdidmainresults) and the displayed tables for per-estimate detail.
+ 
+Wooldid Estimation for Outcome: y; Standard Errors: cluster(i)
+ 
+N clusters = 30; N = 2160 (0 obs dropped from initial sample)
+R2 = 0.5385;  R2adj = 0.4899;  R2-within = 0.0874;  R2-withinadj = 0.0103
+ 
+ 
+Main Results (Full Estimation Sample): 
+
+             |  estimate         se          t          p    lb_95ci 
+-------------+-------------------------------------------------------
+main         |                                                       
+         att | -.0039161   .1351906  -.0289675   .9770889   -.280412 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         att |  .0645952   .1451989   .4448736   .6597139  -.2323699 
+-------------+-------------------------------------------------------
+main         |                                                       
+         ame |         0          .          .          .          . 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         ame |         0          .          .          .          . 
+-------------+-------------------------------------------------------
+ES_att       |                                                       
+        pre5 |  .1811464    .173225   1.045729   .3043246  -.1731384 
+        pre4 |  .0589629   .1932199   .3051598    .762424  -.3362162 
+        pre3 | -.0026644   .1825341  -.0145968   .9884538  -.3759887 
+        pre2 |  .0209357    .150822   .1388109   .8905591  -.2875298 
+       post0 |  .2098826   .2105885   .9966481   .3271792  -.2208192 
+       post1 |  .0045263   .1576751   .0287068   .9772951  -.3179555 
+       post2 |  .0524014   .1193455   .4390728    .663863  -.1916876 
+       post3 |  .1574044   .1729762   .9099773   .3703361  -.1963716 
+-------------+-------------------------------------------------------
+ES_ame       |                                                       
+        pre5 |         0          .          .          .          . 
+        pre4 |         0          .          .          .          . 
+        pre3 |         0          .          .          .          . 
+        pre2 |         0          .          .          .          . 
+       post0 |         0          .          .          .          . 
+       post1 |         0          .          .          .          . 
+       post2 |         0          .          .          .          . 
+       post3 |         0          .          .          .          . 
+
+             |   ub_95ci      relyr 
+-------------+---------------------
+main         |                     
+         att |  .2725798          . 
+-------------+---------------------
+pretreatment |                     
+         att |  .3615603          . 
+-------------+---------------------
+main         |                     
+         ame |         .          . 
+-------------+---------------------
+pretreatment |                     
+         ame |         .          . 
+-------------+---------------------
+ES_att       |                     
+        pre5 |  .5354312         -5 
+        pre4 |  .4541421         -4 
+        pre3 |  .3706598         -3 
+        pre2 |  .3294013         -2 
+       post0 |  .6405845          0 
+       post1 |  .3270082          1 
+       post2 |  .2964903          2 
+       post3 |  .5111804          3 
+-------------+---------------------
+ES_ame       |                     
+        pre5 |         .         -5 
+        pre4 |         .         -4 
+        pre3 |         .         -3 
+        pre2 |         .         -2 
+       post0 |         .          0 
+       post1 |         .          1 
+       post2 |         .          2 
+       post3 |         .          3 
+ 
+p-value for joint test of null that all (non-reference) att coefficients are on
+>  a single line: 0.2781
+ 
+ 
+
+. dis as result "RC = " _rc
+RC = 0
+
+. if _rc == 0 f2check
+  e(b_es_ame): ABSENT
+  e(V_es_ame): ABSENT
+  adversarial_pval_ame = .
+
+. 
+. use `base', clear
+
+. dis as result "===== D3A basic robust ====="
+===== D3A basic robust =====
+
+. cap noi wooldid y i t ttre, att robust contreat(d3adose) contreatcontrols(bas
+> ic) esprelength(4) espostlength(4) esfixedbaseperiod adversarial
+Caution: a treatment period coefficient interacted with something (likely, a te
+> rm implementing a continuous treatment variable or an interactive control var
+> iable) was dropped for multicollinearity.
+This could imply your results are not identified, depending on exactly what was
+>  dropped.
+Re-estimate with option verbose for details on what was dropped.
+Note: the multicollinearity caution above was triggered 165 times total.
+Caution: adversarial: the composite-null covariance is degenerate; no p-value c
+> omputed.
+Caution: standard errors were not identified for 10 of 20 reported estimates. e
+> (V) contains placeholder entries for the affected estimates that display as m
+> issing standard errors; all other estimates retain their variances in e(V). S
+> ee e(wdidmainresults) and the displayed tables for per-estimate detail.
+ 
+Wooldid Estimation for Outcome: y; Standard Errors: vce(robust)
+ 
+N = 2160 (0 obs dropped from initial sample)
+R2 = 0.5385;  R2adj = 0.4899;  R2-within = 0.0874;  R2-withinadj = 0.0103
+ 
+ 
+Main Results (Full Estimation Sample): 
+
+             |  estimate         se          t          p    lb_95ci 
+-------------+-------------------------------------------------------
+main         |                                                       
+         att | -.0039161   .1515683  -.0258374   .9793897  -.3011687 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         att |  .0645952   .1591763    .405809   .6849274   -.247578 
+-------------+-------------------------------------------------------
+main         |                                                       
+         ame |         0          .          .          .          . 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         ame |         0          .          .          .          . 
+-------------+-------------------------------------------------------
+ES_att       |                                                       
+        pre5 |  .1811464   .2062414    .878322    .379877  -.2233301 
+        pre4 |  .0589629   .2113016   .2790464   .7802388  -.3554374 
+        pre3 | -.0026644   .2007602  -.0132716   .9894125  -.3963912 
+        pre2 |  .0209357   .1993746    .105007    .916381  -.3700737 
+       post0 |  .2098826   .2040662   1.028503   .3038408  -.1903278 
+       post1 |  .0045263   .2052674    .022051   .9824095  -.3980399 
+       post2 |  .0524014   .1996406   .2624786   .7929802  -.3391296 
+       post3 |  .1574044   .2099208   .7498277   .4534488  -.2542879 
+-------------+-------------------------------------------------------
+ES_ame       |                                                       
+        pre5 |         0          .          .          .          . 
+        pre4 |         0          .          .          .          . 
+        pre3 |         0          .          .          .          . 
+        pre2 |         0          .          .          .          . 
+       post0 |         0          .          .          .          . 
+       post1 |         0          .          .          .          . 
+       post2 |         0          .          .          .          . 
+       post3 |         0          .          .          .          . 
+
+             |   ub_95ci      relyr 
+-------------+---------------------
+main         |                     
+         att |  .2933365          . 
+-------------+---------------------
+pretreatment |                     
+         att |  .3767684          . 
+-------------+---------------------
+main         |                     
+         ame |         .          . 
+-------------+---------------------
+pretreatment |                     
+         ame |         .          . 
+-------------+---------------------
+ES_att       |                     
+        pre5 |  .5856229         -5 
+        pre4 |  .4733633         -4 
+        pre3 |  .3910624         -3 
+        pre2 |  .4119451         -2 
+       post0 |   .610093          0 
+       post1 |  .4070926          1 
+       post2 |  .4439323          2 
+       post3 |  .5690967          3 
+-------------+---------------------
+ES_ame       |                     
+        pre5 |         .         -5 
+        pre4 |         .         -4 
+        pre3 |         .         -3 
+        pre2 |         .         -2 
+       post0 |         .          0 
+       post1 |         .          1 
+       post2 |         .          2 
+       post3 |         .          3 
+ 
+p-value for joint test of null that all (non-reference) att coefficients are on
+>  a single line: 0.8916
+ 
+ 
+
+. dis as result "RC = " _rc
+RC = 0
+
+. if _rc == 0 f2check
+  e(b_es_ame): ABSENT
+  e(V_es_ame): ABSENT
+  adversarial_pval_ame = .
+
+. 
+. use `base', clear
+
+. dis as result "===== D3B basic cluster(i)  [cell-constant, time-varying dose]
+>  ====="
+===== D3B basic cluster(i)  [cell-constant, time-varying dose] =====
+
+. cap noi wooldid y i t ttre, att cluster(i) contreat(d3bdose) contreatcontrols
+> (basic) esprelength(4) espostlength(4) esfixedbaseperiod adversarial
+Caution: a treatment period coefficient interacted with something (likely, a te
+> rm implementing a continuous treatment variable or an interactive control var
+> iable) was dropped for multicollinearity.
+This could imply your results are not identified, depending on exactly what was
+>  dropped.
+Re-estimate with option verbose for details on what was dropped.
+Note: the multicollinearity caution above was triggered 165 times total.
+Caution: adversarial: the composite-null covariance is degenerate; no p-value c
+> omputed.
+Caution: standard errors were not identified for 10 of 20 reported estimates. e
+> (V) contains placeholder entries for the affected estimates that display as m
+> issing standard errors; all other estimates retain their variances in e(V). S
+> ee e(wdidmainresults) and the displayed tables for per-estimate detail.
+ 
+Wooldid Estimation for Outcome: y; Standard Errors: cluster(i)
+ 
+N clusters = 30; N = 2160 (0 obs dropped from initial sample)
+R2 = 0.5385;  R2adj = 0.4899;  R2-within = 0.0874;  R2-withinadj = 0.0103
+ 
+ 
+Main Results (Full Estimation Sample): 
+
+             |  estimate         se          t          p    lb_95ci 
+-------------+-------------------------------------------------------
+main         |                                                       
+         att | -.0039161   .1351906  -.0289675   .9770889   -.280412 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         att |  .0645952   .1451989   .4448736   .6597139  -.2323699 
+-------------+-------------------------------------------------------
+main         |                                                       
+         ame |         0          .          .          .          . 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         ame |         0          .          .          .          . 
+-------------+-------------------------------------------------------
+ES_att       |                                                       
+        pre5 |  .1811464    .173225   1.045729   .3043246  -.1731384 
+        pre4 |  .0589629   .1932199   .3051598    .762424  -.3362162 
+        pre3 | -.0026644   .1825341  -.0145968   .9884538  -.3759887 
+        pre2 |  .0209357    .150822   .1388109   .8905591  -.2875298 
+       post0 |  .2098826   .2105885   .9966481   .3271792  -.2208192 
+       post1 |  .0045263   .1576751   .0287068   .9772951  -.3179555 
+       post2 |  .0524014   .1193455   .4390728    .663863  -.1916876 
+       post3 |  .1574044   .1729762   .9099773   .3703361  -.1963716 
+-------------+-------------------------------------------------------
+ES_ame       |                                                       
+        pre5 |         0          .          .          .          . 
+        pre4 |         0          .          .          .          . 
+        pre3 |         0          .          .          .          . 
+        pre2 |         0          .          .          .          . 
+       post0 |         0          .          .          .          . 
+       post1 |         0          .          .          .          . 
+       post2 |         0          .          .          .          . 
+       post3 |         0          .          .          .          . 
+
+             |   ub_95ci      relyr 
+-------------+---------------------
+main         |                     
+         att |  .2725798          . 
+-------------+---------------------
+pretreatment |                     
+         att |  .3615603          . 
+-------------+---------------------
+main         |                     
+         ame |         .          . 
+-------------+---------------------
+pretreatment |                     
+         ame |         .          . 
+-------------+---------------------
+ES_att       |                     
+        pre5 |  .5354312         -5 
+        pre4 |  .4541421         -4 
+        pre3 |  .3706598         -3 
+        pre2 |  .3294013         -2 
+       post0 |  .6405845          0 
+       post1 |  .3270082          1 
+       post2 |  .2964903          2 
+       post3 |  .5111804          3 
+-------------+---------------------
+ES_ame       |                     
+        pre5 |         .         -5 
+        pre4 |         .         -4 
+        pre3 |         .         -3 
+        pre2 |         .         -2 
+       post0 |         .          0 
+       post1 |         .          1 
+       post2 |         .          2 
+       post3 |         .          3 
+ 
+p-value for joint test of null that all (non-reference) att coefficients are on
+>  a single line: 0.2781
+ 
+ 
+
+. dis as result "RC = " _rc
+RC = 0
+
+. if _rc == 0 f2check
+  e(b_es_ame): ABSENT
+  e(V_es_ame): ABSENT
+  adversarial_pval_ame = .
+
+. 
+. use `base', clear
+
+. dis as result "===== D1 basic robust ====="
+===== D1 basic robust =====
+
+. cap noi wooldid y i t ttre, att robust contreat(udose) contreatcontrols(basic
+> ) esprelength(4) espostlength(4) esfixedbaseperiod adversarial
+ 
+Wooldid Estimation for Outcome: y; Standard Errors: vce(robust)
+ 
+N = 2160 (0 obs dropped from initial sample)
+R2 = 0.5733;  R2adj = 0.4848;  R2-within = 0.1557;  R2-withinadj = -0.0001
+ 
+ 
+Main Results (Full Estimation Sample): 
+
+             |  estimate         se          t          p    lb_95ci 
+-------------+-------------------------------------------------------
+main         |                                                       
+         att | -.0039161   .1566924  -.0249925   .9800637  -.3112356 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         att |  .0645952   .1641312   .3935582   .6939542  -.2573139 
+-------------+-------------------------------------------------------
+main         |                                                       
+         ame | -.0567209   .0621575  -.9125357   .3616098  -.1786298 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         ame | -.0806593   .0747237  -1.079433   .2805404  -.2272143 
+-------------+-------------------------------------------------------
+ES_att       |                                                       
+        pre5 |  .1811464    .211392   .8569218   .3916029  -.2334549 
+        pre4 |  .0589629   .2132059    .276554   .7821546  -.3591961 
+        pre3 | -.0026644   .2037774  -.0130751   .9895693  -.4023313 
+        pre2 |  .0209357    .205838   .1017097   .9189985  -.3827727 
+       post0 |  .2098826   .2062882   1.017424   .3090892  -.1947086 
+       post1 |  .0045263   .2093583   .0216201   .9827534  -.4060863 
+       post2 |  .0524014   .2056642   .2547909   .7989139  -.3509661 
+       post3 |  .1574044   .2150258   .7320257   .4642488  -.2643239 
+-------------+-------------------------------------------------------
+ES_ame       |                                                       
+        pre5 | -.1234267   .1438451  -.8580527   .3909784   -.405549 
+        pre4 |  -.006338   .1247429  -.0508087   .9594837  -.2509952 
+        pre3 | -.1029801   .1336827  -.7703322   .4412046   -.365171 
+        pre2 | -.0898922   .1407937  -.6384675   .5232512  -.3660296 
+       post0 |  -.316629   .1166203  -2.715043   .0066904  -.5453554 
+       post1 |  .3186731   .1559627   2.043265   .0411725   .0127849 
+       post2 | -.1281073   .1143932  -1.119886   .2629128  -.3524657 
+       post3 |   .211151   .1725078   1.224009   .2211102   -.127187 
+
+             |   ub_95ci      relyr 
+-------------+---------------------
+main         |                     
+         att |  .3034033          . 
+-------------+---------------------
+pretreatment |                     
+         att |  .3865043          . 
+-------------+---------------------
+main         |                     
+         ame |   .065188          . 
+-------------+---------------------
+pretreatment |                     
+         ame |  .0658958          . 
+-------------+---------------------
+ES_att       |                     
+        pre5 |  .5957477         -5 
+        pre4 |   .477122         -4 
+        pre3 |  .3970025         -3 
+        pre2 |  .4246441         -2 
+       post0 |  .6144739          0 
+       post1 |   .415139          1 
+       post2 |  .4557688          2 
+       post3 |  .5791327          3 
+-------------+---------------------
+ES_ame       |                     
+        pre5 |  .1586956         -5 
+        pre4 |  .2383192         -4 
+        pre3 |  .1592107         -3 
+        pre2 |  .1862453         -2 
+       post0 | -.0879027          0 
+       post1 |  .6245614          1 
+       post2 |  .0962511          2 
+       post3 |  .5494891          3 
+ 
+p-value for joint test of null that all (non-reference) att coefficients are on
+>  a single line: 0.8917
+p-value for joint test of null that all (non-reference) ame coefficients are on
+>  a single line: 0.0243
+ 
+ 
+
+. dis as result "RC = " _rc
+RC = 0
+
+. if _rc == 0 f2check
+  e(b_es_ame): 1 x 8
+  e(V_es_ame): 8 x 8
+  diag min   .0130858 max   .0297589
+  eig max   .0319257 min       .012
+  adversarial_pval_ame = .02431817
+
+. 
+. use `base', clear
+
+. dis as result "===== D1 basic cluster(unitid) ====="
+===== D1 basic cluster(unitid) =====
+
+. cap noi wooldid y i t ttre, att cluster(unitid) contreat(udose) contreatcontr
+> ols(basic) esprelength(4) espostlength(4) esfixedbaseperiod adversarial
+ 
+Wooldid Estimation for Outcome: y; Standard Errors: cluster(unitid)
+ 
+N clusters = 180; N = 2160 (0 obs dropped from initial sample)
+R2 = 0.5733;  R2adj = 0.4848;  R2-within = 0.1557;  R2-withinadj = -0.0001
+ 
+ 
+Main Results (Full Estimation Sample): 
+
+             |  estimate         se          t          p    lb_95ci 
+-------------+-------------------------------------------------------
+main         |                                                       
+         att | -.0039161   .1600235  -.0244722   .9805032  -.3196914 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         att |  .0645952   .1672664   .3861815   .6998209  -.2654724 
+-------------+-------------------------------------------------------
+main         |                                                       
+         ame | -.0567209    .056616  -1.001853    .317767  -.1684416 
+-------------+-------------------------------------------------------
+pretreatment |                                                       
+         ame | -.0806593   .0803817  -1.003453   .3169968  -.2392769 
+-------------+-------------------------------------------------------
+ES_att       |                                                       
+        pre5 |  .1811464   .2156499   .8400022   .4020277  -.2443967 
+        pre4 |  .0589629   .2145402    .274834   .7837607  -.3643904 
+        pre3 | -.0026644   .2146895  -.0124105   .9901119  -.4263124 
+        pre2 |  .0209357   .1966407   .1064669   .9153311  -.3670963 
+       post0 |  .2098826   .2108124   .9955897   .3207935  -.2061146 
+       post1 |  .0045263   .2172823   .0208316   .9834032   -.424238 
+       post2 |  .0524014   .2120695   .2470952   .8051177  -.3660766 
+       post3 |  .1574044   .2157757   .7294817   .4666606  -.2683869 
+-------------+-------------------------------------------------------
+ES_ame       |                                                       
+        pre5 | -.1234267   .1440457  -.8568578   .3926692   -.407673 
+        pre4 |  -.006338   .1266757  -.0500334   .9601515  -.2563079 
+        pre3 | -.1029801   .1341192  -.7678251   .4436028  -.3676383 
+        pre2 | -.0898922   .1408176  -.6383588    .524056  -.3677684 
+       post0 |  -.316629   .1168174   -2.71046   .0073728  -.5471455 
+       post1 |  .3186731   .1568876   2.031219   .0437117   .0090859 
+       post2 | -.1281073   .1165669  -1.099002   .2732431  -.3581295 
+       post3 |   .211151   .1723343   1.225241   .2220942  -.1289171 
+
+             |   ub_95ci      relyr 
+-------------+---------------------
+main         |                     
+         att |  .3118592          . 
+-------------+---------------------
+pretreatment |                     
+         att |  .3946628          . 
+-------------+---------------------
+main         |                     
+         ame |  .0549998          . 
+-------------+---------------------
+pretreatment |                     
+         ame |  .0779583          . 
+-------------+---------------------
+ES_att       |                     
+        pre5 |  .6066895         -5 
+        pre4 |  .4823163         -4 
+        pre3 |  .4209835         -3 
+        pre2 |  .4089678         -2 
+       post0 |  .6258798          0 
+       post1 |  .4332907          1 
+       post2 |  .4708793          2 
+       post3 |  .5831957          3 
+-------------+---------------------
+ES_ame       |                     
+        pre5 |  .1608195         -5 
+        pre4 |  .2436318         -4 
+        pre3 |  .1616781         -3 
+        pre2 |   .187984         -2 
+       post0 | -.0861126          0 
+       post1 |  .6282604          1 
+       post2 |  .1019149          2 
+       post3 |  .5512191          3 
+ 
+p-value for joint test of null that all (non-reference) att coefficients are on
+>  a single line: 0.8882
+p-value for joint test of null that all (non-reference) ame coefficients are on
+>  a single line: 0.0027
+ 
+ 
+
+. dis as result "RC = " _rc
+RC = 0
+
+. if _rc == 0 f2check
+  e(b_es_ame): 1 x 8
+  e(V_es_ame): 8 x 8
+  diag min   .0135879 max   .0296991
+  eig max   .0507704 min     .00646
+  adversarial_pval_ame = .00267929
+
+. 
+. dis as result "PROBE B4 COMPLETE"
+PROBE B4 COMPLETE
+
+. 
+end of do-file

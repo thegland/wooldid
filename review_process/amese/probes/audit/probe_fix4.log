@@ -1,0 +1,618 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 19.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2025 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 8-core  perpetual
+Serial number: 501906220782
+  Licensed to: Thomas Hegland
+               UMD
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+. do probe_fix4.do 
+
+. * probe_fix4 — final probe: regime E margins/regress/d5/seeds, regime F, POST
+> EXP.
+. clear all
+
+. set more off
+
+. set maxvar 20000
+
+
+. set graphics off
+
+. set linesize 255
+
+. local AUD /Users/hegland/.claude/jobs/640b9294/tmp/amese/audit
+
+. do "/Users/hegland/Documents/Research/wooldid_dev/test/suite/mc/amese_cases.doh"
+
+. * amese_cases.doh — shared case definitions for the AME-SE diagnosis grid (SI-1..SI-5
+. * deep dive). Include-file used by amese_structure.do and mc_amese.do.
+. * Defines two programs:
+. *   amese_mkdata <dcode>   — builds the panel for data code d1|d2|d3|d1c
+. *       (30 cohorts i=1..30, even i treated at t=6, 6 units/cohort, t=1..12,
+. *        unitid distinct from i, y = cohort FE + .05*t + noise, NO dose effect):
+. *       d1  = dose varies ACROSS units within cohort-period cells, constant within
+. *             unit over time (the demo_vesame_pathology shape)
+. *       d2  = dose varies WITHIN units over time (persistent unit level + i.t noise)
+. *       d3  = dose constant within cohorts (varies only across cohorts)
+. *       d1c = d1 data but errors carry a common cohort-by-period shock (cluster-
+. *             dependent errors: the case where cohort-level clustering is the
+. *             conceptually correct VCE)
+. *   amese_opts <cc> <vce>  — leaves the wooldid option string in r(opts):
+. *       cc: basic | bycoh | bytime | within     vce: ci | cu | rb
+. *       d4  = TRUE contreatwithin-style panel: ALL 30 cohorts treated (staggered
+. *             onsets 5/7/9 by mod(i,3)), dose varies within units over time
+. *       d5  = d4's assignment but dose CONSTANT within units (the user's
+. *             "dose constant within units" variant of the within-style example)
+. cap program drop amese_mkdata
+
+. program define amese_mkdata
+  1.   args dcode
+  2.   clear
+  3.   qui set obs 30
+  4.   gen i = _n
+  5.   if "`dcode'" == "d4" | "`dcode'" == "d5" gen ttre = 5 + 2*mod(_n, 3)
+  6.   else gen ttre = cond(mod(_n, 2) == 0, 6, .)
+  7.   gen a = rnormal()
+  8.   qui expand 6
+  9.   bysort i: gen unit = _n
+ 10.   gen unitid = (i - 1)*6 + unit
+ 11.   if "`dcode'" == "d1" | "`dcode'" == "d1c" | "`dcode'" == "d5" gen dose = exp(0.8*runiform() + 0.2*mod(i, 5))
+ 12.   if "`dcode'" == "d2" | "`dcode'" == "d4" gen uu = runiform()
+ 13.   if "`dcode'" == "d3" gen dose = 0.5 + 0.3*mod(i, 7)
+ 14.   qui expand 12
+ 15.   bysort i unit: gen t = _n
+ 16.   if "`dcode'" == "d2" | "`dcode'" == "d4" {
+ 17.     gen dose = exp(0.4*uu + 0.5*runiform())
+ 18.     drop uu
+ 19.   }
+ 20.   if "`dcode'" == "d1c" {
+ 21.     * common cohort-by-period shock: robust is conceptually wrong here, cluster(i) right
+.     tempvar cshock
+ 22.     bysort i t: gen `cshock' = rnormal() if _n == 1
+ 23.     bysort i t: replace `cshock' = `cshock'[1]
+ 24.     gen y = a + .05*t + .8*`cshock' + .6*rnormal()
+ 25.   }
+ 26.   else gen y = a + .05*t + rnormal()
+ 27.   drop a
+ 28.   sort i unitid t
+ 29.   ereturn clear
+ 30. end
+
+. 
+. cap program drop amese_opts
+
+. program define amese_opts, rclass
+  1.   args cc vce
+  2.   local o "att contreat(dose) esprelength(4) espostlength(4) esfixedbaseperiod"
+  3.   if "`cc'" == "basic" local o "`o' contreatcontrols(basic)"
+  4.   if "`cc'" == "bycoh" local o "`o' contreatcontrols(byCohort)"
+  5.   if "`cc'" == "bytime" local o "`o' contreatcontrols(byTime)"
+  6.   if "`cc'" == "within" local o "`o' contreatcontrols(basic) contreatwithin safety(off)"
+  7.   if "`vce'" == "ci" local o "`o' cluster(i)"
+  8.   if "`vce'" == "cu" local o "`o' cluster(unitid)"
+  9.   if "`vce'" == "rb" local o "`o' robust"
+ 10.   return local opts "`o'"
+ 11. end
+
+. 
+end of do-file
+
+. do "`AUD'/mkvars.doh"
+
+. * mkvars.doh — reconstruct wooldid's internal _i/_t/targetflag/null/ringer for the
+. * amese grid options: esprelength(4)->5 after validate bump, espostlength(4),
+. * esfixedbaseperiod, esrelativeto(-1). Sets globals HS/HE (margins window).
+. * Mirrors wooldid.ado L543-658 (fixed-base branch) + L666/L1228 (window) exactly,
+. * for DGPs with complete panels and (for d1/d1c/d2/d3) never-treated cohorts in
+. * every period (so the support screens are no-ops).
+. cap program drop mkvars
+
+. program define mkvars
+  1.   gen rel = t - ttre
+  2.   qui sum rel
+  3.   local mint = abs(r(min))
+  4.   local maxt = r(max) + 1
+  5.   gen _t = rel + `mint' + 1
+  6.   local refp = -1 + `mint' + 1
+  7.   replace _t = 0 if _t == . | _t == `refp'
+  8.   gen targetflag = _t > 0 & _t < .
+  9.   gen double _i = i if _t > 0 & _t < .
+ 10.   replace _i = 0 if _i == .
+ 11.   gen byte null = 1
+ 12.   gen double ringer = dose
+ 13.   local espre = min(`mint', 5)
+ 14.   local espl  = min(`maxt', 4)
+ 15.   global HS = 1 + `mint' - `espre'
+ 16.   global HE = $HS + `espre' + `espl' - 1
+ 17.   dis "MKVARS|mint=`mint'|maxt=`maxt'|refp=`refp'|HS=$HS|HE=$HE"
+ 18. end
+
+. 
+end of do-file
+
+. set emptycells drop
+
+. 
+. mata:
+------------------------------------------------- mata (type end to exit) -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+: void diagreport(string scalar tag)
+> {
+>   V = st_matrix("e(V)")
+>   nm = st_matrixcolstripe("e(V)")
+>   d = diagonal(V)
+>   isslope = strpos(nm[.,2], "dose") :> 0
+>   isom = strpos(nm[.,2], "o.") :> 0
+>   K = rows(d)
+>   npos = 0; nzero = 0; nneg = 0; nmiss = 0
+>   for (j=1; j<=K; j++) {
+>     if (missing(d[j])) nmiss = nmiss + 1
+>     else if (d[j] == 0) nzero = nzero + 1
+>     else if (d[j] < 0) nneg = nneg + 1
+>     else npos = npos + 1
+>   }
+>   printf("%s|K=%g|pos=%g|zero=%g|neg=%g|miss=%g|fullmiss=%g|nomit=%g\n", tag, K, npos, nzero, nneg, nmiss, sum(rowmissing(V)), sum(isom))
+>   live = 1 :- isom
+>   sl = select(d, isslope :& live)
+>   du = select(d, (1:-isslope) :& live)
+>   if (rows(sl) > 0) printf("%s|live slope n=%g min=%21.15g max=%21.15g\n", tag, rows(sl), min(sl), max(sl))
+>   if (rows(du) > 0) printf("%s|live dummy n=%g min=%21.15g max=%21.15g\n", tag, rows(du), min(du), max(du))
+> }
+
+: void margreport(string scalar tag)
+> {
+>   rt = st_matrix("r(table)")
+>   rv = st_matrix("r(V)")
+>   if (rows(rt) < 2 | rows(rv) < 1) {
+>     printf("%s|EMPTY r(table)/r(V)\n", tag)
+>     return
+>   }
+>   d = diagonal(rv)
+>   printf("%s|b row:  ", tag)
+>   for (j=1; j<=cols(rt); j++) printf(" %12.0g", rt[1,j])
+>   printf("\n%s|se row: ", tag)
+>   for (j=1; j<=cols(rt); j++) printf(" %12.0g", rt[2,j])
+>   printf("\n%s|rV diag:", tag)
+>   for (j=1; j<=rows(d); j++) printf(" %21.15g", d[j])
+>   printf("\n%s|semiss=%g|vdiagmiss=%g|vdiagzero=%g|vdiagneg=%g\n", tag, colmissing(rt[2,.]'), colmissing(d), sum(d:==0), sum((d:<0):*(1:-(d:>=.))))
+> }
+
+: end
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+. 
+. *===== regime E margins detail (d4_r1, reghdfe, WITH e(sample)) =====
+. use "`AUD'/d4_r1.dta", clear
+
+. foreach v in rel _t targetflag _i null ringer {
+  2.   cap drop `v'
+  3. }
+
+. mkvars
+(180 real changes made)
+(180 missing values generated)
+(180 real changes made)
+MKVARS|mint=8|maxt=8|refp=8|HS=4|HE=12
+
+. qui reghdfe y i._i#i._t#i.targetflag##c.dose, absorb(i.i i.t i.null##c.(ringer)) cluster(i) tol(1e-9)
+
+. dis "E_MODEL2|df_r=" e(df_r) "|df_m=" e(df_m) "|df_a=" e(df_a) "|rank=" e(rank)
+E_MODEL2|df_r=29|df_m=649|df_a=12|rank=649
+
+. local dfr = e(df_r)
+
+. mata: diagreport("E_EV2")
+E_EV2|K=664|pos=0|zero=664|neg=0|miss=0|fullmiss=0|nomit=13
+E_EV2|live slope n=330 min=                    0 max=                    0
+E_EV2|live dummy n=321 min=                    0 max=                    0
+
+. cap noi margins [iw=1], dydx(targetflag) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+
+Average marginal effects                               Number of obs   = 2,160
+Model VCE: Robust                                      Subpop. no. obs = 1,380
+
+Expression: Linear prediction, predict()
+dy/dx wrt:  1.targetflag
+Over:       _t
+
+-------------------------------------------------------------------------------
+              |            Delta-method
+              |      dy/dx   std. err.      t    P>|t|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+0.targetflag  |  (base outcome)
+--------------+----------------------------------------------------------------
+1.targetflag  |
+           _t |
+           4  |   1.575405          .        .       .            .           .
+           5  |  -.6872189          .        .       .            .           .
+           6  |   .8983201          .        .       .            .           .
+           7  |  -.4317428          .        .       .            .           .
+           9  |   -.651058          .        .       .            .           .
+          10  |   .4270718          .        .       .            .           .
+          11  |  -3.310118          .        .       .            .           .
+          12  |  -.4922069          .        .       .            .           .
+-------------------------------------------------------------------------------
+Note: dy/dx for factor levels is the discrete change from the base level.
+
+. dis "E_MARG_ATT|rc=" _rc
+E_MARG_ATT|rc=0
+
+. mata: margreport("E_MARG_ATT")
+E_MARG_ATT|b row:              0            0            0            0            0            0            0            0  1.575404809 -.6872188867  .8983201315 -.4317428292 -.6510579737  .4270718473 -3.310118426 -.4922068658
+E_MARG_ATT|se row:             .            .            .            .            .            .            .            .            .            .            .            .            .            .            .            .
+E_MARG_ATT|rV diag:                     0                     0                     0                     0                     0                     0                     0                     0                     0                     0                
+>      0                     0                     0                     0                     0                     0
+E_MARG_ATT|semiss=16|vdiagmiss=0|vdiagzero=16|vdiagneg=0
+
+. cap noi margins [iw=1], dydx(dose) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+
+Average marginal effects                               Number of obs   = 2,160
+Model VCE: Robust                                      Subpop. no. obs = 1,380
+
+Expression: Linear prediction, predict()
+dy/dx wrt:  dose
+Over:       _t
+
+------------------------------------------------------------------------------
+             |            Delta-method
+             |      dy/dx   std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+dose         |
+          _t |
+          4  |  -.1060343          .        .       .            .           .
+          5  |   .2796097          .        .       .            .           .
+          6  |  -.2658003          .        .       .            .           .
+          7  |  -.1796379          .        .       .            .           .
+          9  |  -.5383409          .        .       .            .           .
+         10  |  -.0579383          .        .       .            .           .
+         11  |  -.3074828          .        .       .            .           .
+         12  |  -.0871046          .        .       .            .           .
+------------------------------------------------------------------------------
+
+. dis "E_MARG_AME|rc=" _rc
+E_MARG_AME|rc=0
+
+. mata: margreport("E_MARG_AME")
+E_MARG_AME|b row:   -.1060343458  .2796096814 -.2658002604 -.1796379208 -.5383408622  -.057938314 -.3074828445 -.0871046346
+E_MARG_AME|se row:             .            .            .            .            .            .            .            .
+E_MARG_AME|rV diag:                     0                     0                     0                     0                     0                     0                     0                     0
+E_MARG_AME|semiss=8|vdiagmiss=0|vdiagzero=8|vdiagneg=0
+
+. * plain-regress discriminator on d4
+. cap qui regress y i.i i.t c.ringer i._i#i._t#i.targetflag##c.dose, vce(cluster i)
+
+. dis "EREG|rc=" _rc "|df_r=" e(df_r) "|rank=" e(rank)
+EREG|rc=0|df_r=29|rank=1
+
+. local dfrr = e(df_r)
+
+. mata: diagreport("EREG_EV")
+EREG_EV|K=707|pos=691|zero=16|neg=0|miss=0|fullmiss=0|nomit=13
+EREG_EV|live slope n=330 min=    .0429000243982638 max=    .0429000243985681
+EREG_EV|live dummy n=364 min=                    0 max=     .479279154315097
+
+. cap noi margins [iw=1], dydx(dose) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfrr')
+
+Average marginal effects                               Number of obs   = 2,160
+Model VCE: Robust                                      Subpop. no. obs = 1,380
+
+Expression: Linear prediction, predict()
+dy/dx wrt:  dose
+Over:       _t
+
+------------------------------------------------------------------------------
+             |            Delta-method
+             |      dy/dx   std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+dose         |
+          _t |
+          4  |  -.1060343   .2071232    -0.51   0.613    -.5296489    .3175802
+          5  |   .2796097   .2071232     1.35   0.187    -.1440048    .7032242
+          6  |  -.2658003   .2071232    -1.28   0.210    -.6894148    .1578143
+          7  |  -.1796379   .2071232    -0.87   0.393    -.6032525    .2439766
+          9  |  -.5383409   .2071232    -2.60   0.015    -.9619554   -.1147263
+         10  |  -.0579383   .2071232    -0.28   0.782    -.4815528    .3656762
+         11  |  -.3074828   .2071232    -1.48   0.148    -.7310974    .1161317
+         12  |  -.0871046   .2071232    -0.42   0.677    -.5107192    .3365099
+------------------------------------------------------------------------------
+
+. dis "EREG_MARG_AME|rc=" _rc
+EREG_MARG_AME|rc=0
+
+. mata: margreport("EREG_MARG_AME")
+EREG_MARG_AME|b row:   -.1060343458  .2796096814 -.2658002604 -.1796379208 -.5383408622  -.057938314 -.3074828445 -.0871046346
+EREG_MARG_AME|se row:   .2071232107  .2071232107  .2071232107  .2071232107  .2071232107  .2071232107  .2071232107  .2071232107
+EREG_MARG_AME|rV diag:     .0429000243983146     .0429000243983153     .0429000243983135     .0429000243983143     .0429000243983135     .0429000243983201     .0429000243983155     .0429000243983293
+EREG_MARG_AME|semiss=0|vdiagmiss=0|vdiagzero=0|vdiagneg=0
+
+. cap noi margins [iw=1], dydx(targetflag) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfrr')
+warning: variance matrix is nonsymmetric or highly singular.
+
+Average marginal effects                               Number of obs   = 2,160
+Model VCE: Robust                                      Subpop. no. obs = 1,380
+
+Expression: Linear prediction, predict()
+dy/dx wrt:  1.targetflag
+Over:       _t
+
+-------------------------------------------------------------------------------
+              |            Delta-method
+              |      dy/dx   std. err.      t    P>|t|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+0.targetflag  |  (base outcome)
+--------------+----------------------------------------------------------------
+1.targetflag  |
+           _t |
+           4  |   1.575405          .        .       .            .           .
+           5  |  -.6872189          .        .       .            .           .
+           6  |   .8983201          .        .       .            .           .
+           7  |  -.4317428          .        .       .            .           .
+           9  |   -.651058          .        .       .            .           .
+          10  |   .4270718          .        .       .            .           .
+          11  |  -3.310118          .        .       .            .           .
+          12  |  -.4922069          .        .       .            .           .
+-------------------------------------------------------------------------------
+Note: dy/dx for factor levels is the discrete change from the base level.
+
+. dis "EREG_MARG_ATT|rc=" _rc
+EREG_MARG_ATT|rc=0
+
+. mata: margreport("EREG_MARG_ATT")
+EREG_MARG_ATT|b row:              0            0            0            0            0            0            0            0  1.575404809 -.6872188867  .8983201315 -.4317428292 -.6510579737  .4270718473 -3.310118426 -.4922068658
+EREG_MARG_ATT|se row:             .            .            .            .            .            .            .            .            .            .            .            .            .            .            .            .
+EREG_MARG_ATT|rV diag:                     0                     0                     0                     0                     0                     0                     0                     0     .0283816164808745     .0111218855878926  7.856532662
+> 62957e-10      .011444486587449     .0112221250798292    .00963991841302764    .00974121393187146     .0113109455744094
+EREG_MARG_ATT|semiss=16|vdiagmiss=0|vdiagzero=8|vdiagneg=0
+
+. 
+. *===== d5 contrast (same seed) =====
+. clear
+
+. set seed 60000001
+
+. amese_mkdata d5
+
+. save "`AUD'/d5_r1.dta", replace
+(file /Users/hegland/.claude/jobs/640b9294/tmp/amese/audit/d5_r1.dta not found)
+file /Users/hegland/.claude/jobs/640b9294/tmp/amese/audit/d5_r1.dta saved
+
+. mkvars
+(180 real changes made)
+(180 missing values generated)
+(180 real changes made)
+MKVARS|mint=8|maxt=8|refp=8|HS=4|HE=12
+
+. qui reghdfe y i._i#i._t#i.targetflag##c.dose, absorb(i.i i.t i.null##c.(ringer)) cluster(i) tol(1e-9)
+
+. dis "E5_MODEL|df_r=" e(df_r) "|df_m=" e(df_m) "|df_a=" e(df_a) "|rank=" e(rank)
+E5_MODEL|df_r=29|df_m=649|df_a=12|rank=649
+
+. local dfr = e(df_r)
+
+. mata: diagreport("E5_EV")
+E5_EV|K=664|pos=650|zero=14|neg=0|miss=0|fullmiss=0|nomit=13
+E5_EV|live slope n=330 min=    .0324059659051831 max=    .0324059659052697
+E5_EV|live dummy n=321 min=                    0 max=     .813433748400183
+
+. qui margins [iw=1], dydx(dose) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+
+. mata: margreport("E5_MARG_AME")
+E5_MARG_AME|b row:   -.1069353015  .0859087515  .3105653623  .3194468123  -.194364453  -.268247382  .1983508908 -.0263233148
+E5_MARG_AME|se row:   .1800165712  .1800165712  .1800165712  .1800165712  .1800165712  .1800165712  .1800165712  .1800165712
+E5_MARG_AME|rV diag:     .0324059659052232     .0324059659052228     .0324059659052235     .0324059659052227     .0324059659052232     .0324059659052227      .032405965905223     .0324059659052255
+E5_MARG_AME|semiss=0|vdiagmiss=0|vdiagzero=0|vdiagneg=0
+
+. 
+. *===== d4 determinism: 2 extra seeds =====
+. forval s = 1/2 {
+  2.   clear
+  3.   set seed `=60000010+`s''
+  4.   amese_mkdata d4
+  5.   mkvars
+  6.   qui reghdfe y i._i#i._t#i.targetflag##c.dose, absorb(i.i i.t i.null##c.(ringer)) cluster(i) tol(1e-9)
+  7.   local dfr = e(df_r)
+  8.   mata: d = diagonal(st_matrix("e(V)")); st_local("z", strofreal(sum(d:==0))); st_local("kk", strofreal(rows(d)))
+  9.   cap qui margins [iw=1], dydx(dose) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+ 10.   local m2 .
+ 11.   if _rc == 0 mata: st_local("m2", strofreal(colmissing(st_matrix("r(table)")[2,.]')))
+ 12.   dis "E_SEEDX|s=`s'|evzero=`z' of `kk'|ameSEmiss=`m2'"
+ 13. }
+(180 real changes made)
+(180 missing values generated)
+(180 real changes made)
+MKVARS|mint=8|maxt=8|refp=8|HS=4|HE=12
+E_SEEDX|s=1|evzero=14 of 664|ameSEmiss=0
+(180 real changes made)
+(180 missing values generated)
+(180 real changes made)
+MKVARS|mint=8|maxt=8|refp=8|HS=4|HE=12
+E_SEEDX|s=2|evzero=664 of 664|ameSEmiss=8
+
+. 
+. *===== regime F (d3) =====
+. clear
+
+. set seed 60000001
+
+. amese_mkdata d3
+(15 missing values generated)
+
+. save "`AUD'/d3_r1.dta", replace
+(file /Users/hegland/.claude/jobs/640b9294/tmp/amese/audit/d3_r1.dta not found)
+file /Users/hegland/.claude/jobs/640b9294/tmp/amese/audit/d3_r1.dta saved
+
+. mkvars
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+
+. qui reghdfe y i._i#i._t#i.targetflag##c.dose, absorb(i.i i.t i.null##c.(ringer)) cluster(i) tol(1e-9)
+
+. dis "F_MODEL|df_r=" e(df_r) "|df_m=" e(df_m) "|rank=" e(rank)
+F_MODEL|df_r=29|df_m=165|rank=165
+
+. local dfr = e(df_r)
+
+. mata:
+------------------------------------------------- mata (type end to exit) -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+: nm = st_matrixcolstripe("e(b)")
+
+: isslope = strpos(nm[.,2], "dose") :> 0
+
+: isom = strpos(nm[.,2], "o.") :> 0
+
+: printf("F_MODEL|n slope coefs=%g|n omitted slope=%g|n omitted total=%g\n", sum(isslope), sum(isslope :& isom), sum(isom))
+F_MODEL|n slope coefs=167|n omitted slope=167|n omitted total=167
+
+: end
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+. mata: diagreport("F_EV")
+F_EV|K=334|pos=166|zero=168|neg=0|miss=0|fullmiss=0|nomit=167
+F_EV|live dummy n=167 min=                    0 max=    .0310607600830532
+
+. cap noi margins [iw=1], dydx(dose) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+
+Average marginal effects                               Number of obs   = 2,160
+Model VCE: Robust                                      Subpop. no. obs =   720
+
+Expression: Linear prediction, predict()
+dy/dx wrt:  dose
+Over:       _t
+
+------------------------------------------------------------------------------
+             |            Delta-method
+             |      dy/dx   std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+dose         |
+          _t |
+          1  |          0  (omitted)
+          2  |          0  (omitted)
+          3  |          0  (omitted)
+          4  |          0  (omitted)
+          6  |          0  (omitted)
+          7  |          0  (omitted)
+          8  |          0  (omitted)
+          9  |          0  (omitted)
+------------------------------------------------------------------------------
+
+. dis "F_MARG_AME|rc=" _rc
+F_MARG_AME|rc=0
+
+. mata: margreport("F_MARG_AME")
+F_MARG_AME|b row:              0            0            0            0            0            0            0            0
+F_MARG_AME|se row:             .            .            .            .            .            .            .            .
+F_MARG_AME|rV diag:                     0                     0                     0                     0                     0                     0                     0                     0
+F_MARG_AME|semiss=8|vdiagmiss=0|vdiagzero=8|vdiagneg=0
+
+. cap noi margins [iw=1], dydx(targetflag) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+
+Average marginal effects                               Number of obs   = 2,160
+Model VCE: Robust                                      Subpop. no. obs =   720
+
+Expression: Linear prediction, predict()
+dy/dx wrt:  1.targetflag
+Over:       _t
+
+-------------------------------------------------------------------------------
+              |            Delta-method
+              |      dy/dx   std. err.      t    P>|t|     [95% conf. interval]
+--------------+----------------------------------------------------------------
+0.targetflag  |  (base outcome)
+--------------+----------------------------------------------------------------
+1.targetflag  |
+           _t |
+           1  |   -.244605   .1564821    -1.56   0.129    -.5646469    .0754368
+           2  |  -.3307262   .1436756    -2.30   0.029    -.6245757   -.0368766
+           3  |  -.2114357   .1091971    -1.94   0.063    -.4347688    .0118974
+           4  |  -.2264168   .1094165    -2.07   0.048    -.4501987   -.0026349
+           6  |  -.1288399   .1355534    -0.95   0.350    -.4060777     .148398
+           7  |  -.3688616   .1025006    -3.60   0.001    -.5784989   -.1592243
+           8  |  -.1771272    .148799    -1.19   0.244    -.4814553    .1272008
+           9  |  -.2564024   .1682238    -1.52   0.138    -.6004587    .0876539
+-------------------------------------------------------------------------------
+Note: dy/dx for factor levels is the discrete change from the base level.
+
+. dis "F_MARG_ATT|rc=" _rc
+F_MARG_ATT|rc=0
+
+. mata: margreport("F_MARG_ATT")
+F_MARG_ATT|b row:              0            0            0            0            0            0            0            0 -.2446050341 -.3307261551 -.2114357155 -.2264167994 -.1288398797 -.3688615903  -.177127233 -.2564023798
+F_MARG_ATT|se row:             .            .            .            .            .            .            .            .  .1564821179  .1436755835   .109197082  .1094165111  .1355534188  .1025006196  .1487989512   .168223808
+F_MARG_ATT|rV diag:                     0                     0                     0                     0                     0                     0                     0                     0     .0244866532182572     .0206426732880062     .0119240027
+> 197856      .011971972894026     .0183747293540961     .0105063770252396     .0221411278715802     .0282992495848528
+F_MARG_ATT|semiss=8|vdiagmiss=0|vdiagzero=8|vdiagneg=0
+
+. qui reghdfe y i._i#i._t#i.targetflag##c.dose, absorb(i.i i.t i.null##c.(ringer)) vce(robust) tol(1e-9)
+
+. local dfr = e(df_r)
+
+. cap qui margins [iw=1], dydx(dose) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+
+. local m2 .
+
+. if _rc == 0 mata: st_local("m2", strofreal(colmissing(st_matrix("r(table)")[2,.]')))
+
+. dis "F_ROBUST|amerc=" _rc "|ameSEmiss=`m2'"
+F_ROBUST|amerc=0|ameSEmiss=8
+
+. 
+. *===== POSTEXP: which V property triggers Stata's ereturn-post zeroing? =====
+. cap program drop postexp
+
+. program define postexp, eclass
+  1.   args case
+  2.   tempname b V
+  3.   matrix `b' = (1, 2, 3)
+  4.   if "`case'" == "S1" matrix `V' = (1, 0, 0 \ 0, 1e-30, 0 \ 0, 0, 0)
+  5.   if "`case'" == "S2" matrix `V' = (1, 0, 0 \ 0, -1e-22, 0 \ 0, 0, 1)
+  6.   if "`case'" == "S3" matrix `V' = (1, .5, 0 \ .5 + 1e-12, 1, 0 \ 0, 0, 1)
+  7.   if "`case'" == "S4" matrix `V' = (1, .5, 0 \ .5 + 1e-6, 1, 0 \ 0, 0, 1)
+  8.   if "`case'" == "S5" matrix `V' = (1, 0, 0 \ 0, 1e-260, 0 \ 0, 0, 1)
+  9.   matrix colnames `b' = x1 x2 x3
+ 10.   matrix colnames `V' = x1 x2 x3
+ 11.   matrix rownames `V' = x1 x2 x3
+ 12.   ereturn post `b' `V'
+ 13. end
+
+. foreach c in S1 S2 S3 S4 S5 {
+  2.   cap noi postexp `c'
+  3.   dis "POSTEXP|`c'|rc=" _rc
+  4.   cap noi mata: d = diagonal(st_matrix("e(V)")); printf("POSTEXP|`c'|eV diag: %12.0g %12.0g %12.0g|allzero=%g\n", d[1], d[2], d[3], all(st_matrix("e(V)") :== 0))
+  5. }
+POSTEXP|S1|rc=0
+POSTEXP|S1|eV diag:            1  1.00000e-30            0|allzero=0
+POSTEXP|S2|rc=0
+POSTEXP|S2|eV diag:            1 -1.00000e-22            1|allzero=0
+POSTEXP|S3|rc=0
+POSTEXP|S3|eV diag:            1            1            1|allzero=0
+warning: variance matrix is nonsymmetric or highly singular.
+POSTEXP|S4|rc=0
+POSTEXP|S4|eV diag:            0            0            0|allzero=1
+POSTEXP|S5|rc=0
+POSTEXP|S5|eV diag:            1  1.0000e-260            1|allzero=0
+
+. dis "PROBE_FIX4_DONE"
+PROBE_FIX4_DONE
+
+. 
+end of do-file

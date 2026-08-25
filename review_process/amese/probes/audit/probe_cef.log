@@ -1,0 +1,944 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 19.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2025 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 8-core  perpetual
+Serial number: 501906220782
+  Licensed to: Thomas Hegland
+               UMD
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+. do probe_cef.do 
+
+. * probe_cef — CODE-PATH AUDIT: regimes C (d1c basic ci), E (d4 within ci), F 
+> (d3).
+. clear all
+
+. set more off
+
+. set maxvar 20000
+
+
+. set graphics off
+
+. set linesize 255
+
+. local AUD /Users/hegland/.claude/jobs/640b9294/tmp/amese/audit
+
+. do "/Users/hegland/Documents/Research/wooldid_dev/test/suite/mc/amese_cases.doh"
+
+. * amese_cases.doh — shared case definitions for the AME-SE diagnosis grid (SI-1..SI-5
+. * deep dive). Include-file used by amese_structure.do and mc_amese.do.
+. * Defines two programs:
+. *   amese_mkdata <dcode>   — builds the panel for data code d1|d2|d3|d1c
+. *       (30 cohorts i=1..30, even i treated at t=6, 6 units/cohort, t=1..12,
+. *        unitid distinct from i, y = cohort FE + .05*t + noise, NO dose effect):
+. *       d1  = dose varies ACROSS units within cohort-period cells, constant within
+. *             unit over time (the demo_vesame_pathology shape)
+. *       d2  = dose varies WITHIN units over time (persistent unit level + i.t noise)
+. *       d3  = dose constant within cohorts (varies only across cohorts)
+. *       d1c = d1 data but errors carry a common cohort-by-period shock (cluster-
+. *             dependent errors: the case where cohort-level clustering is the
+. *             conceptually correct VCE)
+. *   amese_opts <cc> <vce>  — leaves the wooldid option string in r(opts):
+. *       cc: basic | bycoh | bytime | within     vce: ci | cu | rb
+. *       d4  = TRUE contreatwithin-style panel: ALL 30 cohorts treated (staggered
+. *             onsets 5/7/9 by mod(i,3)), dose varies within units over time
+. *       d5  = d4's assignment but dose CONSTANT within units (the user's
+. *             "dose constant within units" variant of the within-style example)
+. cap program drop amese_mkdata
+
+. program define amese_mkdata
+  1.   args dcode
+  2.   clear
+  3.   qui set obs 30
+  4.   gen i = _n
+  5.   if "`dcode'" == "d4" | "`dcode'" == "d5" gen ttre = 5 + 2*mod(_n, 3)
+  6.   else gen ttre = cond(mod(_n, 2) == 0, 6, .)
+  7.   gen a = rnormal()
+  8.   qui expand 6
+  9.   bysort i: gen unit = _n
+ 10.   gen unitid = (i - 1)*6 + unit
+ 11.   if "`dcode'" == "d1" | "`dcode'" == "d1c" | "`dcode'" == "d5" gen dose = exp(0.8*runiform() + 0.2*mod(i, 5))
+ 12.   if "`dcode'" == "d2" | "`dcode'" == "d4" gen uu = runiform()
+ 13.   if "`dcode'" == "d3" gen dose = 0.5 + 0.3*mod(i, 7)
+ 14.   qui expand 12
+ 15.   bysort i unit: gen t = _n
+ 16.   if "`dcode'" == "d2" | "`dcode'" == "d4" {
+ 17.     gen dose = exp(0.4*uu + 0.5*runiform())
+ 18.     drop uu
+ 19.   }
+ 20.   if "`dcode'" == "d1c" {
+ 21.     * common cohort-by-period shock: robust is conceptually wrong here, cluster(i) right
+.     tempvar cshock
+ 22.     bysort i t: gen `cshock' = rnormal() if _n == 1
+ 23.     bysort i t: replace `cshock' = `cshock'[1]
+ 24.     gen y = a + .05*t + .8*`cshock' + .6*rnormal()
+ 25.   }
+ 26.   else gen y = a + .05*t + rnormal()
+ 27.   drop a
+ 28.   sort i unitid t
+ 29.   ereturn clear
+ 30. end
+
+. 
+. cap program drop amese_opts
+
+. program define amese_opts, rclass
+  1.   args cc vce
+  2.   local o "att contreat(dose) esprelength(4) espostlength(4) esfixedbaseperiod"
+  3.   if "`cc'" == "basic" local o "`o' contreatcontrols(basic)"
+  4.   if "`cc'" == "bycoh" local o "`o' contreatcontrols(byCohort)"
+  5.   if "`cc'" == "bytime" local o "`o' contreatcontrols(byTime)"
+  6.   if "`cc'" == "within" local o "`o' contreatcontrols(basic) contreatwithin safety(off)"
+  7.   if "`vce'" == "ci" local o "`o' cluster(i)"
+  8.   if "`vce'" == "cu" local o "`o' cluster(unitid)"
+  9.   if "`vce'" == "rb" local o "`o' robust"
+ 10.   return local opts "`o'"
+ 11. end
+
+. 
+end of do-file
+
+. do "`AUD'/mkvars.doh"
+
+. * mkvars.doh — reconstruct wooldid's internal _i/_t/targetflag/null/ringer for the
+. * amese grid options: esprelength(4)->5 after validate bump, espostlength(4),
+. * esfixedbaseperiod, esrelativeto(-1). Sets globals HS/HE (margins window).
+. * Mirrors wooldid.ado L543-658 (fixed-base branch) + L666/L1228 (window) exactly,
+. * for DGPs with complete panels and (for d1/d1c/d2/d3) never-treated cohorts in
+. * every period (so the support screens are no-ops).
+. cap program drop mkvars
+
+. program define mkvars
+  1.   gen rel = t - ttre
+  2.   qui sum rel
+  3.   local mint = abs(r(min))
+  4.   local maxt = r(max) + 1
+  5.   gen _t = rel + `mint' + 1
+  6.   local refp = -1 + `mint' + 1
+  7.   replace _t = 0 if _t == . | _t == `refp'
+  8.   gen targetflag = _t > 0 & _t < .
+  9.   gen double _i = i if _t > 0 & _t < .
+ 10.   replace _i = 0 if _i == .
+ 11.   gen byte null = 1
+ 12.   gen double ringer = dose
+ 13.   local espre = min(`mint', 5)
+ 14.   local espl  = min(`maxt', 4)
+ 15.   global HS = 1 + `mint' - `espre'
+ 16.   global HE = $HS + `espre' + `espl' - 1
+ 17.   dis "MKVARS|mint=`mint'|maxt=`maxt'|refp=`refp'|HS=$HS|HE=$HE"
+ 18. end
+
+. 
+end of do-file
+
+. set emptycells drop
+
+. 
+. *========== PART C: d1c realization sweep (manual basic+ci), find a blackout ==========
+. local foundblack 0
+
+. local foundclean 0
+
+. forval s = 0/15 {
+  2.   clear
+  3.   set seed `=60000001+`s''
+  4.   amese_mkdata d1c
+  5.   mkvars
+  6.   qui reghdfe y i._i#i._t#i.targetflag##c.dose, absorb(i.i i.t i.null##c.(ringer)) cluster(i) tol(1e-9)
+  7.   local dfr = e(df_r)
+  8.   local rk = e(rank)
+  9.   mata: d = diagonal(st_matrix("e(V)")); st_local("evmiss", strofreal(colmissing(d))); st_local("evneg", strofreal(sum((d:<0):*(1:-(d:>=.))))); st_local("evzero", strofreal(sum(d:==0))); st_local("evfullmiss", strofreal(sum(rowmissing(st_matrix("e(V)
+> ")))))
+ 10.   cap qui margins [iw=1], dydx(targetflag) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+ 11.   local rc1 = _rc
+ 12.   local m1 .
+ 13.   local minv1 .
+ 14.   if `rc1' == 0 {
+ 15.     mata: rt = st_matrix("r(table)"); st_local("m1", strofreal(colmissing(rt[2,.]'))); d = diagonal(st_matrix("r(V)")); st_local("minv1", strofreal(min(d), "%21.0g"))
+ 16.   }
+ 17.   cap qui margins [iw=1], dydx(dose) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+ 18.   local rc2 = _rc
+ 19.   local m2 .
+ 20.   local minv2 .
+ 21.   if `rc2' == 0 {
+ 22.     mata: rt = st_matrix("r(table)"); st_local("m2", strofreal(colmissing(rt[2,.]'))); d = diagonal(st_matrix("r(V)")); st_local("minv2", strofreal(min(d), "%21.0g"))
+ 23.   }
+ 24.   dis "C_SWEEP|s=`s'|rank=`rk'|dfr=`dfr'|evdiagmiss=`evmiss'|evdiagzero=`evzero'|evdiagneg=`evneg'|evfullmiss=`evfullmiss'|attrc=`rc1'|attSEmiss=`m1'|attminV=`minv1'|amerc=`rc2'|ameSEmiss=`m2'|ameminV=`minv2'"
+ 25.   if ("`m2'" != "0" | "`m1'" != "0") & `foundblack' == 0 {
+ 26.     local foundblack 1
+ 27.     save "`AUD'/d1c_black.dta", replace
+ 28.     dis "C_SWEEP|saved d1c_black.dta from s=`s'"
+ 29.   }
+ 30.   if "`m2'" == "0" & "`m1'" == "0" & `foundclean' == 0 {
+ 31.     local foundclean 1
+ 32.     save "`AUD'/d1c_clean.dta", replace
+ 33.     dis "C_SWEEP|saved d1c_clean.dta from s=`s'"
+ 34.   }
+ 35. }
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=0|rank=330|dfr=29|evdiagmiss=0|evdiagzero=334|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=16|attminV=0|amerc=0|ameSEmiss=8|ameminV=0
+(file /Users/hegland/.claude/jobs/640b9294/tmp/amese/audit/d1c_black.dta not found)
+file /Users/hegland/.claude/jobs/640b9294/tmp/amese/audit/d1c_black.dta saved
+C_SWEEP|saved d1c_black.dta from s=0
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=1|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0008485578033972017
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=2|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0010621746684925048
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=3|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0017724745324259957
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=4|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0037279038547484524
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=5|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0014631023571274745
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=6|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0007884017003531653
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=7|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0017879867807120331
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=8|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0015912968411364128
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=9|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0012705050682711965
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=10|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0012083993321277805
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=11|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0024994976707192855
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=12|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0013673021365319064
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=13|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0008231942729481265
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=14|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.0003970980667936237
+(15 missing values generated)
+(1,800 missing values generated)
+(1800 real changes made)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_SWEEP|s=15|rank=330|dfr=29|evdiagmiss=0|evdiagzero=3|evdiagneg=0|evfullmiss=0|attrc=0|attSEmiss=8|attminV=0|amerc=0|ameSEmiss=0|ameminV=.000925246832156862
+
+. 
+. * d1 parallel sweep (same seeds, iid errors): does d1 basic+ci ever black out?
+. forval s = 0/15 {
+  2.   clear
+  3.   set seed `=60000001+`s''
+  4.   amese_mkdata d1
+  5.   mkvars
+  6.   qui reghdfe y i._i#i._t#i.targetflag##c.dose, absorb(i.i i.t i.null##c.(ringer)) cluster(i) tol(1e-9)
+  7.   local dfr = e(df_r)
+  8.   cap qui margins [iw=1], dydx(targetflag) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+  9.   local m1 .
+ 10.   if _rc == 0 mata: st_local("m1", strofreal(colmissing(st_matrix("r(table)")[2,.]')))
+ 11.   cap qui margins [iw=1], dydx(dose) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+ 12.   local m2 .
+ 13.   local minv2 .
+ 14.   if _rc == 0 {
+ 15.     mata: st_local("m2", strofreal(colmissing(st_matrix("r(table)")[2,.]'))); st_local("minv2", strofreal(min(diagonal(st_matrix("r(V)"))), "%21.0g"))
+ 16.   }
+ 17.   dis "C_D1SWEEP|s=`s'|attSEmiss=`m1'|ameSEmiss=`m2'|ameminV=`minv2'"
+ 18. }
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=0|attSEmiss=8|ameSEmiss=0|ameminV=.0009618748379913314
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=1|attSEmiss=8|ameSEmiss=0|ameminV=.0034231045908608075
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=2|attSEmiss=8|ameSEmiss=0|ameminV=.0035206284338754291
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=3|attSEmiss=8|ameSEmiss=0|ameminV=.0075794096670003443
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=4|attSEmiss=8|ameSEmiss=0|ameminV=.0034611624731152881
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=5|attSEmiss=8|ameSEmiss=0|ameminV=.003752483682457401
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=6|attSEmiss=8|ameSEmiss=0|ameminV=.0048696680792020683
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=7|attSEmiss=8|ameSEmiss=0|ameminV=.0039321100460176801
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=8|attSEmiss=8|ameSEmiss=0|ameminV=.0033605286623220611
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=9|attSEmiss=8|ameSEmiss=0|ameminV=.0041032086394794552
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=10|attSEmiss=8|ameSEmiss=0|ameminV=.0049240970269365031
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=11|attSEmiss=8|ameSEmiss=0|ameminV=.0060116898423189106
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=12|attSEmiss=8|ameSEmiss=0|ameminV=.0024793267948646715
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=13|attSEmiss=8|ameSEmiss=0|ameminV=.0022628828516572052
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=14|attSEmiss=8|ameSEmiss=0|ameminV=.0020826578380492107
+(15 missing values generated)
+(1,080 missing values generated)
+(1,080 missing values generated)
+(1,170 real changes made)
+(1,170 missing values generated)
+(1,170 real changes made)
+MKVARS|mint=5|maxt=7|refp=5|HS=1|HE=9
+C_D1SWEEP|s=15|attSEmiss=8|ameSEmiss=0|ameminV=.0024670021003230678
+
+. 
+. * dissect the blackout realization if found
+. cap confirm file "`AUD'/d1c_black.dta"
+
+. if _rc == 0 {
+.   use "`AUD'/d1c_black.dta", clear
+.   noi reghdfe y i._i#i._t#i.targetflag##c.dose, absorb(i.i i.t i.null##c.(ringer)) cluster(i) tol(1e-9)
+(MWFE estimator converged in 3 iterations)
+note: dose is probably collinear with the fixed effects (all partialled-out values are close to zero; tol = 1.0e-10)
+warning: missing F statistic; dropped variables due to collinearity or too few clusters
+warning: variance matrix is nonsymmetric or highly singular.
+
+HDFE Linear regression                            Number of obs   =      2,160
+Absorbing 3 HDFE groups                           F( 330,     29) =          .
+Statistics robust to heteroskedasticity           Prob > F        =          .
+                                                  R-squared       =     0.6485
+                                                  Adj R-squared   =     0.5756
+                                                  Within R-sq.    =     0.3444
+Number of clusters (i)       =         30         Root MSE        =     0.8285
+
+                                                (Std. err. adjusted for 30 clusters in i)
+-----------------------------------------------------------------------------------------
+                        |               Robust
+                      y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------------+----------------------------------------------------------------
+       _i#_t#targetflag |
+                2  1 1  |  -.5142397          .        .       .            .           .
+                2  2 1  |  -1.394417          .        .       .            .           .
+                2  3 1  |   -1.53708          .        .       .            .           .
+                2  4 1  |  -1.642981          .        .       .            .           .
+                2  6 1  |  -.5483148          .        .       .            .           .
+                2  7 1  |   2.348762          .        .       .            .           .
+                2  8 1  |  -2.825316          .        .       .            .           .
+                2  9 1  |   2.936682          .        .       .            .           .
+                2 10 1  |  -1.402791          .        .       .            .           .
+                2 11 1  |  -2.005665          .        .       .            .           .
+                2 12 1  |  -2.436239          .        .       .            .           .
+                4  1 1  |  -3.412434          .        .       .            .           .
+                4  2 1  |  -3.194868          .        .       .            .           .
+                4  3 1  |   -1.04035          .        .       .            .           .
+                4  4 1  |    .037448          .        .       .            .           .
+                4  6 1  |   -2.29459          .        .       .            .           .
+                4  7 1  |  -3.069504          .        .       .            .           .
+                4  8 1  |  -1.487462          .        .       .            .           .
+                4  9 1  |  -1.153402          .        .       .            .           .
+                4 10 1  |   .5955717          .        .       .            .           .
+                4 11 1  |   .1939829          .        .       .            .           .
+                4 12 1  |  -2.930415          .        .       .            .           .
+                6  1 1  |  -.1575508          .        .       .            .           .
+                6  2 1  |  -2.763885          .        .       .            .           .
+                6  3 1  |  -6.331344          .        .       .            .           .
+                6  4 1  |   -1.70044          .        .       .            .           .
+                6  6 1  |   3.885304          .        .       .            .           .
+                6  7 1  |  -9.205924          .        .       .            .           .
+                6  8 1  |  -6.751173          .        .       .            .           .
+                6  9 1  |  -9.433191          .        .       .            .           .
+                6 10 1  |  -2.928844          .        .       .            .           .
+                6 11 1  |  -11.53414          .        .       .            .           .
+                6 12 1  |  -4.595902          .        .       .            .           .
+                8  1 1  |   4.405981          .        .       .            .           .
+                8  2 1  |  -5.084907          .        .       .            .           .
+                8  3 1  |  -1.310678          .        .       .            .           .
+                8  4 1  |  -1.124136          .        .       .            .           .
+                8  6 1  |  -1.418719          .        .       .            .           .
+                8  7 1  |  -.1732697          .        .       .            .           .
+                8  8 1  |   2.358842          .        .       .            .           .
+                8  9 1  |  -1.625068          .        .       .            .           .
+                8 10 1  |  -.0378124          .        .       .            .           .
+                8 11 1  |  -.2613012          .        .       .            .           .
+                8 12 1  |  -.3795706          .        .       .            .           .
+               10  1 1  |   .4409264          .        .       .            .           .
+               10  2 1  |   -1.59796          .        .       .            .           .
+               10  3 1  |  -.4886678          .        .       .            .           .
+               10  4 1  |  -.1442122          .        .       .            .           .
+               10  6 1  |  -2.206733          .        .       .            .           .
+               10  7 1  |  -1.818969          .        .       .            .           .
+               10  8 1  |   .4506996          .        .       .            .           .
+               10  9 1  |   .1758486          .        .       .            .           .
+               10 10 1  |    .893095          .        .       .            .           .
+               10 11 1  |   .7922968          .        .       .            .           .
+               10 12 1  |  -1.073317          .        .       .            .           .
+               12  1 1  |  -1.028973          .        .       .            .           .
+               12  2 1  |  -.7095088          .        .       .            .           .
+               12  3 1  |  -1.805966          .        .       .            .           .
+               12  4 1  |  -.5122132          .        .       .            .           .
+               12  6 1  |   .1037575          .        .       .            .           .
+               12  7 1  |  -.5012839          .        .       .            .           .
+               12  8 1  |  -1.887799          .        .       .            .           .
+               12  9 1  |  -2.437358          .        .       .            .           .
+               12 10 1  |  -.0804297          .        .       .            .           .
+               12 11 1  |   -.959254          .        .       .            .           .
+               12 12 1  |  -2.520869          .        .       .            .           .
+               14  1 1  |   .5990381          .        .       .            .           .
+               14  2 1  |  -.2288881          .        .       .            .           .
+               14  3 1  |   .3061205          .        .       .            .           .
+               14  4 1  |  -1.695047          .        .       .            .           .
+               14  6 1  |   1.053097          .        .       .            .           .
+               14  7 1  |   .0832767          .        .       .            .           .
+               14  8 1  |   -1.60864          .        .       .            .           .
+               14  9 1  |   .5523228          .        .       .            .           .
+               14 10 1  |  -2.535405          .        .       .            .           .
+               14 11 1  |  -.0161154          .        .       .            .           .
+               14 12 1  |  -2.553631          .        .       .            .           .
+               16  1 1  |  -.0861767          .        .       .            .           .
+               16  2 1  |  -3.753195          .        .       .            .           .
+               16  3 1  |  -2.254527          .        .       .            .           .
+               16  4 1  |  -1.416473          .        .       .            .           .
+               16  6 1  |  -.9082057          .        .       .            .           .
+               16  7 1  |  -1.353002          .        .       .            .           .
+               16  8 1  |  -1.248861          .        .       .            .           .
+               16  9 1  |     1.3901          .        .       .            .           .
+               16 10 1  |   .1808305          .        .       .            .           .
+               16 11 1  |    -2.5219          .        .       .            .           .
+               16 12 1  |   .7456834          .        .       .            .           .
+               18  1 1  |  -.1345285          .        .       .            .           .
+               18  2 1  |  -1.601148          .        .       .            .           .
+               18  3 1  |  -.6490064          .        .       .            .           .
+               18  4 1  |   1.855044          .        .       .            .           .
+               18  6 1  |   1.031378          .        .       .            .           .
+               18  7 1  |     1.2771          .        .       .            .           .
+               18  8 1  |   1.007728          .        .       .            .           .
+               18  9 1  |   3.059479          .        .       .            .           .
+               18 10 1  |   1.728633          .        .       .            .           .
+               18 11 1  |   1.907079          .        .       .            .           .
+               18 12 1  |   .9610081          .        .       .            .           .
+               20  1 1  |    .776932          .        .       .            .           .
+               20  2 1  |   2.569727          .        .       .            .           .
+               20  3 1  |   1.781894          .        .       .            .           .
+               20  4 1  |   3.702625          .        .       .            .           .
+               20  6 1  |   1.206213          .        .       .            .           .
+               20  7 1  |   1.352326          .        .       .            .           .
+               20  8 1  |   .9808022          .        .       .            .           .
+               20  9 1  |  -1.349847          .        .       .            .           .
+               20 10 1  |   1.599646          .        .       .            .           .
+               20 11 1  |   .9136962          .        .       .            .           .
+               20 12 1  |   1.376452          .        .       .            .           .
+               22  1 1  |  -.3333841          .        .       .            .           .
+               22  2 1  |   .8211621          .        .       .            .           .
+               22  3 1  |  -.9720366          .        .       .            .           .
+               22  4 1  |  -.8699446          .        .       .            .           .
+               22  6 1  |  -.3295669          .        .       .            .           .
+               22  7 1  |   1.408198          .        .       .            .           .
+               22  8 1  |   2.951074          .        .       .            .           .
+               22  9 1  |   1.327233          .        .       .            .           .
+               22 10 1  |   1.367142          .        .       .            .           .
+               22 11 1  |  -1.419158          .        .       .            .           .
+               22 12 1  |  -1.425842          .        .       .            .           .
+               24  1 1  |   2.141994          .        .       .            .           .
+               24  2 1  |  -.3823004          .        .       .            .           .
+               24  3 1  |  -.5756694          .        .       .            .           .
+               24  4 1  |   .0606396          .        .       .            .           .
+               24  6 1  |   .4692203          .        .       .            .           .
+               24  7 1  |  -1.022671          .        .       .            .           .
+               24  8 1  |  -.0684726          .        .       .            .           .
+               24  9 1  |  -.5666195          .        .       .            .           .
+               24 10 1  |   .5842102          .        .       .            .           .
+               24 11 1  |   .2814139          .        .       .            .           .
+               24 12 1  |  -1.209572          .        .       .            .           .
+               26  1 1  |  -1.035747          .        .       .            .           .
+               26  2 1  |   .4054749          .        .       .            .           .
+               26  3 1  |  -.5749165          .        .       .            .           .
+               26  4 1  |     .36138          .        .       .            .           .
+               26  6 1  |   .6987851          .        .       .            .           .
+               26  7 1  |  -.5615792          .        .       .            .           .
+               26  8 1  |   2.250535          .        .       .            .           .
+               26  9 1  |  -1.061231          .        .       .            .           .
+               26 10 1  |  -.6120505          .        .       .            .           .
+               26 11 1  |   1.577242          .        .       .            .           .
+               26 12 1  |   1.071305          .        .       .            .           .
+               28  1 1  |   1.349988          .        .       .            .           .
+               28  2 1  |  -.7674652          .        .       .            .           .
+               28  3 1  |   .0595322          .        .       .            .           .
+               28  4 1  |   1.347481          .        .       .            .           .
+               28  6 1  |  -2.415834          .        .       .            .           .
+               28  7 1  |   -.577019          .        .       .            .           .
+               28  8 1  |  -2.262521          .        .       .            .           .
+               28  9 1  |   .0338276          .        .       .            .           .
+               28 10 1  |   1.077956          .        .       .            .           .
+               28 11 1  |   1.559937          .        .       .            .           .
+               28 12 1  |   .3754713          .        .       .            .           .
+               30  1 1  |  -2.526646          .        .       .            .           .
+               30  2 1  |  -1.467204          .        .       .            .           .
+               30  3 1  |  -2.694334          .        .       .            .           .
+               30  4 1  |   1.902631          .        .       .            .           .
+               30  6 1  |   .1873484          .        .       .            .           .
+               30  7 1  |  -.3401618          .        .       .            .           .
+               30  8 1  |   .4500502          .        .       .            .           .
+               30  9 1  |  -1.738863          .        .       .            .           .
+               30 10 1  |   -.225981          .        .       .            .           .
+               30 11 1  |   .3941731          .        .       .            .           .
+               30 12 1  |  -3.267752          .        .       .            .           .
+                        |
+                   dose |          0  (omitted)
+                        |
+_i#_t#targetflag#c.dose |
+                2  1 1  |  -.1565187          .        .       .            .           .
+                2  2 1  |  -.2461465          .        .       .            .           .
+                2  3 1  |   .0644514          .        .       .            .           .
+                2  4 1  |   .0004151          .        .       .            .           .
+                2  6 1  |    .179706          .        .       .            .           .
+                2  7 1  |  -1.323662          .        .       .            .           .
+                2  8 1  |   .3788082          .        .       .            .           .
+                2  9 1  |  -1.229605          .        .       .            .           .
+                2 10 1  |   .5518642          .        .       .            .           .
+                2 11 1  |   .3923362          .        .       .            .           .
+                2 12 1  |   .2766453          .        .       .            .           .
+                4  1 1  |   .5325519          .        .       .            .           .
+                4  2 1  |   .2957001          .        .       .            .           .
+                4  3 1  |   -.077634          .        .       .            .           .
+                4  4 1  |   -.135639          .        .       .            .           .
+                4  6 1  |   .3610123          .        .       .            .           .
+                4  7 1  |   .0155319          .        .       .            .           .
+                4  8 1  |   .2223827          .        .       .            .           .
+                4  9 1  |   .1935899          .        .       .            .           .
+                4 10 1  |  -.1595334          .        .       .            .           .
+                4 11 1  |  -.1325685          .        .       .            .           .
+                4 12 1  |   .3935667          .        .       .            .           .
+                6  1 1  |  -.7026145          .        .       .            .           .
+                6  2 1  |   .4064514          .        .       .            .           .
+                6  3 1  |   1.520653          .        .       .            .           .
+                6  4 1  |  -.0398656          .        .       .            .           .
+                6  6 1  |   -2.92098          .        .       .            .           .
+                6  7 1  |   3.107256          .        .       .            .           .
+                6  8 1  |   1.966427          .        .       .            .           .
+                6  9 1  |   3.278661          .        .       .            .           .
+                6 10 1  |   .2892264          .        .       .            .           .
+                6 11 1  |   4.265684          .        .       .            .           .
+                6 12 1  |   1.254335          .        .       .            .           .
+                8  1 1  |  -2.002797          .        .       .            .           .
+                8  2 1  |    .946826          .        .       .            .           .
+                8  3 1  |   .1446003          .        .       .            .           .
+                8  4 1  |  -.1621716          .        .       .            .           .
+                8  6 1  |   .2806505          .        .       .            .           .
+                8  7 1  |   .0241808          .        .       .            .           .
+                8  8 1  |  -.9176176          .        .       .            .           .
+                8  9 1  |    .018985          .        .       .            .           .
+                8 10 1  |  -.2918873          .        .       .            .           .
+                8 11 1  |  -.0878233          .        .       .            .           .
+                8 12 1  |   .3626855          .        .       .            .           .
+               10  1 1  |   .0006455          .        .       .            .           .
+               10  2 1  |   .7809233          .        .       .            .           .
+               10  3 1  |   .1859427          .        .       .            .           .
+               10  4 1  |   .2469013          .        .       .            .           .
+               10  6 1  |   1.199388          .        .       .            .           .
+               10  7 1  |   2.183503          .        .       .            .           .
+               10  8 1  |  -.1244572          .        .       .            .           .
+               10  9 1  |   .8287596          .        .       .            .           .
+               10 10 1  |  -.3402818          .        .       .            .           .
+               10 11 1  |  -.6222642          .        .       .            .           .
+               10 12 1  |   .6873933          .        .       .            .           .
+               12  1 1  |  -.0602552          .        .       .            .           .
+               12  2 1  |  -.1717174          .        .       .            .           .
+               12  3 1  |   -.115993          .        .       .            .           .
+               12  4 1  |   .2115394          .        .       .            .           .
+               12  6 1  |  -.8085019          .        .       .            .           .
+               12  7 1  |  -.4063996          .        .       .            .           .
+               12  8 1  |   .0086533          .        .       .            .           .
+               12  9 1  |    .248221          .        .       .            .           .
+               12 10 1  |   .2314082          .        .       .            .           .
+               12 11 1  |  -.4685285          .        .       .            .           .
+               12 12 1  |   .4204066          .        .       .            .           .
+               14  1 1  |  -.1906643          .        .       .            .           .
+               14  2 1  |   .0015666          .        .       .            .           .
+               14  3 1  |  -.0389291          .        .       .            .           .
+               14  4 1  |   .3480326          .        .       .            .           .
+               14  6 1  |  -.4830079          .        .       .            .           .
+               14  7 1  |   -.045044          .        .       .            .           .
+               14  8 1  |   .0412274          .        .       .            .           .
+               14  9 1  |   .0865545          .        .       .            .           .
+               14 10 1  |   .2759424          .        .       .            .           .
+               14 11 1  |  -.0719963          .        .       .            .           .
+               14 12 1  |   .3114752          .        .       .            .           .
+               16  1 1  |  -.6492314          .        .       .            .           .
+               16  2 1  |   1.913308          .        .       .            .           .
+               16  3 1  |   .8936493          .        .       .            .           .
+               16  4 1  |   .3241034          .        .       .            .           .
+               16  6 1  |   .1596568          .        .       .            .           .
+               16  7 1  |   .3224638          .        .       .            .           .
+               16  8 1  |   .0663656          .        .       .            .           .
+               16  9 1  |  -.7248609          .        .       .            .           .
+               16 10 1  |  -.5196176          .        .       .            .           .
+               16 11 1  |   .8008308          .        .       .            .           .
+               16 12 1  |  -.9893418          .        .       .            .           .
+               18  1 1  |   .2532192          .        .       .            .           .
+               18  2 1  |   .7067765          .        .       .            .           .
+               18  3 1  |  -.1901598          .        .       .            .           .
+               18  4 1  |  -.2261239          .        .       .            .           .
+               18  6 1  |   -.154578          .        .       .            .           .
+               18  7 1  |  -.3508344          .        .       .            .           .
+               18  8 1  |   .0512328          .        .       .            .           .
+               18  9 1  |  -1.072439          .        .       .            .           .
+               18 10 1  |  -.1139966          .        .       .            .           .
+               18 11 1  |  -.2937059          .        .       .            .           .
+               18 12 1  |   .0688611          .        .       .            .           .
+               20  1 1  |   .6210801          .        .       .            .           .
+               20  2 1  |  -.2573999          .        .       .            .           .
+               20  3 1  |   -.683655          .        .       .            .           .
+               20  4 1  |  -1.055983          .        .       .            .           .
+               20  6 1  |   .5995612          .        .       .            .           .
+               20  7 1  |  -.0110708          .        .       .            .           .
+               20  8 1  |   .0864599          .        .       .            .           .
+               20  9 1  |   1.374598          .        .       .            .           .
+               20 10 1  |   .7655286          .        .       .            .           .
+               20 11 1  |   .0907043          .        .       .            .           .
+               20 12 1  |   .3021215          .        .       .            .           .
+               22  1 1  |   .5082652          .        .       .            .           .
+               22  2 1  |   .3930732          .        .       .            .           .
+               22  3 1  |   .3193299          .        .       .            .           .
+               22  4 1  |   .4045177          .        .       .            .           .
+               22  6 1  |   .7070063          .        .       .            .           .
+               22  7 1  |  -.5811962          .        .       .            .           .
+               22  8 1  |  -.9829497          .        .       .            .           .
+               22  9 1  |  -.0818739          .        .       .            .           .
+               22 10 1  |   .1484993          .        .       .            .           .
+               22 11 1  |   .8115505          .        .       .            .           .
+               22 12 1  |   .7131315          .        .       .            .           .
+               24  1 1  |   .1065305          .        .       .            .           .
+               24  2 1  |   .2573989          .        .       .            .           .
+               24  3 1  |   .0574177          .        .       .            .           .
+               24  4 1  |   .0530658          .        .       .            .           .
+               24  6 1  |  -.0848654          .        .       .            .           .
+               24  7 1  |    .226762          .        .       .            .           .
+               24  8 1  |  -.0241912          .        .       .            .           .
+               24  9 1  |   .1119401          .        .       .            .           .
+               24 10 1  |   .2067538          .        .       .            .           .
+               24 11 1  |   .1734149          .        .       .            .           .
+               24 12 1  |   .4352508          .        .       .            .           .
+               26  1 1  |   .2872281          .        .       .            .           .
+               26  2 1  |    .205247          .        .       .            .           .
+               26  3 1  |   .0675637          .        .       .            .           .
+               26  4 1  |    .224304          .        .       .            .           .
+               26  6 1  |  -.3424089          .        .       .            .           .
+               26  7 1  |  -.0234038          .        .       .            .           .
+               26  8 1  |   .0561277          .        .       .            .           .
+               26  9 1  |  -.1859288          .        .       .            .           .
+               26 10 1  |   .2238929          .        .       .            .           .
+               26 11 1  |  -.8477844          .        .       .            .           .
+               26 12 1  |  -.2641958          .        .       .            .           .
+               28  1 1  |   -.292547          .        .       .            .           .
+               28  2 1  |   .0885105          .        .       .            .           .
+               28  3 1  |   -.244696          .        .       .            .           .
+               28  4 1  |  -.3005819          .        .       .            .           .
+               28  6 1  |   .6480879          .        .       .            .           .
+               28  7 1  |   .0664955          .        .       .            .           .
+               28  8 1  |   .6408087          .        .       .            .           .
+               28  9 1  |  -.1443173          .        .       .            .           .
+               28 10 1  |  -.2908392          .        .       .            .           .
+               28 11 1  |  -.1411329          .        .       .            .           .
+               28 12 1  |  -.1963953          .        .       .            .           .
+               30  1 1  |   .6885053          .        .       .            .           .
+               30  2 1  |   .2180619          .        .       .            .           .
+               30  3 1  |   .2490764          .        .       .            .           .
+               30  4 1  |   -1.35922          .        .       .            .           .
+               30  6 1  |  -.2337191          .        .       .            .           .
+               30  7 1  |   .0172473          .        .       .            .           .
+               30  8 1  |   .4194132          .        .       .            .           .
+               30  9 1  |   1.260077          .        .       .            .           .
+               30 10 1  |   -1.26548          .        .       .            .           .
+               30 11 1  |  -.4903556          .        .       .            .           .
+               30 12 1  |   2.088917          .        .       .            .           .
+                        |
+                  _cons |    .673139          .        .       .            .           .
+-----------------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-------------------------------------------------------+
+   Absorbed FE | Categories  - Redundant  = Num. Coefs |
+---------------+---------------------------------------|
+             i |        30          30           0    *|
+             t |        12           1          11     |
+          null |         1           1           0     |
+ null#c.ringer |         1           0           1    ?|
+-------------------------------------------------------+
+? = number of redundant parameters may be higher
+* = FE nested within cluster; treated as redundant for DoF computation
+.   dis "CBLK_MODEL|df_r=" e(df_r) "|df_m=" e(df_m) "|rank=" e(rank) "|Nclust=" e(N_clust)
+CBLK_MODEL|df_r=29|df_m=330|rank=330|Nclust=30
+.   local dfr = e(df_r)
+.   mata:
+------------------------------------------------- mata (type end to exit) -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+:   V = st_matrix("e(V)")
+
+:   nm = st_matrixcolstripe("e(V)")
+
+:   d = diagonal(V)
+
+:   isslope = strpos(nm[.,2], "dose") :> 0
+
+:   isom    = strpos(nm[.,2], "o.") :> 0
+
+:   live = 1 :- isom
+
+:   printf("CBLK_EVDIAG|K=%g|miss=%g|zero=%g|neg=%g|fullmiss=%g\n", rows(d), colmissing(d), sum(d:==0), sum((d:<0):*(1:-(d:>=.))), sum(rowmissing(V)))
+CBLK_EVDIAG|K=334|miss=0|zero=334|neg=0|fullmiss=0
+
+:   sl = select(d, isslope :& live); du = select(d, (1:-isslope) :& live)
+
+:   printf("CBLK_EVDIAG|live slope n=%g min=%21.15g max=%21.15g\n", rows(sl), min(sl), max(sl))
+CBLK_EVDIAG|live slope n=165 min=                    0 max=                    0
+
+:   printf("CBLK_EVDIAG|live dummy n=%g min=%21.15g max=%21.15g\n", rows(du), min(du), max(du))
+CBLK_EVDIAG|live dummy n=167 min=                    0 max=                    0
+
+:   cnt = 0
+
+:   for (j=1; j<=rows(d); j++) {
+>     if ((missing(d[j]) | d[j]<0) & cnt<40) { printf("CBLK_BADDIAG|%s|%21.15g\n", nm[j,2], d[j]); cnt++ }
+invalid expression
+(1 line skipped)
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+r(3000);
+.   cap noi margins [iw=1], dydx(targetflag) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+.   dis "CBLK_MARG_ATT|rc=" _rc
+.   cap matrix RTb = r(table)
+.   cap matrix RVb = r(V)
+.   cap matrix RJb = r(Jacobian)
+.   dis "CBLK_MARG_ATT r(table):"
+.   cap noi matrix list RTb, format(%14.0g)
+.   mata:
+(5 lines skipped)
+.   cap noi margins [iw=1], dydx(dose) subpop(if targetflag==1 & _t >= $HS & _t <= $HE) noestimcheck over(_t) df(`dfr')
+.   dis "CBLK_MARG_AME|rc=" _rc
+.   cap matrix RTa = r(table)
+.   cap matrix RVa = r(V)
+.   cap matrix RJa = r(Jacobian)
+.   dis "CBLK_MARG_AME r(table):"
+.   cap noi matrix list RTa, format(%14.0g)
+.   mata:
+(4 lines skipped)
+.   * fingerprint: Var_cl(phihat) via visible-ringer refit
+.   qui reghdfe y c.ringer i._i#i._t#i.targetflag##c.dose, absorb(i.i i.t) cluster(i) tol(1e-9)
+.   mata:
+(5 lines skipped)
+. }
+r(3000);
+
+end of do-file
+r(3000);
