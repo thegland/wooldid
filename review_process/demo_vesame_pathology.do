@@ -55,21 +55,32 @@ wooldid y i t ttre, att cluster(i) contreat(dose) contreatcontrols(basic) esprel
 
 tempname V B
 matrix `B' = e(b_es_ame)
-matrix `V' = e(V_es_ame)
-dis _n as result "---- Exhibit A diagnostics: e(V_es_ame) under cluster(i) ----"
-dis as text "per-horizon reported SEs (sqrt of diag):"
-forval j = 1/8 {
-  local l : word `j' of `: colnames `B''
-  dis as text "  `l'   b = " %10.6f `B'[1,`j'] "   se = " %12.9f sqrt(`V'[`j',`j'])
+cap confirm matrix e(V_es_ame)
+if _rc != 0 {
+  dis _n as result "---- Exhibit A (post-R1 build): the REFUSAL ----"
+  dis as text "e(V_es_ame) is withheld and every ame standard error above is missing —"
+  dis as text "this is the implemented R1 behavior (see the caution printed by the run)."
+  dis as text "Point estimates and e(b_es_ame) remain available. To see the ORIGINAL"
+  dis as text "pathological output (identical positive SEs, rank-1 V), run this exhibit"
+  dis as text "against a pre-R1 build (see the header note)."
 }
-mata: V = st_matrix(st_local("V")); C = corr(V); printf("min pairwise correlation = %16.14g (all exactly 1)\n", min(C))
-mata: ev = symeigenvalues(V); printf("eigenvalues: largest = %10.6g, second-largest = %10.3g  (rank 1)\n", max(ev), sort(ev',1)[7])
-dis as text "reported variance of the (post0 - pre2) CONTRAST (V11+V22-2V12 form):"
-dis as result "  " %12.4e (`V'[5,5] + `V'[4,4] - 2*`V'[5,4]) as text "   while the estimates differ by " %10.6f (`B'[1,5] - `B'[1,4])
-dis as text "=> every cross-horizon comparison is reported as having ZERO sampling"
-dis as text "   variance; honestdid/lincom/test consumers of e(V_es_ame) ingest this"
-dis as text "   silently. (True per-horizon variances are ~5x the common reported"
-dis as text "   value and the true covariance is full rank - see the INV-1 report.)"
+else {
+  matrix `V' = e(V_es_ame)
+  dis _n as result "---- Exhibit A diagnostics: e(V_es_ame) under cluster(i) ----"
+  dis as text "per-horizon reported SEs (sqrt of diag):"
+  forval j = 1/8 {
+    local l : word `j' of `: colnames `B''
+    dis as text "  `l'   b = " %10.6f `B'[1,`j'] "   se = " %12.9f sqrt(`V'[`j',`j'])
+  }
+  mata: V = st_matrix(st_local("V")); C = corr(V); printf("min pairwise correlation = %16.14g (all exactly 1)\n", min(C))
+  mata: ev = symeigenvalues(V); printf("eigenvalues: largest = %10.6g, second-largest = %10.3g  (rank 1)\n", max(ev), sort(ev',1)[7])
+  dis as text "reported variance of the (post0 - pre2) CONTRAST (V11+V22-2V12 form):"
+  dis as result "  " %12.4e (`V'[5,5] + `V'[4,4] - 2*`V'[5,4]) as text "   while the estimates differ by " %10.6f (`B'[1,5] - `B'[1,4])
+  dis as text "=> every cross-horizon comparison is reported as having ZERO sampling"
+  dis as text "   variance; honestdid/lincom/test consumers of e(V_es_ame) ingest this"
+  dis as text "   silently. (True per-horizon variances are ~5x the common reported"
+  dis as text "   value and the true covariance is full rank - see the INV-1 report.)"
+}
 
 * ================= Exhibit B: same data, robust VCE — the collapse is gone ======
 * (Full-rank V, horizon-specific SEs. NOTE: full-rank does not mean well-sized ame
