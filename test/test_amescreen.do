@@ -231,6 +231,53 @@ if _rc != 0 {
 }
 else assertfire B3 0
 
+* C1 (SI-A4/R6): cohort-constant dose (the d3 class) -> named refusal of the ame
+* block: the run completes rc 0, ame POINT estimates are voided to missing (never
+* the regression's fabricated structural zeros), att untouched with real SEs
+mkdemo
+qui replace dose = 0.5 + 0.1*i
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(basic) esf espre(2) espost(2)
+if _rc != 0 {
+  dis as error "C1 FAIL rc=" _rc
+  global pf = $pf + 1
+}
+else {
+  tempname W
+  matrix `W' = e(wdidmainresults)
+  local ra = rownumb(`W', "main:att")
+  local rm = rownumb(`W', "main:ame")
+  local attb = cond(`ra' < ., `W'[`ra', 1], -99)
+  local attse = cond(`ra' < ., `W'[`ra', 2], -99)
+  local ameb = cond(`rm' < ., `W'[`rm', 1], -99)
+  if !missing(`attb') & !missing(`attse') & `attse' > 0 & missing(`ameb') dis "C1 ok"
+  else {
+    dis as error "C1 FAIL: attb=`attb' attse=`attse' ameb=`ameb' (want ame b missing with att real)"
+    global pf = $pf + 1
+  }
+}
+
+* C2 (SI-A4 untreatedZero exception): expected zero doses in the untreated periods
+* must NOT trigger the void - the treated-cell slopes are live and the ame is real
+mkdemo
+qui replace dose = 0 if ttre >= . | t < ttre
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(untreatedZero) esf espre(2) espost(2)
+if _rc != 0 {
+  dis as error "C2 FAIL rc=" _rc
+  global pf = $pf + 1
+}
+else {
+  tempname W
+  matrix `W' = e(wdidmainresults)
+  local rm = rownumb(`W', "main:ame")
+  local ameb = cond(`rm' < ., `W'[`rm', 1], .)
+  local amese = cond(`rm' < ., `W'[`rm', 2], .)
+  if !missing(`ameb') & !missing(`amese') & `amese' > 0 dis "C2 ok"
+  else {
+    dis as error "C2 FAIL: ame b=`ameb' se=`amese' (want real ame under untreatedZero)"
+    global pf = $pf + 1
+  }
+}
+
 if $pf == 0 dis "AMESCREEN_ALL_PASS"
 else dis as error "AMESCREEN_FAILS=$pf"
 exit, clear

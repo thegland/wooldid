@@ -508,7 +508,12 @@ fixed effects (i.e., specifying {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}).
 {marker continuous}{...}
 {dlgtab:Continuous Treatments}
 
-{phang}{opt contreat(varname)}: The continuous treatment variable. Must be defined for all observations (set to 0 if not naturally defined within untreated cohort-periods).{p_end}
+{phang}{opt contreat(varname)}: The continuous treatment variable. Must be defined for all observations (set to 0 if not naturally defined within untreated cohort-periods).
+With continuous treatments, reliable analytic inference additionally requires that cohort-by-period cells contain a large number of observations relative to the number of
+within-cell parameters estimated. If the continuous treatment carries no identifying variation for any treated cohort-period cell's dose slope (for example, a dose constant
+within each cohort - every treated-cell slope term is then dropped for multicollinearity), the within-cell average marginal effects are not identified: under default safety
+{it:wooldid} names this situation, reports the ame results as missing rather than as the regression's structural zeros, and continues with the unaffected att results
+(expected zero doses in untreated periods, as under {it:contreatcontrols(untreatedZero)}, do not trigger this).{p_end}
 
 {phang}{opt contreatelas:ticitytype(dydx/eyex/eydx/dyex)}: Specifies which type of treatment effect to compute. {it:eyex} corresponds with computing the elasticity
 (% change in y/% change in contreat), {it:eydx} corresponds with semi-elasticities comparable to what can be produced for the main effect of treatment
@@ -670,7 +675,9 @@ to include the continuous treatment variable itself among your controls, as this
 a control with values identical to that of the continuous treatment variable: it just needs to have a different variable name. It is recommended that any custom such controls be specified
 in conjunction with the option {it:contreatcontrols(basic)}, or any option other than {it:untreatedZero}. {p_end}
 
-{pstd} {ul:Caution Regarding Continuous Treatments and Cluster-Robust Standard Errors:} With {cmd:contreat()}, the regression gives every treated cohort-by-period cell its own
+{pstd} {ul:Caution Regarding Continuous Treatments and Cluster-Robust Standard Errors:} Valid clustered standard errors cannot be obtained analytically for the ame-family
+quantities when clustering at the cohort ({it:i}) level or above, necessitating use of bootstrapping or other methods (detailed below).
+With {cmd:contreat()}, the regression gives every treated cohort-by-period cell its own
 treatment-intensity slope. When any such cell lies entirely within a single cluster of the specified {cmd:cluster()} (which is automatic when clustering on the cohort identifier
 {it:i} itself), the cluster-robust variance estimator is structurally blind to within-cell variation in the continuous treatment: the "standard errors" it would deliver for the ame-family
 quantities do not measure their sampling variability (in the {it:contreatcontrols(basic)}/{it:byTime} cases they collapse to the variance of the absorbed baseline dose control, one number

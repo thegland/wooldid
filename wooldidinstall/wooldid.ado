@@ -1380,6 +1380,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
   * here, we check and see if the main treatment effects have been dropped from the regression for multicollinearity - my tests for this are imperfect, but still useful
+  * amevoid (SI-A4/R6) and the scrub column floor are consumed downstream
+  * unconditionally, so they are initialized outside the safety gate
+  local amevoid 0
+  local amescrublo 2
   if "`safety'" != "off"  {
     local bvars: colnames e(b)
     local catastrophe 0
@@ -1468,6 +1472,35 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
     if `catastrophe' > 0 dis as text "Note: the multicollinearity caution above was triggered `catastrophe' times total."
     if `bigcatastrophe' == 1 error 322
+
+    * SI-A4/R6 (author-ruled 2026-08-25): when EVERY treated-cell dose-slope term was
+    * dropped for multicollinearity (zero live c.contreat treated terms while dropped
+    * ones exist - the d3 class, e.g. dose constant within each cohort), the within-cell
+    * ame estimand is unidentified and the regression's ame entries are exact structural
+    * zeros. Name the refusal, void the ame block INCLUDING the point estimates (the R1
+    * scrub keeps b; R6 must not - the zeros are fabricated), and continue: the att side
+    * is untouched by construction. Scoping on targetflag==1 exempts untreatedZero's
+    * expected zero-dose reference periods by construction. Skipped under fastnose (R1
+    * convention) and under safety(off) (this whole screen block).
+    if "`contreat'" != "" & "`fastnose'" == "" & strpos("`bvars'", "o.") != 0 {
+      local amelive 0
+      local amedrop 0
+      foreach r6tok of local bvars {
+        * omitted continuous interactions carry the co. marker (not a bare c. plus
+        * o. elsewhere), so a dose term is c.<contreat> OR co.<contreat>
+        if strpos("`r6tok'", "`_i'") != 0 & strpos("`r6tok'", "`_t'") != 0 & (strpos("`r6tok'", "1.`targetflag'") != 0 | strpos("`r6tok'", "1o.`targetflag'") != 0) & (strpos("`r6tok'#", "c.`contreat'#") != 0 | strpos("`r6tok'#", "co.`contreat'#") != 0) {
+          if strpos("`r6tok'", "o.") == 0 local ++amelive
+          else local ++amedrop
+        }
+      }
+      if `amelive' == 0 & `amedrop' > 0 {
+        dis as text "Caution: every treated cohort-period dose-slope term for the continuous treatment variable `contreat' was dropped for multicollinearity (see the caution counts above); this occurs, for example, when `contreat' is constant within each cohort. The within-cell average marginal effects (ame) that wooldid reports for continuous treatments are NOT IDENTIFIED in this design - the regression's ame entries are structural zeros, not estimates - so wooldid is reporting the ame results as missing and skipping the ame-based tests. The att-side results are unaffected."
+        dis as text "Consider whether a coarser definition of `i' (so that cohort-period cells contain dose variation) matches your design, or estimate binary att effects without contreat(). You can ignore this check if you specify safety(off), but be careful: with safety(off) the ame output will contain the structural zeros."
+        local amevoid 1
+        local amescrub 1
+        local amescrublo 1
+      }
+    }
   }
 
 
@@ -2060,7 +2093,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         matrix `___C`item'' = `f9tab'[1..6,1]'
         * AMESE R1: under cell containment the CRVE ame variance is not the ame's
         if `amescrub' {
-          forval amej = 2/6 {
+          forval amej = `amescrublo'/6 {
             matrix `___C`item''[1, `amej'] = .
           }
         }
@@ -2113,7 +2146,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           matrix `___C`item'_pre' = `f9tab'[1..6,1]'
           * AMESE R1 scrub (see the main-ame twin)
           if `amescrub' {
-            forval amej = 2/6 {
+            forval amej = `amescrublo'/6 {
               matrix `___C`item'_pre'[1, `amej'] = .
             }
           }
@@ -2252,7 +2285,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           * AMESE R1: the ame cfx inference columns come from the same refused CRVE
           if `amescrub' & `cfxmatendpoint' > 1 {
             forval amer = 1/`=rowsof(`cfx`itemtext'_`nametext'')' {
-              forval amej = 2/`cfxmatendpoint' {
+              forval amej = `amescrublo'/`cfxmatendpoint' {
                 matrix `cfx`itemtext'_`nametext''[`amer', `amej'] = .
               }
             }
@@ -2328,7 +2361,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * AMESE R1 scrub (see the main cfx ame twin)
               if `amescrub' & `cfxmatendpoint' > 1 {
                 forval amer = 1/`=rowsof(`cfx`itemtext'_`nametext'_sg`sgcase'')' {
-                  forval amej = 2/`cfxmatendpoint' {
+                  forval amej = `amescrublo'/`cfxmatendpoint' {
                     matrix `cfx`itemtext'_`nametext'_sg`sgcase''[`amer', `amej'] = .
                   }
                 }
@@ -2364,7 +2397,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             * AMESE R1 scrub: null the se/t/p/ci columns of every ame ES horizon
             if `amescrub' {
               forval amer = 1/`=rowsof(`___C`horizitem'_horiz')' {
-                forval amej = 2/6 {
+                forval amej = `amescrublo'/6 {
                   matrix `___C`horizitem'_horiz'[`amer', `amej'] = .
                 }
               }
@@ -2789,7 +2822,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           * AMESE R1 scrub (rows 2..6 = se/t/p/ci across all subgroup columns)
           if `amescrub' {
             forval amer = 1/`=rowsof(`___C`item'_s')' {
-              forval amej = 2/6 {
+              forval amej = `amescrublo'/6 {
                 matrix `___C`item'_s'[`amer', `amej'] = .
               }
             }
@@ -2808,7 +2841,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             * AMESE R1 scrub (see the posttreatment twin)
             if `amescrub' {
               forval amer = 1/`=rowsof(`___C`item'_pre_s')' {
-                forval amej = 2/6 {
+                forval amej = `amescrublo'/6 {
                   matrix `___C`item'_pre_s'[`amer', `amej'] = .
                 }
               }
@@ -2835,7 +2868,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 * AMESE R1 scrub: null se/t/p/ci columns of the per-sg ame ES rows
                 if `amescrub' {
                   forval amer = 1/`=rowsof(`___`horizitem'_Choriz_s`sgcase'')' {
-                    forval amej = 2/6 {
+                    forval amej = `amescrublo'/6 {
                       matrix `___`horizitem'_Choriz_s`sgcase''[`amer', `amej'] = .
                     }
                   }
@@ -2943,7 +2976,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           * AMESE R1 scrub
           if `amescrub' {
             forval amer = 1/`=rowsof(`pwsgs_C`item'')' {
-              forval amej = 2/6 {
+              forval amej = `amescrublo'/6 {
                 matrix `pwsgs_C`item''[`amer', `amej'] = .
               }
             }
@@ -2987,7 +3020,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * AMESE R1 scrub
               if `amescrub' {
                 forval amer = 1/`=rowsof(`prepwsgs_C`item'')' {
-                  forval amej = 2/6 {
+                  forval amej = `amescrublo'/6 {
                     matrix `prepwsgs_C`item''[`amer', `amej'] = .
                   }
                 }
@@ -3593,7 +3626,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           else local ++f2nbad
         }
         if `f2ok' {
-          cap ereturn matrix b_es_`f2ky' = `f2bm'
+          * SI-A4/R6: under a voided ame block the captured points are structural
+          * zeros, so b_es_ame* is withheld along with V_es_ame* (do not trust
+          * f2ok=0 to do this - it was observed on the audited d3 runs, not
+          * guaranteed across the class)
+          if !(`amevoid' & strpos("`f2ky'", "ame") == 1) cap ereturn matrix b_es_`f2ky' = `f2bm'
           * AMESE R1: withhold e(V_es_ame*) under cell containment — the captured V is
           * not the sampling covariance of the ame estimates (honestdid/lincom/test
           * consumers would ingest it silently); the points still post above
