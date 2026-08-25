@@ -768,7 +768,9 @@ The matrices are returned whenever at least one horizon has an identified varian
 diagonal rows, flagged by a Caution and by {it:e(es_ndegen_{it:type})} (the count of degenerate rows, posted only when such rows exist — its absence marks a clean covariance). Fully
 non-identified VCVs ({cmd:impvalues}, {cmd:fastnose}, typically {cmd:timetrends}) are not returned. Additionally, when the cell-containment caution fires (see the continuous-treatments
 standard-error caution above), {it:e(V_es_ame*)} is withheld — the captured covariance is not the sampling covariance of the ame estimates — while {it:e(b_es_ame*)} still posts; att-side
-event-study objects are unaffected.{p_end}
+event-study objects are unaffected. Separately, {it:contreatcontrols(byCohort)} requires each treated cohort's untreated/reference-period observations to carry variation in the
+continuous treatment (that variation is all that identifies the cohort-specific baseline dose slope): wooldid refuses with r(459), naming the offending cohort, when a treated cohort has
+none, and prints a computational-fragility caution (suggesting a larger {it:regtol()}) when that variation is below 1/1000 of the sample standard deviation of the treatment variable.{p_end}
 
 {synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods (relative year < 0) in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument (subject to the geometry conditions in the {it:e(b_es)} entry above).{p_end}
 

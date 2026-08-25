@@ -1067,6 +1067,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`verbose'" == "verbose" dis as text "Wooldid is now estimating its regression."
 
   * handle SEs
+  * GROUP B: byCohort point-identification screen (see wooldid_amescreen mode bycoh).
+  * Pre-estimation, always-on when byCohort+contreat are active (the pre-treatment-
+  * period sufficiency errors' sibling, one layer down: rows can exist while the
+  * baseline dose slope's identifying VARIATION does not).
+  if strpos("`contreatcontrols'", "byCohort") != 0 & "`contreat'" != "" {
+    tempvar amebtouse
+    qui gen byte `amebtouse' = (`ifstatement')
+    wooldid_amescreen , mode(bycoh) tcell(`_t') esamp(`amebtouse') contreat(`contreat') iorig(`i') tvar(`ttre')
+    if r(fail) == 1 error 459
+    cap drop `amebtouse'
+  }
+
   local vcespecifier
   if "`robust'" == "robust" local vcespecifier vce(robust)
   if "`cluster'" != "" local vcespecifier cluster(`cluster')
@@ -5830,7 +5842,7 @@ end
 cap prog drop wooldid_amescreen
 prog def wooldid_amescreen, rclass
 version 16.0
-  syntax , mode(string) [icell(string) tcell(string) tflag(string) esamp(string) clusvars(string) contreat(string) sgnote(string) semat(string)]
+  syntax , mode(string) [icell(string) tcell(string) tflag(string) esamp(string) clusvars(string) contreat(string) sgnote(string) semat(string) iorig(string) tvar(string)]
   if "`mode'" == "detect" {
     local fire 0
     local ncells 0
@@ -5851,6 +5863,61 @@ version 16.0
     }
     return scalar fire = `fire'
     return scalar ncells = `ncells'
+    exit
+  }
+  if "`mode'" == "bycoh" {
+    * GROUP B (author-ruled 2026-08-25): per-treated-cohort POINT-identification
+    * screen for contreatcontrols(byCohort). The cohort-specific baseline dose slope
+    * is identified only by dose variation across the cohort's untreated/reference-
+    * pool observations (the omitted base cell, tcell == 0; every other cell carries
+    * its own dose term). Zero variation there -> the slope is unestimable and that
+    * cohort's AME decomposition is solver-arbitrary -> hard refusal (caller raises
+    * r459, in the style of the pre-treatment-period sufficiency errors). Variation
+    * below 1/1000 of the sample dose sd -> near-unidentified direction where
+    * estimation tolerances bind -> computational-fragility caution. Runs regardless
+    * of VCE/fastnose/impvalues: point identification is at stake, not variances.
+    * NOTE the cell coding: `_i' pools ALL tcell==0 rows (reference + never-treated)
+    * into cohort code 0, so treated cohorts must be grouped by the ORIGINAL cohort
+    * variable among treated rows (tvar = the working onset variable; treated rows
+    * carry a nonmissing onset)
+    tempvar bctr bcref bchas bcsd bcn
+    qui gen byte `bctr' = (`tvar' < .) & `esamp'
+    qui gen byte `bcref' = (`tcell' == 0) if `bctr'
+    qui gegen byte `bchas' = max(`bcref') if `bctr', by(`iorig')
+    qui gegen double `bcsd' = sd(`contreat') if `bctr' & `tcell' == 0, by(`iorig')
+    qui gegen double `bcn' = count(`contreat') if `bctr' & `tcell' == 0, by(`iorig')
+    local fail 0
+    tempname bcmin bcsamp
+    scalar `bcmin' = .
+    qui count if `bctr' & `bchas' == 0
+    if r(N) > 0 {
+      qui gstats sum `iorig' if `bctr' & `bchas' == 0, meanonly
+      scalar `bcmin' = r(min)
+    }
+    qui count if `bctr' & `bcref' == 1 & (`bcn' < 2 | `bcsd' == 0 | `bcsd' >= .)
+    if r(N) > 0 {
+      qui gstats sum `iorig' if `bctr' & `bcref' == 1 & (`bcn' < 2 | `bcsd' == 0 | `bcsd' >= .), meanonly
+      if r(min) < `bcmin' scalar `bcmin' = r(min)
+    }
+    if `bcmin' < . {
+      local fail 1
+      dis as error "Error: the continuous treatment variable `contreat' has no variation across the untreated/reference-period observations of treated cohort `=`bcmin'' (smallest offending cohort), so the cohort-specific baseline dose slope required by contreatcontrols(byCohort) cannot be estimated for that cohort, and its AME decomposition would be arbitrary."
+      dis as error "Examine this cohort's `contreat' values in its untreated/reference periods, and drop the cohort from the estimation sample before proceeding."
+    }
+    else {
+      qui gstats sum `contreat' if `esamp'
+      scalar `bcsamp' = r(sd)
+      qui count if `bctr' & `bcref' == 1 & `bcsd' > 0 & `bcsd' < 1e-3*`bcsamp' & `bcsd' < .
+      if r(N) > 0 {
+        tempvar bctag
+        qui gegen byte `bctag' = tag(`iorig') if `bctr' & `bcref' == 1 & `bcsd' > 0 & `bcsd' < 1e-3*`bcsamp' & `bcsd' < .
+        qui count if `bctag' == 1
+        local bck = r(N)
+        qui gstats sum `iorig' if `bctr' & `bcref' == 1 & `bcsd' > 0 & `bcsd' < 1e-3*`bcsamp' & `bcsd' < ., meanonly
+        dis as text "Caution: under contreatcontrols(byCohort), `bck' treated cohort(s) (smallest: `=r(min)') have untreated/reference-period variation in `contreat' below 1/1000 of its sample standard deviation. The cohort-specific baseline dose slopes are nearly unidentified there, so AME estimation is likely computationally fragile: consider increasing regtol() (a larger value tightens the estimation convergence tolerance), or examine and drop the affected cohort(s)."
+      }
+    }
+    return scalar fail = `fail'
     exit
   }
   if "`mode'" == "sescan" {

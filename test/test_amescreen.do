@@ -198,6 +198,39 @@ if _rc != 0 {
 }
 else assertfire A10 1
 
+* ---- GROUP B: the byCohort point-identification screen ----
+
+* B1: a treated cohort reduced to one unit (zero dose variation in its reference
+* pool) must be REFUSED with r459, naming the cohort
+mkdemo
+drop if i == 2 & unit > 1
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(byCohort) esf espre(2) espost(2)
+if _rc == 459 dis "B1 ok"
+else {
+  dis as error "B1 FAIL: rc=" _rc " (want 459)"
+  global pf = $pf + 1
+}
+
+* B2: thin variation (two units, dose spread ~1e-7) -> fragility caution, run completes
+mkdemo
+drop if i == 2 & unit > 2
+qui replace dose = 1 + 1e-7*(unit == 2) if i == 2
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(byCohort) esf espre(2) espost(2)
+if _rc == 0 dis "B2 ok"
+else {
+  dis as error "B2 FAIL: rc=" _rc " (want 0 with the fragility caution)"
+  global pf = $pf + 1
+}
+
+* B3: healthy byCohort + robust -> clean run, real ame inference, screen silent
+mkdemo
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(byCohort) esf espre(2) espost(2)
+if _rc != 0 {
+  dis as error "B3 FAIL rc=" _rc
+  global pf = $pf + 1
+}
+else assertfire B3 0
+
 if $pf == 0 dis "AMESCREEN_ALL_PASS"
 else dis as error "AMESCREEN_FAILS=$pf"
 exit, clear
