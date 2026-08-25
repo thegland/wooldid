@@ -152,5 +152,8 @@
   "qui gen y = 1.5*(t >= ttre & ttre < .) + 0.07*i + 0.3*sin(2.7*i + 1.3*t)",
   "qui drop if ttre >= . & t == 3",
   "ereturn clear"
+ ],
+ "icbad8": [
+  "qui replace icbad = icbad*100"
  ]
 }

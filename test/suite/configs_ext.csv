@@ -347,7 +347,7 @@ ext_contract10_fractional_time,extcase,binary_balanced.dta,,,ext_contract10_frac
 ext_contract10_inconsistent_ttre,extcase,binary_balanced.dta,,,ext_contract10_inconsistent_ttre,y cohort t ttre,att robust safety(on),0,459,,0
 ext_contract10_poly_zero,extcase,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatpoly(0) robust safety(off),0,198,,0
 ext_contract10_bad_safety,extcase,binary_balanced.dta,,,,y cohort t ttre,att robust safety(nonsense),0,198,,0
-ext_contract10_poisexp_without_poisson,extcase,binary_balanced.dta,,,,y cohort t ttre,att poisexpresults robust safety(off),0,,,0
+ext_contract10_poisexp_without_poisson,extcase,binary_balanced.dta,,,,y cohort t ttre,att poisexpresults robust safety(off),0,198,,0
 ext_contract10_graph_drop_all,extcase,binary_balanced.dta,,,ext_contract10_graph_drop_all,y cohort t ttre,att esprelength(1) espostlength(1) histogramcohorteffects makeplots robust safety(off),0,0,,0
 ext_cov10_error_emptycells_restore,extval,binary_balanced.dta,,,ext_cov10_error_emptycells_restore,y cohort t,att,198,198,too few variables specified,0
 ext_contract10_if_outside_negative,extcase,binary_balanced.dta,,cohort < 12,ext_contract10_if_outside_negative,y_count_oracle cohort t ttre,att poisson robust,411,322,outcome variable contains negative values,1

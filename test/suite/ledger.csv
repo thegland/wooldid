@@ -66,6 +66,14 @@ G10B-esf-s,trig_esfsup_ref,scalar,*,,G10B 7ba1e16 esf support-first reorder: old
 G10B-esf-m,trig_esfsup_ref,mat,*,,G10B 7ba1e16: same
 G10B-esf-e,trig_esfsup_ref,esamp,*,,G10B 7ba1e16: new drops the unsupported-reference cohort from e(sample)
 G10B-esf-n,trig_esfsup_ref,matnames,*,,G10B 7ba1e16: dropping the refless cohort removes the ES pre2 cell (its rel -2 row sat only in unsupported t=3) from b/V/wdidmainresults
+NFADV-core-p,cov_advpool,scalar,adversarial_pval_*,,SI-14 NFADV-05 4fcf127 author-approved: pooled-reference adversarial p unposted (no single omitted reference period exists); old posted a plug-in p (removal)
+NFADV-core-l,cov_advpool,mat,adversarial_line_*,,SI-14 NFADV-05: intercept re-expressed at relative time 0
+NFADV-core-ln,cov_advpool,matnames,adversarial_line_*,,SI-14 NFADV-05: line columns renamed t _cons -> slope intercept_rt0
+B21b-ic8-s,cov_icbad2,scalar,*,,SI-15 B21 3cb0c41 gen-double: interactivecontrols levels ~1e8 are not float-representable - old-side garbage class. ACCEPTED BLIND SPOT: total-divergence config
+B21b-ic8-m,cov_icbad2,mat,*,,SI-15 B21: same
+B21b-ic8-e,cov_icbad2,esamp,*,,SI-15 B21: same
+B21b-ic8-n,cov_icbad2,matnames,*,,SI-15 B21: same
+B21b-ic8-p,cov_icbad2,macro,*,,SI-15 B21: old garbage path may not post e(V) (properties)
 AMESE-R1-w,cont_*,mat,wdidmainresults,,AMESE 7054878/ea69544 (standing-issues family A, author-ruled R1): cohort-clustered contreat plug-in ame SEs are structurally invalid (cell containment); new scrubs ame se/t/p/ci cells to missing - ame-row cells old-value -> missing (or, on refit configs, old-missing -> recovered att cells)
 AMESE-R1-w2,plot_cont,mat,wdidmainresults,,AMESE 7054878/ea69544 R1+R4: this config is an R4-refit revival - fired diffs are old-missing -> recovered att inference cells (plus the ame scrub where old carried values)
 AMESE-R1-w3,trig_cfx,mat,wdidmainresults,,AMESE 7054878/ea69544 R1+R4: R4-refit revival - old-missing -> recovered att inference cells (60/60 non-drift cells recovery this run)
