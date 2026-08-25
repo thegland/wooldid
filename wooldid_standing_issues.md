@@ -210,6 +210,13 @@ STILL OPEN in family A after this implementation:
     0 unexplained / 0 stale; cert 24/24 incl. test_jointclus; battery
     IDENTICAL after the cmdline-only re-bless; trig_jtclus judged
     rc-by-design 0→198; the two TM2 rows also fired on this run).
+  - **CLOSED 2026-08-25 by author ruling (pointwise att side).** No caution for
+    the standard binary run: the AME case is covered by the containment screen,
+    the joint-test case by the SI-A1 screen, and the author's judgment is that
+    the residual pointwise exposure collapses into cases where clustered SEs
+    are known-problematic anyway (e.g. small cluster counts). The targeted
+    binary pointwise MC was offered and declined. SI-A1 is now closed except
+    for adversarial, which the author is taking up separately.
 - SI-A2 (= R7): byCohort ame POINT estimands are solver-normalization-dependent
   (audited reghdfe .723 vs regress .554; V1 demonstrated O(1) shifts under the R4
   refit — the caution now discloses it). PARTIALLY GUARDED 2026-08-25 by the Group B
