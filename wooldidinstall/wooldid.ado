@@ -1158,7 +1158,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * poisson, and behind a maxvar feasibility count.
   if "`fastnose'" == "" {
     wooldid_amescreen , mode(vzero)
-    if r(vzero) == 1 & `amescrub' == 1 & "`poisson'" != "poisson" & wordcount("`cluster'") == 1 & "`customvce'" == "" {
+    if r(vzero) == 1 & `amescrub' == 1 & "`poisson'" != "poisson" & wordcount("`cluster'") == 1 & "`customvce'" == "" & "`fe'" == "" & "`ccc_absorbinserter'" == "" {
       * cap: on huge-cardinality i the levels list can overflow the macro length
       * (rc 920) - treat as refit-infeasible rather than aborting the run
       local amevzi 99999
@@ -5847,7 +5847,7 @@ version 16.0
       }
     }
     if `fire' {
-      dis as text "Caution: with standard errors clustered on `clusvars', every observation of `ncells' treated cohort-by-period cell(s) lies within a single cluster, so the cluster-robust variance is blind to within-cell variation in `contreat'. The continuous-treatment (ame) standard errors this would produce do not measure the sampling variability of the ame estimates (they collapse toward the variance of the absorbed baseline dose control), so wooldid has set the ame standard errors, tests, and joint diagnostics to missing and is not returning e(V_es_ame*); ame point estimates are unaffected and e(b_es_ame*) is still returned. To obtain ame inference: impvalues provides cluster-level inference from the cross-cluster dispersion of per-cluster estimates; vce(robust) is valid when errors are independent across observations (not under within-unit serial dependence); or cluster() on a variable strictly finer than the cohort-by-period cells."
+      dis as text "Caution: with standard errors clustered on `clusvars', every observation of `ncells' treated cohort-by-period cell(s) lies within a single cluster, so the cluster-robust variance is blind to within-cell variation in `contreat'. The continuous-treatment (ame) standard errors this would produce do not measure the sampling variability of the ame estimates (they collapse toward the variance of the absorbed baseline dose control), so wooldid has set the ame standard errors, tests, and joint diagnostics to missing and is not returning e(V_es_ame*); att point estimates and inference are unaffected; ame point estimates are reported as computed (note that under cohort-specific dose controls the ame decomposition is solver-normalization-dependent) and e(b_es_ame*) is still returned. To obtain ame inference: impvalues provides cluster-level inference from the cross-cluster dispersion of per-cluster estimates; vce(robust) is valid when errors are independent across observations (not under within-unit serial dependence); or cluster() on a variable strictly finer than the cohort-by-period cells."
     }
     return scalar fire = `fire'
     return scalar ncells = `ncells'
@@ -5893,7 +5893,7 @@ version 16.0
       mata: st_local("vzero", strofreal(max(abs(st_matrix(st_local("vchk")))) == 0))
     }
     if `vzero' {
-      dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix: Stata's variance screen zeroes a nonsymmetric or highly singular VCE wholesale, which destroys the valid entries along with the degenerate ones (the quiet estimation call swallows Stata's own warning). Standard errors from this model are unavailable`sgnote'. Re-running with vce(robust), or with cluster() on a variable strictly finer than the cohort-by-period cells, avoids the degeneracy that triggers the screen."
+      dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix: Stata's variance screen zeroes a nonsymmetric or highly singular VCE wholesale, which destroys the valid entries along with the degenerate ones (the quiet estimation call swallows Stata's own warning). Standard errors from this model are unavailable`sgnote'. Re-running with vce(robust), with a different cluster() choice, or with a simpler specification may avoid the degeneracy that triggers the screen."
     }
     return scalar vzero = `vzero'
     exit
