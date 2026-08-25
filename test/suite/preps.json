@@ -155,5 +155,20 @@
  ],
  "icbad8": [
   "qui replace icbad = icbad*100"
+ ],
+ "tm2_sgjoint": [
+  "qui set obs 15",
+  "qui gen i = _n",
+  "qui gen ttre = cond(_n <= 4, 8, cond(_n <= 8, 10, cond(_n <= 12, 12, .)))",
+  "qui expand 6",
+  "qui bysort i: gen unit = _n",
+  "qui gen sg = mod(i, 3) + 1",
+  "qui gen dose = exp(0.11*mod(i*7 + unit*3, 10) + 0.05*mod(unit, 4))",
+  "qui expand 12",
+  "qui bysort i unit: gen t = _n",
+  "qui gen rel = t - ttre",
+  "qui gen y = 0.05*i + 0.04*t + 0.35*dose*(rel >= 0 & rel < .) + 0.06*(sg == 2)*dose*cond(rel < 0 & rel < ., rel + 8, 0) + 0.10*(sg == 3)*dose*cond(rel < 0 & rel < ., rel + 8, 0) + 0.3*sin(2.7*i + 1.3*t + 0.9*unit)",
+  "sort i unit t",
+  "ereturn clear"
  ]
 }

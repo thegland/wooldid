@@ -312,8 +312,29 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
     `review_process/demo_tm2_sgjoint.do` — planted sg-differentiated dose
     pre-trends; att sg joint p's real (sg3 = 5.7e-05), every ame twin "."
     (Exhibit A); the 1x1-continuous vs 1x2-binary r(p) geometry reproduced on
-    plain `reg` + `margins` (Exhibit B). The mandated fix protocol is unchanged
-    and still pending.
+    plain `reg` + `margins` (Exhibit B).
+  - **FIXED 2026-08-25 (author-ordered).** Protocol honored in full: (1) the
+    mandated evidence was banked pre-fix at `review_process/tm2_evidence/`
+    (3+ datasets, instrumented + stock, pre-R3 vintage — R3 makes the sites
+    unreachable on the cluster(i) pinning config); (2) [1,2] → [1,1] at the two
+    sg-continuous sites (`joint_Choriz_s#` / `joint_Choriz_i_s#`), matching the
+    pooled-continuous reads that were already [1,1]; the binary twins'
+    1×2-geometry [1,2] reads untouched; (3) the old-vs-new diff is now
+    explicitly pinned per the author's instruction: new suite config
+    `trig_tm2_sgjoint` (deterministic planted sg pre-trends) + ledger rows
+    TM2-sg-p / TM2-ext-p, with the EXPECTED direction recorded — old posts
+    p=., new posts a real p; a new-side regression to p=. leaves no diff, the
+    scoped row goes STALE, and the run FAILS (the mechanical deviation flag).
+    Probe evidence on the exact pinned config: old ame twins all "."; new ame
+    p's real and recovering the planted structure (sg1 .81 no-trend, sg2
+    1.4e-13, sg3 1.4e-36) with att twins bit-identical across builds (%21x).
+    Re-bless is MOOT: `test/baseline/cont_sg.csv` contains zero joint_Choriz
+    entries post-Group-A (the containment gate skips the block under
+    cluster(i)), and the battery's three contreat+subgroups configs all use
+    cluster(i) — battery stays bit-identical. Suite NOT rerun per author
+    instruction; next full run expects the two TM2 rows to fire (on
+    trig_tm2_sgjoint and the ext_c2_* grid, whose 24 configs captured the
+    "." on both builds pre-fix).
 - **SI-11 — `allsgssame`-ame joint tests missing-valued on both builds.** The
   continuous SG-equality tests ("all SGs have the same ame"/"...pre-treatment ame")
   are missing in both probe cases AND pinned missing in the blessed cont_sg

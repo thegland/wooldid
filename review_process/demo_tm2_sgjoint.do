@@ -13,6 +13,13 @@
 *
 * Run from the repo root:   "<stata>" -e do review_process/demo_tm2_sgjoint.do
 * (or pass the wooldid.ado path as argument 1). Deterministic; ~30 seconds.
+*
+* STATUS NOTE (2026-08-25): the author-ordered fix has landed — the two
+* sg-continuous sites now read r(p)[1,1], so running this demo against the
+* current build shows REAL ame p-values in Exhibit A. To reproduce the defect,
+* pass a pre-fix build as argument 1 (e.g. stage main's wooldid.ado to a file).
+* The oldnew suite pins the old-vs-new contrast via trig_tm2_sgjoint (ledger
+* rows TM2-sg-p / TM2-ext-p): expected old p=., new real p.
 
 clear all
 set more off
