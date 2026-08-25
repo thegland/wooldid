@@ -357,7 +357,7 @@ implementation. A pre-existing variable named {it:_ppmlhdfe_d} is overwritten by
 that name as reserved in your data. {p_end}
 
 {phang}{opt poisexp:results}: When implementing poisson, present treatment effects in terms of differences in exponentiated linear predictions (the poisson "number of events" or {it:predict(n)}
-option). Results of this sort will thus not have a log-type interpretation. {p_end}
+option). Results of this sort will thus not have a log-type interpretation. Specifying {it:poisexpresults} without {it:poisson} is an error, since the option has no effect outside of poisson estimation. {p_end}
 
 
 {marker eventstudy}{...}
@@ -732,7 +732,10 @@ with the option {it:verbose}. {p_end}
 Only {it:on} and {it:off} are accepted values; anything else is rejected with an error (formerly, unrecognized values were silently treated as {it:on}).
 Most important among these checks are tests for whether or not a variable intended to capture the treatment effect in a given i-t cell was dropped from the underlying regression for
 multicolinearity, as may occur if one's fixed effects or continuous treatment control variables partial out one of the main effects. Identification failures of this sort will generally be detected,
-though not necessarily when the problem concerns continuous treatments being analyzed with a lattice or with polynomial terms.   {p_end}
+though not necessarily when the problem concerns continuous treatments being analyzed with a lattice or with polynomial terms. Default safety also screens for very granular {it:i} variables:
+when {it:i} takes more than 100 distinct values, {it:wooldid} cautions that the cohort-by-period interaction terms built from {it:i} can be slow to estimate and can exceed Stata's variable
+limits (consider unit-level fixed effects via {it:fe()} plus a coarser {it:i}, such as treatment onset groups), and if the count of variables the specification requires exceeds the current
+{help maxvar} setting, {it:wooldid} halts with an informative error before estimation rather than failing mid-run with r(907).   {p_end}
 
 {phang}{opt oldsyntax}: In older versions, {it:wooldid} used the suffix {it:contemp} to flag the event study coefficient containing the period contemporaneous with treatment. 
 This turned out to make {it:wooldid} relatively incompatible with the popular event study plot production program {help event_plot}, so the {it:contemp} suffix has been 

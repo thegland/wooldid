@@ -1067,6 +1067,37 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   if "`verbose'" == "verbose" dis as text "Wooldid is now estimating its regression."
 
   * handle SEs
+  * SI-8 (author-ruled 2026-08-25): granular-i guidance + maxvar preflight, both
+  * skipped under safety(off). Counting is tag-based (no level lists in macros - the
+  * huge-cardinality lesson). The preflight uses the EXACT treated interaction-cell
+  * count (distinct (_i,_t) pairs, x2 under contreat for the dose slopes), a lower
+  * bound on the regression's variable demand, so an early refusal can only fire
+  * when the late r(907) was certain anyway.
+  if "`safety'" != "off" {
+    tempvar si8tag
+    qui gegen byte `si8tag' = tag(`i') if `ifstatement'
+    qui count if `si8tag' == 1
+    local si8ilev = r(N)
+    cap drop `si8tag'
+    qui gegen byte `si8tag' = tag(`_i' `_t') if `ifstatement' & `_i' != 0
+    qui count if `si8tag' == 1
+    local si8cells = r(N)
+    cap drop `si8tag'
+    qui gegen byte `si8tag' = tag(`t') if `ifstatement'
+    qui count if `si8tag' == 1
+    local si8tlev = r(N)
+    cap drop `si8tag'
+    local si8demand = `si8cells'*(1 + ("`contreat'" != "")) + `si8ilev' + `si8tlev' + 200
+    if `si8ilev' > 100 {
+      dis as text "Caution: the cohort variable `i' takes `si8ilev' distinct values. wooldid builds cohort-by-period interaction terms from it, so very granular `i' variables can be slow and can exceed Stata's variable limits. You may wish to specify unit-level fixed effects via fe() and swap `i' to a coarser level of aggregation, such as cohorts or treatment onset groups. (safety(off) suppresses this check.)"
+    }
+    if `si8demand' > c(maxvar) {
+      dis as error "Error: this specification requires at least `si8demand' variables (about `si8cells' treated cohort-by-period interaction terms) but maxvar is currently " c(maxvar) ", so estimation would fail with r(907)."
+      dis as error "Consider specifying unit-level fixed effects via fe() and swapping `i' to a coarser level of aggregation, such as cohorts or treatment onset groups. (safety(off) suppresses this check.)"
+      error 907
+    }
+  }
+
   * GROUP B: byCohort point-identification screen (see wooldid_amescreen mode bycoh).
   * Pre-estimation, always-on when byCohort+contreat are active (the pre-treatment-
   * period sufficiency errors' sibling, one layer down: rows can exist while the
@@ -4439,6 +4470,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * working copy to off above, which would mask an invalid user token here
   if "`safetyinput'" != "" & !inlist("`safetyinput'", "on", "off") {
     dis as error "Error: safety() must be on or off."
+    error 198
+  }
+  * SI-9 (author-ruled 2026-08-25): formerly accepted silently with zero effect
+  if "`poisexpresults'" != "" & "`poisson'" == "" {
+    dis as error "Error: poisexpresults requires poisson to have any effect; specify poisson, or drop poisexpresults."
     error 198
   }
   * under esfixedbaseperiod the worker formerly clamped esrelativeto() values above -1
