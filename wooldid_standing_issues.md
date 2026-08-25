@@ -184,6 +184,32 @@ STILL OPEN in family A after this implementation:
   (G1a: 0.66-0.75) and the att joint tests' oversizing — deliberately NOT touched
   (standard-usage surface; needs its own ruling). V1's DQ6 (pwsgs att rows with
   se ~8.7e-09 / p ~1e-188 uncautioned) corroborates.
+  - **JOINT-TEST SIDE ADDRESSED 2026-08-25 (author-ruled three-part fix).**
+    (1)+(2) sthlp: the jointtests entry now documents both regimes — continuous
+    case correctly sized only with many observations per i-t cell (with the
+    lattice()/contreatpoly rider), and incompatibility with analytic clustered
+    SEs at the cohort-i level or above (steer: bootstrap clustering or
+    randomization inference); the safety() paragraph lists the new check.
+    (3) code: a pre-estimation screen in the worker — jointtests + any cluster
+    variable (or cluster-type customvce) in which `i` is nested → error 198
+    under default safety with the mechanism + permute()/bootstrap steer +
+    override mention; under safety(off) the same text prints as a caution and
+    estimation proceeds with the p-values computed. Gated on `safetyinput`
+    (contreatwithin's internal safety overwrite does not demote the error);
+    nestedness is a per-cluster-variable gegen tag-count on the original `i`;
+    fires on ANY member of a multi-way cluster(); validate-stage contract
+    errors (fastnose, impvalues×jointtests) still fire first by construction.
+    Cert: test/test_jointclus.do (8 scenarios incl. two-way and customvce).
+    Suite: trig_jtclus pins the refusal 0→198; eight cluster(i)+jointtests
+    configs (basic, sg_attit, sg_attitime, cont_sg, sg_missif, sg_degpre,
+    cov_kitchen, adm_base) and six battery configs moved to safety(off) so
+    their estimation surfaces and scoped ledger rows stay alive under the
+    caution path. STILL OPEN in SI-A1: the pointwise att SE understatement
+    (0.66–0.75) and the adversarial test (author: set aside for now).
+    VALIDATED 2026-08-25: full suite ALL COMPONENTS PASS first run (454/454;
+    0 unexplained / 0 stale; cert 24/24 incl. test_jointclus; battery
+    IDENTICAL after the cmdline-only re-bless; trig_jtclus judged
+    rc-by-design 0→198; the two TM2 rows also fired on this run).
 - SI-A2 (= R7): byCohort ame POINT estimands are solver-normalization-dependent
   (audited reghdfe .723 vs regress .554; V1 demonstrated O(1) shifts under the R4
   refit — the caution now discloses it). PARTIALLY GUARDED 2026-08-25 by the Group B
