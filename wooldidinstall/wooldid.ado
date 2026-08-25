@@ -1110,6 +1110,50 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     cap drop `amebtouse'
   }
 
+  * SI-A1 joint-test screen (author-ruled 2026-08-25): with analytic clustered SEs
+  * clustered at the level of the cohort variable i or above, the saturated
+  * cohort-by-period cell dummies force each cell's residuals to sum to zero within
+  * its own cluster, so the CRVE cannot capture the within-cluster cross-horizon
+  * variation the joint tests depend on (measured rejection rates 11-66% at nominal
+  * 5%, persisting at large cohort counts and large cells). Runs under BOTH safety
+  * modes and branches: error under default safety, caution + proceed under
+  * safety(off) - so it gates on safetyinput, not safety (contreatwithin overwrites
+  * the latter internally). customvce cluster-type counts as clustered (the Group A
+  * containment screen's convention); adversarial is deliberately not gated here.
+  if "`jointtests'" != "" {
+    local jtclusvars
+    if "`cluster'" != "" local jtclusvars `cluster'
+    local jtcvw = word(`"`customvce'"', 1)
+    if "`jtclusvars'" == "" & strlen("`jtcvw'") >= 2 & strpos("cluster", "`jtcvw'") == 1 {
+      local jtclusvars : subinstr local customvce "`jtcvw'" "", word
+    }
+    local jtcoarse
+    foreach jtcv of local jtclusvars {
+      cap confirm variable `jtcv'
+      if _rc != 0 continue
+      tempvar jtt
+      qui gegen byte `jtt' = tag(`i') if `ifstatement'
+      qui count if `jtt' == 1
+      local jtni = r(N)
+      cap drop `jtt'
+      qui gegen byte `jtt' = tag(`i' `jtcv') if `ifstatement'
+      qui count if `jtt' == 1
+      local jtnic = r(N)
+      cap drop `jtt'
+      if `jtni' > 0 & `jtnic' == `jtni' & "`jtcoarse'" == "" local jtcoarse `jtcv'
+    }
+    if "`jtcoarse'" != "" {
+      if "`safetyinput'" != "off" {
+        dis as error "Error: jointtests is not compatible with wooldid's analytic clustered SEs when clustering at the level of the cohort variable i or above (`i' is nested within the clustering variable `jtcoarse'). The joint test p-values are severely oversized in this configuration: the cluster-robust covariance cannot capture the within-cluster cross-horizon variation that the joint tests depend on."
+        dis as error "Consider wooldid's built-in randomization inference (the permute() option) or bootstrap-based clustered SEs for joint-type inference here, or cluster at a finer level. Alternatively, specify safety(off) to proceed anyway; this error then becomes a caution and the joint test p-values are reported as-is (they remain unreliable)."
+        error 198
+      }
+      else {
+        dis as text "Caution: jointtests was combined with analytic clustered SEs clustered at the level of the cohort variable i or above (`i' is nested within the clustering variable `jtcoarse'), and safety(off) was specified, so estimation is proceeding - but the joint test p-values are severely oversized in this configuration: the cluster-robust covariance cannot capture the within-cluster cross-horizon variation that the joint tests depend on. Consider wooldid's built-in randomization inference (the permute() option) or bootstrap-based clustered SEs for joint-type inference here, or cluster at a finer level."
+      }
+    }
+  }
+
   local vcespecifier
   if "`robust'" == "robust" local vcespecifier vce(robust)
   if "`cluster'" != "" local vcespecifier cluster(`cluster')

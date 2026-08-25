@@ -375,7 +375,15 @@ prior to treatment. Values above -1 (the onset period or later) are rejected wit
 0 is raised to 1 (a caution prints): subgroup estimation requires at least one post-treatment horizon. {p_end}
 
 {phang}{opt joint:tests}: Calculate joint statistical significance tests of all requested pre-treatment relative time period-specific effects. Caution: simulations suggest these
-tests tend to be particularly sensitive to whether you have a sufficient number of clusters in your sample for standard error estimation. {p_end}
+tests tend to be particularly sensitive to whether you have a sufficient number of clusters in your sample for standard error estimation. Two further reliability conditions apply.
+First, {it:jointtests} is not compatible with wooldid's analytic clustered SEs when clustering is at the level of the cohort variable {it:i} or above: the joint test p-values are
+severely oversized in that configuration (the cluster-robust covariance cannot capture the within-cluster cross-horizon variation the tests depend on, a problem that does not
+diminish with more cohorts or larger cells), so {it:wooldid} refuses the combination with an error under default safety ({it:safety(off)} downgrades the error to a caution and
+proceeds, reporting the unreliable p-values as-is); if joint-type inference is needed in such settings, use bootstrap-based clustered standard errors or randomization inference
+(see {it:permute()}). Second, in the continuous treatment case the joint tests are only correctly sized when the i-by-t cells each contain many observations: the tests aggregate
+within-cell dose-slope variances that carry a downward small-sample bias which compounds across horizons, so designs with only a handful of observations per cohort-period cell
+yield oversized joint tests even under robust or finely clustered SEs (note that {it:lattice()} refines cells smaller and {it:contreatpoly} adds within-cell parameters, both of
+which sharpen this concern). {p_end}
 
 {phang}{opt adv:ersarial}: Tests the composite null hypothesis that all estimated relative time period-specific effects fall on a single line - some line, with slope and intercept
 unknown - a null that is adversarial toward finding pre-trend violations in that the line is chosen to fit the estimates as well as possible. The p-value comes from a calibrated
@@ -736,7 +744,9 @@ multicolinearity, as may occur if one's fixed effects or continuous treatment co
 though not necessarily when the problem concerns continuous treatments being analyzed with a lattice or with polynomial terms. Default safety also screens for very granular {it:i} variables:
 when {it:i} takes more than 100 distinct values, {it:wooldid} cautions that the cohort-by-period interaction terms built from {it:i} can be slow to estimate and can exceed Stata's variable
 limits (consider unit-level fixed effects via {it:fe()} plus a coarser {it:i}, such as treatment onset groups), and if the count of variables the specification requires exceeds the current
-{help maxvar} setting, {it:wooldid} halts with an informative error before estimation rather than failing mid-run with r(907).   {p_end}
+{help maxvar} setting, {it:wooldid} halts with an informative error before estimation rather than failing mid-run with r(907). Default safety additionally refuses {it:jointtests} combined
+with analytic clustered SEs clustered at the level of the cohort variable {it:i} or above, where the joint test p-values are severely oversized (see {it:jointtests}); {it:safety(off)}
+downgrades that error to a caution and proceeds.   {p_end}
 
 {phang}{opt oldsyntax}: In older versions, {it:wooldid} used the suffix {it:contemp} to flag the event study coefficient containing the period contemporaneous with treatment. 
 This turned out to make {it:wooldid} relatively incompatible with the popular event study plot production program {help event_plot}, so the {it:contemp} suffix has been 

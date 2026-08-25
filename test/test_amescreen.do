@@ -75,7 +75,7 @@ end
 
 * A1: demo design + cluster(i) — fires, tests suppressed, points intact
 mkdemo
-cap noi wooldid y i t ttre, att contreat(dose) contreatcontrols(basic) cluster(i) esf espre(2) espost(2) adversarial jointtests
+cap noi wooldid y i t ttre, att contreat(dose) contreatcontrols(basic) cluster(i) esf espre(2) espost(2) adversarial jointtests safety(off)
 if _rc != 0 {
   dis as error "A1 FAIL rc=" _rc
   global pf = $pf + 1
@@ -172,7 +172,7 @@ else {
 
 * A9: binary-only cluster(i) — untouched (no contreat, no predicate)
 mkdemo
-cap noi wooldid y i t ttre, att cluster(i) esf espre(2) espost(2) jointtests
+cap noi wooldid y i t ttre, att cluster(i) esf espre(2) espost(2) jointtests safety(off)
 if _rc != 0 {
   dis as error "A9 FAIL rc=" _rc
   global pf = $pf + 1
@@ -191,7 +191,7 @@ else {
 * A10: subgroups — fires cleanly (rc 0), sg ame surfaces scrubbed, att rows intact
 mkdemo
 gen sg = mod(i,2)+1
-cap noi wooldid y i t ttre, att contreat(dose) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests
+cap noi wooldid y i t ttre, att contreat(dose) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests safety(off)
 if _rc != 0 {
   dis as error "A10 FAIL rc=" _rc
   global pf = $pf + 1
