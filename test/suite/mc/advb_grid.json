@@ -768,6 +768,206 @@
      "band_high_pct": 10.0
     }
    }
+  },
+  {
+   "config": "AB17",
+   "M": 504,
+   "label": "altmethod at the small-cell boundary (twin of AB3=9.10%): does q=4 blunt the leverage amplification?",
+   "spec": "G=30 U=2 T=12 cluster(unitid) err=iid binary scs=1 altmethod_adversarial",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8500001,
+   "G": 30,
+   "U": 2,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "altmethod_adversarial",
+   "certification_arm": false,
+   "paired_twin": "AB3",
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 7.5,
+     "band_low_pct": 4.5,
+     "band_high_pct": 13.0
+    }
+   }
+  },
+  {
+   "config": "AB18",
+   "M": 504,
+   "label": "altmethod under containment (twin of AB12=56.35%): A3a/A3b showed ~40% relative improvement at singleton cells but still failing",
+   "spec": "G=30 U=6 T=12 cluster(i) err=iid binary scs=1 altmethod_adversarial safety(off)",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8200001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(i)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "altmethod_adversarial safety(off)",
+   "certification_arm": false,
+   "paired_twin": "AB12",
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 35.0,
+     "band_low_pct": 20.0,
+     "band_high_pct": 55.0
+    }
+   }
+  },
+  {
+   "config": "AB19",
+   "M": 504,
+   "label": "altmethod under a violated VCE (twin of AB7b=44.84%): the shock is absorbed into cell estimates, so no VCE should see it",
+   "spec": "G=30 U=6 T=12 cluster(unitid) err=cohortshock binary scs=0.5 altmethod_adversarial",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8400001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "cohortshock",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 0.5,
+   "pwr": 0,
+   "extra": "altmethod_adversarial",
+   "certification_arm": false,
+   "paired_twin": "AB7b",
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 40.0,
+     "band_low_pct": 25.0,
+     "band_high_pct": 60.0
+    }
+   }
+  },
+  {
+   "config": "AB20",
+   "M": 504,
+   "label": "altmethod with few clusters (twin of AB5=17.46%): fewer tested dimensions should help when df is scarce",
+   "spec": "G=5 U=4 T=12 cluster(unitid) err=iid binary scs=1 altmethod_adversarial",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8700001,
+   "G": 5,
+   "U": 4,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "altmethod_adversarial",
+   "certification_arm": false,
+   "paired_twin": "AB5",
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 12.0,
+     "band_low_pct": 5.0,
+     "band_high_pct": 25.0
+    }
+   }
+  },
+  {
+   "config": "AB21",
+   "M": 504,
+   "label": "altmethod under robust+AR(1) (twin of AB8=0.00%): is it equally inert?",
+   "spec": "G=30 U=6 T=12 robust err=ar1 binary scs=1 altmethod_adversarial",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8300001,
+   "G": 30,
+   "U": 6,
+   "T": 12,
+   "vce": "robust",
+   "err": "ar1",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "altmethod_adversarial",
+   "certification_arm": false,
+   "paired_twin": "AB8",
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 0.5,
+     "band_low_pct": 0.0,
+     "band_high_pct": 4.0
+    }
+   }
   }
  ],
  "decision_rule": {
@@ -782,5 +982,12 @@
    "AB16:adversarial"
   ],
   "text": "Apply in order, first trigger decides. V0 integrity FAIL on any certification arm -> NO RULING. V1 rate(AB12) < 25 -> NO RULING (driver not reproducing the known containment failure). A1 NOT CERTIFIED(AB4) -> ABANDON. A2 AB14b power < 90% -> ABANDON. A3 rate(AB1) > 8.0 -> ABANDON. A4 rate(AB6) > 8.0 -> ABANDON. A5 rate(AB15) > 8.0 -> ABANDON. Otherwise KEEP, GATED at m* = min clusters-per-cell over certified cluster-VCE arms, n* = min cluster count, cell* = min cell size over certified robust arms. AME sub-ruling: keep ame adversarial iff AB9 ame rej@.05 in [15,35] and chi2 <= 21.666, else WITHDRAW to RI/bootstrap/IM. ALT sub-ruling: keep altmethod iff CERTIFIED(AB11)."
+ },
+ "amendment_1": {
+  "date": "2026-08-26",
+  "requested_by": "author",
+  "disclosure": "Added AFTER partial results from the original 19 configs were seen (AB1-AB12 complete). This is an amendment, not part of the original preregistration, and is disclosed as such. Predictions for AB17-AB21 were nonetheless LOCKED before these five configs ran. All five are report-only diagnostics; they cannot enter the certified set and cannot change the original decision rule's triggers.",
+  "purpose": "The original grid measured altmethod_adversarial only where standard adversarial PASSES (AB11), so it could not answer whether one method is salvageable when the other is not. These five are CRN-paired altmethod twins of every regime where standard adversarial FAILED: small cells (AB3), containment (AB12), violated VCE (AB7b), few clusters (AB5), and robust+AR(1) inertness (AB8).",
+  "rule": "ALT-INDEPENDENT: altmethod_adversarial is worth keeping independently of adversarial iff it CERTIFIES (PASS band + chi2 <= 21.666) in at least one regime where its paired standard twin FAILED. If it merely reduces the failure magnitude without certifying anywhere new, the two stand or fall together and altmethod is at most a documented mild improvement. Conversely if CERTIFIED(AB11) and NOT CERTIFIED(AB1), altmethod is promoted to the documented default."
  }
 }

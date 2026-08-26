@@ -318,3 +318,42 @@ Never demoted, never dropped: **AB1, AB3, AB13** (the *m*-ladder and cell-size c
 | **R-14** | **KEEP is ruled, but the escape from containment is illusory** — the fix for *m*=1 is to cluster finer than the cell, and clustering finer than the cell is invalid precisely when there is cell-level dependence. | DOC1 makes AB7a/AB7b decide the *strength* of the shipped warning, and a failure at σ=0.2 (3.8% of error variance) downgrades the ruling to KEEP-GATED-WITH-PROMINENT-WARNING. If the honest release note has to say "valid only when you may assume no cohort-by-period shocks", the author should see that stated before the results arrive, not after. |
 
 **One framing note that belongs in the record before results exist:** honestdid-style functionality is not an escape hatch from this problem. It consumes the same `e(V_es_*)`. If `V_es` is directionally understated — the containment family, or any design with cohort-by-period shocks — honestdid's sensitivity bounds are wrong in the same directions by the same factors. Whatever design condition this campaign establishes must be imposed on the honestdid handoff too, which is why the ship form in §4 gates both.
+
+---
+
+## AMENDMENT 1 (2026-08-26, author-requested) — altmethod twins at the failure boundaries
+
+**Disclosure, stated plainly:** this amendment was made AFTER partial results from the original
+19 configs were seen (AB1–AB12 complete). It is therefore *not* part of the original
+preregistration. Its five configs are report-only diagnostics: they cannot enter the certified
+set and cannot change any trigger in §4. Predictions for them were nonetheless locked before
+they ran, and they are CRN-paired to their standard twins (same base seeds → identical datasets
+→ paired comparisons, so the altmethod-vs-standard difference is measured with the paired MC
+standard error, not the unpaired one).
+
+**Why it is needed.** The original grid measured `altmethod_adversarial` in exactly one regime
+(AB11), which is a regime where standard `adversarial` also passes. That design can establish
+"altmethod is not worse where things already work" but cannot answer the author's question —
+whether one of the two methods is worth saving even if the other is not. Answering it requires
+altmethod measured where standard adversarial FAILED.
+
+| config | twin (standard result) | regime | locked prediction |
+|---|---|---|---|
+| AB17 | AB3 (9.10%) | 2-unit cells, unit clustering | 7.5% [4.5, 13.0] |
+| AB18 | AB12 (56.35%) | containment: cluster(i), 6-unit cells | 35% [20, 55] |
+| AB19 | AB7b (44.84%) | violated VCE: cohort-period shock σ=0.5 | 40% [25, 60] |
+| AB20 | AB5 (17.46%) | few clusters: G=5, U=4 (20 clusters) | 12% [5, 25] |
+| AB21 | AB8 (0.00%) | robust + AR(1) | 0.5% [0.0, 4.0] |
+
+Prior evidence framing the predictions: A3a/A3b measured altmethod at 12.6%/11.2% where standard
+adversarial gave 20.5%/23.1% on singleton-cell cohort-clustered data — a large relative
+improvement that still failed the band by a wide margin. The locked predictions above assume that
+pattern generalizes (altmethod reduces the failure magnitude without curing it), which is exactly
+what these five configs can falsify.
+
+**ALT-INDEPENDENT RULE (locked before the amendment ran).** `altmethod_adversarial` is worth
+keeping independently of `adversarial` **iff it CERTIFIES (PASS band AND chi2 ≤ 21.666) in at
+least one regime where its paired standard twin FAILED.** If it only reduces the failure
+magnitude without certifying anywhere new, the two methods stand or fall together and altmethod
+is at most a documented mild improvement. The converse case (CERTIFIED(AB11) with NOT
+CERTIFIED(AB1)) promotes altmethod to the documented default, per §4's ALT sub-ruling.
