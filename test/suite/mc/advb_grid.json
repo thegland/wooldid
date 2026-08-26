@@ -968,6 +968,58 @@
      "band_high_pct": 4.0
     }
    }
+  },
+  {
+   "config": "AB22",
+   "M": 504,
+   "label": "AMENDMENT 2 (author-requested): ame ladder third point - 50 units per i-t cell, robust",
+   "spec": "G=30 U=50 T=12 robust err=iid contreat",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 8900001,
+   "G": 30,
+   "U": 50,
+   "T": 12,
+   "vce": "robust",
+   "err": "iid",
+   "mode": "contreat",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ],
+    [
+     "ame_adversarial",
+     "pame"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ],
+    [
+     "joint_Choriz",
+     "pjointC"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 5.0,
+     "band_low_pct": 3.0,
+     "band_high_pct": 7.5
+    },
+    "ame_adversarial": {
+     "point_pct": 6.5,
+     "band_low_pct": 4.5,
+     "band_high_pct": 10.0
+    }
+   }
   }
  ],
  "decision_rule": {
@@ -989,5 +1041,12 @@
   "disclosure": "Added AFTER partial results from the original 19 configs were seen (AB1-AB12 complete). This is an amendment, not part of the original preregistration, and is disclosed as such. Predictions for AB17-AB21 were nonetheless LOCKED before these five configs ran. All five are report-only diagnostics; they cannot enter the certified set and cannot change the original decision rule's triggers.",
   "purpose": "The original grid measured altmethod_adversarial only where standard adversarial PASSES (AB11), so it could not answer whether one method is salvageable when the other is not. These five are CRN-paired altmethod twins of every regime where standard adversarial FAILED: small cells (AB3), containment (AB12), violated VCE (AB7b), few clusters (AB5), and robust+AR(1) inertness (AB8).",
   "rule": "ALT-INDEPENDENT: altmethod_adversarial is worth keeping independently of adversarial iff it CERTIFIES (PASS band + chi2 <= 21.666) in at least one regime where its paired standard twin FAILED. If it merely reduces the failure magnitude without certifying anywhere new, the two stand or fall together and altmethod is at most a documented mild improvement. Conversely if CERTIFIED(AB11) and NOT CERTIFIED(AB1), altmethod is promoted to the documented default."
+ },
+ "amendment_2": {
+  "date": "2026-08-26",
+  "requested_by": "author",
+  "disclosure": "Added after the AB campaign reported. Report-only; cannot enter the certified set or move any trigger. Prediction LOCKED before the config ran.",
+  "purpose": "Third point on the ame cell-size ladder: 31.55% at U=6 (A4, robust), 9.92% at U=20 (AB9, robust), and now U=50. Tests whether the leverage mechanism (bias ~ within-cell parameters / cell size) continues to nominal or hits a floor from another channel.",
+  "locked_reasoning": "Excess over nominal fell 26.5pp -> 4.9pp for a 3.3x cell-size increase. A further 2.5x predicts excess ~1.5pp, i.e. ~6.5%. The M=504 PASS band is [2.98,6.94]%, so the prediction sits at the certification edge: this config can genuinely go either way, which is what makes it worth running."
  }
 }
