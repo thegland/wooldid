@@ -210,6 +210,25 @@ STILL OPEN in family A after this implementation:
     0 unexplained / 0 stale; cert 24/24 incl. test_jointclus; battery
     IDENTICAL after the cmdline-only re-bless; trig_jtclus judged
     rc-by-design 0→198; the two TM2 rows also fired on this run).
+  - **ADVERSARIAL SIDE MEASURED 2026-08-26 (AB campaign; report of record
+    `test/suite/mc/REPORT_ADVBOUND_2026-08-26.md`, prereg
+    `test/suite/PREREG_ADVBOUND_2026-08-25.md`).** 24 configs / 17,056 reps,
+    preregistered with locked theory predictions (25 of 26 inside band).
+    RULING: binary `adversarial` = KEEP, GATED — it is correctly sized at
+    4.80% (6-unit cells, unit clustering), 4.60% (robust), 5.00% (20-unit
+    cells) and 5.60% (AR(1) with matching clustering); power 98.8-100%. The
+    governing parameter is CLUSTERS PER CELL, not cluster count or cell size
+    (the campaign's decisive result: 2 clusters/cell = 14.50% FAIL even with
+    60 clusters and 6-unit cells). Fails: containment 56.35%, cohort-period
+    shocks 12.30% at only 3.8% of error variance, 20 clusters 17.46%,
+    staggering mildly (7.20%, chi2-flagged). Robust under AR(1) is INERT not
+    safe (0.00%, chi2 1072). `altmethod_adversarial` is uniformly better at
+    EVERY boundary and certifies once where standard fails (2-unit cells,
+    6.94% vs 9.10% paired) — but at the exact band edge (35/504), so that one
+    claim is provisional pending M>=2000. ame-side adversarial = WITHDRAW
+    (9.92% at best geometry); and the clustering advice INVERTS between sides
+    (fine clustering rescues att, harms ame: 48.41% vs robust 31.55%).
+    Ship recommendations in the report; no code written pending author ruling.
   - **CLOSED 2026-08-25 by author ruling (pointwise att side).** No caution for
     the standard binary run: the AME case is covered by the containment screen,
     the joint-test case by the SI-A1 screen, and the author's judgment is that
