@@ -6,7 +6,7 @@ fired; author-requested amendment 1 at `293b9dc`). Harness: `mc_advb.do`, `run_a
 `analyze_advb.py`, `advb_grid.json`, all committed at `e478711` before results existed.
 Machine-readable output: `out/advb_report.md` (out/ is gitignored; this file is the record).
 
-**24 configs, 17,056 reps, zero nonzero return codes, zero missing p-values, every config at
+**25 configs, 17,560 reps, zero nonzero return codes, zero missing p-values, every config at
 its exact preregistered rep count.** Locked consensus bands contained the measured rate in
 **25 of 26** scored quantities.
 
@@ -18,7 +18,7 @@ its exact preregistered rep count.** Locked consensus bands contained the measur
 |---|---|---|
 | **Binary `adversarial`** | **KEEP, GATED** | no abandon trigger fired; 5 configs certified |
 | **`altmethod_adversarial`** | **KEEP — and it strictly dominates** | better than standard at *every* boundary; certifies once where standard fails (at the band edge) |
-| **Continuous `adversarial` (ame)** | **WITHDRAW** | 9.92% at best geometry, uniformity flagged |
+| **Continuous `adversarial` (ame)** | formal: **WITHDRAW**; recommended: **GATE ON CELL SIZE** | 31.55% at 6 obs/cell → 9.92% at 20 → **5.95% PASS at 50** (AB22, amendment 2) |
 | Gate parameters | m\* = 6 clusters per cell, cell\* = 6 obs (robust), n\* ≥ 180 clusters (not localized) | minima over the certified set |
 
 Decision rule applied mechanically: V0 integrity clean → V1 negative control 56.35% ≥ 25 (campaign
@@ -106,17 +106,29 @@ measured, and correct — which independently validates the steer text shipped i
 
 | config | geometry | VCE | ame rate | att twin |
 |---|---|---|---|---|
-| AB9 | 30 × 20 | robust | **9.92%** (chi2 35.6\*) | 4.96% ✓ |
-| AB10 | 30 × 6 | cluster(unitid) | **48.41%** (chi2 1491.8\*) | 5.16% ✓ |
 | (A4, prior campaign) | 30 × 6 | robust | 31.55% | 5.75% ✓ |
+| AB9 | 30 × 20 | robust | **9.92%** (chi2 35.6\*) | 4.96% ✓ |
+| **AB22** | **30 × 50** | **robust** | **5.95% ✓ PASS** (chi2 8.2) | 5.16% ✓ |
+| AB10 | 30 × 6 | cluster(unitid) | **48.41%** (chi2 1491.8\*) | 5.16% ✓ |
 
 Two findings:
 
-1. **Large cells help a lot but not enough.** 31.55% at 6-unit cells → 9.92% at 20-unit cells
-   under robust. That is the leverage mechanism behaving exactly as predicted (bias scales as
-   within-cell parameters ÷ cell size), but it lands outside the keep band with uniformity
-   flagged, so the preregistered sub-ruling is WITHDRAW → route ame joint inference to
-   randomization inference, cluster bootstrap, or IM p-values.
+1. **Large cells do NOT merely help — they cure it.** The completed ladder under robust is
+   **31.55% (6 units) → 9.92% (20 units) → 5.95% (50 units, chi2 8.2, PASS)**. Excess over
+   nominal falls 26.55pp → 4.92pp → 0.95pp, i.e. by ~5.3× for each ~3× increase in cell size,
+   a strikingly regular decay (roughly excess ∝ cell size^−1.4) that confirms the leverage
+   mechanism quantitatively rather than merely directionally. **The ame adversarial test is
+   therefore not irredeemable: it is correctly sized under robust SEs once cohort-period cells
+   contain on the order of 50 observations.**
+
+   *Status of the ruling.* The preregistered sub-ruling keyed on AB9 (20-unit cells) and
+   mechanically returns WITHDRAW; AB22 is a disclosed post-hoc amendment and by its own terms
+   cannot move a trigger. So the formal ruling stands as written. But the honest scientific
+   reading is that the withdrawal is **conditional, not absolute**, and the recommendation to
+   the author is a GATED KEEP for the ame side rather than removal: refuse/caution below a cell
+   size threshold and permit it above one. Caveats: this is a single config at M=504, the pass
+   is comfortable (30 of 504, band limit 35) but the threshold between 20 and 50 units is
+   unmapped, and it holds for **robust only** — see finding 2.
 2. **Clustering finer makes the ame WORSE, not better** — 48.41% (unit-clustered) vs 31.55%
    (robust) on the same 6-unit geometry. **The advice therefore inverts between the two sides:**
    "cluster finer than the cell" rescues the binary att test and actively harms the continuous
@@ -178,7 +190,11 @@ ruling). Named disagreements, all resolved by measurement:
    or (robust) cells smaller than 6 observations.
 3. **The gate must cover the `e(V_es_*)` honestdid handoff, not just the test.** The object at
    risk is the covariance matrix; gating the test alone relocates the failure.
-4. **Withdraw ame-side `adversarial`** and route to RI / bootstrap / IM (§4).
+4. **Ame-side `adversarial`: GATE, do not remove** (§4, revised by AB22). It is correctly
+   sized under robust at ~50 observations per cell (5.95%) and severely oversized at 6 (31.55%).
+   Suggested shape: permit above a cell-size threshold, caution/refuse below it, and route the
+   refused cases to RI / bootstrap / IM. The exact threshold in (20, 50] needs one cheap
+   follow-up ladder before it is documented.
 5. **Document the inverted advice** for att vs ame clustering (§4, finding 2).
 6. **DOC1 (fires): cohort-period shocks.** Even a shock worth 3.8% of error variance gives
    12.30%. Escaping containment by clustering finer assumes away precisely the dependence that
