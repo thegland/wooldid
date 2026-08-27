@@ -1020,6 +1020,240 @@
      "band_high_pct": 10.0
     }
    }
+  },
+  {
+   "config": "AB23",
+   "M": 504,
+   "label": "50 units/cell, 50 CLUSTERS per cell (unit-level): does the binary test hold at very large cells?",
+   "spec": "G=30 U=50 T=12 cluster(unitid) err=iid binary scs=1",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 9000001,
+   "G": 30,
+   "U": 50,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 5.0,
+     "band_low_pct": 3.5,
+     "band_high_pct": 7.0
+    }
+   }
+  },
+  {
+   "config": "AB24",
+   "M": 504,
+   "label": "50 units/cell, robust: large-cell robust twin of AB2",
+   "spec": "G=30 U=50 T=12 robust err=iid binary scs=1",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 9000001,
+   "G": 30,
+   "U": 50,
+   "T": 12,
+   "vce": "robust",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 5.0,
+     "band_low_pct": 3.5,
+     "band_high_pct": 7.0
+    }
+   }
+  },
+  {
+   "config": "AB25",
+   "M": 504,
+   "label": "50 units/cell but only 2 CLUSTERS per cell - THE DECISIVE SEPARATION of clusters-per-cell from cell size (AB13 was m=2 at 6 units = 14.50%)",
+   "spec": "G=30 U=50 T=12 cluster(cl2) err=iid binary scs=1",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 9000001,
+   "G": 30,
+   "U": 50,
+   "T": 12,
+   "vce": "cluster(cl2)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 16.0,
+     "band_low_pct": 10.0,
+     "band_high_pct": 25.0
+    }
+   }
+  },
+  {
+   "config": "AB26",
+   "M": 504,
+   "label": "50 units/cell, cells inside ONE cluster: containment ladder third point (singleton 20.5% -> 6 units 56.35% -> 50 units ?)",
+   "spec": "G=30 U=50 T=12 cluster(i) err=iid binary scs=1 safety(off)",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 9000001,
+   "G": 30,
+   "U": 50,
+   "T": 12,
+   "vce": "cluster(i)",
+   "err": "iid",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "safety(off)",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 60.0,
+     "band_low_pct": 45.0,
+     "band_high_pct": 75.0
+    }
+   }
+  },
+  {
+   "config": "AB27",
+   "M": 504,
+   "label": "50 units/cell, AR(1) errors, unit clustering: realistic errors at large cells",
+   "spec": "G=30 U=50 T=12 cluster(unitid) err=ar1 binary scs=1",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 9000001,
+   "G": 30,
+   "U": 50,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "ar1",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 1,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 5.5,
+     "band_low_pct": 3.5,
+     "band_high_pct": 8.0
+    }
+   }
+  },
+  {
+   "config": "AB28",
+   "M": 504,
+   "label": "50 units/cell, cohort-period shock: does cell size help against common shocks? Predicted WORSE than AB7b (44.84% at 6 units) - the idiosyncratic part shrinks like 1/U while the shock does not, so the understatement RATIO grows",
+   "spec": "G=30 U=50 T=12 cluster(unitid) err=cohortshock binary scs=0.5",
+   "shards": 8,
+   "reps_per_shard": 63,
+   "base_seed": 9000001,
+   "G": 30,
+   "U": 50,
+   "T": 12,
+   "vce": "cluster(unitid)",
+   "err": "cohortshock",
+   "mode": "binary",
+   "stag": 0,
+   "scs": 0.5,
+   "pwr": 0,
+   "extra": "",
+   "certification_arm": false,
+   "quantities": [
+    [
+     "adversarial_ro",
+     "padv"
+    ]
+   ],
+   "secondaries": [
+    [
+     "joint_horiz",
+     "pjoint"
+    ]
+   ],
+   "predictions": {
+    "adversarial_ro": {
+     "point_pct": 65.0,
+     "band_low_pct": 45.0,
+     "band_high_pct": 85.0
+    }
+   }
   }
  ],
  "decision_rule": {
@@ -1048,5 +1282,12 @@
   "disclosure": "Added after the AB campaign reported. Report-only; cannot enter the certified set or move any trigger. Prediction LOCKED before the config ran.",
   "purpose": "Third point on the ame cell-size ladder: 31.55% at U=6 (A4, robust), 9.92% at U=20 (AB9, robust), and now U=50. Tests whether the leverage mechanism (bias ~ within-cell parameters / cell size) continues to nominal or hits a floor from another channel.",
   "locked_reasoning": "Excess over nominal fell 26.5pp -> 4.9pp for a 3.3x cell-size increase. A further 2.5x predicts excess ~1.5pp, i.e. ~6.5%. The M=504 PASS band is [2.98,6.94]%, so the prediction sits at the certification edge: this config can genuinely go either way, which is what makes it worth running."
+ },
+ "amendment_3": {
+  "date": "2026-08-26",
+  "requested_by": "author",
+  "disclosure": "Report-only; predictions LOCKED before running. Cannot enter the certified set or move an original trigger.",
+  "purpose": "Binary results at 50 observations per cell across VCEs, including 50 clusters per cell. AB25 is the decisive one: it holds cell size at 50 while dropping to 2 clusters per cell, which separates the clusters-per-cell account (predicting failure regardless of cell size) from any account in which large cells are themselves protective. AB26 and AB28 extend the containment and common-shock ladders to large cells, where both are predicted to get WORSE, not better.",
+  "shared_seed_note": "All six share base 9000001, so they are CRN-paired to each other (identical datasets across VCEs)."
  }
 }
