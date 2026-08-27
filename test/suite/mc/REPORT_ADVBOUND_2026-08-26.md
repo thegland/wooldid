@@ -210,3 +210,53 @@ ruling). Named disagreements, all resolved by measurement:
 in marginal (AB16 6.70%), so the cluster-count boundary lies somewhere in (60, 180] and n\* ships
 conservatively until a cheap follow-up localizes it. The preregistered FOLLOWUP clause also calls
 for mapping m ∈ {3, 4} before documenting m\* = 6 as tight.
+
+
+---
+
+## 8. AMENDMENT 3 (2026-08-26): binary results at 50 observations per cell
+
+Six CRN-paired configs at 30 cohorts × 50 units × 12 periods, varying only the VCE and the error
+structure. Report-only, predictions locked before running (5 of 6 inside band).
+
+| config | clustering | clusters/cell | errors | rate | chi2 | verdict |
+|---|---|---|---|---|---|---|
+| AB24 | robust | — | iid | 4.37% | 12.6 | passes |
+| AB23 | unit level | 50 | iid | 4.37% | 14.0 | passes |
+| AB27 | unit level | 50 | AR(1) | 4.96% | 6.5 | passes |
+| AB25 | half-cohort | **2** | iid | **17.86%** | 235.0\* | fails |
+| AB26 | cohort level | **1** | iid | **59.33%** | 2009.5\* | fails |
+| AB28 | unit level | 50 | cohort shock σ=.5 | **98.02%** | 4476.2\* | fails |
+
+### Cell size read across every regime
+
+| regime | 6/cell | 20/cell | 50/cell | effect of larger cells |
+|---|---|---|---|---|
+| binary, clustering finer than the cell | 4.80% | 5.00% | 4.37% | none — already correct, stays correct |
+| **continuous, robust** | 31.55% | 9.92% | **5.95%** | **cures it** — the one place size is the remedy |
+| binary, 2 clusters per cell | 14.50% | — | 17.86% | worse |
+| binary, cells inside one cluster | 56.35% | — | 59.33% | worse (20.5% at singleton cells) |
+| binary, cohort-period common shock | 44.84% | — | **98.02%** | **catastrophically worse** |
+
+**Finding 1 — the clusters-per-cell account is now cleanly separated from cell size.** AB13
+(m=2, 6-unit cells) could not distinguish "two clusters per cell is fatal" from "small cells are
+fatal", because both moved together. AB25 holds cells at 50 and drops to m=2: **17.86%, worse
+than AB13's 14.50%**. Clusters per cell governs; cell size is not protective and is mildly
+aggravating. **A guard written on cell size would pass AB25 and be wrong.**
+
+**Finding 2 — larger cells make the common-shock failure catastrophic: 44.84% → 98.02%.** This is
+the campaign's one badly missed prediction (locked at 65%, measured 98.02%); the predicted
+*direction* was right and the magnitude was not. Mechanism: the cohort-period shock is absorbed
+into each cell's own dummy and leaves no residual trace, so no analytic VCE can see it, while the
+idiosyncratic component that the VCE *does* see shrinks like 1/U. The ratio of true to estimated
+variance therefore grows with cell size. **Practical consequence: "use large cells and cluster
+finely" is sound only absent cohort-period common shocks, and is close to worst-case advice when
+they are present.** This strengthens the DOC1 rider from mandatory-caveat to
+prominent-warning status for any guidance that recommends enlarging cells.
+
+**Finding 3 — the binary test is indifferent to cell size once clustering is fine enough**
+(4.80% → 5.00% → 4.37%), the exact mirror of the continuous side, where cell size is everything.
+Both facts belong in the design-conditions documentation together.
+
+Campaign totals after amendment 3: **31 configs, 20,584 reps, 0 bad rcs, 32 of 34 locked
+predictions inside band.**

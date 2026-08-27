@@ -219,10 +219,10 @@ footer code { background: none; padding: 0; color: var(--ink); }
     <h1>Adversarial Test Calibration</h1>
     <p class="subtitle">Where the pre-trend line test rejects a true null at its stated rate — and where it does not.</p>
     <dl class="facts">
-      <div><dt>Configurations</dt><dd>25</dd></div>
-      <div><dt>Replications</dt><dd>17,560</dd></div>
+      <div><dt>Configurations</dt><dd>31</dd></div>
+      <div><dt>Replications</dt><dd>20,584</dd></div>
       <div><dt>Failed runs</dt><dd>0</dd></div>
-      <div><dt>Predictions in band</dt><dd>27 / 28</dd></div>
+      <div><dt>Predictions in band</dt><dd>32 / 34</dd></div>
       <div><dt>Design</dt><dd>Preregistered</dd></div>
     </dl>
   </div>
@@ -337,6 +337,73 @@ footer code { background: none; padding: 0; color: var(--ink); }
 
 <section class="wide">
   <div class="col">
+    <div class="eyebrow">Cell size</div>
+    <h2>What larger cells do — and don't do</h2>
+    <p>Enlarging cohort-by-period cells is the intuitive remedy: more observations behind every estimate ought to mean better inference. It does exactly that in one place, does nothing in another, and makes matters <em>worse</em> in three. The six configurations below hold cell size fixed at fifty observations and vary only the variance estimator and the error structure.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Config</th><th>Clustering</th><th class="num">Per cell</th><th>Errors</th><th class="num">Rate</th><th class="num">Uniformity</th><th>Calibration</th><th>Verdict</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cfg">AB24</td><td>robust</td><td class="num">—</td><td>independent</td><td class="num">4.37%</td><td class="num">12.6</td>
+          <td><div class="gauge ok" data-lo="2.98" data-hi="6.94" data-val="4.37"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill ok">passes</span></td></tr>
+        <tr><td class="cfg">AB23</td><td>unit level</td><td class="num">50</td><td>independent</td><td class="num">4.37%</td><td class="num">14.0</td>
+          <td><div class="gauge ok" data-lo="2.98" data-hi="6.94" data-val="4.37"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill ok">passes</span></td></tr>
+        <tr><td class="cfg">AB27</td><td>unit level</td><td class="num">50</td><td>AR(1)</td><td class="num">4.96%</td><td class="num">6.5</td>
+          <td><div class="gauge ok" data-lo="2.98" data-hi="6.94" data-val="4.96"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill ok">passes</span></td></tr>
+        <tr><td class="cfg">AB25</td><td>half-cohort</td><td class="num">2</td><td>independent</td><td class="num">17.86%</td><td class="num"><span class="flag">235.0</span></td>
+          <td><div class="gauge bad" data-lo="2.98" data-hi="6.94" data-val="17.86"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill bad">fails</span></td></tr>
+        <tr><td class="cfg">AB26</td><td>cohort level</td><td class="num">1</td><td>independent</td><td class="num">59.33%</td><td class="num"><span class="flag">2009.5</span></td>
+          <td><div class="gauge bad" data-lo="2.98" data-hi="6.94" data-val="59.33"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill bad">fails</span></td></tr>
+        <tr><td class="cfg">AB28</td><td>unit level</td><td class="num">50</td><td>cohort shock</td><td class="num">98.02%</td><td class="num"><span class="flag">4476.2</span></td>
+          <td><div class="gauge bad" data-lo="2.98" data-hi="6.94" data-val="98.02"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill bad">fails</span></td></tr>
+      </tbody>
+      <caption>All six use 30 cohorts × 50 units × 12 periods on identical simulated datasets, so the differences are attributable to the variance estimator and error structure alone. The last row runs past the axis: at 98%, the test rejects a true null almost every time.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <h3>Cell size read across every regime</h3>
+    <p>Placing each ladder side by side shows the pattern that no single configuration reveals.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Regime</th><th class="num">6 per cell</th><th class="num">20 per cell</th><th class="num">50 per cell</th><th>Effect of larger cells</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Binary, clustering finer than the cell</td><td class="num">4.80%</td><td class="num">5.00%</td><td class="num">4.37%</td><td class="note">No effect — already correct, stays correct</td></tr>
+        <tr><td><strong>Continuous, robust</strong></td><td class="num">31.55%</td><td class="num">9.92%</td><td class="num"><strong>5.95%</strong></td><td class="note">Cures it — the one place size is the remedy</td></tr>
+        <tr><td>Binary, two clusters per cell</td><td class="num">14.50%</td><td class="num">—</td><td class="num">17.86%</td><td class="note">Worse</td></tr>
+        <tr><td>Binary, cells inside one cluster</td><td class="num">56.35%</td><td class="num">—</td><td class="num">59.33%</td><td class="note">Worse (20.5% at one observation per cell)</td></tr>
+        <tr><td>Binary, cohort-period common shock</td><td class="num">44.84%</td><td class="num">—</td><td class="num"><strong>98.02%</strong></td><td class="note">Catastrophically worse</td></tr>
+      </tbody>
+      <caption>Rejection rates under a true null, nominal 5%. Larger cells rescue the continuous test and leave a correctly specified binary test alone; everywhere the variance estimator is already mis-specified, they magnify the damage.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <div class="callout">
+      <p class="lede">Two clusters per cell fails <em>worse</em> at fifty observations per cell than at six — 17.86% against 14.50%.</p>
+      <p>This is the clean separation the earlier result could not provide, because there cell size and clusters-per-cell moved together. Holding cells at fifty and varying only how many clusters span them confirms that <strong>clusters per cell is the governing quantity and cell size is not protective</strong>. A guard written on cell size would pass this configuration and be wrong.</p>
+    </div>
+    <div class="callout">
+      <p class="lede">Under cohort-period common shocks, larger cells are actively dangerous: 44.84% at six observations per cell becomes <strong>98.02%</strong> at fifty.</p>
+      <p>The reason is that the shock is absorbed into each cell's own estimate and leaves no trace in the residuals, so no variance estimator can see it. The idiosyncratic part of the error shrinks in proportion to cell size while the shock does not, so the gap between the true and the estimated variance widens as cells grow. The predicted direction was right; the magnitude was not — this was the campaign's one badly missed prediction, locked at 65% and measured at 98%. The practical consequence is sharp: <strong>“use large cells and cluster finely” is sound advice only when there are no common shocks at the cohort-period level, and is close to worst-case advice when there are.</strong></p>
+    </div>
+  </div>
+</section>
+
+<section class="wide">
+  <div class="col">
     <div class="eyebrow">Method comparison</div>
     <h2>Standard versus altmethod</h2>
     <p>Each altmethod configuration runs on the <em>same simulated datasets</em> as its standard counterpart, so these differences are paired rather than two independent samples.</p>
@@ -390,11 +457,11 @@ footer code { background: none; padding: 0; color: var(--ink); }
   <div class="eyebrow">Recommendations</div>
   <h2>What should ship</h2>
   <ul class="tight">
-    <li><strong>Guard on clusters per cell.</strong> Refuse outright when a treated cell lies inside a single cluster; caution below six clusters per cell, below roughly 180 clusters overall, or below six observations per cell under robust standard errors.</li>
+    <li><strong>Guard on clusters per cell — never on cell size.</strong> Refuse outright when a treated cell lies inside a single cluster; caution below six clusters per cell, below roughly 180 clusters overall, or below six observations per cell under robust standard errors. Two clusters per cell fails at every cell size tested, so a size-based guard would wave it through.</li>
     <li><strong>Cover the covariance handoff, not just the test.</strong> The object at risk is the event-study covariance matrix that <code>honestdid</code> consumes; guarding the test alone relocates the failure rather than fixing it.</li>
     <li><strong>Gate the continuous version on cell size</strong> rather than removing it, and locate the threshold between twenty and fifty first.</li>
     <li><strong>Document the inverted advice</strong> — cluster finer for the binary test, do not for the continuous one.</li>
-    <li><strong>Document the common-shock caveat</strong>, which is undetectable at runtime and defeats the finer-clustering escape route.</li>
+    <li><strong>Document the common-shock caveat prominently.</strong> It is undetectable at runtime, it defeats the finer-clustering escape route, and larger cells make it dramatically worse rather than better (98% rejection of a true null at fifty observations per cell). Any guidance to enlarge cells must carry this condition alongside it.</li>
     <li><strong>Never report undersizing as a pass.</strong> Robust standard errors under serial correlation rejected nothing at all across 504 replications.</li>
   </ul>
   <p><strong>Left open.</strong> Nothing certified below 180 clusters while 60 clusters came in marginal, so that boundary sits untested in between; the same is true of clusters-per-cell between two and six, and of the continuous threshold between twenty and fifty. Each needs one cheap follow-up before any number is documented as exact.</p>
