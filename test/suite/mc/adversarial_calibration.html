@@ -1,0 +1,431 @@
+<title>Adversarial Test Calibration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root {
+  --paper:   #EFF2F1;
+  --surface: #FFFFFF;
+  --sunk:    #E5EAE8;
+  --ink:     #13201E;
+  --muted:   #5A6B68;
+  --rule:    #D3DBD9;
+  --accent:  #0E6B60;
+  --pass:    #2E7D51;
+  --warn:    #A9741C;
+  --fail:    #A33328;
+  --pass-bg: #E4F0E9;
+  --warn-bg: #F6EEDF;
+  --fail-bg: #F6E5E2;
+  --band:    #C9DED9;
+
+  --serif: Spectral, "Iowan Old Style", Georgia, serif;
+  --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --measure: 68ch;
+  --wide: 1080px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:   #0E1413;
+    --surface: #161E1D;
+    --sunk:    #1C2624;
+    --ink:     #E4EBE9;
+    --muted:   #94A5A1;
+    --rule:    #29352F;
+    --accent:  #4FD3BF;
+    --pass:    #63C089;
+    --warn:    #E0A94E;
+    --fail:    #E4776A;
+    --pass-bg: #172A20;
+    --warn-bg: #2C2415;
+    --fail-bg: #2E1B18;
+    --band:    #23423C;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:   #0E1413;
+  --surface: #161E1D;
+  --sunk:    #1C2624;
+  --ink:     #E4EBE9;
+  --muted:   #94A5A1;
+  --rule:    #29352F;
+  --accent:  #4FD3BF;
+  --pass:    #63C089;
+  --warn:    #E0A94E;
+  --fail:    #E4776A;
+  --pass-bg: #172A20;
+  --warn-bg: #2C2415;
+  --fail-bg: #2E1B18;
+  --band:    #23423C;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16.5px;
+  line-height: 1.62;
+  margin: 0;
+  padding: 0 24px 96px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.col { max-width: var(--measure); margin-inline: auto; }
+.wide { max-width: var(--wide); margin-inline: auto; }
+
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; line-height: 1.22; margin: 0; }
+h1 { font-size: clamp(2.1rem, 5vw, 3rem); letter-spacing: -0.015em; }
+h2 { font-size: 1.65rem; margin-bottom: .5rem; }
+h3 { font-size: 1.12rem; margin-bottom: .35rem; }
+p { margin: 0 0 1.05em; }
+a { color: var(--accent); }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: .72rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: .7rem;
+}
+
+/* ---------- masthead ---------- */
+header.masthead {
+  border-bottom: 2px solid var(--ink);
+  padding: 72px 0 26px;
+  margin-bottom: 34px;
+}
+.subtitle {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.22rem;
+  color: var(--muted);
+  margin: .7rem 0 1.6rem;
+  max-width: 56ch;
+}
+.facts { display: flex; flex-wrap: wrap; gap: 0 40px; font-family: var(--mono); font-size: .78rem; }
+.facts div { display: flex; flex-direction: column; gap: 2px; }
+.facts dt { color: var(--muted); letter-spacing: .06em; text-transform: uppercase; font-size: .68rem; }
+.facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+section { margin-block: 56px; }
+
+/* ---------- verdict cards ---------- */
+.verdicts { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 18px; }
+.verdict {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--stripe, var(--accent));
+  padding: 20px 20px 18px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.verdict .what { font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+.verdict .call { font-family: var(--serif); font-size: 1.32rem; font-weight: 600; line-height: 1.2; }
+.verdict p { font-size: .92rem; margin: 0; color: var(--muted); }
+.verdict.keep  { --stripe: var(--pass); }
+.verdict.keep .call { color: var(--pass); }
+.verdict.cond  { --stripe: var(--warn); }
+.verdict.cond .call { color: var(--warn); }
+
+/* ---------- tables ---------- */
+.scroll { overflow-x: auto; margin-block: 18px; border: 1px solid var(--rule); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .87rem; }
+caption {
+  caption-side: bottom; text-align: left; color: var(--muted);
+  font-size: .8rem; padding: 10px 14px; border-top: 1px solid var(--rule);
+}
+th, td { padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+thead th {
+  font-family: var(--mono); font-size: .69rem; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  background: var(--sunk); border-bottom: 1px solid var(--rule);
+}
+tbody tr:last-child td { border-bottom: none; }
+td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td.cfg { font-family: var(--mono); font-weight: 600; font-size: .82rem; }
+td.note { white-space: normal; min-width: 210px; color: var(--muted); }
+.flag { color: var(--fail); font-weight: 600; }
+
+.pill {
+  display: inline-block; font-family: var(--mono); font-size: .68rem; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 2px;
+}
+.pill.ok   { color: var(--pass); background: var(--pass-bg); }
+.pill.marg { color: var(--warn); background: var(--warn-bg); }
+.pill.bad  { color: var(--fail); background: var(--fail-bg); }
+
+/* ---------- gauge ---------- */
+.gauge { position: relative; height: 22px; min-width: 190px; }
+.gauge .track {
+  position: absolute; inset: 9px 0 auto; height: 3px; background: var(--rule);
+}
+.gauge .bandzone {
+  position: absolute; top: 4px; height: 13px; background: var(--band);
+  left: var(--lo); width: calc(var(--hi) - var(--lo));
+}
+.gauge .mark {
+  position: absolute; top: 1px; height: 19px; width: 3px; background: var(--mk, var(--ink));
+  left: var(--val); transform: translateX(-1.5px);
+}
+.gauge.ok   { --mk: var(--pass); }
+.gauge.marg { --mk: var(--warn); }
+.gauge.bad  { --mk: var(--fail); }
+.axis {
+  position: relative; height: 16px; margin: 2px 0 0; min-width: 190px;
+  font-family: var(--mono); font-size: .6rem; color: var(--muted);
+}
+.axis span { position: absolute; transform: translateX(-50%); }
+
+/* ---------- callout ---------- */
+.callout {
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  padding: 16px 20px;
+  margin-block: 22px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout .lede { font-family: var(--serif); font-size: 1.08rem; }
+
+.ladder { display: grid; gap: 10px; margin-block: 20px; }
+.rung {
+  display: grid; grid-template-columns: 108px 1fr 96px; gap: 16px; align-items: center;
+  background: var(--surface); border: 1px solid var(--rule); padding: 12px 16px;
+}
+.rung .lab { font-family: var(--mono); font-size: .8rem; font-weight: 600; }
+.rung .val { font-family: var(--mono); font-size: .95rem; font-variant-numeric: tabular-nums; text-align: right; }
+.bar { height: 12px; background: var(--sunk); position: relative; }
+.bar i { position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--fill, var(--fail)); display: block; }
+
+ul.tight { margin: 0 0 1.05em; padding-left: 1.15em; }
+ul.tight li { margin-bottom: .45em; }
+code { font-family: var(--mono); font-size: .88em; background: var(--sunk); padding: 1px 5px; }
+
+footer {
+  border-top: 1px solid var(--rule); margin-top: 64px; padding-top: 22px;
+  font-size: .85rem; color: var(--muted);
+}
+footer code { background: none; padding: 0; color: var(--ink); }
+</style>
+
+<header class="masthead">
+  <div class="col">
+    <div class="eyebrow">wooldid · Monte Carlo size calibration</div>
+    <h1>Adversarial Test Calibration</h1>
+    <p class="subtitle">Where the pre-trend line test rejects a true null at its stated rate — and where it does not.</p>
+    <dl class="facts">
+      <div><dt>Configurations</dt><dd>25</dd></div>
+      <div><dt>Replications</dt><dd>17,560</dd></div>
+      <div><dt>Failed runs</dt><dd>0</dd></div>
+      <div><dt>Predictions in band</dt><dd>27 / 28</dd></div>
+      <div><dt>Design</dt><dd>Preregistered</dd></div>
+    </dl>
+  </div>
+</header>
+
+<section class="col">
+  <p>Every configuration below generates data under a <strong>true null</strong> — no treatment effect at all, so the true event-study profile is flat and trivially lies on a line. A correctly sized test should then reject about 5% of the time. Rejecting far more often means the test manufactures pre-trends that aren't there; rejecting far less means it cannot see the ones that are.</p>
+  <p>Two criteria decide each case, and both must hold. The <strong>rejection rate</strong> must land inside a preregistered band, and the <strong>p-value distribution</strong> must pass a uniformity test. The second criterion is not ceremonial: a configuration from the earlier campaign sat at a comfortable-looking 2.4% while its p-value distribution was destroyed, because a structurally blind covariance matrix was dragged through a plausible rate by a lenient reference distribution. A rate inside the band is not, by itself, evidence of correctness.</p>
+</section>
+
+<section class="wide">
+  <div class="col"><div class="eyebrow">The rulings</div></div>
+  <div class="verdicts">
+    <div class="verdict keep">
+      <div class="what">binary <code>adversarial</code></div>
+      <div class="call">Keep, gated</div>
+      <p>Correctly sized in five configurations, including realistic serial correlation. No abandon trigger fired. Power 98.8–100%.</p>
+    </div>
+    <div class="verdict keep">
+      <div class="what"><code>altmethod_adversarial</code></div>
+      <div class="call">Keep — it dominates</div>
+      <p>Better than the standard method at every boundary measured, and certifies once where the standard method fails.</p>
+    </div>
+    <div class="verdict cond">
+      <div class="what">continuous <code>adversarial</code> (ame)</div>
+      <div class="call">Gate on cell size</div>
+      <p>Severely oversized with small cells, correctly sized at ~50 observations per cell. Conditional, not irredeemable.</p>
+    </div>
+  </div>
+</section>
+
+<section class="col">
+  <div class="eyebrow">The governing parameter</div>
+  <h2>Clusters per cell — not cluster count, not cell size</h2>
+  <p>The estimator fits a dummy for every treated cohort-by-period cell. When such a cell sits entirely inside one cluster, ordinary least squares forces that cell's residuals to sum to zero within the cluster, so the cluster-robust variance estimator becomes structurally blind to exactly the variation the line test depends on. Clustering <em>finer</em> than the cell breaks that blindness — but the campaign shows how much finer matters, and the answer is not obvious.</p>
+  <div class="callout">
+    <p class="lede">Two clusters per cell is not enough. With 60 clusters and 6-unit cells but only <strong>two clusters spanning each cell</strong>, rejection is 14.50% — far worse than the same 60 clusters arranged as 2-unit cells (9.10%), and worse than every configuration with six clusters per cell.</p>
+    <p>This was the campaign's decisive disagreement. One theorist predicted 14.5% against the others' 7.5–10.5%, named it as the result that would falsify his own account if it came back otherwise, and it landed at 14.50%. Any runtime guard should therefore be written on clusters-per-cell.</p>
+  </div>
+</section>
+
+<section class="wide">
+  <div class="col">
+    <div class="eyebrow">Boundary map</div>
+    <h2>Where the standard test works</h2>
+    <p>Binary treatment, att side. Bands are [3.6%, 6.4%] at 1,000 replications and [2.98%, 6.94%] at 504; uniformity must be at or below 21.7.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Config</th><th>Design</th><th>Clustering</th>
+          <th class="num">Per cell</th><th class="num">Rate</th><th class="num">Uniformity</th>
+          <th>Calibration</th><th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="cfg">AB1</td><td>30 cohorts × 6 units</td><td>unit level</td><td class="num">6</td><td class="num">4.80%</td><td class="num">3.4</td>
+          <td><div class="gauge ok" data-lo="3.6" data-hi="6.4" data-val="4.80"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill ok">certified</span></td></tr>
+        <tr><td class="cfg">AB2</td><td>30 × 6</td><td>robust</td><td class="num">—</td><td class="num">4.60%</td><td class="num">7.2</td>
+          <td><div class="gauge ok" data-lo="3.6" data-hi="6.4" data-val="4.60"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill ok">certified</span></td></tr>
+        <tr><td class="cfg">AB4</td><td>30 × 20</td><td>unit level</td><td class="num">20</td><td class="num">5.00%</td><td class="num">6.8</td>
+          <td><div class="gauge ok" data-lo="3.6" data-hi="6.4" data-val="5.00"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill ok">certified</span></td></tr>
+        <tr><td class="cfg">AB6</td><td>30 × 6, AR(1) errors</td><td>unit level</td><td class="num">6</td><td class="num">5.60%</td><td class="num">8.7</td>
+          <td><div class="gauge ok" data-lo="3.6" data-hi="6.4" data-val="5.60"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill ok">certified</span></td></tr>
+        <tr><td class="cfg">AB11</td><td>30 × 6, altmethod</td><td>unit level</td><td class="num">6</td><td class="num">4.40%</td><td class="num">9.4</td>
+          <td><div class="gauge ok" data-lo="3.6" data-hi="6.4" data-val="4.40"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill ok">certified</span></td></tr>
+        <tr><td class="cfg">AB16</td><td>10 × 6 (60 clusters)</td><td>unit level</td><td class="num">6</td><td class="num">6.70%</td><td class="num">15.3</td>
+          <td><div class="gauge marg" data-lo="3.6" data-hi="6.4" data-val="6.70"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill marg">marginal</span></td></tr>
+        <tr><td class="cfg">AB15</td><td>30 × 6, staggered onsets</td><td>unit level</td><td class="num">6</td><td class="num">7.20%</td><td class="num"><span class="flag">24.2</span></td>
+          <td><div class="gauge marg" data-lo="3.6" data-hi="6.4" data-val="7.20"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill marg">marginal</span></td></tr>
+        <tr><td class="cfg">AB2a</td><td>30 × 2</td><td>robust</td><td class="num">—</td><td class="num">7.40%</td><td class="num">14.4</td>
+          <td><div class="gauge marg" data-lo="3.6" data-hi="6.4" data-val="7.40"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill marg">marginal</span></td></tr>
+        <tr><td class="cfg">AB3</td><td>30 × 2</td><td>unit level</td><td class="num">2</td><td class="num">9.10%</td><td class="num"><span class="flag">25.5</span></td>
+          <td><div class="gauge bad" data-lo="3.6" data-hi="6.4" data-val="9.10"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill bad">fails</span></td></tr>
+        <tr><td class="cfg">AB7a</td><td>30 × 6, cohort shock (3.8% of variance)</td><td>unit level</td><td class="num">6</td><td class="num">12.30%</td><td class="num"><span class="flag">72.7</span></td>
+          <td><div class="gauge bad" data-lo="2.98" data-hi="6.94" data-val="12.30"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill bad">fails</span></td></tr>
+        <tr><td class="cfg">AB13</td><td>30 × 6, two sub-clusters</td><td>half-cohort</td><td class="num">2</td><td class="num">14.50%</td><td class="num"><span class="flag">238.4</span></td>
+          <td><div class="gauge bad" data-lo="3.6" data-hi="6.4" data-val="14.50"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill bad">fails</span></td></tr>
+        <tr><td class="cfg">AB5</td><td>5 × 4 (20 clusters)</td><td>unit level</td><td class="num">4</td><td class="num">17.46%</td><td class="num"><span class="flag">231.1</span></td>
+          <td><div class="gauge bad" data-lo="2.98" data-hi="6.94" data-val="17.46"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill bad">fails</span></td></tr>
+        <tr><td class="cfg">AB7b</td><td>30 × 6, cohort shock (20% of variance)</td><td>unit level</td><td class="num">6</td><td class="num">44.84%</td><td class="num"><span class="flag">1213.1</span></td>
+          <td><div class="gauge bad" data-lo="2.98" data-hi="6.94" data-val="44.84"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill bad">fails</span></td></tr>
+        <tr><td class="cfg">AB12</td><td>30 × 6, cells inside one cluster</td><td>cohort level</td><td class="num">1</td><td class="num">56.35%</td><td class="num"><span class="flag">1674.3</span></td>
+          <td><div class="gauge bad" data-lo="2.98" data-hi="6.94" data-val="56.35"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill bad">fails</span></td></tr>
+        <tr><td class="cfg">AB8</td><td>30 × 6, AR(1) errors</td><td>robust</td><td class="num">—</td><td class="num">0.00%</td><td class="num"><span class="flag">1072.4</span></td>
+          <td><div class="gauge bad" data-lo="2.98" data-hi="6.94" data-val="0.00"><div class="track"></div><div class="bandzone"></div><div class="mark"></div></div></td>
+          <td><span class="pill bad">inert</span></td></tr>
+      </tbody>
+      <caption>Shaded region is the acceptance band; the tick is the measured rate. Horizontal scale is square-root, so the low end stays legible while 56% still fits. Flagged uniformity values exceed the 21.7 threshold. AB8 rejects nothing at all — conservative is not the same as safe.</caption>
+    </table>
+  </div>
+  <div class="col">
+    <p><strong>Three boundaries, stated plainly.</strong> The test needs cells that sit inside at least six clusters; it needs enough clusters overall (twenty is far too few); and it fails under cohort-by-period common shocks — notably even when such a shock contributes under 4% of error variance. That last one deserves emphasis in any documentation, because escaping the containment problem by clustering finer assumes away precisely the dependence that motivates cohort-level clustering in the first place, and nothing at runtime can detect it.</p>
+    <p><strong>Power is not the constraint.</strong> Where size holds, planted deviations from a line were detected 98.8% and 100% of the time. The test's problem was never sensitivity.</p>
+  </div>
+</section>
+
+<section class="wide">
+  <div class="col">
+    <div class="eyebrow">Method comparison</div>
+    <h2>Standard versus altmethod</h2>
+    <p>Each altmethod configuration runs on the <em>same simulated datasets</em> as its standard counterpart, so these differences are paired rather than two independent samples.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Regime</th><th class="num">Standard</th><th class="num">Altmethod</th><th class="num">Change</th><th>Outcome</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>6-unit cells, unit clustering</td><td class="num">4.80%</td><td class="num">4.40%</td><td class="num">−0.40</td><td><span class="pill ok">both certified</span></td></tr>
+        <tr><td>2-unit cells, unit clustering</td><td class="num">9.10%</td><td class="num">6.94%</td><td class="num">−2.16</td><td><span class="pill ok">altmethod only</span></td></tr>
+        <tr><td>20 clusters</td><td class="num">17.46%</td><td class="num">11.31%</td><td class="num">−6.15</td><td><span class="pill bad">both fail</span></td></tr>
+        <tr><td>Cohort shock, 20% of variance</td><td class="num">44.84%</td><td class="num">36.71%</td><td class="num">−8.13</td><td><span class="pill bad">both fail</span></td></tr>
+        <tr><td>Cells inside one cluster</td><td class="num">56.35%</td><td class="num">37.70%</td><td class="num">−18.65</td><td><span class="pill bad">both fail</span></td></tr>
+        <tr><td>Robust under AR(1)</td><td class="num">0.00%</td><td class="num">0.60%</td><td class="num">+0.60</td><td><span class="pill bad">both inert</span></td></tr>
+      </tbody>
+      <caption>Altmethod is better in every regime where the standard test fails, without exception, and the margin grows with the severity of the failure.</caption>
+    </table>
+  </div>
+  <div class="col">
+    <p>The reason is mechanical and worth recording: the standard statistic tests six dimensions after projecting out level and slope, while altmethod tests four. Fewer dimensions inverted through a directionally starved covariance matrix means less amplification — which predicts exactly the observed pattern, namely near-identical answers where the variance estimate is honest and uniformly smaller damage where it is not.</p>
+    <div class="callout">
+      <p class="lede">The one place altmethod changes a verdict is also the one place to be careful about it.</p>
+      <p>At 2-unit cells it certifies with <strong>35 rejections out of 504</strong> — and the band's upper limit is exactly 35. One more rejection would have failed it. On the identical paired datasets the comparison is 47 versus 35 (discordant 31 against 19), an improvement of 2.38 percentage points against a paired standard error of 1.40 — roughly 1.7 standard errors, suggestive but not decisive. Treat “small cells are supported under altmethod” as provisional until confirmed at a higher replication count. Everything else in the altmethod column reduces the magnitude of a failure without changing what it is.</p>
+    </div>
+  </div>
+</section>
+
+<section class="wide">
+  <div class="col">
+    <div class="eyebrow">Continuous treatments</div>
+    <h2>The cell-size ladder</h2>
+    <p>For continuous treatments the estimator fits a dose slope inside every treated cell, so each slope rests on however many observations that cell holds. Small cells mean shrunken residuals, understated variances, and a test that rejects far too often. Enlarging cells is therefore not a workaround — it is the mechanism running in reverse.</p>
+  </div>
+  <div class="col ladder">
+    <div class="rung"><span class="lab">6 per cell</span><span class="bar"><i style="--w:63%"></i></span><span class="val">31.55%</span></div>
+    <div class="rung"><span class="lab">20 per cell</span><span class="bar"><i style="--w:19.8%"></i></span><span class="val">9.92%</span></div>
+    <div class="rung"><span class="lab">50 per cell</span><span class="bar"><i style="--w:11.9%; --fill: var(--pass)"></i></span><span class="val">5.95%</span></div>
+  </div>
+  <div class="col">
+    <p>Excess over nominal falls from 26.6 to 4.9 to 0.95 percentage points — roughly a factor of five for each tripling of cell size. At fifty observations per cell the test is correctly sized (5.95%, uniformity 8.2), so the continuous version is <strong>conditional rather than irredeemable</strong>. The formal preregistered ruling, which keyed on the twenty-unit configuration, returns withdraw; the fifty-unit result arrived as a disclosed follow-up and by its own terms cannot overturn a trigger. The honest reading is a gated keep: permit above a cell-size threshold, refuse or caution below it, and route refused cases to randomization inference, bootstrap, or IM p-values. The threshold itself lies somewhere between twenty and fifty and has not been located.</p>
+    <div class="callout">
+      <p class="lede">The clustering advice inverts between the two sides.</p>
+      <p>Clustering finer than the cell is what rescues the binary test. For the continuous test it makes things <strong>worse</strong>: 48.41% under unit-level clustering against 31.55% under robust on identical geometry. Unit clustering manufactures noisy, few-degree-of-freedom off-diagonal terms in the covariance where robust structurally has zeros that happen to match the truth. One theorist predicted this against the other two.</p>
+    </div>
+  </div>
+</section>
+
+<section class="col">
+  <div class="eyebrow">Recommendations</div>
+  <h2>What should ship</h2>
+  <ul class="tight">
+    <li><strong>Guard on clusters per cell.</strong> Refuse outright when a treated cell lies inside a single cluster; caution below six clusters per cell, below roughly 180 clusters overall, or below six observations per cell under robust standard errors.</li>
+    <li><strong>Cover the covariance handoff, not just the test.</strong> The object at risk is the event-study covariance matrix that <code>honestdid</code> consumes; guarding the test alone relocates the failure rather than fixing it.</li>
+    <li><strong>Gate the continuous version on cell size</strong> rather than removing it, and locate the threshold between twenty and fifty first.</li>
+    <li><strong>Document the inverted advice</strong> — cluster finer for the binary test, do not for the continuous one.</li>
+    <li><strong>Document the common-shock caveat</strong>, which is undetectable at runtime and defeats the finer-clustering escape route.</li>
+    <li><strong>Never report undersizing as a pass.</strong> Robust standard errors under serial correlation rejected nothing at all across 504 replications.</li>
+  </ul>
+  <p><strong>Left open.</strong> Nothing certified below 180 clusters while 60 clusters came in marginal, so that boundary sits untested in between; the same is true of clusters-per-cell between two and six, and of the continuous threshold between twenty and fifty. Each needs one cheap follow-up before any number is documented as exact.</p>
+</section>
+
+<footer class="col">
+  <p><strong>Provenance.</strong> Grid, per-configuration predictions and the keep-versus-abandon rule were committed before any replication ran; two follow-up additions are disclosed as such in the preregistration. Locked prediction bands contained the measured rate in 27 of 28 scored quantities.</p>
+  <p>Report of record <code>test/suite/mc/REPORT_ADVBOUND_2026-08-26.md</code> · Preregistration <code>test/suite/PREREG_ADVBOUND_2026-08-25.md</code> · Grid and locked bands <code>test/suite/mc/advb_grid.json</code> · Generated results table <code>test/suite/mc/out/advb_report.md</code> (untracked)</p>
+</footer>
+
+<script>
+(function () {
+  var MAX = 60, R = Math.sqrt(MAX);
+  function pos(v) { return (Math.sqrt(Math.max(0, v)) / R) * 100; }
+  document.querySelectorAll('.gauge').forEach(function (g) {
+    g.style.setProperty('--lo', pos(parseFloat(g.dataset.lo)) + '%');
+    g.style.setProperty('--hi', pos(parseFloat(g.dataset.hi)) + '%');
+    g.style.setProperty('--val', pos(parseFloat(g.dataset.val)) + '%');
+  });
+  var ticks = [0, 5, 10, 20, 40, 60];
+  document.querySelectorAll('.gauge').forEach(function (g, i) {
+    if (i !== 0) return;
+    var ax = document.createElement('div');
+    ax.className = 'axis';
+    ticks.forEach(function (t) {
+      var s = document.createElement('span');
+      s.style.left = pos(t) + '%';
+      s.textContent = t;
+      ax.appendChild(s);
+    });
+    g.parentNode.appendChild(ax);
+  });
+})();
+</script>
