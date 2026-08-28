@@ -69,6 +69,12 @@ G10B-esf-n,trig_esfsup_ref,matnames,*,,G10B 7ba1e16: dropping the refless cohort
 TM2-sg-p,trig_tm2_sgjoint,macro,joint_Choriz*,,SI-10/T-M2 author-ordered fix: sg-continuous joint pre-trend p now read at r(p)[1;1] (continuous overjoint is 1x1; the old [1;2] read silently returned missing). EXPECTED old p=. vs new real p; if new regresses to p=. there is no diff and this row goes STALE (run fails); old showing a real p would also be a defect - flag it
 TM2-ext-p,ext_c2_*,macro,joint_Choriz*,,SI-10/T-M2 fix on the c2 grid: 24 configs captured joint_Choriz_s*/joint_Choriz_i_s* as p=. on BOTH builds pre-fix; post-fix new posts the real [1;1] value wherever the sg margins test is estimable
 SIA4-d3,trig_d3void,mat,wdidmainresults,,SI-A4/R6 author-ruled: the d3 class (all treated-cell dose slopes dropped) - old presents the regression's fabricated structural zeros as ame point estimates; new voids the ame rows to missing with a named caution; att rows bit-identical
+SI7-sg-m,ext_contract10_rcs_factor_fe,mat,wdidsgresults_*,,SI-7 fix: the non-estimable sg1 pre2 horizon is dropped from that subgroup's event study (old reported it as a machine-zero estimate); sg matrices change shape
+SI7-sg-n,ext_contract10_rcs_factor_fe,matnames,wdidsgresults_*,,SI-7 fix: same - sg1 loses its pre2 row label
+SI7-eb-n,ext_contract10_rcs_factor_fe,matnames,b,,SI-7 fix: e(b) loses the ES_att_SG1_pre2 entry (the non-estimable subgroup horizon), 11 names -> 10
+SI7-eb-m,ext_contract10_rcs_factor_fe,mat,b,,SI-7 fix: removing that one entry SHIFTS every later e(b) cell up one slot - the cells are relabelled, not recomputed (old also carried a machine-zero 8.9e-16 in the removed slot)
+SI7-pw,ext_contract10_rcs_factor_fe,mat,pwsgs,,SI-7 fix: near-zero subgroup cell moves between machine zeros (1.8e-15 vs 8.9e-16) once the non-estimable horizon is gone
+SI7-wm,ext_contract10_rcs_factor_fe,mat,wdidmainresults,,SI-7 fix: same class - a machine-zero cell (8.9e-16 -> 0)
 SIA4-d3p,trig_d3void,macro,properties,,SI-A4/R6: on the d3 class old failed to post V (b-only); new posts b plus a sentinel-diagonal V via the standard not-identified machinery ([b] -> [b V])
 SIA4-gp-p,cont_sg_gap,mat,pwsgs,,SI-A4/R6 void on a d3-class fixture (all treated dose slopes dropped; dupcol family): fabricated sg-ame zeros -> missing
 SIA4-gp-s,cont_sg_gap,mat,wdidsgresults_*,,SI-A4/R6 void: fabricated sg-ame zeros -> missing

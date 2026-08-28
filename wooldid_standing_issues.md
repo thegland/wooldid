@@ -15,6 +15,31 @@ report (`review_process/inv1_v_es_ame_2026-08-24.md`), the mini-assessment proto
 
 ---
 
+## Working principle on effort allocation (author-stated 2026-08-27)
+
+**Do not spend substantial effort, or accept material code complexity, to improve behavior
+that only occurs on datasets so pathological that a good result is impossible anyway.**
+
+The author's reasoning, recorded because it should govern future triage: users build
+specifications up incrementally and debug by subtraction. Someone who hits a failure on
+`att subgroups(g)` will almost certainly have run the same command without `subgroups()`
+first, and when something breaks the standard move is to drop options one at a time until
+it works. So on a genuinely degenerate dataset the user diagnoses the situation quickly on
+their own, and the marginal value of a more polished message in that corner is small —
+often smaller than the cost of the code that produces it.
+
+SI-7 is the worked example. The crash was real and its message was cryptic, but it fired
+only where the variance-covariance matrix had already collapsed, so nothing usable was
+being lost. The fix was kept because it turned out to be cheap and inert (fires only where
+the old code aborted; battery bit-identical; one fixture's diff), not because the polish
+justified the investigation that preceded it. Had it required invasive changes or ongoing
+maintenance, the correct call would have been to leave it alone.
+
+Applying this: before opening an investigation, ask whether any dataset reaching the defect
+could have produced a trustworthy answer. If not, cap the effort - document the behavior
+and move on. Keep such a fix only when it is safe, small and self-contained; otherwise
+toss it.
+
 ## A. The V_es / AME inference pathology family — FULL DIAGNOSIS (2026-08-24 grid)
 
 Diagnosed by author directive via a preregistered 26-case x 256-rep MC-truth grid
@@ -508,75 +533,6 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
     further action in this repo.
 
 ## D. Suite-side residuals (test infrastructure, not wooldid defects)
-
-- **SI-16 — ASSESSMENT NOTE (author-directed 2026-08-27, deliberately NOT implemented
-  yet; for the next general update of the assessment process).** The SI-7 fix removed a
-  hard abort, and that abort was inadvertently acting as a GATE. Runs that previously
-  died at `5o. invalid name` now complete and produce output — so a class of underlying
-  data situations that used to be blocked will start flowing through the subgroup
-  event-study path, adversarial/joint tests, the F2 handoff and the display, and that
-  output has never been examined. The next assessment update should probe this
-  deliberately rather than assume the fix is self-contained. Wanted:
-  - **A regression case that would have crashed before and must not now.** The pinned
-    fixture `ext_contract10_rcs_factor_fe` covers the exact historical crash, but the
-    assessment should carry at least one config of its own whose whole purpose is
-    "previously r198, now completes with a named dropped horizon", so the coverage does
-    not depend on one ext pin whose data is knife-edge.
-  - **Subgroups with deliberately nasty horizon structure**, beyond a single missing
-    pre-period. Author's example: a subgroup **missing every other relative year**
-    (holes interior to the window, not just at an end). Others worth constructing:
-    a subgroup estimable only post-treatment and not pre; a subgroup whose ONLY
-    estimable horizon is the reference-adjacent one; a subgroup where the dropped
-    horizon sits at the window edge versus the interior; two subgroups dropping
-    *different* horizons in the same run; a subgroup where every horizon is
-    non-estimable (exercises the skip-entirely branch, currently unexercised by any
-    config); and the same shapes under `att_it`/`att_itime` as well as `att`.
-  - **Check the downstream consumers, not just the return code.** Interior holes are
-    the real hazard: the relyr column, the adversarial line fit (which regresses
-    coefficients on relative time and now sees an irregular grid), the sg joint
-    pre-trend tests, `e(b_es_att_s*)`/`e(V_es_att_s*)` conformability, the plot paths,
-    and the `f2rl_*` labels all consume the reduced horizon set. A run that returns
-    rc 0 with a silently mislabeled or misaligned horizon would be worse than the old
-    crash, and nothing currently tests for that.
-  - **Both builds.** Old aborts on these, so they will be rc-pinned 198 -> 0 additions
-    rather than value comparisons; the ledger notes must say the old abort was not
-    good behavior (same wording issue as the SI-7 pin).
-  - **The subgroup JOINT pre-trend test is the one downstream path left unverified.**
-    Checked 2026-08-27: it is structurally independent of the SI-7 trim (it makes its
-    OWN `margins ..., contrast(overjoint)` call and never reads the trimmed matrix or
-    relyr list), and its interpretation survives a missing horizon in a way a line fit
-    does not - "the estimable pre-period effects are jointly zero" is still a coherent
-    null on a reduced set. The open question is whether that call, which also passes
-    `noestimcheck`, folds a NON-ESTIMABLE level into the overjoint contrast and returns
-    a p-value that is partly meaningless; only the total-failure case is guarded today
-    (`cap confirm matrix r(p)`). This is PRE-EXISTING, not introduced by SI-7. It could
-    not be observed on the available fixture because that dataset returns missing joint
-    p-values for an unrelated reason (its degenerate clustered VCE), for the pooled run
-    as well as the subgroups. Constructing data where a subgroup horizon is
-    non-estimable AND the joint tests otherwise produce values is exactly the kind of
-    case this note asks for.
-  - **PROBED 2026-08-27 (author-requested, robust VCE): the contamination scenario could
-    not be reached, and the marker looks like a symptom of a degenerate VCE.** Four
-    probes, recipes worth reusing when this note is worked:
-    (i) the pinned fixture with `cluster(state)` swapped for `robust` - the omission
-    marker DISAPPEARS entirely (no drop, no SI-7 path, joint p's produced), so on that
-    dataset the marker was itself downstream of the all-zero clustered VCE rather than
-    of the design;
-    (ii) a clean synthetic panel with one subgroup's relative period removed outright -
-    margins does not mark anything, it simply RETURNS FEWER COLUMNS. That is a
-    different (and pre-existing, working) path: sg1 came back with 5 correctly-labelled
-    rows against sg2's 6, joint p .731 vs .767, adversarial .426 vs .923;
-    (iii) the same clean panel with `fe(i.sg##i.t)` - no non-estimability at all;
-    (iv) the author's own example, every other relative year removed for one subgroup
-    (INTERIOR holes at rel -4 and -2) - again the omit-column path: sg1 kept 4
-    correctly-labelled rows (att att pre3 post0), its joint test computed on the
-    reduced set (.732), and its adversarial correctly skipped by the existing
-    too-few-coefficients gate while sg2 was untouched.
-    HYPOTHESIS worth testing rather than assuming: the `o.` marker and missing joint
-    p-values may be intrinsically linked, because the same variance degeneracy that
-    makes margins mark a level non-estimable also independently prevents the joint test
-    from returning a value - in which case a joint p contaminated by a non-estimable
-    level is not reachable. This rests on failed attempts, not proof.
 
 - **SI-14 — NFADV unpost-path coverage.** The pooled-reference/degenerate-q
   adversarial unpost paths are ledgered only for `ext_*` configs; no core/adm
