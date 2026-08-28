@@ -541,6 +541,20 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   - **Both builds.** Old aborts on these, so they will be rc-pinned 198 -> 0 additions
     rather than value comparisons; the ledger notes must say the old abort was not
     good behavior (same wording issue as the SI-7 pin).
+  - **The subgroup JOINT pre-trend test is the one downstream path left unverified.**
+    Checked 2026-08-27: it is structurally independent of the SI-7 trim (it makes its
+    OWN `margins ..., contrast(overjoint)` call and never reads the trimmed matrix or
+    relyr list), and its interpretation survives a missing horizon in a way a line fit
+    does not - "the estimable pre-period effects are jointly zero" is still a coherent
+    null on a reduced set. The open question is whether that call, which also passes
+    `noestimcheck`, folds a NON-ESTIMABLE level into the overjoint contrast and returns
+    a p-value that is partly meaningless; only the total-failure case is guarded today
+    (`cap confirm matrix r(p)`). This is PRE-EXISTING, not introduced by SI-7. It could
+    not be observed on the available fixture because that dataset returns missing joint
+    p-values for an unrelated reason (its degenerate clustered VCE), for the pooled run
+    as well as the subgroups. Constructing data where a subgroup horizon is
+    non-estimable AND the joint tests otherwise produce values is exactly the kind of
+    case this note asks for.
 
 - **SI-14 — NFADV unpost-path coverage.** The pooled-reference/degenerate-q
   adversarial unpost paths are ledgered only for `ext_*` configs; no core/adm

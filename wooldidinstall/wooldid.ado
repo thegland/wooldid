@@ -2742,7 +2742,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * is <= 2 columns and fails the > 2 gate either way)
               if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
               if "`adversarial'" == "adversarial"   {
-                if  `finaladvtest' > 2  {
+                * SI-7 (author-ruled 2026-08-27): if any horizon was dropped as not estimable,
+                * refuse the line test for THIS subgroup. The adversarial null is that the
+                * coefficients lie on a single line in relative time; with a horizon missing the
+                * fit is run on an incomplete - and possibly interior-holed - grid, so the
+                * statistic would not mean what its name says. Other subgroups are unaffected.
+                if `sgndrop' > 0 {
+                  dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': `sgndrop' relative period effect(s) were dropped as not estimable, so its coefficients no longer span a complete relative-time grid and a line fit through them would not be interpretable."
+                }
+                else if  `finaladvtest' > 2  {
                   wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase')
                   local advstatus `r(status)'
                   if "`advstatus'" != "gapskip" {

@@ -63,13 +63,19 @@ use suite/data/survey_rcs.dta, clear
 qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
 qui log using si7_t1.txt, text replace name(si7)
 cap noi wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) ///
-    fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) safety(off)
+    fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) ///
+    safety(off) adversarial
 local rc1 = _rc
 qui log close si7
 scanlog si7_t1.txt "are not estimable for subgroup 1"
 local caut = r(found)
 scanlog si7_t1.txt "invalid name"
 local crash = r(found)
+* the adversarial line test must be REFUSED for a subgroup with a dropped horizon:
+* the null is that the coefficients lie on a line in relative time, which an
+* incomplete (possibly interior-holed) grid cannot express
+scanlog si7_t1.txt "adversarial pre-trend test was skipped for subgroup 1"
+local advskip = r(found)
 sgrows 1 pre2
 local n1 = r(n)
 local has1 = r(has)
@@ -77,11 +83,11 @@ sgrows 2 pre2
 local n2 = r(n)
 local has2 = r(has)
 cap erase si7_t1.txt
-if `rc1' == 0 & `caut' == 1 & `crash' == 0 & `has1' == 0 & `has2' == 1 & `n1' < `n2' & `n1' > 0 {
-  dis as result "T1 PASS: rc 0, caution named sg1/pre2, sg1 dropped it (`n1' rows) and sg2 kept it (`n2' rows)"
+if `rc1' == 0 & `caut' == 1 & `crash' == 0 & `has1' == 0 & `has2' == 1 & `n1' < `n2' & `n1' > 0 & `advskip' == 1 {
+  dis as result "T1 PASS: rc 0, caution named sg1/pre2, sg1 dropped it (`n1' rows) and sg2 kept it (`n2' rows), adversarial refused for sg1"
 }
 else {
-  dis as error "T1 FAIL: rc=`rc1' caution=`caut' crashtext=`crash' sg1rows=`n1' sg1haspre2=`has1' sg2rows=`n2' sg2haspre2=`has2'"
+  dis as error "T1 FAIL: rc=`rc1' caution=`caut' crashtext=`crash' sg1rows=`n1' sg1haspre2=`has1' sg2rows=`n2' sg2haspre2=`has2' advskip=`advskip'"
   global pf = $pf + 1
 }
 
