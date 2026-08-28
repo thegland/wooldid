@@ -2604,6 +2604,92 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               matrix `nameget' = r(table)[1, `matrixstartgrab'..`=colsof(r(b))']
               local names: colnames `nameget'
               matrix drop `nameget'
+
+              * SI-7 (author-ruled 2026-08-27): margins marks a subgroup-by-horizon margin it
+              * deems NOT ESTIMABLE with an omission marker (e.g. 5bno.<tvar>). Because this call
+              * passes noestimcheck, margins computes such a margin anyway - so the marker is the
+              * ONLY signal separating a real estimate from one produced under protest, and it must
+              * be READ rather than stripped: stripping the o leaves a token that parses as a plain
+              * number, and the non-estimable value is then reported as if it were an estimate
+              * (the pre-fix behavior on builds where the token happened to parse). Instead drop
+              * those horizons from THIS subgroup and say so; ragged subgroups are already
+              * supported below ("not all sgs have all relyrs, necessarily"). The drop must be
+              * positional: names, the estimates matrix and the F2 b/V all index the same margins
+              * columns, and the matrix concatenation below requires them to stay conformable.
+              local sgkeep
+              local sgdroplbl
+              local sgndrop 0
+              local sgidx 0
+              foreach sgnm of local names {
+                local ++sgidx
+                if strpos("`sgnm'", "o.") != 0 {
+                  local ++sgndrop
+                  if regexm("`sgnm'", "^([0-9]+)") {
+                    local sgdrelyr = real(regexs(1)) - `min_t' - 1
+                    if `sgdrelyr' < 0 local sgdroplbl `sgdroplbl' pre`=abs(`sgdrelyr')'
+                    else              local sgdroplbl `sgdroplbl' post`sgdrelyr'
+                  }
+                }
+                else local sgkeep `sgkeep' `sgidx'
+              }
+              if `sgndrop' > 0 {
+                dis as text "Caution: the relative period effect(s) `sgdroplbl' are not estimable for subgroup `sgcase' (margins reports them as omitted), so they are dropped from that subgroup's event study; its remaining relative periods, and all other subgroups, are unaffected. This typically arises when the specified fixed effects absorb the subgroup-by-time variation (for example fe() interacting the subgroups() variable with time), or when a subgroup has no usable observations at that relative period."
+                if "`sgkeep'" == "" {
+                  dis as text "Caution: no relative period effect is estimable for subgroup `sgcase', so its event study is skipped entirely."
+                  cap matrix drop `___`horizitem'_horiz_s`sgcase''
+                  continue
+                }
+                local sgnames
+                foreach sgi of local sgkeep {
+                  local sgw : word `sgi' of `names'
+                  local sgnames `sgnames' `sgw'
+                }
+                local names `sgnames'
+                tempname sgkm
+                local sgfirst 1
+                foreach sgi of local sgkeep {
+                  if `sgfirst' {
+                    matrix `sgkm' = `___`horizitem'_horiz_s`sgcase''[`sgi', 1...]
+                    local sgfirst 0
+                  }
+                  else matrix `sgkm' = `sgkm' \ `___`horizitem'_horiz_s`sgcase''[`sgi', 1...]
+                }
+                matrix `___`horizitem'_horiz_s`sgcase'' = `sgkm'
+                matrix drop `sgkm'
+                if "`marginsdof'" != "nose" {
+                  tempname sgkb sgkv sgkrow
+                  local sgfirst 1
+                  foreach sgi of local sgkeep {
+                    if `sgfirst' {
+                      matrix `sgkb' = `f2bmat'[1, `sgi']
+                      local sgfirst 0
+                    }
+                    else matrix `sgkb' = (`sgkb', `f2bmat'[1, `sgi'])
+                  }
+                  local sgfirst 1
+                  foreach sgi of local sgkeep {
+                    local sgfirst2 1
+                    foreach sgj of local sgkeep {
+                      if `sgfirst2' {
+                        matrix `sgkrow' = `f2vmat'[`sgi', `sgj']
+                        local sgfirst2 0
+                      }
+                      else matrix `sgkrow' = (`sgkrow', `f2vmat'[`sgi', `sgj'])
+                    }
+                    if `sgfirst' {
+                      matrix `sgkv' = `sgkrow'
+                      local sgfirst 0
+                    }
+                    else matrix `sgkv' = `sgkv' \ `sgkrow'
+                  }
+                  matrix `f2bmat' = `sgkb'
+                  matrix `f2vmat' = `sgkv'
+                  matrix drop `sgkb' `sgkv' `sgkrow'
+                }
+                * the adversarial gate counts margins columns; discount the removed ones
+                local finaladvtest = `finaladvtest' - `sgndrop'
+              }
+
               local names = subinstr("`names'", "bn","",.)
               local names = subinstr("`names'", "`_t'","",.)
               local names = subinstr("`names'", "1.`targetflag'","",.)
