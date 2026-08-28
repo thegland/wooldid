@@ -555,6 +555,28 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
     as well as the subgroups. Constructing data where a subgroup horizon is
     non-estimable AND the joint tests otherwise produce values is exactly the kind of
     case this note asks for.
+  - **PROBED 2026-08-27 (author-requested, robust VCE): the contamination scenario could
+    not be reached, and the marker looks like a symptom of a degenerate VCE.** Four
+    probes, recipes worth reusing when this note is worked:
+    (i) the pinned fixture with `cluster(state)` swapped for `robust` - the omission
+    marker DISAPPEARS entirely (no drop, no SI-7 path, joint p's produced), so on that
+    dataset the marker was itself downstream of the all-zero clustered VCE rather than
+    of the design;
+    (ii) a clean synthetic panel with one subgroup's relative period removed outright -
+    margins does not mark anything, it simply RETURNS FEWER COLUMNS. That is a
+    different (and pre-existing, working) path: sg1 came back with 5 correctly-labelled
+    rows against sg2's 6, joint p .731 vs .767, adversarial .426 vs .923;
+    (iii) the same clean panel with `fe(i.sg##i.t)` - no non-estimability at all;
+    (iv) the author's own example, every other relative year removed for one subgroup
+    (INTERIOR holes at rel -4 and -2) - again the omit-column path: sg1 kept 4
+    correctly-labelled rows (att att pre3 post0), its joint test computed on the
+    reduced set (.732), and its adversarial correctly skipped by the existing
+    too-few-coefficients gate while sg2 was untouched.
+    HYPOTHESIS worth testing rather than assuming: the `o.` marker and missing joint
+    p-values may be intrinsically linked, because the same variance degeneracy that
+    makes margins mark a level non-estimable also independently prevents the joint test
+    from returning a value - in which case a joint p contaminated by a non-estimable
+    level is not reachable. This rests on failed attempts, not proof.
 
 - **SI-14 — NFADV unpost-path coverage.** The pooled-reference/degenerate-q
   adversarial unpost paths are ledgered only for `ext_*` configs; no core/adm
