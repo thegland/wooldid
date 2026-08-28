@@ -1257,11 +1257,11 @@
   },
   {
    "config": "AB29",
-   "M": 504,
-   "label": "continuous, unit clustering at 50 units/cell = 50 CLUSTERS per cell - the empty cell of the grid",
+   "M": 335,
+   "label": "continuous, unit clustering at 50 units/cell = 50 CLUSTERS per cell. PARTIAL: stopped at 335 of 504 reps by author decision once the conclusion was not in doubt.",
    "spec": "G=30 U=50 T=12 cluster(unitid) err=iid contreat",
    "shards": 8,
-   "reps_per_shard": 63,
+   "reps_per_shard": null,
    "base_seed": 9100001,
    "G": 30,
    "U": 50,
@@ -1305,59 +1305,8 @@
      "band_low_pct": 4.0,
      "band_high_pct": 11.0
     }
-   }
-  },
-  {
-   "config": "AB30",
-   "M": 504,
-   "label": "continuous, unit clustering at 20 units/cell - middle rung of the clustered ladder",
-   "spec": "G=30 U=20 T=12 cluster(unitid) err=iid contreat",
-   "shards": 8,
-   "reps_per_shard": 63,
-   "base_seed": 9200001,
-   "G": 30,
-   "U": 20,
-   "T": 12,
-   "vce": "cluster(unitid)",
-   "err": "iid",
-   "mode": "contreat",
-   "stag": 0,
-   "scs": 1,
-   "pwr": 0,
-   "extra": "",
-   "certification_arm": false,
-   "quantities": [
-    [
-     "adversarial_ro",
-     "padv"
-    ],
-    [
-     "ame_adversarial",
-     "pame"
-    ]
-   ],
-   "secondaries": [
-    [
-     "joint_horiz",
-     "pjoint"
-    ],
-    [
-     "joint_Choriz",
-     "pjointC"
-    ]
-   ],
-   "predictions": {
-    "adversarial_ro": {
-     "point_pct": 5.2,
-     "band_low_pct": 3.5,
-     "band_high_pct": 7.5
-    },
-    "ame_adversarial": {
-     "point_pct": 15.0,
-     "band_low_pct": 8.0,
-     "band_high_pct": 28.0
-    }
-   }
+   },
+   "stopped_early": true
   }
  ],
  "decision_rule": {
@@ -1399,6 +1348,7 @@
   "requested_by": "author question",
   "disclosure": "Report-only; predictions locked before running.",
   "purpose": "Completes the clustered continuous ladder. Measured so far: unit clustering at 6 units/cell = 48.41% (vs robust 31.55% on identical geometry), and robust at 20/50 units = 9.92%/5.95%. The clustered arm at 20 and 50 units was never run, so 'fine clustering harms the ame' rests on a single small-cell observation.",
-  "locked_reasoning": "Two distinct channels damage the ame covariance and BOTH should improve with cell size: (1) leverage deflation of the within-cell dose slopes, which robust showed dies out by 50 units; (2) noisy cross-horizon off-diagonals that clustering estimates where robust sets them near zero - these are estimated from the cluster count, which grows with U. So I predict the clustered arm largely recovers by 50 units (6.5%) rather than staying at 48%, which would mean the harm from clustering is a SMALL-CELL phenomenon, not a property of clustering as such."
+  "locked_reasoning": "Two distinct channels damage the ame covariance and BOTH should improve with cell size: (1) leverage deflation of the within-cell dose slopes, which robust showed dies out by 50 units; (2) noisy cross-horizon off-diagonals that clustering estimates where robust sets them near zero - these are estimated from the cluster count, which grows with U. So I predict the clustered arm largely recovers by 50 units (6.5%) rather than staying at 48%, which would mean the harm from clustering is a SMALL-CELL phenomenon, not a property of clustering as such.",
+  "outcome": "AB29 measured 5.67% (MC SE 1.26pp), chi2 4.1, on 335 of 504 reps before the author stopped the run as decided. Locked prediction 6.5% [4.0,11.0]: HIT. AB30 (20-unit clustered rung) was cancelled and never ran, so the threshold between 6 and 50 units under clustering is unmapped. CONSEQUENCE: the earlier claim that 'the clustering advice inverts between the att and ame sides' was OVERGENERALIZED from a single small-cell observation (48.41% at 6 units/cell). Clustering at 50 units/cell gives 5.67% against robust's 5.95% on the same geometry - a tie. The corrected statement is that SMALL CELLS break the continuous test and clustering makes small cells worse; clustering as such is not the problem."
  }
 }

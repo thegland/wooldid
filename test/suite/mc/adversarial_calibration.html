@@ -381,7 +381,7 @@ footer code { background: none; padding: 0; color: var(--ink); }
       </thead>
       <tbody>
         <tr><td>Binary, clustering finer than the cell</td><td class="num">4.80%</td><td class="num">5.00%</td><td class="num">4.37%</td><td class="note">No effect — already correct, stays correct</td></tr>
-        <tr><td><strong>Continuous, robust</strong></td><td class="num">31.55%</td><td class="num">9.92%</td><td class="num"><strong>5.95%</strong></td><td class="note">Cures it — the one place size is the remedy</td></tr>
+        <tr><td><strong>Continuous, robust</strong></td><td class="num">31.55%</td><td class="num">9.92%</td><td class="num"><strong>5.95%</strong></td><td class="note">Cures it — the one place size is the remedy (clustered: 5.67%)</td></tr>
         <tr><td>Binary, two clusters per cell</td><td class="num">14.50%</td><td class="num">—</td><td class="num">17.86%</td><td class="note">Worse</td></tr>
         <tr><td>Binary, cells inside one cluster</td><td class="num">56.35%</td><td class="num">—</td><td class="num">59.33%</td><td class="note">Worse (20.5% at one observation per cell)</td></tr>
         <tr><td>Binary, cohort-period common shock</td><td class="num">44.84%</td><td class="num">—</td><td class="num"><strong>98.02%</strong></td><td class="note">Catastrophically worse</td></tr>
@@ -447,8 +447,9 @@ footer code { background: none; padding: 0; color: var(--ink); }
   <div class="col">
     <p>Excess over nominal falls from 26.6 to 4.9 to 0.95 percentage points — roughly a factor of five for each tripling of cell size. At fifty observations per cell the test is correctly sized (5.95%, uniformity 8.2), so the continuous version is <strong>conditional rather than irredeemable</strong>. The formal preregistered ruling, which keyed on the twenty-unit configuration, returns withdraw; the fifty-unit result arrived as a disclosed follow-up and by its own terms cannot overturn a trigger. The honest reading is a gated keep: permit above a cell-size threshold, refuse or caution below it, and route refused cases to randomization inference, bootstrap, or IM p-values. The threshold itself lies somewhere between twenty and fifty and has not been located.</p>
     <div class="callout">
-      <p class="lede">The clustering advice inverts between the two sides.</p>
-      <p>Clustering finer than the cell is what rescues the binary test. For the continuous test it makes things <strong>worse</strong>: 48.41% under unit-level clustering against 31.55% under robust on identical geometry. Unit clustering manufactures noisy, few-degree-of-freedom off-diagonal terms in the covariance where robust structurally has zeros that happen to match the truth. One theorist predicted this against the other two.</p>
+      <p class="lede">Clustering harms the continuous test only when cells are small — a correction.</p>
+      <p>At six observations per cell, unit-level clustering measures 48.41% against robust's 31.55% on identical geometry, which was initially written up here as the clustering advice inverting between the binary and continuous sides. Running the clustered arm at <strong>fifty</strong> observations per cell shows that was overgeneralized: it measures <strong>5.67%</strong> against robust's 5.95% — a tie. Both damage channels are cell-size dependent, so the continuous test has one requirement, cell size, rather than two competing ones. The small-cell finding and its mechanism stand: clustering estimates noisy cross-horizon covariances where robust sets them structurally near zero, and that noise is what a Wald statistic amplifies when cells are thin.</p>
+      <p>That measurement is a partial run of 335 replications (Monte Carlo standard error 1.26 points), stopped once the conclusion was not in doubt. The threshold between six and fifty observations per cell was not mapped, so “on the order of fifty” is the honest way to state the requirement.</p>
     </div>
   </div>
 </section>

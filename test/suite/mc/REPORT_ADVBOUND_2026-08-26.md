@@ -129,8 +129,13 @@ Two findings:
    size threshold and permit it above one. Caveats: this is a single config at M=504, the pass
    is comfortable (30 of 504, band limit 35) but the threshold between 20 and 50 units is
    unmapped, and it holds for **robust only** — see finding 2.
-2. **Clustering finer makes the ame WORSE, not better** — 48.41% (unit-clustered) vs 31.55%
-   (robust) on the same 6-unit geometry. **The advice therefore inverts between the two sides:**
+2. **Clustering finer makes the ame worse AT SMALL CELLS ONLY** — 48.41% (unit-clustered) vs
+   31.55% (robust) on the same 6-unit geometry. **This was initially written up as "the advice
+   inverts between the two sides", which AMENDMENT 4 shows was overgeneralized from that single
+   small-cell observation** (see §9). At 50 units per cell the clustered arm measures 5.67%
+   against robust's 5.95% — a tie. Corrected statement: small cells break the continuous test and
+   clustering makes small cells worse; clustering as such is not the problem. The original
+   small-cell finding and its mechanism still stand:
    "cluster finer than the cell" rescues the binary att test and actively harms the continuous
    ame test. One theorist predicted this against the other two; the mechanism he gave is that
    unit clustering manufactures noisy, few-df off-diagonal terms in the ame covariance where
@@ -260,3 +265,33 @@ Both facts belong in the design-conditions documentation together.
 
 Campaign totals after amendment 3: **31 configs, 20,584 reps, 0 bad rcs, 32 of 34 locked
 predictions inside band.**
+
+
+---
+
+## 9. AMENDMENT 4 (2026-08-27, stopped early): the clustered continuous ladder
+
+The claim that fine clustering harms the ame rested on ONE observation — 48.41% at 6 units per
+cell. The clustered arm was never run at larger cells, so the claim was untested where it
+mattered. Two configs were preregistered with locked predictions; the author stopped the run once
+the answer was clear, and the second was cancelled.
+
+| config | geometry | VCE | ame rate | uniformity | n | status |
+|---|---|---|---|---|---|---|
+| AB29 | 30 × 50 | cluster(unitid) — **50 clusters/cell** | **5.67%** (MC SE 1.26pp) | 4.1 | 335 of 504 | partial, stopped by author |
+| AB30 | 30 × 20 | cluster(unitid) | — | — | 0 | cancelled, never ran |
+
+Locked prediction for AB29 was 6.5% [4.0, 11.0]: **HIT**. Its att twin measured 4.18%.
+
+**The correction this forces.** Clustered 5.67% versus robust 5.95% at the same 50-unit geometry
+is a tie, against 48.41% versus 31.55% at 6 units. Both damage channels are cell-size dependent —
+within-cell slope leverage (which robust already showed dies out by 50 units) and the noisy
+cross-horizon off-diagonals that clustering estimates where robust sets them structurally near
+zero (estimated from the cluster count, which grows with cell size). So the continuous test has
+**one requirement, cell size**, not two competing ones.
+
+**What stays unmapped, by decision.** The threshold between 6 and 50 units under clustering was
+the cancelled config, so the clustered ladder has a gap in the middle; the robust ladder's own
+threshold between 20 and 50 units was never localized either. Any documented cell-size number
+should therefore be stated as "on the order of 50", not as a tested boundary. Testing was stopped
+here at the author's direction.
