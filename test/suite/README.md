@@ -134,6 +134,17 @@ mixed-vintage dumps cannot be compared.
 
 ## Known limits / future work
 
+- **Subgroup horizon-estimability coverage (SI-16, queued for the next assessment
+  update).** The SI-7 fix turned a hard abort into "drop the non-estimable horizon for
+  that subgroup and caution". That abort was acting as an inadvertent gate, so data
+  situations that used to be blocked now produce output through the subgroup event
+  study, adversarial/joint tests and the F2 handoff — none of it exercised here yet.
+  Needs configs with deliberately ragged subgroup horizon structure (interior holes,
+  e.g. every other relative year missing; post-only subgroups; different subgroups
+  dropping different horizons; a subgroup with nothing estimable, which exercises the
+  skip-entirely branch), asserted on the downstream surfaces rather than just the return
+  code. See wooldid_standing_issues.md section D.
+
 - Both-error parity pins compare rc only (messages out of contract; console output is
   never diffed — message texts changed program-wide by design).
 - The colleagues' oracle/metamorphic library is not ported (future component).

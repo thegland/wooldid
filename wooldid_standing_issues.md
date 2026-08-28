@@ -509,6 +509,39 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
 
 ## D. Suite-side residuals (test infrastructure, not wooldid defects)
 
+- **SI-16 — ASSESSMENT NOTE (author-directed 2026-08-27, deliberately NOT implemented
+  yet; for the next general update of the assessment process).** The SI-7 fix removed a
+  hard abort, and that abort was inadvertently acting as a GATE. Runs that previously
+  died at `5o. invalid name` now complete and produce output — so a class of underlying
+  data situations that used to be blocked will start flowing through the subgroup
+  event-study path, adversarial/joint tests, the F2 handoff and the display, and that
+  output has never been examined. The next assessment update should probe this
+  deliberately rather than assume the fix is self-contained. Wanted:
+  - **A regression case that would have crashed before and must not now.** The pinned
+    fixture `ext_contract10_rcs_factor_fe` covers the exact historical crash, but the
+    assessment should carry at least one config of its own whose whole purpose is
+    "previously r198, now completes with a named dropped horizon", so the coverage does
+    not depend on one ext pin whose data is knife-edge.
+  - **Subgroups with deliberately nasty horizon structure**, beyond a single missing
+    pre-period. Author's example: a subgroup **missing every other relative year**
+    (holes interior to the window, not just at an end). Others worth constructing:
+    a subgroup estimable only post-treatment and not pre; a subgroup whose ONLY
+    estimable horizon is the reference-adjacent one; a subgroup where the dropped
+    horizon sits at the window edge versus the interior; two subgroups dropping
+    *different* horizons in the same run; a subgroup where every horizon is
+    non-estimable (exercises the skip-entirely branch, currently unexercised by any
+    config); and the same shapes under `att_it`/`att_itime` as well as `att`.
+  - **Check the downstream consumers, not just the return code.** Interior holes are
+    the real hazard: the relyr column, the adversarial line fit (which regresses
+    coefficients on relative time and now sees an irregular grid), the sg joint
+    pre-trend tests, `e(b_es_att_s*)`/`e(V_es_att_s*)` conformability, the plot paths,
+    and the `f2rl_*` labels all consume the reduced horizon set. A run that returns
+    rc 0 with a silently mislabeled or misaligned horizon would be worse than the old
+    crash, and nothing currently tests for that.
+  - **Both builds.** Old aborts on these, so they will be rc-pinned 198 -> 0 additions
+    rather than value comparisons; the ledger notes must say the old abort was not
+    good behavior (same wording issue as the SI-7 pin).
+
 - **SI-14 — NFADV unpost-path coverage.** The pooled-reference/degenerate-q
   adversarial unpost paths are ledgered only for `ext_*` configs; no core/adm
   config exercises them. Add one. §4 gap 1.
