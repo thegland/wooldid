@@ -395,7 +395,20 @@ no single omitted period exists, so a caution is printed and the fitted line is 
 {it:timetrends}), a caution is printed and no p-value is computed. For display, wooldid also reports a line fit by the unweighted OLS regression of {it:coef_rt} on {it:time_rt},
 where {it:coef_rt} is the estimated coefficient in relative time period {it:rt} and {it:time_rt} is the relative time period; the variable {it:coef_rt} includes values of 0 for the
 reference period (or periods, if {it:timetrends} and {it:esfixedbaseperiod} are specified). These tests will not be conducted if an insufficient number of relative time
-period-specific treatment effects are requested (either overall, or within specific subgroups). {p_end}
+period-specific treatment effects are requested (either overall, or within specific subgroups).
+{p_end}
+
+{phang}{it:Size of the adversarial test.} Simulation evidence indicates that these line tests are particularly sensitive to small cluster count issues, and that they tend to be
+severely oversized when each i-by-t cell does not contain {it:many} clusters. Rejection rates under a true null were close to nominal when every treated cohort-by-period cell was
+spanned by six or more clusters, but rose sharply as that number fell - roughly threefold when cells were spanned by only two clusters, and by an order of magnitude when each cell
+lay entirely within a single cluster (as happens automatically when clustering on the cohort variable {it:i} itself). Enlarging cells does not substitute for this: cell size was
+found to be immaterial to the test's size once the cluster requirement was met, and did not repair matters when it was not. Small overall cluster counts degrade the test
+independently. Two further conditions are worth keeping in view. Under a continuous treatment the line test additionally requires cells containing many observations - on the order
+of fifty - because each cell's dose slope is otherwise too imprecisely estimated for the test's covariance to be trustworthy. And where errors contain a common shock at the
+cohort-by-period level, no analytic variance estimator can capture it: such a shock is absorbed into the cell's own coefficient and leaves no trace in the residuals, so the test
+becomes badly oversized regardless of the clustering chosen, increasingly so as cells grow. Where these conditions are not met, prefer randomization inference (see {it:permute()})
+or bootstrap-based standard errors for pre-trend inference. {it:wooldid} does not test for these conditions at run time; they are a matter for the user's judgement about the
+design. {p_end}
 
 {phang}{opt altmethod_adversarial}: Alternate method of implementing the test above, which projects a trend forward using the pre-treatment coefficients only (plus the planted
 zero-valued reference row or rows), and then tests whether the post-treatment coefficients collectively fall in line with the projected values. The test propagates the full

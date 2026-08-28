@@ -229,6 +229,23 @@ STILL OPEN in family A after this implementation:
     (9.92% at best geometry); and the clustering advice INVERTS between sides
     (fine clustering rescues att, harms ame: 48.41% vs robust 31.55%).
     Ship recommendations in the report; no code written pending author ruling.
+  - **CLOSED 2026-08-27 by author ruling — DOCUMENTATION ONLY, no runtime gate.**
+    The author ruled the adversarial line tests properly addressed by an sthlp
+    note that they are particularly sensitive to small cluster counts and tend
+    to be severely oversized when each i-t cell does not contain MANY clusters;
+    explicitly NO runtime tests for cluster counts. Implemented in the
+    adversarial() entry, grounded in the measured campaign (>=6 clusters per
+    cell near nominal; ~3x oversized at 2 clusters per cell; order-of-magnitude
+    at 1; cell size immaterial once the cluster condition is met and no repair
+    when it is not; small overall cluster counts degrade independently). Two
+    further conditions were included in the same paragraph and are flagged to
+    the author as ADDITIONS beyond the literal ruling, easily struck: the
+    continuous/ame version additionally needs cells of order 50 observations,
+    and a cohort-by-period common shock is invisible to every analytic VCE
+    (worsening with cell size), with a steer to permute()/bootstrap in both
+    cases. Campaign artifacts retained: REPORT_ADVBOUND_2026-08-26.md,
+    PREREG_ADVBOUND_2026-08-25.md, adversarial_calibration.html, advb_grid.json,
+    and the mc_advb/run_advb/analyze_advb harness.
   - **CLOSED 2026-08-25 by author ruling (pointwise att side).** No caution for
     the standard binary run: the AME case is covered by the containment screen,
     the joint-test case by the SI-A1 screen, and the author's judgment is that
