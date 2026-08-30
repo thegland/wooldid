@@ -55,6 +55,9 @@ patho_nocontrols,patho,dta_path_nocontrols,y i t ttre,,,,att cluster(i) esprelen
 patho_nopre,patho,dta_path_nopre,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1),,,,cohort without pre-periods + extended-missing sg
 patho_nopost,patho,dta_path_nopost,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) oostreatedcontrols(1),,,,out-of-sample onset with oos controls
 patho_onepercell,patho,dta_path_onepercell,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1),,,,single-obs ttre-year cells
+patho_perm,patho,dta_path_onepercell,y i t ttre,,,seed246813,att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20),198,0,,doctrine 2026-08-29 (feature x pathological data): RI on single-unit cells - a valid inference mode there (probe: 20/20 reps p .0476); new-only option -> old r198
+patho_gt,patho,dta_path_onepercell,y i t ttre,,,,att cluster(i) esprelength(1) espostlength(1) gteffects,198,0,,doctrine 2026-08-29 (feature x pathological data): per-cell effects where every cell is one obs; new-only option -> old r198
+patho_ptp,patho,dta_path_onepercell,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) esfixedbaseperiod pretrendpower(80),198,0,,doctrine 2026-08-29 (feature x pathological data): Roth power diagnostics on a 2-point single-obs pre window; new-only option -> old r198
 # ---- covars: closes the zero-coverage gap on shared covariate options ----
 cov_controls,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) controls(x1 x2),,,,scattered-missing controls shrink e(sample) (A7 class)
 cov_fe,covars,dta_s_covars,y i t ttre,,,,att cluster(i) esprelength(2) espostlength(2) fe(fecat),,,,fe singleton drops (A7 class)
