@@ -534,8 +534,14 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
 
 ## C2. New defect found in passing (bootstrap R2 review, 2026-08-30)
 
-- **SI-17 — permute() + cleanmatrices kills the permutation engine after a successful
-  estimation (r3499).** MEASURED at HEAD 4b08962 by the bootstrap plan's blind R2
+- **SI-17 — RESOLVED (author-ruled 2026-08-31; fix (a), refuse the combination).**
+  `permute()` now refuses `cleanmatrices` at parse with a named message, mirroring the
+  bootstrap refusal; `test_permute2.do` carries S17a-S17d (rc, message text, and both
+  options still working alone), and the pre-fix build was confirmed to reach the
+  r(3499) failure on the same command line. Original report follows.
+
+- **SI-17 (original) — permute() + cleanmatrices kills the permutation engine after a
+  successful estimation (r3499).** MEASURED at HEAD 4b08962 by the bootstrap plan's blind R2
   reviewer (probe P2, artifacts in the session scratchpad r2/): `permute(shuffle)
   permreps(20) cleanmatrices` dies r(3499) "wooldid_permx() not found" - the worker-end
   `clear mata` that cleanmatrices requests destroys the ado's own compiled mata

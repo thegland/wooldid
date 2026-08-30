@@ -243,7 +243,7 @@ version 16.0
     wooldid_display , part(1)
     wooldid_display , part(2)
     wooldid_display , part(boot)
-    if "`makeplots'`makecfxplots'`saveplots'`gteffects'`histogramcohorteffects'" != "" dis as text "Caution: plots, saved plot data, gteffects cell standard errors and histogram outputs are produced from the ANALYTIC covariance during estimation; the reported tables and e() inference above are bootstrap-based."
+    if "`makeplots'`makecfxplots'`saveplots'`gteffects'`histogramcohorteffects'`adversarial'`altmethod_adversarial'" != "" dis as text "Caution: plots, saved plot data, gteffects cell standard errors, histogram outputs and adversarial line-test p-values are produced from the ANALYTIC covariance during estimation; the reported tables and e() inference above are bootstrap-based."
     dis as result " "
   }
 end
@@ -4418,7 +4418,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
   if "`permute'" != "" {
-    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if')
+    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') cm(`cleanmatrices')
     if _rc != 0 error _rc
   }
 
@@ -4900,7 +4900,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis)]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) cm(string)]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -4909,6 +4909,15 @@ version 16.0
   }
   if "`impv'" != "" {
     dis as error "Error: permute() is not compatible with impvalues."
+    error 198
+  }
+  * SI-17: cleanmatrices asks the worker to clear mata on its way out, which destroys
+  * the ado's OWN compiled mata functions - so the shell's post-estimation permutation
+  * engine then dies r(3499) "wooldid_permx() not found" AFTER a fully successful
+  * estimation. Refused rather than silently fragile (bootstrap() refuses it for the
+  * same reason)
+  if "`cm'" != "" {
+    dis as error "Error: permute() is not compatible with cleanmatrices; cleanmatrices clears the compiled engine functions the permutation replications need after estimation."
     error 198
   }
   if "`uncond'" != "" {
