@@ -9,7 +9,14 @@
 * the aforementioned governmental entities.
 
 cap prog drop wooldid
-prog def wooldid, eclass
+* properties(svyr) is a DISPLAY-ROUTING declaration, not an svy-support claim: Stata's
+* bootstrap/jackknife prefixes route their post-replication output through
+* _prefix_display only when the command's properties intersect {svyb,svyj,svyr};
+* otherwise they attempt a bare `wooldid, <diopts>' replay, which parses as a
+* too-few-variables r(198) here and aborts the prefix AFTER a fully successful
+* replication run. svyr is the narrowest property that fixes the routing. svy itself
+* remains unsupported and fails loudly (measured: svy: wooldid -> r(101)).
+prog def wooldid, eclass properties(svyr)
 version 16.0
   * F11: replay - wooldid typed alone after a successful wooldid estimation redisplays
   * the stored results from e() (tables and diagnostics; plots are not redrawn, and no
@@ -169,6 +176,12 @@ end
 cap prog drop wooldid_worker
 prog def wooldid_worker, eclass
 version 16.0
+  * Every Stata replication prefix (bootstrap/jackknife/simulate/permute) runs its
+  * replication loop under `set coeftabresults off', which silently removes margins
+  * r(table) - and this worker harvests r(table) at 16+ sites, dying r(503)
+  * "conformability error" on every replicate. The setting is program-scoped, so this
+  * line is automatically undone at worker exit and is a no-op in a default session.
+  set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
 syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis)]
