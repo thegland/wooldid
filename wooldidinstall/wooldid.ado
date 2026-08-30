@@ -184,7 +184,7 @@ version 16.0
   set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis)]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -4033,7 +4033,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis)]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -4344,6 +4344,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * so an internal relaxation does not silently disable them
   local safetyinput `safety'
 
+  * F-boot: bootstrap-SE screens; deep checks live in the subprogram (wooldid_bootctl)
+  * to conserve this program's compiled-size headroom. called UNCONDITIONALLY: with
+  * bootstrap() absent it enforces the stray-companion screen and exits. it sits AFTER
+  * the safetyinput capture above deliberately - the bayes cell-weighted gate keys on
+  * the user's own safety() value (contreatwithin rewrites the working copy later)
+  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if')
+  if _rc != 0 error _rc
+
   * register verbose retention with the shell's error-path cleanup epilogue (top of this
   * file): under verbose, ___wooldidfullmodel (and _ppmlhdfe_d under poisson) are
   * documented as retained for inspection - on failed runs as well
@@ -4391,6 +4399,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   }
 
   * do some light processing of the "number of pre-treatment coefs" input - it needs some adjustment when esfixedbaseperiod is used since the period normalized to 0 could fall within your range of requested coefs
+  * F-boot A8: preserve the user's raw esprelength for rep-line reconstruction. the
+  * normalization below is RE-APPLIED whenever a nested rep re-parses, so embedding the
+  * mutated value in a rep command line widens the window once per nesting level
+  * (measured: user 3 -> c_local 4 -> rep re-parse 5). rep builders emit this raw copy.
+  local esprelengthraw = `esprelength'
   if "`esfixedbaseperiod'" == "esfixedbaseperiod" &   `esprelength' > 0  {
     if abs(`esrelativeto') <= `esprelength' local ++esprelength
     * this is needed b/c we arent counting the reference period coef as a coef
@@ -4698,7 +4711,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * silently strand the worker on the stale syntax-parsed value. varlist/if/weight/exp
   * are excluded: the worker's own syntax call already parsed them identically and this
   * subprogram never alters them.
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose gteffects permute permreps permexact permtstat permtci permstrata permprobs y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose gteffects permute permreps permexact permtstat permtci permstrata permprobs y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha esprelengthraw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -4968,6 +4981,162 @@ end
 *** (mata: wooldid_permx), runs the rep loop as nested quiet wooldid calls on a
 *** permuted onset column, and hands the summary statistics back to the shell via
 *** c_local (the shell restores the observed results and posts them to e())
+cap prog drop wooldid_bootctl
+prog def wooldid_bootctl
+version 16.0
+*** F-boot (plan: review_process/bootstrap_plan.md): bootstrap-SE option screens.
+*** commit-B state: the full gate set is live, but a passing call still exits r(198)
+*** loudly at the tail - the engine lands in a later commit and the option must never
+*** silently no-op before then (the F6 commit-A precedent).
+  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ifr(string asis)]
+
+  * stray-companion screen: every companion requires the master option
+  if "`bootstrap'" == "" {
+    local bootstray
+    if `reps' != 0 local bootstray reps()
+    if "`ties'" != "" local bootstray `bootstray' ties
+    if `level' != 0 local bootstray `bootstray' level()
+    if `dots' != -1 local bootstray `bootstray' dots()
+    if "`rseed'" != "" local bootstray `bootstray' rseed()
+    if "`bootalpha'" != "" local bootstray `bootstray' bootalpha()
+    if "`bootstray'" != "" {
+      dis as error "Error: `bootstray' require(s) the bootstrap() option."
+      error 198
+    }
+    exit 0
+  }
+
+  * master-option token
+  if !inlist("`bootstrap'", "standard", "bayes") {
+    dis as error "Error: bootstrap() must be either bootstrap(standard) - cluster resampling with replacement - or bootstrap(bayes) - Bayesian cluster reweighting. Received: bootstrap(`bootstrap')."
+    error 198
+  }
+
+  * reps() is mandatory (author ruling: no floor - low-rep runs are legitimate; see the
+  * help file on how many replications inference needs)
+  if `reps' <= 0 {
+    dis as error "Error: bootstrap() requires reps(#) with a positive number of replications."
+    error 198
+  }
+
+  * companion-value validation
+  if `level' != 0 & (`level' < 10 | `level' > 99.99) {
+    dis as error "Error: level() must be between 10 and 99.99 for bootstrap confidence intervals."
+    error 198
+  }
+  if `dots' != -1 & `dots' < 0 {
+    dis as error "Error: dots() must be a nonnegative integer (0 suppresses the progress display)."
+    error 198
+  }
+  if "`rseed'" != "" {
+    cap confirm number `rseed'
+    local badseed = _rc != 0
+    if `badseed' == 0 {
+      if mod(`rseed',1) != 0 | `rseed' < 0 | `rseed' > 2147483647 local badseed 1
+    }
+    if `badseed' {
+      dis as error "Error: rseed() must be an integer between 0 and 2,147,483,647 (it is passed to set seed)."
+      error 198
+    }
+  }
+  if "`bootalpha'" != "" {
+    if !inlist("`bootalpha'", "size", "equal") {
+      dis as error "Error: bootalpha() must be bootalpha(size) - Dirichlet with per-cluster alpha equal to cluster size, the bayesboot convention and the default - or bootalpha(equal) - Dirichlet(1,...,1) across clusters."
+      error 198
+    }
+    if "`bootstrap'" == "standard" {
+      dis as error "Error: bootalpha() applies only to bootstrap(bayes)."
+      error 198
+    }
+  }
+
+  * interaction refusals
+  if "`permute'" != "" {
+    dis as error "Error: bootstrap() may not be combined with permute(); each orchestrates its own replication loop. Run them in separate wooldid calls."
+    error 198
+  }
+  if "`impv'" != "" {
+    dis as error "Error: bootstrap() may not be combined with impvalues; the imputation-method point estimates are cross-cluster means whose replication vector would not correspond to the reported results."
+    error 198
+  }
+  if "`fn'" != "" {
+    dis as error "Error: bootstrap() may not be combined with fastnose; fastnose requests point estimates only, leaving nothing for the bootstrap to attach inference to (the replications use it internally)."
+    error 198
+  }
+  if "`uncond'" != "" {
+    dis as error "Error: bootstrap() may not be combined with unconditionalse; the reported standard errors would be bootstrap-based, contradicting the unconditional-VCE request."
+    error 198
+  }
+  if `"`cvce'"' != "" {
+    dis as error "Error: bootstrap() may not be combined with customvce(); the reported standard errors would be bootstrap-based, contradicting the custom-VCE request."
+    error 198
+  }
+  * oldsyntax arrives NORMALIZED to 0/1 (validate rewrites it early) - gate on "1",
+  * never on nonempty (the permctl precedent; a nonempty gate fires on every run)
+  if "`os'" == "1" {
+    dis as error "Error: bootstrap() is not available under oldsyntax."
+    error 198
+  }
+  if "`ssg'" != "" {
+    dis as error "Error: bootstrap() may not be combined with suppresssgprimaryeffects; the suppressed subgroup entries are exactly what the replication vectors need in order to bootstrap the subgroup statistics."
+    error 198
+  }
+  if wordcount("`clus'") > 1 {
+    dis as error "Error: bootstrap() supports a single (numeric) cluster() variable; multiway clustering is not available with bootstrap-based standard errors."
+    error 198
+  }
+
+  * cell-weighted estimand gates (author ruling 2026-08-30). att_it/att_i/att_itime
+  * aggregate with equal weight per treatment cell, so a within-cluster weight
+  * multiplier cancels out of them: reweighting-based replications hold the cell set
+  * fixed and omit the cell-sampling variance component.
+  local cellwtd `attit' `atti' `attitime'
+  if "`bootstrap'" == "bayes" & "`cellwtd'" != "" {
+    if "`si'" != "off" {
+      dis as error "Error: bootstrap(bayes) with `cellwtd' reweights clusters but cannot resample treatment cells, so those bootstrap standard errors omit the cell-sampling variance component and can be too small when treatment effects vary across clusters. To proceed anyway with a caution, specify safety(off); bootstrap(standard) resamples cells and does not have this limitation."
+      error 198
+    }
+    dis as text "Caution: bootstrap(bayes) standard errors for `cellwtd' omit the cell-sampling variance component (cluster reweighting cannot resample treatment cells) and can be too small when treatment effects vary across clusters. bootstrap(standard) does not have this limitation."
+  }
+  if "`bootstrap'" == "standard" & "`cellwtd'" != "" {
+    * the resampling copies of a drawn cluster must be re-identifiable as distinct
+    * units, which is defined only when every i lies wholly inside one resampling
+    * cluster. observation-level resampling (no cluster()) can never satisfy this.
+    if "`clus'" == "" {
+      dis as error "Error: bootstrap(standard) with `cellwtd' requires cluster(): observation-level resampling cannot re-identify duplicated treatment cells. Specify cluster() at or above the i level, or request att/ame estimands only."
+      error 198
+    }
+    tempvar smp cmin cmax
+    if `"`ifr'"' != "" qui gen byte `smp' = ((`ifr')==1) & !missing(`clus')
+    else qui gen byte `smp' = !missing(`clus')
+    qui gegen double `cmin' = min(`clus') if `smp', by(`ivar')
+    qui gegen double `cmax' = max(`clus') if `smp', by(`ivar')
+    cap assert `cmin' == `cmax' if `smp'
+    if _rc != 0 {
+      dis as error "Error: bootstrap(standard) with `cellwtd' requires the cluster() variable to nest i (every i wholly inside one cluster): resampled clusters are duplicated as whole units, which is undefined when a unit straddles clusters. Cluster at or above the i level, or request att/ame estimands only."
+      error 459
+    }
+  }
+
+  * cluster-count sanity (resampling/reweighting needs at least two resampling units)
+  if "`clus'" != "" {
+    tempvar smp2 cgrp
+    if `"`ifr'"' != "" qui gen byte `smp2' = ((`ifr')==1) & !missing(`clus')
+    else qui gen byte `smp2' = !missing(`clus')
+    qui gegen double `cgrp' = group(`clus') if `smp2'
+    qui gstats sum `cgrp' if `smp2', nod
+    if r(max) < 2 {
+      dis as error "Error: bootstrap() requires at least 2 clusters in the estimation sample."
+      error 459
+    }
+    if r(max) < 10 dis as text "Caution: only " r(max) " clusters are available for the bootstrap; bootstrap inference is unreliable with very few clusters."
+  }
+
+  * commit-B tail: surface complete, engine pending
+  dis as error "Error: the bootstrap() engine is not yet enabled in this build."
+  error 198
+end
+
 cap prog drop wooldid_permrun
 prog def wooldid_permrun
 version 16.0
