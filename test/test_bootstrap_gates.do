@@ -85,13 +85,13 @@ cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) sa
 chk 6b 0 _rc
 * (6b now RUNS: caution printed, then full bayes bootstrap - message-checked below)
 
-* G7 standard + cell-weighted + nesting cluster (cluster == i) -> gates pass -> tail
-cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(standard) reps(50)
-chk 7 198 _rc
+* G7 standard + cell-weighted + nesting cluster (cluster == i) -> RUNS (re-id leg)
+cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(standard) reps(20)
+chk 7 0 _rc
 * G7b coarser nesting cluster (s nests unit? NO - s is COARSER than unit: each unit
 * wholly inside one s, so cluster(s) nests i=unit) -> gates pass -> tail
-cap qui wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(50)
-chk 7b 198 _rc
+cap qui wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20)
+chk 7b 0 _rc
 
 * G8 standard + cell-weighted + no cluster -> obs-level refusal
 cap qui wooldid y unit t ttre, att_it robust bootstrap(standard) reps(50)
@@ -102,9 +102,9 @@ chk 8 198 _rc
 cap qui wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50)
 chk 9 459 _rc
 
-* G10 standard + att only + cluster(unit): all gates pass -> tail r198
-cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50)
-chk 10 198 _rc
+* G10 standard + att only + cluster(unit): runs (count path)
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20)
+chk 10 0 _rc
 
 * G11 single cluster -> r459
 cap qui wooldid y unit t ttre if s==1, att cluster(s) bootstrap(standard) reps(50)
@@ -160,8 +160,8 @@ end
 
 use `panel', clear
 qui log using boot_gates_m1.smcl, replace name(m1) smcl
-cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50)
-logh m1 not yet enabled in this build
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20) rseed(8)
+logh m1 Bootstrap Inference
 qui log using boot_gates_m2.smcl, replace name(m2) smcl
 cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off)
 logh m2 Caution: bootstrap(bayes) standard errors for att_it
@@ -172,8 +172,8 @@ qui log using boot_gates_m4.smcl, replace name(m4) smcl
 cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) oldsyntax
 logh m4 not available under oldsyntax
 qui log using boot_gates_m5.smcl, replace name(m5) smcl
-cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(50)
-logh m5 not yet enabled in this build
+cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) rseed(8)
+logh m5 Bootstrap Inference
 qui log using boot_gates_m6.smcl, replace name(m6) smcl
 cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(20) rseed(3)
 logh m6 Bootstrap Inference

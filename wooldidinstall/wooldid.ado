@@ -217,7 +217,8 @@ version 16.0
     tempname wdbobs wdbobsb wdbcomp wdbacc
     qui est sto `wdbobs'
     matrix `wdbobsb' = e(b)
-    cap noi wooldid_bootrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp')
+    local wdb_reid = cond("`bootstrap'" == "standard" & "`att_it'`att_i'`att_itime'" != "", "reid", "")
+    cap noi wooldid_bootrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp')
     local wdb_rc = _rc
     qui est restore `wdbobs'
     cap est drop `wdbobs'
@@ -5219,10 +5220,6 @@ version 16.0
     dis as error "Error: bootstrap() may not be combined with cleanmatrices; cleanmatrices clears the compiled engine functions the bootstrap needs after estimation."
     error 198
   }
-  if "`bootstrap'" == "standard" {
-    dis as error "Error: bootstrap(standard) is not yet enabled in this build; bootstrap(bayes) is available."
-    error 198
-  }
 end
 
 cap prog drop wooldid_permrun
@@ -5492,7 +5489,7 @@ version 16.0
 *** bayesboot BITWISE on unweighted data (bootalpha(size), the default) and rwgen
 *** with priorpowers(-n_c) for bootalpha(equal), and is the Rubin generalization
 *** for weighted data ("multiply existing weights by the cluster draw").
-  syntax , [mode(string) reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string)]
+  syntax , [mode(string) reid reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string)]
 
   if `dots' == -1 local dots 1
   if "`bootalpha'" == "" local bootalpha size
@@ -5536,12 +5533,15 @@ version 16.0
     error 459
   }
 
-  * draw matrix (C x R): per-rep (outer) per-cluster-ascending (inner) Gamma draws
-  * from the seeded mt64 stream - the exact rwgen bayes consumption order; row
-  * multiplier = (g/colsum g)/W_c
+  * draws. bayes: C x R Dirichlet matrix up front - per-rep (outer) per-cluster-
+  * ascending (inner) Gamma draws from the seeded mt64 stream, the exact rwgen bayes
+  * consumption order; row multiplier = (g/colsum)/W_c. standard: draws happen
+  * INSIDE the rep loop (one bsample per rep - the official bootstrap prefix's
+  * consumption sequence, so same-seed runs are comparable; nested wooldid calls
+  * leave c(rngstate) untouched, measured)
   if "`rseed'" != "" set seed `rseed'
   tempname wdbdrawm
-  mata: wooldid_bootdw("`mbfr'", "`bootalpha'", `reps', "`wdbdrawm'")
+  if "`mode'" == "bayes" mata: wooldid_bootdw("`mbfr'", "`bootalpha'", `reps', "`wdbdrawm'")
 
   * rep command line
   local wtif
@@ -5581,8 +5581,69 @@ version 16.0
   local nfail 0
   local nblank 0
   if `dots' > 0 dis as text "Bootstrap replications (`reps'): " _continue
+  tempname wdbcf wdbrf
   forval r = 1/`reps' {
-    frame `mbfr': qui replace __wdbdraw = el("`wdbdrawm'", __wdbrow, `r')
+    if "`mode'" == "bayes" {
+      frame `mbfr': qui replace __wdbdraw = el("`wdbdrawm'", __wdbrow, `r')
+    }
+    else if "`reid'" == "" {
+      * standard count path: cluster multiplicities from bsample on a COPY of the
+      * map frame (map-frame draws == full-data draws under the cluster()+
+      * idcluster() form, measured; plain bsample diverges - A17)
+      cap frame drop `wdbcf'
+      frame copy `mbfr' `wdbcf'
+      frame `wdbcf' {
+        bsample, cluster(`clusv') idcluster(__wdbns)
+        qui gegen double __wdbcnt = count(__wdbns), by(`clusv')
+        qui bysort `clusv': keep if _n == 1
+      }
+      frame `mbfr' {
+        cap drop __wdblnk
+        cap drop __wdbcnt
+        qui frlink m:1 `clusv', frame(`wdbcf') generate(__wdblnk)
+        qui frget __wdbcnt = __wdbcnt, from(__wdblnk)
+        qui replace __wdbdraw = cond(missing(__wdbcnt), 0, __wdbcnt)
+        qui drop __wdbcnt __wdblnk
+      }
+      frame drop `wdbcf'
+    }
+    else {
+      * physical re-id leg (cell-weighted estimands; plan section 7): resample the
+      * FULL estimation universe and re-identify duplicated clusters' units so a
+      * twice-drawn cluster contributes its cells twice - the textbook cluster
+      * bootstrap of the equal-cell-weighted estimands. cluster nests i (bootctl
+      * gate A1), so group(drawid, i) assigns each copy fresh unit codes. same-seed
+      * draws equal the count path's (one bsample per rep, same form)
+      cap frame drop `wdbrf'
+      qui frame
+      frame copy `r(currentframe)' `wdbrf'
+      frame `wdbrf' {
+        qui keep if `smp'
+        bsample, cluster(`clusv') idcluster(__wdbns)
+        qui gegen double __wdbnewi = group(__wdbns `i')
+        cap qui wooldid `y' __wdbnewi `t' `ttrevar' `wtif0' , `repopts'
+        local wdb_rrc = _rc
+      }
+      if `wdb_rrc' == 1 {
+        cap frame drop `wdbrf'
+        if `dots' > 0 dis as result " "
+        error 1
+      }
+      local badrep = `wdb_rrc' != 0
+      if `badrep' == 0 {
+        local wdb_gblank 0
+        mata: wooldid_bootgrab("`accname'", `r', "`obsb'")
+        local nblank = `nblank' + `wdb_gblank'
+        local ++ndone
+      }
+      else local ++nfail
+      cap frame drop `wdbrf'
+      if `dots' > 0 {
+        if `badrep' dis as error "x" _continue
+        else dis as text "." _continue
+      }
+      continue
+    }
     cap drop `drawv'
     qui frget `drawv' = __wdbdraw, from(`lnk')
     cap drop `repw'
