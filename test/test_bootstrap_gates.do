@@ -118,9 +118,9 @@ if `g12rc' != 0 & `g12rc' != 198 {
   * documented offline-update rc but never a bootctl-shaped refusal message
 }
 
-* G14 jointtests + bootstrap: loud C-stage refusal (boot Wald lands in a later commit)
-cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(20) jointtests
-chk 14 198 _rc
+* G14 jointtests + bootstrap: RUNS (boot Wald; exempt from the SI-A1 screen)
+cap qui wooldid y unit t ttre, att esprelength(2) espostlength(1) cluster(unit) bootstrap(bayes) reps(20) rseed(2) jointtests
+chk 14 0 _rc
 * G15 pretrendpower + bootstrap: permanent refusal (plan A13)
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) esfixedbaseperiod bootstrap(bayes) reps(20) pretrendpower(80)
 chk 15 198 _rc

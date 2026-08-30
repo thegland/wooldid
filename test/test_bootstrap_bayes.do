@@ -130,8 +130,9 @@ else {
     local ++fails
   }
   matrix PW = e(pwsgs)
-  if PW[1, 2] < . {
-    di as error "O6c FAIL: pwsgs not blanked"
+  * commit E fills pwsgs inference from the bootstrap covariance (z column)
+  if PW[1, 2] >= . | PW[1, 2] <= 0 {
+    di as error "O6c FAIL: pwsgs bootstrap se missing"
     local ++fails
   }
   di "O6_SG_OK sgse=" `sgse'
