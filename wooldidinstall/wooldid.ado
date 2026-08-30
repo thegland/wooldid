@@ -5124,7 +5124,7 @@ version 16.0
   }
   if "`bootalpha'" != "" {
     if !inlist("`bootalpha'", "size", "equal") {
-      dis as error "Error: bootalpha() must be bootalpha(size) - Dirichlet with per-cluster alpha equal to cluster size, the bayesboot convention and the default - or bootalpha(equal) - Dirichlet(1,...,1) across clusters."
+      dis as error "Error: bootalpha() must be bootalpha(equal) - Dirichlet(1,...,1) across clusters, the Rubin convention and the default - or bootalpha(size) - per-cluster alpha equal to cluster size, the bayesboot id() convention, whose standard errors understate cluster-level dispersion on multi-observation clusters."
       error 198
     }
     if "`bootstrap'" == "standard" {
@@ -5702,7 +5702,7 @@ version 16.0
   syntax , [mode(string) reid reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string)]
 
   if `dots' == -1 local dots 1
-  if "`bootalpha'" == "" local bootalpha size
+  if "`bootalpha'" == "" local bootalpha equal
 
   * sample concept (A7): user-if sample + nonmissing cluster (permrun byte-parallel)
   tempvar smp
@@ -5910,7 +5910,7 @@ version 16.0
 *** build (their bootstrap Wald versions land with the joint-test commit).
   syntax , [mode(string) reps(integer 0) acc(string) obsb(string) done(string) fail(string) blank(string) level(real 0) bootalpha(string) clus(varlist) comp(string) rseed(string)]
   if `level' == 0 local level 95
-  if "`bootalpha'" == "" local bootalpha size
+  if "`bootalpha'" == "" local bootalpha equal
 
   * -------- column-position walk: e(b) col k <-> results-matrix row (positional:
   * e(b) is built by stacking wdidpooled + the SG blocks in sglist order, so the

@@ -30,7 +30,7 @@ end
 
 * ---- O1: ORACLE - engine vs manual rwgen loop, same seed, unweighted, size alpha
 mkpan
-qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(12) rseed(424)
+qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(12) rseed(424) bootalpha(size)
 matrix ENG = e(bootdist)
 local engK = colsof(ENG)
 mkpan
@@ -74,6 +74,17 @@ forval r = 1/8 {
 di "O2_ORACLE_EQUAL_MAXRELDIF=" `w2'
 if `w2' > 1e-12 {
   di as error "O2 FAIL"
+  local ++fails
+}
+
+* ---- O2b: the DEFAULT alpha is equal (author ruling 2026-08-31): a default run
+* reproduces an explicit bootalpha(equal) run bitwise under the same seed
+mkpan
+qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(8) rseed(555)
+matrix DEFD = e(bootdist)
+di "O2b_DEFAULT_EQUAL_DIFF=" mreldif(DEFD, ENG2)
+if mreldif(DEFD, ENG2) > 0 {
+  di as error "O2b FAIL: default is not equal-alpha"
   local ++fails
 }
 
