@@ -137,7 +137,7 @@ compatibility bonus):
 - **non-cluster**: same engines with cluster := observation (bayes: row-level Dirichlet =
   rwgen bayes row atoms; standard: row-level multinomial). Cheap because the engine is
   cluster-var-agnostic. Cluster default: cluster() variable when present (first var if
-  multiway — or refuse multiway v1); no cluster() => observation-level.
+  multiway cluster() is REFUSED v1 - Section 6 governs); no cluster() => observation-level.
 - Weight-type mapping for the injected [wt=prodvar]: keep the user's declared type;
   unweighted runs use aw (pw for poisson runs — poisson+aw is refused by wooldid).
   Point estimates are aw/pw-invariant (measured).
@@ -153,15 +153,15 @@ From the name-aligned rep matrix (complete reps + per-column availability counts
   (estat-bootstrap trio); `ties` = BC z0 tie adjustment exactly as the built-in.
 - Joint tests recomputed as chi2 Wald with V_boot on the same element sets, SAME e()
   names (scalar-vs-macro split mirrored), z/chi2 metric documented; rank policy: if the
-  relevant V_boot subblock is rank-deficient or a column's rep count < floor, post
+  relevant V_boot subblock is rank-deficient or a column has fewer than 2 completed reps, post
   missing + one caution (never a silent 0.0000). The SI-A1 jointtests screen (whose own
   error text recommends bootstrap) gets a carve-out for bootstrap-based joint tests.
 - Per-column missing policy: a column absent in a rep (extinct horizon/SG) contributes
   nothing to that column's moments; per-column n_reps recorded; columns with
-  n_reps < floor get missing inference + a named caution listing them. Whole-rep
+  n_reps < 2 get missing inference (arithmetic, not a gate - Q4) + a named caution listing them. Whole-rep
   failures (r459 no-controls draws etc.) counted like the official 'x' reps
-  (e(boot_failed)), never aborting the run; floor on completed reps (permreps>=20
-  precedent) below which the whole bootstrap errors informatively.
+  (e(boot_failed)), never aborting the run. NO completion floor (Q4 ruling; deliberate contrast with permreps>=20
+  precedent).
 - e() additions: boot_method, boot_reps/completed/failed, boot_level, boot_stat=z,
   b_boot (rep means), bias_boot, V_boot, ci_normal/percentile/bc matrices, per-column
   rep counts, bootdist matrix (reps x columns, cap like permdist 10k), rngstate/seed
@@ -170,7 +170,7 @@ From the name-aligned rep matrix (complete reps + per-column availability counts
 ## 5. Option surface (borrowed names, as directed)
 
 Master: `BOOTstrap(standard|bayes)`. Companions (gated on it via the stray-companion
-screen): `reps(#)` (explicit, floor 20 — Q4), `ties`, `level(#)` (integer 10-99.99,
+screen): `reps(#)` (mandatory explicit, NO floor — Q4 ruling), `ties`, `level(cilevel)` (10-99.99 incl. decimals,
 default 95; scoped to bootstrap outputs), `dots(#)` (progress every # reps; 0=silent;
 default dots(1) with a Stata-style header), `rseed(#)` (= set seed; session RNG advances,
 documented like the built-in). NOT colliding with perm* names. `update` unaffected.
@@ -181,7 +181,7 @@ Refuse: bootstrap+permute (two rep engines); bootstrap+impvalues (different esti
 permctl precedent); bootstrap+fastnose (user-level — nothing left to bootstrap onto...
 actually reps use fastnose internally; user fastnose means no SEs are wanted: refuse);
 bootstrap+update; oldsyntax; multiway cluster() v1 (single numeric cluster var, permctl
-precedent); reps-floor; >=2 clusters hard error + few-cluster caution (<10);
+precedent); reps() must be present (no floor); >=2 clusters hard error + few-cluster caution (<10);
 suppresssgprimaryeffects+bootstrap (SG tests' inputs absent from rep e(b) — refuse or
 auto-plain; recommend refuse v1). unconditionalse/customvce: the OBSERVED run keeps its
 VCE for the analytic table; bootstrap replaces reported inference — v1 recommendation:
@@ -269,3 +269,58 @@ Q4 reps: **mandatory explicit reps(), NO floor** — low-rep runs are legitimate
     is arithmetically undefined at tiny rep counts (SE needs >=2 completed reps) it is
     posted missing, which is arithmetic, not a gate. (Deliberate contrast with
     permreps' floor-20.)
+
+## 12. R1 adversarial-review amendments (2026-08-30; R1 verdict: amend-then-implement)
+
+R1 confirmed the core machinery empirically (weight-injection == physical resampling
+BITWISE incl. screens and horizon extinction — the zero-weight markout at L275 removes
+zero-count clusters from the SCREENED sample so min_t/controlcheck/refperiod/horizon
+grids recompute exactly as under physical removal; joint_horiz == Wald-F from
+e(b_es)/e(V_es) to 15-16 digits; ES names relyr-anchored => name-meaning stable under
+resamples; rngstate untouched by nested wooldid calls; admin-scale timing ~0.5-0.8 s/rep,
+frame copy ~1%). Amendments adopted:
+
+- **A1 (F1 BLOCKER — nesting gate).** The re-id leg is defined ONLY when the resampling
+  cluster nests i (i constant within cluster — gegen minmax shape, permctl 4912-4920
+  precedent). bootctl gate: bootstrap(standard) + any cell-weighted estimand requires
+  cluster-nests-i; otherwise (incl. observation-level bootstrap) REFUSE v1 with an
+  informative message (suggest att/ame, or cluster at/above i). bayes + cell-weighted
+  keeps the Q2 safety-keyed refusal/caution regardless of nesting.
+- **A2 (F3).** Boot V columns with <2 completed reps or extinct horizons: post via the
+  -1e100 missing-diagonal sentinel machinery (3667-3699 precedent) — a raw repost of a
+  missing-diagonal V is r(504) (measured). Sentinel columns are excluded from every
+  Wald subblock.
+- **A3 (F4).** BC z0 and `ties` compare replicates against a REP-0 FASTNOSE run of the
+  observed assignment (NFPERM-10 precedent), transported as tempname scalars — never
+  against full-run values (fastnose differs in final digits; ties would silently no-op).
+- **A4 (F5).** The SI-A1 jointtests screen (worker ~1126-1165) gets a bootstrap carve-out
+  keyed on the bootstrap flag: with bootstrap on, the worker's analytic joint tests are
+  suppressed internally (never computed, never screened) while the jointtests REQUEST is
+  recorded for the shell's Wald stage; the 1165 safety(off) caution twin is suppressed
+  under bootstrap (its oversized-p warning describes the analytic tests being replaced).
+- **A5 (F6).** v1 plots policy = document-and-caution: makeplots/makecfxplots/saveplots
+  under bootstrap print one caution that plot CIs and saved plot data are analytic while
+  the tables carry bootstrap inference; the esplots re-render-from-rewired-e() idea is
+  FILED as an enhancement (feasible-looking, untested; cfx plots can never re-render
+  from e()).
+- **A6 (F7).** Rewired surfaces list is EXPLICIT: e(wdidmainresults) + e(wdidsgresults_*)
+  se/t(z)/p/ci columns, e(V) (full boot covariance; analytic kept as hidden
+  e(V_analytic)), e(pwsgs)/e(prepwsgs) (diffs of e(b) elements under boot V), all
+  e(joint_*) names, e(V_es_*) REPLACED by name-aligned boot subblocks (analytic kept
+  hidden) so honestdid/pretrendpower consume bootstrap Sigma_pre automatically.
+  adversarial + bootstrap: re-run wooldid_advstat with the boot V_es post-rewiring
+  (bounded effort; fallback = documented analytic provenance). STRETCH item, commit E.
+- **A7 (F8).** n_c (bayes alpha) and the standard-mode draw universe are defined on the
+  permrun smp concept (user-if sample + nonmissing cluster; byte-parallel bootctl/
+  bootrun rule, NFPERM-03 pattern); the rwgen-bitwise proof pins it.
+- **A8 (F9 — measured 3->4->5).** Fix form: validate c_locals the RAW user esprelength in
+  a NEW blanket-listed local (esprelengthraw; safetyinput precedent) and the rep line
+  emits that. Cert test must use DEEP pre-history (min_t > user espre + 1) — the defect
+  is latent on short-pre panels.
+- **A9 (F10).** The safetyinput capture (4332) moves ABOVE the bootctl call site, or
+  bootctl receives `safety' (still raw at 4325). One-line trap on the Q2 ruling itself.
+- **A10 (F11/F12/F14).** bootrun reads rep e(b) only when rep rc==0 (staleness measured);
+  t->z column rename for non-poisson, lb/ub column names follow level(), header
+  e(wdid_vcespec) says bootstrap; re-id leg does NOT re-id user covariates keyed to unit
+  identity (official idcluster shares the limitation) — sthlp note + caution when fe()/
+  interactivecontrols name the i variable under the re-id leg.
