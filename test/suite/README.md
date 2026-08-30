@@ -28,7 +28,7 @@ The orchestrator **exits nonzero if any component fails** and appends every verd
 | `cert` | the targeted `test/test_*.do` suites + `check_validate_sync.py` — HEAD certification (fresh logs enforced; column-1 `*_ALL_PASS` + no `*_FAILS=` grading) | new | ~2 min pooled |
 | `newfeat` | cross-checks in `suite/newfeat/` (7 scripts): external randomization-inference re-implementation (exact, sampled, unequal-count, t-stat, probabilities), HonestDiD integration + the 11-case honestdid grid, the Roth `pretrends`-package crosscheck, the reghdfe common-onset oracle (b_es/V_es at machine precision), the 22-config fastnose parity grid, feature identities incl. the V_es total-variance check | new | ~8 min |
 | `battery` | the standing bit-exact regression vs `test/baseline` (`--rtol 0`) | new | ~3 min |
-| `coverage` | static assertion: every syntax-line option exercised by ≥1 config, with **clean-rc gating** (an option covered only by erroring configs is flagged ERR-ONLY) and dead allow-zero detection; allow-zero = `update,permprobs` only | — | seconds |
+| `coverage` | static assertion: every syntax-line option exercised by ≥1 config, with **clean-rc gating** (an option covered only by erroring configs is flagged ERR-ONLY) and dead allow-zero detection; allow-zero = `update,permprobs` only. Also joins configs to `data_classes.csv` (warns PATHO-ONLY, fails on table drift — see "Role of pathological data") | — | seconds |
 
 `oldnew` subcomponents (subset with `ONLY=core,trig,...`): `core` (the 29 battery
 configs), `trig` (divergence-trigger configs), `covars`, `adm` (the realistic
