@@ -81,9 +81,9 @@ chk 5h 198 _rc
 * G6 bayes + cell-weighted: refuse under default safety, caution + proceed-to-tail under safety(off)
 cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(50)
 chk 6a 198 _rc
-cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(50) safety(off)
-chk 6b 198 _rc
-* (6b must fail at the TAIL, i.e. print the caution first - checked via log grep below)
+cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off)
+chk 6b 0 _rc
+* (6b now RUNS: caution printed, then full bayes bootstrap - message-checked below)
 
 * G7 standard + cell-weighted + nesting cluster (cluster == i) -> gates pass -> tail
 cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(standard) reps(50)
@@ -118,6 +118,16 @@ if `g12rc' != 0 & `g12rc' != 198 {
   * documented offline-update rc but never a bootctl-shaped refusal message
 }
 
+* G14 jointtests + bootstrap: loud C-stage refusal (boot Wald lands in a later commit)
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(20) jointtests
+chk 14 198 _rc
+* G15 pretrendpower + bootstrap: permanent refusal (plan A13)
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) esfixedbaseperiod bootstrap(bayes) reps(20) pretrendpower(80)
+chk 15 198 _rc
+* G16 cleanmatrices + bootstrap: permanent refusal (plan A16)
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(20) cleanmatrices
+chk 16 198 _rc
+
 * G13 plain run untouched
 use `panel', clear
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1)
@@ -151,9 +161,9 @@ end
 use `panel', clear
 qui log using boot_gates_m1.smcl, replace name(m1) smcl
 cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50)
-logh m1 engine is not yet enabled
+logh m1 not yet enabled in this build
 qui log using boot_gates_m2.smcl, replace name(m2) smcl
-cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(50) safety(off)
+cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off)
 logh m2 Caution: bootstrap(bayes) standard errors for att_it
 qui log using boot_gates_m3.smcl, replace name(m3) smcl
 cap noi wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50)
@@ -163,7 +173,10 @@ cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) ol
 logh m4 not available under oldsyntax
 qui log using boot_gates_m5.smcl, replace name(m5) smcl
 cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(50)
-logh m5 engine is not yet enabled
+logh m5 not yet enabled in this build
+qui log using boot_gates_m6.smcl, replace name(m6) smcl
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(20) rseed(3)
+logh m6 Bootstrap Inference
 
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
