@@ -532,6 +532,22 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   - **DONE 2026-08-25:** author is handling the upstream report directly; no
     further action in this repo.
 
+## C2. New defect found in passing (bootstrap R2 review, 2026-08-30)
+
+- **SI-17 — permute() + cleanmatrices kills the permutation engine after a successful
+  estimation (r3499).** MEASURED at HEAD 4b08962 by the bootstrap plan's blind R2
+  reviewer (probe P2, artifacts in the session scratchpad r2/): `permute(shuffle)
+  permreps(20) cleanmatrices` dies r(3499) "wooldid_permx() not found" - the worker-end
+  `clear mata` that cleanmatrices requests destroys the ado's own compiled mata
+  functions, so the shell's post-worker permutation engine cannot run (control without
+  cleanmatrices: p=.238, rc 0). Pre-existing since F6; not introduced by the bootstrap
+  work. The bootstrap feature refuses bootstrap+cleanmatrices v1 for the same reason
+  (plan amendment A16). CANDIDATE FIXES for author graduation: (a) refuse
+  permute+cleanmatrices (cheap, mirrors bootstrap); (b) scope the cleanmatrices
+  `clear mata` away from the ado's own namespace (e.g. mata drop of user objects only);
+  (c) defer the mata clear until after the shell epilogue. Not implemented pending your
+  ruling.
+
 ## D. Suite-side residuals (test infrastructure, not wooldid defects)
 
 - **SI-14 — NFADV unpost-path coverage.** The pooled-reference/degenerate-q

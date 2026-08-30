@@ -324,3 +324,65 @@ frame copy ~1%). Amendments adopted:
   e(wdid_vcespec) says bootstrap; re-id leg does NOT re-id user covariates keyed to unit
   identity (official idcluster shares the limitation) — sthlp note + caution when fe()/
   interactivecontrols name the i variable under the re-id leg.
+
+## 13. R2 blind-review amendments (2026-08-30; R2 verdict: amend findings 1-6, then
+## proceed; commit B passes as a faithful A1/A8/A9 implementation, no re-review)
+
+All R2 findings adopted (coordinator agrees with every fix as recommended; no
+disagreement round needed):
+
+- **A11 (R2-1 BLOCKER — covariance policy).** MEASURED: a pairwise-complete covariance
+  over availability-varying columns can be full-rank INDEFINITE (min eig -0.042);
+  invsym() then silently zeroes a negative pivot and returns a confident wrong Wald p;
+  chi2tail on a negative statistic returns 1 silently. POLICY: every inverted quadratic
+  form (joint-test subblocks, posted e(V_es_*) subblocks) uses COMPLETE-CASE (listwise
+  within the subblock) covariance - PSD by construction - plus an explicit
+  PSD/eigenvalue guard (never rank alone) with sentinel+caution on failure. The full
+  posted e(V) is complete-case listwise across the observed column set with
+  e(boot_N_V) recording the listwise rep count (bayes mode: == all completed reps by
+  construction). DOCUMENTED consequence: a listwise subblock diagonal need not equal
+  the table SE^2 (per-column availability vs listwise) - stated in sthlp, not left for
+  a verifier to find.
+- **A12 (R2-2 — structural-zero contamination).** (a) Every column whose OBSERVED
+  reported b is missing in e(wdidmainresults) OR e(wdidsgresults_*) (amevoid and
+  friends; SG blocks void independently) is EXCLUDED from bootstrap inference
+  (sentinel + caution). (b) Rep-level structural zeros: in ame-family columns only
+  (the mechanism = resamples losing dose variation; fastnose skips the amescreen so
+  reps return exact 0.0 silently - MEASURED), a rep contributing an exact 0.0 to a
+  column whose observed b is nonzero is blanked as unavailable for that column and
+  counted; one caution names affected columns.
+- **A13 (R2-3 — pretrendpower).** bootstrap + pretrendpower REFUSED v1 (wooldid_ptp
+  computes/displays/posts inside the worker from analytic V_es before any rewiring;
+  "automatic bootstrap Sigma_pre" was unfulfillable in this ordering). Message points
+  users at feeding the rewired e(b_es_*)/e(V_es_*) to Roth's pretrends package
+  directly. A6's wording amended accordingly.
+- **A14 (R2-4 — suppression channel).** The worker's analytic joint tests are
+  suppressed under bootstrap by gating the COMPUTATION SITES on the bootstrap flag -
+  NEVER by setting the suppressjointtests local (that would post
+  e(wdid_suppressjt)=suppressjointtests and the display would silently never print the
+  boot joint tests, live or on replay).
+- **A15 (R2-5 — rep line).** contreatwithin JOINS the rep keep-list (the only
+  point-estimate-shaping option the F6 template omits that bootstrap allows; omission
+  is silent - validate's internal rewrite emits safety(off), so reps would run the
+  non-within model with no error). Cert case added.
+- **A16 (R2-6 — cleanmatrices).** bootstrap + cleanmatrices REFUSED v1: the worker-end
+  clear mata under cleanmatrices destroys the ado's compiled mata functions, killing
+  any post-worker engine r(3499). MEASURED LIVE on permute at HEAD - filed as its own
+  pre-existing defect in wooldid_standing_issues.md (predates this feature).
+- **A17 (R2-7/9/10 + notes).** e(df_r): keep + document (user test/lincom after
+  bootstrap are t/F-based on the rewired V and will not match the reported z/chi2 p's
+  - sthlp note). Plan text corrected to the update-WINS convention (worker executes
+  update first; a refusal is unreachable). Sentinel columns get zeroed off-diagonals
+  in every posted V; the master column set is the OBSERVED e(b) name set (rep-only
+  columns ignored). Low-availability columns (completed in a small share of reps) get
+  a named disclosure caution (not a floor - Q4-consistent). Determinism recipe pinned:
+  draws via bsample, cluster() idcluster() ON THE MAP FRAME (plain bsample diverges;
+  map-frame draws == full-data draws same-seed, MEASURED); matching proofs compare
+  fastnose-to-fastnose at project tolerance (the count-vs-duplication identity is
+  ~1e-15-exact, not bitwise-0). Re-id reps that trip the SI-8 maxvar screen (r907)
+  count as failed reps (sthlp sentence). A10's i-naming caution scans
+  controls/coarsecohortcontrols/ccc_absorb too. A5's plots caution also names
+  gteffects/histogramcohorteffects SEs as analytic. Commit-B token nits (reps(0)
+  indistinguishable from unset in the stray screen; level(0)/dots(-1) sentinel
+  overlap; rseed integer-only vs set seed state strings) documented in bootctl
+  comments rather than churned.
