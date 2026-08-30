@@ -104,6 +104,46 @@ mixed-vintage dumps cannot be compared.
 - `unconditionalse`/`customvce(cluster)` are 1–2 ulp non-reproducible run-to-run on
   BOTH builds — inside 1e-10, but never compare those cells at `--rtol 0`.
 
+## Role of pathological data (author doctrine, 2026-08-29)
+
+Every dataset (and inline-prep config) the comparison configs run on is classified in
+`data_classes.csv` — `wellbehaved` / `stress` / `pathological`, one row per dataset
+plus `config:<name>` rows for inline-prep cases and deliberate per-config overrides
+(an override wins over the dataset lookup). The `coverage` component consumes the
+table and fails when it goes out of sync (unclassified config or stale row), so the
+marking stays live as configs are added.
+
+How to read a result by class:
+
+- **`pathological`** data is engineered so a trustworthy answer is impossible (no
+  controls, no never-treated units, single-obs cells, separation, sentinel codings,
+  knife-edge estimability). A config on such data answers ONE question: *does wooldid
+  handle this input correctly — true correct results, or an observable failure?* The
+  catastrophic outcome it guards against is plausible-looking wrong numbers. It is NOT
+  evidence that a feature functions well; do not cite a passing patho config as
+  feature-quality evidence.
+- **`wellbehaved`** (and, with judgment, `stress`) data is where feature-quality
+  evidence lives: a diff there speaks to whether the feature works as intended on
+  useful input.
+- The boundary is admittedly imperfect, and edge-case failures can reveal deeper
+  errors — which is why both kinds stay in the suite for the features that matter.
+
+Two working rules follow. **Coverage:** features should tend to be tested on BOTH
+kinds of data. The `coverage` component warns `PATHO-ONLY` when an option's clean-rc
+coverage exists only on pathological-class data (never shown working where a good
+answer is expected — fix by adding a well-behaved config). The inverse — no
+pathological exposure — is reported informationally but is NOT a defect: per the
+effort-allocation principle (`wooldid_standing_issues.md` preamble), not every feature
+needs a pathological probe. **Diagnosis:** when an error surfaces on pathological
+data, probe the same feature on well-behaved input before diagnosing; combining the
+two signal streams (how it fails on bad data, how it behaves on good data) is not
+guaranteed to add value but is a good first path to investigate.
+
+Out of scope for the table: the `mc/` and `newfeat/` components generate purpose-built
+calibration data inside their own scripts, and the `screens` deck's subject is
+option-pathology (bad option combinations, usually on fine data) — the config
+`component` column already carries that purpose.
+
 ## Which subpart should I run? (sub-agents)
 
 - Touched estimation/weights/margins code → `battery` + the nearest `cert` suites; add

@@ -36,7 +36,11 @@ runs therefore detects *any* change in returned results, down to the last bit.
   units, no controls, cohorts lacking pre-/post-periods, missing relative years, single-obs
   ttre-year cells, deeply imbalanced panels with an fe() singleton inducer, poisson
   separation. Each shape's baseline wooldid behavior is recorded in the grid. These are for
-  targeted/wave testing; they are not yet battery configs (roadmap item 3).
+  targeted/wave testing; they are not yet battery configs (roadmap item 3). Every dataset
+  here and in `suite/data/` is classified wellbehaved/stress/pathological in
+  `suite/data_classes.csv`; a pathological-data test asks only "correct results or
+  observable failure?", never whether a feature performs well — see `suite/README.md`,
+  "Role of pathological data".
 
 ## Usage
 ```bash

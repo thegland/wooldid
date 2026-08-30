@@ -99,7 +99,11 @@ every era. Do NOT use a bare `s/wooldid/wooldid_old/g` — it would rewrite
   are low priority. Exception: Stata's 32-character name limit is a genuine real-world
   hazard — treat name-construction overflows as realistic.
 - Pathological test datasets are pre-built: run `test/mkpathological.do` (from `test/`) or
-  use `test/data/dta_path_*.dta` if present.
+  use `test/data/dta_path_*.dta` if present. Every suite dataset is classified in
+  `test/suite/data_classes.csv` (wellbehaved/stress/pathological). Read results by class:
+  a pathological-data case only asks "correct results or observable failure?" — it is not
+  feature-quality evidence, and a defect found there should also be probed on well-behaved
+  input before you diagnose it (see `test/suite/README.md`, "Role of pathological data").
 
 ## What wooldid does (orientation)
 `wooldid y i t ttre, options` — y outcome, i cohort/unit id, t time, ttre treatment-onset

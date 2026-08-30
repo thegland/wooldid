@@ -63,6 +63,13 @@ most of them are lessons this campaign paid for empirically; do not drop them ca
 - Old-vs-new comparisons use rtol 1e-10 as the project indifference threshold; the
   clustered plain-reg/poisson ULP class (`unconditionalse`, `customvce(cluster)`) is
   never bit-reproducible — see the brief's tolerance note.
+- **Pathological data answers a different question than well-behaved data** (author
+  doctrine 2026-08-29; canonical statement in `test/suite/README.md` "Role of
+  pathological data", classes in `test/suite/data_classes.csv`). A pathological-data
+  test asks "correct results or observable failure?"; feature-quality evidence comes
+  from well-behaved data, and features should tend to be tested on both. When a defect
+  surfaces on pathological data, probe the same feature on well-behaved input before
+  diagnosing — combine the two signal streams.
 
 ## 5. Follow-ups and close-out
 - Narrow change requested BY a reviewer (one-clause guard tweak, doc line) → implement,

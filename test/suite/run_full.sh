@@ -265,9 +265,11 @@ do_coverage() {
   note "coverage: option-surface assertion"
   local extcfg=()
   [ -f "$SUITE/configs_ext.csv" ] && extcfg=(--configs "$SUITE/configs_ext.csv")
+  local dclass=()
+  [ -f "$SUITE/data_classes.csv" ] && dclass=(--data-classes "$SUITE/data_classes.csv")
   if python3 "$SUITE/coverage_check.py" --ado "$REPO/wooldidinstall/wooldid.ado" \
       --configs "$SUITE/configs.csv" "${extcfg[@]+"${extcfg[@]}"}" \
-      --allow-zero update,permprobs \
+      --allow-zero update,permprobs "${dclass[@]+"${dclass[@]}"}" \
       > "$OUT/coverage.txt" 2>&1; then
     note "coverage: OK"
     tail -2 "$OUT/coverage.txt" | tee -a "$REPORT"
