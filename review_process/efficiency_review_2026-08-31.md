@@ -76,7 +76,17 @@ count, and therefore K, unchanged.
 *Risk:* point estimates unchanged to 16 digits; variances move in the 13th. Requires the
 dydx-only gate and testing of the elasticity forms.
 
-**2. Joint pre-trend tests: stop recomputing what is already in hand.** Each
+**2. Joint pre-trend tests — REFUSED on investigation (2026-08-31), and it surfaced a bug
+ticket.** The structural-identity premise below is false under `interactivecontrols()` and
+under `lattice()` + `contreatcontrols(basic)`: 20 of 193 probes diverge, at rc 0 with no
+caution, with p moving 0.146 vs 0.615 and 3.6e-3 vs 7.3e-44. Divergence happens exactly
+when the reference-cell margin is not a structural zero. The author declined the change
+and filed the residue as **SI-20**: the reference period can carry a real estimated effect
+in those configurations, which matters not only for the joint tests' null but for the
+`e(b_es_*)`/`e(V_es_*)` handoff to HonestDiD and pretrends, which assume a normalised
+reference. The original proposal is retained below for the record.
+
+*Original proposal.* Each
 `margins … contrast(overjoint)` joint test is a full margins re-computation of a Wald
 test whose inputs — the event-study b and V — the run has *already captured* moments
 earlier. Measured four independent ways at **23–25% of any `jointtests` run** (15.0 s of
