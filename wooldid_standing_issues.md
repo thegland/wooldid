@@ -591,6 +591,23 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   Not implemented pending your ruling: 1 is a packaging change and 2 changes the shipped
   file set, so neither is mine to choose unilaterally.
 
+  **RESEARCHED 2026-08-31 — see `review_process/mlib_decision_2026-08-31.md`.** The
+  library fix is PROVEN to cure all four failing cases (each r3499 -> rc 0, with
+  wooldid.ado unchanged), but three complications were measured that make the prebuilt
+  form a decision rather than a formality: (i) an mlib records the Stata version that
+  compiled each function, and an older Stata IGNORES the member with a silent r(3499) —
+  no `version()` option exists and `version 16` does not help — so a library built here
+  reaches Stata 19 users only, while the package declares 16.0; (ii) after `clear mata`
+  resolution falls to whatever library the adopath holds, rc 0 and no message, so a stale
+  or older-release library silently shadows the running source — the exact dev-vs-shipped
+  divergence the chunk set out to prevent; (iii) reghdfe and ftools, the closest
+  comparators, deliberately ship no prebuilt library and recompile when c(stata_version)
+  changes. A fourth design emerged and is now recommended: have `cleanmatrices` build the
+  library from the in-memory functions immediately BEFORE clearing, which dissolves all
+  three at once (built by the running Stata, from the running source, no binary shipped).
+  Build script at `build/build_mlib.py` and cert suite at `test/test_mlib.do` are ready
+  and work; neither is wired into anything pending the choice.
+
 - **SI-17 — RESOLVED (author-ruled 2026-08-31; fix (a), refuse the combination).**
   `permute()` now refuses `cleanmatrices` at parse with a named message, mirroring the
   bootstrap refusal; `test_permute2.do` carries S17a-S17d (rc, message text, and both
