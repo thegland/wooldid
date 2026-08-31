@@ -127,6 +127,37 @@ if e(joint_horiz) >= . {
   local ++fails
 }
 
+* ---- E-T8 (verifier F1 regression): with THREE OR MORE subgroups Stata marks the
+* base level in the pairwise rownames (1vs0bn.sg, not 1vs0.sg). A mapping that does
+* not tolerate the marker leaves those rows carrying ANALYTIC se/t/p/CI inside a
+* table the display attributes to the bootstrap covariance - measured at 46x too
+* small, z=-67, p=2e-33. No row may retain the analytic value, and any row that
+* cannot be mapped must be blank rather than analytic.
+use "`REPO'/test/data/dta_path_relyrgap.dta", clear
+cap drop sg3
+gen sg3 = mod(i, 3)
+tempfile d3sg
+save `d3sg'
+qui wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(2) jointtests subgroups(sg3) safety(off)
+matrix PA = e(pwsgs)
+use `d3sg', clear
+qui wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(2) jointtests subgroups(sg3) safety(off) bootstrap(bayes) reps(30) rseed(21)
+matrix PB = e(pwsgs)
+local nr = rowsof(PB)
+local et8leak 0
+local et8halfblank 0
+forval r = 1/`nr' {
+  if PA[`r',2] < . & PB[`r',2] < . {
+    if reldif(PA[`r',2], PB[`r',2]) == 0 local ++et8leak
+  }
+  if PB[`r',2] >= . & PB[`r',4] < . local ++et8halfblank
+}
+di "ET8_rows=" `nr' " analytic_leaks=" `et8leak' " half_blank=" `et8halfblank'
+if `et8leak' > 0 | `et8halfblank' > 0 {
+  di as error "ET8 FAIL: analytic inference survived into e(pwsgs)"
+  local ++fails
+}
+
 * ---- E-T7: ties z0 convention pinned vs bstat (half-weighted ties)
 clear
 set seed 77

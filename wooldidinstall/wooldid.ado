@@ -5208,7 +5208,7 @@ version 16.0
       dis as error "Error: bootstrap(bayes) with `cellwtd' reweights clusters but cannot resample treatment cells, so those bootstrap standard errors omit the cell-sampling variance component and can be too small when treatment effects vary across clusters. To proceed anyway with a caution, specify safety(off); bootstrap(standard) resamples cells and does not have this limitation."
       error 198
     }
-    dis as text "Caution: bootstrap(bayes) standard errors for `cellwtd' omit the cell-sampling variance component (cluster reweighting cannot resample treatment cells) and can be too small when treatment effects vary across clusters. bootstrap(standard) does not have this limitation."
+    dis as text "Caution: bootstrap(bayes) standard errors for `cellwtd' omit the cell-sampling variance component (cluster reweighting cannot resample treatment cells) and can be too small when treatment effects vary across clusters. Everything computed from that covariance inherits the understatement - the joint tests, the pairwise subgroup contrasts and the confidence intervals for those estimands, where p-values can be extreme - so read them alongside a bootstrap(standard) run, which does not have this limitation."
   }
   if "`bootstrap'" == "standard" & "`cellwtd'" != "" {
     * the resampling copies of a drawn cluster must be re-identifiable as distinct
@@ -5303,8 +5303,11 @@ version 16.0
   }
   foreach sg of local sgl {
     tempname wsg
-    cap matrix `wsg' = e(wdidsgresults_`sg')
+    * confirm before reading: `cap matrix X = e(absent)' yields a fabricated 1x1
+    * missing scalar rather than failing (the F2-class trap bootwire already guards)
+    cap confirm matrix e(wdidsgresults_`sg')
     if _rc != 0 continue
+    matrix `wsg' = e(wdidsgresults_`sg')
     local rnames : rowfullnames `wsg'
     local rr 0
     foreach rn of local rnames {
@@ -5328,7 +5331,9 @@ version 16.0
       forval k = 1/`K' {
         if "`wdbeq`k''" == "ES_`fam'" & "`wdbsg`k''" == "." & `wdbrl`k'' < 0 & `wdbrl`k'' != . local cols `cols' `k'
       }
-      if `: word count `cols'' >= 2 {
+      * one pre horizon is still a joint test (of a single restriction) - the analytic
+      * path posts one, so the bootstrap must too (F8)
+      if `: word count `cols'' >= 1 {
         local wdbjp .
         mata: wooldid_bootjw("`acc'", "`obsb'", "`cols'", "", `wdbdf')
         local ename = cond(strpos("`fam'", "ame"), "joint_Choriz", "joint_horiz")
@@ -5345,12 +5350,18 @@ version 16.0
         forval k = 1/`K' {
           if "`wdbeq`k''" == "ES_`fam'" & "`wdbsg`k''" == "`sg'" & `wdbrl`k'' < 0 & `wdbrl`k'' != . local cols `cols' `k'
         }
-        if `: word count `cols'' >= 2 {
+        if `: word count `cols'' >= 1 {
           local wdbjp .
           mata: wooldid_bootjw("`acc'", "`obsb'", "`cols'", "", `wdbdf')
           local ename = cond(strpos("`fam'", "ame"), "joint_Choriz", "joint_horiz")
           if "`fam'" == "att_it" | "`fam'" == "ame_it" local ename `ename'_i
           if `wdbjp' != . ereturn local `ename'_s`sg' = `wdbjp'
+          else {
+            * F7: say so - an absent per-subgroup joint test used to be indistinguishable
+            * from one that was never requested
+            local ++wdbncaut
+            local wdbc`wdbncaut' the bootstrapped `ename' joint test for subgroup `sg' is unavailable (rank-deficient or thin replication covariance)
+          }
         }
       }
     }
@@ -5406,9 +5417,11 @@ version 16.0
       local item = subinstr("`item'", "_", "", 1)
       if !`ispre' local item `eqn'
       local eqwant = cond(`ispre', "pretreatment", "main")
-      if regexm("`nmn'", "^([0-9]+)vs([0-9]+)([.].*)?$") {
+      * with three or more subgroups Stata marks the base level in the pairwise row
+      * name (1vs0bn.sg, not 1vs0.sg), so the marker must be tolerated on BOTH sides
+      if regexm("`nmn'", "^([0-9]+)(bn?)?vs([0-9]+)(bn?)?([.].*)?$") {
         local sga = regexs(1)
-        local sgb = regexs(2)
+        local sgb = regexs(3)
         local ka
         local kb
         forval k = 1/`K' {
@@ -5432,13 +5445,33 @@ version 16.0
             }
           }
         }
-        else local ++pwunmapped
+        else {
+          * unmapped: blank rather than leave the analytic se/t/p/CI in a table the
+          * display attributes to the bootstrap covariance (the commit-C blanking
+          * invariant, restored here for every future label surprise as well)
+          forval cc = 2/6 {
+            matrix `pw'[`rr', `cc'] = .
+          }
+          local ++pwunmapped
+        }
       }
-      else local ++pwunmapped
+      else {
+        forval cc = 2/6 {
+          matrix `pw'[`rr', `cc'] = .
+        }
+        local ++pwunmapped
+      }
     }
     local pwc : colnames `pw'
     local pwc : subinstr local pwc "t" "`=cond(`wdbdf' < ., "t", "z")'", word
     local pwc : subinstr local pwc "z" "`=cond(`wdbdf' < ., "t", "z")'", word
+    * the CI columns carry the requested level here too (F5): bootwire renames the
+    * main and subgroup tables, and this table must not keep saying 95
+    if `level' != 95 {
+      local wdbplvl = cond(mod(`level',1)==0, strofreal(`level'), subinstr(strofreal(`level',"%9.0g"), ".", "p", .))
+      local pwc : subinstr local pwc "lb_95ci" "lb_`wdbplvl'ci", word
+      local pwc : subinstr local pwc "ub_95ci" "ub_`wdbplvl'ci", word
+    }
     matrix colnames `pw' = `pwc'
     ereturn matrix pwsgs = `pw'
     if `pwunmapped' > 0 {
@@ -6027,7 +6060,8 @@ version 16.0
     }
   }
   * column labels: the test statistic is z-based at level() (bootstrap convention)
-  local wdblvltxt = cond(mod(`level',1)==0, strofreal(`level'), "")
+  * a non-integer level still needs a legal matrix column name: 92.5 -> lb_92p5ci
+  local wdblvltxt = cond(mod(`level',1)==0, strofreal(`level'), subinstr(strofreal(`level',"%9.0g"), ".", "p", .))
   local wmc : colnames `wm'
   local wmc : subinstr local wmc "t" "`wdblab'", word
   local wmc : subinstr local wmc "z" "`wdblab'", word
@@ -8152,9 +8186,9 @@ void wooldid_bootdist(string scalar accname, string scalar outname)
 // (a dropped constraint must post MISSING, never a residual-rank p).
 void wooldid_bootjw(string scalar accname, string scalar obsbname, string scalar colslist, string scalar mode, real scalar dfden)
 {
-  real matrix A, S, Si, CC, dev, Cm
+  real matrix A, S, Si, CC, dev, Cm, R
   real rowvector idx
-  real colvector ok, b, d, ev
+  real colvector ok, b, d, ev, sc
   real scalar k, j, W, df
   idx = strtoreal(tokens(colslist))
   A = st_matrix(accname)[., idx']
@@ -8182,12 +8216,26 @@ void wooldid_bootjw(string scalar accname, string scalar obsbname, string scalar
   CC = select(A, ok)
   dev = CC :- mean(CC)
   S = Cm * ((dev' * dev) / (rows(CC) - 1)) * Cm'
-  ev = symeigenvalues(S)'
-  if (min(ev) < -1e-8*max(abs(ev)) | max(abs(ev)) <= 0) {
+  // scale-free guard: invsym's pivot tolerance is ABSOLUTE, so on its own it both
+  // misses relative rank deficiency at ordinary scale and refuses well-conditioned
+  // covariances at tiny scale. Correlation-normalise, judge the eigenvalues of the
+  // normalised matrix, then undo the scaling on the inverse. The 1e-8 relative floor
+  // (condition number 1e8) was calibrated on measured conditioning: real event-study
+  // pre-blocks sit around 1.5e-2, a near-collinear construction that invsym alone let
+  // through at ordinary scale sits at 5.7e-10, and the floor separates them with six
+  // orders of margin on the live side
+  sc = sqrt(diagonal(S))
+  if (min(sc) <= 0 | missing(sc)) {
     st_local("wdbjp", ".")
     return
   }
-  Si = invsym(S)
+  R = S :/ (sc * sc')
+  ev = symeigenvalues(R)'
+  if (min(ev) < -1e-8*max(abs(ev)) | max(ev) <= 0 | min(ev) < 1e-8*max(ev)) {
+    st_local("wdbjp", ".")
+    return
+  }
+  Si = invsym(R) :/ (sc * sc')
   if (min(abs(diagonal(Si))) == 0) {
     st_local("wdbjp", ".")
     return
