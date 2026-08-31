@@ -5,21 +5,30 @@ Usage:
   mkrun.py --configs configs.csv [--configs configs_ext.csv ...] --preps preps.json
            --ado /abs/path/wooldid.ado --label old|new --sha <gitsha>
            --data /abs/suite/data [--data /abs/test/data ...]
-           --outdir /abs/rundir [--components core,trig,...] [--shard-size 15]
+           --outdir /abs/rundir [--dumpdir /abs/dumpdir]
+           [--components core,trig,...] [--shard-size 15]
 
 Emits outdir/shard_<component>_<n>.do (slow configs isolated into *_slow shards) plus
 outdir/shards.manifest (one line per shard: dofile|nconfigs|slow). Each shard dumps one
-<config>.csv per config in the runner's cwd, in the battery %21x format plus a
-"prov|<label>|<sha>" provenance line.
+<config>.csv per config, in the battery %21x format plus a "prov|<label>|<sha>"
+provenance line.
+
+--dumpdir sends those dumps to a fixed absolute directory instead of the runner's cwd.
+That is what lets the orchestrator give every shard its OWN cwd (SI-21): the saveplots
+capture below globs the whole working directory and then ERASES what it listed, so
+shards sharing a cwd could both steal and destroy each other's saveplots evidence. With
+per-shard cwds the glob sees only that shard's own output, while the dumps still land
+together where the comparer expects them.
 """
 import sys, os, csv, json
+import re as _re2
 
 DUMPRES = r'''
 cap program drop dumpres
 program define dumpres
-  args cfg rc
+  args cfg rc svpre
   tempname fh
-  file open `fh' using "`cfg'.csv", write replace
+  file open `fh' using `"{DUMPDIR}`cfg'.csv"', write replace
   file write `fh' "rc|`rc'" _n
   file write `fh' "prov|{LABEL}|{SHA}" _n
   qui ds
@@ -66,7 +75,15 @@ program define dumpres
     }
     cap matrix drop `M'
   }
-  local svfiles : dir . files "svp*"
+  * SI-21: this globs the WHOLE working directory and erases what it lists, so it is
+  * only correct while each shard owns its cwd. run_full.sh guarantees that by giving
+  * every shard a fresh private workdir and sending dumps to --dumpdir.
+  * The pattern is the config's OWN saveplots() prefix when it has one, falling back to
+  * "svp" as a catch-all for strays. The old hardcoded "svp*" was simultaneously too
+  * broad (it swept other shards' files) and too narrow (a config saving under any other
+  * prefix - e.g. saveplots(wdbt_saved) - was never checked at all).
+  if "`svpre'" == "" local svpre svp
+  local svfiles : dir . files "`svpre'*"
   local svfiles : list sort svfiles
   file write `fh' `"files|`svfiles'"' _n
   foreach svf of local svfiles {
@@ -169,7 +186,9 @@ def main():
         call += ", " + r["options"].strip()
         lines.append(call)
         lines.append("local rc = _rc")
-        lines.append(f"dumpres {r['config']} `rc'")
+        m = _re2.search(r"saveplots\(([^)]*)\)", r["options"])
+        svpre = m.group(1).strip() if m else ""
+        lines.append(f"dumpres {r['config']} `rc' {svpre}".rstrip())
         lines.append("")
         return "\n".join(lines)
 
@@ -179,8 +198,19 @@ def main():
         key = (r["component"], r.get("slow", "").strip() == "1")
         groups.setdefault(key, []).append(r)
     manifest = []
-    header = HEADER.replace("{ADO}", ado).replace(
-        "{DUMPRES}", DUMPRES.replace("{LABEL}", label).replace("{SHA}", sha))
+    dumpdir = optval("--dumpdir")
+    if dumpdir:
+        dumpdir = os.path.abspath(dumpdir)
+        os.makedirs(dumpdir, exist_ok=True)
+        dumpdir = dumpdir.rstrip("/") + "/"
+    else:
+        dumpdir = ""
+    header = (HEADER.replace("{ADO}", ado)
+                    .replace("{LABEL}", label)
+                    .replace("{SHA}", sha)
+                    .replace("{DUMPRES}", DUMPRES.replace("{LABEL}", label)
+                                                 .replace("{SHA}", sha)
+                                                 .replace("{DUMPDIR}", dumpdir)))
     for (comp, slow), rs in sorted(groups.items()):
         for i in range(0, len(rs), shard_size):
             chunk = rs[i:i + shard_size]

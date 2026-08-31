@@ -651,9 +651,9 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
 
 ## E. Feature tickets (author-ruled, not yet implemented)
 
-- **SI-21 — TEST HARNESS RACE (found 2026-08-31): the `oldnew` component's saveplots file
-  check is directory-wide while all shards share one working directory, so it both
-  invents and destroys evidence.** Not a wooldid defect; nothing in the package is
+- **SI-21 — RESOLVED 2026-08-31 (fix committed; see below for what it was). TEST HARNESS
+  RACE: the `oldnew` component's saveplots file check was directory-wide while all shards
+  shared one working directory, so it both invented and destroyed evidence.** Not a wooldid defect; nothing in the package is
   implicated. Filed because it produced a false FAILURE on a clean build and can equally
   produce a false PASS.
 
@@ -678,11 +678,30 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   interleaving enough to expose a race that was always there. Any future change to the
   timing of any config can expose it again, in either direction.
 
-  **FIX RECIPE.** Give each shard its own working subdirectory and write the dump `.csv`
-  files to a shared absolute output path, so `dir . files "svp*"` sees only that shard's
-  output. A cheaper stopgap is to erase `svp*` at the START of each config as well as the
-  end, which narrows but does not close the window. The real fix is the isolation - the
-  erase-before-dump direction cannot be fixed by ordering alone.
+  **FIX AS IMPLEMENTED.** Exactly the recorded recipe. `mkrun.py` gained `--dumpdir`, an
+  absolute directory the `.csv` dumps are written to; `run_full.sh` now gives every shard
+  a FRESH private working directory (`out/wd_<side>/<shard>/`, `rm -rf` + recreate on
+  every launch, not only on full runs, so a stale file from a previous subset run cannot
+  be attributed to the next run's first config). The glob therefore sees only its own
+  shard's output, while the comparer still finds all dumps together in `out/run_<side>/`.
+
+  **A SECOND, INDEPENDENT DEFECT IN THE SAME CHECK, found while fixing this and fixed
+  with it:** the pattern was hardcoded `svp*`, so it was simultaneously too broad (swept
+  other shards) and TOO NARROW - `ext_bin_ext_saveplots` uses `saveplots(wdbt_saved)` and
+  its output was never checked at all, on either side, silently. `mkrun.py` now parses
+  each config's own `saveplots()` prefix and passes it to `dumpres`, falling back to
+  `svp` as a stray catch-all. That config now records its two files on both sides and
+  compares clean.
+
+  **VERIFICATION.** (a) Decoy test, which is the load-bearing one because a green run
+  alone is weak evidence against a timing bug AND because both sides get the fix at once
+  - had the fix merely broken the capture, `files|` would have gone empty everywhere and
+  compared IDENTICAL forever with no symptom. A `svp_decoy_si21.txt` planted in each
+  former shared cwd survived the run un-erased and was recorded by zero configs; under
+  the old scheme it would have been both recorded and deleted. (b) Positive check:
+  `adm_svpsg` still records its own 10 saveplots files, so the capture is live.
+  (c) Full `oldnew`, both sides regenerated: 467/467 compared, unexplained=0, 0 shard
+  problems, PASS.
 
 
 - **SI-20 — BUG TICKET (author-filed 2026-08-31, investigate; do not fix blind): the

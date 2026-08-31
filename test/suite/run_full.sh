@@ -140,7 +140,7 @@ do_oldnew() {
   [ -n "$only" ] && comps=(--components "$only")
   for side in old new; do
     if [ -z "$only" ]; then
-      rm -rf "$OUT/run_$side" "$OUT/shards_$side"   # no mixed-vintage dumps on full runs
+      rm -rf "$OUT/run_$side" "$OUT/shards_$side" "$OUT/wd_$side"  # no mixed-vintage dumps on full runs
     fi
     mkdir -p "$OUT/run_$side" "$OUT/shards_$side"
     local sha; sha=$([ $side = old ] && echo "$sha_old" || echo "$sha_new")
@@ -148,7 +148,8 @@ do_oldnew() {
       "${extcfg[@]+"${extcfg[@]}"}" \
       --preps "$SUITE/preps.json" --ado "$OUT/build_$side/wooldid.ado" \
       --label "$side" --sha "$sha" --data "$SUITE/data" --data "$REPO/test/data" \
-      --outdir "$OUT/shards_$side" "${comps[@]+"${comps[@]}"}" \
+      --outdir "$OUT/shards_$side" --dumpdir "$OUT/run_$side" \
+      "${comps[@]+"${comps[@]}"}" \
       || { note "oldnew: mkrun($side) FAILED"; return 1; }
   done
   note "oldnew: running shards (pool=$STATA_JOBS)"
@@ -157,7 +158,16 @@ do_oldnew() {
     while IFS='|' read -r dofile n speed; do
       [ -z "$dofile" ] && continue
       tmo=600; [ "$speed" = "slow" ] && tmo=1800
-      run_stata_job "$OUT/run_$side" "$OUT/shards_$side/$dofile" "$tmo" \
+      # SI-21: every shard gets its OWN, FRESH working directory. dumpres globs the whole
+      # cwd for saveplots output and then erases what it listed, so shards sharing a cwd
+      # could record each other's files AND delete them before the owner dumped - a race
+      # that produced a false FAILURE on a clean build and could equally hide a real
+      # saveplots regression. Dumps still land together in run_$side via --dumpdir. The
+      # directory is recreated on every launch (not just full runs) so a stale svp* file
+      # from a previous subset run can never be attributed to the next run's first config.
+      wd="$OUT/wd_$side/${dofile%.do}"
+      rm -rf "$wd"; mkdir -p "$wd"
+      run_stata_job "$wd" "$OUT/shards_$side/$dofile" "$tmo" \
         "${side}_${dofile%.do}" "^SHARD_DONE"
     done < "$OUT/shards_$side/shards.manifest"
   done
