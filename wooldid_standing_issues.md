@@ -534,25 +534,62 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
 
 ## C2. New defect found in passing (bootstrap R2 review, 2026-08-30)
 
-- **SI-18 — `cleanmatrices` poisons the session for every LATER bootstrap/permute run
-  (r3499). NOT IMPLEMENTED; needs an author ruling.** Found by the commit-E adversarial
+- **SI-18 — `cleanmatrices` destroys wooldid's own compiled mata, breaking `gteffects`
+  in the SAME run and every later bootstrap/permute run in the session (r3499). NOT
+  IMPLEMENTED; needs an author ruling.** Found by the commit-E adversarial
   verifier (finding F2, measured). SI-17 refuses `permute` + `cleanmatrices` on the same
   command line, but `cleanmatrices` runs `clear mata`, which destroys the ado's own
   compiled mata functions for the rest of the session — and because the ado is already
   loaded and cached, its mata block never re-runs. Measured in one clean session:
   `bootstrap(bayes)` rc 0, then a plain `cleanmatrices` run rc 0, then the SAME bootstrap
   command → r(3499) `wooldid_bootdw() not found`; a subsequent `permute()` → r(3499) too.
-  Both failures land after a fully successful estimation. The do-no-harm verifier
+  Both failures land after a fully successful estimation.
+
+  **SCOPE CORRECTION (measured 2026-08-31, after the first filing).** This is not only a
+  cross-run problem, and the existing refusals do not contain it. `cleanmatrices` clears
+  mata early in the worker (~L287), while `gteffects` calls `wooldid_gtx()` much later in
+  the same worker (~L1564) — so **`gteffects` + `cleanmatrices` fails r(3499)
+  `wooldid_gtx() not found` on one command line**, with no refusal anywhere. Fresh-session
+  controls: `gteffects` alone rc 0, `cleanmatrices` alone rc 0. Refusing combinations one
+  at a time therefore does not scale — it would need a third refusal now and a new one for
+  every future mata consumer, whereas a structural fix covers all of them at once.
+
+  **MECHANISM EVIDENCE for the candidate fixes (all measured):**
+  - Functions living in a **mata library survive `clear mata` and reload on demand**
+    (probe: built an mlib, cleared mata, called the function — rc 0, correct value).
+  - **Re-running the ado from inside one of its own programs FAILS r(110)**, with or
+    without the `cap prog drop` pattern this file uses — a program cannot be dropped or
+    redefined while it is executing. So "re-`run` the ado to recompile" does not work.
+  - **Re-sourcing a mata-only file from inside a running program DOES work** (rc 0), and
+    the failure is detectable first (`cap mata:` a probe call returns 3499).
+  - Mata object names **are** enumerable by logging `mata: mata describe` and parsing,
+    so a selective drop is mechanically possible though it means parsing a log listing. The do-no-harm verifier
   independently hit the same class on the OLD build (a permute config with no
   `cleanmatrices` at all died r(3499) because an earlier config in the session had used
   it), so this predates the bootstrap work. User-side recovery today is `discard` or
   re-running the ado.
-  CANDIDATE FIXES: (a) after `clear mata`, re-`run` the ado to recompile the engine
-  functions — cheapest, but redefining programs while one of them is executing needs
-  checking; (b) narrow `cleanmatrices` to drop user mata objects only, leaving the
-  `wooldid_*` namespace alone; (c) document the session effect and leave the behavior.
-  Not implemented pending your ruling — (a) touches a shared option's semantics and the
-  redefinition question is not settled.
+  CANDIDATE FIXES, reordered by the evidence above:
+  1. **Ship the mata in a library** (`lwooldid.mlib` built by `mata mlib create/add/index`,
+     added to the `.pkg`). `clear mata` then cannot reach wooldid's functions at all —
+     they reload on demand — so `cleanmatrices` keeps its full documented brute-force
+     meaning and every consumer (gteffects, permute, bootstrap, anything later) is immune
+     by construction. Structurally the cleanest. Costs: a build step in the release
+     process, a `.pkg` entry, and a decision about the dev workflow, since `do
+     wooldid.ado` currently defines the functions inline and inline definitions would
+     shadow (or be shadowed by) the library copies.
+  2. **Split the mata into its own file and re-source it after clearing.** `cleanmatrices`
+     does `clear mata` then immediately re-sources `wooldid_mata.do` (via `findfile`), so
+     third-party junk goes and ours comes back — exactly the option's documented intent
+     ("clear out ... content in mata" left by reghdfe). Proven to work from inside a
+     running program. Smallest behavioral change; costs a second shipped file.
+  3. **Selective drop**: enumerate mata objects and drop only those outside the
+     `wooldid_*` namespace. Same end state as 2 without a second file, but it means
+     capturing and parsing `mata describe` output — the most fragile of the three.
+  4. **Document only**: state in the help that `cleanmatrices` ends the session's ability
+     to use gteffects/permute/bootstrap until wooldid is reloaded, and leave the behavior.
+     Cheapest, but leaves a silent-looking r(3499) after a successful estimation.
+  Not implemented pending your ruling: 1 is a packaging change and 2 changes the shipped
+  file set, so neither is mine to choose unilaterally.
 
 - **SI-17 — RESOLVED (author-ruled 2026-08-31; fix (a), refuse the combination).**
   `permute()` now refuses `cleanmatrices` at parse with a named message, mirroring the
