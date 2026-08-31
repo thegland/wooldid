@@ -1,5 +1,44 @@
 # The .mlib conversion: findings and the decision it needs (2026-08-31)
 
+> ## SUPERSEDING FINDING (same day, after the research below)
+>
+> **The bug this chunk exists to fix does not affect normally-installed users.** It is an
+> artifact of loading wooldid with `do "<path>/wooldid.ado"` — which is what every test
+> suite, harness and agent brief in this project does, and what all the SI-17/SI-18
+> evidence was gathered under.
+>
+> Measured, identical commands, two loading methods:
+>
+> | loading method | gteffects+cleanmatrices, one run | bootstrap after cleanmatrices |
+> |---|---|---|
+> | `do "…/wooldid.ado"` (our harness) | r3499 | r3499 |
+> | adopath (a real install) | **rc 0** | **rc 0** |
+>
+> Mechanism, isolated in a ten-line reproduction: when a mata function is missing, Stata
+> falls back to **re-reading the defining ado from the adopath**, which re-runs its mata
+> block. A `do`-loaded program has no such association and cannot recover. The minimal
+> case — an ado that clears mata mid-program and then calls its own mata function —
+> returns rc 0 when adopath-resolved and r3499 when `do`-loaded.
+>
+> **Consequences.**
+> 1. The `.mlib` would be solving a problem users do not have. Its remaining value is for
+>    developers running working copies by path — real, but a much smaller prize than the
+>    chunk assumed.
+> 2. **SI-17's refusal is a user-facing regression.** `permute() + cleanmatrices`
+>    returns rc 0 on the pre-SI-17 build when adopath-loaded (measured). The refusal I
+>    shipped removes a combination that worked. The same applies to the
+>    `bootstrap() + cleanmatrices` refusal.
+> 3. My error, and worth naming: the SI-17/SI-18 evidence was gathered under the dev
+>    harness's loading method and generalised to users without checking the other one.
+>
+> **Revised recommendation: do not ship a library.** Instead reconsider the two refusals
+> (they block working user configurations), and if the developer-facing breakage is worth
+> addressing at all, address it in the test harness — which could load wooldid via
+> `adopath ++` instead of `do`, matching how users actually run it.
+>
+> Everything below remains accurate as mechanics research and is retained for the record.
+
+
 Chunk: *"Create a .mlib file containing all mata functions used by wooldid, so that
 `clear mata` does not break wooldid's ability to use them … I want a story for [dev vs
 shipped] that can't leave the dev build and the shipped build silently different."*

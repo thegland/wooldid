@@ -534,9 +534,17 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
 
 ## C2. New defect found in passing (bootstrap R2 review, 2026-08-30)
 
-- **SI-18 — `cleanmatrices` destroys wooldid's own compiled mata, breaking `gteffects`
-  in the SAME run and every later bootstrap/permute run in the session (r3499). NOT
-  IMPLEMENTED; needs an author ruling.** Found by the commit-E adversarial
+- **SI-18 — SEVERITY COLLAPSED 2026-08-31: this is a DEV-HARNESS ARTIFACT, not a user
+  bug.** Measured: with wooldid loaded via the adopath, as any installed user has it,
+  every case returns rc 0 - gteffects+cleanmatrices in one run, bootstrap and permute
+  after a cleanmatrices run. The r(3499) failures reproduce ONLY when the package is
+  loaded with `do "<path>/wooldid.ado"`, which is how every test suite, harness and agent
+  brief in this project loads it, and how all the original evidence was gathered.
+  Mechanism, isolated in a ten-line reproduction: a missing mata function makes Stata
+  re-read the defining ado from the adopath, re-running its mata block; a `do`-loaded
+  program has no such association. CONSEQUENCE FOR SI-17: its refusal blocks a
+  combination that works for real users (pre-SI-17 build, adopath-loaded,
+  permute+cleanmatrices = rc 0) - see the SI-17 entry. Original report retained below.** Found by the commit-E adversarial
   verifier (finding F2, measured). SI-17 refuses `permute` + `cleanmatrices` on the same
   command line, but `cleanmatrices` runs `clear mata`, which destroys the ado's own
   compiled mata functions for the rest of the session — and because the ado is already
@@ -608,7 +616,16 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   Build script at `build/build_mlib.py` and cert suite at `test/test_mlib.do` are ready
   and work; neither is wired into anything pending the choice.
 
-- **SI-17 — RESOLVED (author-ruled 2026-08-31; fix (a), refuse the combination).**
+- **SI-17 — RESOLVED, BUT THE PREMISE IS NOW IN DOUBT (see SI-18's 2026-08-31
+  correction).** The refusal was ruled and shipped on evidence gathered under `do`-loading.
+  Measured 2026-08-31: on the pre-SI-17 build loaded via the adopath - i.e. as an
+  installed user has it - `permute(shuffle) permreps(20) cleanmatrices` returns **rc 0**.
+  So the shipped refusal removes a working user configuration, and the same applies to the
+  `bootstrap() + cleanmatrices` refusal added later. RECOMMEND revisiting both: either
+  revert them, or narrow them to the `do`-loaded case if that can be detected. Not changed
+  pending the author's ruling, since they were author-ruled in. Original entry follows.
+
+- **SI-17 (as ruled and shipped) — author-ruled 2026-08-31; fix (a), refuse the combination.**
   `permute()` now refuses `cleanmatrices` at parse with a named message, mirroring the
   bootstrap refusal; `test_permute2.do` carries S17a-S17d (rc, message text, and both
   options still working alone), and the pre-fix build was confirmed to reach the
