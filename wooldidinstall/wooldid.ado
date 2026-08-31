@@ -1185,7 +1185,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     cap drop `si8tag'
     local si8demand = `si8cells'*(1 + ("`contreat'" != "")) + `si8ilev' + `si8tlev' + 200
     if `si8ilev' > 100 {
-      dis as text "Caution: the cohort variable `i' takes `si8ilev' distinct values. wooldid builds cohort-by-period interaction terms from it, so very granular `i' variables can be slow and can exceed Stata's variable limits. You may wish to specify unit-level fixed effects via fe() and swap `i' to a coarser level of aggregation, such as cohorts or treatment onset groups. (safety(off) suppresses this check.)"
+      dis as text "Caution: the cohort variable `i' takes `si8ilev' distinct values. wooldid builds one interaction term per cohort-by-period cell, and runtime grows faster than linearly in that cell count - roughly its 1.3rd to 1.7th power, and about its 1.9th under lattice() - so a granular `i' can dominate runtime long before it approaches Stata's variable limits. Sample size itself is comparatively cheap. Coarsening `i' is normally the single largest speedup available: specify unit-level fixed effects via fe() and swap `i' to a coarser level of aggregation, such as cohorts or treatment onset groups. (safety(off) suppresses this check.)"
     }
     if `si8demand' > c(maxvar) {
       dis as error "Error: this specification requires at least `si8demand' variables (about `si8cells' treated cohort-by-period interaction terms) but maxvar is currently " c(maxvar) ", so estimation would fail with r(907)."

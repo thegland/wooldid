@@ -19,6 +19,7 @@
 {viewerjumpto "Continuous Treatments" "wooldid##continuous"}{...}
 {viewerjumpto "Controls and Fixed Effects" "wooldid##controls"}{...}
 {viewerjumpto "Technical Features" "wooldid##technical"}{...}
+{viewerjumpto "Runtime and What Drives It" "wooldid##runtime"}{...}
 {viewerjumpto "Working with Output" "wooldid##output"}{...}
 {viewerjumpto "Comparison with Related Estimators" "wooldid##comparison"}{...}
 {viewerjumpto "Examples" "wooldid##examples"}{...}
@@ -38,7 +39,7 @@ Ibragimov and Muller (2010) style cluster-robust inference, and randomization (p
 inference is unreliable ({it:permute()}). A fast exploratory mode ({it:fastnose}) skips standard error estimation entirely for specification search.  {p_end}
 
 {pstd}{ul:Shortcuts:} {help wooldid##description:Description}, {help wooldid##options:Options}, {help wooldid##output:Working with Output},
-{help wooldid##comparison:Comparison with Related Estimators}, {help wooldid##examples:Examples},
+{help wooldid##runtime:Runtime and What Drives It}, {help wooldid##comparison:Comparison with Related Estimators}, {help wooldid##examples:Examples},
 {help wooldid##bugs:Bugs and Assistance}, {help wooldid##citations:Citations}, {help wooldid##author:Author Info and How to Cite}, {help wooldid##disclaimer:Disclaimer} {p_end}
 
 {pstd}{ul:Dependencies:} {cmd:wooldid} requires users have STATA 16 or higher installed, {help reghdfe} version 5.7.3, {help ftools} (for {it:reghdfe}),
@@ -303,7 +304,7 @@ This is a fixed-zero-null pivotality approximation - it relies on the permuted t
 sharp-null randomization-test inversion. Implies {cmd:permtstat}. Unavailable (with a caution) when the observed run has no usable standard error, and refused loudly when the
 observed comparison statistic itself is missing. {p_end}
 
-{phang}{opt boot:strap(mode)}: Bootstrap standard errors and inference. When specified, the reported standard errors, z statistics, p-values, confidence intervals, joint tests and subgroup contrasts are bootstrap quantities, replacing the analytic ones; point estimates are unchanged, and the analytic covariance is preserved in the hidden {it:e(V_analytic)} (and {it:e(V_es_analytic_*)}). Each replication re-estimates the full model, so runtime scales with {cmd:reps()}. Two modes. {cmd:bootstrap(standard)} is the cluster bootstrap: clusters - the {cmd:cluster()} variable, or observations when no {cmd:cluster()} is given - are resampled with replacement. For the observation-weighted estimands ({it:att}, {it:ame}) replications are computed by cluster frequency reweighting, which is the same statistic as physical resampling and matches Stata's own {helpb bootstrap} prefix replication for replication under a common seed. When a cell-weighted estimand ({it:att_it}, {it:att_i}, {it:att_itime}) is requested, replications instead physically resample and re-identify duplicated clusters, so a twice-drawn cluster contributes its treatment cells twice; that leg requires {cmd:cluster()} to nest {it:i} and is refused otherwise. {cmd:bootstrap(bayes)} is the Bayesian bootstrap: rather than resampling, each replication draws a total Dirichlet weight per cluster and splits it within the cluster in proportion to any existing weights, so no cluster ever leaves the sample and replication estimability is stable. Because reweighting cannot resample cells, {cmd:bootstrap(bayes)} combined with a cell-weighted estimand omits the cell-sampling variance component and can understate those standard errors when treatment effects vary across clusters: it is refused under default safety and proceeds with a caution under {cmd:safety(off)}, while {cmd:bootstrap(standard)} carries no such limitation. In simulations on staggered designs with 24 clusters both modes were close to calibrated for {it:att}, with the resampling mode nearer nominal than the reweighting mode. Requires {cmd:reps()}. Incompatible with {cmd:permute()}, {cmd:impvalues}, {cmd:fastnose}, {cmd:unconditionalse}, {cmd:customvce()}, {cmd:pretrendpower()}, {cmd:suppresssgprimaryeffects}, {cmd:oldsyntax}, and multi-way {cmd:cluster()}. With {cmd:jointtests} the joint tests become chi-squared Wald tests on the bootstrap covariance, and that combination is exempt from the analytic joint-test screen described under {cmd:jointtests} - bootstrap inference is what that screen recommends. Plots, saved plot data, {it:gteffects} cell standard errors, histogram output and adversarial line-test p-values are computed from the analytic covariance before the replications run and remain analytic; a caution says so. Stata's own {helpb bootstrap} prefix can also be used on an unweighted wooldid call ({cmd:bootstrap _b, reps(#) seed(#) cluster(c) idcluster(nc): wooldid y i t ttre, ... fastnose}), but it rejects weighted commands, cannot deliver the Bayesian flavor, and discards replications whose coefficient vector lost a horizon - the built-in {cmd:bootstrap()} option avoids all three. {p_end}
+{phang}{opt boot:strap(mode)}: Bootstrap standard errors and inference. When specified, the reported standard errors, z statistics, p-values, confidence intervals, joint tests and subgroup contrasts are bootstrap quantities, replacing the analytic ones; point estimates are unchanged, and the analytic covariance is preserved in the hidden {it:e(V_analytic)} (and {it:e(V_es_analytic_*)}). Each replication re-estimates the full model, so runtime scales with {cmd:reps()}. Two modes. {cmd:bootstrap(standard)} is the cluster bootstrap: clusters - the {cmd:cluster()} variable, or observations when no {cmd:cluster()} is given - are resampled with replacement. For the observation-weighted estimands ({it:att}, {it:ame}) replications are computed by cluster frequency reweighting, which is the same statistic as physical resampling and matches Stata's own {helpb bootstrap} prefix replication for replication under a common seed. When a cell-weighted estimand ({it:att_it}, {it:att_i}, {it:att_itime}) is requested, replications instead physically resample and re-identify duplicated clusters, so a twice-drawn cluster contributes its treatment cells twice; that leg requires {cmd:cluster()} to nest {it:i} and is refused otherwise. Re-identification roughly doubles the cost of each replication, because the resampled data carries distinct cohort identities for duplicated clusters and so presents a larger cell count to the regression. That cost is inherent to making those estimands' bootstrap correct rather than an inefficiency, but it is worth budgeting for when choosing {cmd:reps()}. {cmd:bootstrap(bayes)} is the Bayesian bootstrap: rather than resampling, each replication draws a total Dirichlet weight per cluster and splits it within the cluster in proportion to any existing weights, so no cluster ever leaves the sample and replication estimability is stable. Because reweighting cannot resample cells, {cmd:bootstrap(bayes)} combined with a cell-weighted estimand omits the cell-sampling variance component and can understate those standard errors when treatment effects vary across clusters: it is refused under default safety and proceeds with a caution under {cmd:safety(off)}, while {cmd:bootstrap(standard)} carries no such limitation. In simulations on staggered designs with 24 clusters both modes were close to calibrated for {it:att}, with the resampling mode nearer nominal than the reweighting mode. Requires {cmd:reps()}. Incompatible with {cmd:permute()}, {cmd:impvalues}, {cmd:fastnose}, {cmd:unconditionalse}, {cmd:customvce()}, {cmd:pretrendpower()}, {cmd:suppresssgprimaryeffects}, {cmd:oldsyntax}, and multi-way {cmd:cluster()}. With {cmd:jointtests} the joint tests become chi-squared Wald tests on the bootstrap covariance, and that combination is exempt from the analytic joint-test screen described under {cmd:jointtests} - bootstrap inference is what that screen recommends. Plots, saved plot data, {it:gteffects} cell standard errors, histogram output and adversarial line-test p-values are computed from the analytic covariance before the replications run and remain analytic; a caution says so. Stata's own {helpb bootstrap} prefix can also be used on an unweighted wooldid call ({cmd:bootstrap _b, reps(#) seed(#) cluster(c) idcluster(nc): wooldid y i t ttre, ... fastnose}), but it rejects weighted commands, cannot deliver the Bayesian flavor, and discards replications whose coefficient vector lost a horizon - the built-in {cmd:bootstrap()} option avoids all three. {p_end}
 
 {phang}{opt reps(#)}: Number of bootstrap replications; required with {cmd:bootstrap()}. No minimum is imposed, so small values can be used to time a specification - but bootstrap inference needs many replications: hundreds for standard errors, and a thousand or more before the percentile and bias-corrected intervals are worth reading. Replications that fail to estimate - for example a resample retaining no comparison group - are excluded and counted in {it:e(boot_failed)}, the convention Stata's own {helpb bootstrap} follows. {p_end}
 
@@ -563,7 +564,10 @@ constructs the lattice quantiles without using weights).
 If {it:lattice} is not specified, {it:wooldid} will proceed without
 using a lattice variable (as though you specified a lattice variable that is always 1). A user-supplied lattice variable must be numeric and contain only non-negative
 integers (it is used as a factor variable; the value check can be bypassed with {it:safety(off)}); a lattice type passed without a quantile count is rejected with a
-specific error at parse time. {p_end}
+specific error at parse time. Be aware that a lattice is the most expensive scaling axis in {it:wooldid}: runtime grows at roughly the 1.9th power of the
+cohort-by-period cell count once a lattice is present (versus about the 1.3rd to 1.7th power without one), and the absorbing regression rather than
+{it:margins} becomes the dominant cost. Each additional lattice point multiplies the terms the regression must carry, so prefer the smallest
+{it:latticenum} that answers the question. See {help wooldid##runtime:Runtime and what drives it}. {p_end}
 
 {phang} {it:latticetype:} Specifies groups in which to estimate {it:latticenum} quantiles of {it:contreat}. Choice of lattice type can be important for both interpretive reasons
 (e.g., when interpreting the output of {it:makecfxplots}) and for estimation feasibility reasons: clustered standard error computation will often fail if multiple clusters are not
@@ -771,15 +775,17 @@ event-study window has no post-treatment horizons (e.g. {cmd:espostlength(0)}), 
 
 {phang}{opt emptycellsoverride}: By default, {it:wooldid} tells Stata to drop interaction terms that correspond with empty cells, which is achieved by the command
 {it:set emptycells drop}, which improves estimation efficiency in this setting. This option overrides this behavior. This should only be of interest in conjunction
-with the option {it:verbose}. {p_end}
+with the option {it:verbose}. Note that it is an expensive option: dropping empty cells was measured to be worth a factor of roughly 2.24 in runtime on a
+representative specification, and overriding it forgoes that saving. {p_end}
 
 {phang}{opt safety(on|off)}: When {it:safety(off)} is not explicitly specified, {it:wooldid} will caution the user or halt estimation when {it:wooldid} is likely to yield unreliable estimates.
 Only {it:on} and {it:off} are accepted values; anything else is rejected with an error (formerly, unrecognized values were silently treated as {it:on}).
 Most important among these checks are tests for whether or not a variable intended to capture the treatment effect in a given i-t cell was dropped from the underlying regression for
 multicolinearity, as may occur if one's fixed effects or continuous treatment control variables partial out one of the main effects. Identification failures of this sort will generally be detected,
 though not necessarily when the problem concerns continuous treatments being analyzed with a lattice or with polynomial terms. Default safety also screens for very granular {it:i} variables:
-when {it:i} takes more than 100 distinct values, {it:wooldid} cautions that the cohort-by-period interaction terms built from {it:i} can be slow to estimate and can exceed Stata's variable
-limits (consider unit-level fixed effects via {it:fe()} plus a coarser {it:i}, such as treatment onset groups), and if the count of variables the specification requires exceeds the current
+when {it:i} takes more than 100 distinct values, {it:wooldid} cautions that runtime grows faster than linearly in the cohort-by-period cell count built from {it:i} and that the specification
+can also exceed Stata's variable limits (consider unit-level fixed effects via {it:fe()} plus a coarser {it:i}, such as treatment onset groups; see
+{help wooldid##runtime:Runtime and what drives it}), and if the count of variables the specification requires exceeds the current
 {help maxvar} setting, {it:wooldid} halts with an informative error before estimation rather than failing mid-run with r(907). Default safety additionally refuses {it:jointtests} combined
 with analytic clustered SEs clustered at the level of the cohort variable {it:i} or above, where the joint test p-values are severely oversized (see {it:jointtests}); {it:safety(off)}
 downgrades that error to a caution and proceeds.   {p_end}
@@ -790,6 +796,33 @@ replaced with the suffix {it:post0}. This option reverts {it:wooldid} to using t
 
 
 
+
+{marker runtime}{...}
+{title:Runtime and what drives it}
+
+{pstd}Users are often surprised by which specifications are slow, because the intuitive lever - the number of observations - is not the binding one. The guidance
+below comes from direct measurement across a range of panel sizes and shapes. {p_end}
+
+{pstd}{bf:Cost is driven by the cohort-by-period cell count, not by sample size.} Write K for the number of interaction cells {it:wooldid} builds, which is
+roughly the number of distinct values of {it:i} times the number of relative periods in the event-study window. Runtime grows at about the 1.3rd to 1.7th power
+of K, while sample size, subgroup count and event-study width are each merely linear. The effect is large enough to invert expectations: in one measurement a
+29,067-observation panel with K=29 ran in 1.4 seconds, while a 4,152-observation panel with K=2,257 took 86.8 seconds - seven times fewer rows and sixty-three
+times more time. {p_end}
+
+{pstd}{bf:What this implies in practice.} Coarsening {it:i} is normally the single largest speedup available: move to cohorts or treatment-onset groups and
+recover unit-level variation with {it:fe()}. Halving the number of observations, by contrast, buys little, because it leaves K untouched - this is also why
+subsampling is a poor way to shorten a long {cmd:bootstrap()} or {cmd:permute()} run, where shrinking the window or coarsening {it:i} works and dropping rows
+largely does not. Narrowing the event-study window helps in proportion to the horizons removed. {p_end}
+
+{pstd}{bf:The expensive options.} {it:lattice()} is the steepest axis, at roughly the 1.9th power of K, and it shifts the dominant cost from {it:margins} into
+the absorbing regression; prefer the smallest {it:latticenum} that answers the question. {it:emptycellsoverride} forgoes a measured factor of about 2.24.
+The {cmd:bootstrap()} re-identification leg required by {it:att_it}, {it:att_i} and {it:att_itime} roughly doubles per-replication cost. On the other side,
+{it:fastnose} skips the variance calculation that accounts for most of a {it:margins} call and is correspondingly worth several times over on runs where
+standard errors are not needed. {p_end}
+
+{pstd}{bf:Where the time goes.} Nearly all of a typical run is spent inside Stata's {it:margins}, and most of each {it:margins} call is the delta-method
+variance calculation rather than the point estimates. Very little time is spent in {it:wooldid}'s own code, which is why the levers that matter are the ones
+that change the size of the problem handed to {it:margins} - K above all - rather than anything about how the data are stored or passed in. {p_end}
 
 {marker output}{...}
 {title:Working With Output}

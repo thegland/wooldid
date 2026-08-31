@@ -74,7 +74,7 @@ qui log using si89_t3.txt, text replace name(si89)
 cap noi wooldid y i t ttre, att robust
 qui log close si89
 local rc3 = _rc
-scanlog si89_t3.txt "distinct values. wooldid builds cohort-by-period"
+scanlog si89_t3.txt "distinct values. wooldid builds"
 if `rc3' == 0 & r(found) == 1 dis as result "T3 PASS: 150-level i -> caution shown, run completes"
 else {
   dis as error "T3 FAIL: rc = `rc3', caution found = " r(found)
@@ -87,7 +87,7 @@ qui log using si89_t4.txt, text replace name(si89)
 cap noi wooldid y i t ttre, att robust safety(off)
 qui log close si89
 local rc4 = _rc
-scanlog si89_t4.txt "distinct values. wooldid builds cohort-by-period"
+scanlog si89_t4.txt "distinct values. wooldid builds"
 if `rc4' == 0 & r(found) == 0 dis as result "T4 PASS: safety(off) -> no caution, run completes"
 else {
   dis as error "T4 FAIL: rc = `rc4', caution found = " r(found)
