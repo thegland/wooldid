@@ -96,7 +96,29 @@ ways, and the `post`/`test`/`restore` pattern it needs is already established in
 by the E1 fix. *Risk:* low but not zero — the estimands are structurally identical rather
 than coincidentally equal, so it wants the usual verification wave.
 
-**3. Subgroup level margins are computed twice.** The `pwcompare(effects)` pass already
+**3. IMPLEMENTED FOR THE BINARY SITES ONLY (2026-08-31, `73ece5c`); the contreat half is
+REFUSED.** The italicised claim below — that this saving *cannot perturb a reported digit*
+— **is false at the contreat sites**, and verification caught it. The `pwcompare` pass
+does not emit margins' `o.` omitted markers. At the binary sites only the second half of
+the vector is consumed and the markers sit in the discarded half, which is harmless; at
+the contreat sites the whole vector is consumed and the truerow/sghaspre filter uses those
+markers to drop a subgroup's pre-treatment row when the per-sg continuous pre-treatment
+margins come back all-omitted. Deferring there let an unmarked row survive: `e(b)` gained
+an all-zero `pretreatment_SG<k>_ame` column and every later coefficient shifted one
+position into the wrong name — the same symptom `cont_sg_tidose` was added to the battery
+to pin. The binary half ships and is worth 14–20% on subgroup runs (better than the ~9%
+estimated here); `test_sgdefer.do` now pins the boundary.
+
+Two process lessons worth keeping. First, the investigation's own probe **recorded the
+discriminating evidence** (`level pass: 1bno.sg3 2o.sg3 3o.sg3` vs `pwcompare: 1bn.sg3
+2.sg3 3.sg3`) and filed it as harmless because it lands in "the DISCARDED first half" —
+true at the binary sites, false at the contreat sites. A difference dismissed as
+irrelevant on one code path needs re-checking on every other path that consumes it.
+Second, the 28-config probe and 27-config A/B agreed unanimously and were both wrong,
+because neither contained the shape that mattered; the battery did. Unanimity across
+probes drawn from the same config pool is not independent confirmation.
+
+*Original proposal.* The `pwcompare(effects)` pass already
 returns the level margins in `r(table)`, **bitwise identical** to the ones the code then
 recomputes with a separate `over(subgroups)` call (measured `mreldif` exactly 0). Worth
 ~9% of a subgroups run. *This is the one saving in the report that cannot perturb a
@@ -115,6 +137,23 @@ permute wall time without `permtstat`, **43% with it**. *Measured constraint:* t
 study window must stay in the *regression* — dropping it moves `main_att` by 1–10% — so
 only the aggregation may be skipped, which cannot move the reported statistic. The naive
 one-line gate does not work; the lens says so explicitly.
+
+### Status of this report's items (2026-08-31)
+
+| item | ruling | commit |
+|---|---|---|
+| 1. poisson `predict(xb)` split | implemented, 62x on a poisson event study | `32517df` |
+| 2. joint tests reuse b/V | **refused**; residue filed as SI-20 | — |
+| 3. duplicate subgroup level margins | **binary half implemented (14-20%), contreat half refused** | `73ece5c` |
+| 4. F8 diagnostics inside replications | implemented behind a rep-only flag | `1727d6e` |
+| 5. permute event-study aggregation | retired; per-horizon p-values filed as SI-19 | — |
+| 6. `summarystats` e-class `total` | do nothing (author) | — |
+| Tier 2 structural rewrites | consider only after conventional measures (author) | — |
+| Documentation | implemented | `298f92a` |
+
+Two of the eight were refused on evidence gathered after approval, and in both cases the
+refusal came from testing a shape the original investigation had not covered. That is the
+argument for spending the verification wave even on items whose premise looks airtight.
 
 **6. `summarystats` uses an e-class `total`**, which destroys `e()` and forces an
 `est restore` of the full model — an O(K²) operation. Small today (0.01–0.11 s) but grows
