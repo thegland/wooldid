@@ -5,9 +5,12 @@ lenses: phase profiling across a size ladder, an instrumented hunt for discarded
 repeated work, a scaling study along five axes, a Stata-idiom pass over the hot paths,
 and a study of the bootstrap/permute replication engines.
 
-**Nothing here is implemented.** This is a report for you to rule on. Every claim below
-is measured unless labelled otherwise, and every proposal carries an explicit read on the
-risk to reported numbers, since that is the project's cardinal constraint.
+**As first written, nothing here was implemented** — it was a report to rule on. All eight
+items have since been ruled on and the outcomes are recorded inline and in the status
+ledger at the end of Tier 1. Every claim below is measured unless labelled otherwise, and
+every proposal carries an explicit read on the risk to reported numbers, since that is the
+project's cardinal constraint. Two claims did not survive verification; those items carry
+a correction at the top of their section rather than a silent edit.
 
 ---
 
