@@ -1,4 +1,7 @@
-* test_mlib.do - the shipped mata library: discovery, clear-mata survival, and the
+* build/test_mlib.do - the mata library (UNWIRED: not under test/, so the cert component
+* does not glob it, because no library is shipped yet and the design is undecided).
+* Run from test/ once a library exists: stata-mp -e do ../build/test_mlib.do
+* the shipped mata library: discovery, clear-mata survival, and the
 * cleanmatrices cure (SI-18). Run from test/: stata-mp -e do test_mlib.do
 *
 * M1 the library is discoverable and reports the expected function set
