@@ -2656,14 +2656,23 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         * posttreatment effect - same production method as before, but with an over(sg)  component
         tempname ___`item'_s
         if "`impvalues'" == "" {
-          qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups') `poismarginstext' `marginsdof'
-          local matrixstartgrab floor(`=colsof(r(b))'/2)+1
-          matrix `f9tab' = r(table)
-          if rowsof(`f9tab') < 6 {
-            matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
-            matrix rownames `f9tab' = b se t pvalue ll ul
+          * EFF3: with more than one realized subgroup the sg-comparison pass below
+          * issues this identical over(`subgroups') margins with pwcompare(effects)
+          * bolted on, and Stata returns the subgroup LEVEL margins in r(table) beside
+          * the pairwise rows in r(table_vs). defer the extraction to that pass rather
+          * than paying for a second identical margins here. with a single realized
+          * subgroup the comparison pass does not run at all, so the call stays.
+          if wordcount("`sglist'") > 1 local sgeff3_`item' 1
+          else {
+            qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups') `poismarginstext' `marginsdof'
+            local matrixstartgrab floor(`=colsof(r(b))'/2)+1
+            matrix `f9tab' = r(table)
+            if rowsof(`f9tab') < 6 {
+              matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
+              matrix rownames `f9tab' = b se t pvalue ll ul
+            }
+            matrix `___`item'_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
           }
-          matrix `___`item'_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
         }
 
 
@@ -2673,14 +2682,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           local sgpre 1
 
           if "`impvalues'" == "" {
-            qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck over(`subgroups') `poismarginstext' `marginsdof'
-            local matrixstartgrab floor(`=colsof(r(b))'/2)+1
-            matrix `f9tab' = r(table)
-            if rowsof(`f9tab') < 6 {
-              matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
-              matrix rownames `f9tab' = b se t pvalue ll ul
+            * EFF3: see the posttreatment twin. the pre-period comparison pass is
+            * capture-wrapped (pwcompare hard-errors when the pre-period subpopulation
+            * realizes a single subgroup), so its failure branch runs this call as a
+            * fallback - the deferral must never be able to lose the level margins.
+            if wordcount("`sglist'") > 1 local sgeff3pre_`item' 1
+            else {
+              qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck over(`subgroups') `poismarginstext' `marginsdof'
+              local matrixstartgrab floor(`=colsof(r(b))'/2)+1
+              matrix `f9tab' = r(table)
+              if rowsof(`f9tab') < 6 {
+                matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
+                matrix rownames `f9tab' = b se t pvalue ll ul
+              }
+              matrix `___`item'_pre_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
             }
-            matrix `___`item'_pre_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
           }
 
         }
@@ -2948,6 +2964,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           matrix rownames `f9tab' = b se t pvalue ll ul
         }
         matrix `pwsgs_`item''  =  `f9tab'[1..6,floor(`=colsof(r(table_vs))'/2)+1..`=colsof(r(table_vs))']'
+        * EFF3: the SAME pass returned the subgroup level margins in r(table); read
+        * them here, before wooldid_sgchain (rclass) wipes r()
+        if "`sgeff3_`item''" != "" {
+          local matrixstartgrab floor(`=colsof(r(b))'/2)+1
+          matrix `f9tab' = r(table)
+          if rowsof(`f9tab') < 6 {
+            matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
+            matrix rownames `f9tab' = b se t pvalue ll ul
+          }
+          matrix `___`item'_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
+        }
         if "`sgpost'" != "" {
           wooldid_sgchain, half
           * rank guard (verifier e1_v1): on a rank-deficient posted VCE, -test- silently
@@ -2981,6 +3008,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             * test and no pairwise rows, exactly as under the previous contrast-first order
             local prejoint_`item'_sdiff
             if "`sgpost'" != "" qui est restore ___wooldidfullmodel
+            * EFF3 fallback: the level margins were deferred to this pass, which just
+            * refused. the plain over(`subgroups') call does NOT refuse here (it merely
+            * returns the single realized subgroup), so run it now, after the restore
+            if "`sgeff3pre_`item''" != "" {
+              qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck over(`subgroups') `poismarginstext' `marginsdof'
+              local matrixstartgrab floor(`=colsof(r(b))'/2)+1
+              matrix `f9tab' = r(table)
+              if rowsof(`f9tab') < 6 {
+                matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
+                matrix rownames `f9tab' = b se t pvalue ll ul
+              }
+              matrix `___`item'_pre_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
+            }
           }
           else {
             tempname prepwsgs_`item'
@@ -2990,6 +3030,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               matrix rownames `f9tab' = b se t pvalue ll ul
             }
             matrix `prepwsgs_`item''  =  `f9tab'[1..6,floor(`=colsof(r(table_vs))'/2)+1..`=colsof(r(table_vs))']'
+            * EFF3: level margins off this same pass (before wooldid_sgchain)
+            if "`sgeff3pre_`item''" != "" {
+              local matrixstartgrab floor(`=colsof(r(b))'/2)+1
+              matrix `f9tab' = r(table)
+              if rowsof(`f9tab') < 6 {
+                matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
+                matrix rownames `f9tab' = b se t pvalue ll ul
+              }
+              matrix `___`item'_pre_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
+            }
             * the pairwise rows are stacked into e(pwsgs) iff THIS flag is set - not iff
             * the joint p exists - so a chain-test failure after a successful pwcompare
             * cannot silently shorten e(pwsgs)
