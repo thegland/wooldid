@@ -4418,7 +4418,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     }
   }
   if "`permute'" != "" {
-    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') cm(`cleanmatrices')
+    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if')
     if _rc != 0 error _rc
   }
 
@@ -4432,7 +4432,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * bootstrap() absent it enforces the stray-companion screen and exits. it sits AFTER
   * the safetyinput capture above deliberately - the bayes cell-weighted gate keys on
   * the user's own safety() value (contreatwithin rewrites the working copy later)
-  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') cm(`cleanmatrices')
+  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower')
   if _rc != 0 error _rc
 
   * register verbose retention with the shell's error-path cleanup epilogue (top of this
@@ -4900,7 +4900,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) cm(string)]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis)]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -4909,15 +4909,6 @@ version 16.0
   }
   if "`impv'" != "" {
     dis as error "Error: permute() is not compatible with impvalues."
-    error 198
-  }
-  * SI-17: cleanmatrices asks the worker to clear mata on its way out, which destroys
-  * the ado's OWN compiled mata functions - so the shell's post-estimation permutation
-  * engine then dies r(3499) "wooldid_permx() not found" AFTER a fully successful
-  * estimation. Refused rather than silently fragile (bootstrap() refuses it for the
-  * same reason)
-  if "`cm'" != "" {
-    dis as error "Error: permute() is not compatible with cleanmatrices; cleanmatrices clears the compiled engine functions the permutation replications need after estimation."
     error 198
   }
   if "`uncond'" != "" {
@@ -5080,7 +5071,7 @@ version 16.0
 *** commit-B state: the full gate set is live, but a passing call still exits r(198)
 *** loudly at the tail - the engine lands in a later commit and the option must never
 *** silently no-op before then (the F6 commit-A precedent).
-  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ifr(string asis) jt(string) ptp(string asis) cm(string)]
+  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ifr(string asis) jt(string) ptp(string asis)]
 
   * stray-companion screen: every companion requires the master option
   if "`bootstrap'" == "" {
@@ -5249,16 +5240,15 @@ version 16.0
   * (they will be exempt from the SI-A1 screen when they land - its own text
   * recommends bootstrap). pretrendpower: permanent v1 refusal (plan A13) - the ptp
   * subprogram computes and posts from the ANALYTIC e(V_es_*) inside the worker,
-  * before any rewiring. cleanmatrices: permanent v1 refusal (plan A16) - its
-  * worker-end clear mata destroys the ado's own compiled engine functions (r3499;
-  * the permute twin is filed as SI-17). standard mode: engine lands in the next
+  * before any rewiring. (A cleanmatrices refusal was shipped here and in permctl and
+  * has been REMOVED: the r(3499) it guarded against only reproduces when wooldid is
+  * loaded with `do <path>`, as this project's harness does; an adopath-resolved ado
+  * recovers because Stata re-reads it when a mata function is missing, so the refusal
+  * was blocking a combination that works for installed users - see SI-17/SI-18.)
+  * standard mode: engine lands in the next
   * commit; loud refusal until then (F6 precedent).
   if "`ptp'" != "" {
     dis as error "Error: bootstrap() may not be combined with pretrendpower(); the Roth diagnostics are computed from the analytic event-study covariance before the bootstrap rewiring. Feed e(b_es_*)/e(V_es_*) from a bootstrap run to the pretrends package directly if bootstrap-based power diagnostics are needed."
-    error 198
-  }
-  if "`cm'" != "" {
-    dis as error "Error: bootstrap() may not be combined with cleanmatrices; cleanmatrices clears the compiled engine functions the bootstrap needs after estimation."
     error 198
   }
 end

@@ -124,10 +124,6 @@ chk 14 0 _rc
 * G15 pretrendpower + bootstrap: permanent refusal (plan A13)
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) esfixedbaseperiod bootstrap(bayes) reps(20) pretrendpower(80)
 chk 15 198 _rc
-* G16 cleanmatrices + bootstrap: permanent refusal (plan A16)
-cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(20) cleanmatrices
-chk 16 198 _rc
-
 * G13 plain run untouched
 use `panel', clear
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1)

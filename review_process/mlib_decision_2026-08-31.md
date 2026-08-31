@@ -31,7 +31,11 @@
 > 3. My error, and worth naming: the SI-17/SI-18 evidence was gathered under the dev
 >    harness's loading method and generalised to users without checking the other one.
 >
-> **Revised recommendation: do not ship a library.** Instead reconsider the two refusals
+> **OUTCOME (author-ruled 2026-08-31): no library. Both refusals reverted, the mlib
+> infrastructure deleted, the mata stays inline in `wooldid.ado`. This document is
+> retained as the record of why the investigation ended where it did.**
+>
+> **Revised recommendation as given: do not ship a library.** Instead reconsider the two refusals
 > (they block working user configurations), and if the developer-facing breakage is worth
 > addressing at all, address it in the test harness — which could load wooldid via
 > `adopath ++` instead of `do`, matching how users actually run it.

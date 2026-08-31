@@ -534,8 +534,9 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
 
 ## C2. New defect found in passing (bootstrap R2 review, 2026-08-30)
 
-- **SI-18 — SEVERITY COLLAPSED 2026-08-31: this is a DEV-HARNESS ARTIFACT, not a user
-  bug.** Measured: with wooldid loaded via the adopath, as any installed user has it,
+- **SI-18 — CLOSED 2026-08-31, no action needed: a DEV-HARNESS ARTIFACT, not a user
+  bug.** No .mlib is shipped and none is needed; the mata stays inline in wooldid.ado.
+  Detail below.** Measured: with wooldid loaded via the adopath, as any installed user has it,
   every case returns rc 0 - gteffects+cleanmatrices in one run, bootstrap and permute
   after a cleanmatrices run. The r(3499) failures reproduce ONLY when the package is
   loaded with `do "<path>/wooldid.ado"`, which is how every test suite, harness and agent
@@ -616,8 +617,11 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   Build script at `build/build_mlib.py` and cert suite at `test/test_mlib.do` are ready
   and work; neither is wired into anything pending the choice.
 
-- **SI-17 — RESOLVED, BUT THE PREMISE IS NOW IN DOUBT (see SI-18's 2026-08-31
-  correction).** The refusal was ruled and shipped on evidence gathered under `do`-loading.
+- **SI-17 — REVERTED 2026-08-31 by author ruling; CLOSED.** The refusal is gone and
+  `permute()`/`bootstrap()` with `cleanmatrices` return rc 0 again (measured, adopath-
+  loaded). Rationale below.
+
+- **SI-17 (history) — the refusal that was shipped and then reverted.** The refusal was ruled and shipped on evidence gathered under `do`-loading.
   Measured 2026-08-31: on the pre-SI-17 build loaded via the adopath - i.e. as an
   installed user has it - `permute(shuffle) permreps(20) cleanmatrices` returns **rc 0**.
   So the shipped refusal removes a working user configuration, and the same applies to the
