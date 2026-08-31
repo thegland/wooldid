@@ -68,7 +68,7 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 {synoptset 1 tabbed }{...}
 {synopt : {help wooldid##specifyestimand:Specifying the Estimand(s):}} {opt att} {opt att_it} {opt att_i} {opt att_itime} {opt semi:elasticity} {p_end}
 
-{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values} {opt fast:nose} {opt perm:ute(method)} {opt permreps(int)} {opt permex:act} {opt permstr:ata(variable)} {opt permpr:obs(spec)} {opt permts:tat} {opt permtc:i} {p_end}
+{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values} {opt fast:nose} {opt perm:ute(method)} {opt permreps(int)} {opt permex:act} {opt permstr:ata(variable)} {opt permpr:obs(spec)} {opt permts:tat} {opt permtc:i} {opt boot:strap(mode)} {opt reps(int)} {opt ties} {opt level(#)} {opt dots(int)} {opt rseed(#)} {opt bootalp:ha(spec)} {p_end}
 
 {synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem)} {opt replace} {opt sum:marystats}
 {opt pois:son} {opt poisexp:results}  {p_end}
@@ -302,6 +302,20 @@ draws with undefined t-ratios count as failed. Because standard errors vary acro
 This is a fixed-zero-null pivotality approximation - it relies on the permuted t-ratio distribution approximating the t-ratio's distribution under shifted nulls - and is not a
 sharp-null randomization-test inversion. Implies {cmd:permtstat}. Unavailable (with a caution) when the observed run has no usable standard error, and refused loudly when the
 observed comparison statistic itself is missing. {p_end}
+
+{phang}{opt boot:strap(mode)}: Bootstrap standard errors and inference. When specified, the reported standard errors, z statistics, p-values, confidence intervals, joint tests and subgroup contrasts are bootstrap quantities, replacing the analytic ones; point estimates are unchanged, and the analytic covariance is preserved in the hidden {it:e(V_analytic)} (and {it:e(V_es_analytic_*)}). Each replication re-estimates the full model, so runtime scales with {cmd:reps()}. Two modes. {cmd:bootstrap(standard)} is the cluster bootstrap: clusters - the {cmd:cluster()} variable, or observations when no {cmd:cluster()} is given - are resampled with replacement. For the observation-weighted estimands ({it:att}, {it:ame}) replications are computed by cluster frequency reweighting, which is the same statistic as physical resampling and matches Stata's own {helpb bootstrap} prefix replication for replication under a common seed. When a cell-weighted estimand ({it:att_it}, {it:att_i}, {it:att_itime}) is requested, replications instead physically resample and re-identify duplicated clusters, so a twice-drawn cluster contributes its treatment cells twice; that leg requires {cmd:cluster()} to nest {it:i} and is refused otherwise. {cmd:bootstrap(bayes)} is the Bayesian bootstrap: rather than resampling, each replication draws a total Dirichlet weight per cluster and splits it within the cluster in proportion to any existing weights, so no cluster ever leaves the sample and replication estimability is stable. Because reweighting cannot resample cells, {cmd:bootstrap(bayes)} combined with a cell-weighted estimand omits the cell-sampling variance component and can understate those standard errors when treatment effects vary across clusters: it is refused under default safety and proceeds with a caution under {cmd:safety(off)}, while {cmd:bootstrap(standard)} carries no such limitation. In simulations on staggered designs with 24 clusters both modes were close to calibrated for {it:att}, with the resampling mode nearer nominal than the reweighting mode. Requires {cmd:reps()}. Incompatible with {cmd:permute()}, {cmd:impvalues}, {cmd:fastnose}, {cmd:unconditionalse}, {cmd:customvce()}, {cmd:pretrendpower()}, {cmd:cleanmatrices}, {cmd:suppresssgprimaryeffects}, {cmd:oldsyntax}, and multi-way {cmd:cluster()}. With {cmd:jointtests} the joint tests become chi-squared Wald tests on the bootstrap covariance, and that combination is exempt from the analytic joint-test screen described under {cmd:jointtests} - bootstrap inference is what that screen recommends. Plots, saved plot data, {it:gteffects} cell standard errors, histogram output and adversarial line-test p-values are computed from the analytic covariance before the replications run and remain analytic; a caution says so. Stata's own {helpb bootstrap} prefix can also be used on an unweighted wooldid call ({cmd:bootstrap _b, reps(#) seed(#) cluster(c) idcluster(nc): wooldid y i t ttre, ... fastnose}), but it rejects weighted commands, cannot deliver the Bayesian flavor, and discards replications whose coefficient vector lost a horizon - the built-in {cmd:bootstrap()} option avoids all three. {p_end}
+
+{phang}{opt reps(#)}: Number of bootstrap replications; required with {cmd:bootstrap()}. No minimum is imposed, so small values can be used to time a specification - but bootstrap inference needs many replications: hundreds for standard errors, and a thousand or more before the percentile and bias-corrected intervals are worth reading. Replications that fail to estimate - for example a resample retaining no comparison group - are excluded and counted in {it:e(boot_failed)}, the convention Stata's own {helpb bootstrap} follows. {p_end}
+
+{phang}{opt level(#)}: Confidence level for the bootstrap confidence intervals, between 10 and 99.99; the default is 95. Applies to bootstrap output only. {p_end}
+
+{phang}{opt rseed(#)}: Seed for the bootstrap draws, passed to {cmd:set seed}; as with the built-in prefixes this advances the session's random-number state. Without it the draws consume the current state and the run is not reproducible. {p_end}
+
+{phang}{opt dots(#)}: Show a progress dot every {it:#} replications, with {cmd:dots(0)} suppressing the display; the default is 1. {p_end}
+
+{phang}{opt ties}: Adjust the bias-corrected confidence intervals' median-bias constant for ties between the replications and the observed statistic, exactly as the built-in {helpb bootstrap}'s {cmd:ties} option does. It has no effect on continuous statistics, which do not tie. {p_end}
+
+{phang}{opt bootalp:ha(spec)}: The Dirichlet convention for {cmd:bootstrap(bayes)}. {cmd:bootalpha(equal)}, the default, draws Dirichlet(1,...,1) across clusters - the Rubin convention. {cmd:bootalpha(size)} instead gives cluster {it:c} the Gamma shape {it:n_c}, its observation count, reproducing what {helpb bayesboot} does when passed {cmd:id(}{it:clustervar}{cmd:)}; it is available for exact comparison against that command, but it is not a sound default for panel data, because tying the Dirichlet's concentration to the observation count rather than the cluster count shrinks the cluster-weight dispersion by roughly the square root of the mean cluster size and the resulting standard errors are badly understated. {p_end}
 
 {pstd} {ul: Discussion of Unconditional Standard Errors:}
 The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates
@@ -810,6 +824,8 @@ none, and prints a computational-fragility caution (suggesting a larger {it:regt
 
 {synopt:{it:e(gteffects)}} The cohort-by-relative-period building-block table produced by the {it:gteffects} option; see that option's description for the column layout.{p_end}
 
+{synopt:{it:Bootstrap inference}} When {cmd:bootstrap()} is used: scalars {it:e(boot_reps)}, {it:e(boot_completed)}, {it:e(boot_failed)}, {it:e(boot_level)}, {it:e(boot_N_V)} (replications behind the covariance) and {it:e(boot_v_posted)}; macros {it:e(boot_method)}, {it:e(boot_stat)} (z), {it:e(boot_seed)}, {it:e(boot_alpha)} and {it:e(boot_ties)}; matrices {it:e(V_boot)}, {it:e(b_boot)} (replication means), {it:e(bias_boot)}, {it:e(boot_navail)} (available replications per estimate), {it:e(boot_ci_normal)}, {it:e(boot_ci_percentile)}, {it:e(boot_ci_bc)}, {it:e(boot_z0)}, and - up to 10,000 completed replications - {it:e(bootdist)}, the replication matrix itself. The analytic covariances the bootstrap replaced are kept as hidden {it:e(V_analytic)} and {it:e(V_es_analytic_*)}. Note that {it:e(df_r)} continues to hold the analytic degrees of freedom, so {cmd:test} and {cmd:lincom} run by hand after a bootstrap fit use a t/F metric on the bootstrap covariance and will not reproduce the z-based p-values in the reported tables. {p_end}
+
 {synopt:{it:Permutation inference}} When {cmd:permute()} is used: scalars {it:e(perm_p_{it:est})}, {it:e(perm_lb_{it:est})}/{it:e(perm_ub_{it:est})} (the 5th-95th percentile null band),
 {it:e(perm_sd_{it:est})}, and under {it:permtci} {it:e(perm_tlb_{it:est})}/{it:e(perm_tub_{it:est})}, for each requested estimand; run-level {it:e(perm_reps)}, {it:e(perm_completed)}, {it:e(perm_failed)},
 {it:e(perm_npossible)} (also as the string {it:e(perm_npossible_str)} for very large counts); macros {it:e(perm_method)} and {it:e(perm_stat)} (b or t); the comparator matrix
@@ -1037,6 +1053,14 @@ require an event-study window - here via {it:esprelength}):{p_end}
 {p 10 10}   {cmd:set seed 12345}
 
 {p 10 10}   {cmd:wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(500)}
+
+{phang}13) Cluster bootstrap standard errors with 500 replications, reproducible, and joint pre-trend tests computed on the bootstrap covariance - the sanctioned route when clustering at or above the cohort level:{p_end}
+
+{p 10 10}   {cmd:wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(3) jointtests bootstrap(standard) reps(500) rseed(42)}
+
+{phang}14) Bayesian (Dirichlet reweighting) bootstrap, which leaves every cluster in every replication and so never loses the comparison group to an unlucky resample:{p_end}
+
+{p 10 10}   {cmd:wooldid y i t ttre, att cluster(i) bootstrap(bayes) reps(500) rseed(42)}
 
 
 

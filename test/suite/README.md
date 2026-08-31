@@ -36,12 +36,14 @@ administrative panel: FIPS-style counties, calendar years, unequal cohorts, unba
 entry/exit, lognormal population weights — carries the only coverage anywhere of
 `customvce(cluster)`, poisson+pweight, clean factor-variable `fe()`, subgroups×summarystats,
 unconditionalse+pweight, and the saveplots×subgroups filename pin), `plots`, `screens`
-(rc-contract deck), `patho` (the pathological shapes), and the mined
+(rc-contract deck), `patho` (the pathological shapes), `boot` (the bootstrap-SE deck:
+both engines, the re-id leg, weighted, subgroups, joint tests, observation-level), and the mined
 `extgrid`/`extlattice`/`extcase`/`extval`.
 
 A separate DEEP-VALIDATION component lives in `mc/` (own orchestrator `mc/run_mc.sh`,
 own README): preregistered Monte-Carlo size/power calibration of the statistical
-claims — RI p-value exactness, adversarial line-test size, pretrendpower power.
+claims — RI p-value exactness, adversarial line-test size, pretrendpower power, and
+bootstrap standard-error calibration (`mc/mc_bootse.do`).
 Deliberately NOT part of `all` (~1.5 h); run it when inference machinery changes.
 
 ## Usage
@@ -152,6 +154,9 @@ option-pathology (bad option combinations, usually on fine data) — the config
 - Touched validation/screens/error text → `ONLY=screens ./run_full.sh oldnew` + the
   matching cert suite.
 - Touched a new feature → its cert suite + `newfeat`.
+- Touched the bootstrap feature → `ONLY=boot ./run_full.sh oldnew` + the four
+  `test/test_bootstrap_*.do` cert suites (and `mc/mc_bootse.do` if the inference math
+  changed).
 - Added an option → `coverage` (and add a config for it).
 - Edited the ledger or configs → `./run_full.sh compare` (seconds, no Stata).
 - Claiming "no old-vs-new regressions anywhere" → the full `oldnew` run.
