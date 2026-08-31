@@ -651,6 +651,40 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
 
 ## E. Feature tickets (author-ruled, not yet implemented)
 
+- **SI-21 — TEST HARNESS RACE (found 2026-08-31): the `oldnew` component's saveplots file
+  check is directory-wide while all shards share one working directory, so it both
+  invents and destroys evidence.** Not a wooldid defect; nothing in the package is
+  implicated. Filed because it produced a false FAILURE on a clean build and can equally
+  produce a false PASS.
+
+  **MECHANISM (structural, not inferred).** `mkrun.py` line ~69 captures a config's
+  saveplots output with `local svfiles : dir . files "svp*"` - the whole current
+  directory - records it as the config's `files|` field, and then **erases every file it
+  listed**. `run_full.sh` line 160 runs all 42 shards of a side in ONE shared workdir
+  (`out/run_<side>`) at pool concurrency 6. So for any two configs A and B running
+  concurrently, A can (a) record B's saveplots files as its own, and (b) **erase them
+  before B dumps**, which is the more dangerous direction: B would then record `files|`
+  as empty and a genuine saveplots regression would compare clean.
+
+  **OBSERVED.** Full suite run 2026-08-31 on build `e499626`: `[ext_lat_cohort_n2]
+  DIFFERS (+27 new-only objects)`, `UNEXPLAINED saveplots files: [] -> ["svpadm_ES.dta"
+  ...]` - eight `svpadm_*` files. Those come from `saveplots(svpadm)` in
+  `shard_adm_slow_00.do`; `ext_lat_cohort_n2` lives in `shard_extlattice_00.do`. Two
+  different shards, one directory. Re-running the SAME component on the SAME build gave
+  `unexplained=0`, `oldnew: PASS`. Same build, two runs, two verdicts.
+
+  **WHY IT SURFACED NOW.** The `svpadm` config is `subgroups(region)`, i.e. a binary
+  subgroup run, which commit `73ece5c` made 14-20% faster. That shifted the shard
+  interleaving enough to expose a race that was always there. Any future change to the
+  timing of any config can expose it again, in either direction.
+
+  **FIX RECIPE.** Give each shard its own working subdirectory and write the dump `.csv`
+  files to a shared absolute output path, so `dir . files "svp*"` sees only that shard's
+  output. A cheaper stopgap is to erase `svp*` at the START of each config as well as the
+  end, which narrows but does not close the window. The real fix is the isolation - the
+  erase-before-dump direction cannot be fixed by ordering alone.
+
+
 - **SI-20 — BUG TICKET (author-filed 2026-08-31, investigate; do not fix blind): the
   event-study REFERENCE PERIOD can carry a non-zero estimated effect under
   `interactivecontrols()` and under `lattice()` + `contreatcontrols(basic)`.** Found while
