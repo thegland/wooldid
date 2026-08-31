@@ -251,6 +251,13 @@ end
 cap prog drop wooldid_worker
 prog def wooldid_worker, eclass
 version 16.0
+  * internal replication marker, set by wooldid_permrun/wooldid_bootrun around each
+  * nested call (inside nobreak, so it is always cleared) and consumed READ-ONCE here.
+  * Replication results are read for their coefficients alone, so blocks that only fill
+  * diagnostic e() returns can be skipped there. Read-once means even a leaked marker -
+  * which the setters' nobreak discipline already prevents - affects at most one run.
+  local wdrepmode "${WOOLDID_REPMODE}"
+  global WOOLDID_REPMODE
   * Every Stata replication prefix (bootstrap/jackknife/simulate/permute) runs its
   * replication loop under `set coeftabresults off', which silently removes margins
   * r(table) - and this worker harvests r(table) at 16+ sites, dying r(503)
@@ -3532,7 +3539,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * est restore is needed. it DOES clear r(); nothing between here and the ereturn post consumes
   * r(). gtools by() is hash-based: the user's sort order is not disturbed.
   local f8keys
-  if `espre' + `espl' > 0 {
+  * skipped inside replication calls: this block only fills e(escomp*), which the
+  * bootstrap and permutation engines never read (they consume coefficients), so it is
+  * pure cost there - measured at 8-16% of rep-loop time on a realistic panel
+  if `espre' + `espl' > 0 & "`wdrepmode'" != "1" {
     tempvar f8wa f8wpit f8wit
     qui gen double `f8wa' = `w' `customweighttext'
     qui gegen double `f8wpit' = total(`esamp' * `w'), by(`i' `t')
@@ -5588,7 +5598,13 @@ version 16.0
   * shows the full run's estimate. the statistics are held in tempname SCALARS: a
   * local's decimal round-trip re-parses one ulp off, which breaks the
   * observed-is-a-member property (measured: b >= local-copy-of-b evaluates FALSE)
+  nobreak {
+    global WOOLDID_REPMODE 1
   cap qui wooldid `repcall' `ttrevar' `wtif' , `repopts'
+    local wdrepdone = _rc
+    global WOOLDID_REPMODE
+  }
+  cap error `wdrepdone'
   * NFPERM-10: the comparator fit and its scalars must be valid. formerly a rep-0
   * failure fell through silently (retaining full-run-provenance scalars, breaking the
   * exact test's bitwise observed-is-a-member property), and a missing comparison
@@ -5629,7 +5645,13 @@ version 16.0
     frame `mpfr': qui replace __wdpassign = el("`wdpassign'", __wdprow, `r')
     cap drop `repons'
     qui frget `repons' = __wdpassign, from(`lnk')
+    nobreak {
+      global WOOLDID_REPMODE 1
     cap qui wooldid `repcall' `repons' `wtif' , `repopts'
+      local wdrepdone = _rc
+      global WOOLDID_REPMODE
+    }
+    cap error `wdrepdone'
     local badrep 0
     if _rc != 0 local badrep 1
     if `badrep' == 0 {
@@ -5827,7 +5849,13 @@ version 16.0
   local wtif0
   if "`wtype'" != "" local wtif0 [`wtype'=`wexp']
   if `"`ifr'"' != "" local wtif0 `wtif0' if (`ifr')
+  nobreak {
+    global WOOLDID_REPMODE 1
   cap qui wooldid `repcall' `wtif0' , `repopts'
+    local wdrepdone = _rc
+    global WOOLDID_REPMODE
+  }
+  cap error `wdrepdone'
   if _rc == 1 error 1
   if _rc != 0 {
     dis as error "Error: the rep-0 comparison run of the observed data failed (rc `=_rc'); bootstrap inference is impossible. The observed estimation results are unaffected."
@@ -5892,7 +5920,13 @@ version 16.0
         qui keep if `smp'
         bsample, cluster(`clusv') idcluster(__wdbns)
         qui gegen double __wdbnewi = group(__wdbns `i')
+        nobreak {
+          global WOOLDID_REPMODE 1
         cap qui wooldid `y' __wdbnewi `t' `ttrevar' `wtif0' , `repopts'
+          local wdrepdone = _rc
+          global WOOLDID_REPMODE
+        }
+        cap error `wdrepdone'
         local wdb_rrc = _rc
       }
       if `wdb_rrc' == 1 {
@@ -5919,7 +5953,13 @@ version 16.0
     qui frget `drawv' = __wdbdraw, from(`lnk')
     cap drop `repw'
     qui gen double `repw' = `basew' * `drawv'
+    nobreak {
+      global WOOLDID_REPMODE 1
     cap qui wooldid `repcall' [`wtype2'=`repw'] , `repopts'
+      local wdrepdone = _rc
+      global WOOLDID_REPMODE
+    }
+    cap error `wdrepdone'
     if _rc == 1 {
       if `dots' > 0 dis as result " "
       error 1

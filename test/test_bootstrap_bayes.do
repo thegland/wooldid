@@ -224,5 +224,30 @@ else {
   }
 }
 
+
+* ---- O11 (efficiency, F8 rep gate): the composition diagnostics must be computed for
+* the OBSERVED run and skipped inside replications, and the rep marker must never leak.
+mkpan
+qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(2) bootstrap(bayes) reps(15) rseed(8)
+cap confirm matrix e(escomp)
+local o11a = _rc
+di "O11_observed_escomp_rc=" `o11a' " marker=[${WOOLDID_REPMODE}]"
+if `o11a' != 0 {
+  di as error "O11 FAIL: bootstrap run lost e(escomp) on its observed results"
+  local ++fails
+}
+if "${WOOLDID_REPMODE}" != "" {
+  di as error "O11b FAIL: the replication marker leaked out of the run"
+  local ++fails
+}
+* a plain run AFTER a bootstrap must still produce the diagnostics
+mkpan
+qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(2)
+cap confirm matrix e(escomp)
+if _rc != 0 {
+  di as error "O11c FAIL: a normal run after a bootstrap lost e(escomp)"
+  local ++fails
+}
+
 if `fails' == 0 di as result "BOOTBAYES_ALL_PASS"
 else di as error "BOOTBAYES_FAILS=`fails'"
