@@ -23,7 +23,8 @@ measured against, and what remains open.
 | `8d8316f` | **E — joint tests, subgroup contrasts, CI trio, `ties`.** |
 | `58e4467` | **bayes default alpha flipped to `equal`** (author-ruled on MC evidence). |
 | `6693e2f` | **SI-17** — `permute()` refuses `cleanmatrices` (adjacent pre-existing defect). |
-| *(F)* | docs, suite configs, MC, this report. |
+| `133b11b` | **F — docs, suite configs, calibration MC, this report.** |
+| `4906bd3` | **`bootdf()`** — t critical values as a user choice (author-requested from the MC finding in section 3). |
 
 ### The user-facing surface
 
@@ -147,13 +148,14 @@ seed, the internal and prefix **reported standard errors agree to 1.3e-09** with
 identical point estimates — that residual is the prefix's own float replicate storage,
 which is documented behavior unless `saving(, double)` is used.
 
-**One open question for the author** (measured, not acted on). Coverage sits below
+**One question this raised, since answered by the author** (see open item 5). Coverage sits below
 nominal even where the SE is calibrated — design B standard has ratio 1.004 with 81%
 coverage. The reported interval is the estimate plus or minus 1.96 bootstrap standard
 errors, and at 24 clusters the bootstrap SE is itself noisy across draws, so a
 mean-correct SE still undercovers. A t(G−1) critical value (2.069 at G=24, ~5.6% wider)
 would recover a few points. That is a critical-value convention choice, not a bootstrap
-defect — Stata's own bootstrap prefix is z-based too — so it is left as a decision.
+defect — Stata's own bootstrap prefix is z-based too — and the author ruled it in as the
+optional `bootdf()`, leaving the default alone.
 
 ---
 
@@ -238,9 +240,12 @@ verifiers on the C+D engine layers, then one on E.
    bootstrap run are therefore t/F-metric on the bootstrap covariance and will not
    exactly match the reported z-based p-values. Documented rather than changed —
    `ereturn repost` cannot unset it.
-5. **Critical-value convention** (section 3): bootstrap intervals are z-based, matching
-   the built-in prefix. A t(G−1) critical value would improve coverage at small cluster
-   counts. Author decision, not implemented.
+5. **Critical-value convention — RESOLVED** (`4906bd3`). Ruled in by the author as a
+   user choice: `bootdf(normal)` (default, unchanged, z-based like the built-in prefix),
+   `bootdf(clusters)` for t with G−1 degrees of freedom, or an explicit integer. It moves
+   only the reference distribution — p-values, normal-theory intervals, and the joint
+   tests, which become F(k, df) — never the standard errors, and it aligns `e(df_r)` so a
+   hand-run `test`/`lincom` reproduces the reported p-values.
 6. **Coverage of the percentile and bias-corrected intervals was not measured.** Both are
    already stored from the same replications, so measuring them costs no additional
    refits — noted at the foot of the MC script.
