@@ -23,14 +23,14 @@ macro|cmdline|wooldid ycount i t ttre, att cluster(i) poisson
 macro|properties|b V
 macro|depvar|ycount
 matnames|b|1x1|y1|main_att
-mat|b|1|1|+1.fbec640861590X-004
+mat|b|1|1|+1.fbec640861588X-004
 matnames|V|1x1|main_att|main_att
-mat|V|1|1|+1.4ec53271222fdX-00b
+mat|V|1|1|+1.4ec5327122785X-00b
 matnames|wdidmainresults|1x7|main:att|estimate se z p lb_95ci ub_95ci relyr
-mat|wdidmainresults|1|1|+1.fbec640861590X-004
-mat|wdidmainresults|1|2|+1.9e01fa15c0e55X-006
-mat|wdidmainresults|1|3|+1.3a12878283ea3X+002
-mat|wdidmainresults|1|4|+1.ef890c68a1526X-015
-mat|wdidmainresults|1|5|+1.311037633d5bfX-004
-mat|wdidmainresults|1|6|+1.63644856c2ab0X-003
+mat|wdidmainresults|1|1|+1.fbec640861588X-004
+mat|wdidmainresults|1|2|+1.9e01fa15c1122X-006
+mat|wdidmainresults|1|3|+1.3a12878283c7eX+002
+mat|wdidmainresults|1|4|+1.ef890c68a69ccX-015
+mat|wdidmainresults|1|5|+1.311037633d458X-004
+mat|wdidmainresults|1|6|+1.63644856c2b5cX-003
 mat|wdidmainresults|1|7|+1.0000000000000X+3ff

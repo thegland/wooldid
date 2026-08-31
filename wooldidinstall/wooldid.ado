@@ -1770,8 +1770,32 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
   ****** set some parameters that margins will rely on later
+  * Poisson reporting scale. Both forms name the SAME prediction - the linear index -
+  * so the documented xb-vs-predict(n) scale choice (see poisexpresults) is unaffected by
+  * which one is used. They differ only in how margins differentiates it:
+  *   expression() implies nochainrule, i.e. a NUMERICAL Jacobian (one interpreted pass
+  *     over the estimation sample per coefficient). StataCorp recommend that posture
+  *     after community-contributed estimators such as ppmlhdfe.
+  *   predict()    reaches the ANALYTIC Jacobian.
+  * For a plain dydx contrast of xb the margin is exactly linear in b, so the analytic
+  * Jacobian is the EXACT one: measured against the exact identity J*b == margin, the
+  * predict() form agrees to 2.3e-16 while the expression() form - a finite-difference
+  * approximation - agrees only to 3.4e-13. So on dydx sites predict() is both faster
+  * (2-10x end to end) and more accurate, and the change moves reported variances toward
+  * the exact value rather than away from it.
+  * The ey*/dyex operators are a different matter and KEEP expression(): both code paths
+  * take ln of the prediction, the poisson prediction is the sign-unconstrained linear
+  * index, and which form aborts r(459) is data-dependent and goes in BOTH directions.
+  * Preserving today's rc behaviour there - including its failures - is deliberate; see
+  * the efficiency review and SI-20.
   local poismarginstext
-  if "`poisson'" == "poisson" & "`poisexpresults'" == "" local poismarginstext expression(predict(xb))
+  local poismarginstextC
+  if "`poisson'" == "poisson" & "`poisexpresults'" == "" {
+    local poismarginstext  expression(predict(xb))
+    local poismarginstextC expression(predict(xb))
+    if "`semielasticity'"         == "dydx" local poismarginstext  predict(xb)
+    if "`contreatelasticitytype'" == "dydx" local poismarginstextC predict(xb)
+  }
 
 
 
@@ -1806,7 +1830,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       matrix `___hist' = r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
       matrix colnames `___hist' = att_i
       if "`contreat'" != "" {
-        qui margins [`weight'=``whichweight''], `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstext'
+        qui margins [`weight'=``whichweight''], `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstextC'
         tempname ___Chist
         matrix `___Chist' = r(b)[1, 1..`=colsof(r(b))']'
         matrix `___hist' = (`___hist',`___Chist')
@@ -1838,7 +1862,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       matrix colnames `___hist2' = att_itime
       if "`contreat'" != "" {
         tempname ___Chist2
-        qui margins [`weight'=`w_att_it'], `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstext'
+        qui margins [`weight'=`w_att_it'], `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstextC'
         matrix `___Chist2' = r(b)[1, 1..`=colsof(r(b))']'
         matrix `___hist2' = (`___hist2',`___Chist2')
         matrix drop `___Chist2'
@@ -2183,7 +2207,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       * posttreatment average marginal effect of the continuous treatment variable generated here - just a matter of specifying contreat vs targetflag to get an AME of some sort
       * we also no longer need the skip-half-the-matrix adjustment, because w/ a continuous variable things are not computed at 0 and 1
       if "`impvalues'" == "" {
-        qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck `poismarginstext' `marginsdof'
+        qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck `poismarginstextC' `marginsdof'
         matrix `f9tab' = r(table)
         if rowsof(`f9tab') < 6 {
           matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
@@ -2199,7 +2223,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       }
 
       if "`impvalues'" == "impvalues" {
-        qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck `poismarginstext' nose over(`cluster')
+        qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck `poismarginstextC' nose over(`cluster')
         tempname ibmucoefs
         tempname ibmuframe
         matrix `ibmucoefs' =  r(b)[1, 1..`=colsof(r(b))']'
@@ -2236,7 +2260,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         tempname ___C`item'_pre
 
         if "`impvalues'" == "" {
-          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck `poismarginstext' `marginsdof'
+          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck `poismarginstextC' `marginsdof'
           matrix `f9tab' = r(table)
           if rowsof(`f9tab') < 6 {
             matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
@@ -2252,7 +2276,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         }
 
         if "`impvalues'" == "impvalues" {
-          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck `poismarginstext' nose over(`cluster')
+          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck `poismarginstextC' nose over(`cluster')
           tempname ibmucoefs
           tempname ibmuframe
           matrix `ibmucoefs' =  r(b)[1, 1..`=colsof(r(b))']'
@@ -2373,7 +2397,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
           * proceed for continuous treatment
           local itemtext = subinstr("`item'","att","ame",.)
-          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstext'
+          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstextC'
           tempname cfx`itemtext'_`nametext'
           matrix `f9tab' = r(table)
           if rowsof(`f9tab') < 6 {
@@ -2449,7 +2473,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               }
 
               local itemtext = subinstr("`item'","att","ame",.)
-              qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `subgroups' == `sgcase' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstext'
+              qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `subgroups' == `sgcase' & `targetflag'==1  `cfxif') noestimcheck over(`cfxlatticeplot') `cfxseopt' `poismarginstextC'
               tempname cfx`itemtext'_`nametext'_sg`sgcase'
               matrix `f9tab' = r(table)
               if rowsof(`f9tab') < 6 {
@@ -2486,7 +2510,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           tempname ___C`horizitem'_horiz
 
           if "`impvalues'" == "" {
-            qui  margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof'
+            qui  margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' ) noestimcheck   over(`_t') `poismarginstextC' `marginsdof'
             matrix `f9tab' = r(table)
             if rowsof(`f9tab') < 6 {
               matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
@@ -2548,7 +2572,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             local currenthoriz 1
             tempname horizhold
             foreach horizon in `horizlist' {
-              qui margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `_t' == `horizon' & `targetflag'==1  ) noestimcheck   over(`cluster') `poismarginstext' nose
+              qui margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `_t' == `horizon' & `targetflag'==1  ) noestimcheck   over(`cluster') `poismarginstextC' nose
               tempname ibmucoefs
               tempname ibmuframe
               matrix `ibmucoefs' =  r(b)[1, 1..`=colsof(r(b))']'
@@ -2593,12 +2617,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       * invalid ame covariance, so they are skipped (see the R1 caution)
       if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'`bootstrap'"=="" & `amescrub' == 0 {
         if "`att'" == "att"  {
-          qui margins [`weight'=`w_att'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != .  &  (`_t' == 0 |`_t' >= `horizonstarter')     ) contrast(overjoint) `poismarginstext' `marginsdof'
+          qui margins [`weight'=`w_att'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != .  &  (`_t' == 0 |`_t' >= `horizonstarter')     ) contrast(overjoint) `poismarginstextC' `marginsdof'
           local joint_Choriz = r(p)[1,1]
         }
 
         if "`joint_Choriz_i'" == "" & ( "`att_it'" != "" | "`att_itime'" != "" | "`att_i'" != "" ) {
-          qui margins [`weight'=`w_att_it'],`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != .  &  (`_t' == 0 |`_t' >= `horizonstarter')  ) contrast(overjoint) `poismarginstext' `marginsdof'
+          qui margins [`weight'=`w_att_it'],`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != .  &  (`_t' == 0 |`_t' >= `horizonstarter')  ) contrast(overjoint) `poismarginstextC' `marginsdof'
           local joint_Choriz_i = r(p)[1,1]
         }
       }
@@ -3004,7 +3028,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       if "`suppresssgprimaryeffects'" == "" {
         foreach item in `att' `att_it' `att_i' `att_itime' {
           * posttreatment average marginal effect of the continuous treatment variable
-          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre'  ) noestimcheck over(`subgroups') `poismarginstext' `marginsdof'
+          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre'  ) noestimcheck over(`subgroups') `poismarginstextC' `marginsdof'
           tempname ___C`item'_s
           matrix `f9tab' = r(table)
           if rowsof(`f9tab') < 6 {
@@ -3023,7 +3047,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
           * pretreatment average marginal effect of the continuous treatment variable
           if (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) {
-            qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0  ) noestimcheck over(`subgroups') `poismarginstext' `marginsdof'
+            qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0  ) noestimcheck over(`subgroups') `poismarginstextC' `marginsdof'
             tempname ___C`item'_pre_s
             matrix `f9tab' = r(table)
             if rowsof(`f9tab') < 6 {
@@ -3050,7 +3074,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               cap confirm  matrix `___`horizitem'_Choriz_s`sgcase''
               * this prevents estimating horizons if done already for a non att
               if _rc != 0 {
-                qui margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof'
+                qui margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstextC' `marginsdof'
                 tempname ___`horizitem'_Choriz_s`sgcase'
                 matrix `f9tab' = r(table)
                 if rowsof(`f9tab') < 6 {
@@ -3114,7 +3138,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'`bootstrap'"=="" & `amescrub' == 0 {
           foreach sgcase in `sglist' {
             if "`att'" == "att" {
-              qui margins  [`weight'=`w_att'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & `subgroups' == `sgcase'   &  (`_t' == 0 |`_t' >= `horizonstarter')   ) contrast(overjoint) `poismarginstext' `marginsdof'
+              qui margins  [`weight'=`w_att'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & `subgroups' == `sgcase'   &  (`_t' == 0 |`_t' >= `horizonstarter')   ) contrast(overjoint) `poismarginstextC' `marginsdof'
               cap confirm matrix r(p)
               if _rc == 0 {
                 * the continuous overjoint r(p) is 1x1 (no base column), so the real p
@@ -3127,7 +3151,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             }
 
             if ("`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" ) & "`joint_Choriz_i_s`sgcase''" == "" {
-              qui margins [`weight'=`w_att_it'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & `subgroups' == `sgcase'  &  (`_t' == 0 |`_t' >= `horizonstarter')    ) contrast(overjoint) `poismarginstext' `marginsdof'
+              qui margins [`weight'=`w_att_it'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & `subgroups' == `sgcase'  &  (`_t' == 0 |`_t' >= `horizonstarter')    ) contrast(overjoint) `poismarginstextC' `marginsdof'
               cap confirm matrix r(p)
               if _rc == 0 {
                 local joint_Choriz_i_s`sgcase' = r(p)[1,1]
@@ -3158,7 +3182,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
         foreach item in `att' `att_it' `att_i' `att_itime' {
 
-          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') `poismarginstext' noestimcheck over(`subgroups') pwcompare(effects) `marginsdof' `sgpost'
+          qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') `poismarginstextC' noestimcheck over(`subgroups') pwcompare(effects) `marginsdof' `sgpost'
           tempname pwsgs_C`item'
           matrix `f9tab' = r(table_vs)
           if rowsof(`f9tab') < 6 {
@@ -3189,7 +3213,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             else local joint_C`item'_sdiff
             qui est restore ___wooldidfullmodel
             if "`sgfallback'" != "" {
-              qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') `poismarginstext' noestimcheck over(`subgroups') contrast(overjoint) `marginsdof'
+              qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') `poismarginstextC' noestimcheck over(`subgroups') contrast(overjoint) `marginsdof'
               local joint_C`item'_sdiff = r(p)[1,1]
             }
           }
@@ -3197,7 +3221,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
           * repeat for pre-treatment
           if (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) {
-            cap qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof' `sgpost'
+            cap qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstextC' `marginsdof' `sgpost'
             if _rc != 0 {
               local prejoint_C`item'_sdiff
               if "`sgpost'" != "" qui est restore ___wooldidfullmodel
@@ -3235,7 +3259,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 else local prejoint_C`item'_sdiff
                 qui est restore ___wooldidfullmodel
                 if "`sgfallback'" != "" {
-                  qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstext' `marginsdof'
+                  qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstextC' `marginsdof'
                   cap local prejoint_C`item'_sdiff = r(p)[1,1]
                   if _rc != 0 local prejoint_C`item'_sdiff
                 }
