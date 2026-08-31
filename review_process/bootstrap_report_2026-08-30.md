@@ -201,7 +201,24 @@ verifiers on the C+D engine layers, then one on E.
 - **v2** (C+D, do-no-harm) — PASS-with-observations. Off-state **bit-identical on 41/41
   configs at rtol 0**, **9/9 console goldens byte-identical**, zero on-state residue
   across 37 sentinels, five cert suites green.
-- **E verifier** — *pending* (see section 7).
+- **E adversarial verifier** — **FAIL** on one blocker, since fixed (`4a141b3`): with
+  three or more subgroups, Stata's base-level rowname marker (`1vs0bn.sg`) defeated the
+  pairwise-contrast mapping, and those rows kept their **analytic** inference inside a
+  bootstrap-labelled table — an SE 46× too small, p = 1.97e-33, under a caution that
+  wrongly said the rows had been left missing. Every shipped test used two subgroups,
+  which is why the gates passed. Fixed on both sides: the marker is tolerated, and an
+  unmapped row is now blanked rather than left analytic, so any future label surprise
+  degrades safely. Five smaller findings fixed with it (scale-free rank guard, CI column
+  labels at non-default and non-integer levels, a silent per-subgroup guard failure, the
+  single-pre-horizon joint test, a hardened `e()` read) and the bayes cell-weighted
+  caution widened to name the surfaces that inherit the understatement.
+- **Post-E do-no-harm verifier** — **PASS**. 62 off-state configs and 36,660 `e()` cells
+  at worst reldif exactly 0; 8/8 console goldens byte-identical; clean on-state residue;
+  eight cert suites green; the off-state chain proven across `d3d9e99` ≡ `133b11b` ≡
+  `95c339d`. The two intended off-state differences are SI-17's refusal and `bootdf()`
+  existing. It also disambiguated `c(changed)` flipping after a bootstrap run as
+  pre-existing engine-convention behavior (`permute()` does it on the pre-feature build
+  too) with the data signature provably untouched.
 
 ---
 
@@ -222,10 +239,12 @@ verifiers on the C+D engine layers, then one on E.
 
 ## 7. Open items
 
-1. **The commit-E verifier pass** has not run. It was launched twice and killed by API
-   spend limits both times, and the author elected to finish the remaining work first.
-   E's own oracle suite passes, but E has not had the independent adversarial pass that
-   C and D received.
+1. **`cleanmatrices` poisons the session for later bootstrap/permute runs** — filed as
+   **SI-18**, not implemented, needs a ruling. SI-17 refuses the combination on one
+   command line, but `cleanmatrices` runs `clear mata`, destroying the ado's own compiled
+   functions for the rest of the session, so a *later* run dies r(3499) after a fully
+   successful estimation. Pre-existing: the do-no-harm verifier hit the same class on the
+   pre-feature build. Three candidate fixes are in the standing-issues entry.
 2. **Deliberate v1 scope calls, documented rather than fixed:** plots, saved plot data,
    `gteffects` cell standard errors, histogram outputs and adversarial line-test p-values
    are produced from the analytic covariance during estimation, before the rewiring. A
