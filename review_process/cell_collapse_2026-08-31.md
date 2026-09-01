@@ -151,7 +151,11 @@ evidence:
 
 1. The absolute error is **exactly 2^-49**, one quantum, *identical* on two cells with
    different values and different subpops. Algebraic error does not produce a fixed
-   power-of-two discrepancy.
+   power-of-two discrepancy. **CORRECTION (2026-09-01):** 2^-49 is not a general constant -
+   it is `ULP(|xb|)` on this dataset, where |xb| sits in binade 2^3. A later amplification
+   ladder tracked the predicted binade exactly across three decades of |xb|. The scale-free
+   statement is that the collapse perturbs the answer no more than permuting the input rows
+   does; see `cell_collapse_followup_2026-09-01.md` section 4.
 2. Every large coefficient is **bit-exact**. The same quantum on 0.4575 would read 3.9e-15;
    it appears only where cancellation makes the result near-zero (-0.0199, -0.0121).
 3. **The partial-collapse ladder.** Refining the collapse key with an arbitrary bucket
