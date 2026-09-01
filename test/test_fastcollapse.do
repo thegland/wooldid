@@ -127,8 +127,11 @@ local g5 = _rc
 use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att customvce(cluster state) fastcollapse safety(off)
 local g6 = _rc
-di "F4_gate_rcs contreat=" `g1' " interactive=" `g2' " uncond=" `g3' " semielas=" `g4' " impvalues=" `g5' " customvce=" `g6'
-forval g = 1/6 {
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att robust subgroups(region) fastcollapse safety(off)
+local g7 = _rc
+di "F4_gate_rcs contreat=" `g1' " interactive=" `g2' " uncond=" `g3' " semielas=" `g4' " impvalues=" `g5' " customvce=" `g6' " subgroups=" `g7'
+forval g = 1/7 {
   if `g`g'' != 198 {
     di as error "F4 FAIL: gate `g' returned rc `g`g'' (want 198) - safety(off) must not open an escape"
     local ++fails
@@ -187,6 +190,27 @@ if `rp1' != 0 | `rp2' != 0 | `dpq' > 1e-8 {
 }
 if `rp3' != 198 {
   di as error "F7 FAIL: poisexpresults returned rc `rp3' (want 198)"
+  local ++fails
+}
+
+* ---- F8: REGRESSION. Before subgroups() was refused (2026-09-01) this exact command
+* returned a hard r(503) WITH fastcollapse and rc 0 without it: collapsed, the att and
+* att_it estimands lost different numbers of horizons to the omission-marker drop, and
+* the non-conformable concatenation aborted the run. It must now be a clean refusal, and
+* the command without the option must still complete.
+use "`REPO'/test/suite/data/survey_rcs.dta", clear
+qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att att_it subgroups(group) ///
+    fe(group_time) esprelength(2) espostlength(2) jointtests cluster(state) safety(off) fastcollapse
+local r8a = _rc
+use "`REPO'/test/suite/data/survey_rcs.dta", clear
+qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att att_it subgroups(group) ///
+    fe(group_time) esprelength(2) espostlength(2) jointtests cluster(state) safety(off)
+local r8b = _rc
+di "F8_r503regression with_option=" `r8a' " (want 198, was 503)  without=" `r8b' " (want 0)"
+if `r8a' != 198 | `r8b' != 0 {
+  di as error "F8 FAIL: rc `r8a'/`r8b' - the r(503) regression is not pinned"
   local ++fails
 }
 

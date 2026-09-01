@@ -4603,6 +4603,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if "`impvalues'" != ""                    local fcbad `fcbad' impvalues
     if "`poisexpresults'" != ""               local fcbad `fcbad' poisexpresults
     if `"`customvce'"' != ""                  local fcbad `fcbad' customvce()
+    if "`subgroups'" != ""                    local fcbad `fcbad' subgroups()
     if "`fcbad'" != "" {
       dis as error "Error: fastcollapse is incompatible with:`fcbad'."
       dis as error "fastcollapse evaluates the margins calls on one row per cohort-by-period-by-treatment cell, which is exact only when the treatment derivative is constant within a cell and the reported quantity is a plain marginal effect. Each option above breaks one of those conditions:"
@@ -4610,6 +4611,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       dis as error "  semielasticity (and the contreat elasticity forms) divide by the prediction, which re-introduces the within-cell variation that a plain marginal effect cancels."
       dis as error "  poisexpresults reports on the exponentiated scale, which is not linear in the coefficients (measured: estimates moved in the 7th significant digit)."
       dis as error "  unconditionalse asks margins for a variance built from observation-level influence functions; margins verifies the visible row count against e(N) and errors when it is collapsed."
+      dis as error "  subgroups() is refused on measured evidence, added 2026-09-01. margins signals a non-estimable subgroup-by-horizon margin only through an omission marker in the name it returns, and the subgroup code - uniquely in wooldid - READS that signal, three separate ways. Collapsing the rows can flip the marker, which silently changed which horizons and which joint tests were reported on 4 of 472 suite configs, and turned one completed estimation into a hard r(503) when two estimands lost different numbers of horizons. Non-subgroup runs are unaffected: 123 non-vacuous pairs showed no structural difference, because no non-subgroup code reads a margins result name."
       dis as error "  impvalues computes per-cluster effects over(cluster), and the cluster variable is not part of the cell key."
       dis as error "  customvce() is not verified for fastcollapse rather than known-broken; it is refused pending measurement."
       dis as error "Drop fastcollapse, or drop the conflicting option. (No safety(off) escape: these are measured wrong answers, not risks.)"

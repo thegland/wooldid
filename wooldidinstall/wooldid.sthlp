@@ -311,6 +311,14 @@ that a plain marginal effect cancels; {it:poisexpresults}, whose exponentiated r
 observation-level influence functions and whose row count {it:margins} checks against {it:e(N)}; and {it:impvalues}, which computes effects over the clusters, a grouping the cell
 key does not contain. {it:customvce()} is also refused, as not yet verified rather than known-broken. Poisson estimation on the default (log) reporting scale is supported. {p_end}
 
+{phang2}{ul:And {bf:subgroups()}, for a subtler reason worth understanding.} When {it:margins} judges a subgroup-by-horizon effect not estimable it does not error - it computes the
+number anyway and flags it only by marking the name it returns. wooldid's subgroup code is the one place that reads that flag, and it does so three separate ways: to drop the
+affected horizon with a caution, to skip the adversarial pre-trend test, and inside the subgroup joint tests. Collapsing the rows can change whether {it:margins} sets the flag, so a
+horizon that should be dropped can come back as a meaningless near-zero, a reported joint test can turn to missing, or - where two estimands lose different numbers of horizons -
+the run can abort outright. Measured across the 472-configuration test inventory this changed reported output on 4 configurations and produced one hard error. Non-subgroup runs
+are not exposed: no code outside the subgroup path reads a {it:margins} result name, and 123 non-subgroup comparisons on aggregating data showed no structural difference at all.
+{p_end}
+
 {phang2}{ul:Memory.} The full data is held aside while the collapsed window runs, so peak memory includes an extra copy of your dataset. This is immaterial for typical panels but
 worth knowing if you are already near your memory limit, particularly if you have issued your own {help preserve} before calling {it:wooldid}. {p_end}
 
