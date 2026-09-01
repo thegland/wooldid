@@ -282,9 +282,27 @@ there are only a handful of rows per cell (roughly four or fewer), where the col
 and periods, where the absorbing regression rather than {it:margins} dominates the run. See {help wooldid##runtime:Runtime and what drives it}. {p_end}
 
 {phang2}{ul:Results agree to machine precision but are not bit-identical.} Collapsing changes the order in which {it:margins} accumulates its averages, and the controls' contribution
-cancels algebraically between the treated and untreated predictions without cancelling bit for bit. Reported numbers therefore move in roughly the last digit or two - measured to
-move no more than merely permuting the order of the rows in your dataset moves an ordinary {it:wooldid} run. If you diff output across runs, expect low-order digits to differ; if
-you need byte-identical reproductions of an earlier result, do not add this option to the command that produced it. {p_end}
+cancels algebraically between the treated and untreated predictions without cancelling bit for bit. If you diff output across runs, expect low-order digits to differ; if you need
+byte-identical reproductions of an earlier result, do not add this option to the command that produced it. {p_end}
+
+{phang2}{ul:How large are the differences?} The difference is bounded, in {bf:absolute} terms, by about one unit in the last place of the linear prediction - the size of the
+prediction divided by 2 to the 52nd power - and every difference measured was a small integer multiple of that one quantum. On a panel whose predictions are of order 10, that is about 2e-15. Note this scales with the prediction, not with the
+estimate: an outcome with a very large mean raises {it:|xb|} and the absolute differences with it. {p_end}
+
+{phang2}Because the bound is absolute, what it means in {bf:relative} terms depends on how big the estimate is. An ordinary coefficient - say an ATT of order 0.5 - agrees to roughly
+15 significant digits (relative differences around 3e-15). An estimate sitting near zero, such as a small pre-treatment coefficient of order 0.01, can show a relative difference
+around 1e-13, purely because the denominator is small rather than because the error is larger. Standard errors and variances do not amplify at all: they were measured at about
+1e-16 relative regardless of the scale of the predictions. P-values in a far tail move more in relative terms - a p-value of 2e-07 moved by about 3e-11 relative - which is a
+property of tail probabilities, not of this option. {p_end}
+
+{phang2}{ul:When should you care?} For almost all work, not at all: no digit {it:wooldid} displays is affected, and the differences are several orders of magnitude below any
+sampling uncertainty you are reporting. Two situations warrant attention. First, if you compare output byte-for-byte across runs, or archive results for exact reproduction - then
+add or remove the option deliberately rather than casually. Second, if your analysis differences two nearly equal estimates, or otherwise divides by a quantity that is near zero,
+since that amplifies the relative size of any rounding difference. {p_end}
+
+{phang2}A useful calibration for the second case: merely permuting the order of the rows in your dataset - leaving the data otherwise untouched and not using this option at all -
+moves the same near-zero coefficient about 19 times {bf:more} than {it:fastcollapse} does. So if a conclusion is sensitive at this scale, it is already sensitive to the order your
+observations happen to be stored in, which is worth knowing whether or not you use this option. {p_end}
 
 {phang2}{ul:Refused combinations.} {it:fastcollapse} is refused with an error, and {it:safety(off)} does not override the refusal, because each of these is a demonstrated wrong
 answer rather than an accepted risk: {it:contreat()} and {it:interactivecontrols()}, which interact the treatment dummy with a variable that varies inside a cell, so the effect is
