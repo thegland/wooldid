@@ -70,9 +70,18 @@ The premise needed splitting, because wooldid distinguishes two structures:
 - **Supported spanning** (subgroup constant within each `i`, one level covering several
   cohorts): legal, and **ULPCLASS** in every configuration - weighted, unweighted, ragged,
   at both the level sites and the pwcompare sites.
-- **Not nested in `i`** (subgroup varying *within* an `i`-by-`t` cell): **refused at parse
-  time, rc 459**, by the F13 containment guard at lines 836-848. The author's literal
-  configuration is a `safety(off)` regime. It was tested there too, and is also correct.
+- **The subgroup varying *within* an `i`-by-`t` cell**: **refused at parse time, rc 459**,
+  by the F13 containment guard at lines 836-848. The author's literal configuration is a
+  `safety(off)` regime. It was tested there too, and is also correct.
+
+**TERMINOLOGY CORRECTION (author-flagged).** An earlier draft of this section described the
+requirement as "the subgroup must be nested in `i`". That is backwards. The guard requires
+the subgroup to be CONSTANT WITHIN each `i`, so each `i` maps to exactly one subgroup level:
+**`i` nests inside the subgroup, and each `i` is a subset of a subgroup.** The subgroup is a
+*coarsening* of `i`. The guard's own remedy says so - it tells the user to define `i` at the
+FINER level (`egen newi = group(i subgroups)`). The analysis was never affected, because the
+load-bearing statement used throughout is the correct one: the subgroup is a *function of*
+`_i` within any subgroup subpop.
 
 **The key-split worry does not materialise.** Inside any subgroup subpop the rows are
 in-window treated rows, so `_i` equals `i`; F13 forces the subgroup constant within `i`;
@@ -83,6 +92,22 @@ key-split ratio **1.000 at every site** across all supported configurations. Onl
 Weights showed no detectable interaction: differences moved in both directions with no
 pattern, the quantum unchanged. 928 subpop-ratio measurements, minimum 69.25, **zero
 degenerate sites**.
+
+**SPEED, measured afterwards to close this gap** (the case-C agent measured correctness
+only). Spanning subgroup, `cluster(cohid)`, `jointtests`, N=29,667, collapse-once/restore-once,
+3 interleaved reps: **2.744s -> 1.092s, a 60.2% saving (2.51x)**, with the collapse costing
+0.024s and preserve/restore ~0. `NONVACUITY_FAIL=0`; a `noesample`-only control arm was
+bit-identical to pristine, so the movement is the collapse and not the option.
+
+**Do the subgroup and subgroup-test estimates come back identical?** Not bit-identical -
+ULP-class, as everywhere else. At rtol 0 there are 16 difference groups, spread over
+`b_es_att_s2`, `pwsgs`, `wdidmainresults` and both `wdidsgresults_*` matrices, all in the
+last digits. At rtol 1e-13 only **two** survive, and both are the per-subgroup joint-test
+p-values, which wooldid stores as MACROS (text at display precision) rather than as matrix
+cells: `joint_horiz_s1` .0107726416627541 -> .0107726416627534 (~6.5e-14 relative) and
+`joint_horiz_s2` 1.89593725727e-07 -> 1.89593725733e-07 (~3.2e-11 relative, tail
+amplification on a p of 1.9e-07). Because they are stored as strings they are flagged at any
+tolerance; nothing about them is structurally different.
 
 Two operational findings worth keeping:
 - `jointtests` is *required* to reach the per-subgroup joint-test sites at all, because
@@ -113,6 +138,14 @@ The verification is unusually tight:
 
 Exactly 11 nonzero b differences across four configs and three sites, **every one equal to
 2^-49 to the last bit**.
+
+**SPEED (per call, directional, from the case-D runs):** the collapse is **4.2x to 15.5x**
+faster at every site of every ccc configuration - continuous 12.9/4.2/6.7x, categorical
+9.1/5.9/6.8x, mixed-with-controls 9.9/5.7/15.5x, amplified 7.9/4.3/5.6x.
+**End-to-end, measured afterwards** (`coarsecohortcontrols(c.x1 c.x2)`, robust, jointtests,
+N=29,667, 3 interleaved reps): **2.225s -> 1.454s, a 34.7% saving (1.53x)**. Correctness on
+that same run: **IDENTICAL at rtol 1e-13** (4 last-digit groups at rtol 0), with the
+`noesample`-only control bit-identical to pristine.
 
 ---
 
@@ -205,6 +238,34 @@ max absolute 2.2e+02) because the collapsed rows carry an arbitrary cluster valu
 own design makes coarse clusters the normal case - the cluster must contain `i`, and `_i` is
 in the key - so a conforming cluster is automatically a function of the key. Two earlier
 attempts to break this were *vacuous* and were caught by the subpop metric.
+
+---
+
+### Does a caller's outstanding `preserve` break this? No - measured
+
+The author asked what happens if the user has issued `preserve` before calling wooldid.
+Tested directly (`scratchpad/pres/pres.do`); `preserve` is **scoped per program
+invocation** and nests cleanly.
+
+| test | result |
+|---|---|
+| user `preserve` outstanding, program does `preserve`/`restore` | **works** - the program restores to the user's state (N=8), the user's own `restore` still returns N=10 |
+| two levels of nested programs, each preserving | **works** - inner restores to 6, outer to 10 |
+| program preserves and exits WITHOUT restoring | **auto-restored** on program exit (N=10) |
+| program preserves then ERRORS | caller gets its data back (N=8), and the user's own `preserve` **survives** - their later `restore` returns rc 0, N=10 |
+| two `preserve`s in the SAME scope | **rc 621** ("already preserved") |
+
+So a program-internal `preserve` is safe alongside a user's, and safe under abort. The only
+constraint is the last row: **wooldid must not have two outstanding `preserve`s in the same
+program scope.** Today that is free - wooldid currently issues no `preserve` anywhere - but
+it is a real constraint on any future second use inside `wooldid_worker`, and worth a guard
+rather than an assumption.
+
+One cost the speed numbers do not show: `preserve` was measured to be an in-memory copy
+(~37 GB/s, no temp file appears), so a user's outstanding snapshot plus wooldid's own means
+**two or three copies of the dataset resident at once**. Irrelevant at 320 MB; worth
+considering for a user already near their memory ceiling, and an argument for holding the
+collapsed window as short as the collapse-once design already does.
 
 ---
 
