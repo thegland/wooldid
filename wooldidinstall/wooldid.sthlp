@@ -69,7 +69,7 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 {synoptset 1 tabbed }{...}
 {synopt : {help wooldid##specifyestimand:Specifying the Estimand(s):}} {opt att} {opt att_it} {opt att_i} {opt att_itime} {opt semi:elasticity} {p_end}
 
-{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values} {opt fast:nose} {opt perm:ute(method)} {opt permreps(int)} {opt permex:act} {opt permstr:ata(variable)} {opt permpr:obs(spec)} {opt permts:tat} {opt permtc:i} {opt boot:strap(mode)} {opt reps(int)} {opt ties} {opt level(#)} {opt dots(int)} {opt rseed(#)} {opt bootalp:ha(spec)} {opt bootd:f(spec)} {p_end}
+{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values} {opt fast:nose} {opt fastcollapse} {opt perm:ute(method)} {opt permreps(int)} {opt permex:act} {opt permstr:ata(variable)} {opt permpr:obs(spec)} {opt permts:tat} {opt permtc:i} {opt boot:strap(mode)} {opt reps(int)} {opt ties} {opt level(#)} {opt dots(int)} {opt rseed(#)} {opt bootalp:ha(spec)} {opt bootd:f(spec)} {p_end}
 
 {synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem)} {opt replace} {opt sum:marystats}
 {opt pois:son} {opt poisexp:results}  {p_end}
@@ -268,6 +268,33 @@ matrices carry only the point-estimate column, exactly as under {it:cfxplotnose}
 roughly the last digit of precision (absolute differences on the order of 1e-15; relative differences are typically similar but can reach roughly 1e-13 on subgroup pairwise
 contrasts, whose differencing amplifies rounding, up to roughly 1e-14 under {it:timetrends}, and larger still in relative terms where an estimate is itself near zero), because
 {it:margins} follows a different computational path when the variance is skipped. {p_end}
+
+{phang}{opt fastcollapse}: Speed up the {it:margins} calls by evaluating them on one row per cohort-by-period-by-treatment cell instead of on every observation. {it:wooldid}'s
+estimands are weighted averages of cell-level treatment effects, and within the conditions this option enforces the treatment derivative is constant inside such a cell, so the
+collapsed row - carrying the cell's summed weight - represents the whole cell exactly. The regression itself is untouched and still runs on the full data, so the coefficients,
+the variance matrix and the clustering are unaffected; only the averaging step that {it:margins} performs is handed a smaller dataset. The full data is restored before any
+plotting or display work. Compatible with {it:fastnose}, and used inside {cmd:permute()} and {cmd:bootstrap()} replications when requested. {p_end}
+
+{phang2}{ul:When it pays.} The saving grows with the number of observations per cell and with the size of the regression, and is unaffected by the choice of standard errors. On a
+30,000-observation administrative panel with roughly 500 rows per cell it removed 35-60% of total run time; on a 475,000-row version, 56%. It pays for itself inside a single
+{it:margins} call at that scale - a bare {it:att} is already enough - and adding event-study horizons makes it a better deal rather than a worse one. It is not worth using when
+there are only a handful of rows per cell (roughly four or fewer), where the collapse can cost slightly more than it saves, and it helps least on designs with very many cohorts
+and periods, where the absorbing regression rather than {it:margins} dominates the run. See {help wooldid##runtime:Runtime and what drives it}. {p_end}
+
+{phang2}{ul:Results agree to machine precision but are not bit-identical.} Collapsing changes the order in which {it:margins} accumulates its averages, and the controls' contribution
+cancels algebraically between the treated and untreated predictions without cancelling bit for bit. Reported numbers therefore move in roughly the last digit or two - measured to
+move no more than merely permuting the order of the rows in your dataset moves an ordinary {it:wooldid} run. If you diff output across runs, expect low-order digits to differ; if
+you need byte-identical reproductions of an earlier result, do not add this option to the command that produced it. {p_end}
+
+{phang2}{ul:Refused combinations.} {it:fastcollapse} is refused with an error, and {it:safety(off)} does not override the refusal, because each of these is a demonstrated wrong
+answer rather than an accepted risk: {it:contreat()} and {it:interactivecontrols()}, which interact the treatment dummy with a variable that varies inside a cell, so the effect is
+no longer constant within the cell; {it:semielasticity} and the continuous-treatment elasticity forms, which divide by the prediction and so re-introduce the within-cell variation
+that a plain marginal effect cancels; {it:poisexpresults}, whose exponentiated reporting scale is not linear in the coefficients; {it:unconditionalse}, whose variance is built from
+observation-level influence functions and whose row count {it:margins} checks against {it:e(N)}; and {it:impvalues}, which computes effects over the clusters, a grouping the cell
+key does not contain. {it:customvce()} is also refused, as not yet verified rather than known-broken. Poisson estimation on the default (log) reporting scale is supported. {p_end}
+
+{phang2}{ul:Memory.} The full data is held aside while the collapsed window runs, so peak memory includes an extra copy of your dataset. This is immaterial for typical panels but
+worth knowing if you are already near your memory limit, particularly if you have issued your own {help preserve} before calling {it:wooldid}. {p_end}
 
 {phang}{opt permute(method)}: Randomization (permutation) inference in the Conley-Taber spirit, for settings - most importantly few treated clusters - where cluster-asymptotic standard errors are unreliable. The observed
 estimation runs exactly as usual (full inference, display, plots); afterwards, wooldid re-randomizes which clusters carry which treatment-onset dates, re-estimates the requested estimands under each counterfactual
@@ -818,7 +845,8 @@ largely does not. Narrowing the event-study window helps in proportion to the ho
 the absorbing regression; prefer the smallest {it:latticenum} that answers the question. {it:emptycellsoverride} forgoes a measured factor of about 2.24.
 The {cmd:bootstrap()} re-identification leg required by {it:att_it}, {it:att_i} and {it:att_itime} roughly doubles per-replication cost. On the other side,
 {it:fastnose} skips the variance calculation that accounts for most of a {it:margins} call and is correspondingly worth several times over on runs where
-standard errors are not needed. {p_end}
+standard errors are not needed. {it:fastcollapse} attacks the same cost from
+the other side - it shrinks the data each {it:margins} call sees rather than skipping the variance - and the two compose. {p_end}
 
 {pstd}{bf:Where the time goes.} Nearly all of a typical run is spent inside Stata's {it:margins}, and most of each {it:margins} call is the delta-method
 variance calculation rather than the point estimates. Very little time is spent in {it:wooldid}'s own code, which is why the levers that matter are the ones

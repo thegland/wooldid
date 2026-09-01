@@ -109,6 +109,34 @@ for name in sorted(assigned - clist):
 synline = syn[0].lower() if syn else ""
 typos = [n for n in sorted(clist) if n not in assigned and n.lower() not in synline]
 
+# BLANKET COVERAGE: every option the syntax line declares must appear in the c_local
+# list. The blanket's own comment claims this is true "by construction", but nothing
+# enforced it, and a new option that is merely LEFT OUT is invisible to the closure
+# check above (the worker parses the syntax itself, so it reads a correct value - only
+# the SHELL, which relies on the c_local, silently sees an empty one). That is how
+# fastcollapse initially failed to reach the permute/bootstrap replication option
+# strings while every direct run behaved perfectly.
+opt_names = []
+for tok in re.findall(r"[A-Za-z_]+", syn[0].split("]", 1)[-1] if syn else ""):
+    opt_names.append(tok)
+# recover each option's full name from the syntax line: NAMEabbrev(...) or NAMEabbrev
+declared = set()
+for m in re.finditer(r"(?<![A-Za-z_])([A-Za-z][A-Za-z_0-9]*)(?=\s*\(|\s|$)", syn[0] if syn else ""):
+    declared.add(m.group(1).lower())
+# syntax-line noise that is not an option
+NOISE = {"syntax", "varlist", "numeric", "default", "none", "if", "aw", "pw", "string",
+         "varname", "integer", "int", "numlist", "real", "name", "namelist", "passthru"}
+uncovered = []
+for opt in sorted(declared - NOISE):
+    if opt in ("y", "i", "t"):
+        continue
+    if opt in {c.lower() for c in clist}:
+        continue
+    # options the blanket documents as deliberately excluded
+    if opt in {"varlist", "weight", "exp"}:
+        continue
+    uncovered.append(opt)
+
 if missing:
     print("FAIL: locals assigned in wooldid_validate, read by the worker after the "
           "call, but not in the c_local list (the suppressjointtests defect class): "
@@ -120,5 +148,12 @@ if typos:
     print("FAIL: c_local names that are neither syntax options nor assigned in the "
           "validator (typo?): " + " ".join(typos))
     fail = True
+if uncovered:
+    print("FAIL: syntax options not in the c_local blanket (the shell reads these as "
+          "empty, so rep option strings and shell-side gates silently lose them): "
+          + " ".join(uncovered))
+    fail = True
+else:
+    print("OK: every syntax option is covered by the c_local blanket")
 
 sys.exit(1 if fail else 0)
