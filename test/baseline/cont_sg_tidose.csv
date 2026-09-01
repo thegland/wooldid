@@ -30,6 +30,7 @@ macro|wdid_esrel|-1
 macro|wdid_espre|2
 macro|wdid_suppressjt|suppressjointtests
 macro|wdid_cetype|dydx
+macro|wdid_fcol|0
 macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_sglist|0 1 2

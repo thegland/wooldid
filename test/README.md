@@ -30,7 +30,13 @@ runs therefore detects *any* change in returned results, down to the last bit.
   tolerance; missing-value sentinels and unparseable strings compare exactly. Self-tests on
   startup. Use `--rtol 0` for strict bit-exactness.
 - `baseline/` — the committed reference outputs (as of commit `3cb0c41` — the B21
-  gen-double re-bless, 2026-07-21; gtools active, Stata 19.0 MP).
+  gen-double re-bless, 2026-07-21; gtools active, Stata 19.0 MP). Re-blessed 2026-09-01
+  when the cell collapse became the default (`fastcollapse` / `fullprecisionslow`): every
+  file gained the hidden macro `wdid_fcol`; the 17 collapse-eligible configs were
+  bit-identical to the previous baseline; `cont_lat`, `cont_uz`, `cont_uz_ss` moved at
+  1e-16..1e-10 in the shared session but were bit-identical to the pristine build when
+  each was run alone (session-order contamination from the earlier configs' collapse,
+  not a change to the contreat path, which does not collapse).
 - `mkpathological.do` — builds `data/dta_path_*.dta`, the pathological data shapes used by
   the coverage grid (`review_process/assessment_grid.md`, dimension D12): no never-treated
   units, no controls, cohorts lacking pre-/post-periods, missing relative years, single-obs

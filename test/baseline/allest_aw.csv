@@ -26,6 +26,7 @@ macro|wdid_esrel|-1
 macro|wdid_espre|2
 macro|wdid_suppressjt|suppressjointtests
 macro|wdid_cetype|dydx
+macro|wdid_fcol|1
 macro|wdid_semielas|dydx
 macro|wdid_estimands|att att_it att_i att_itime
 macro|wdid_vcespec|cluster(i)

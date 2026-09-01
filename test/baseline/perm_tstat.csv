@@ -33,6 +33,7 @@ macro|estimate_type|pooled_reference_period
 macro|wdid_vcespec|cluster(i)
 macro|wdid_estimands|att   
 macro|wdid_semielas|dydx
+macro|wdid_fcol|1
 macro|wdid_cetype|dydx
 macro|wdid_suppressjt|suppressjointtests
 macro|wdid_espre|0

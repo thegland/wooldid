@@ -117,6 +117,7 @@ version 16.0
     if "`interactivecontrols'" != "" local wdp_ro `wdp_ro' interactivecontrols(`interactivecontrols')
     if "`customweightmultiplier'" != "" local wdp_ro `wdp_ro' customweightmultiplier(`customweightmultiplier')
     if "`fastcollapse'" != "" local wdp_ro `wdp_ro' fastcollapse
+    if "`fullprecisionslow'" != "" local wdp_ro `wdp_ro' fullprecisionslow
     if "`contreat'" != "" local wdp_ro `wdp_ro' contreat(`contreat') contreatpoly(`contreatpoly')
     if `"`contreatcontrols'"' != "" local wdp_ro `wdp_ro' contreatcontrols(`contreatcontrols')
     if `"`lattice'"' != "" local wdp_ro `wdp_ro' lattice(`lattice')
@@ -198,6 +199,7 @@ version 16.0
     if "`interactivecontrols'" != "" local wdb_ro `wdb_ro' interactivecontrols(`interactivecontrols')
     if "`customweightmultiplier'" != "" local wdb_ro `wdb_ro' customweightmultiplier(`customweightmultiplier')
     if "`fastcollapse'" != "" local wdb_ro `wdb_ro' fastcollapse
+    if "`fullprecisionslow'" != "" local wdb_ro `wdb_ro' fullprecisionslow
     if "`contreat'" != "" local wdb_ro `wdb_ro' contreat(`contreat') contreatpoly(`contreatpoly')
     if `"`contreatcontrols'"' != "" local wdb_ro `wdb_ro' contreatcontrols(`contreatcontrols')
     if `"`lattice'"' != "" local wdb_ro `wdb_ro' lattice(`lattice')
@@ -268,7 +270,7 @@ version 16.0
   set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -1806,22 +1808,26 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   *****************************         PRODUCE HISTOGRAMS       ***************************
   ******************************************************************************************
 
-  * F-collapse (fastcollapse): margins evaluates over every row, but inside the option's
-  * gate every quantity it computes is a cell-level weighted average and the derivative is
-  * constant within an (_i, _t, targetflag) cell. So the margins calls below can be handed
-  * one row per cell carrying the cell's SUMMED weight. `preserve' is inline here on
-  * purpose - issued inside wooldid_fcol it would unwind at that program's return and every
-  * margins call would silently run on full data. The restore twin is likewise inline.
+  * F-collapse: margins evaluates over every row, but inside the collapse's gate every
+  * quantity it computes is a cell-level weighted average and the derivative is constant
+  * within an (_i, _t, targetflag) cell. So the margins calls below can be handed one row
+  * per cell carrying the cell's SUMMED weight. `fcon' is wooldid_validate's realized
+  * decision (on by default, off under fullprecisionslow or any ineligible option).
+  * `preserve' is inline here on purpose - issued inside wooldid_fcol it would unwind at
+  * that program's return and every margins call would silently run on full data. The
+  * restore twin is likewise inline.
   local fcnoes
   local fconn
-  if "`fastcollapse'" != "" {
+  if "`fcon'" == "1" {
     preserve
     wooldid_fcol `esamp' , key(`_i' `_t' `targetflag' `ifvar' `t' `ttre' `subgroups') wvars(`w_att' `w_att_it' `w_att_i' `w_att_itime')
     local fconn = r(ncell)
     * the collapsed rows carry no e(sample) marker, so every call in the window needs
     * noesample; rows in memory ARE the estimation sample (wooldid_fcol keeps on it)
     local fcnoes noesample
+    if "`verbose'" == "verbose" dis as text "Wooldid is evaluating the margins calls on one row per cell (`fconn' cells; see fastcollapse / fullprecisionslow in the help file)."
   }
+  else if "`verbose'" == "verbose" & "`fcskip'" != "" dis as text "Wooldid is evaluating the margins calls on the full data: the default cell collapse does not apply with`fcskip' (see fastcollapse in the help file)."
 
   * since semielasticities are allowed, we need text for inserting that info into plots
   local effecttype Effects
@@ -3344,7 +3350,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   }
 
   * F-collapse: every margins call is behind us - put the full data back
-  if "`fastcollapse'" != "" restore
+  if "`fcon'" == "1" restore
 
   if "`verbose'" == "verbose" dis as text "Wooldid has completed estimation of all main effects and is now preparing to present them, as well as preparing to produce event study estimates."
 
@@ -4126,6 +4132,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   ereturn hidden local wdid_estimands "`att' `att_it' `att_i' `att_itime'"
   ereturn hidden local wdid_cwm "`customweightmultiplier'"
   ereturn hidden local wdid_semielas "`semielasticity'"
+  ereturn hidden local wdid_fcol "`fcon'"
   ereturn hidden local wdid_cetype "`contreatelasticitytype'"
   ereturn hidden local wdid_suppressjt "`suppressjointtests'"
   ereturn hidden local wdid_suppresssgpe "`suppresssgprimaryeffects'"
@@ -4222,7 +4229,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -4587,23 +4594,36 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     local semielasticity eydx
   }
 
-  * ---- F-collapse gate (fastcollapse) --------------------------------------------
-  * Every refusal below is a MEASURED wrong answer at rc 0, not a risky one, so there is
-  * deliberately no safety(off) escape: safety(off) means "I accept a risk", never "give
-  * me numbers I have been shown are wrong".
-  * The option hands margins one row per (_i,_t,targetflag) cell. That is exact only while
-  * the derivative is constant within the cell, i.e. while no model term interacts
-  * targetflag with something that varies inside a cell and the operator is plain dydx.
-  if "`fastcollapse'" == "fastcollapse" {
-    local fcbad
-    if "`contreat'" != ""                     local fcbad `fcbad' contreat()
-    if "`interactivecontrols'" != ""          local fcbad `fcbad' interactivecontrols()
-    if "`unconditionalse'" != ""              local fcbad `fcbad' unconditionalse
-    if "`semielasticity'" != "dydx"           local fcbad `fcbad' semielasticity
-    if "`impvalues'" != ""                    local fcbad `fcbad' impvalues
-    if "`poisexpresults'" != ""               local fcbad `fcbad' poisexpresults
-    if `"`customvce'"' != ""                  local fcbad `fcbad' customvce()
-    if "`subgroups'" != ""                    local fcbad `fcbad' subgroups()
+  * ---- F-collapse gate ----------------------------------------------------------------
+  * The collapse hands margins one row per (_i,_t,targetflag) cell. That is exact only
+  * while the treatment derivative is constant within the cell, i.e. while no model term
+  * interacts targetflag with something that varies inside a cell and the reported
+  * quantity is a plain marginal effect on a scale linear in the coefficients.
+  *
+  * IT IS ON BY DEFAULT (author-ruled 2026-09-01) whenever the request permits it:
+  *   fullprecisionslow          -> never collapse
+  *   fastcollapse, ineligible   -> ERROR: an explicit request for something that would
+  *                                 return a measured-wrong answer must not pass silently
+  *   otherwise                  -> collapse iff eligible; SILENTLY skip if not, because
+  *                                 an ordinary contreat() run must not start erroring
+  * The refusals carry no safety(off) escape: safety(off) means "I accept a risk", never
+  * "give me numbers I have been shown are wrong". `fcon' is the realized decision; the
+  * worker consumes it and records it in e(wdid_fcol). `fcskip' names the skip reason(s)
+  * for the verbose line.
+  local fcbad
+  if "`contreat'" != ""                     local fcbad `fcbad' contreat()
+  if "`interactivecontrols'" != ""          local fcbad `fcbad' interactivecontrols()
+  if "`unconditionalse'" != ""              local fcbad `fcbad' unconditionalse
+  if "`semielasticity'" != "dydx"           local fcbad `fcbad' semielasticity
+  if "`impvalues'" != ""                    local fcbad `fcbad' impvalues
+  if "`poisexpresults'" != ""               local fcbad `fcbad' poisexpresults
+  if `"`customvce'"' != ""                  local fcbad `fcbad' customvce()
+  if "`subgroups'" != ""                    local fcbad `fcbad' subgroups()
+  if "`fastcollapse'" != "" & "`fullprecisionslow'" != "" {
+    dis as error "Error: fastcollapse and fullprecisionslow are contradictory - the first asks for the cell collapse and the second suppresses it. Specify at most one. (The collapse is on by default wherever the request permits it, so neither is needed to get it.)"
+    error 198
+  }
+  if "`fastcollapse'" != "" {
     if "`fcbad'" != "" {
       dis as error "Error: fastcollapse is incompatible with:`fcbad'."
       dis as error "fastcollapse evaluates the margins calls on one row per cohort-by-period-by-treatment cell, which is exact only when the treatment derivative is constant within a cell and the reported quantity is a plain marginal effect. Each option above breaks one of those conditions:"
@@ -4614,10 +4634,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       dis as error "  subgroups() is refused on measured evidence, added 2026-09-01. margins signals a non-estimable subgroup-by-horizon margin only through an omission marker in the name it returns, and the subgroup code - uniquely in wooldid - READS that signal, three separate ways. Collapsing the rows can flip the marker, which silently changed which horizons and which joint tests were reported on 4 of 472 suite configs, and turned one completed estimation into a hard r(503) when two estimands lost different numbers of horizons. Non-subgroup runs are unaffected: 123 non-vacuous pairs showed no structural difference, because no non-subgroup code reads a margins result name."
       dis as error "  impvalues computes per-cluster effects over(cluster), and the cluster variable is not part of the cell key."
       dis as error "  customvce() is not verified for fastcollapse rather than known-broken; it is refused pending measurement."
-      dis as error "Drop fastcollapse, or drop the conflicting option. (No safety(off) escape: these are measured wrong answers, not risks.)"
+      dis as error "Drop fastcollapse, or drop the conflicting option. (No safety(off) escape: these are measured wrong answers, not risks.) Without an explicit fastcollapse the run proceeds normally on the full data - the collapse simply does not engage."
       error 198
     }
   }
+  local fcon 0
+  local fcskip `fcbad'
+  if "`fullprecisionslow'" == "" & "`fcbad'" == "" local fcon 1
 
   * do some light processing of the "number of pre-treatment coefs" input - it needs some adjustment when esfixedbaseperiod is used since the period normalized to 0 could fall within your range of requested coefs
   * F-boot A8: preserve the user's raw esprelength for rep-line reconstruction. the
@@ -4932,7 +4955,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * silently strand the worker on the stale syntax-parsed value. varlist/if/weight/exp
   * are excluded: the worker's own syntax call already parsed them identically and this
   * subprogram never alters them.
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse gteffects permute permreps permexact permtstat permtci permstrata permprobs y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf esprelengthraw {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf esprelengthraw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -5005,18 +5028,19 @@ end
 * ceiling and this is used at four call sites.
 * ============================================================================
 * ---------------------------------------------------------------------------
-* F-collapse helper (fastcollapse). Replaces the estimation sample with ONE row per
-* (_i, _t, targetflag [, subgroup]) cell, carrying that cell's SUMMED weight and keeping
-* the cell's FIRST row.
+* F-collapse helper (on by default; fastcollapse / fullprecisionslow). Replaces the
+* estimation sample with ONE row per (_i, _t, targetflag [, subgroup]) cell, carrying that
+* cell's SUMMED weight and keeping the cell's FIRST row.
 *
 * WHY THE RETAINED ROW'S OTHER VALUES DO NOT MATTER. margins forms dydx(targetflag) as
 * xb(tf=1) - xb(tf=0). Every regressor that does not interact with targetflag contributes
 * identically to both terms and cancels, so the derivative is the cell coefficient and is
-* constant within the cell. That is exactly the condition wooldid_validate's fastcollapse
+* constant within the cell. That is exactly the condition wooldid_validate's F-collapse
 * gate enforces; outside it (contreat(), interactivecontrols(), a non-dydx operator, the
 * exponentiated poisson scale) the derivative varies observation by observation and the
 * retained row would BE the estimand rather than an irrelevant carrier - which is why
-* those combinations are refused rather than cautioned.
+* those combinations skip the collapse by default and are refused when it is asked for
+* explicitly, rather than cautioned.
 *
 * The cancellation is algebraic, not bitwise: (S+c1)-(S+c0) keeps a residue of order
 * ULP(|xb|), where S is the retained row's shared partial sum. Results therefore agree
