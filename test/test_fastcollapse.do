@@ -28,12 +28,47 @@
 * F2 ... and on the event study and the joint tests
 * F3 compatible with fastnose
 * F4 an explicit fastcollapse with an ineligible option is refused r(198), no safety(off)
-*    escape; and fastcollapse + fullprecisionslow is refused as contradictory
-* F5 WITHOUT an explicit request every ineligible option runs normally and silently skips
+*    escape; fastcollapse + fullprecisionslow is refused as contradictory; and an explicit
+*    fastcollapse WITH subgroups() is accepted (subgroups() left the ineligible list 2026-09-01;
+*    contreat() left it 2026-09-02, so F4's contreat leg now carries contreatpoly(2))
+* F5 WITHOUT an explicit request every ineligible option runs normally and silently skips,
+*    while a subgroups() run and a bare contreat() run collapse
 * F6 the off-switch reaches permute and bootstrap replications
 * F7 poisson (dydx scale) collapses and agrees; poisexpresults does not collapse
 * F8 REGRESSION: the subgroups()+fe()+jointtests command that hard-errored r(503) under the
-*    collapse is refused when asked for explicitly and runs uncollapsed by default
+*    collapse now completes collapsed (safety(off) => the screen prints its caution)
+* F9 THE SUBGROUP SCREEN: a healthy subgroup run collapses with an empty e(wdid_fcguard); a
+*    numerically singular subgroup VCE under the default safety falls back to the full data
+*    (e(wdid_fcguard)=fallback) and every result read after the fallback is BIT-IDENTICAL to
+*    fullprecisionslow; the same run under safety(off) stays collapsed with
+*    e(wdid_fcguard)=caution and rc 0
+* F10 THE 2026-09-01 ADVERSARIAL PROBE'S PINS: (a) a subgroup whose pre window holds only
+*    the reference period (no pre-trend joint test in either arm) does not trip the screen;
+*    (b) a rank-1 subgroup-contrast VCE with a tiny largest eigenvalue is flagged at the
+*    level scale; (c) an observed-run fallback carries into the bootstrap replications
+* F11 THE CONTINUOUS TREATMENT: contreat() left the ineligible list 2026-09-02, so the
+*    collapse now carries the cell's estimand-weighted mean of the dose on the surviving row
+*    and puts the user's cohort variable in the key. (a) five eligible reads - plain att; all
+*    four estimands with an event study and jointtests; contreatelasticitytype(dyex); poisson
+*    on the default dydx scale; subgroups() - collapse and agree with fullprecisionslow;
+*    (b) each of the six refused reads (contreatpoly(>1), eyex, eydx, lattice(),
+*    poisson+dyex, the dose inside controls()) skips SILENTLY and stays bit-identical to it;
+*    (c) an explicit fastcollapse with each is r(198) with no safety(off) escape, while a
+*    plain contreat() run is accepted; (d) the two provisos the worker's form exists for -
+*    a customweightmultiplier() of 0 on the pick row (the mean is written onto every row of
+*    the cell, not by gcollapse (mean) [aw=w] merge) and a float-stored dose (the recast)
+* F12 THE TWO GUARDS ADDED ON TOP OF F11 (2026-09-02). (a) THE GATE UNABBREVIATES: the
+*    contreat-in-controls token tokenises controls(), coarsecohortcontrols(), fe() and
+*    ccc_absorb() and looks for the treatment variable among the tokens, but
+*    coarsecohortcontrols() is declared string and so is NOT unabbreviated by Stata before the
+*    gate sees it - c.dose_var#c.x1 with a dose named dose_vary walked past the literal
+*    comparison and the run COLLAPSED when it had to refuse. The gate now runs cap unab on
+*    each token. Four legs: the exact name, the abbreviation (the regression), an unrelated
+*    pair (no false positive), and the varlist route. (b) THE CELL MEAN IS MISSING-AWARE PER
+*    VARIABLE: each averaged variable carries its own weight sum over the rows where THAT
+*    variable is non-missing. Both halves are pinned - the caller's guarantee that no missing
+*    dose can reach the worker, and wooldid_fcol called DIRECTLY on a constructed fixture,
+*    which is the only way to exercise a defensive guard.
 * Prints FASTCOLLAPSE_ALL_PASS iff all pass.
 clear all
 local REPO ..
@@ -149,8 +184,12 @@ if `rcC' != 0 | `rcF' != 0 | `fcolF' != 1 | `dcf' > 1e-8 {
 * ---- F4: an EXPLICIT request for an ineligible configuration is refused r(198), and
 * safety(off) does NOT open an escape (these are measured wrong answers, not risks).
 * Plus the contradictory pair.
+* Gate 1 was a bare contreat() run until 2026-09-02, when contreat() itself left the
+* ineligible list (F11); it now carries contreatpoly(2), one of the six contreat reads that
+* ARE still refused, so this leg keeps covering the contreat family on dta_cont. The
+* acceptance side of the new contract is pinned in F11c.
 use "`REPO'/test/data/dta_cont.dta", clear
-cap qui wooldid y i t ttre, att contreat(intensity) contreatcontrols(basic) cluster(i) fastcollapse safety(off)
+cap qui wooldid y i t ttre, att contreat(intensity) contreatcontrols(basic) contreatpoly(2) cluster(i) fastcollapse safety(off)
 local g1 = _rc
 use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att robust interactivecontrols(x1 x2) fastcollapse safety(off)
@@ -168,28 +207,39 @@ use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att customvce(cluster state) fastcollapse safety(off)
 local g6 = _rc
 use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att cluster(state) subgroups(region) fastcollapse safety(off)
-local g7 = _rc
-use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att robust fastcollapse fullprecisionslow
-local g8 = _rc
-di "F4_gate_rcs contreat=" `g1' " interactive=" `g2' " uncond=" `g3' " semielas=" `g4' " impvalues=" `g5' " customvce=" `g6' " subgroups=" `g7' " contradictory=" `g8'
-forval g = 1/8 {
+local g7 = _rc
+di "F4_gate_rcs contreatpoly=" `g1' " interactive=" `g2' " uncond=" `g3' " semielas=" `g4' " impvalues=" `g5' " customvce=" `g6' " contradictory=" `g7'
+forval g = 1/7 {
   if `g`g'' != 198 {
     di as error "F4 FAIL: gate `g' returned rc `g`g'' (want 198)"
     local ++fails
   }
 }
+* subgroups() is NOT on the list any more: an explicit request is accepted and engages
+* (region varies within cohid, so the command carries safety(off) for that reason alone)
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att cluster(state) subgroups(region) fastcollapse safety(off)
+local g8 = _rc
+local f8 = e(wdid_fcol)
+di "F4_subgroups_explicit rc=" `g8' " (want 0)  fcol=" `f8' " (want 1)"
+if `g8' != 0 | `f8' != 1 {
+  di as error "F4 FAIL: explicit fastcollapse + subgroups() rc `g8' fcol `f8' - subgroups() must be eligible"
+  local ++fails
+}
 
 * ---- F5: THE DEFAULT-ON CONTRACT. Without an explicit fastcollapse, every one of those
-* options must run NORMALLY and simply not collapse - an ordinary contreat() or
-* subgroups() run must not start erroring because the collapse became the default.
-* (unconditionalse needs robust/cluster and region varies within cohid, so the
-* unconditionalse and subgroups(region) commands carry robust / safety(off): each
-* runs rc 0 under fullprecisionslow, measured 2026-09-01, so a nonzero rc here is the
-* default collapse and nothing else.)
+* options must run NORMALLY and simply not collapse - a run wooldid cannot collapse must not
+* start erroring because the collapse became the default - and a subgroups() run must
+* collapse (fcol 1) and complete. (unconditionalse needs robust/cluster and region varies
+* within cohid, so the unconditionalse and subgroups(region) commands carry robust /
+* safety(off): each runs rc 0 under fullprecisionslow, measured 2026-09-01, so a nonzero
+* rc here is the default collapse and nothing else.)
+* Option 1 followed gate 1 on 2026-09-02: a bare contreat() run now COLLAPSES, so the
+* silent-skip leg carries contreatpoly(2) and the bare run moved to its own leg (s8) below,
+* which keeps the original protection - an ordinary contreat() run must not start erroring.
 use "`REPO'/test/data/dta_cont.dta", clear
-cap qui wooldid y i t ttre, att contreat(intensity) contreatcontrols(basic) cluster(i)
+cap qui wooldid y i t ttre, att contreat(intensity) contreatcontrols(basic) contreatpoly(2) cluster(i)
 local s1 = _rc
 local f1 = e(wdid_fcol)
 use "`ADMIN'", clear
@@ -216,8 +266,8 @@ use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att cluster(state) subgroups(region) safety(off)
 local s7 = _rc
 local f7 = e(wdid_fcol)
-di "F5_silentskip rcs=" `s1' "/" `s2' "/" `s3' "/" `s4' "/" `s5' "/" `s6' "/" `s7' "  fcol=" `f1' "/" `f2' "/" `f3' "/" `f4' "/" `f5' "/" `f6' "/" `f7'
-forval k = 1/7 {
+di "F5_silentskip rcs=" `s1' "/" `s2' "/" `s3' "/" `s4' "/" `s5' "/" `s6' "/" `s7' "  fcol=" `f1' "/" `f2' "/" `f3' "/" `f4' "/" `f5' "/" `f6' "/" `f7' " (want 0 x6 then 1)"
+forval k = 1/6 {
   if `s`k'' != 0 {
     di as error "F5 FAIL: ineligible option `k' errored (rc `s`k'') without an explicit fastcollapse - it must run normally and skip the collapse"
     local ++fails
@@ -226,6 +276,21 @@ forval k = 1/7 {
     di as error "F5 FAIL: ineligible option `k' reports e(wdid_fcol)=`f`k'' - it must be 0"
     local ++fails
   }
+}
+if `s7' != 0 | `f7' != 1 {
+  di as error "F5 FAIL: subgroups() run rc `s7' fcol `f7' - it must complete and collapse (fcol 1)"
+  local ++fails
+}
+* s8: the bare contreat() run this section used to hold. It must still complete, and since
+* 2026-09-02 it must also collapse - the same shape as the subgroups() leg above.
+use "`REPO'/test/data/dta_cont.dta", clear
+cap qui wooldid y i t ttre, att contreat(intensity) contreatcontrols(basic) cluster(i)
+local sct8 = _rc
+local fct8 = e(wdid_fcol)
+di "F5_contreat_default rc=" `sct8' " (want 0) fcol=" `fct8' " (want 1)"
+if `sct8' != 0 | `fct8' != 1 {
+  di as error "F5 FAIL: bare contreat() run rc `sct8' fcol `fct8' - it must complete and collapse (fcol 1)"
+  local ++fails
 }
 
 * ---- F6: the off-switch reaches the replication engines (and the default runs them).
@@ -279,25 +344,867 @@ if `rp3' != 0 | `fcolR' != 0 | `rp4' != 198 {
   local ++fails
 }
 
-* ---- F8: REGRESSION. Before subgroups() was excluded (2026-09-01) this exact command
-* returned a hard r(503) WITH the collapse and rc 0 without it: collapsed, the att and
-* att_it estimands lost different numbers of horizons to the omission-marker drop, and
-* the non-conformable concatenation aborted the run. An explicit request must be a clean
-* refusal, and the plain command must complete UNCOLLAPSED under the default.
+* ---- F8: REGRESSION. Before the subgroup screen existed this exact command returned a
+* hard r(503) WITH the collapse and rc 0 without it: collapsed, the att and att_it
+* estimands lost different numbers of horizons to the omission-marker drop, and the
+* non-conformable concatenation aborted the run. The screen catches the singular VCE
+* that drives that; under safety(off) the run stays collapsed with the caution
+* (e(wdid_fcguard) = caution) and must COMPLETE, whether or not fastcollapse is spelled out.
 use "`REPO'/test/suite/data/survey_rcs.dta", clear
 qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
 cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att att_it subgroups(group) ///
     fe(group_time) esprelength(2) espostlength(2) jointtests cluster(state) safety(off) fastcollapse
 local r8a = _rc
+local g8a "`e(wdid_fcguard)'"
 use "`REPO'/test/suite/data/survey_rcs.dta", clear
 qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
 cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att att_it subgroups(group) ///
     fe(group_time) esprelength(2) espostlength(2) jointtests cluster(state) safety(off)
 local r8b = _rc
 local f8b = e(wdid_fcol)
-di "F8_r503regression explicit=" `r8a' " (want 198, was 503)  default=" `r8b' " (want 0) default_fcol=" `f8b' " (want 0)"
-if `r8a' != 198 | `r8b' != 0 | `f8b' != 0 {
-  di as error "F8 FAIL: rc `r8a'/`r8b' fcol `f8b' - the r(503) regression is not pinned"
+local g8b "`e(wdid_fcguard)'"
+di "F8_r503regression explicit=" `r8a' " (want 0, was 503) guard=`g8a' (want caution)  default=" `r8b' " (want 0) default_fcol=" `f8b' " (want 1) guard=`g8b' (want caution)"
+if `r8a' != 0 | "`g8a'" != "caution" | `r8b' != 0 | `f8b' != 1 | "`g8b'" != "caution" {
+  di as error "F8 FAIL: rc `r8a'/`r8b' fcol `f8b' guard `g8a'/`g8b' - the r(503) regression is not pinned"
+  local ++fails
+}
+
+* ---- F9: THE SUBGROUP SCREEN. Three runs of one degenerate command and two healthy ones.
+* The degenerate command is survey_rcs with the cell shock removed and fe(i.group##i.t):
+* the clustered VCE is singular in the subgroup-contrast direction, so the collapsed and
+* full-data reads at the subgroup sites disagree beyond residue (a measured divergence,
+* 2026-09-01). Under the default safety the screen must fall back to the full data at the
+* first flagged site, and everything read after it must be BIT-IDENTICAL to
+* fullprecisionslow (mreldif exactly 0 on the posted subgroup matrices), while the main
+* results read before it stay within residue. Under safety(off) the run stays collapsed
+* with the caution. The healthy command must pass the screen untouched: guard empty,
+* collapsed, and within residue of fullprecisionslow.
+local RCS "`REPO'/test/suite/data/survey_rcs.dta"
+local DEG "att subgroups(group) fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state)"
+use "`RCS'", clear
+qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], `DEG'
+local r9a = _rc
+local f9a = e(wdid_fcol)
+local g9a "`e(wdid_fcguard)'"
+cap matrix B9a = e(b)
+cap matrix P9a = e(pwsgs)
+cap matrix S9a1 = e(wdidsgresults_1)
+cap matrix S9a2 = e(wdidsgresults_2)
+use "`RCS'", clear
+qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], `DEG' fullprecisionslow
+local r9u = _rc
+local g9u "`e(wdid_fcguard)'"
+cap matrix B9u = e(b)
+cap matrix P9u = e(pwsgs)
+cap matrix S9u1 = e(wdidsgresults_1)
+cap matrix S9u2 = e(wdidsgresults_2)
+local d9b = mreldif(B9a, B9u)
+local d9p = mreldif(P9a, P9u)
+local d9s = max(mreldif(S9a1, S9u1), mreldif(S9a2, S9u2))
+use "`RCS'", clear
+qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], `DEG' safety(off)
+local r9c = _rc
+local f9c = e(wdid_fcol)
+local g9c "`e(wdid_fcguard)'"
+di "F9_screen default: rc=" `r9a' " fcol=" `f9a' " guard=`g9a' (want fallback)  slow: rc=" `r9u' " guard=`g9u' (want empty)"
+di "F9_screen post-fallback mreldif pwsgs=" `d9p' " sgresults=" `d9s' " (want exactly 0)  pre-flag mreldif b=" `d9b' " (want < 1e-8)"
+di "F9_screen safety(off): rc=" `r9c' " fcol=" `f9c' " guard=`g9c' (want caution)"
+if `r9a' != 0 | `f9a' != 1 | "`g9a'" != "fallback" | `r9u' != 0 | "`g9u'" != "" {
+  di as error "F9 FAIL: default-safety degenerate run rc `r9a' fcol `f9a' guard `g9a' (slow rc `r9u' guard `g9u') - the screen must fall back"
+  local ++fails
+}
+if `d9p' != 0 | `d9s' != 0 | `d9b' >= 1e-8 {
+  di as error "F9 FAIL: after the fallback pwsgs/sgresults must be bit-identical to fullprecisionslow (mreldif `d9p'/`d9s') and b within residue (`d9b')"
+  local ++fails
+}
+if `r9c' != 0 | `f9c' != 1 | "`g9c'" != "caution" {
+  di as error "F9 FAIL: safety(off) degenerate run rc `r9c' fcol `f9c' guard `g9c' - it must stay collapsed with the caution"
+  local ++fails
+}
+* Two healthy runs, both on aggregating data. (i) binary_balanced under the conventional
+* VCE: balanced cohorts, so the subgroup contrasts share one se legitimately - the screen
+* must not mistake that for degeneracy. (ii) the admin data at the cohort level with a
+* subgroup that splits cohorts (share weighting under safety(off)): the cell collapse's
+* headline case, where the subgroup reads are 3-5x faster collapsed (measured 2026-09-01:
+* 2.1 s vs 9.7 s) and must agree to residue with an empty guard.
+local BB "`REPO'/test/suite/data/binary_balanced.dta"
+use "`BB'", clear
+cap qui wooldid y cohort t ttre, att att_it esprelength(2) espostlength(2) subgroups(sg_three) jointtests
+local r9h = _rc
+local f9h = e(wdid_fcol)
+local g9h "`e(wdid_fcguard)'"
+cap matrix P9h = e(pwsgs)
+cap matrix S9h = e(wdidsgresults_1)
+use "`BB'", clear
+cap qui wooldid y cohort t ttre, att att_it esprelength(2) espostlength(2) subgroups(sg_three) jointtests fullprecisionslow
+local r9hu = _rc
+cap matrix P9hu = e(pwsgs)
+cap matrix S9hu = e(wdidsgresults_1)
+local d9hp = mreldif(P9h, P9hu)
+local d9hs = mreldif(S9h, S9hu)
+di "F9_healthy rc=" `r9h' "/" `r9hu' " fcol=" `f9h' " (want 1) guard=`g9h' (want empty)  mreldif pwsgs=" `d9hp' " sgresults=" `d9hs' " (want < 1e-8)"
+if `r9h' != 0 | `r9hu' != 0 | `f9h' != 1 | "`g9h'" != "" | `d9hp' >= 1e-8 | `d9hs' >= 1e-8 {
+  di as error "F9 FAIL: healthy subgroup run rc `r9h'/`r9hu' fcol `f9h' guard `g9h' mreldif `d9hp'/`d9hs' - it must collapse untouched and agree"
+  local ++fails
+}
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att att_it subgroups(region) esprelength(2) espostlength(2) safety(off)
+local r9k = _rc
+local f9k = e(wdid_fcol)
+local g9k "`e(wdid_fcguard)'"
+cap matrix P9k = e(pwsgs)
+cap matrix S9k = e(wdidsgresults_1)
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att att_it subgroups(region) esprelength(2) espostlength(2) safety(off) fullprecisionslow
+local r9ku = _rc
+cap matrix P9ku = e(pwsgs)
+cap matrix S9ku = e(wdidsgresults_1)
+local d9kp = mreldif(P9k, P9ku)
+local d9ks = mreldif(S9k, S9ku)
+di "F9_healthy_admin rc=" `r9k' "/" `r9ku' " fcol=" `f9k' " (want 1) guard=`g9k' (want empty)  mreldif pwsgs=" `d9kp' " sgresults=" `d9ks' " (want < 1e-8)"
+if `r9k' != 0 | `r9ku' != 0 | `f9k' != 1 | "`g9k'" != "" | `d9kp' >= 1e-8 | `d9ks' >= 1e-8 {
+  di as error "F9 FAIL: healthy admin subgroup run rc `r9k'/`r9ku' fcol `f9k' guard `g9k' mreldif `d9kp'/`d9ks' - it must collapse untouched and agree"
+  local ++fails
+}
+
+* ---- F10: THE 2026-09-01 ADVERSARIAL PROBE'S THREE PINS (7 angles, ~500 configs).
+* (a) FALSE ALARM REMOVED: an early-treated cohort used as a subgroup has a pre-treatment
+*     window holding only the reference period, so its pre-trend joint test is absent in
+*     both arms (b = 0, V = 0 structurally). The overjoint screen used to flag that as
+*     "zero variance" and cost the speedup at default safety; it is now gated on r(p).
+*     Pin: guard empty, collapsed, bit-identical to fullprecisionslow.
+local DB "`REPO'/test/data/dta_binary.dta"
+use "`DB'", clear
+qui sum t, meanonly
+local t2 = r(min) + 1
+qui gen byte sgd2 = 1 + (mod(i, 7) == 0)
+qui replace ttre = `t2' if sgd2 == 2
+cap qui wooldid y i t ttre, att robust esprelength(2) espostlength(2) subgroups(sgd2) jointtests
+local r10a = _rc
+local f10a = e(wdid_fcol)
+local g10a "`e(wdid_fcguard)'"
+local j10a "`e(joint_horiz_s1)'"
+local k10a "`e(joint_horiz_s2)'"
+cap matrix P10a = e(pwsgs)
+cap qui wooldid y i t ttre, att robust esprelength(2) espostlength(2) subgroups(sgd2) jointtests fullprecisionslow
+local r10au = _rc
+local j10au "`e(joint_horiz_s1)'"
+local k10au "`e(joint_horiz_s2)'"
+cap matrix P10au = e(pwsgs)
+local d10a = mreldif(P10a, P10au)
+di "F10a rc=" `r10a' "/" `r10au' " fcol=" `f10a' " (want 1) guard=`g10a' (want empty) joint_horiz_s1 `j10a'/`j10au' s2 [`k10a']/[`k10au'] (want both empty) mreldif pwsgs=" `d10a'
+if `r10a' != 0 | `r10au' != 0 | `f10a' != 1 | "`g10a'" != "" | "`j10a'" != "`j10au'" | "`k10a'`k10au'" != "" | `d10a' >= 1e-8 {
+  di as error "F10a FAIL: reference-only subgroup pre window rc `r10a'/`r10au' fcol `f10a' guard `g10a' joint `j10a'/`j10au' [`k10a']/[`k10au'] mreldif `d10a' - the absent joint test must not trip the screen"
+  local ++fails
+}
+* (b) SLIP CLOSED: a rank-1 subgroup-contrast VCE whose largest eigenvalue is itself ~1e-8
+*     of the level variance passed the contrast-relative singular-direction test and kept a
+*     collapsed joint test that differed from the full data by an order of magnitude
+*     (1.5e-82 vs 3.3e-83; a known-degenerate dataset). The test is now anchored to the
+*     level scale too. Pin: the att read flags (guard=fallback) and the all-subgroups-equal
+*     joint tests match fullprecisionslow exactly.
+use "`BB'", clear
+qui gen double pw1 = 1
+qui replace pw1 = 1 + 1e-3 if person_id == 101
+qui replace pw1 = 1 + 2e-3 if person_id == 201
+cap qui wooldid y cohort t ttre [pw=pw1], att att_it esprelength(2) espostlength(2) subgroups(sg_three) cluster(cohort)
+local r10b = _rc
+local g10b "`e(wdid_fcguard)'"
+local ja10b = e(joint_att_allsgssame)
+local jp10b = e(joint_pre_att_allsgssame)
+cap qui wooldid y cohort t ttre [pw=pw1], att att_it esprelength(2) espostlength(2) subgroups(sg_three) cluster(cohort) fullprecisionslow
+local r10bu = _rc
+local ja10bu = e(joint_att_allsgssame)
+local jp10bu = e(joint_pre_att_allsgssame)
+local da10b = reldif(`ja10b', `ja10bu')
+local dp10b = reldif(`jp10b', `jp10bu')
+di "F10b rc=" `r10b' "/" `r10bu' " guard=`g10b' (want fallback) joint_att reldif=" `da10b' " joint_pre_att reldif=" `dp10b' " (want < 1e-8)"
+if `r10b' != 0 | `r10bu' != 0 | "`g10b'" != "fallback" | `da10b' >= 1e-8 | `dp10b' >= 1e-8 {
+  di as error "F10b FAIL: rank-1 contrast VCE rc `r10b'/`r10bu' guard `g10b' reldif `da10b'/`dp10b' - the att read must flag and the joint tests must match the full data"
+  local ++fails
+}
+* (c) FALLBACK REACHES THE BOOTSTRAP REPS: reps run under fastnose, where the screen has no
+*     r(V) to read, so after an observed-run fallback they are sent to the full data
+*     outright. Before, on this exactly degenerate contrast the collapsed replicates were
+*     bit-constant and the bootstrapped subgroup-equality test came back unavailable while
+*     fullprecisionslow reported one. Pin: guard=fallback and pwsgs / joint test / e(V)
+*     match fullprecisionslow exactly under the same seed.
+local RCS "`REPO'/test/suite/data/survey_rcs.dta"
+use "`RCS'", clear
+cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) fe(group_time) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) bootstrap(standard) reps(5) rseed(123) dots(0)
+local r10c = _rc
+local g10c "`e(wdid_fcguard)'"
+local ja10c "`e(joint_att_allsgssame)'"
+cap matrix P10c = e(pwsgs)
+cap matrix V10c = e(V)
+use "`RCS'", clear
+cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) fe(group_time) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) bootstrap(standard) reps(5) rseed(123) dots(0) fullprecisionslow
+local r10cu = _rc
+local ja10cu "`e(joint_att_allsgssame)'"
+cap matrix P10cu = e(pwsgs)
+cap matrix V10cu = e(V)
+local dp10c = mreldif(P10c, P10cu)
+local dv10c = mreldif(V10c, V10cu)
+di "F10c rc=" `r10c' "/" `r10cu' " guard=`g10c' (want fallback) joint_att `ja10c'/`ja10cu' (want equal) mreldif pwsgs=" `dp10c' " V=" `dv10c' " (want < 1e-8)"
+if `r10c' != 0 | `r10cu' != 0 | "`g10c'" != "fallback" | "`ja10c'" != "`ja10cu'" | `dp10c' >= 1e-8 | `dv10c' >= 1e-8 {
+  di as error "F10c FAIL: bootstrap after fallback rc `r10c'/`r10cu' guard `g10c' joint `ja10c'/`ja10cu' mreldif `dp10c'/`dv10c' - the reps must follow the observed run to the full data"
+  local ++fails
+}
+
+* ---- F11: THE CONTINUOUS TREATMENT (2026-09-02). contreat() used to sit on the ineligible
+* list outright. The collapse now engages for it: the user's cohort variable joins the cell
+* key (without it the reference-period rows pool across every cohort sharing an onset, and a
+* read weighted by w_att_it consumes a mean built under w_att - measured: a pre-trend joint p
+* moving .0956 -> .1112), and the surviving row carries the cell's ESTIMAND-WEIGHTED MEAN of
+* the dose and of wooldid's internal ringer copy, written onto every row of the cell before
+* the first-row pick. What stays refused is the reads that are not linear in the dose and the
+* requests that split a cell on a variable outside the key.
+* F11.0 non-vacuity; F11a five eligible reads agree with fullprecisionslow; F11b every new
+* gate token skips silently and stays bit-identical; F11c the explicit-request refusals and
+* the plain-contreat acceptance; F11d the two provisos (a zero-weight pick row, a float dose).
+local CCD "`REPO'/test/suite/data/continuous_control_dense.dta"
+local DC  "`REPO'/test/data/dta_cont.dta"
+
+* ---- F11.0: NON-VACUITY, twice over. (i) the collapse must actually aggregate under the
+* contreat key - rows per (cohort, t) cell far above 1; (ii) the DOSE must vary inside those
+* cells, which is what makes the carried mean load-bearing: with a constant-within-cell dose
+* the surviving row's own draw already equals the mean and F11a would pass without the new
+* code (measured on the pre-mean form, which this fixture breaks by 5.6% on the att se).
+use "`CCD'", clear
+qui count
+local ctrows = r(N)
+qui gegen long __ccell = group(cohort t)
+qui su __ccell, meanonly
+local ctcells = r(max)
+local ctratio = `ctrows'/`ctcells'
+qui gegen double __dsd = sd(dose_vary), by(cohort t)
+qui su __dsd, meanonly
+local ctdsd = r(min)
+di "F11_0_rows=" `ctrows' " cells=" `ctcells' " rows_per_cell=" %6.2f `ctratio' " min_within_cell_dose_sd=" `ctdsd'
+if `ctratio' < 10 {
+  di as error "F11.0 FAIL: rows per contreat cell `ctratio' - the collapse barely aggregates here, so F11a would pass vacuously"
+  local ++fails
+}
+if `ctdsd' <= 0 | `ctdsd' >= . {
+  di as error "F11.0 FAIL: min within-cell dose sd `ctdsd' - the dose must vary inside a cell or the carried mean is not exercised"
+  local ++fails
+}
+* the float-dose proviso pin (F11d3) is only a pin while dta_cont's intensity is stored float
+use "`DC'", clear
+local ctftype : type intensity
+di "F11_0_dta_cont_intensity_type=`ctftype' (want float)"
+if "`ctftype'" != "float" {
+  di as error "F11.0 FAIL: dta_cont intensity is `ctftype', not float - F11d3 no longer tests the recast-to-double proviso"
+  local ++fails
+}
+
+* ---- F11a: THE COLLAPSE ENGAGES WITH contreat() AND AGREES WITH fullprecisionslow.
+* Five reads, each compared on e(b), e(V) and the reported table e(wdidmainresults):
+* (1) a plain att run, (2) all four estimands with an event study and the joint tests,
+* (3) contreatelasticitytype(dyex), (4) poisson on the default dydx scale, (5) subgroups().
+* Residues measured 2026-09-02 sit at 0..9.1e-14, four orders inside the 1e-8 threshold, and
+* the gate-off breakages of F11b's forms run 1e-5 to 0.8 relative - the same headroom F1 has.
+
+* (1) plain att
+use "`CCD'", clear
+qui wooldid y_cont_vary cohort t ttre, att contreat(dose_vary) contreatcontrols(basic) robust
+local ra1 = _rc
+local fa1 = e(wdid_fcol)
+matrix b11a1 = e(b)
+matrix V11a1 = e(V)
+matrix M11a1 = e(wdidmainresults)
+use "`CCD'", clear
+qui wooldid y_cont_vary cohort t ttre, att contreat(dose_vary) contreatcontrols(basic) robust fullprecisionslow
+local ra1u = _rc
+local fa1u = e(wdid_fcol)
+matrix b11a1u = e(b)
+matrix V11a1u = e(V)
+matrix M11a1u = e(wdidmainresults)
+local da1b = mreldif(b11a1, b11a1u)
+local da1v = mreldif(V11a1, V11a1u)
+local da1m = mreldif(M11a1, M11a1u)
+di "F11a1_plain rc=" `ra1' "/" `ra1u' " fcol=" `fa1' "/" `fa1u' " (want 1/0) mreldif b=" `da1b' " V=" `da1v' " table=" `da1m'
+if `ra1' != 0 | `ra1u' != 0 | `fa1' != 1 | `fa1u' != 0 | `da1b' > 1e-8 | `da1v' > 1e-8 | `da1m' > 1e-8 {
+  di as error "F11a1 FAIL: plain contreat rc `ra1'/`ra1u' fcol `fa1'/`fa1u' mreldif `da1b'/`da1v'/`da1m' - contreat() must collapse and agree"
+  local ++fails
+}
+
+* (2) all four estimands, event study, joint tests. The joint-test p-values are the reads
+* proviso (iii) protects, so they are compared as scalars (full precision) rather than macros.
+local CT2 att att_it att_i att_itime contreat(dose_vary) contreatcontrols(basic) cluster(person_id) esprelength(2) espostlength(2) jointtests
+use "`CCD'", clear
+qui wooldid y_cont_vary cohort t ttre, `CT2'
+local ra2 = _rc
+local fa2 = e(wdid_fcol)
+matrix b11a2 = e(b)
+matrix V11a2 = e(V)
+matrix M11a2 = e(wdidmainresults)
+matrix E11a2 = e(b_es_att)
+scalar jh2 = e(joint_horiz)
+scalar jc2 = e(joint_Choriz_i)
+use "`CCD'", clear
+qui wooldid y_cont_vary cohort t ttre, `CT2' fullprecisionslow
+local ra2u = _rc
+local fa2u = e(wdid_fcol)
+matrix b11a2u = e(b)
+matrix V11a2u = e(V)
+matrix M11a2u = e(wdidmainresults)
+matrix E11a2u = e(b_es_att)
+scalar jh2u = e(joint_horiz)
+scalar jc2u = e(joint_Choriz_i)
+local da2b = mreldif(b11a2, b11a2u)
+local da2v = mreldif(V11a2, V11a2u)
+local da2m = mreldif(M11a2, M11a2u)
+local da2e = mreldif(E11a2, E11a2u)
+local da2jh = reldif(jh2, jh2u)
+local da2jc = reldif(jc2, jc2u)
+di "F11a2_all4es rc=" `ra2' "/" `ra2u' " fcol=" `fa2' "/" `fa2u' " (want 1/0) mreldif b=" `da2b' " V=" `da2v' " table=" `da2m' " es=" `da2e'
+di "F11a2_joint reldif joint_horiz=" `da2jh' " joint_Choriz_i=" `da2jc' " (want < 1e-6; values " jc2 "/" jc2u ")"
+if `ra2' != 0 | `ra2u' != 0 | `fa2' != 1 | `fa2u' != 0 | `da2b' > 1e-8 | `da2v' > 1e-8 | `da2m' > 1e-8 | `da2e' > 1e-8 {
+  di as error "F11a2 FAIL: all-four-estimand contreat rc `ra2'/`ra2u' fcol `fa2'/`fa2u' mreldif `da2b'/`da2v'/`da2m'/`da2e'"
+  local ++fails
+}
+if `da2jh' > 1e-6 | `da2jc' > 1e-6 {
+  di as error "F11a2 FAIL: joint p reldif `da2jh'/`da2jc' - proviso (iii) (the user cohort in the key) is what keeps these exact"
+  local ++fails
+}
+* structural identity, as F2 asserts for the binary path
+if colsof(b11a2) != colsof(b11a2u) | rowsof(V11a2) != rowsof(V11a2u) {
+  di as error "F11a2 FAIL: structural change - b or V changed dimensions under the collapse"
+  local ++fails
+}
+local cn2 : colnames b11a2
+local cn2u : colnames b11a2u
+if "`cn2'" != "`cn2u'" {
+  di as error "F11a2 FAIL: e(b) column names changed under the collapse"
+  local ++fails
+}
+
+* (3) contreatelasticitytype(dyex) - linear in the dose, so it stays eligible
+local CT3 att att_it contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(dyex) robust esprelength(2) espostlength(2)
+use "`CCD'", clear
+qui wooldid y_cont_vary cohort t ttre, `CT3'
+local ra3 = _rc
+local fa3 = e(wdid_fcol)
+matrix b11a3 = e(b)
+matrix V11a3 = e(V)
+matrix M11a3 = e(wdidmainresults)
+use "`CCD'", clear
+qui wooldid y_cont_vary cohort t ttre, `CT3' fullprecisionslow
+local ra3u = _rc
+matrix b11a3u = e(b)
+matrix V11a3u = e(V)
+matrix M11a3u = e(wdidmainresults)
+local da3b = mreldif(b11a3, b11a3u)
+local da3v = mreldif(V11a3, V11a3u)
+local da3m = mreldif(M11a3, M11a3u)
+di "F11a3_dyex rc=" `ra3' "/" `ra3u' " fcol=" `fa3' " (want 1) mreldif b=" `da3b' " V=" `da3v' " table=" `da3m'
+if `ra3' != 0 | `ra3u' != 0 | `fa3' != 1 | `da3b' > 1e-8 | `da3v' > 1e-8 | `da3m' > 1e-8 {
+  di as error "F11a3 FAIL: dyex rc `ra3'/`ra3u' fcol `fa3' mreldif `da3b'/`da3v'/`da3m' - dyex is linear in the dose and must collapse"
+  local ++fails
+}
+
+* (4) poisson on the default dydx scale (predict(xb), differentiated analytically)
+local CT4 att poisson contreat(dose_vary) contreatcontrols(basic) robust esprelength(2) espostlength(2)
+use "`CCD'", clear
+qui wooldid y_count cohort t ttre, `CT4'
+local ra4 = _rc
+local fa4 = e(wdid_fcol)
+matrix b11a4 = e(b)
+matrix V11a4 = e(V)
+matrix M11a4 = e(wdidmainresults)
+use "`CCD'", clear
+qui wooldid y_count cohort t ttre, `CT4' fullprecisionslow
+local ra4u = _rc
+matrix b11a4u = e(b)
+matrix V11a4u = e(V)
+matrix M11a4u = e(wdidmainresults)
+local da4b = mreldif(b11a4, b11a4u)
+local da4v = mreldif(V11a4, V11a4u)
+local da4m = mreldif(M11a4, M11a4u)
+di "F11a4_poisson rc=" `ra4' "/" `ra4u' " fcol=" `fa4' " (want 1) mreldif b=" `da4b' " V=" `da4v' " table=" `da4m'
+if `ra4' != 0 | `ra4u' != 0 | `fa4' != 1 | `da4b' > 1e-8 | `da4v' > 1e-8 | `da4m' > 1e-8 {
+  di as error "F11a4 FAIL: poisson+contreat rc `ra4'/`ra4u' fcol `fa4' mreldif `da4b'/`da4v'/`da4m'"
+  local ++fails
+}
+
+* (5) subgroups(). sg_three is constant within a cohort on this fixture, so it does not split
+* a cell; the run must pass the subgroup screen untouched (guard empty) rather than fall back,
+* which is what makes the comparison a test of the collapse and not of the fallback.
+local CT5 att att_it contreat(dose_vary) contreatcontrols(basic) cluster(person_id) esprelength(2) espostlength(2) subgroups(sg_three)
+use "`CCD'", clear
+qui wooldid y_cont_vary cohort t ttre, `CT5'
+local ra5 = _rc
+local fa5 = e(wdid_fcol)
+local ga5 "`e(wdid_fcguard)'"
+matrix b11a5 = e(b)
+matrix V11a5 = e(V)
+matrix M11a5 = e(wdidmainresults)
+matrix P11a5 = e(pwsgs)
+matrix S11a5 = e(wdidsgresults_1)
+use "`CCD'", clear
+qui wooldid y_cont_vary cohort t ttre, `CT5' fullprecisionslow
+local ra5u = _rc
+matrix b11a5u = e(b)
+matrix V11a5u = e(V)
+matrix M11a5u = e(wdidmainresults)
+matrix P11a5u = e(pwsgs)
+matrix S11a5u = e(wdidsgresults_1)
+local da5b = mreldif(b11a5, b11a5u)
+local da5v = mreldif(V11a5, V11a5u)
+local da5m = mreldif(M11a5, M11a5u)
+local da5p = mreldif(P11a5, P11a5u)
+local da5s = mreldif(S11a5, S11a5u)
+di "F11a5_subgroups rc=" `ra5' "/" `ra5u' " fcol=" `fa5' " (want 1) guard=[`ga5'] (want empty) mreldif b=" `da5b' " V=" `da5v' " table=" `da5m'
+di "F11a5_subgroups mreldif pwsgs=" `da5p' " sgresults_1=" `da5s'
+if `ra5' != 0 | `ra5u' != 0 | `fa5' != 1 | "`ga5'" != "" | `da5b' > 1e-8 | `da5v' > 1e-8 | `da5m' > 1e-8 | `da5p' > 1e-8 | `da5s' > 1e-8 {
+  di as error "F11a5 FAIL: contreat+subgroups rc `ra5'/`ra5u' fcol `fa5' guard `ga5' mreldif `da5b'/`da5v'/`da5m'/`da5p'/`da5s'"
+  local ++fails
+}
+
+* ---- F11b: EVERY NEW GATE TOKEN SKIPS SILENTLY. Without an explicit fastcollapse each of the
+* refused reads must run normally, report e(wdid_fcol)=0, and - because it then takes the SAME
+* code path as fullprecisionslow - reproduce it BIT-IDENTICALLY (mreldif exactly 0, as measured
+* 2026-09-02). Anything else means the gate leaked. The six tokens: contreatpoly(>1),
+* contreatelasticitytype(eyex), contreatelasticitytype(eydx), lattice(), poisson+dyex, and the
+* contreat variable inside controls(). eyex/eydx divide by the prediction, so they run on
+* y_positive; gate-off, they were measured at 1.1e-5..2.9e-4 relative wrong.
+local BOPT1 att contreat(dose_vary) contreatcontrols(basic) contreatpoly(2) robust esprelength(2) espostlength(2)
+local BOPT2 att contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(eyex) robust esprelength(2) espostlength(2)
+local BOPT3 att contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(eydx) robust esprelength(2) espostlength(2)
+local BOPT4 att contreat(dose_vary) contreatcontrols(basic) lattice(all 2) robust esprelength(2) espostlength(2)
+local BOPT5 att poisson contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(dyex) robust esprelength(2) espostlength(2)
+local BOPT6 att att_it contreat(dose_vary) contreatcontrols(basic) controls(c.dose_vary#c.x1) cluster(person_id) esprelength(2) espostlength(2)
+local BY1 y_cont_vary
+local BY2 y_positive
+local BY3 y_positive
+local BY4 y_cont_vary
+local BY5 y_count
+local BY6 y_cont_vary
+local BNM1 contreatpoly(2)
+local BNM2 eyex
+local BNM3 eydx
+local BNM4 lattice()
+local BNM5 poisson+dyex
+local BNM6 contreat-in-controls
+forval k = 1/6 {
+  * dropped first, so a run that posted nothing is a loud mreldif error rather than a
+  * silent comparison of the previous iteration's matrices
+  cap matrix drop b11b V11b M11b b11bu V11bu M11bu
+  use "`CCD'", clear
+  cap qui wooldid `BY`k'' cohort t ttre, `BOPT`k''
+  local bq`k' = _rc
+  local bf`k' = e(wdid_fcol)
+  cap matrix b11b = e(b)
+  cap matrix V11b = e(V)
+  cap matrix M11b = e(wdidmainresults)
+  use "`CCD'", clear
+  cap qui wooldid `BY`k'' cohort t ttre, `BOPT`k'' fullprecisionslow
+  local bqu`k' = _rc
+  cap matrix b11bu = e(b)
+  cap matrix V11bu = e(V)
+  cap matrix M11bu = e(wdidmainresults)
+  local bd`k' = max(mreldif(b11b, b11bu), mreldif(V11b, V11bu), mreldif(M11b, M11bu))
+  di "F11b`k' `BNM`k'' rc=" `bq`k'' "/" `bqu`k'' " fcol=" `bf`k'' " (want 0) worst mreldif b/V/table=" `bd`k'' " (want exactly 0)"
+  if `bq`k'' != 0 | `bqu`k'' != 0 {
+    di as error "F11b FAIL: gated read `BNM`k'' errored (rc `bq`k''/`bqu`k'') without an explicit fastcollapse - it must run normally and skip the collapse"
+    local ++fails
+  }
+  if `bf`k'' != 0 {
+    di as error "F11b FAIL: gated read `BNM`k'' reports e(wdid_fcol)=`bf`k'' - the gate must turn the collapse off"
+    local ++fails
+  }
+  if `bd`k'' != 0 {
+    di as error "F11b FAIL: gated read `BNM`k'' differs from fullprecisionslow by `bd`k'' - with the collapse off both are the same code path and must be bit-identical"
+    local ++fails
+  }
+}
+
+* ---- F11c: an EXPLICIT fastcollapse with each of those is refused r(198), with no safety(off)
+* escape (they are measured wrong answers, not risks), while an explicit fastcollapse with a
+* plain contreat() run is ACCEPTED and engages. This is F4's contract, re-pointed: the old
+* blanket contreat() refusal is gone and only the six reads above are refused.
+forval k = 1/6 {
+  use "`CCD'", clear
+  cap qui wooldid `BY`k'' cohort t ttre, `BOPT`k'' fastcollapse safety(off)
+  local cx`k' = _rc
+}
+di "F11c_gate_rcs poly2=" `cx1' " eyex=" `cx2' " eydx=" `cx3' " lattice=" `cx4' " pois_dyex=" `cx5' " ctl=" `cx6' " (want 198 x6)"
+forval k = 1/6 {
+  if `cx`k'' != 198 {
+    di as error "F11c FAIL: explicit fastcollapse with `BNM`k'' returned rc `cx`k'' (want 198)"
+    local ++fails
+  }
+}
+use "`CCD'", clear
+cap qui wooldid y_cont_vary cohort t ttre, att contreat(dose_vary) contreatcontrols(basic) robust fastcollapse
+local cx7 = _rc
+local cf7 = e(wdid_fcol)
+di "F11c_plain_explicit rc=" `cx7' " (want 0) fcol=" `cf7' " (want 1)"
+if `cx7' != 0 | `cf7' != 1 {
+  di as error "F11c FAIL: explicit fastcollapse + plain contreat() rc `cx7' fcol `cf7' - contreat() left the ineligible list 2026-09-02"
+  local ++fails
+}
+
+* ---- F11d: THE TWO PROVISOS THE WORKER'S FORM EXISTS FOR.
+* (1) and (2) pin the mean-on-EVERY-ROW form. The pick row is the cell's first in-sample row,
+* chosen without reference to any weight, and customweightmultiplier() zeroes an estimand
+* weight WITHOUT removing the row from e(sample) (a zero sampling weight cannot: Stata drops
+* those rows). The earlier gcollapse (mean) [aw=w] merge form wrote MISSING onto zero-weight
+* rows, so a zeroed pick row kept its raw dose: measured, a pre-trend horizon moving
+* p .167 -> .0022 with its CI crossing zero. (1) is the brief's named case, cwm = 0 on the
+* first row of every cell; (2) is its non-vacuity twin - cwm = 0 on ELEVEN of every twelve
+* rows, so a zero-weight row is picked in 143 of the 144 cells whatever order wooldid leaves
+* the data in, and the cell mean must come back as the surviving row's dose exactly.
+* (3) pins the recast to double: dta_cont's intensity is stored float, and a float store of
+* the cell mean injects ~2.4e-8 relative into every dose-scaled read.
+local CTD att att_it att_i att_itime contreat(dose_vary) contreatcontrols(basic) cluster(person_id) esprelength(2) espostlength(2) jointtests
+* the cwm fixtures address cells by row block, so first pin that 12-row blocks ARE the cells
+use "`CCD'", clear
+qui gegen long __ccell = group(cohort t)
+qui gen long __blk = ceil(_n/12)
+qui gegen long __bmin = min(__ccell), by(__blk)
+qui gegen long __bmax = max(__ccell), by(__blk)
+qui count if __bmin != __bmax
+local dblkbad = r(N)
+qui su __blk, meanonly
+local dnblk = r(max)
+di "F11d_blocks nblocks=" `dnblk' " (want 144) rows_spanning_two_cells=" `dblkbad' " (want 0)"
+if `dnblk' != `ctcells' | `dblkbad' != 0 {
+  di as error "F11d FAIL: the 12-row blocks the cwm fixtures use are not the collapse cells (`dnblk' blocks vs `ctcells' cells, `dblkbad' straddling rows)"
+  local ++fails
+}
+
+* (1) cwm = 0 on the first row of every cell, with pw
+use "`CCD'", clear
+qui gen double w0f = cond(mod(_n,12)==1, 0, 1)
+qui count if w0f == 0
+local dnz1 = r(N)
+qui wooldid y_cont_vary cohort t ttre [pw=probability_weight], `CTD' customweightmultiplier(w0f)
+local rd1 = _rc
+local fd1 = e(wdid_fcol)
+matrix b11d1 = e(b)
+matrix V11d1 = e(V)
+matrix M11d1 = e(wdidmainresults)
+use "`CCD'", clear
+qui gen double w0f = cond(mod(_n,12)==1, 0, 1)
+qui wooldid y_cont_vary cohort t ttre [pw=probability_weight], `CTD' customweightmultiplier(w0f) fullprecisionslow
+local rd1u = _rc
+matrix b11d1u = e(b)
+matrix V11d1u = e(V)
+matrix M11d1u = e(wdidmainresults)
+local dd1b = mreldif(b11d1, b11d1u)
+local dd1v = mreldif(V11d1, V11d1u)
+local dd1m = mreldif(M11d1, M11d1u)
+di "F11d1_cwm0_firstrow zeroed=" `dnz1' " (want 144) rc=" `rd1' "/" `rd1u' " fcol=" `fd1' " (want 1) mreldif b=" `dd1b' " V=" `dd1v' " table=" `dd1m'
+if `dnz1' != `ctcells' {
+  di as error "F11d1 FAIL: the fixture zeroed `dnz1' rows, not one per cell (`ctcells')"
+  local ++fails
+}
+if `rd1' != 0 | `rd1u' != 0 | `fd1' != 1 | `dd1b' > 1e-8 | `dd1v' > 1e-8 | `dd1m' > 1e-8 {
+  di as error "F11d1 FAIL: cwm 0 on the first row of every cell rc `rd1'/`rd1u' fcol `fd1' mreldif `dd1b'/`dd1v'/`dd1m' - the mean must be written onto the zero-weight pick row too"
+  local ++fails
+}
+
+* (2) cwm = 0 on all but the 5th row of every cell
+use "`CCD'", clear
+qui gen double w01 = cond(mod(_n,12)==5, 1, 0)
+qui count if w01 == 0
+local dnz2 = r(N)
+qui wooldid y_cont_vary cohort t ttre, `CTD' customweightmultiplier(w01)
+local rd2 = _rc
+local fd2 = e(wdid_fcol)
+matrix b11d2 = e(b)
+matrix V11d2 = e(V)
+matrix M11d2 = e(wdidmainresults)
+use "`CCD'", clear
+qui gen double w01 = cond(mod(_n,12)==5, 1, 0)
+qui wooldid y_cont_vary cohort t ttre, `CTD' customweightmultiplier(w01) fullprecisionslow
+local rd2u = _rc
+matrix b11d2u = e(b)
+matrix V11d2u = e(V)
+matrix M11d2u = e(wdidmainresults)
+local dd2b = mreldif(b11d2, b11d2u)
+local dd2v = mreldif(V11d2, V11d2u)
+local dd2m = mreldif(M11d2, M11d2u)
+di "F11d2_cwm0_allbut1 zeroed=" `dnz2' " (want " `ctrows'-`ctcells' ") rc=" `rd2' "/" `rd2u' " fcol=" `fd2' " (want 1) mreldif b=" `dd2b' " V=" `dd2v' " table=" `dd2m'
+if `dnz2' != `ctrows' - `ctcells' {
+  di as error "F11d2 FAIL: the fixture zeroed `dnz2' rows, not all but one per cell (`=`ctrows'-`ctcells'')"
+  local ++fails
+}
+if `rd2' != 0 | `rd2u' != 0 | `fd2' != 1 | `dd2b' > 1e-8 | `dd2v' > 1e-8 | `dd2m' > 1e-8 {
+  di as error "F11d2 FAIL: cwm 0 on eleven of every twelve rows rc `rd2'/`rd2u' fcol `fd2' mreldif `dd2b'/`dd2v'/`dd2m' - the picked zero-weight row must still carry the cell mean"
+  local ++fails
+}
+
+* (3) a float-stored dose
+use "`DC'", clear
+qui wooldid y i t ttre, att att_it contreat(intensity) contreatcontrols(basic)
+local rd3 = _rc
+local fd3 = e(wdid_fcol)
+matrix b11d3 = e(b)
+matrix V11d3 = e(V)
+matrix M11d3 = e(wdidmainresults)
+use "`DC'", clear
+qui wooldid y i t ttre, att att_it contreat(intensity) contreatcontrols(basic) fullprecisionslow
+local rd3u = _rc
+matrix b11d3u = e(b)
+matrix V11d3u = e(V)
+matrix M11d3u = e(wdidmainresults)
+local dd3b = mreldif(b11d3, b11d3u)
+local dd3v = mreldif(V11d3, V11d3u)
+local dd3m = mreldif(M11d3, M11d3u)
+di "F11d3_float_dose rc=" `rd3' "/" `rd3u' " fcol=" `fd3' " (want 1) mreldif b=" `dd3b' " V=" `dd3v' " table=" `dd3m'
+if `rd3' != 0 | `rd3u' != 0 | `fd3' != 1 | `dd3b' > 1e-8 | `dd3v' > 1e-8 | `dd3m' > 1e-8 {
+  di as error "F11d3 FAIL: float dose rc `rd3'/`rd3u' fcol `fd3' mreldif `dd3b'/`dd3v'/`dd3m' - without the recast to double a float dose injects ~2.4e-8"
+  local ++fails
+}
+
+* ---- F12: THE TWO GUARDS ADDED ON TOP OF THE CONTINUOUS-TREATMENT COLLAPSE (2026-09-02).
+* F12a THE GATE UNABBREVIATES. The contreat-in-controls token refuses the collapse when the
+* treatment variable ALSO appears inside controls(), coarsecohortcontrols(), fe() or
+* ccc_absorb(): the dose derivative then varies inside a cell on a variable the collapse does
+* not average. The gate tokenises those option strings and compares each token to the
+* treatment variable's name - but controls(), fe() and ccc_absorb() are declared varlists, so
+* Stata unabbreviates them before the gate sees them, while coarsecohortcontrols() is declared
+* string and does NOT get unabbreviated. So c.dose_var#c.x1 with a dose named dose_vary walked
+* past the literal comparison and the run COLLAPSED when it had to refuse. The gate now runs
+* cap unab on each token and looks for the treatment variable in the expansion, falling back
+* to the literal comparison when unab fails.
+* F12b THE CELL MEAN IS MISSING-AWARE, PER VARIABLE. The worker used to build ONE shared
+* weight sum and divide every averaged variable's sum(w*x) by it; each averaged variable now
+* carries its own weight sum, restricted to the rows where THAT variable is non-missing. With
+* a non-missing dose the two forms are the same number bit for bit, so this is a DEFENSIVE
+* guard: it only matters if a missing value ever reaches the worker, where the shared form
+* would divide a numerator taken over the non-missing rows by a weight total taken over all of
+* them, and would silently rewrite an all-missing cell's dose to 0. A missing dose cannot
+* reach the worker through wooldid - the caller zeroes the if-marker on any row with a missing
+* contreat() value - so both halves are pinned: that the caller's guarantee holds, and then
+* wooldid_fcol called DIRECTLY, which is the only way to exercise the guard itself.
+local CCD "`REPO'/test/suite/data/continuous_control_dense.dta"
+
+* ---- F12a.0: NON-VACUITY. F12a2 and F12a4 only test the unabbreviation while dose_var is an
+* ABBREVIATION of dose_vary and not a variable in its own right. If the fixture ever grows a
+* literal dose_var, both legs would be testing the plain literal comparison instead.
+use "`CCD'", clear
+cap confirm variable dose_var, exact
+local gaex = _rc
+cap unab gaunab : dose_var
+local gaunrc = _rc
+di "F12a_0_abbrev exact_rc=" `gaex' " (want nonzero) unab_rc=" `gaunrc' " (want 0) expands_to=[`gaunab'] (want dose_vary)"
+if `gaex' == 0 | `gaunrc' != 0 | "`gaunab'" != "dose_vary" {
+  di as error "F12a.0 FAIL: dose_var is not a bare abbreviation of dose_vary here (exact rc `gaex', unab rc `gaunrc', expansion [`gaunab']) - F12a2/F12a4 would not be exercising the unabbreviation at all"
+  local ++fails
+}
+
+* ---- F12a: the four legs. Each is run three ways: the default (does the gate fire?),
+* fullprecisionslow (the reference), and an explicit fastcollapse (is the refusal loud?).
+* Legs 1/2/4 must refuse, and with the collapse off they take the SAME code path as
+* fullprecisionslow, so they must be bit-identical to it (measured exactly 0, 2026-09-02).
+* Leg 3 must NOT fire - coarsecohortcontrols(c.x1#c.x2) never mentions the dose - so it
+* collapses and agrees to residue (measured 9.5e-16), and its explicit request is accepted.
+* safety(off) rides on the three refusing legs to pin that it opens no escape.
+local GA1 att contreat(dose_vary) contreatcontrols(basic) robust coarsecohortcontrols(c.dose_vary#c.x1)
+local GA2 att contreat(dose_vary) contreatcontrols(basic) robust coarsecohortcontrols(c.dose_var#c.x1)
+local GA3 att contreat(dose_vary) contreatcontrols(basic) robust coarsecohortcontrols(c.x1#c.x2)
+local GA4 att contreat(dose_vary) contreatcontrols(basic) robust controls(c.dose_var#c.x1)
+local GAN1 ccc-c.dose_vary#c.x1
+local GAN2 ccc-c.dose_var#c.x1-ABBREV
+local GAN3 ccc-c.x1#c.x2-unrelated
+local GAN4 controls-c.dose_var#c.x1-ABBREV
+local GAF1 0
+local GAF2 0
+local GAF3 1
+local GAF4 0
+local GAX1 198
+local GAX2 198
+local GAX3 0
+local GAX4 198
+local GAS1 safety(off)
+local GAS2 safety(off)
+local GAS3
+local GAS4 safety(off)
+local GAD1 0
+local GAD2 0
+local GAD3 1e-8
+local GAD4 0
+local GAR1 the gate is off, so both arms are the same code path and must be bit-identical
+local GAR2 the gate is off, so both arms are the same code path and must be bit-identical
+local GAR3 the collapse engages here and must agree with the full data to residue
+local GAR4 the gate is off, so both arms are the same code path and must be bit-identical
+forval k = 1/4 {
+  * dropped first, so a run that posted nothing is a loud mreldif error rather than a
+  * silent comparison of the previous iteration's matrices
+  cap matrix drop b12a V12a M12a b12au V12au M12au
+  use "`CCD'", clear
+  cap qui wooldid y_cont_vary cohort t ttre, `GA`k''
+  local gr`k' = _rc
+  local gf`k' = e(wdid_fcol)
+  cap matrix b12a = e(b)
+  cap matrix V12a = e(V)
+  cap matrix M12a = e(wdidmainresults)
+  use "`CCD'", clear
+  cap qui wooldid y_cont_vary cohort t ttre, `GA`k'' fullprecisionslow
+  local gru`k' = _rc
+  cap matrix b12au = e(b)
+  cap matrix V12au = e(V)
+  cap matrix M12au = e(wdidmainresults)
+  local gd`k' = max(mreldif(b12a, b12au), mreldif(V12a, V12au), mreldif(M12a, M12au))
+  use "`CCD'", clear
+  cap qui wooldid y_cont_vary cohort t ttre, `GA`k'' fastcollapse `GAS`k''
+  local gx`k' = _rc
+  di "F12a`k' `GAN`k'' rc=" `gr`k'' "/" `gru`k'' " fcol=" `gf`k'' " (want `GAF`k'') worst mreldif b/V/table=" `gd`k'' " (want <= `GAD`k'') explicit_rc=" `gx`k'' " (want `GAX`k'')"
+  if `gr`k'' != 0 | `gru`k'' != 0 {
+    di as error "F12a FAIL: `GAN`k'' errored (rc `gr`k''/`gru`k'') without an explicit fastcollapse - a gated read must run normally on the full data, never start erroring"
+    local ++fails
+  }
+  if `gf`k'' != `GAF`k'' {
+    di as error "F12a FAIL: `GAN`k'' reports e(wdid_fcol)=`gf`k'', want `GAF`k'' - the contreat-in-controls gate must see through the abbreviation and must not fire on an unrelated term"
+    local ++fails
+  }
+  if `gd`k'' > `GAD`k'' {
+    di as error "F12a FAIL: `GAN`k'' differs from fullprecisionslow by `gd`k'' (want <= `GAD`k'') - `GAR`k''"
+    local ++fails
+  }
+  if `gx`k'' != `GAX`k'' {
+    di as error "F12a FAIL: explicit fastcollapse with `GAN`k'' returned rc `gx`k'', want `GAX`k'' (the refusals carry no safety(off) escape)"
+    local ++fails
+  }
+}
+
+* ---- F12b1: THE CALLER'S GUARANTEE. wooldid zeroes the if-marker on any row whose contreat()
+* value is missing, so no missing dose can reach the worker. Blank the dose on every 7th row
+* and check that every one of those rows leaves e(sample) - under the default (collapsed) path
+* and under fullprecisionslow alike. Measured 2026-09-02: 1728 rows, 246 blanked, e(N) falling
+* 1728 -> 1482 in both arms with no missing-dose row left in e(sample).
+use "`CCD'", clear
+qui count
+local gbn = r(N)
+qui wooldid y_cont_vary cohort t ttre, att contreat(dose_vary) contreatcontrols(basic) robust
+local gbbase = e(N)
+di "F12b1_baseline rows=" `gbn' " e(N)=" `gbbase' " (want equal)"
+if `gbbase' != `gbn' {
+  di as error "F12b1 FAIL: the unblanked run keeps `gbbase' of `gbn' rows - the e(N) delta below no longer isolates the missing-dose drop"
+  local ++fails
+}
+local GBW att contreat(dose_vary) contreatcontrols(basic) robust
+local GBN1 default
+local GBN2 fullprecisionslow
+local GBF1 1
+local GBF2 0
+local GBO1
+local GBO2 fullprecisionslow
+forval k = 1/2 {
+  use "`CCD'", clear
+  qui replace dose_vary = . if mod(_n,7) == 0
+  qui count if missing(dose_vary)
+  local gbm`k' = r(N)
+  cap qui wooldid y_cont_vary cohort t ttre, `GBW' `GBO`k''
+  local gbr`k' = _rc
+  local gbf`k' = e(wdid_fcol)
+  local gbN`k' = e(N)
+  qui count if e(sample)
+  local gbes`k' = r(N)
+  qui count if e(sample) & missing(dose_vary)
+  local gbbad`k' = r(N)
+  local gbwant`k' = `gbn' - `gbm`k''
+  di "F12b1_`GBN`k'' rc=" `gbr`k'' " fcol=" `gbf`k'' " (want `GBF`k'') blanked=" `gbm`k'' " e(N)=" `gbN`k'' " esample_rows=" `gbes`k'' " (want `gbwant`k'') esample_and_missing_dose=" `gbbad`k'' " (want 0)"
+  if `gbm`k'' <= 0 {
+    di as error "F12b1 FAIL: the blanking fixture blanked `gbm`k'' rows - with nothing blanked the caller's guarantee is not exercised"
+    local ++fails
+  }
+  if `gbr`k'' != 0 | `gbf`k'' != `GBF`k'' {
+    di as error "F12b1 FAIL: `GBN`k'' arm rc `gbr`k'' fcol `gbf`k'' (want 0 / `GBF`k'') - a blanked dose must not change whether the run completes or collapses"
+    local ++fails
+  }
+  if `gbN`k'' != `gbwant`k'' | `gbes`k'' != `gbwant`k'' | `gbbad`k'' != 0 {
+    di as error "F12b1 FAIL: `GBN`k'' arm e(N) `gbN`k'' / e(sample) rows `gbes`k'' (want `gbwant`k'') with `gbbad`k'' missing-dose rows still in e(sample) - the caller must zero the if-marker on every one of them, or a missing dose reaches wooldid_fcol"
+    local ++fails
+  }
+}
+
+* ---- F12b2: THE WORKER, CALLED DIRECTLY. The only way to exercise a guard the caller makes
+* unreachable. Thirteen rows, three cells of the key, one out-of-sample row (marker 0, weight
+* 1000, dose 9999) that must never enter anything:
+*   cell 1  weights 1 2 3 4, doses 10 20 30 40      -> weighted mean 30
+*   cell 2  weights 1 2 3 4, doses 10 20 . .        -> weighted mean over the rows that HAVE
+*                                                      a value, (10 + 40)/3 = 50/3 = 16.667
+*   cell 3  weights 1 2 3 4, doses . . . .          -> stays MISSING
+* The shared weight sum the guard replaced gives 50/10 = 5 for cell 2 and rewrites cell 3 to
+* 0/10 = 0 (measured on the pre-guard form's arithmetic, 2026-09-02). The doses are read into
+* scalars rather than macros so the comparison is at full precision, as F11a2 does for the
+* joint p-values. Cell weight sums are 10 each, which also pins that the out-of-sample row's
+* weight of 1000 never entered.
+clear
+set obs 13
+gen byte __es = (_n > 1)
+gen long __k = cond(_n<=5, 1, cond(_n<=9, 2, 3))
+gen double __w = cond(_n==1, 1000, mod(_n-2, 4) + 1)
+gen double __d = .
+qui replace __d = 9999 in 1
+qui replace __d = 10*(_n-1) if inrange(_n,2,5)
+qui replace __d = 10 in 6
+qui replace __d = 20 in 7
+tempfile F12FIX
+qui save "`F12FIX'"
+
+* (i) the weighted path
+use "`F12FIX'", clear
+cap wooldid_fcol __es , key(__k) wvars(__w) contreat(__d)
+local ubr = _rc
+local ubn = r(ncell)
+local ubN = _N
+scalar f12wd1 = __d[1]
+scalar f12wd2 = __d[2]
+scalar f12wd3 = __d[3]
+scalar f12ww1 = __w[1]
+scalar f12ww2 = __w[2]
+scalar f12ww3 = __w[3]
+local ubd2 = reldif(f12wd2, 50/3)
+di "F12b2_weighted rc=" `ubr' " ncell=" `ubn' " N=" `ubN' " (want 0/3/3)"
+di "F12b2_weighted dose nomissing=" %20.15g f12wd1 " (want 30)  partmissing=" %20.15g f12wd2 " (want 50/3, reldif " `ubd2' "; a shared weight sum gives 5)  allmissing=" f12wd3 " (want missing; a shared weight sum gives 0)"
+di "F12b2_weighted cell weight sums=" f12ww1 "/" f12ww2 "/" f12ww3 " (want 10 each)"
+if `ubr' != 0 | `ubn' != 3 | `ubN' != 3 {
+  di as error "F12b2 FAIL: the weighted wooldid_fcol call returned rc `ubr' ncell `ubn' N `ubN' - it must leave exactly one row per cell"
+  local ++fails
+}
+if f12wd1 != 30 {
+  di as error "F12b2 FAIL: the no-missing cell's dose came back " f12wd1 ", want the weighted mean 30"
+  local ++fails
+}
+if `ubd2' > 1e-15 {
+  di as error "F12b2 FAIL: the part-missing cell's dose came back " f12wd2 " (reldif `ubd2' from 50/3) - it must be the weighted mean over the rows that HAVE a value; a weight sum taken over the whole cell gives 50/10 = 5"
+  local ++fails
+}
+if f12wd3 < . {
+  di as error "F12b2 FAIL: the all-missing cell's dose came back " f12wd3 ", want missing - a weight sum taken over the whole cell divides a zero numerator by a positive total and silently rewrites the dose to 0"
+  local ++fails
+}
+if f12ww1 != 10 | f12ww2 != 10 | f12ww3 != 10 {
+  di as error "F12b2 FAIL: cell weight sums " f12ww1 "/" f12ww2 "/" f12ww3 ", want 10 each (cell 1's 10 is also what pins that the out-of-sample row's weight of 1000 stayed out)"
+  local ++fails
+}
+
+* (ii) the no-weight-variable path: with no weight variable each non-missing row counts 1, so
+* the same three cells must give the PLAIN mean over the rows that have a value.
+use "`F12FIX'", clear
+cap wooldid_fcol __es , key(__k) wvars() contreat(__d)
+local unr = _rc
+local unn = r(ncell)
+local unN = _N
+scalar f12ud1 = __d[1]
+scalar f12ud2 = __d[2]
+scalar f12ud3 = __d[3]
+di "F12b2_noweight rc=" `unr' " ncell=" `unn' " N=" `unN' " (want 0/3/3) dose nomissing=" f12ud1 " (want 25) partmissing=" f12ud2 " (want 15) allmissing=" f12ud3 " (want missing)"
+if `unr' != 0 | `unn' != 3 | `unN' != 3 {
+  di as error "F12b2 FAIL: the wvars()-empty wooldid_fcol call returned rc `unr' ncell `unn' N `unN' - it must leave exactly one row per cell"
+  local ++fails
+}
+if f12ud1 != 25 | f12ud2 != 15 | f12ud3 < . {
+  di as error "F12b2 FAIL: the wvars()-empty path gave doses " f12ud1 "/" f12ud2 "/" f12ud3 ", want the plain mean over the non-missing rows: 25 / 15 / missing"
   local ++fails
 }
 

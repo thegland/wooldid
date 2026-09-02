@@ -198,8 +198,14 @@ version 16.0
     if "`controls'" != "" local wdb_ro `wdb_ro' controls(`controls')
     if "`interactivecontrols'" != "" local wdb_ro `wdb_ro' interactivecontrols(`interactivecontrols')
     if "`customweightmultiplier'" != "" local wdb_ro `wdb_ro' customweightmultiplier(`customweightmultiplier')
-    if "`fastcollapse'" != "" local wdb_ro `wdb_ro' fastcollapse
-    if "`fullprecisionslow'" != "" local wdb_ro `wdb_ro' fullprecisionslow
+    * a cell-collapse fallback in the observed run (e(wdid_fcguard), see wooldid_fcdeg)
+    * extends to the reps: under fastnose the screen has no r(V) to read, so they must be
+    * sent to the full data outright or the bootstrap covariance of a degenerate subgroup
+    * contrast is built from collapsed replicates while the observed inference is not
+    * (2026-09-01 probe, A4)
+    local wdb_fb = cond("`e(wdid_fcguard)'" == "fallback", "fallback", "")
+    if "`fastcollapse'" != "" & "`wdb_fb'" == "" local wdb_ro `wdb_ro' fastcollapse
+    if "`fullprecisionslow'`wdb_fb'" != "" local wdb_ro `wdb_ro' fullprecisionslow
     if "`contreat'" != "" local wdb_ro `wdb_ro' contreat(`contreat') contreatpoly(`contreatpoly')
     if `"`contreatcontrols'"' != "" local wdb_ro `wdb_ro' contreatcontrols(`contreatcontrols')
     if `"`lattice'"' != "" local wdb_ro `wdb_ro' lattice(`lattice')
@@ -238,6 +244,16 @@ version 16.0
       }
       if "`wdb_ikeyed'" != "" dis as text "Caution: a covariate specification names the i variable `i'; under resampling, duplicated clusters' copies share their original `i' codes inside fe()/controls() terms (the official bootstrap idcluster convention). Only the cell/aggregation identities are re-identified."
     }
+    * bootdf() default, resolved here because it needs the resampling-cluster count that
+    * wooldid_bootrun has just returned: standard normal when the run is unclustered, and
+    * t with G-1 degrees of freedom when it is clustered, G being the number of resampling
+    * clusters. the bootstrap standard error is estimated rather than known, and where a
+    * cluster count exists it is the natural denominator for that correction; with no
+    * cluster() the resampling unit is the observation, so a G-1 rule would be N-1 and
+    * indistinguishable from the normal. an explicit bootdf() always wins (author ruling
+    * 2026-09-02; the value is validated in wooldid_bootctl, and both branches here are
+    * valid by construction)
+    if "`bootdf'" == "" local bootdf = cond("`cluster'" != "", "clusters", "normal")
     * rewire the posted inference surfaces to the bootstrap covariance (eclass sub)
     wooldid_bootwire , mode(`bootstrap') reps(`reps') level(`level') bootalpha(`bootalpha') clus(`cluster') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') done(`wdb_r_done') fail(`wdb_r_fail') blank(`wdb_r_blank') rseed(`rseed') bootdf(`bootdf') nclus(`wdb_r_nclus')
     * bootstrapped joint tests, subgroup contrasts and CI flavors (eclass sub)
@@ -1818,16 +1834,40 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * restore twin is likewise inline.
   local fcnoes
   local fconn
+  * subgroup runs additionally screen each subgroup margins call for a numerically
+  * singular VCE direction (wooldid_fcdeg): `fcsg' arms the screen, `fcguard' records
+  * its outcome for e(wdid_fcguard), `fcrerun' is its per-call verdict
+  local fcsg 0
+  local fcguard
+  local fcrerun 0
   if "`fcon'" == "1" {
     preserve
-    wooldid_fcol `esamp' , key(`_i' `_t' `targetflag' `ifvar' `t' `ttre' `subgroups') wvars(`w_att' `w_att_it' `w_att_i' `w_att_itime')
+    * with a continuous treatment the surviving row also carries the DOSE, which varies
+    * inside a cell, so two things change. (1) the user's cohort variable joins the key: `_i'
+    * is `i' only where `_t' > 0 and 0 elsewhere (see its construction above), so without `i'
+    * the reference-period rows pool across every cohort sharing an onset, and a read weighted
+    * by w_att_it then consumes a mean built under w_att across cohorts whose weights are not
+    * proportional (measured: a pre-trend joint p moving .0956 -> .1112). (2) the dose on the
+    * surviving row is replaced by the cell's estimand-weighted mean, which is what makes every
+    * margins read exact rather than a one-row draw of a within-cell-varying regressor.
+    local fckeyx
+    local fccont
+    if "`contreat'" != "" {
+      local fckeyx `i'
+      * the ringer (wooldid's double copy of the dose) is averaged the same way: wherever
+      * contreatcontrolinserterFE is non-empty it is an explicit regressor whose level shifts
+      * the round-off of every prediction
+      local fccont contreat(`contreat' `ringer')
+    }
+    wooldid_fcol `esamp' , key(`_i' `_t' `targetflag' `ifvar' `t' `ttre' `subgroups' `fckeyx') wvars(`w_att' `w_att_it' `w_att_i' `w_att_itime') `fccont'
     local fconn = r(ncell)
     * the collapsed rows carry no e(sample) marker, so every call in the window needs
     * noesample; rows in memory ARE the estimation sample (wooldid_fcol keeps on it)
     local fcnoes noesample
+    if "`subgroups'" != "" local fcsg 1
     if "`verbose'" == "verbose" dis as text "Wooldid is evaluating the margins calls on one row per cell (`fconn' cells; see fastcollapse / fullprecisionslow in the help file)."
   }
-  else if "`verbose'" == "verbose" & "`fcskip'" != "" dis as text "Wooldid is evaluating the margins calls on the full data: the default cell collapse does not apply with`fcskip' (see fastcollapse in the help file)."
+  else if "`verbose'" == "verbose" & "`fcskip'" != "" dis as text "Wooldid is evaluating the margins calls on the full data: the default cell collapse does not apply with `fcskip' (see fastcollapse in the help file)."
 
   * since semielasticities are allowed, we need text for inserting that info into plots
   local effecttype Effects
@@ -2738,7 +2778,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               *     then this margins should be estimable since we would have seen the sg's cohorts dropped earlier
               *     if there was no post period or an insufficient pre-period
               * problem: this doesn't guarantee we see the same relative periods, however
-              qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof' `fcnoes'
+              * the per-estimand relyr list starts empty so a subgroup whose event study is
+              * skipped entirely (below) names no ES rows for this estimand
+              local relyrlist_s`sgcase'_`horizitem'
+              * F-collapse screen (see wooldid_fcdeg): a flagged call is re-issued on the full
+              * data, and every later call runs there too (`fcsg' disarms, `fcnoes' clears)
+              forval fcpass = 1/2 {
+                qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof' `fcnoes'
+                if `fcsg' wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') levels `verbose'
+                if `fcsg' == 0 | `fcrerun' == 0 continue, break
+                restore, preserve
+                local fcnoes
+                local fcsg 0
+              }
               local matrixstartgrab = floor(`=colsof(r(b))'/2)+1
               * capture the adversarial estimability count NOW, while r(b) is authoritative:
               * the single-relyr-level glevelsof fallback below is rclass and wipes r(b)
@@ -2878,6 +2930,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   local absinj = abs(`relyrinj')
                   local relyrlist_s`sgcase' `relyrlist_s`sgcase'' pre`absinj'
                 }
+                * per-estimand copy: att and att_it can keep DIFFERENT horizon sets for a
+                * subgroup (SI-7 drops), and the rowname filter below names each ES block
+                * from its own estimand's list; the unsuffixed local (last estimand
+                * computed) still serves the contreat ES rows
+                local relyrlist_s`sgcase'_`horizitem' `relyrlist_s`sgcase''
                 if "`relyrbysg'" == "" {
                   local relyrbysg  `relyrinj'
                 }
@@ -2935,7 +2992,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
         foreach sgcase in `sglist' {
           if "`att'" == "att"   {
-             qui margins  [`weight'=`w_att'] ,`semielasticity'(`targetflag') noestimcheck  subpop(if `ifstatement'  & `subgroups' == `sgcase' & `t' < `ttre' & `ttre' != .   &  (`_t' == 0 |`_t' >= `horizonstarter')    ) contrast(overjoint) over(`_t') `poismarginstext' `marginsdof' `fcnoes'
+             forval fcpass = 1/2 {
+               qui margins  [`weight'=`w_att'] ,`semielasticity'(`targetflag') noestimcheck  subpop(if `ifstatement'  & `subgroups' == `sgcase' & `t' < `ttre' & `ttre' != .   &  (`_t' == 0 |`_t' >= `horizonstarter')    ) contrast(overjoint) over(`_t') `poismarginstext' `marginsdof' `fcnoes'
+               if `fcsg' wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') joint `verbose'
+               if `fcsg' == 0 | `fcrerun' == 0 continue, break
+               restore, preserve
+               local fcnoes
+               local fcsg 0
+             }
              *this confirm matrix machinery handles the case where the joint test fails b/c a given sg has no estimable pre-treatment relative period effects
              cap confirm matrix r(p)
              if _rc == 0 {
@@ -2946,7 +3010,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
              }
           }
           if "`joint_horiz_i_s`sgcase''" == "" & ("`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" ){
-            qui margins  [`weight'=`w_att_it'] ,`semielasticity'(`targetflag') noestimcheck  subpop(if `ifstatement' & `subgroups' == `sgcase' & `t' < `ttre' & `ttre' != .   &  (`_t' == 0 |`_t' >= `horizonstarter')   ) contrast(overjoint) over(`_t') `poismarginstext' `marginsdof' `fcnoes'
+            forval fcpass = 1/2 {
+              qui margins  [`weight'=`w_att_it'] ,`semielasticity'(`targetflag') noestimcheck  subpop(if `ifstatement' & `subgroups' == `sgcase' & `t' < `ttre' & `ttre' != .   &  (`_t' == 0 |`_t' >= `horizonstarter')   ) contrast(overjoint) over(`_t') `poismarginstext' `marginsdof' `fcnoes'
+              if `fcsg' wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') joint `verbose'
+              if `fcsg' == 0 | `fcrerun' == 0 continue, break
+              restore, preserve
+              local fcnoes
+              local fcsg 0
+            }
             cap confirm matrix r(p)
             if _rc == 0 {
               local joint_horiz_i_s`sgcase' = r(p)[1,2]
@@ -2981,7 +3052,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       if "`fastnose'" != "" local sgpost
       foreach item in `att' `att_it' `att_i' `att_itime' {
         * pairwise comparisons among the sgs AND the joint test that all sgs are the same
-        qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof' `sgpost' `fcnoes'
+        * (F-collapse screen: a posted call is un-posted before the re-issue)
+        forval fcpass = 1/2 {
+          qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof' `sgpost' `fcnoes'
+          if `fcsg' wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') `verbose'
+          if `fcsg' == 0 | `fcrerun' == 0 continue, break
+          if "`sgpost'" != "" qui est restore ___wooldidfullmodel
+          restore, preserve
+          local fcnoes
+          local fcsg 0
+        }
         tempname pwsgs_`item'
         matrix `f9tab' = r(table_vs)
         if rowsof(`f9tab') < 6 {
@@ -3027,8 +3107,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
         * repeat for pre-treatment
         if (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) {
-          cap qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof' `sgpost' `fcnoes'
-          if _rc != 0 {
+          forval fcpass = 1/2 {
+            cap qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof' `sgpost' `fcnoes'
+            local fcprerc = _rc
+            if `fcsg' & `fcprerc' == 0 wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') `verbose'
+            if `fcsg' == 0 | `fcprerc' != 0 | `fcrerun' == 0 continue, break
+            if "`sgpost'" != "" qui est restore ___wooldidfullmodel
+            restore, preserve
+            local fcnoes
+            local fcsg 0
+          }
+          if `fcprerc' != 0 {
             * the pre-ame only exists for 1 sg (or margins otherwise refused): no joint
             * test and no pairwise rows, exactly as under the previous contrast-first order
             local prejoint_`item'_sdiff
@@ -3518,11 +3607,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
         * if horizon estimates are to be produced, present them here
         if `espre' + `espl'  > 0 {
-          if "`att'" == "att" {
+          * a subgroup whose event study was skipped entirely (no estimable relative
+          * period) has no horizon matrix to append; its ES rownames are empty to match
+          cap confirm matrix `___att_horiz_s`sgcase''
+          if "`att'" == "att" & _rc == 0 {
             matrix `wdid_sg`sgcase'' = `wdid_sg`sgcase'' \ `___att_horiz_s`sgcase''
             matrix drop `___att_horiz_s`sgcase''
           }
-          if "`att_i'" == "att_i"  |  "`att_it'" == "att_it" |  "`att_itime'" == "att_itime" {
+          cap confirm matrix `___att_it_horiz_s`sgcase''
+          if ("`att_i'" == "att_i"  |  "`att_it'" == "att_it" |  "`att_itime'" == "att_itime") & _rc == 0 {
             matrix `wdid_sg`sgcase'' = `wdid_sg`sgcase'' \ `___att_it_horiz_s`sgcase''
             matrix drop `___att_it_horiz_s`sgcase''
           }
@@ -3560,7 +3653,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             local testtext = subinstr("`testtext'","ES_ame:","",.)
             local testtext = subinstr("`testtext'","ES_att:","",.)
             local testtext = subinstr("`testtext'"," ","",.)
-            if strpos("`relyrlist_s`sgcase'' ","`testtext' ") != 0 local rownamessg `rownamessg' `rownametest'
+            * each ES block is named from ITS estimand's horizon list: att and att_it can
+            * keep different horizon sets for a subgroup (SI-7 drops), and naming both
+            * from one list either mislabels rows (stata pads a short namelist by
+            * repeating its last name) or errors r(503). the contreat (ES_ame*) rows keep
+            * the unsuffixed list, as before
+            local sgeslist `relyrlist_s`sgcase''
+            if strpos("`rownametest'","ES_att:") == 1    local sgeslist `relyrlist_s`sgcase'_att'
+            if strpos("`rownametest'","ES_att_it:") == 1 local sgeslist `relyrlist_s`sgcase'_att_it'
+            if strpos("`sgeslist' ","`testtext' ") != 0 local rownamessg `rownamessg' `rownametest'
             * note: the spaces above are required to avoid triggering "1 is present" when presented with "11"
           }
         }
@@ -4133,6 +4234,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   ereturn hidden local wdid_cwm "`customweightmultiplier'"
   ereturn hidden local wdid_semielas "`semielasticity'"
   ereturn hidden local wdid_fcol "`fcon'"
+  ereturn hidden local wdid_fcguard "`fcguard'"
   ereturn hidden local wdid_cetype "`contreatelasticitytype'"
   ereturn hidden local wdid_suppressjt "`suppressjointtests'"
   ereturn hidden local wdid_suppresssgpe "`suppresssgprimaryeffects'"
@@ -4610,28 +4712,73 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * "give me numbers I have been shown are wrong". `fcon' is the realized decision; the
   * worker consumes it and records it in e(wdid_fcol). `fcskip' names the skip reason(s)
   * for the verbose line.
+  * subgroups() is NOT on this list (author-ruled 2026-09-01, after a 2026-09-01 refusal):
+  * the subgroup reads are exact under the collapse except in a numerically singular VCE
+  * direction, where the exact zero they branch on is cancellation residue. The worker
+  * screens each subgroup margins call for that (wooldid_fcdeg) and re-issues the call on
+  * the full data when it fires - or, under safety(off), proceeds with a caution.
   local fcbad
-  if "`contreat'" != ""                     local fcbad `fcbad' contreat()
+  * contreat() itself is eligible: every collapsible read is linear in the dose inside a cell
+  * (dydx(targetflag) = delta_g + beta_g*x, dydx(contreat) = beta_g, dyex = beta_g*x), so a
+  * summed weight and a weighted mean reproduce it exactly. what is refused is the reads that
+  * are NOT linear in the dose, and the requests that split a cell on a variable outside the key
+  if "`contreat'" != "" {
+    if `contreatpoly' > 1                                                       local fcbad `fcbad' contreatpoly(>1)
+    if `"`lattice'"' != ""                                                      local fcbad `fcbad' lattice()
+    if "`cfxlattice'" != "" | "`makecfxplots'" != ""                            local fcbad `fcbad' makecfxplots/cfxlattice()
+    if "`contreatelasticitytype'" == "eyex" | "`contreatelasticitytype'" == "eydx" local fcbad `fcbad' contreatelasticitytype(`contreatelasticitytype')
+    * poisson reports dyex through margins' expression(predict(xb)), which margins
+    * differentiates NUMERICALLY, so replacing a within-cell-varying dose by its mean changes
+    * the round-off of the derivative rather than cancelling out of it
+    if "`poisson'" == "poisson" & "`contreatelasticitytype'" == "dyex"           local fcbad `fcbad' poisson+contreatelasticitytype(dyex)
+    * the treatment variable inside a user control term (controls(c.dose#c.x) and the like)
+    * makes the DOSE derivative vary within a cell on a variable the collapse does not average
+    local fcctrl `"`controls' `coarsecohortcontrols' `fe' `ccc_absorb'"'
+    foreach tok in "#" "(" ")" "," {
+      local fcctrl = subinstr(`"`fcctrl'"', "`tok'", " ", .)
+    }
+    local fcctrlhit 0
+    foreach w of local fcctrl {
+      * a Stata variable name cannot contain a dot, so whatever follows the LAST dot is the
+      * name and everything before it is operator notation - c.dose, 2.dose, L.dose and the
+      * stacked c.L.dose all reduce to dose, where stripping a single prefix left L.dose and
+      * missed the gate
+      local w2 = substr("`w'", strrpos("`w'", ".") + 1, .)
+      if "`w2'" == "" continue
+      * controls(), fe() and ccc_absorb() are varlists, so Stata has already unabbreviated
+      * them by the time we see them; coarsecohortcontrols() is declared string and has NOT
+      * been, so an abbreviated or wildcarded name would otherwise walk past this check and
+      * collapse a request that must not be collapsed. expand each token and look for the
+      * treatment variable in what it expands to
+      cap unab fcw : `w2'
+      if _rc == 0 {
+        if `: list posof "`contreat'" in fcw' local fcctrlhit 1
+      }
+      else if "`w2'" == "`contreat'" local fcctrlhit 1
+    }
+    if `fcctrlhit' local fcbad `fcbad' contreat-in-controls
+  }
   if "`interactivecontrols'" != ""          local fcbad `fcbad' interactivecontrols()
   if "`unconditionalse'" != ""              local fcbad `fcbad' unconditionalse
   if "`semielasticity'" != "dydx"           local fcbad `fcbad' semielasticity
   if "`impvalues'" != ""                    local fcbad `fcbad' impvalues
   if "`poisexpresults'" != ""               local fcbad `fcbad' poisexpresults
   if `"`customvce'"' != ""                  local fcbad `fcbad' customvce()
-  if "`subgroups'" != ""                    local fcbad `fcbad' subgroups()
   if "`fastcollapse'" != "" & "`fullprecisionslow'" != "" {
     dis as error "Error: fastcollapse and fullprecisionslow are contradictory - the first asks for the cell collapse and the second suppresses it. Specify at most one. (The collapse is on by default wherever the request permits it, so neither is needed to get it.)"
     error 198
   }
   if "`fastcollapse'" != "" {
     if "`fcbad'" != "" {
-      dis as error "Error: fastcollapse is incompatible with:`fcbad'."
-      dis as error "fastcollapse evaluates the margins calls on one row per cohort-by-period-by-treatment cell, which is exact only when the treatment derivative is constant within a cell and the reported quantity is a plain marginal effect. Each option above breaks one of those conditions:"
-      dis as error "  contreat() and interactivecontrols() interact the treatment dummy with a variable that varies inside a cell, so the effect is no longer cell-constant (measured: coefficients shifted, one sign flip)."
-      dis as error "  semielasticity (and the contreat elasticity forms) divide by the prediction, which re-introduces the within-cell variation that a plain marginal effect cancels."
+      dis as error "Error: fastcollapse is incompatible with: `fcbad'."
+      dis as error "fastcollapse evaluates the margins calls on one row per cohort-by-period-by-treatment cell, which is exact only when the reported quantity is linear in the coefficients and, within a cell, linear in the treatment variable. Each option above breaks one of those conditions:"
+      dis as error "  interactivecontrols() interacts the treatment dummy with a variable that varies inside a cell, so the effect is no longer cell-constant. contreat() itself is eligible - the collapse carries the cell's weighted mean of the dose - but the reads listed below are not."
+      dis as error "  contreatpoly() above 1 makes the effect a polynomial in the dose, which the cell mean does not reproduce; lattice(), makecfxplots and cfxlattice() split a cell on a binning of the dose, which is not part of the cell key."
+      dis as error "  contreat-in-controls means the contreat variable also appears inside controls(), coarsecohortcontrols(), fe() or ccc_absorb(); the dose derivative then varies inside the cell on a variable the collapse does not average (measured: the ame rows move by up to 0.6 percent while the att rows stay exact)."
+      dis as error "  poisson with contreatelasticitytype(dyex) is reported through margins expression(predict(xb)), which margins differentiates numerically, so the cell mean changes the round-off of the derivative (measured: a reported confidence bound moved 2.8e-4 relative)."
+      dis as error "  semielasticity (and the contreat elasticity forms eyex and eydx) divide by the prediction, which re-introduces the within-cell variation that a plain marginal effect cancels. contreatelasticitytype(dydx) and (dyex) are linear in the dose and stay eligible (dyex except under poisson - see above)."
       dis as error "  poisexpresults reports on the exponentiated scale, which is not linear in the coefficients (measured: estimates moved in the 7th significant digit)."
       dis as error "  unconditionalse asks margins for a variance built from observation-level influence functions; margins verifies the visible row count against e(N) and errors when it is collapsed."
-      dis as error "  subgroups() is refused on measured evidence, added 2026-09-01. margins signals a non-estimable subgroup-by-horizon margin only through an omission marker in the name it returns, and the subgroup code - uniquely in wooldid - READS that signal, three separate ways. Collapsing the rows can flip the marker, which silently changed which horizons and which joint tests were reported on 4 of 472 suite configs, and turned one completed estimation into a hard r(503) when two estimands lost different numbers of horizons. Non-subgroup runs are unaffected: 123 non-vacuous pairs showed no structural difference, because no non-subgroup code reads a margins result name."
       dis as error "  impvalues computes per-cluster effects over(cluster), and the cluster variable is not part of the cell key."
       dis as error "  customvce() is not verified for fastcollapse rather than known-broken; it is refused pending measurement."
       dis as error "Drop fastcollapse, or drop the conflicting option. (No safety(off) escape: these are measured wrong answers, not risks.) Without an explicit fastcollapse the run proceeds normally on the full data - the collapse simply does not engage."
@@ -5036,11 +5183,13 @@ end
 * xb(tf=1) - xb(tf=0). Every regressor that does not interact with targetflag contributes
 * identically to both terms and cancels, so the derivative is the cell coefficient and is
 * constant within the cell. That is exactly the condition wooldid_validate's F-collapse
-* gate enforces; outside it (contreat(), interactivecontrols(), a non-dydx operator, the
-* exponentiated poisson scale) the derivative varies observation by observation and the
-* retained row would BE the estimand rather than an irrelevant carrier - which is why
-* those combinations skip the collapse by default and are refused when it is asked for
-* explicitly, rather than cautioned.
+* gate enforces; outside it (interactivecontrols(), a non-dydx operator, the exponentiated
+* poisson scale) the derivative varies observation by observation and the retained row would
+* BE the estimand rather than an irrelevant carrier - which is why those combinations skip
+* the collapse by default and are refused when it is asked for explicitly, rather than
+* cautioned. contreat() is inside the condition rather than outside it: the retained row
+* carries the cell's weighted mean of the dose (below), which reproduces every read that is
+* linear in the dose.
 *
 * The cancellation is algebraic, not bitwise: (S+c1)-(S+c0) keeps a residue of order
 * ULP(|xb|), where S is the retained row's shared partial sum. Results therefore agree
@@ -5052,7 +5201,7 @@ end
 * call would silently run on full data. Both live inline in the worker body.
 cap prog drop wooldid_fcol
 prog def wooldid_fcol, rclass
-  syntax varname(numeric) , KEY(varlist) [WVARS(string)]
+  syntax varname(numeric) , KEY(varlist) [WVARS(string) CONTreat(varlist numeric)]
   * rows in memory become exactly the estimation sample, so the margins calls' noesample
   * is equivalent to their usual e(sample) restriction, and any user if() is already folded in
   qui keep if `varlist' == 1
@@ -5064,6 +5213,72 @@ prog def wooldid_fcol, rclass
   }
   tempvar ord pick
   qui gen long `ord' = _n
+  * with contreat(), the surviving row carries the cell's estimand-weighted mean of the
+  * continuous treatment. every estimand weight is w x customweightmultiplier divided by a
+  * quantity that is constant inside an (i,t) cell (w_per_it, w_per_i, t_per_i - see the weight
+  * construction), and `i' is in the key here, so the first weight variable that exists serves
+  * as the analytic weight and the four estimands give the same mean.
+  * the variable is recast to double first: a float store of the mean injects ~2.4e-8.
+  * the mean is formed as sum(w*x)/sum(w) and written onto EVERY row of the cell, not by
+  * gcollapse (mean) [aw=w] merge: that form writes MISSING onto zero-weight rows, and the
+  * surviving row is the cell's first IN-SAMPLE row whether or not its weight is zero. a zero
+  * sampling weight cannot produce that (Stata drops those rows from e(sample)), but a
+  * customweightmultiplier() of exactly 0 can, and did (measured on the earlier form: a
+  * pre-trend horizon moving p .167 -> .0022). the `!= 0' guard rather than `> 0' costs nothing
+  * and keeps a signed customweightmultiplier() under safety(off) exact wherever the cell's
+  * weights do not cancel to exactly zero. two cases are left alone deliberately: a cell whose
+  * weights are ALL zero keeps its raw values and carries no weight in any read of either arm;
+  * and a cell whose non-zero signed weights cancel to exactly zero enters every read with
+  * weight zero, losing the dose level it carried (measured at 2.7e-4 relative on the main att
+  * family) - unrepresentable in a (summed weight, weighted mean) pair, and reachable only
+  * through a signed customweightmultiplier() under safety(off), which is caveat emptor.
+  local cmv
+  if "`contreat'" != "" {
+    local wsrc
+    if "`wv'" != "" local wsrc `: word 1 of `wv''
+    * the per-variable temporaries are indexed by POSITION, not by the variable's name:
+    * a name-built macro (cm_<varname>) would exceed Stata's 31-character local-name limit
+    * for a contreat variable of 29 characters or more.
+    * each variable carries its OWN weight sum, restricted to the rows where that variable
+    * is non-missing. with a non-missing dose - which the caller guarantees, by zeroing the
+    * if-marker on any row with a missing contreat value - this is the same denominator for
+    * every variable and the same number as a single shared sum, bit for bit. it matters
+    * only if a missing value ever reaches here: a shared denominator would divide a
+    * numerator taken over the non-missing rows by a weight total taken over all of them,
+    * and a cell whose values were ALL missing would sum to 0 over a positive weight total
+    * and have its missing dose silently rewritten to 0. with the per-variable form the
+    * partial case gives the correct weighted mean over the rows that have a value, and the
+    * all-missing case leaves the weight total at 0, which the guard below declines.
+    * note the scope: this makes the MEAN missing-aware, not the worker. the cell's summed
+    * estimand weight, built further down with the row pick, still totals every row that
+    * survived the e(sample) keep, so a row with a missing dose would contribute weight
+    * without contributing a dose. that pairing is unreachable for the same reason the rest
+    * of this is defensive - such a row is not in e(sample) - and is left alone deliberately
+    * so the weight arithmetic stays bit-identical to the binary case
+    local ck 0
+    foreach cv of local contreat {
+      local ctype : type `cv'
+      if "`ctype'" != "double" qui recast double `cv'
+      local ++ck
+      tempvar cm`ck' cw`ck'
+      if "`wsrc'" != "" {
+        qui gen double `cm`ck'' = `cv' * `wsrc' if !missing(`cv')
+        qui gen double `cw`ck'' = `wsrc'        if !missing(`cv')
+      }
+      else {
+        qui gen double `cm`ck'' = `cv' if !missing(`cv')
+        qui gen double `cw`ck'' = 1    if !missing(`cv')
+      }
+      local cmv `cmv' `cm`ck'' `cw`ck''
+    }
+    qui gcollapse (sum) `cmv', by(`key') merge replace
+    local ck 0
+    foreach cv of local contreat {
+      local ++ck
+      qui replace `cv' = `cm`ck'' / `cw`ck'' if `cw`ck'' != 0 & `cw`ck'' < .
+    }
+    qui drop `cmv'
+  }
   * `replace' is required because each weight target is also its own source (the cell
   * sum is written back over the row-level weight in place)
   if "`wv'" != "" qui gcollapse (sum) `wv' (min) `pick' = `ord', by(`key') merge replace
@@ -5101,6 +5316,48 @@ version 16.0
   if `sgcn' < 2 local sgcchain
   c_local sgchain `"`sgcchain'"'
   c_local sgchainn `sgcn'
+end
+
+* F-collapse degeneracy screen for the subgroup reads (author-ruled 2026-09-01). The
+* subgroup section is the one place wooldid BRANCHES on a margins result being exactly
+* zero: the omission marker margins writes into a returned name when b and V are both
+* zero, the rank -test- assigns the subgroup-equality chain, a missing pairwise se. In a
+* numerically singular direction of the VCE that zero is cancellation residue of order
+* 1e-16, and the collapse - which changes the summation order - can land it on either
+* side, silently changing which horizons and joint tests are reported (measured on 8 of
+* 260 subgroup configs, every one in such a direction; none elsewhere). So each subgroup
+* margins call is screened on its OWN r() the moment it returns, before anything reads
+* it. A flag under the default safety re-issues the call, and every call after it, on the
+* full data (the worker does the restore inline: preserve is scoped to the program that
+* issued it, and a posted call is un-posted first); under safety(off) the run proceeds
+* on the collapsed rows with a caution, as ruled. Reads r() only through Mata, which
+* never disturbs it. c_locals: fcrerun (1 = re-issue), fcguard (fallback / caution, for
+* e(wdid_fcguard)). Kept out of the worker for compiled-size headroom.
+* `joint' marks the overjoint pre-trend calls: when margins returns no r(p) there (a
+* subgroup whose pre-treatment window holds only the reference period - an early cohort
+* used as a subgroup - has one structurally zero level: b = 0, V = 0, no test in either
+* arm) nothing is reported from the call, so there is nothing for the collapse to move
+* and the zero-variance predicate would only cost the speedup (2026-09-01 probe, A7).
+cap prog drop wooldid_fcdeg
+prog def wooldid_fcdeg
+version 16.0
+  syntax , [SAFety(string) GUARD(string) LEVels VERbose JOINT]
+  c_local fcrerun 0
+  if "`joint'" != "" {
+    cap confirm matrix r(p)
+    if _rc exit
+  }
+  mata: wooldid_fcdegx(1e-9, "`levels'" != "")
+  if "`fcdeg'" != "1" exit
+  if "`safety'" != "off" {
+    c_local fcrerun 1
+    c_local fcguard fallback
+    if "`verbose'" == "verbose" dis as text "Wooldid found `fcdegwhy' at a subgroup margins call, so it is setting the cell collapse aside and evaluating the remaining subgroup results on the full data."
+    exit
+  }
+  c_local fcguard caution
+  if "`guard'" == "caution" exit
+  dis as text "Caution: wooldid found `fcdegwhy' at a subgroup margins call. Wooldid treats that as a numerically singular direction of the VCE, where an exact zero margins returns can be cancellation residue rather than an estimate, so which subgroup horizons and joint tests are reported can depend on the summation order - which the default cell collapse (see fastcollapse in the help file) changes. Under the default safety setting wooldid would evaluate the subgroup results on the full data from this point; with safety(off) it proceeds on the collapsed rows as requested. Specify fullprecisionslow to evaluate everything on the full data."
 end
 
 
@@ -6388,11 +6645,23 @@ version 16.0
   ereturn scalar boot_failed = `fail'
   ereturn scalar boot_level = `level'
   ereturn local boot_stat `wdblab'
+  local wdbdfr0 = e(df_r)
   if `wdbdf' < . {
     ereturn scalar boot_df = `wdbdf'
     * align e(df_r) with the reference distribution actually used, so that test and
     * lincom run by hand on the bootstrap covariance reproduce the reported p-values
     ereturn scalar df_r = `wdbdf'
+  }
+  else {
+    * the reported statistic is z / chi-squared here, so a finite e(df_r) inherited from
+    * the analytic fit would send a hand-run test or lincom to a t/F metric on the
+    * BOOTSTRAP covariance and disagree with the printed p (measured on a 12-cluster run:
+    * test reported 1.781e-11 against a printed p of 0 to 14 decimal places). blanking it
+    * sends test and lincom to chi-squared/z, which reproduces the printed values; the
+    * analytic value is kept as a hidden twin, the way e(V_analytic) preserves the
+    * analytic covariance
+    if `wdbdfr0' < . ereturn hidden scalar df_r_analytic = `wdbdfr0'
+    ereturn scalar df_r = .
   }
   ereturn scalar boot_N_V = `wdb_nlw'
   ereturn scalar boot_v_posted = `wdb_vposted'
@@ -7729,6 +7998,81 @@ void wooldid_gtx(string scalar gtiv, string scalar gttv, string scalar gttf,
     out = sort(out, (1, 4))
     st_matrix(outname, out)
     st_matrixcolstripe(outname, (J(15, 1, ""), ("i", "onset", "caltime", "relyr", "estimate", "se", "p", "lb_95ci", "ub_95ci", "inwindow", "nobs", "w_att", "w_att_it", "w_att_i", "w_att_itime")'))
+}
+end
+
+
+*** F-collapse degeneracy predicate (see wooldid_fcdeg) on the r() of the margins call
+*** just issued: r(b)/r(V) hold the level margins, whose SECOND half of columns are the
+*** 1.targetflag margins the worker reads (the first half is the 0.targetflag base, always
+*** omitted); r(V_vs), present after pwcompare, holds the pairwise contrasts likewise. At
+*** relative tolerance tol the call is flagged when a second-half name carries an omission
+*** marker; a second-half level variance is missing, all are zero, or one is <= tol x the
+*** largest; the adjacent-difference contrast VCE of the second-half levels (the object
+*** the subgroup-equality chain -test- and the overjoint pre-trend tests act on; skipped
+*** for the event-study levels under `levels', which nothing contrasts) has its largest
+*** eigenvalue <= tol x the largest level variance or its smallest <= tol x the larger of
+*** its largest and the largest level variance; or a second-half pairwise variance is
+*** missing or <= tol x the largest level variance.
+*** Residue sits near 1e-16 and the smallest real subgroup contrast measured in the
+*** assessment at 3.5e-5, so tol = 1e-9 has about seven orders of headroom either side.
+*** A nose call carries no r(V), and margins writes no omission marker under nose, so
+*** there is nothing to screen: not flagged. Sets locals fcdeg (0/1) and fcdegwhy.
+cap mata: mata drop wooldid_fcdegx()
+mata:
+void wooldid_fcdegx(real scalar tol, real scalar levels)
+{
+    real matrix V, C, L
+    real colvector d, dv
+    real rowvector ev
+    string matrix cs
+    real scalar K, j0, n, k, dmax
+    string scalar why
+    st_local("fcdeg", "0")
+    st_local("fcdegwhy", "")
+    V = st_matrix("r(V)")
+    K = cols(V)
+    if (K == 0) return
+    j0 = floor(K/2) + 1
+    n = K - j0 + 1
+    // the marker lives in the r(b)/r(table) names (what the read-1 parse uses), never
+    // in r(V)'s - 0 of 148 screened calls carried it there in the 2026-09-01 probe
+    cs = st_matrixcolstripe("r(b)")
+    why = ""
+    for (k=j0; k<=K; k++) {
+        if (strpos(cs[k,2], "o.")) {
+            why = "a subgroup margin that margins marks as not estimable"
+            break
+        }
+    }
+    d = diagonal(V)[|j0 \ K|]
+    dmax = (hasmissing(d) ? . : max(d))
+    if (why == "" & (dmax == . | dmax <= 0)) why = "subgroup margins with zero variance"
+    if (why == "" & min(d) <= tol*dmax) why = "a subgroup margin whose variance is below " + strofreal(tol) + " of the largest one"
+    if (why == "" & n >= 2 & !levels) {
+        L = (I(n-1), J(n-1, 1, 0)) - (J(n-1, 1, 0), I(n-1))
+        C = L * V[|j0, j0 \ K, K|] * L'
+        C = (C + C') / 2
+        ev = symeigenvalues(C)
+        // the singular-direction floor is anchored to the level scale as well as to the
+        // contrast scale: a rank-1 contrast VCE whose largest eigenvalue is itself ~1e-8
+        // of dmax passed the contrast-relative test alone (2026-09-01 probe, b_q1e3)
+        if (max(ev) <= tol*dmax) why = "subgroup contrasts with zero variance"
+        else if (min(ev) <= tol*max((dmax, max(ev)))) why = "a contrast among the subgroup margins lying in a numerically singular direction of the VCE"
+    }
+    if (why == "") {
+        V = st_matrix("r(V_vs)")
+        K = cols(V)
+        if (K > 0) {
+            j0 = floor(K/2) + 1
+            dv = diagonal(V)[|j0 \ K|]
+            if (hasmissing(dv)) why = "a pairwise subgroup contrast with missing variance"
+            else if (min(dv) <= tol*dmax) why = "a pairwise subgroup contrast whose variance is below " + strofreal(tol) + " of the largest subgroup margin variance"
+        }
+    }
+    if (why == "") return
+    st_local("fcdeg", "1")
+    st_local("fcdegwhy", why)
 }
 end
 

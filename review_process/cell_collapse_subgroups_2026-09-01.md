@@ -234,3 +234,156 @@ logs, the suite sweep (`estscope/D/RESULT.txt`), the timing builds and logs
 (`partial/`), and the row-permutation control (`permctl/perm.do`, `perm.log`). The
 harness is the suite's `mkrun` with `--extraopt fullprecisionslow` for arm U, so any of
 it can be recreated from the repo's suite tooling.
+
+## 8. Addendum (2026-09-01, after the ruling): route P built, probed, pinned
+
+**Ruling.** The author chose route P with two amendments: the collapse runs with
+`subgroups()` by default behind the per-read screen, a flagged read falls back to the full
+data under the default safety setting, and under `safety(off)` there is no fallback - the
+run proceeds on the collapsed rows and prints a caution. Then an adversarial probe for
+cases the screen might miss, before any full assessment run.
+
+**What was built.** The `subgroups()` term left the eligibility gate (`fcbad`, ~4687; the
+seven substantive exclusions stay, and an explicit `fastcollapse` with one of them is
+still `r(198)`). A per-read screen `wooldid_fcdeg` (~5193) runs before each subgroup read
+while `fcsg` is armed: read 1 (`levels`), the two overjoint pre-trend calls (`joint`),
+the read-2 pwcompare call, and the pre-window twin. It hands `r(V)` to Mata
+`wooldid_fcdegx(1e-9, levels)`, which looks at the subgroup half of the diagonal and,
+for `n >= 2` non-level reads, at the eigenvalues of the adjacent-difference contrast
+VCE, and returns a reason when any of: an `o.` marker in the `r(b)` names; the largest
+level variance missing or `<= 0`; a level variance `<= 1e-9 x` the largest; the largest
+contrast eigenvalue `<= 1e-9 x dmax`; the smallest contrast eigenvalue `<= 1e-9 x
+max(dmax, largest eigenvalue)`; or a missing/`<= 1e-9 x dmax` diagonal in `r(V_vs)`.
+On a reason: default safety does `restore, preserve`, clears `fcnoes`, disarms the
+screen, and re-issues that margins call on the full data (`fcrerun`), so the rest of
+the section runs uncollapsed; `safety(off)` prints the caution once and continues. The
+outcome is exposed as `e(wdid_fcguard)` in {empty, `fallback`, `caution`}. A fallback
+in the observed run also sends `bootstrap()` replications to the full data (the reps run
+under `fastnose`, where the screen has no `r(V)` to read). The section-3 rowname bug was
+fixed as recommended.
+
+**Verification.** `test/test_fastcollapse.do` F8-F10 (`FASTCOLLAPSE_ALL_PASS`, 1:54):
+F8 the `subgroups()+fe()+jointtests` command that hard-errored `r(503)` collapsed
+(section 3) now completes collapsed under `safety(off)` with the caution; F9 the
+degenerate `survey_rcs` command (cell shock removed, `fe(i.group##i.t)`, singular in the
+subgroup-contrast direction) falls back under default safety with every subgroup matrix
+read after the fallback bit-identical to `fullprecisionslow` (`mreldif` exactly 0), stays
+collapsed under `safety(off)` with `e(wdid_fcguard)=caution` and `rc 0`, and two healthy
+subgroup runs collapse with the guard empty; F10 pins the three probe-driven fixes
+below. `test/check_validate_sync.py` OK. Suite pin `fcol_sg` moved from `r(198)` to
+`rc 0`, verified on its `adm_sub` subsample (guard empty, `fcol 1`). Timing on the
+shipped build: the cohort-level admin subgroup section reads 3-5x faster collapsed
+(2.1 s vs 9.7 s for the reads), guard empty - the prize of section 4 survives the screen.
+
+**The probe.** Seven angles, one subagent and one Stata each, 420 distinct subgroup
+configurations run paired (arm C: default, collapse engaged; arm U: `fullprecisionslow`)
+through the suite's `mkrun` with `%21x` dumps of every `e()` matrix, scalar and macro,
+and a verdict per config: PASS (guard empty, C agrees with U to residue), MISS (guard
+empty, some cell moves `> 1e-9` relative or the structure differs), FLAG_SEFAIL (flagged
+on a run wooldid itself labels SE-degenerate), FLAG_HEALTHYVCE (flagged with no wooldid
+caution - false alarm or a catch wooldid's caution misses), FALLBACK_DIV (fallback taken
+but C still differs), CAUTION_RC (`safety(off)` changes the return code). Angles: A1
+scale heterogeneity and heteroskedastic-but-healthy VCEs; A2 tolerance-boundary hunting
+(contrast variances placed at `1e-7`..`1e-11` of `dmax` by weights and rescaling); A3 the
+`o.` / non-estimable path; A4 bootstrap, permutation and `if` interactions; A5
+`cleanmatrices`, `survey_rcs` cluster variants; A6 subgroup structures (subgroup = i,
+finer than i, straddling units, single-unit levels, one-level subgroup, missing subgroup
+values); A7 the eligibility gate and the reference-only pre window. Raw tallies over
+the real build: PASS 235, FLAG_SEFAIL 85, FLAG_HEALTHYVCE 32, MISS 5, FALLBACK_DIV 4
+(all four fixed below), CAUTION_RC 0; the remainder are BOTH_ERR (refusals in both arms),
+NOTENGAGED (the eligibility gate, as designed, plus the `cleanmatrices` harness artefact
+below) and NODUMP (harness). The `dg_*` rows in `a3_5`/`a3_6` and the `a6_d2` rows are
+runs of a diagnostic build with the screen disabled, made to read the raw variance
+ratios; their MISS verdicts are the unguarded baseline, and the same configurations
+flag on the real build (`a3_9`, `a6_5`, `a6_6`).
+
+**Fixed from the probe (each pinned in F10):**
+
+1. *Singular direction anchored to the level scale* (A2 `b_q1e3`, `b_q5e4`:
+   `binary_balanced`, `[pw]` with two units at `1 + 1e-3` and `1 + 2e-3`,
+   `subgroups(sg_three) cluster(cohort)`). The contrast VCE was rank one with its
+   largest eigenvalue itself `~1e-8` of `dmax`, so the contrast-relative eigenvalue test
+   passed while the collapsed joint p came out `1.5e-82` against `3.3e-83` on the full
+   data. The smallest-eigenvalue floor is now `1e-9 x max(dmax, largest eigenvalue)`.
+   (F10b: fallback, `e(joint_att_allsgssame)` and the pre twin equal to full data.)
+2. *Bootstrap replications follow the fallback* (A4 `a4b_rcs_std5`, `a4b_rcs_if_std5`:
+   `survey_rcs`, `cluster(state) bootstrap(standard) reps(5)`). The observed run fell
+   back, the reps did not (nothing for the screen to read under `fastnose`), and the
+   bootstrapped subgroup-equality test came back "unavailable" against `p = 0` on the
+   full data. The shell now appends `fullprecisionslow` to the reps when
+   `e(wdid_fcguard) == "fallback"`. (F10c: fallback, bootstrap `e(V)` and `pwsgs` equal.)
+3. *Reference-only pre window* (A7: an early cohort used as a subgroup so that its
+   `esprelength(2)` window contains only the reference period, `jointtests`). The
+   overjoint call has a single `over(_t)` level with zero variance by construction,
+   nothing is tested (`r(p)` absent, `joint_horiz_s2` empty in both arms), and the screen
+   fell back for nothing - a realistic data situation. The overjoint sites now exit when
+   `r(p)` is absent: nothing reported, nothing to protect. (F10a: guard empty,
+   `joint_horiz_s1` equal, `joint_horiz_s2` empty in both arms.)
+4. *Dead `o.` predicate* (A3). The marker lives in the `r(b)`/`r(table)` column names,
+   never in `r(V)`'s (0 of 148 screened calls carried it there); the read now uses
+   `st_matrixcolstripe("r(b)")`. In practice the all-zero-VCV branch fires first on
+   these runs (`a3_9`: fallback / caution as expected), so this closes a gap rather
+   than a measured miss.
+
+**Document-only.** (a) *Scale heterogeneity* (A1): the read-2 level test is relative to
+the largest level variance across subgroups, so a subgroup whose outcome scale is below
+about `3.75e-5` of another's (variance ratio `1e-9`) is flagged on a healthy VCE; every
+such run was bit-identical between arms, so the cost is the lost speedup under default
+safety and an overstated caution under `safety(off)`. Not worth a per-subgroup
+normalisation; the help file names the route and the caution text was reworded to say
+what wooldid treats the finding as rather than to assert a failed VCE. (b) A6
+`a6_sgfine_rob_off`: a subgroup strictly finer than `i` (only reachable under
+`safety(off)`; default safety refuses `r(459)`) has structurally duplicated margins
+within each unit, so the contrast VCE is singular by construction and the caution
+prints although nothing wrong is reported; bit-identical. Low priority.
+
+**Residue MISSes (5, immaterial).** A1 `sc_rcs_g1_1em4_rob` (`e(joint_horiz_s1)` moves
+`2.3e-9` relative on `p ~ 1.2e-6`), `sb_bb_shared_1e6_conv` (`pwsgs[2,1]` moves `5.1e-9`
+on a t of `1e-6`); A2 `r_nm5`, `r_n5e6`, `r_n2e5` (between-subgroup contrast t-statistics
+moving `6.7e-8`, `9.55e-8`, `8.95e-9` relative, on contrasts whose variance sits within
+a factor of ten of the `1e-9` band). No point estimate, standard error, reported set or
+return code moved in any of them; these are the amplified last-place residue the
+default-on decision already accepted, at the edge of the band by construction.
+
+**Justified catches.** FLAG_HEALTHYVCE verdicts that were not the scale artefact were all
+runs where wooldid's own identical-SE caution stays silent but the contrast variance is
+exactly zero on the full data too: robust VCE on saturated designs (`dta_s_deeppre`
+adversarial, `dta_tiny jointtests`), `cluster(t)` without `fe` on `survey_rcs`, few
+coarse clusters, weight-driven contrast degeneracy (`d_pm4`..`d_pm6`), and rescaled
+flaggers (`k_rcs_mul8`) that defeat the caution's absolute tolerance. The dominant
+FLAG_SEFAIL route is a cluster variable that nests the cohort variable, which makes
+between-subgroup contrasts of identical (cohort, period) composition exactly
+zero-variance.
+
+**Harness artefact, no change.** A5/A6 `cleanmatrices` after a subgroup run returned
+`r(3499)` (`wooldid_fcdegx() not found`) only when the ado is loaded with `do`; from the
+adopath Stata re-reads the ado when a Mata function is missing and all seven variants
+run `rc 0` (`cm_adopath.log`). Same mechanism as the SI-17/SI-18 note at ado ~5559.
+
+**Off-angle observations for the author (both arms, not caused by the collapse):**
+wooldid's identical-SE scan is cluster-only and uses an absolute tolerance (three SEs
+identical to `1e-12`), so it misses robust singular directions and is defeated by
+rescaling; under `fastnose` the SI-7 horizon drop can never fire (no `r(V)` to read),
+so bootstrap and permutation replications cannot see a non-estimable subgroup horizon;
+`pwsgs` treats a zero-variance contrast inconsistently across estimands (`att` row se
+missing, `att_it` row se `1.6e-10`); a one-level subgroup covering all treated units
+returned `att 1.385` against the main `1.406` (unverified beyond the observation);
+reghdfe `vce(robust)` on a saturated `fe(sgt)` design returns an all-zero VCE when one
+subgroup is rescaled by `<= 1e-4`; an explicit `fastcollapse` that falls back is silent
+without `verbose`.
+
+**Revised certification.** The `r(503)` regression completes (F8), the measured
+degenerate shape reproduces the full-data subgroup output byte for byte after the
+fallback and completes with the caution under `safety(off)` (F9), healthy subgroup runs
+engage with no fallback (F9, `fcol_sg`), the three probe-driven refinements hold (F10), and
+across 420 probed subgroup configurations no result read while the collapse was engaged
+differed from its full-data value by more than amplified rounding. The full assessment
+run should add the battery's subgroup rows under default safety (expect
+`e(wdid_fcguard)` empty on every row wooldid does not already caution) and re-time the
+slow subgroup rows against the pre-ruling numbers.
+
+**Artifacts (session scratch, not committed).** `adv2/a*_*/RESULT.txt` and dumps for
+every probe run, `adv2/runpair.sh` (paired runner and differ), `probe/a{1,2,4,6,7}/REPORT.md`
+(A3 and A5 reported through their RESULT files), `diag/wooldid_diag.ado` (the
+screen-disabled diagnostic build, `FCDIAG|` lines), `fix2/verify_fixes.do`, `fix2/v5b.do`
+and `fix2/pin_fcol_sg.do` with logs, `cm/cm_adopath.do` and log.

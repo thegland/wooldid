@@ -1,6 +1,7 @@
 * test_bootstrap_df.do - bootdf(): the reference distribution for bootstrap inference.
 * Run from test/: stata-mp -e do test_bootstrap_df.do
-* T1 the default is unchanged (bit-identical to explicit bootdf(normal), stat z);
+* T1 the default is CONDITIONAL: clustered -> t(G-1), unclustered -> normal, each
+*    bit-identical to the matching explicit bootdf(), and an explicit value overrides;
 * T2 bootdf(clusters) gives t(G-1): SE and the statistic itself unchanged, p and CI
 * strictly wider, hand-reconstructed exactly, column relabelled t, and e(df_r) aligned
 * so a hand-run lincom reproduces the table p; T3 joint tests become F(k,df), hand-
@@ -24,16 +25,43 @@ prog def mkp
   gen y = 2*(t>=ttre & ttre<.) + 0.3*(t>=ttre & ttre<.)*sg + 0.1*unit + 0.05*t + rnormal()
 end
 
-* T1: default is unchanged (normal) - bit-identical to an explicit bootdf(normal)
+* T1: the default is CONDITIONAL on clustering (author ruling 2026-09-02, replacing the
+* earlier unconditional bootdf(normal) default). Clustered -> t(G-1), bit-identical to an
+* explicit bootdf(clusters); unclustered -> normal, bit-identical to an explicit
+* bootdf(normal). An explicit bootdf() always wins over the default.
 mkp
 qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(20) rseed(9)
 matrix D1 = e(wdidmainresults)
 local st1 `e(boot_stat)'
+local df1 = e(boot_df)
+mkp
+qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(20) rseed(9) bootdf(clusters)
+di "T1a_clustered_default_vs_clusters=" mreldif(D1, e(wdidmainresults)) " stat=[`st1'] boot_df=`df1'"
+if mreldif(D1, e(wdidmainresults)) > 0 | "`st1'" != "t" | `df1' != 11 {
+  di as error "T1a FAIL: clustered default must be t(G-1)"
+  local ++fails
+}
+* and the explicit normal still overrides it
 mkp
 qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(20) rseed(9) bootdf(normal)
-di "T1_default_vs_normal=" mreldif(D1, e(wdidmainresults)) " stat=[`st1'] boot_df=" e(boot_df)
-if mreldif(D1, e(wdidmainresults)) > 0 | "`st1'" != "z" {
-  di as error "T1 FAIL"
+matrix D1n = e(wdidmainresults)
+local st1b `e(boot_stat)'
+local df1b = e(boot_df)
+di "T1b_clustered_explicit_normal stat=[`st1b'] boot_df=`df1b'"
+if "`st1b'" != "z" | `df1b' < . {
+  di as error "T1b FAIL: an explicit bootdf(normal) must override the clustered default"
+  local ++fails
+}
+* unclustered: the default is normal, bit-identical to an explicit bootdf(normal)
+mkp
+qui wooldid y unit t ttre, att robust esprelength(1) espostlength(1) bootstrap(bayes) reps(20) rseed(9)
+matrix D1c = e(wdidmainresults)
+local st1c `e(boot_stat)'
+mkp
+qui wooldid y unit t ttre, att robust esprelength(1) espostlength(1) bootstrap(bayes) reps(20) rseed(9) bootdf(normal)
+di "T1c_unclustered_default_vs_normal=" mreldif(D1c, e(wdidmainresults)) " stat=[`st1c']"
+if mreldif(D1c, e(wdidmainresults)) > 0 | "`st1c'" != "z" {
+  di as error "T1c FAIL: unclustered default must be normal"
   local ++fails
 }
 
@@ -42,17 +70,19 @@ mkp
 qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(20) rseed(9) bootdf(clusters)
 matrix D2 = e(wdidmainresults)
 di "T2_stat=[`e(boot_stat)'] boot_df=" e(boot_df) " df_r=" e(df_r)
+* the z baseline is the EXPLICIT bootdf(normal) run (D1n): since the ruling of 2026-09-02
+* the plain default on a clustered run is itself t(G-1), so D1 would be the same object
 * SE column identical to the normal run
-di "T2_se_same=" reldif(D1[1,2], D2[1,2])
+di "T2_se_same=" reldif(D1n[1,2], D2[1,2])
 * the t stat itself is b/se either way
-di "T2_tstat_same=" reldif(D1[1,3], D2[1,3])
+di "T2_tstat_same=" reldif(D1n[1,3], D2[1,3])
 * p and CI must be WIDER / larger under t
-local pz = D1[1,4]
+local pz = D1n[1,4]
 local pt = D2[1,4]
-local wz = D1[1,6] - D1[1,5]
+local wz = D1n[1,6] - D1n[1,5]
 local wt = D2[1,6] - D2[1,5]
 di "T2_p_z=" `pz' " p_t=" `pt' " ci_width_z=" `wz' " ci_width_t=" `wt'
-if reldif(D1[1,2], D2[1,2]) > 0 | `pt' <= `pz' | `wt' <= `wz' | e(boot_df) != 11 {
+if reldif(D1n[1,2], D2[1,2]) > 0 | `pt' <= `pz' | `wt' <= `wz' | e(boot_df) != 11 {
   di as error "T2 FAIL"
   local ++fails
 }
@@ -81,7 +111,7 @@ if reldif(r(p), `pt') > 1e-10 {
 
 * T3: joint tests become F(k, df) under bootdf
 mkp
-qui wooldid y unit t ttre, att cluster(unit) esprelength(3) espostlength(1) jointtests bootstrap(bayes) reps(40) rseed(99)
+qui wooldid y unit t ttre, att cluster(unit) esprelength(3) espostlength(1) jointtests bootstrap(bayes) reps(40) rseed(99) bootdf(normal)
 scalar jpz = e(joint_horiz)
 mkp
 qui wooldid y unit t ttre, att cluster(unit) esprelength(3) espostlength(1) jointtests bootstrap(bayes) reps(40) rseed(99) bootdf(clusters)

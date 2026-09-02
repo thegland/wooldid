@@ -273,14 +273,19 @@ contrasts, whose differencing amplifies rounding, up to roughly 1e-14 under {it:
 observation. {it:wooldid}'s estimands are weighted averages of cell-level treatment effects, and within the conditions listed below the treatment derivative is constant inside such
 a cell, so the collapsed row - carrying the cell's summed weight - represents the whole cell exactly. The regression itself is untouched and still runs on the full data, so the
 coefficients, the variance matrix and the clustering are unaffected; only the averaging step that {it:margins} performs is handed a smaller dataset. The full data is restored
-before any plotting or display work. {bf:The collapse is on by default} whenever the request permits it, so this option is never needed to obtain it: specifying it asks {it:wooldid}
-to {bf:insist} on the collapse, and turns the silent skip described under {it:Ineligible combinations} into an error. Use {opt fullprecisionslow} to turn the collapse off. The
+before any plotting or display work. {bf:Continuous treatments are covered too}: with {it:contreat()} the collapsed row additionally carries the cell's weighted mean of the
+treatment variable, which reproduces every reported effect exactly because each of them is linear in the dose inside a cell - the treatment-dummy derivative is
+{it:delta + beta*dose}, the dose derivative ({it:ame}) is constant, and {it:contreatelasticitytype(dyex)} is proportional to the dose. The forms that are {ul:not} linear in the
+dose are listed below and turn the collapse off. {bf:The collapse is on by default} whenever the request permits it, so this option is never needed to obtain it: specifying it asks {it:wooldid}
+to {bf:insist} on the collapse, and turns the silent skip described under {it:What turns the collapse off} into an error. Use {opt fullprecisionslow} to turn the collapse off. The
 collapse composes with {it:fastnose}, is applied inside {cmd:permute()} and {cmd:bootstrap()} replications, and is recorded in the hidden macro {it:e(wdid_fcol)} (1 when it was
 applied, 0 when it was not); {it:verbose} reports the decision as the run proceeds. {p_end}
 
 {phang2}{ul:When it pays.} The saving grows with the number of observations per cell and with the size of the regression, and is unaffected by the choice of standard errors. On a
 30,000-observation administrative panel with roughly 500 rows per cell it removed 35-60% of total run time; on a 475,000-row version, 56%. It pays for itself inside a single
-{it:margins} call at that scale - a bare {it:att} is already enough - and adding event-study horizons makes it a better deal rather than a worse one. It gains little when there
+{it:margins} call at that scale - a bare {it:att} is already enough, with no event-study horizons requested: a vanilla {it:att} run with {it:contreat()} was 1.24 times faster on a
+4,000-observation sample, 1.25 times on a 29,000-observation one and 1.33 times on a 145,000-observation one, so building the cell means does not eat the saving. Adding
+event-study horizons makes it a better deal rather than a worse one, and so does asking for more estimands: the same 29,000-observation run went to 2.0 times faster with all four. It gains little when there
 are only a handful of rows per cell (roughly four or fewer), where the collapse can cost slightly more than it saves, and it helps least on designs with very many cohorts and
 periods, where the absorbing regression rather than {it:margins} dominates the run. See {help wooldid##runtime:Runtime and what drives it}. {p_end}
 
@@ -299,32 +304,81 @@ around 1e-13, purely because the denominator is small rather than because the er
 1e-16 relative regardless of the scale of the predictions. P-values in a far tail move more in relative terms - a p-value of 2e-07 moved by about 3e-11 relative - which is a
 property of tail probabilities, not of this option. {p_end}
 
+{phang2}{ul:Continuous treatments carry a second rounding step, and a looser bound.} The figures above are for the binary case, where the collapsed row only re-orders the
+summation. With {it:contreat()} the row also carries the cell's weighted mean of the dose, which is itself a rounded quantity, so the bound is set by that mean rather than by one
+unit in the last place of the prediction. Measured over 305 paired continuous-treatment runs comparing every stored result cell by cell: no cell moved by more than 1e-9 in
+relative terms at any magnitude down to 1e-12; the largest relative move on a quantity of ordinary size was 1.9e-10, on a p-value of 1.2e-8; the largest absolute move anywhere
+was 4.8e-10, in the tenth significant digit of a t statistic of 39.2; coefficients topped out at 1.1e-10 relative, on a pre-treatment coefficient of 3.2e-05, and variances at
+2.6e-11. Two decimal orders of that headroom are spent on near-zero cells: an ordinary coefficient still agrees to about 15 significant digits. As in the binary case, no digit
+{it:wooldid} displays is affected. {p_end}
+
 {phang2}{ul:When should you care?} For almost all work, not at all: no digit {it:wooldid} displays is affected, and the differences are several orders of magnitude below any
 sampling uncertainty you are reporting. Two situations warrant attention. First, if you compare output byte-for-byte across runs, or archive results for exact reproduction - then
 be deliberate about whether the collapse is on or off ({opt fullprecisionslow}) in every run you compare, and bear in mind that a request outside the eligible set is run
-uncollapsed without notice. Second, if your analysis differences two nearly equal estimates, or otherwise divides by a quantity that is near zero, since that amplifies the relative
+uncollapsed without notice, and that a {it:subgroups()} run can switch to the full data part-way through (see below; {it:e(wdid_fcguard)} records it). Second, if your analysis differences two nearly equal estimates, or otherwise divides by a quantity that is near zero, since that amplifies the relative
 size of any rounding difference. {p_end}
 
 {phang2}A useful calibration for the second case: merely permuting the order of the rows in your dataset - leaving the data otherwise untouched, with the collapse off -
 moves the same near-zero coefficient about 19 times {bf:more} than the collapse does. So if a conclusion is sensitive at this scale, it is already sensitive to the order your
 observations happen to be stored in, which is worth knowing whether or not the collapse is in use. {p_end}
 
-{phang2}{ul:Ineligible combinations.} With any of the following the collapse is {bf:skipped} and the run proceeds on the full data exactly as it would have before the collapse
-existed; if {it:fastcollapse} was specified explicitly the combination is instead refused with an error, and {it:safety(off)} does not override the refusal, because each is a
-demonstrated wrong answer rather than an accepted risk. {it:contreat()} and {it:interactivecontrols()}, which interact the treatment dummy with a variable that varies inside a
-cell, so the effect is no longer constant within the cell; {it:semielasticity} and the continuous-treatment elasticity forms, which divide by the prediction and so re-introduce
-the within-cell variation that a plain marginal effect cancels; {it:poisexpresults}, whose exponentiated reporting scale is not linear in the coefficients; {it:unconditionalse},
-whose variance is built from observation-level influence functions and whose row count {it:margins} checks against {it:e(N)}; and {it:impvalues}, which computes effects over the
-clusters, a grouping the cell key does not contain. {it:customvce()} is also excluded, as not yet verified rather than known-broken. Poisson estimation on the default (log)
-reporting scale is eligible. {p_end}
+{phang2}{ul:What turns the collapse off: the complete list.} There are three ways the collapse does not run, and this paragraph is the single place that enumerates them.
+{bf:(1) You turn it off}, with {opt fullprecisionslow}. {bf:(2) The request is ineligible}, in which case the collapse is {bf:skipped} and the run proceeds on the full data
+exactly as it would have before the collapse existed - silently, unless {it:verbose} is on, which names the option responsible. If {it:fastcollapse} was specified explicitly the
+same combination is instead refused with an error, and {it:safety(off)} does {ul:not} override that refusal, because each entry below is a demonstrated wrong answer rather than
+an accepted risk. {bf:(3) A {it:subgroups()} run sets it aside part-way through}, which is a screen rather than an eligibility rule and is described in the next paragraph. {p_end}
 
-{phang2}{ul:And {bf:subgroups()}, for a subtler reason worth understanding.} When {it:margins} judges a subgroup-by-horizon effect not estimable it does not error - it computes the
-number anyway and flags it only by marking the name it returns. wooldid's subgroup code is the one place that reads that flag, and it does so three separate ways: to drop the
-affected horizon with a caution, to skip the adversarial pre-trend test, and inside the subgroup joint tests. Collapsing the rows can change whether {it:margins} sets the flag, so a
-horizon that should be dropped can come back as a meaningless near-zero, a reported joint test can turn to missing, or - where two estimands lose different numbers of horizons -
-the run can abort outright. Measured across the 472-configuration test inventory this changed reported output on 4 configurations and produced one hard error. Subgroup runs are
-therefore always evaluated on the full data. Non-subgroup runs are not exposed: no code outside the subgroup path reads a {it:margins} result name, and 123 non-subgroup comparisons
-on aggregating data showed no structural difference at all. {p_end}
+{phang2}The ineligible list, grouped by the condition each one breaks. {ul:The treatment effect is no longer constant inside a cell:} {it:interactivecontrols()}, which interacts
+the treatment dummy with a variable that varies within the cell; and, under {it:contreat()}, the treatment variable {ul:also} appearing inside {it:controls()},
+{it:coarsecohortcontrols()}, {it:fe()} or {it:ccc_absorb()}, which makes the dose derivative vary within the cell on a variable the collapse does not average. (A control term
+built from a {ul:copy} of the treatment variable under a different name is not detected and stays eligible; it was also measured exact, {it:margins} not differentiating through
+the copy.) {ul:The reported quantity is not linear in the coefficients, or not linear in the dose:} {it:semielasticity} and the continuous-treatment elasticity forms
+{it:contreatelasticitytype(eyex)} and {it:(eydx)}, which divide by the prediction and so re-introduce the within-cell variation that a plain marginal effect cancels;
+{it:contreatpoly()} above 1, which makes the effect a polynomial in the dose that the cell mean does not reproduce; {it:poisexpresults}, whose exponentiated reporting scale is
+not linear in the coefficients; and {it:poisson} together with {it:contreatelasticitytype(dyex)}, which {it:margins} reports through an {it:expression()} it differentiates
+numerically, so that replacing the dose by its cell mean changes the round-off of the derivative rather than cancelling out of it.
+{ul:The read splits a cell on something the cell key does not contain:}
+{it:lattice()}, {it:makecfxplots} and {it:cfxlattice()}, which bin the dose; and {it:impvalues}, which computes effects over the clusters.
+{ul:{it:margins} objects to the collapsed row count itself:} {it:unconditionalse}, whose variance is built from observation-level influence functions and whose row count
+{it:margins} checks against {it:e(N)}. {ul:Unverified rather than known-broken:} {it:customvce()}, refused pending measurement. {p_end}
+
+{phang2}Everything else is eligible, including several combinations that are easy to assume are not. {it:contreat()} is eligible on the default {it:dydx} scale and under
+{it:contreatelasticitytype(dyex)}, with every flavour of {it:contreatcontrols()} and with {it:ccnoabsorb}. Poisson estimation on the default (log) reporting scale is eligible,
+including with {it:contreat()}. So are {it:fastnose}, {it:jointtests}, {it:adversarial} and {it:altmethod_adversarial}, {it:esfixedbaseperiod} and {it:esrelativeto()},
+{it:pretrendpower()}, {it:histogramcohorteffects}, {it:summarystats}, {it:gteffects} (which {it:wooldid} refuses alongside {it:contreat()} for a separate reason), {it:makeplots}
+and {it:saveplots()}, and the replications of {cmd:permute()} and {cmd:bootstrap()}, which are evaluated collapsed like any other run. {p_end}
+
+{phang2}{ul:{bf:subgroups()} is eligible, but screened, for a subtler reason worth understanding.} When {it:margins} judges a subgroup-by-horizon effect not estimable it does not
+error - it computes the number anyway and flags it only by marking the name it returns, and that flag rests on a rank decision made at the last digit. wooldid's subgroup code is
+the one place that reads the flag, and it does so three separate ways: to drop the affected horizon with a caution, to skip the adversarial pre-trend test, and inside the subgroup
+joint tests. So it is the one place where the collapse's last-digit change in summation order can change {bf:what} is reported rather than its low-order digits: a horizon that
+should be dropped can come back as a meaningless near-zero, or a reported joint test can turn to missing. This can only happen where the variance matrix has a direction that is
+singular in truth - a subgroup effect, or a contrast between subgroups, whose true variance is zero, as when a fixed effect absorbs every cell ({it:fe()} on a cohort-by-period
+variable), the fit is exact, or the clustered variance is rank-deficient - so that the number {it:margins} computes there is cancellation residue rather than an estimate. wooldid
+therefore screens each subgroup {it:margins} call after the fact, inspecting the returned variance matrix for a not-estimable marker, a subgroup effect or a between-subgroup
+contrast whose variance is below 1e-9 of the largest, or a contrast direction singular at that tolerance (the smallest genuine subgroup contrast measured across the test inventory
+is 3.5e-5 and the residue is around 1e-16, so the band has ample room on both sides). The screen is a few matrix operations per call. If it finds nothing, the collapsed result
+stands. If it finds a singular direction, then under the default safety setting wooldid restores the full data at that point and evaluates that call and every remaining subgroup
+call on it, so everything downstream of the flag is exactly what {opt fullprecisionslow} would have produced (the main results, and any subgroup horizons already read before the
+flag, were computed collapsed and agree with their full-data values to the last digit as described above); {it:verbose} reports when this happens. Under {it:safety(off)} wooldid
+instead keeps the collapsed rows, as requested, and prints a caution naming what it found, since in that situation which subgroup horizons and joint tests are reported can depend on
+the summation order. The outcome is recorded in the hidden macro {it:e(wdid_fcguard)}: empty when nothing was flagged, {it:fallback}, or {it:caution}. An explicit
+{it:fastcollapse} is a request the screen may set aside in the same way; and a fallback carries into {it:bootstrap()} replications, which are otherwise evaluated collapsed. {p_end}
+
+{phang2}{ul:When does the screen fire?} In practice when a contrast between two subgroups has {bf:exactly} zero variance in the full data too, so the "significance" of that
+contrast rests on rounding residue whichever way it is computed. The common route is clustering on a variable that nests the cohort variable - {it:cluster(state)} where the cohorts
+are state-by-group cells, or clustering on the cohort itself - so that subgroups of identical cohort-and-period composition are perfectly correlated; a handful of coarse clusters,
+a subgroup that is an exact shifted copy of another, and a subgroup nested inside a unit reach the same place. wooldid's own identical-standard-error, all-zero-variance or
+not-estimable caution usually accompanies such a run but does not always (a robust variance on a saturated design, or clustering on the period, can be singular there without it),
+so the screen adds coverage. Every configuration on which the collapse had been measured to change reported subgroup output is caught by it, and across an adversarial probe of
+over 400 further subgroup configurations - noise shrunk toward the tolerance, weights driven toward zero, near-balanced compositions, rescaled and heteroskedastic outcomes,
+estimability edges, replications, every downstream reporting path - no result read while the collapse was engaged differed from its full-data value by more than amplified
+rounding: at most 1e-7 relative, on between-subgroup contrasts whose variance sat within a factor of ten of the tolerance, never a point estimate, standard error or reported
+set. Healthy
+subgroup runs pass untouched: realistic heteroskedasticity leaves the screened variance ratios between 0.1 and 1, seven to eight orders of magnitude from the tolerance. The
+one way a healthy variance matrix reaches it is outcome scales differing between subgroups by more than about a factor of 1e4 (a variance ratio of 1e-9): the cost is then the
+speedup under the default safety, and under {it:safety(off)} a caution that overstates the situation. Non-subgroup runs are not exposed: no code outside the subgroup path reads a
+{it:margins} result name, and 123 non-subgroup comparisons on aggregating data showed no structural difference at all. {p_end}
 
 {phang2}{ul:Memory.} The full data is held aside while the collapsed window runs, so peak memory includes an extra copy of your dataset. This is immaterial for typical panels but
 worth knowing if you are already near your memory limit, particularly if you have issued your own {help preserve} before calling {it:wooldid}; {opt fullprecisionslow} removes
@@ -385,7 +439,7 @@ observed comparison statistic itself is missing. {p_end}
 
 {phang}{opt bootalp:ha(spec)}: The Dirichlet convention for {cmd:bootstrap(bayes)}. {cmd:bootalpha(equal)}, the default, draws Dirichlet(1,...,1) across clusters - the Rubin convention. {cmd:bootalpha(size)} instead gives cluster {it:c} the Gamma shape {it:n_c}, its observation count, reproducing what {helpb bayesboot} does when passed {cmd:id(}{it:clustervar}{cmd:)}; it is available for exact comparison against that command, but it is not a sound default for panel data, because tying the Dirichlet's concentration to the observation count rather than the cluster count shrinks the cluster-weight dispersion by roughly the square root of the mean cluster size and the resulting standard errors are badly understated. {p_end}
 
-{phang}{opt bootd:f(spec)}: The reference distribution for the reported bootstrap statistics. {cmd:bootdf(normal)}, the default, uses standard normal critical values and reports z statistics - the convention Stata's own {helpb bootstrap} prefix follows. {cmd:bootdf(clusters)} instead uses the t distribution with {it:G}-1 degrees of freedom, where {it:G} is the number of resampling units ({cmd:cluster()} groups, or observations when no {cmd:cluster()} is given), and a positive integer sets the degrees of freedom directly. This changes only the reference distribution, never the bootstrap standard errors themselves: the p-values, the normal-theory confidence intervals and the joint tests widen, with the joint tests reported as F({it:k},{it:df}) rather than chi-squared({it:k}); the percentile and bias-corrected intervals are quantile-based and are unaffected. The t option is worth considering when the number of clusters is modest: simulations on 24-cluster designs found coverage running below nominal even where the bootstrap standard error itself was calibrated, because the standard error is estimated rather than known, and a t({it:G}-1) critical value is the standard correction. When it is in force {it:e(df_r)} is set to the same degrees of freedom, so a {cmd:test} or {cmd:lincom} run by hand afterwards reproduces the reported p-values rather than diverging from them. {p_end}
+{phang}{opt bootd:f(spec)}: The reference distribution for the reported bootstrap statistics. {cmd:bootdf(normal)} uses standard normal critical values and reports z statistics - the convention Stata's own {helpb bootstrap} prefix follows. {cmd:bootdf(clusters)} instead uses the t distribution with {it:G}-1 degrees of freedom, where {it:G} is the number of resampling units ({cmd:cluster()} groups, or observations when no {cmd:cluster()} is given), and a positive integer sets the degrees of freedom directly. {bf:The default depends on whether you clustered}: {cmd:bootdf(clusters)} when {cmd:cluster()} was given, and {cmd:bootdf(normal)} when it was not. The bootstrap standard error is estimated rather than known, so where a cluster count exists the t({it:G}-1) correction is the appropriate one; with no {cmd:cluster()} the resampling unit is the observation, and a {it:G}-1 rule would be {it:N}-1 and indistinguishable from the normal. An explicit {cmd:bootdf()} always overrides the default. This changes only the reference distribution, never the bootstrap standard errors themselves: the p-values, the normal-theory confidence intervals and the joint tests widen, with the joint tests reported as F({it:k},{it:df}) rather than chi-squared({it:k}); the percentile and bias-corrected intervals are quantile-based and are unaffected. The t option is worth considering when the number of clusters is modest: simulations on 24-cluster designs found coverage running below nominal even where the bootstrap standard error itself was calibrated, because the standard error is estimated rather than known, and a t({it:G}-1) critical value is the standard correction. Under every setting {it:e(df_r)} is aligned with the reference distribution actually reported - the same degrees of freedom under {cmd:bootdf(clusters)} or an explicit integer, and missing under {cmd:bootdf(normal)} so that the fallback is chi-squared and z - so a {cmd:test} or {cmd:lincom} run by hand afterwards reproduces the reported p-values rather than diverging from them. The analytic value is preserved as hidden {it:e(df_r_analytic)}. {p_end}
 
 {pstd} {ul: Discussion of Unconditional Standard Errors:}
 The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates
@@ -887,8 +941,8 @@ The {cmd:bootstrap()} re-identification leg required by {it:att_it}, {it:att_i} 
 {it:fastnose} skips the variance calculation that accounts for most of a {it:margins} call and is correspondingly worth several times over on runs where
 standard errors are not needed. The default cell collapse (see {it:fastcollapse}) attacks the same cost from
 the other side - it shrinks the data each {it:margins} call sees rather than skipping the variance - and the two compose. The collapse is already on unless
-{it:fullprecisionslow} or an ineligible option turns it off, so a run that must be evaluated on the full data ({it:contreat()}, {it:subgroups()},
-{it:unconditionalse}, ...) is the one paying the full per-row {it:margins} cost described here. {p_end}
+{it:fullprecisionslow} or an ineligible option turns it off, so a run that must be evaluated on the full data ({it:unconditionalse}, {it:contreatpoly()} above 1, ...,
+or a {it:subgroups()} run whose screen has set the collapse aside) is the one paying the full per-row {it:margins} cost described here. {p_end}
 
 {pstd}{bf:Where the time goes.} Nearly all of a typical run is spent inside Stata's {it:margins}, and most of each {it:margins} call is the delta-method
 variance calculation rather than the point estimates. Very little time is spent in {it:wooldid}'s own code, which is why the levers that matter are the ones
@@ -929,7 +983,7 @@ none, and prints a computational-fragility caution (suggesting a larger {it:regt
 
 {synopt:{it:e(gteffects)}} The cohort-by-relative-period building-block table produced by the {it:gteffects} option; see that option's description for the column layout.{p_end}
 
-{synopt:{it:Bootstrap inference}} When {cmd:bootstrap()} is used: scalars {it:e(boot_reps)}, {it:e(boot_completed)}, {it:e(boot_failed)}, {it:e(boot_level)}, {it:e(boot_N_V)} (replications behind the covariance) and {it:e(boot_v_posted)}; macros {it:e(boot_method)}, {it:e(boot_stat)} (z, or t under {cmd:bootdf()}), {it:e(boot_seed)}, {it:e(boot_alpha)} and {it:e(boot_ties)}; matrices {it:e(V_boot)}, {it:e(b_boot)} (replication means), {it:e(bias_boot)}, {it:e(boot_navail)} (available replications per estimate), {it:e(boot_ci_normal)}, {it:e(boot_ci_percentile)}, {it:e(boot_ci_bc)}, {it:e(boot_z0)}, and - up to 10,000 completed replications - {it:e(bootdist)}, the replication matrix itself. The analytic covariances the bootstrap replaced are kept as hidden {it:e(V_analytic)} and {it:e(V_es_analytic_*)}. Under {cmd:bootdf()} the scalar {it:e(boot_df)} records the degrees of freedom in force. Note that with the default {cmd:bootdf(normal)} the scalar {it:e(df_r)} continues to hold the analytic degrees of freedom, so {cmd:test} and {cmd:lincom} run by hand after a bootstrap fit use a t/F metric on the bootstrap covariance and will not reproduce the z-based p-values in the reported tables; specifying {cmd:bootdf(clusters)} aligns {it:e(df_r)} with the reported inference and removes that discrepancy. {p_end}
+{synopt:{it:Bootstrap inference}} When {cmd:bootstrap()} is used: scalars {it:e(boot_reps)}, {it:e(boot_completed)}, {it:e(boot_failed)}, {it:e(boot_level)}, {it:e(boot_N_V)} (replications behind the covariance) and {it:e(boot_v_posted)}; macros {it:e(boot_method)}, {it:e(boot_stat)} (z, or t under {cmd:bootdf()}), {it:e(boot_seed)}, {it:e(boot_alpha)} and {it:e(boot_ties)}; matrices {it:e(V_boot)}, {it:e(b_boot)} (replication means), {it:e(bias_boot)}, {it:e(boot_navail)} (available replications per estimate), {it:e(boot_ci_normal)}, {it:e(boot_ci_percentile)}, {it:e(boot_ci_bc)}, {it:e(boot_z0)}, and - up to 10,000 completed replications - {it:e(bootdist)}, the replication matrix itself. The analytic covariances the bootstrap replaced are kept as hidden {it:e(V_analytic)} and {it:e(V_es_analytic_*)}. Under {cmd:bootdf()} the scalar {it:e(boot_df)} records the degrees of freedom in force. {it:e(df_r)} is aligned with the reference distribution actually reported, so a {cmd:test} or {cmd:lincom} run by hand after a bootstrap fit reproduces the p-values in the reported tables under every {cmd:bootdf()} setting: under {cmd:bootdf(clusters)} or an explicit integer it holds those degrees of freedom, and under {cmd:bootdf(normal)} it is set to missing so that {cmd:test} and {cmd:lincom} fall back to chi-squared and z, matching the reported statistics. The analytic residual degrees of freedom the bootstrap replaced are kept as hidden {it:e(df_r_analytic)}, alongside the analytic covariances. {p_end}
 
 {synopt:{it:Permutation inference}} When {cmd:permute()} is used: scalars {it:e(perm_p_{it:est})}, {it:e(perm_lb_{it:est})}/{it:e(perm_ub_{it:est})} (the 5th-95th percentile null band),
 {it:e(perm_sd_{it:est})}, and under {it:permtci} {it:e(perm_tlb_{it:est})}/{it:e(perm_tub_{it:est})}, for each requested estimand; run-level {it:e(perm_reps)}, {it:e(perm_completed)}, {it:e(perm_failed)},

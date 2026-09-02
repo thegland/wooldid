@@ -26,8 +26,12 @@ prog def mkpan
 end
 
 * ---- E-T1: joint_horiz under bootstrap == hand Wald from bootdist (exact)
+* the reference distribution is requested explicitly: this leg checks the Wald construction
+* against chi2, and since the ruling of 2026-09-02 the default on a CLUSTERED run is
+* bootdf(clusters), which reports F(k, G-1) instead. bootdf() itself is covered in
+* test_bootstrap_df.do (T1 both branches, T3 the F reference).
 mkpan
-qui wooldid y unit t ttre, att cluster(unit) esprelength(3) espostlength(1) jointtests bootstrap(bayes) reps(40) rseed(99)
+qui wooldid y unit t ttre, att cluster(unit) esprelength(3) espostlength(1) jointtests bootstrap(bayes) reps(40) rseed(99) bootdf(normal)
 scalar jp = e(joint_horiz)
 matrix BD = e(bootdist)
 matrix OB = e(b)
