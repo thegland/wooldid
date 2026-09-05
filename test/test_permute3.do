@@ -54,16 +54,20 @@ real scalar wdp3_q(real colvector v, real scalar pr)
   if (x == floor(x) & x >= 1) return((v[x] + v[min((x+1, n))])/2)
   return(v[max((min((ceil(x), n)), 1))])
 }
-real scalar wdp3_recon(real scalar exact, real scalar lvl)
+real scalar wdp3_recon(real scalar exact, real scalar lvl) return(wdp3_reconx(exact, lvl, 0))
+// absp = 1: the permabsp convention - p from |s|, the symmetric dual interval; the null
+// band e(perm_nullband) must hold the SIGNED level quantiles in both conventions
+real scalar wdp3_reconx(real scalar exact, real scalar lvl, real scalar absp)
 {
-  real matrix A, S, CI
+  real matrix A, S, CI, NB
   real rowvector cm, cs, P, bb, N
   real colvector v, s
-  real scalar k, r, n, plo, phi, p, qlo, qhi, bad, so, sobs, ts, M, al
+  real scalar k, r, n, plo, phi, p, qlo, qhi, qa, bad, so, sobs, ts, M, al
   A = st_matrix("e(permdist_b)")
   cm = st_matrix("e(perm_comparator_b)")
   P = st_matrix("e(perm_p)")
   CI = st_matrix("e(perm_ci)")
+  NB = st_matrix("e(perm_nullband)")
   bb = st_matrix("e(b)")
   N = st_matrix("e(perm_n)")
   M = st_numscalar("e(perm_reps)")
@@ -99,23 +103,34 @@ real scalar wdp3_recon(real scalar exact, real scalar lvl)
       continue
     }
     v = sort(v, 1)
-    if (exact & n == M) {
-      plo = sum(v :<= sobs)/n
-      phi = sum(v :>= sobs)/n
+    if (absp) {
+      if (exact & n == M) p = sum(abs(v) :>= abs(sobs))/n
+      else p = (1 + sum(abs(v) :>= abs(sobs)))/(n + 1)
     }
     else {
-      plo = (1 + sum(v :<= sobs))/(n + 1)
-      phi = (1 + sum(v :>= sobs))/(n + 1)
+      if (exact & n == M) {
+        plo = sum(v :<= sobs)/n
+        phi = sum(v :>= sobs)/n
+      }
+      else {
+        plo = (1 + sum(v :<= sobs))/(n + 1)
+        phi = (1 + sum(v :>= sobs))/(n + 1)
+      }
+      p = min((1, 2*min((plo, phi))))
     }
-    p = min((1, 2*min((plo, phi))))
     if (p != P[k]) bad++
     qlo = wdp3_q(v, al)
     qhi = wdp3_q(v, 1 - al)
+    if (NB[1, k] != qlo | NB[2, k] != qhi) bad++
     if (qlo > 0 | qhi < 0) {
       if (CI[1, k] < . | CI[2, k] < .) bad++
       continue
     }
-    if (bb[k] - qhi*so != CI[1, k] | bb[k] - qlo*so != CI[2, k]) bad++
+    if (absp) {
+      qa = wdp3_q(sort(abs(v), 1), 1 - 2*al)
+      if (bb[k] - qa*so != CI[1, k] | bb[k] + qa*so != CI[2, k]) bad++
+    }
+    else if (bb[k] - qhi*so != CI[1, k] | bb[k] - qlo*so != CI[2, k]) bad++
   }
   return(bad)
 }
@@ -644,6 +659,124 @@ if _rc == 0 {
   }
 }
 
+* ================= Q12: permabsp - the absolute-value p convention with its symmetric dual
+* interval, reconstructed bitwise; it must DIFFER from the equal-tailed p on the same draws
+* (non-vacuity), coincide on the mirror-symmetric exact fixture (2/20), coincide with the
+* permtci interval under permtstat, and be refused without permute() ==================
+mkperm3 8 4 3
+set seed 1212
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) permute(shuffle) permreps(30)
+xrc Q12a 0 _rc
+tempname ETP ETD ETB
+if _rc == 0 {
+  matrix `ETP' = e(perm_p)
+  matrix `ETD' = e(permdist_b)
+  matrix `ETB' = e(perm_nullband)
+  if "`e(perm_pconv)'" != "equaltailed" | e(perm_absp) != 0 {
+    dis as error "Q12b FAIL: e(perm_pconv)/e(perm_absp) wrong on the equal-tailed run"
+    global pf = $pf + 1
+  }
+}
+mkperm3 8 4 3
+set seed 1212
+qui log using perm3_q12.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) permute(shuffle) permreps(30) permabsp
+local rc12 = _rc
+qui log close p3
+xrc Q12c 0 `rc12'
+if `rc12' == 0 {
+  local bad 0
+  if "`e(perm_pconv)'" != "absolute" | e(perm_absp) != 1 local ++bad
+  * same seed, same draws; the band (signed level quantiles) is convention-free
+  if mreldif(e(permdist_b), `ETD') != 0 local ++bad
+  if mreldif(e(perm_nullband), `ETB') != 0 local ++bad
+  * the kernel's own quantile rows are the symmetric +/- q under permabsp
+  tempname K12
+  matrix `K12' = e(perm_kernel)
+  forval k = 1/`=colsof(`K12')' {
+    if `K12'[13, `k'] == 1 & (`K12'[4, `k'] != -`K12'[5, `k'] | `K12'[5, `k'] < 0) local ++bad
+  }
+  mata: st_numscalar("__bad", wdp3_reconx(0, 95, 1))
+  if __bad != 0 local ++bad
+  chk3tab , label(Q12d)
+  * non-vacuity: at least one live p differs between the two conventions on these draws
+  local ndiff 0
+  local nlive 0
+  forval k = 1/`=colsof(`ETP')' {
+    if `ETP'[1, `k'] < . & e(perm_p)[1, `k'] < . {
+      local ++nlive
+      if `ETP'[1, `k'] != e(perm_p)[1, `k'] local ++ndiff
+    }
+  }
+  if `nlive' < 3 | `ndiff' == 0 local ++bad
+  * the legacy scalar carries the absolute-value p too, and the footer names the convention
+  if e(perm_p_att) != e(wdidmainresults)[1, 4] local ++bad
+  local lg = fileread("perm3_q12.txt")
+  if strpos("`lg'", "absolute-value permutation p-values (permabsp)") == 0 local ++bad
+  if strpos("`lg'", "equal-tailed permutation p-values") != 0 local ++bad
+  if strpos("`lg'", "95% null band") == 0 local ++bad
+  if `bad' {
+    dis as error "Q12e FAIL: `bad' permabsp check(s) (live=`nlive' differing=`ndiff')"
+    global pf = $pf + 1
+  }
+}
+* exact enumeration on the Q4 fixture: the observed assignment is the unique maximum in
+* |s| (the fixture is not an exact mirror - the 0.1*i unit trend breaks it), so the
+* absolute-value p is the 1/M floor where the equal-tailed p was 2/20
+mkperm3 6 3 3
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact permabsp
+xrc Q12f 0 _rc
+if _rc == 0 {
+  local bad 0
+  if abs(e(perm_p_att) - 0.05) > 1e-12 local ++bad
+  if e(perm_exact) != 1 | e(perm_completed) != 20 local ++bad
+  mata: st_numscalar("__bad", wdp3_reconx(1, 95, 1))
+  if __bad != 0 local ++bad
+  * symmetric about the estimate
+  if reldif(_b[main_att] - e(wdidmainresults)[1, 5], e(wdidmainresults)[1, 6] - _b[main_att]) > 1e-12 local ++bad
+  if `bad' {
+    dis as error "Q12g FAIL: `bad' exact permabsp check(s): p=" e(perm_p_att)
+    global pf = $pf + 1
+  }
+}
+* permtstat + permtci + permabsp: the permtci interval IS the table's interval
+mkperm3 8 4 3
+set seed 1213
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(30) permtstat permtci permabsp
+xrc Q12h 0 _rc
+if _rc == 0 {
+  local bad 0
+  if "`e(perm_stat)'" != "t" | "`e(perm_pconv)'" != "absolute" local ++bad
+  mata: st_numscalar("__bad", wdp3_reconx(0, 95, 1))
+  if __bad != 0 local ++bad
+  if e(perm_tlb_att) >= . local ++bad
+  else if reldif(e(perm_tlb_att), e(wdidmainresults)[1, 5]) > 1e-12 | reldif(e(perm_tub_att), e(wdidmainresults)[1, 6]) > 1e-12 local ++bad
+  if `bad' {
+    dis as error "Q12i FAIL: `bad' permtstat+permtci+permabsp check(s)"
+    global pf = $pf + 1
+  }
+}
+* level(90) under permtci: the inverted-|t| interval follows level()
+mkperm3 8 4 3
+set seed 1213
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(30) permtstat permtci permabsp level(90)
+xrc Q12j 0 _rc
+if _rc == 0 {
+  local bad 0
+  mata: st_numscalar("__bad", wdp3_reconx(0, 90, 1))
+  if __bad != 0 local ++bad
+  if e(perm_tlb_att) >= . local ++bad
+  else if reldif(e(perm_tlb_att), e(wdidmainresults)[1, 5]) > 1e-12 | reldif(e(perm_tub_att), e(wdidmainresults)[1, 6]) > 1e-12 local ++bad
+  if `bad' {
+    dis as error "Q12k FAIL: `bad' level(90) permtci check(s)"
+    global pf = $pf + 1
+  }
+}
+* stray
+mkperm3 8 4 3
+cap noi wooldid y i t ttre, att cluster(i) permabsp
+xrc Q12l 198 _rc
+
 * ================= Q11: a plain run after all of this is untouched by the engine ======
 mkperm3 8 4 3
 cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
@@ -656,7 +789,7 @@ if _rc == 0 {
 }
 
 cap erase perm3_q1.dta
-foreach f in perm3_q1.txt perm3_q1r.txt perm3_q5.txt perm3_q7.txt perm3_q7b.txt {
+foreach f in perm3_q1.txt perm3_q1r.txt perm3_q5.txt perm3_q7.txt perm3_q7b.txt perm3_q12.txt {
   cap erase `f'
 }
 cap erase perm3_q1_ES.dta
