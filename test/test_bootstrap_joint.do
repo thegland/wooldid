@@ -30,37 +30,73 @@ end
 * against chi2, and since the ruling of 2026-09-02 the default on a CLUSTERED run is
 * bootdf(clusters), which reports F(k, G-1) instead. bootdf() itself is covered in
 * test_bootstrap_df.do (T1 both branches, T3 the F reference).
+* RE-PINNED 2026-09-04. Author ruling: a joint test that cannot be BOOTSTRAPPED is ABSENT,
+* and bootstrapping one means bootstrapping its test statistic, which requires boottstat.
+* So the no-boottstat run must post no joint scalar at all, and the hand-Wald identity is
+* checked on the boottstat run. NOTE FOR LAYER 2: under boottstat the statistic is slated
+* to become the recentered studentized W_r rather than the draw-covariance Wald checked
+* here, at which point the ET1 identity below must be re-derived, not merely re-toleranced.
 mkpan
 qui wooldid y unit t ttre, att cluster(unit) esprelength(3) espostlength(1) jointtests bootstrap(bayes) reps(40) rseed(99) bootdf(normal)
+cap confirm scalar e(joint_horiz)
+local et1_absent_rc = _rc
+di "ET1_ABSENT_WITHOUT_BOOTTSTAT rc=`et1_absent_rc' flag=[`e(boot_jt_absent)'] (want 111 and 1)"
+if `et1_absent_rc' == 0 | "`e(boot_jt_absent)'" != "1" {
+  di as error "ET1z FAIL: the joint test must be absent and flagged without boottstat"
+  local ++fails
+}
+* RE-DERIVED 2026-09-05 (Layer 2): under boottstat the joint statistic is the bootstrap of the
+* TEST STATISTIC - each replication's recentred Wald (b_r - b)' V_r^-1 (b_r - b) on its own
+* e(V_es_att), stored by name in e(boot_jointW) - and the p is the add-one share at or beyond
+* the observed Wald on the analytic e(V_es_analytic_att). boottstat is refused with
+* bootstrap(bayes) (task 2), so the identity runs on bootstrap(standard)
+mkpan
+qui wooldid y unit t ttre, att cluster(unit) esprelength(3) espostlength(1) jointtests bootstrap(standard) reps(40) rseed(99) bootdf(normal) boottstat
 scalar jp = e(joint_horiz)
-matrix BD = e(bootdist)
-matrix OB = e(b)
-local cn : colfullnames e(b)
+matrix JW = e(boot_jointW)
+matrix VA = e(V_es_analytic_att)
+matrix BE = e(b_es_att)
+local cn : colnames BE
 local pcols
 local k 0
 foreach nm of local cn {
   local ++k
-  if strpos("`nm'", "ES_att_pre") local pcols `pcols' `k'
+  if substr("`nm'",1,3) == "pre" local pcols `pcols' `k'
 }
-mata: A = st_matrix("BD")[., strtoreal(tokens(st_local("pcols")))']
-mata: b = st_matrix("OB")[1, strtoreal(tokens(st_local("pcols")))']'
-mata: CC = select(A, rowmissing(A) :== 0)
-mata: dev = CC :- mean(CC)
-mata: S = (dev' * dev)/(rows(CC)-1)
-mata: st_numscalar("jphand", chi2tail(cols(A), b' * invsym(S) * b))
-di "ET1_JOINT_RELDIF=" reldif(jp, jphand)
-if reldif(jp, jphand) > 1e-12 {
-  di as error "ET1 FAIL"
+local jwn : colnames JW
+local jcol : list posof "att" in jwn
+scalar jc = `jcol'
+di "ET1_map pcols=[`pcols'] jointW col=`jcol' of [`jwn']"
+if `jcol' == 0 | "`pcols'" == "" {
+  di as error "ET1 FAIL (VACUOUS): e(boot_jointW) has no att column or e(b_es_att) has no pre horizons"
   local ++fails
+}
+else {
+  mata: JW = st_matrix("JW"); VA = st_matrix("VA"); BE = st_matrix("BE"); idx = strtoreal(tokens(st_local("pcols")))
+  mata: b = BE[1, idx']'; V = VA[idx', idx']; V = (V + V')/2
+  mata: sc = sqrt(diagonal(V))'; R = V :/ (sc' * sc); Si = invsym(R) :/ (sc' * sc)
+  mata: Wobs = b' * Si * b; w = JW[., st_numscalar("jc")]; w = select(w, w :< .)
+  mata: st_numscalar("jphand", (1 + sum(w :>= Wobs))/(rows(w) + 1)); st_numscalar("jpn", rows(w))
+  di "ET1_JOINT_RELDIF=" reldif(jp, jphand) " usable=" jpn
+  if jpn < 2 {
+    di as error "ET1 FAIL (VACUOUS): fewer than 2 usable replication statistics"
+    local ++fails
+  }
+  else if reldif(jp, jphand) > 1e-12 {
+    di as error "ET1 FAIL"
+    local ++fails
+  }
 }
 
 * ---- E-T2: SI-A1 carve-out
 mkpan
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(1) jointtests
 local t2a = _rc
-cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(1) jointtests bootstrap(bayes) reps(20) rseed(4)
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(1) jointtests bootstrap(standard) reps(20) rseed(4) boottstat
 local t2b = _rc
 di "ET2_ANALYTIC_RC=" `t2a' " BOOT_RC=" `t2b' " jp=" e(joint_horiz)
+* the carve-out is unchanged - analytic refuses r(198), the bootstrap route does not - but
+* since the 2026-09-04 ruling the bootstrap route only PRODUCES a joint test under boottstat
 if `t2a' != 198 | `t2b' != 0 | e(joint_horiz) >= . {
   di as error "ET2 FAIL"
   local ++fails
@@ -68,11 +104,26 @@ if `t2a' != 198 | `t2b' != 0 | e(joint_horiz) >= . {
 
 * ---- E-T3: pwsgs filled + allsgssame boot Wald + per-sg macro split
 mkpan
-qui wooldid y unit t ttre, att att_it cluster(unit) esprelength(1) espostlength(1) subgroups(sg) bootstrap(bayes) reps(30) rseed(7) safety(off)
+* RE-POINTED 2026-09-04: "z == est/se" is a property of the STANDARD-DEVIATION family, so
+* this run asks for it explicitly; and the across-subgroup equality scalar now requires
+* boottstat, as the joint tests do
+* SPLIT 2026-09-04: this test was checking two different things at once, and the author's
+* ruling made their preconditions mutually exclusive - "z == est/se" is a property of the
+* WALD display, while the across-subgroup equality scalar now requires boottstat, and
+* bootdisplay(wald) + boottstat is refused because a studentized run has no bootstrap
+* standard deviation to build a normal/t approximation on. So: run A for the contrast
+* algebra, run B for the equality scalar.
+* run B RE-POINTED 2026-09-05: boottstat is refused with bootstrap(bayes), so it runs on
+* bootstrap(standard); unclustered and att-only, because att_it needs cluster() under
+* bootstrap(standard) and the analytic pairwise se the studentized equality test needs is
+* degenerate under clustering at or above i on some designs (pre-existing at HEAD)
+qui wooldid y unit t ttre, att esprelength(1) espostlength(1) subgroups(sg) bootstrap(standard) reps(30) rseed(7) safety(off) boottstat
+scalar allsg_B = e(joint_att_allsgssame)
+qui wooldid y unit t ttre, att att_it cluster(unit) esprelength(1) espostlength(1) subgroups(sg) bootstrap(bayes) reps(30) rseed(7) safety(off) bootdisplay(wald)
 matrix P = e(pwsgs)
 local pc : colnames P
-di "ET3_PWCOLS=[`pc'] se11=" P[1,2] " allsg=" e(joint_att_allsgssame)
-if P[1,2] >= . | P[1,2] <= 0 | e(joint_att_allsgssame) >= . {
+di "ET3_PWCOLS=[`pc'] se11=" P[1,2] " allsg(boottstat run)=" allsg_B
+if P[1,2] >= . | P[1,2] <= 0 | allsg_B >= . {
   di as error "ET3 FAIL"
   local ++fails
 }
@@ -191,6 +242,133 @@ di "ET7_TIESPIN ties:  bstat=" z0ties " ours=" ourties " diff=" reldif(z0ties, o
 if reldif(z0plain, ourplain) > 0 | reldif(z0ties, ourties) > 0 {
   di as error "ET7 FAIL: ties z0 convention diverges from bstat"
   local ++fails
+}
+
+* ---- E-T9: NO ANALYTIC across-subgroup equality p-value survives a bootstrap run.
+* REGRESSION TEST for a leak found by audit on 2026-09-04 and fixed the same day. The
+* blanking loop in wooldid_bootjnt iterated a STATIC six-name item list; the worker also
+* posts contreat twins via subinstr(item,"att","ame"), which yields ame_i and ame_itime -
+* both missing from that list. So under bootstrap(bayes) + contreat() + subgroups() with
+* att_i/att_itime, four ANALYTIC equality p-values printed while the footer asserted they
+* were absent and e(boot_sgjt_absent) was set. The disclosure contradicted the output.
+*
+* This test is written to FAIL LOUDLY RATHER THAN VACUOUSLY: it first checks that the
+* ANALYTIC baseline actually produces the ame_* scalars, because a fixture that does not
+* would let the bootstrap leg pass while checking nothing. Four earlier attempts at this
+* fixture each passed vacuously for a different reason.
+*
+* NB: `clear', NOT `clear all'. `clear all' drops loaded PROGRAMS, which would discard the
+* working-tree wooldid this file `do'-loaded at the top and silently fall through to the
+* INSTALLED copy on the adopath - the test would then be exercising a different version of
+* the package than the one under test, and its rc would be meaningless.
+clear
+set more off
+set seed 777
+set sortseed 777
+set obs 12
+gen grp = _n
+gen ttre = .
+replace ttre = 4 if mod(grp,3) == 0
+replace ttre = 6 if mod(grp,3) == 1
+gen gfe = rnormal()
+expand 4
+bysort grp: gen person = _n + 100*grp
+gen sg = 1 + mod(_n,2)
+gen pfe = rnormal()
+expand 8
+bysort person: gen t = _n
+gen w = 0.5 + rchi2(3)
+gen c = 0.3 + 1.5*runiform()
+gen post = (t >= ttre & ttre != .)
+gen eff = cond(sg==1, 1.0, 0.5)
+gen y = 2 + gfe + pfe + 0.04*(t-1) + eff*post + 0.6*c*post + rnormal(0, 0.6)
+tempfile fxeq
+save `fxeq'
+local EQB att att_i att_itime cluster(person) subgroups(sg) contreat(c) ///
+    contreatcontrols(basic) esprelength(2) espostlength(2) safety(off)
+use `fxeq', clear
+cap qui wooldid y grp t ttre [aw=w], `EQB'
+local eq_rc0 = _rc
+local eq_present 0
+foreach nm in ame ame_i ame_itime pre_ame pre_ame_i pre_ame_itime {
+  if e(joint_`nm'_allsgssame) < . local ++eq_present
+}
+use `fxeq', clear
+cap qui wooldid y grp t ttre [aw=w], `EQB' bootstrap(bayes) reps(12) rseed(101) dots(0)
+local eq_rc1 = _rc
+local eq_leaked 0
+foreach nm in ame ame_i ame_itime pre_ame pre_ame_i pre_ame_itime att att_i att_itime pre_att pre_att_i pre_att_itime {
+  if e(joint_`nm'_allsgssame) < . {
+    local ++eq_leaked
+    di as error "ET9 leaked: joint_`nm'_allsgssame = " e(joint_`nm'_allsgssame)
+  }
+}
+di "ET9_rc0=`eq_rc0' rc1=`eq_rc1' analytic_ame_present=`eq_present' leaked=`eq_leaked' sgjt_absent=[`e(boot_sgjt_absent)']"
+if `eq_rc0' != 0 | `eq_rc1' != 0 {
+  di as error "ET9 FAIL (VACUOUS): a run errored, so the leak check proved nothing"
+  local ++fails
+}
+else if `eq_present' == 0 {
+  di as error "ET9 FAIL (VACUOUS): the analytic baseline posts no ame_* equality scalars, so this fixture cannot exhibit the leak it guards"
+  local ++fails
+}
+else if `eq_leaked' > 0 {
+  di as error "ET9 FAIL: `eq_leaked' analytic equality p-value(s) survived a bootstrap run"
+  local ++fails
+}
+
+* ---------------------------------------------------------------- ET10: the across-subgroup equality test under boottstat is the
+* polarised chain Wald (wooldid_bootsgw); with two subgroups it is the squared studentized contrast, so it must be reproducible BY
+* NAME from e(bootdist), e(bootdist_pwse), e(pwsgs) (col 2 = se_analytic) and e(b): add-one tail of W_r >= W_obs. Unclustered on
+* purpose: under cluster(unit) the analytic pairwise se is degenerate on some designs (pre-existing), which makes this absent.
+mkpan
+cap qui wooldid y unit t ttre, att esprelength(1) espostlength(1) subgroups(sg) jointtests bootstrap(standard) reps(40) rseed(7) boottstat
+local rc10 = _rc
+local p10 = e(joint_att_allsgssame)
+di "ET10_run rc=`rc10' allsgssame=" `p10'
+if `rc10' != 0 | `p10' >= . | `p10' <= 0 | `p10' > 1 {
+  di as error "ET10 FAIL: the subgroup-equality test is not posted (in (0,1]) under unclustered boottstat"
+  local ++fails
+}
+else {
+  matrix ET10_A = e(bootdist)
+  matrix ET10_PS = e(bootdist_pwse)
+  matrix ET10_PW = e(pwsgs)
+  matrix ET10_OB = e(b)
+  local et10cn : colnames ET10_OB
+  local et10k0 : list posof "main_SG0_att" in et10cn
+  local et10k1 : list posof "main_SG1_att" in et10cn
+  local et10pn : colnames ET10_PS
+  local et10c1 : word 1 of `et10pn'
+  di "ET10_map k0=`et10k0' k1=`et10k1' pwsecol1=[`et10c1'] pwrow1=[`: word 1 of `: rownames ET10_PW'']"
+  if `et10k0' == 0 | `et10k1' == 0 | "`et10c1'" != "1vs0.sg" | "`: word 1 of `: rownames ET10_PW''" != "1vs0.sg" {
+    di as error "ET10 FAIL (VACUOUS): the subgroup level columns or the contrast column could not be mapped by name"
+    local ++fails
+  }
+  else {
+    scalar et10k0 = `et10k0'
+    scalar et10k1 = `et10k1'
+    mata:
+      A=st_matrix("ET10_A"); PS=st_matrix("ET10_PS"); PW=st_matrix("ET10_PW"); OB=st_matrix("ET10_OB")
+      k0=st_numscalar("et10k0"); k1=st_numscalar("et10k1")
+      dobs=OB[1,k1]-OB[1,k0]; so=PW[1,2]
+      d=A[.,k1]-A[.,k0]; s=PS[.,1]
+      use=selectindex((d:<.):&(s:<.):&(s:>0))
+      W=((d[use]:-dobs):/s[use]):^2
+      st_numscalar("et10n", rows(W))
+      st_numscalar("et10so", so)
+      st_numscalar("et10p", (so < . & so > 0 & rows(W) > 0 ? (1+sum(W:>=(dobs/so)^2))/(rows(W)+1) : .))
+    end
+    di "ET10_hand usable=" et10n " se_obs=" et10so " p=" %12.8f et10p "  table=" %12.8f `p10' "  reldif=" reldif(et10p, `p10')
+    if et10n < 2 | et10so >= . {
+      di as error "ET10 FAIL (VACUOUS): fewer than 2 usable replications or no observed pairwise se, nothing was checked"
+      local ++fails
+    }
+    else if reldif(et10p, `p10') > 1e-10 {
+      di as error "ET10 FAIL: the subgroup-equality p is not the add-one tail of the polarised replication statistics"
+      local ++fails
+    }
+  }
 }
 
 if `fails' == 0 di as result "BOOTJOINT_ALL_PASS"

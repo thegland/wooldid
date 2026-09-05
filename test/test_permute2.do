@@ -378,12 +378,13 @@ else {
     }
     tempname PD
     matrix `PD' = e(permdist)
-    local recount 0
-    forvalues r = 1/`=rowsof(`PD')' {
-      if abs(`PD'[`r',1]) >= abs(e(perm_comparator)[1,1]) local ++recount
-    }
-    if reldif(`recount'/e(perm_completed), e(perm_p_att)) > 1e-12 {
-      dis as error "P9 FAIL: reconstruction " `recount' "/" e(perm_completed) " != e(perm_p_att) " e(perm_p_att)
+    * equal-tailed exact shares (2026-09-05 one-convention ruling): p = min(1, 2 min(#{s <= obs},
+    * #{s >= obs})/M), the counts taken in Mata on the matrix values (a local's decimal
+    * round-trip re-parses one ulp off and breaks the observed-is-a-member comparison)
+    mata: st_numscalar("__p9lo", sum(st_matrix(st_local("PD"))[., 1] :<= st_matrix("e(perm_comparator)")[1, 1])); st_numscalar("__p9hi", sum(st_matrix(st_local("PD"))[., 1] :>= st_matrix("e(perm_comparator)")[1, 1]))
+    local recount = min(__p9lo, __p9hi)
+    if reldif(min(1, 2*`recount'/e(perm_completed)), e(perm_p_att)) > 1e-12 {
+      dis as error "P9 FAIL: reconstruction 2*" `recount' "/" e(perm_completed) " != e(perm_p_att) " e(perm_p_att)
       local ++fails
     }
     * NFPERM-11: population SD of the enumerated distribution

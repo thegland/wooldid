@@ -121,9 +121,38 @@ if `g12rc' != 0 & `g12rc' != 198 {
 * G14 jointtests + bootstrap: RUNS (boot Wald; exempt from the SI-A1 screen)
 cap qui wooldid y unit t ttre, att esprelength(2) espostlength(1) cluster(unit) bootstrap(bayes) reps(20) rseed(2) jointtests
 chk 14 0 _rc
-* G15 pretrendpower + bootstrap: permanent refusal (plan A13)
+* G15 pretrendpower + bootstrap: RUNS as of 2026-09-04. The plan-A13 refusal was lifted
+* on the author's ruling: the Roth diagnostics now run from the shell AFTER the bootstrap
+* rewiring, so Roth's own formulas consume the BOOTSTRAP event-study covariance. The
+* refusal had rested on an ordering constraint, not an impossibility.
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) esfixedbaseperiod bootstrap(bayes) reps(20) pretrendpower(80)
-chk 15 198 _rc
+chk 15 0 _rc
+* G15b it must actually CONSUME the bootstrap covariance, not merely run: the power
+* figures have to move against the analytic fit on the same data. A run that silently
+* kept reading the analytic V_es would pass G15 and be wrong, so pin the movement.
+cap matrix G15b_boot = e(roth_power_att)
+local g15rc = _rc
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) esfixedbaseperiod pretrendpower(80)
+cap matrix G15b_anl = e(roth_power_att)
+local g15rc2 = _rc
+local g15moved 0
+local g15cells 0
+if `g15rc' == 0 & `g15rc2' == 0 {
+  forvalues r = 1/`=rowsof(G15b_anl)' {
+    forvalues c = 1/`=colsof(G15b_anl)' {
+      if G15b_anl[`r',`c'] < . & G15b_boot[`r',`c'] < . {
+        local ++g15cells
+        if reldif(G15b_anl[`r',`c'], G15b_boot[`r',`c']) > 1e-10 local ++g15moved
+      }
+    }
+  }
+}
+di "G15b_cells=`g15cells' moved=`g15moved' (want cells>0 and moved>0)"
+if `g15cells' == 0 | `g15moved' == 0 {
+  di as error "G15b FAIL: pretrendpower under bootstrap did not consume the bootstrap covariance"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+use `panel', clear
 * G13 plain run untouched
 use `panel', clear
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1)
@@ -173,6 +202,50 @@ logh m5 Bootstrap Inference
 qui log using boot_gates_m6.smcl, replace name(m6) smcl
 cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(20) rseed(3)
 logh m6 Bootstrap Inference
+
+* G16 bootsave(): stray without bootstrap() -> 198; writes <name>.dta to the cwd with the draws
+* bitwise equal to e(bootdist) and an observed _rep = 0 row equal to e(b); an existing file is
+* refused without replace (602) and overwritten with it
+cap erase "boot_gates_g16.dta"
+use `panel', clear
+cap qui wooldid y unit t ttre, att cluster(unit) bootsave(boot_gates_g16)
+chk 16 198 _rc
+use `panel', clear
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(15) rseed(7) bootsave(boot_gates_g16)
+chk 16b 0 _rc
+matrix G16_BD = e(bootdist)
+matrix G16_OB = e(b)
+local g16bn : colnames G16_OB
+cap confirm file "boot_gates_g16.dta"
+chk 16c 0 _rc
+if _rc == 0 {
+  preserve
+  use "boot_gates_g16.dta", clear
+  mata:
+    BD = st_matrix("G16_BD"); OB = st_matrix("G16_OB"); nm = tokens(st_local("g16bn"))
+    X = J(st_nobs(), 0, .)
+    for (k=1;k<=cols(BD);k++) X = (X, st_data(., strtoname(nm[k])))
+    rep = st_data(., "_rep")
+    obs = X[selectindex(rep:==0), .]
+    draws = select(X[selectindex(rep:>0), .], rowmissing(X[selectindex(rep:>0), .]):==0)
+    // Mata's & does not short-circuit, so guard the conformability before comparing
+    ok = (rows(obs)==1 & cols(obs)==cols(OB) & rows(draws)==rows(BD) & cols(draws)==cols(BD) & rows(BD) > 0)
+    if (ok) ok = (max(abs(obs :- OB))==0 & max(abs(draws :- BD))==0)
+    st_numscalar("g16ok", ok)
+  end
+  restore
+  if g16ok != 1 {
+    di as error "G16 FAIL: the saved draws or the observed row do not match e(bootdist) / e(b)"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+}
+use `panel', clear
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(15) rseed(7) bootsave(boot_gates_g16)
+chk 16d 602 _rc
+use `panel', clear
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(15) rseed(7) bootsave(boot_gates_g16) replace
+chk 16e 0 _rc
+cap erase "boot_gates_g16.dta"
 
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

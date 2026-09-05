@@ -93,19 +93,28 @@ version 16.0
   if `wdsh_rc' != 0 exit `wdsh_rc'
 
   * F6: permutation inference - runs only after a fully successful estimation. the
-  * worker set wdp_on; re-running wooldid_validate materializes every normalized
+  * worker set wdp_on and (since 2026-09-05) deferred its table display and plots, as it
+  * does under bootstrap(); re-running wooldid_validate materializes every normalized
   * option here (the S5 c_local blanket), from which the rep command line is built.
   * the observed results are stored, the rep loop re-runs wooldid quietly on permuted
-  * onset assignments, then the observed results are restored, the permutation
-  * summaries are appended to e() (this shell is eclass), and part(perm) prints them
+  * onset assignments accumulating the FULL rep e(b) name-aligned (wooldid_permrun),
+  * the observed results are restored, every reported inference surface is rewired to
+  * the permutation distribution (wooldid_permwire, wooldid_permjnt, wooldid_permcellsx),
+  * and the (e()-driven) display prints the rewired tables, the deferred plots and the
+  * part(perm) footer. Author rulings 2026-09-05: only permutation p-values are ever
+  * shown under permute(); joint, equality and adversarial tests are permutation tests
+  * of a fixed-metric statistic; the intervals are shift intervals; the observed run is
+  * a fast (no-SE) run unless permtstat or permanalyticse
   if "`wdp_on'" == "1" {
     qui wooldid_validate `0'
-    * permtci's critical value comes from the permuted |t| distribution, so it implies permtstat
+    * permtci implies permtstat (resolved in validate as well; kept for the rep string)
     if "`permtci'" != "" & "`permtstat'" == "" local permtstat permtstat
-    * rep option string: keep everything that shapes the point estimates; strip
-    * display/diagnostic/plot work and the permutation options themselves; reps run
-    * under fastnose (only coefficients are consumed). subgroups are stripped: v1
-    * permutation statistics cover the pooled estimands only
+    * rep option string: keep everything that shapes the point estimates - INCLUDING
+    * subgroups (their rows are permuted too, 2026-09-05) and the cfx plot requests
+    * (their cells are harvested by key); strip display/diagnostic/plot work and the
+    * permutation options themselves; reps run under fastnose (only coefficients are
+    * consumed) UNLESS permtstat, in which case each replication also produces a VCE so
+    * its own standard errors can form its t-ratios
     local wdp_ro `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `poisexpresults' `robust' `ccnoabsorb' `latticeignoreweights' `emptycellsoverride'
     if "`permtstat'" == "" local wdp_ro `wdp_ro' fastnose
     if "`cluster'" != "" local wdp_ro `wdp_ro' cluster(`cluster')
@@ -116,32 +125,49 @@ version 16.0
     if "`controls'" != "" local wdp_ro `wdp_ro' controls(`controls')
     if "`interactivecontrols'" != "" local wdp_ro `wdp_ro' interactivecontrols(`interactivecontrols')
     if "`customweightmultiplier'" != "" local wdp_ro `wdp_ro' customweightmultiplier(`customweightmultiplier')
-    if "`fastcollapse'" != "" local wdp_ro `wdp_ro' fastcollapse
-    if "`fullprecisionslow'" != "" local wdp_ro `wdp_ro' fullprecisionslow
+    * a cell-collapse fallback in the observed run (e(wdid_fcguard), see wooldid_fcdeg)
+    * extends to the reps, as in the bootstrap block. NB the screen reads a subgroup
+    * margins r(V), so under the fast-mode default it never fires: this rule bites only
+    * under permtstat or permanalyticse, and the help says so
+    local wdp_fb = cond("`e(wdid_fcguard)'" == "fallback", "fallback", "")
+    if "`fastcollapse'" != "" & "`wdp_fb'" == "" local wdp_ro `wdp_ro' fastcollapse
+    if "`fullprecisionslow'`wdp_fb'" != "" local wdp_ro `wdp_ro' fullprecisionslow
     if "`contreat'" != "" local wdp_ro `wdp_ro' contreat(`contreat') contreatpoly(`contreatpoly')
     if `"`contreatcontrols'"' != "" local wdp_ro `wdp_ro' contreatcontrols(`contreatcontrols')
     if `"`lattice'"' != "" local wdp_ro `wdp_ro' lattice(`lattice')
+    if "`makecfxplots'" != "" {
+      local wdp_ro `wdp_ro' makecfxplots
+      if "`cfxlattice'" != "" local wdp_ro `wdp_ro' cfxlattice(`cfxlattice')
+      if "`cfxplottypes'" != "" local wdp_ro `wdp_ro' cfxplottypes(`cfxplottypes')
+      if "`makecfxplotsbysg'" != "" local wdp_ro `wdp_ro' makecfxplotsbysg
+      if "`cfxplotnose'" != "" local wdp_ro `wdp_ro' cfxplotnose
+    }
     if "`semielasticity'" == "eydx" local wdp_ro `wdp_ro' semielasticity
     if "`contreat'" != "" & "`contreatelasticitytype'" != "" local wdp_ro `wdp_ro' contreatelasticitytype(`contreatelasticitytype')
-    if `esprelength' != 0 local wdp_ro `wdp_ro' esprelength(`esprelength')
+    if "`subgroups'" != "" local wdp_ro `wdp_ro' subgroups(`subgroups')
+    * the RAW user esprelength (validate's esf normalization re-fires on every nested
+    * re-parse) and the user's OWN safety value, as the bootstrap block emits them
+    if `esprelengthraw' != 0 local wdp_ro `wdp_ro' esprelength(`esprelengthraw')
     if "`esposttrip'" == "no" local wdp_ro `wdp_ro' espostlength(-999)
     else if `espostlength' != 0 local wdp_ro `wdp_ro' espostlength(`espostlength')
     local wdp_ro `wdp_ro' esrelativeto(`esrelativeto')
-    if "`safety'" != "" local wdp_ro `wdp_ro' safety(`safety')
+    if "`safetyinput'" != "" local wdp_ro `wdp_ro' safety(`safetyinput')
     if `regtol' != 9 local wdp_ro `wdp_ro' regtol(`regtol')
     if `oostreatedcontrols' != 0 local wdp_ro `wdp_ro' oostreatedcontrols(`oostreatedcontrols')
     if `anticipation' != 0 local wdp_ro `wdp_ro' anticipation(`anticipation')
     local wdp_est `att' `att_it' `att_i' `att_itime'
     if "`wdp_est'" == "" local wdp_est att
-    tempname wdpobs wdpdist wdpcomp
+    local wdp_ts = ("`permtstat'" != "")
+    tempname wdpobs wdpdist wdpcomp wdpobsb wdpacc wdpsacc wdpcmpb wdpcmpse wdpcell wdpcell0 wdpasg
     qui est sto `wdpobs'
-    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist') compname(`wdpcomp')
+    matrix `wdpobsb' = e(b)
+    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist') compname(`wdpcomp') obsb(`wdpobsb') accname(`wdpacc') seaccname(`=cond(`wdp_ts', "`wdpsacc'", "")') cmpbname(`wdpcmpb') cmpsename(`=cond(`wdp_ts', "`wdpcmpse'", "")') cellacc(`=cond("`makecfxplots'" != "", "`wdpcell'", "")') cell0(`wdpcell0') dots(`dots') asgname(`=cond("`permsave'" != "", "`wdpasg'", "")')
     local wdp_rc = _rc
     qui est restore `wdpobs'
     cap est drop `wdpobs'
     global WOOLDID_LASTRC
     if `wdp_rc' != 0 exit `wdp_rc'
-    * append the permutation summaries to the restored observed results
+    * run-level permutation results on the restored observed results
     ereturn local perm_method `permute'
     ereturn hidden local wdid_permest `wdp_est'
     ereturn scalar perm_reps = `wdp_r_reps'
@@ -149,30 +175,72 @@ version 16.0
     ereturn scalar perm_failed = `wdp_r_fail'
     ereturn scalar perm_npossible = `wdp_r_npd'
     ereturn local perm_npossible_str `wdp_r_nps'
-    ereturn local perm_stat = cond("`permtstat'" != "", "t", "b")
+    ereturn local perm_stat = cond(`wdp_ts', "t", "b")
+    local wdp_M = cond("`permexact'" != "", "`wdp_r_reps'", ".")
+    * rewire the coefficient tables and post the stripe-aligned surfaces (eclass sub)
+    wooldid_permwire , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') seacc(`wdpsacc') cmpse(`wdpcmpse') level(`level') m(`wdp_M') done(`wdp_r_done') fail(`wdp_r_fail') blank(`wdp_r_blank') ts(`wdp_ts') method(`permute') reps(`wdp_r_reps') ase(`permanalyticse') clus(`cluster') gt(`gteffects')
+    * the legacy per-estimand scalars, read from the posted kernel by name so they are
+    * the SAME numbers the tables carry (one convention: equal-tailed p, 5th-95th null
+    * band, permutation SD; on the t-ratio scale under permtstat)
+    tempname wdpk
+    matrix `wdpk' = e(perm_kernel)
     foreach wdpe in `wdp_est' {
-      ereturn scalar perm_p_`wdpe' = `wdp_r_p_`wdpe''
-      ereturn scalar perm_lb_`wdpe' = `wdp_r_lb_`wdpe''
-      ereturn scalar perm_ub_`wdpe' = `wdp_r_ub_`wdpe''
-      ereturn scalar perm_sd_`wdpe' = `wdp_r_sd_`wdpe''
-      if "`permtci'" != "" {
-        * inverted-t CI: observed b +/- (95th pctile of the permuted |t|) x observed se
-        local wdptb = _b[main_`wdpe']
-        local wdpts = _se[main_`wdpe']
-        if `wdpts' < . & `wdpts' > 0 & `wdp_r_q_`wdpe'' < . {
-          ereturn scalar perm_tlb_`wdpe' = `wdptb' - `wdp_r_q_`wdpe''*`wdpts'
-          ereturn scalar perm_tub_`wdpe' = `wdptb' + `wdp_r_q_`wdpe''*`wdpts'
+      local wdpc = colnumb(`wdpk', "main_`wdpe'")
+      if `wdpc' < . {
+        ereturn scalar perm_p_`wdpe' = `wdpk'[3, `wdpc']
+        ereturn scalar perm_lb_`wdpe' = `wdpk'[11, `wdpc']
+        ereturn scalar perm_ub_`wdpe' = `wdpk'[12, `wdpc']
+        ereturn scalar perm_sd_`wdpe' = `wdpk'[6, `wdpc']
+        if "`permtci'" != "" {
+          * inverted-t CI (permtci, retained): observed b +/- (95th pctile of the
+          * permuted |t|) x observed se
+          local wdptb = _b[main_`wdpe']
+          local wdpts = _se[main_`wdpe']
+          tempname wdpq
+          mata: st_numscalar("`wdpq'", wooldid_permq(sort(abs(select(st_matrix("`wdpacc'")[., `wdpc'] :/ st_matrix("`wdpsacc'")[., `wdpc'], (st_matrix("`wdpacc'")[., `wdpc'] :< .) :& (st_matrix("`wdpsacc'")[., `wdpc'] :> 0) :& (st_matrix("`wdpsacc'")[., `wdpc'] :< .))), 1), 0.95))
+          if `wdpts' < . & `wdpts' > 0 & `wdpq' < . {
+            ereturn scalar perm_tlb_`wdpe' = `wdptb' - `wdpq'*`wdpts'
+            ereturn scalar perm_tub_`wdpe' = `wdptb' + `wdpq'*`wdpts'
+          }
+          else dis as text "Caution: the inverted-t CI for `wdpe' is unavailable (no usable observed standard error)."
         }
-        else dis as text "Caution: the inverted-t CI for `wdpe' is unavailable (no usable observed standard error)."
       }
     }
     if `wdp_r_done' <= 10000 cap ereturn matrix permdist = `wdpdist'
-    * NFPERM-12 (lean kernel): the comparison statistics actually used for the tail
-    * counts, so p-values are reconstructable from e() alone. matrix-handle transport -
-    * a c_local decimal round-trip re-parses one ulp off (see the rep-0 comment in
-    * wooldid_permrun), which would break bitwise reconstruction
+    * NFPERM-12 (lean kernel): the estimand comparators actually used for the legacy
+    * scalars, on the e(perm_stat) scale (the full vector is e(perm_comparator_b))
     cap ereturn matrix perm_comparator = `wdpcomp'
+    * joint tests, subgroup equality, adversarial and contrasts (eclass sub)
+    wooldid_permjnt , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') level(`level') m(`wdp_M') ts(`wdp_ts') jt(`jointtests') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') esf(`esfixedbaseperiod')
+    * the continuous-treatment plot cells (eclass sub)
+    if "`makecfxplots'" != "" & `wdp_ncfx' > 0 {
+      local wdp_cfxnames
+      forval wdk = 1/`wdp_ncfx' {
+        local wdp_cfxnames `wdp_cfxnames' `wdb_cfxname`wdk''
+      }
+      wooldid_permcellsx , cell(`wdpcell') cell0(`wdpcell0') ncfx(`wdp_ncfx') names(`wdp_cfxnames') level(`level') m(`wdp_M') ts(`wdp_ts') lattype(`latticetype') cfxlat(`cfxlattice')
+    }
+    * permsave(): the replication draws as a .dta in the working directory
+    if "`permsave'" != "" wooldid_permsave , file(`permsave') acc(`wdpacc') obsb(`wdpobsb') seacc(`=cond(`wdp_ts', "`wdpsacc'", "")') aseobs(`=cond(`wdp_ts', "e(perm_ase_obs)", "")') asg(`wdpasg') clusvals(`wdp_clusvals') obsons(`wdp_obsons') `replace'
+    * deferred display: the worker skipped these under permute(); they read only e(),
+    * which now carries the permutation inference (identical formatting, free replay)
+    wooldid_display , part(1)
+    if "`makecfxplots'" != "" {
+      local wdcfopts
+      if "`saveplots'" != "" local wdcfopts saveplots(`saveplots')
+      cap noi wooldid_cfxplots , `wdcfopts' `replace'
+    }
+    wooldid_display , part(2)
+    * event-study plots, deferred from the worker so they read the REWIRED tables: their
+    * bands are the permutation shift intervals the table prints
+    if "`makeplots'" == "makeplots" {
+      local wdesopts
+      if "`saveplots'" != "" local wdesopts saveplots(`saveplots')
+      cap noi wooldid_esplots , `wdesopts' `replace'
+    }
     wooldid_display , part(perm)
+    * the one surface still drawn from the analytic covariance (mirrors the bootstrap block)
+    if "`histogramcohorteffects'" != "" dis as text "Caution: histogram outputs are drawn from the stage-1 ANALYTIC covariance during estimation; the reported tables, the cfx matrices, the event-study and continuous-treatment plots and the e() inference above are permutation-based."
     dis as result " "
   }
 
@@ -189,8 +257,12 @@ version 16.0
     * subgroups (their estimands get bootstrapped) and contreatwithin (R2 finding 5:
     * omitting it silently runs the non-within model in reps because validate's
     * internal rewrite emits safety(off)); strip display/plot/diagnostic work and the
-    * bootstrap options themselves; reps run under fastnose (only e(b) is consumed)
-    local wdb_ro `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `poisexpresults' `robust' `ccnoabsorb' `latticeignoreweights' `emptycellsoverride' `contreatwithin' fastnose
+    * bootstrap options themselves. reps run under fastnose (only e(b) is consumed) UNLESS
+    * boottstat is requested, in
+    * which case each replication also has to produce a VCE so its own standard errors can
+    * studentize its coefficients
+    local wdb_ro `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `poisexpresults' `robust' `ccnoabsorb' `latticeignoreweights' `emptycellsoverride' `contreatwithin'
+    if "`boottstat'" == "" local wdb_ro `wdb_ro' fastnose
     if "`cluster'" != "" local wdb_ro `wdb_ro' cluster(`cluster')
     if "`fe'" != "" local wdb_ro `wdb_ro' fe(`fe')
     if `"`coarsecohortcontrols'"' != "" local wdb_ro `wdb_ro' coarsecohortcontrols(`coarsecohortcontrols')
@@ -209,6 +281,16 @@ version 16.0
     if "`contreat'" != "" local wdb_ro `wdb_ro' contreat(`contreat') contreatpoly(`contreatpoly')
     if `"`contreatcontrols'"' != "" local wdb_ro `wdb_ro' contreatcontrols(`contreatcontrols')
     if `"`lattice'"' != "" local wdb_ro `wdb_ro' lattice(`lattice')
+    * cell-level surfaces the author ruled must be bootstrapped, not blanked (2026-09-04):
+    * the replications compute them too, and the loop harvests them by cell key
+    if "`gteffects'" != "" local wdb_ro `wdb_ro' gteffects
+    if "`makecfxplots'" != "" {
+      local wdb_ro `wdb_ro' makecfxplots
+      if "`cfxlattice'" != "" local wdb_ro `wdb_ro' cfxlattice(`cfxlattice')
+      if "`cfxplottypes'" != "" local wdb_ro `wdb_ro' cfxplottypes(`cfxplottypes')
+      if "`makecfxplotsbysg'" != "" local wdb_ro `wdb_ro' makecfxplotsbysg
+      if "`cfxplotnose'" != "" local wdb_ro `wdb_ro' cfxplotnose
+    }
     if "`semielasticity'" == "eydx" local wdb_ro `wdb_ro' semielasticity
     if "`contreat'" != "" & "`contreatelasticitytype'" != "" local wdb_ro `wdb_ro' contreatelasticitytype(`contreatelasticitytype')
     if "`subgroups'" != "" local wdb_ro `wdb_ro' subgroups(`subgroups')
@@ -224,11 +306,30 @@ version 16.0
     if `regtol' != 9 local wdb_ro `wdb_ro' regtol(`regtol')
     if `oostreatedcontrols' != 0 local wdb_ro `wdb_ro' oostreatedcontrols(`oostreatedcontrols')
     if `anticipation' != 0 local wdb_ro `wdb_ro' anticipation(`anticipation')
-    tempname wdbobs wdbobsb wdbcomp wdbacc
+    tempname wdbobs wdbobsb wdbcomp wdbacc wdbsacc wdbpwsacc wdbjwacc wdbjobs wdbaseobs wdbawacc wdbaobs
+    tempname wdbcell
     qui est sto `wdbobs'
     matrix `wdbobsb' = e(b)
-    local wdb_reid = cond("`bootstrap'" == "standard" & "`att_it'`att_i'`att_itime'" != "", "reid", "")
-    cap noi wooldid_bootrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp')
+    * the physical re-id leg is taken for the cell-weighted estimands (their bootstrap is
+    * only correct when a twice-drawn cluster contributes its cells twice) AND, since
+    * 2026-09-04, for boottstat under cluster(): each replication's own standard error
+    * has to cluster on the RESAMPLED cluster identity, and only a physical expansion can
+    * carry one - frequency weights on the original rows cannot say "this cluster is here
+    * twice as two clusters", so under the count leg a twice-drawn cluster's copies were
+    * pooled into one score and the cluster-robust meat took m^2 where it needed m.
+    * Measured inflation E[m^2]/E[m] = 2 - 1/G, ~sqrt(2) in the standard error, which
+    * broke percentile-t pivotality. Author ruling 2026-09-04
+    local wdb_reid = cond("`bootstrap'" == "standard" & ("`att_it'`att_i'`att_itime'" != "" | ("`boottstat'" != "" & "`cluster'" != "")), "reid", "")
+    * UNCLUSTERED + user weight + boottstat: physical expansion WITHOUT re-identification.
+    * A frequency weight cannot compose with a user aweight/pweight (their product w*m is
+    * neither a count nor a sampling weight), but duplicating the drawn rows physically and
+    * letting each copy carry the user's own weight represents both facts. No unit re-id:
+    * the resampling unit is the observation, so re-identifying by draw would fragment every
+    * unit into single-period units. Duplicate (i,t) rows are tolerated by the observation-
+    * weighted estimands (att/ame); the cell-weighted ones are refused without cluster()
+    * at parse and never reach this leg. Author ruling 2026-09-04
+    local wdb_phys = cond("`bootstrap'" == "standard" & "`boottstat'" != "" & "`cluster'" == "" & "`wdp_wt'" != "" & "`poisson'" == "", "phys", "")
+    cap noi wooldid_bootrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' `wdb_phys' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp') seaccname(`=cond("`boottstat'" != "", "`wdbsacc'", "")') pwseaccname(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwaccname(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobsname(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awaccname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobsname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') advesrel(`esrelativeto') advtt(`timetrends') advalt(`altmethod_adversarial') cellacc(`=cond("`gteffects'`makecfxplots'" != "", "`wdbcell'", "")')
     local wdb_rc = _rc
     qui est restore `wdbobs'
     cap est drop `wdbobs'
@@ -255,15 +356,53 @@ version 16.0
     * valid by construction)
     if "`bootdf'" == "" local bootdf = cond("`cluster'" != "", "clusters", "normal")
     * rewire the posted inference surfaces to the bootstrap covariance (eclass sub)
-    wooldid_bootwire , mode(`bootstrap') reps(`reps') level(`level') bootalpha(`bootalpha') clus(`cluster') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') done(`wdb_r_done') fail(`wdb_r_fail') blank(`wdb_r_blank') rseed(`rseed') bootdf(`bootdf') nclus(`wdb_r_nclus')
+    wooldid_bootwire , mode(`bootstrap') reps(`reps') level(`level') bootalpha(`bootalpha') clus(`cluster') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') `ties' done(`wdb_r_done') fail(`wdb_r_fail') blank(`wdb_r_blank') rseed(`rseed') bootdf(`bootdf') bdisp(`bootdisplay') nclus(`wdb_r_nclus') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseout(`=cond("`boottstat'" != "", "`wdbaseobs'", "")')
     * bootstrapped joint tests, subgroup contrasts and CI flavors (eclass sub)
-    wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') bootdf(`bootdf') nclus(`wdb_r_nclus')
+    wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') bootdf(`bootdf') bts(`boottstat') bdisp(`bootdisplay') nclus(`wdb_r_nclus') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwacc(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends')
+    * bootsave(): the replication draws as a .dta in the working directory (author request
+    * 2026-09-04). One row per replication (_rep = 1..reps; a failed replication keeps its
+    * row, all missing) plus a _rep = 0 row carrying the observed estimates, so the file
+    * can recentre its own draws; under boottstat also the replication and observed analytic
+    * standard errors (se_*) and, with subgroups, the replication pairwise-contrast se
+    * (pwse_*). Read from the accumulators, not e(bootdist), so the 10,000-row cap on the
+    * posted matrix does not apply
+    if "`bootsave'" != "" wooldid_bootsave , file(`bootsave') acc(`wdbacc') obsb(`wdbobsb') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') `replace'
     * deferred display: worker skipped these under bootstrap; they read only e(),
     * which now carries the bootstrap inference (identical formatting, free replay)
     wooldid_display , part(1)
+    * Roth pre-trend power on the BOOTSTRAP covariance. Author ruling 2026-09-04 lifting
+    * the plan-A13 refusal: e(V_es_*) has just been replaced with the bootstrap version,
+    * so running the diagnostic here feeds Roth's own formula a bootstrap covariance
+    * rather than an analytic one. The two hbar scalars were computed at worker level
+    * (they need tempvars that no longer exist) and are handed back in. Placed between
+    * part(1) and part(2) to match the ordering the non-bootstrap path uses
+    if "`pretrendpower'" != "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`=cond(e(df_r) < ., string(e(df_r)), ".")') pois(`poisson') poisexp(`poisexpresults') hba(`=cond(e(wdid_ptphbar_att) < ., string(e(wdid_ptphbar_att)), ".")') hbi(`=cond(e(wdid_ptphbar_it) < ., string(e(wdid_ptphbar_it)), ".")')
+    * cell-level surfaces rewired to the bootstrap (ruling 2026-09-04): e(gteffects) columns
+    * se/p/lb/ub and each e(cfx*) matrix's se/t/pvalue/ll/ul, per bootdisplay(); studentized
+    * under boottstat from the replications' own cell standard errors
+    if "`gteffects'`makecfxplots'" != "" wooldid_bootcellsx , cell(`wdbcell') ncfx(`wdb_ncfx') bdisp(`bootdisplay') bts(`boottstat') level(`level') bootdf(`bootdf') nclus(`wdb_r_nclus') `ties'
+    * continuous-treatment plots, deferred like the event-study plots (author ruling
+    * 2026-09-05): drawn from the rewired e(cfx*) matrices, so their bands are the
+    * displayed bootstrap family's; the worker drew nothing and saved nothing under bootstrap()
+    if "`makecfxplots'" != "" {
+      local wdcfopts
+      if "`saveplots'" != "" local wdcfopts saveplots(`saveplots')
+      cap noi wooldid_cfxplots , `wdcfopts' `replace'
+    }
     wooldid_display , part(2)
+    * event-study plots, deferred from the worker so they read the REWIRED tables. The
+    * bands are therefore whichever family bootdisplay() selected - percentile, BC or
+    * wald - and match the printed table exactly
+    if "`makeplots'" == "makeplots" {
+      local wdesopts
+      if "`saveplots'" != "" local wdesopts saveplots(`saveplots')
+      cap noi wooldid_esplots , `wdesopts' `replace'
+    }
     wooldid_display , part(boot)
-    if "`makeplots'`makecfxplots'`saveplots'`gteffects'`histogramcohorteffects'`adversarial'`altmethod_adversarial'" != "" dis as text "Caution: plots, saved plot data, gteffects cell standard errors, histogram outputs and adversarial line-test p-values are produced from the ANALYTIC covariance during estimation; the reported tables and e() inference above are bootstrap-based."
+    * the list shrank on 2026-09-05: gteffects cells and the cfx matrices are now rewired to
+    * the bootstrap (wooldid_bootcellsx), the adversarial p is bootstrapped under boottstat and
+    * absent otherwise, and event-study plots are drawn after the rewiring
+    if "`histogramcohorteffects'" != "" dis as text "Caution: histogram outputs are drawn from the ANALYTIC covariance during estimation; the reported tables, the gteffects cells, the cfx matrices, the event-study and continuous-treatment plots and the e() inference above are bootstrap-based."
     dis as result " "
   }
 end
@@ -286,7 +425,7 @@ version 16.0
   set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -340,6 +479,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     c_local wdp_wx `w'
   }
   local weightinserter [`weight' = `w']
+  * fw is parseable only so the bootstrap replication path can pass an fweight; a user
+  * typing it directly is refused. The demotion back to aweight on the next line is
+  * LOAD-BEARING and measured: `weightinserter' was built one line above, so the fweight
+  * reaches the REGRESSION and nothing else, while margins/gstats/gquantiles keep today's
+  * aweight semantics. Without the demotion, customweightmultiplier() makes the margins
+  * weight w*cwm non-integer even when w itself is integral and every replication dies
+  * with r(459) - cwm is deliberately NOT folded into `w' (see the `local w `exp'' above),
+  * which is exactly why splitting them works
+  if "`weight'" == "fweight" & "`wdrepmode'" == "" {
+    dis as error "Error: wooldid does not accept fweights. Specify aweights or pweights."
+    error 198
+  }
+  if "`weight'" == "fweight" local weight aweight
   if "`w'" == "" {
     tempvar w
     qui gen `w' = 1
@@ -1239,7 +1391,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * F-boot carve-out: under bootstrap the analytic joint tests are never computed
   * (their p-values are Wald tests on the bootstrap covariance, which this screen's
   * own error text recommends), so the screen does not apply
-  if "`jointtests'" != "" & "`bootstrap'" == "" {
+  * permute() carve-out (2026-09-05): the same - under permute() the joint tests are
+  * permutation tests built by the shell, the other remedy this screen's text recommends
+  if "`jointtests'" != "" & "`bootstrap'`permute'" == "" {
     local jtclusvars
     if "`cluster'" != "" local jtclusvars `cluster'
     local jtcvw = word(`"`customvce'"', 1)
@@ -2171,7 +2325,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             if "`adversarial'" == "adversarial" dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
             local adversarial
           }
-          if "`adversarial'" == "adversarial"     {
+          if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose"     {
             wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial')
             local advstatus `r(status)'
             * a gap-cancelled altmethod fit calls off adversarial as a whole (overall section)
@@ -2232,7 +2386,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
 
   **** produce joint test of significance for pre-treatment horizons using the contrast option
-  if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'`bootstrap'"=="" {
+  if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'`bootstrap'`permute'"=="" {
     if "`verbose'" == "verbose" dis as text "Wooldid is now computing pre-treatment horizon effect joint tests."
     if "`att'" == "att" {
       * contrast(overjoint) joint-tests the hypothesis that each estimate by group specified in over() is the same
@@ -2262,6 +2416,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   **********************************************************************************************************************************************
   * graph window management: graphs are created with name(..., replace) so re-runs overwrite wooldid's own prior graphs; wooldid no longer clears the user's unrelated graphs from memory
   local cfxmatricestoreturn
+  local cfxnp 0
 
   * continuous treatment estimates are constructed borderline identically to the main estimates until we get to cfx plots
   if "`contreat'" != "" {
@@ -2384,7 +2539,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
         * F9: fast mode keeps the cfx matrices in the established 1-column (point
         * estimates only) shape that cfxplotnose already produces, rather than minting
         * a new 6-column-with-missings shape
-        if "`fastnose'" != "" local cfxmatendpoint 1
+        * under permute() the 6-column shape is kept (missing-padded) so the shell's cell
+        * rewiring can fill p/ll/ul from the replications
+        if "`fastnose'" != "" & "`permute'" == "" local cfxmatendpoint 1
         * build the margins se/df option in a per-iteration copy rather than overwriting the user's
         * cfxplotnose flag: the overwrite leaked across the estimand loop, so every estimand after
         * the first was treated as if cfxplotnose had been specified, silently truncating its
@@ -2441,8 +2598,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
             matrix rownames `f9tab' = b se t pvalue ll ul
           }
           matrix `cfx`item'_`nametext'' = `f9tab'[1..`cfxmatendpoint',floor(`=colsof(r(table))'/2)+1..`=colsof(r(table))']'
-          qui marginsplot, recastci(rarea) plotopts(color(navy)) ciopts(color(navy%50)) `cfx_xtitle'  scale(.85) ytitle("`ytext'") title("`titletext'") name("cfx`item'_`nametext'", replace)
-          if "`saveplots'" != "" qui graph save "`saveplots'_cfx`item'_`nametext'.gph", `replace'
+          * under bootstrap() the plot is drawn by wooldid_cfxplots from the REWIRED matrix
+          * after the bootstrap (author ruling 2026-09-05), so neither the analytic plot nor
+          * its file is produced here; the title and y-title it needs are kept per matrix
+          if "`wdrepmode'" == "" & "`bootstrap'`permute'" == "" {
+            qui marginsplot, recastci(rarea) plotopts(color(navy)) ciopts(color(navy%50)) `cfx_xtitle'  scale(.85) ytitle("`ytext'") title("`titletext'") name("cfx`item'_`nametext'", replace)
+          }
+          if "`saveplots'" != "" & "`wdrepmode'" == "" & "`bootstrap'`permute'" == "" qui graph save "`saveplots'_cfx`item'_`nametext'.gph", `replace'
+          local cfxatt_ttl `"`titletext'"'
+          local cfxatt_ytx `"`ytext'"'
+          local cfxxt_meta `"`cfx_xtitle'"'
 
           * this code here just handles text to switch to contreat
           if "`item'" == "att" local ytext "AME on `y'"
@@ -2480,9 +2645,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
           }
           local amecfxci recastci(rarea) ciopts(color(navy%50))
           if `amescrub' local amecfxci noci
-          qui marginsplot, `amecfxci' plotopts(color(navy)) `cfx_xtitle' ytitle("`ytext'")  scale(.85) title("`titletext'") name("cfx`itemtext'_`nametext'", replace)
-          if "`saveplots'" != "" qui graph save "`saveplots'_cfx`itemtext'_`nametext'.gph", `replace'
+          if "`wdrepmode'" == "" & "`bootstrap'`permute'" == "" {
+            qui marginsplot, `amecfxci' plotopts(color(navy)) `cfx_xtitle' ytitle("`ytext'")  scale(.85) title("`titletext'") name("cfx`itemtext'_`nametext'", replace)
+          }
+          if "`saveplots'" != "" & "`wdrepmode'" == "" & "`bootstrap'`permute'" == "" qui graph save "`saveplots'_cfx`itemtext'_`nametext'.gph", `replace'
           local cfxmatricestoreturn `cfxmatricestoreturn' cfx`itemtext'_`nametext' cfx`item'_`nametext'
+          * plot metadata by position in cfxmatricestoreturn (ame first, then att)
+          local ++cfxnp
+          local cfxttl`cfxnp' `"`titletext'"'
+          local cfxytx`cfxnp' `"`ytext'"'
+          local ++cfxnp
+          local cfxttl`cfxnp' `"`cfxatt_ttl'"'
+          local cfxytx`cfxnp' `"`cfxatt_ytx'"'
         }
 
         *********** MAKE CFX PLOTS BY SG (by looping through sgs)
@@ -2520,8 +2694,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                 matrix rownames `f9tab' = b se t pvalue ll ul
               }
               matrix `cfx`item'_`nametext'_sg`sgcase''  = `f9tab'[1..`cfxmatendpoint',floor(`=colsof(r(b))'/2)+1..`=colsof(r(b))']'
-              qui marginsplot, recastci(rarea) plotopts(color(navy)) ciopts(color(navy%50)) `cfx_xtitle' ytitle("`ytext'") title("`titletext'") scale(.85) name("cfx`item'_`nametext'_sg`sgcase'", replace)
-              if "`saveplots'" != ""  qui graph save "`saveplots'_cfx`item'_`nametext'_sg`sgcase'.gph", `replace'
+              if "`wdrepmode'" == "" & "`bootstrap'`permute'" == "" {
+                qui marginsplot, recastci(rarea) plotopts(color(navy)) ciopts(color(navy%50)) `cfx_xtitle' ytitle("`ytext'") title("`titletext'") scale(.85) name("cfx`item'_`nametext'_sg`sgcase'", replace)
+              }
+              if "`saveplots'" != "" & "`wdrepmode'" == "" & "`bootstrap'`permute'" == "" qui graph save "`saveplots'_cfx`item'_`nametext'_sg`sgcase'.gph", `replace'
+              local cfxatt_ttl `"`titletext'"'
+              local cfxatt_ytx `"`ytext'"'
               if "`item'" == "att" local ytext "AME on `y'"
               if "`item'" == "att_it" local ytext "AME_it on `y'"
               if "`item'" == "att_itime" local ytext "AME_itime on `y'"
@@ -2556,9 +2734,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               }
               local amecfxci recastci(rarea) ciopts(color(navy%50))
               if `amescrub' local amecfxci noci
-              qui marginsplot, plotopts(color(navy)) `amecfxci' `cfx_xtitle' ytitle("`ytext'") title("`titletext'")  scale(.85) name("cfx`itemtext'_`nametext'_sg`sgcase'", replace)
-              if "`saveplots'" != "" qui graph save "`saveplots'_cfx`itemtext'_`nametext'_sg`sgcase'.gph", `replace'
+              if "`wdrepmode'" == "" & "`bootstrap'`permute'" == "" {
+                qui marginsplot, plotopts(color(navy)) `amecfxci' `cfx_xtitle' ytitle("`ytext'") title("`titletext'")  scale(.85) name("cfx`itemtext'_`nametext'_sg`sgcase'", replace)
+              }
+              if "`saveplots'" != "" & "`wdrepmode'" == "" & "`bootstrap'`permute'" == "" qui graph save "`saveplots'_cfx`itemtext'_`nametext'_sg`sgcase'.gph", `replace'
               local cfxmatricestoreturn `cfxmatricestoreturn'   cfx`itemtext'_`nametext'_sg`sgcase' cfx`item'_`nametext'_sg`sgcase'
+              local ++cfxnp
+              local cfxttl`cfxnp' `"`titletext'"'
+              local cfxytx`cfxnp' `"`ytext'"'
+              local ++cfxnp
+              local cfxttl`cfxnp' `"`cfxatt_ttl'"'
+              local cfxytx`cfxnp' `"`cfxatt_ytx'"'
             }
           }
         }
@@ -2619,7 +2805,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               if "`adversarial'" == "adversarial" dis as text "Caution: adversarial pre-trend testing was cancelled: too few event-study coefficients were estimated to fit the reference line."
               local adversarial
             }
-            if "`adversarial'" == "adversarial" & `amescrub' == 0   {
+            if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose" & `amescrub' == 0   {
               wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial')
               local advstatus `r(status)'
               if "`advstatus'" == "gapskip" local adversarial
@@ -2680,7 +2866,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       * note - pret 1 case will suppress these already from att level processing
       * AMESE R3: under cell containment the joint pre-trend tests inherit the same
       * invalid ame covariance, so they are skipped (see the R1 caution)
-      if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'`bootstrap'"=="" & `amescrub' == 0 {
+      if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'`bootstrap'`permute'"=="" & `amescrub' == 0 {
         if "`att'" == "att"  {
           qui margins [`weight'=`w_att'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != .  &  (`_t' == 0 |`_t' >= `horizonstarter')     ) contrast(overjoint) `poismarginstextC' `marginsdof' `fcnoes'
           local joint_Choriz = r(p)[1,1]
@@ -2962,7 +3148,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
               * single-relyr-level fallback had fired - harmless only because that case
               * is <= 2 columns and fails the > 2 gate either way)
               if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
-              if "`adversarial'" == "adversarial"   {
+              if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose"   {
                 * SI-7 (author-ruled 2026-08-27): if any horizon was dropped as not estimable,
                 * refuse the line test for THIS subgroup. The adversarial null is that the
                 * coefficients lie on a single line in relative time; with a horizon missing the
@@ -2988,7 +3174,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
       }
 
       * produce joint tests of pre-treatment horizons by sg - accomplish by looping through sgs
-      if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'`bootstrap'"=="" {
+      if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'`bootstrap'`permute'"=="" {
 
         foreach sgcase in `sglist' {
           if "`att'" == "att"   {
@@ -3279,7 +3465,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
                   local finaladvtest  `=colsof(r(b))'
                 }
                 if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
-                if "`adversarial'" == "adversarial" & `amescrub' == 0  {
+                if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose" & `amescrub' == 0  {
                   if  `finaladvtest' > 1  {
                     wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase')
                     local advstatus `r(status)'
@@ -3299,7 +3485,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
 
         * produce joint tests of pre-treatment AMES by horizon by sg
         * (AMESE R3: skipped under cell containment — same invalid covariance)
-        if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'`bootstrap'"=="" & `amescrub' == 0 {
+        if (  ("`esfixedbaseperiod'" == "" & `espre' > 1) |  ( `espre' > 1 & "`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) )  & "`suppressjointtests'`bootstrap'`permute'"=="" & `amescrub' == 0 {
           foreach sgcase in `sglist' {
             if "`att'" == "att" {
               qui margins  [`weight'=`w_att'] ,`contreatelasticitytype'(`contreat') noestimcheck over(`_t') subpop(if `ifstatement' & `t' < `ttre' & `ttre' != . & `subgroups' == `sgcase'   &  (`_t' == 0 |`_t' >= `horizonstarter')   ) contrast(overjoint) `poismarginstextC' `marginsdof' `fcnoes'
@@ -4215,9 +4401,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * across runs - two identical calls returned identical numbers under different row
   * identifiers, breaking documented downstream row-name joins); rename to stable
   * lattice_# keys before posting
+  ereturn hidden local wdid_cfxmats `cfxmatricestoreturn'
   foreach matrix in `cfxmatricestoreturn' {
     wooldid_cfxstripe ``matrix''
     ereturn matrix `matrix' = ``matrix''
+  }
+  * per-plot metadata for wooldid_cfxplots, indexed by position in e(wdid_cfxmats): the
+  * titles the worker composed, the x-axis title option verbatim, and the user's lattice
+  * variable (empty under an auto lattice, whose tempvar does not outlive the worker)
+  if `cfxnp' > 0 {
+    forval wdk = 1/`cfxnp' {
+      ereturn hidden local wdid_cfxttl`wdk' `"`cfxttl`wdk''"'
+      ereturn hidden local wdid_cfxytx`wdk' `"`cfxytx`wdk''"'
+    }
+    ereturn hidden local wdid_cfxxt `"`cfxxt_meta'"'
+    ereturn hidden local wdid_cfxlatvar "`cfxlattice'"
   }
 
   * display-state macros consumed by wooldid_display / wooldid_esplots (and by replay).
@@ -4250,7 +4448,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * replay contract version: bump this when the display contract changes (anything
   * wooldid_display / wooldid_esplots read from e(), or how they interpret it);
   * their gates exact-match this value, so a bump refuses cross-version replays
-  ereturn hidden local wdid_replayv "1"
+  ereturn hidden local wdid_replayv "2"
 
 
   ********* begin actual result presentation *************
@@ -4261,11 +4459,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * covariance first and then calls the (e()-driven) display itself - printing here
   * would show analytic inference that is about to be replaced. pretrendpower is
   * refused with bootstrap at parse (plan A13), so the ptp call needs no gate
-  if "`bootstrap'" == "" wooldid_display , part(1)
+  if "`bootstrap'`permute'" == "" wooldid_display , part(1)
   * F7: Roth (2022) pre-trend power diagnostics (compute + display + ereturns live in a
   * subprogram; cap noi so a failure here cannot abort an otherwise-complete run)
-  if "`pretrendpower'" != "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`df_r') pois(`poisson') poisexp(`poisexpresults') tvar(`t') ttrevar(`ttre') ivar(`i') wvar(`w') cwm(`customweightmultiplier')
-  if "`bootstrap'" == "" wooldid_display , part(2)
+  * F7: Roth (2022) pre-trend power diagnostics. Without bootstrap the whole diagnostic
+  * runs here. WITH bootstrap only the data-dependent half runs here - it needs `ttre'
+  * and `w', which are worker tempvars - and the shell re-enters this program after the
+  * bootstrap rewiring so the power algebra reads the BOOTSTRAP e(V_es_*)
+  if "`pretrendpower'" != "" & "`bootstrap'" == "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`df_r') pois(`poisson') poisexp(`poisexpresults') tvar(`t') ttrevar(`ttre') ivar(`i') wvar(`w') cwm(`customweightmultiplier')
+  if "`pretrendpower'" != "" & "`bootstrap'" != "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`df_r') pois(`poisson') poisexp(`poisexpresults') tvar(`t') ttrevar(`ttre') ivar(`i') wvar(`w') cwm(`customweightmultiplier') hbaronly
+  if "`bootstrap'`permute'" == "" wooldid_display , part(2)
 
 
 
@@ -4278,7 +4481,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * this choice is vestigial to a prior program design and is kept here on the principle of not redoing what already works
   * though I should probably redo this someday
 
-  if `espre' +`espl' > 0 & "`makeplots'" == "makeplots" {
+  * Under bootstrap this call is DEFERRED to the shell, which runs it after
+  * wooldid_bootwire. wooldid_esplots reads e(wdidmainresults) and e(wdidsgresults_*),
+  * and running it here would read them BEFORE the rewiring - so the figure's bands were
+  * analytic while the table's were bootstrap. Measured on one fixture, the two disagreed
+  * about significance (ES_att pre2: table [-0.9951, 0.0113] includes zero, plot
+  * [-1.1353, -0.1398] excludes it). Author ruling 2026-09-04. Because esplots reads e()
+  * rather than worker tempvars, deferring needs no stash - unlike wooldid_ptp
+  if `espre' +`espl' > 0 & "`makeplots'" == "makeplots" & "`bootstrap'`permute'" == "" {
     local wdesopts
     if "`saveplots'" != "" local wdesopts saveplots(`saveplots')
     wooldid_esplots , `wdesopts' `replace'
@@ -4331,7 +4541,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -4627,13 +4837,20 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     if "`permtci'" != "" local permstray `permstray' permtci
     if "`permstrata'" != "" local permstray `permstray' permstrata()
     if `"`permprobs'"' != "" local permstray `permstray' permprobs()
+    if "`permsave'" != "" local permstray `permstray' permsave()
+    if "`permanalyticse'" != "" local permstray `permstray' permanalyticse
     if "`permstray'" != "" {
       dis as error "Error: `permstray' require(s) the permute() option."
       error 198
     }
   }
+  * permtci's critical value comes from the permuted |t| distribution, so it implies
+  * permtstat. Resolved HERE (it used to live in the shell alone) so that the fast-mode
+  * default further down sees the implied value: permtci alone must not send the observed
+  * run down the no-SE path it is about to be studentized against
+  if "`permtci'" != "" & "`permtstat'" == "" local permtstat permtstat
   if "`permute'" != "" {
-    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if')
+    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safety') psave(`permsave') level(`level') `replace'
     if _rc != 0 error _rc
   }
 
@@ -4647,7 +4864,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * bootstrap() absent it enforces the stray-companion screen and exits. it sits AFTER
   * the safetyinput capture above deliberately - the bayes cell-weighted gate keys on
   * the user's own safety() value (contreatwithin rewrites the working copy later)
-  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower')
+  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower')
   if _rc != 0 error _rc
 
   * register verbose retention with the shell's error-path cleanup epilogue (top of this
@@ -5048,6 +5265,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
     * future relaxation of that gate cannot silently re-enable a joint test under nose
     local suppressjointtests suppressjointtests
   }
+  * ---- permute() fast-mode default (author ruling 2026-09-05) ----
+  * without permtstat the observed run is a fast (no-SE) run as well: nothing the
+  * permutation inference reports consumes the analytic standard errors, so the margins
+  * variance work they cost is wasted. permanalyticse restores them (the tables then carry
+  * them labelled se_analytic). Placed AFTER the fast-mode refusals above, which key on the
+  * USER's fastnose: under permute() the adversarial and joint-test surfaces are
+  * permutation quantities built by the shell after the replications, not analytic ones
+  * that fast mode cannot produce, and pretrendpower() is refused by wooldid_permctl.
+  * suppressjointtests is deliberately NOT set here: the worker's analytic joint-test
+  * blocks are gated on permute() themselves, and the display must still print the
+  * permutation joint tests the shell posts under the analytic names
+  if "`permute'" != "" & "`permtstat'" == "" & "`permanalyticse'" == "" local fastnose fastnose
 
   * ---- option-domain screens (issue-file batch VAL-G19/G21A/G21B/G21C/G21E) ----
   * appended after all pre-existing checks so no existing multi-error call's first message
@@ -5102,7 +5331,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw pw / ]  ,  [att att_it att_iti
   * silently strand the worker on the stale syntax-parsed value. varlist/if/weight/exp
   * are excluded: the worker's own syntax call already parsed them identically and this
   * subprogram never alters them.
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf esprelengthraw {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -5368,7 +5597,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis)]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) replace]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -5400,6 +5629,38 @@ version 16.0
   if "`os'" == "1" {
     dis as error "Error: permute() is not compatible with oldsyntax."
     error 198
+  }
+  * chunk-1 refusals (author ruling 2026-09-05). pretrendpower: the Roth diagnostics are
+  * computed on an event-study covariance, and randomization inference produces none - the
+  * author allowed the refusal rather than a permutation-covariance substitute.
+  * suppresssgprimaryeffects: mirrors bootctl - the suppressed subgroup entries are what
+  * the replication vectors need in order to permute the subgroup statistics
+  if `"`ptp'"' != "" {
+    dis as error "Error: permute() is not compatible with pretrendpower(): the Roth (2022) diagnostics are computed on an event-study variance-covariance matrix, and randomization inference produces none (its p-values and intervals come from the permutation distribution). Run pretrendpower() in a separate call without permute()."
+    error 198
+  }
+  if "`ssg'" != "" {
+    dis as error "Error: permute() may not be combined with suppresssgprimaryeffects; the suppressed subgroup entries are exactly what the replication vectors need in order to permute the subgroup statistics."
+    error 198
+  }
+  if `level' != 0 & (`level' < 10 | `level' > 99.99) {
+    dis as error "Error: level() must be between 10 and 99.99."
+    error 198
+  }
+  * permsave(): the name rules are bootsave()'s (plain file name, cwd, replace to
+  * overwrite), checked here BEFORE the replication loop runs rather than after it
+  if "`psave'" != "" {
+    local wdpfn `psave'
+    if lower(substr("`wdpfn'", -4, 4)) == ".dta" local wdpfn = substr("`wdpfn'", 1, strlen("`wdpfn'") - 4)
+    if strpos("`wdpfn'", "/") | strpos("`wdpfn'", "\") | "`wdpfn'" == "" {
+      dis as error "Error: permsave() takes a plain file name (no directory part); the file is written to the current working directory."
+      error 198
+    }
+    cap confirm file "`wdpfn'.dta"
+    if _rc == 0 & "`replace'" == "" {
+      dis as error "Error: permsave(`wdpfn') - `wdpfn'.dta already exists in the working directory; add the replace option to overwrite it."
+      error 602
+    }
   }
   if ("`ts'" != "" | "`tc'" != "") & "`fn'" != "" {
     dis as error "Error: permtstat/permtci randomize on t-statistics, which fastnose does not compute."
@@ -5483,6 +5744,48 @@ version 16.0
     error 459
   }
 
+  * subgroups() under permute() (chunk 1, 2026-09-05): every cluster can become treated in
+  * a replication, so the worker's subgroup screens - which run on the OBSERVED treated
+  * units only - must hold on the whole design population, or a replication fails by a
+  * rule that is correlated with the assignment it drew, which silently biases the
+  * reference distribution. The four screens below are the worker's (VAL-G15A negative
+  * values, the integer screen, F13 cell containment, F13 unit splitting) with their
+  * onset clauses dropped; the sample is the design sample (the user's if and a
+  * nonmissing cluster value), slightly wider than the estimation sample
+  if "`sg'" != "" {
+    cap assert `sg' >= 0 | `sg' >= . if `insmp'
+    if _rc != 0 {
+      dis as error "Error: permute() with subgroups() requires the subgroup variable to be non-negative (or missing) on every in-sample row, not only on treated units' rows: any cluster can be assigned treatment in a replication, and the replications refuse negative subgroup values on treated rows."
+      error 411
+    }
+    cap assert `sg' == int(`sg') if `insmp'
+    if _rc != 0 {
+      dis as error "Error: permute() with subgroups() requires integer-valued (or missing) subgroup values on every in-sample row, because any cluster can be assigned treatment in a replication."
+      error 411
+    }
+    tempvar sgmin sgmax
+    qui gegen double `sgmin' = min(cond(`sg' >= ., ., `sg')) if `insmp', by(`ivar' `tvar')
+    qui gegen double `sgmax' = max(cond(`sg' >= ., ., `sg')) if `insmp', by(`ivar' `tvar')
+    cap assert `sgmin' == `sgmax' if `insmp'
+    if _rc != 0 & "`si'" != "off" {
+      dis as error "Error: permute() with subgroups(): the subgroup variable `sg' varies within `ivar'-by-`tvar' cells of the sample (over ALL units, because any cluster can be assigned treatment in a replication). Define `ivar' at the finer level over which the subgroup varies, or drop subgroups(). To ignore this error, specify safety(off)."
+      error 459
+    }
+    qui drop `sgmin' `sgmax'
+    qui gegen double `sgmin' = min(cond(`sg' >= ., ., `sg')) if `insmp', by(`ivar')
+    qui gegen double `sgmax' = max(cond(`sg' >= ., ., `sg')) if `insmp', by(`ivar')
+    cap assert `sgmin' == `sgmax' if `insmp'
+    if _rc != 0 {
+      if "`si'" != "off" {
+        dis as error "Error: permute() with subgroups(): the subgroup variable `sg' splits some units of `ivar' across multiple subgroups over time (over ALL units, because any cluster can be assigned treatment in a replication). A unit cannot belong to more than one subgroup. To proceed anyway, specify safety(off); share weighting then applies inside the replications as it does in the observed run."
+        error 459
+      }
+      else dis as text "Caution: the subgroup variable `sg' splits some units of `ivar' across multiple subgroups over time; under safety(off) the replications proceed with share weighting, as the observed run does."
+    }
+    qui drop `sgmin' `sgmax'
+    if "`permstrata'" == "" & "`permmethod'" == "shuffle" dis as text "Caution: subgroups() with permute(shuffle) and no permstrata(): the shuffled assignments also re-randomize which subgroups the treated clusters fall in, so the reference distribution of the subgroup-specific statistics mixes subgroup composition with onset timing. When subgroup membership is fixed at the cluster level, permstrata(`sg') holds each subgroup's onset composition fixed across replications."
+  }
+
   * strata: clusters must be strict subsets of strata
   if "`permstrata'" != "" {
     if "`permmethod'" != "shuffle" {
@@ -5539,18 +5842,21 @@ version 16.0
 *** commit-B state: the full gate set is live, but a passing call still exits r(198)
 *** loudly at the tail - the engine lands in a later commit and the option must never
 *** silently no-op before then (the F6 commit-A precedent).
-  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ifr(string asis) jt(string) ptp(string asis)]
+  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ifr(string asis) jt(string) ptp(string asis)]
 
   * stray-companion screen: every companion requires the master option
   if "`bootstrap'" == "" {
     local bootstray
     if `reps' != 0 local bootstray reps()
     if "`ties'" != "" local bootstray `bootstray' ties
-    if `level' != 0 local bootstray `bootstray' level()
-    if `dots' != -1 local bootstray `bootstray' dots()
+    if `level' != 0 & "`permute'" == "" local bootstray `bootstray' level()
+    if `dots' != -1 & "`permute'" == "" local bootstray `bootstray' dots()
     if "`rseed'" != "" local bootstray `bootstray' rseed()
     if "`bootalpha'" != "" local bootstray `bootstray' bootalpha()
     if "`bootdf'" != "" local bootstray `bootstray' bootdf()
+    if "`bdisp'" != "" local bootstray `bootstray' bootdisplay()
+    if "`bts'" != "" local bootstray `bootstray' boottstat
+    if "`bsave'" != "" local bootstray `bootstray' bootsave()
     if "`bootstray'" != "" {
       dis as error "Error: `bootstray' require(s) the bootstrap() option."
       error 198
@@ -5621,6 +5927,45 @@ version 16.0
     }
   }
 
+  * bootdisplay(): which inference family the printed tables show. Every family is
+  * computed and stored in e() on every bootstrap run regardless (author ruling
+  * 2026-09-03); this option chooses only what is displayed. percentile (the default)
+  * shows the classic asymmetric percentile interval, the percentile p dual to it, and
+  * the standard error implied by inverting that interval - which deliberately does NOT
+  * satisfy b +/- c*se, the author having ruled that the interval is the primary object.
+  * sd shows the older internally-consistent Wald package on the bootstrap standard
+  * deviation, where se, statistic, p and interval do all reproduce one another
+  * boottstat needs each replication to produce a standard error that is the same
+  * functional of the replicate data as the observed one. Two paths cannot (author
+  * ruling 2026-09-04, measured E[se_r^2]/se_obs^2 of 1.44-1.83): poisson runs its
+  * replications on pweights, whose robust meat squares the duplication weight; and
+  * bootstrap(bayes) reweights by continuous Dirichlet mass, which is neither an
+  * integer count for an fweight nor a set of rows for a physical expansion. Refuse
+  * boottstat ALONE - the percentile, bias-corrected and Wald families read only the
+  * coefficient draws and are unaffected
+  if "`bts'" != "" & "`pois'" != "" {
+    dis as error "Error: boottstat may not be combined with poisson. The Poisson replications are estimated on sampling weights, so a replication's own standard error is not the same functional of the resampled data as the observed standard error, and the studentized bootstrap would be anti-conservative. Drop boottstat; the percentile, bias-corrected and Wald bootstrap families remain available with poisson."
+    error 198
+  }
+  if "`bts'" != "" & "`bootstrap'" == "bayes" {
+    dis as error "Error: boottstat may not be combined with bootstrap(bayes). The Bayesian bootstrap reweights clusters by continuous Dirichlet mass, which cannot be expressed as a duplication count, so a replication's own standard error is not the same functional of the reweighted data as the observed standard error. Use bootstrap(standard) for a studentized bootstrap, or drop boottstat; the percentile, bias-corrected and Wald families remain available with bootstrap(bayes)."
+    error 198
+  }
+  if "`bdisp'" != "" {
+    if !inlist("`bdisp'", "percentile", "bc", "wald") {
+      dis as error "Error: bootdisplay() must be bootdisplay(percentile) - the default: the p-value and confidence interval from the percentile ranks of the bootstrap distribution - or bootdisplay(bc) - the bias-corrected percentile method - or bootdisplay(wald) - the p-value and interval from a normal or t approximation, the choice between them governed by bootdf(). The reported standard error is the standard deviation of the bootstrap distribution under all three; every family is computed and stored in e() whichever is displayed."
+      error 198
+    }
+    * bootdisplay(wald) is meaningless after studentizing: boottstat reports the ANALYTIC
+    * standard error (there is no standard deviation of a studentized distribution to put
+    * in that column), so a normal/t approximation built on a bootstrap standard deviation
+    * has no standard error to be built from. Refused rather than silently reinterpreted
+    if "`bdisp'" == "wald" & "`bts'" != "" {
+      dis as error "Error: bootdisplay(wald) may not be combined with boottstat. A studentized bootstrap reports the analytic standard error and takes its p-value and confidence interval from the percentile ranks of the studentized distribution; there is no bootstrap standard deviation of a studentized statistic for a normal or t approximation to be built on. Drop boottstat for the Wald package, or drop bootdisplay(wald) for the studentized one."
+      error 198
+    }
+  }
+
   * interaction refusals
   if "`permute'" != "" {
     dis as error "Error: bootstrap() may not be combined with permute(); each orchestrates its own replication loop. Run them in separate wooldid calls."
@@ -5669,23 +6014,30 @@ version 16.0
     }
     dis as text "Caution: bootstrap(bayes) standard errors for `cellwtd' omit the cell-sampling variance component (cluster reweighting cannot resample treatment cells) and can be too small when treatment effects vary across clusters. Everything computed from that covariance inherits the understatement - the joint tests, the pairwise subgroup contrasts and the confidence intervals for those estimands, where p-values can be extreme - so read them alongside a bootstrap(standard) run, which does not have this limitation."
   }
-  if "`bootstrap'" == "standard" & "`cellwtd'" != "" {
+  * the physical re-id leg - taken for the cell-weighted estimands, and since 2026-09-04
+  * also for boottstat under cluster() - requires the cluster() variable to nest i. The
+  * two routes reach it for different reasons and get different messages
+  local wdb_btsclus = ("`bts'" != "" & "`clus'" != "" & "`bootstrap'" == "standard")
+  if "`bootstrap'" == "standard" & ("`cellwtd'" != "" | `wdb_btsclus') {
     * the resampling copies of a drawn cluster must be re-identifiable as distinct
     * units, which is defined only when every i lies wholly inside one resampling
     * cluster. observation-level resampling (no cluster()) can never satisfy this.
-    if "`clus'" == "" {
+    if "`clus'" == "" & "`cellwtd'" != "" {
       dis as error "Error: bootstrap(standard) with `cellwtd' requires cluster(): observation-level resampling cannot re-identify duplicated treatment cells. Specify cluster() at or above the i level, or request att/ame estimands only."
       error 198
     }
-    tempvar smp cmin cmax
-    if `"`ifr'"' != "" qui gen byte `smp' = ((`ifr')==1) & !missing(`clus')
-    else qui gen byte `smp' = !missing(`clus')
-    qui gegen double `cmin' = min(`clus') if `smp', by(`ivar')
-    qui gegen double `cmax' = max(`clus') if `smp', by(`ivar')
-    cap assert `cmin' == `cmax' if `smp'
-    if _rc != 0 {
-      dis as error "Error: bootstrap(standard) with `cellwtd' requires the cluster() variable to nest i (every i wholly inside one cluster): resampled clusters are duplicated as whole units, which is undefined when a unit straddles clusters. Cluster at or above the i level, or request att/ame estimands only."
-      error 459
+    if "`clus'" != "" {
+      tempvar smp cmin cmax
+      if `"`ifr'"' != "" qui gen byte `smp' = ((`ifr')==1) & !missing(`clus')
+      else qui gen byte `smp' = !missing(`clus')
+      qui gegen double `cmin' = min(`clus') if `smp', by(`ivar')
+      qui gegen double `cmax' = max(`clus') if `smp', by(`ivar')
+      cap assert `cmin' == `cmax' if `smp'
+      if _rc != 0 {
+        if "`cellwtd'" != "" dis as error "Error: bootstrap(standard) with `cellwtd' requires the cluster() variable to nest i (every i wholly inside one cluster): resampled clusters are duplicated as whole units, which is undefined when a unit straddles clusters. Cluster at or above the i level, or request att/ame estimands only."
+        else dis as error "Error: boottstat with cluster() requires the cluster() variable to nest i (every i wholly inside one cluster). A studentized bootstrap has to estimate each replication on a physical expansion of the resampled clusters so that its standard error clusters on the resampled cluster identity, and that expansion is undefined when a unit straddles clusters. Cluster at or above the i level, or drop boottstat (the percentile, bias-corrected and Wald families do not need it)."
+        error 459
+      }
     }
   }
 
@@ -5715,10 +6067,127 @@ version 16.0
   * was blocking a combination that works for installed users - see SI-17/SI-18.)
   * standard mode: engine lands in the next
   * commit; loud refusal until then (F6 precedent).
-  if "`ptp'" != "" {
-    dis as error "Error: bootstrap() may not be combined with pretrendpower(); the Roth diagnostics are computed from the analytic event-study covariance before the bootstrap rewiring. Feed e(b_es_*)/e(V_es_*) from a bootstrap run to the pretrends package directly if bootstrap-based power diagnostics are needed."
+  * pretrendpower: the plan-A13 refusal was LIFTED 2026-09-04 on the author's ruling. The
+  * diagnostic now runs from the shell AFTER wooldid_bootwire, so Roth's own formula is
+  * fed the bootstrap event-study covariance instead of the analytic one. The refusal had
+  * rested on an ordering constraint - the ptp subprogram ran inside the worker, before
+  * any rewiring - not on an impossibility. The author declined a simulation-based power
+  * calculation as going beyond what Roth (2022) specifies for a feature that cites him
+end
+
+cap prog drop wooldid_bootsave
+prog def wooldid_bootsave
+version 16.0
+  * bootsave(): write the replication accumulators to <file>.dta in the working directory.
+  * Plain file name only (it is the user's stated design: the file lands in the cwd), an
+  * existing file needs wooldid's replace option, and the build runs in its own frame so
+  * the user's data are untouched
+  syntax , file(string) acc(string) obsb(string) [seacc(string) aseobs(string) pwseacc(string) replace]
+  local fn `file'
+  if lower(substr("`fn'", -4, 4)) == ".dta" local fn = substr("`fn'", 1, strlen("`fn'") - 4)
+  if strpos("`fn'", "/") | strpos("`fn'", "\") | "`fn'" == "" {
+    dis as error "Error: bootsave() takes a plain file name (no directory part); the file is written to the current working directory."
     error 198
   }
+  cap confirm file "`fn'.dta"
+  if _rc == 0 & "`replace'" == "" {
+    dis as error "Error: bootsave(`fn') - `fn'.dta already exists in the working directory; add the replace option to overwrite it."
+    error 602
+  }
+  tempname bsf
+  cap frame drop `bsf'
+  frame create `bsf'
+  cap noi frame `bsf' {
+    mata: wooldid_bootsavemk("`acc'", "`obsb'", "`seacc'", "`aseobs'", "`pwseacc'")
+    label var _rep "bootstrap replication (0 = observed estimates)"
+    save "`fn'.dta", replace
+    local wdbsn = _N
+  }
+  local wdbsrc = _rc
+  cap frame drop `bsf'
+  if `wdbsrc' != 0 {
+    dis as error "Error: bootsave(`fn') could not build the replication dataset (rc=`wdbsrc')."
+    error `wdbsrc'
+  }
+  dis as text "bootsave(): the replication draws were written to `fn'.dta (`=`wdbsn'-1' replication rows plus the _rep = 0 observed row)."
+end
+
+cap prog drop wooldid_bootcellsx
+prog def wooldid_bootcellsx, eclass
+version 16.0
+  * rewires e(gteffects) and every e(cfx*) matrix to bootstrap inference from the cell
+  * accumulators filled in wooldid_bootrun. Same families and the same conventions as the
+  * coefficient rows; se is the bootstrap SD (non-studentized) or the analytic cell se
+  * (studentized). Twins are posted per family so every family is retrievable
+  syntax , cell(string) [ncfx(integer 0) bdisp(string) bts(string) level(real 0) bootdf(string) nclus(integer 0) ties]
+  local bdisp = cond("`bdisp'" == "", "percentile", "`bdisp'")
+  * the shell's level() defaults to 0 (meaning c(level)); resolve it here exactly as the
+  * coefficient-row rewiring does, else al = 0.5 collapses every interval onto the median
+  if `level' == 0 local level 95
+  local wdbdf = .
+  if "`bootdf'" != "" & "`bootdf'" != "normal" {
+    if "`bootdf'" == "clusters" local wdbdf = `nclus' - 1
+    else local wdbdf = `bootdf'
+    if `wdbdf' < 1 local wdbdf = .
+  }
+  local zc = cond(`wdbdf' < ., invt(`wdbdf', 1 - (100 - `level')/200), invnormal(1 - (100 - `level')/200))
+  local famlist percentile bc wald
+  if "`bts'" != "" local famlist percentile bc
+  local wdbcellmissall 0
+  * ---- gteffects: cols estimate(5) se(6) p(7) lb(8) ub(9)
+  cap confirm matrix e(gteffects)
+  if _rc == 0 {
+    cap confirm matrix `cell'_gt
+    if _rc == 0 {
+      tempname gtsel
+      foreach fam of local famlist {
+        local ftag = cond("`fam'" == "percentile", "pctl", "`fam'")
+        tempname gt`fam'
+        matrix `gt`fam'' = e(gteffects)
+        local wdbcellmiss 0
+        if "`bts'" != "" mata: wooldid_bootcellwire("`gt`fam''", 1, "`cell'_gt", "`cell'_gtse", 5, 6, 7, 8, 9, "`fam'", `level', `zc', `wdbdf', ("`ties'" != ""))
+        else            mata: wooldid_bootcellwire("`gt`fam''", 1, "`cell'_gt", "", 5, 6, 7, 8, 9, "`fam'", `level', `zc', `wdbdf', ("`ties'" != ""))
+        if "`fam'" == "percentile" local wdbcellmissall = `wdbcellmissall' + `wdbcellmiss'
+        matrix colnames `gt`fam'' = `: colnames e(gteffects)'
+        if "`fam'" == "`bdisp'" matrix `gtsel' = `gt`fam''
+        ereturn hidden matrix boot_`ftag'_gteffects = `gt`fam''
+      }
+      cap confirm matrix `gtsel'
+      if _rc == 0 ereturn matrix gteffects = `gtsel'
+      ereturn local boot_gteffects_family `bdisp'
+    }
+  }
+  * ---- cfx matrices: cols b(1) se(2) t(3) pvalue(4) ll(5) ul(6) when the full shape is present
+  forval c = 1/`ncfx' {
+    local nm `e(wdid_cfxmats)'
+    local nm : word `c' of `nm'
+    cap confirm matrix e(`nm')
+    if _rc != 0 continue
+    cap confirm matrix `cell'_cfx`c'
+    if _rc != 0 continue
+    if colsof(e(`nm')) < 6 continue
+    tempname cfsel
+    foreach fam of local famlist {
+      local ftag = cond("`fam'" == "percentile", "pctl", "`fam'")
+      tempname cf`fam'
+      matrix `cf`fam'' = e(`nm')
+      local wdbcellmiss 0
+      if "`bts'" != "" mata: wooldid_bootcellwire("`cf`fam''", 0, "`cell'_cfx`c'", "`cell'_cfx`c'se", 1, 2, 4, 5, 6, "`fam'", `level', `zc', `wdbdf', ("`ties'" != ""))
+      else            mata: wooldid_bootcellwire("`cf`fam''", 0, "`cell'_cfx`c'", "", 1, 2, 4, 5, 6, "`fam'", `level', `zc', `wdbdf', ("`ties'" != ""))
+      if "`fam'" == "percentile" local wdbcellmissall = `wdbcellmissall' + `wdbcellmiss'
+      * the t column is b/se under the reported se, whichever family
+      mata: M = st_matrix("`cf`fam''"); M[., 3] = M[., 1] :/ M[., 2]; st_matrix("`cf`fam''", M)
+      matrix colnames `cf`fam'' = `: colnames e(`nm')'
+      matrix rownames `cf`fam'' = `: rowfullnames e(`nm')'
+      if "`fam'" == "`bdisp'" matrix `cfsel' = `cf`fam''
+      * e() names are capped at 32 characters; a cfx matrix name too long for the twin
+      * prefix keeps only its selected family in the live matrix
+      if strlen("boot_`ftag'_`nm'") <= 32 ereturn hidden matrix boot_`ftag'_`nm' = `cf`fam''
+    }
+    cap confirm matrix `cfsel'
+    if _rc == 0 ereturn matrix `nm' = `cfsel'
+  }
+  if `wdbcellmissall' > 0 dis as text "Caution: `wdbcellmissall' gteffects/cfx cell(s) have no analytic standard error to studentize by (for example the ame covariance is withheld under cell containment), so under boottstat their bootstrap inference is left blank rather than filled from the cell draws; the non-studentized bootstrap (without boottstat) reports those cells from the draws."
 end
 
 cap prog drop wooldid_bootjnt
@@ -5731,7 +6200,14 @@ version 16.0
 *** residual-rank p - the ed780ac precedent). Joint-test e() names and the
 *** per-subgroup macro-vs-scalar split mirror the analytic surface exactly, so the
 *** existing display prints them unchanged (amendment A14).
-  syntax , [level(real 0) acc(string) obsb(string) comp(string) jt(string) ties done(string) bootdf(string) nclus(integer 0)]
+  syntax , [level(real 0) acc(string) obsb(string) comp(string) jt(string) ties done(string) bootdf(string) bts(string) bdisp(string) nclus(integer 0) pwseacc(string) jwacc(string) jobs(string) aseobs(string) seacc(string) awacc(string) aobs(string) adv(string) advalt(string) advesrel(string) advtt(string)]
+  * a pre-rewrite copy of the observed pairwise table: column 2 is the analytic margins se,
+  * which the polarisation route needs as its observed comparator. Taken before anything
+  * below touches e(pwsgs)
+  tempname pw0
+  cap matrix `pw0' = e(pwsgs)
+  local seacc0 `seacc'
+  local bdisp = cond("`bdisp'" == "", "percentile", "`bdisp'")
   if `level' == 0 local level 95
   * reference distribution (bootdf()): missing = normal/chi-squared, else t/F with
   * these denominator degrees of freedom
@@ -5781,47 +6257,144 @@ version 16.0
   }
   local K `kk'
 
-  * -------- joint pre-trend tests (only when the user requested jointtests)
-  if "`jt'" != "" {
+  * -------- joint pre-trend tests (only when the user requested jointtests).
+  * Author ruling 2026-09-03: a joint test that cannot be BOOTSTRAPPED is ABSENT, not
+  * approximated - "the joint test is absent if not bootstrappable. NEVER show an
+  * analytic SE when bootstrap is requested." Bootstrapping a joint test means
+  * bootstrapping its test STATISTIC, which requires each replication's own covariance
+  * among the estimands and therefore requires boottstat (the replications run without
+  * fastnose only in that mode). So without boottstat the whole block is skipped and
+  * nothing is posted: these names are created ONLY here under bootstrap, since the
+  * worker suppresses the analytic joint tests whenever bootstrap() is on, so skipping
+  * leaves them genuinely absent rather than stale
+  if "`jt'" != "" & "`bts'" == "" {
+    * a flag, not just a caution: the cautions below print at estimation time only, so a
+    * REPLAYED run would otherwise carry no disclosure that the joint tests are missing
+    ereturn local boot_jt_absent 1
+    local ++wdbncaut
+    local wdbc`wdbncaut' the joint tests were not computed. Bootstrapping a joint test means bootstrapping its test statistic, which needs each replication's own covariance among the estimands; add boottstat to request that. They are reported as absent rather than as an analytic test, which would not be a bootstrap quantity
+  }
+  if "`jt'" != "" & "`bts'" != "" {
+    * BOOTSTRAPPED joint statistics: p = add-one share of recentred W_r >= W_obs, the W_r
+    * having been computed inside each replication from its own e(V_es_*) (wooldid_bootjwr)
+    * and W_obs here from the observed analytic covariance (wooldid_bootjwobs). This
+    * replaces the earlier draw-covariance Wald (wooldid_bootjw), which the author ruled
+    * is not a bootstrapped test. A family whose replications gave no usable W_r posts
+    * nothing, with a caution - never an analytic p under a bootstrap header
+    local wdb_jtok = ("`jwacc'" != "" & "`jobs'" != "")
+    if `wdb_jtok' {
+      cap confirm matrix `jwacc'
+      if _rc != 0 local wdb_jtok 0
+    }
+    if `wdb_jtok' local wdb_jfk : colnames `jwacc'
     foreach fam in att att_it ame ame_it {
+      local ename = cond(strpos("`fam'", "ame"), "joint_Choriz", "joint_horiz")
+      if "`fam'" == "att_it" | "`fam'" == "ame_it" local ename `ename'_i
       * overall
-      local cols
-      forval k = 1/`K' {
-        if "`wdbeq`k''" == "ES_`fam'" & "`wdbsg`k''" == "." & `wdbrl`k'' < 0 & `wdbrl`k'' != . local cols `cols' `k'
-      }
-      * one pre horizon is still a joint test (of a single restriction) - the analytic
-      * path posts one, so the bootstrap must too (F8)
-      if `: word count `cols'' >= 1 {
-        local wdbjp .
-        mata: wooldid_bootjw("`acc'", "`obsb'", "`cols'", "", `wdbdf')
-        local ename = cond(strpos("`fam'", "ame"), "joint_Choriz", "joint_horiz")
-        if "`fam'" == "att_it" | "`fam'" == "ame_it" local ename `ename'_i
-        if `wdbjp' != . ereturn scalar `ename' = `wdbjp'
-        else {
-          local ++wdbncaut
-          local wdbc`wdbncaut' the bootstrapped `ename' joint test is unavailable (rank-deficient or thin replication covariance)
-        }
-      }
-      * per subgroup (ereturn LOCALS - the analytic macro convention)
-      foreach sg of local sgl {
-        local cols
-        forval k = 1/`K' {
-          if "`wdbeq`k''" == "ES_`fam'" & "`wdbsg`k''" == "`sg'" & `wdbrl`k'' < 0 & `wdbrl`k'' != . local cols `cols' `k'
-        }
-        if `: word count `cols'' >= 1 {
-          local wdbjp .
-          mata: wooldid_bootjw("`acc'", "`obsb'", "`cols'", "", `wdbdf')
-          local ename = cond(strpos("`fam'", "ame"), "joint_Choriz", "joint_horiz")
-          if "`fam'" == "att_it" | "`fam'" == "ame_it" local ename `ename'_i
-          if `wdbjp' != . ereturn local `ename'_s`sg' = `wdbjp'
-          else {
-            * F7: say so - an absent per-subgroup joint test used to be indistinguishable
-            * from one that was never requested
-            local ++wdbncaut
-            local wdbc`wdbncaut' the bootstrapped `ename' joint test for subgroup `sg' is unavailable (rank-deficient or thin replication covariance)
+      local fk `fam'
+      local jp .
+      if `wdb_jtok' {
+        local jk : list posof "`fk'" in wdb_jfk
+        if `jk' > 0 {
+          local wobs .
+          mata: wooldid_bootjwobs("`fk'", "`jobs'", "wobs")
+          if `wobs' < . {
+            mata: st_local("jp", strofreal((1 + sum(select(st_matrix("`jwacc'")[., `jk'], st_matrix("`jwacc'")[., `jk'] :< .) :>= strtoreal(st_local("wobs")))) / (sum(st_matrix("`jwacc'")[., `jk'] :< .) + 1), "%21x"))
+            mata: st_local("jn", strofreal(sum(st_matrix("`jwacc'")[., `jk'] :< .)))
+            if `jn' < 2 local jp .
           }
         }
       }
+      if `jp' < . ereturn scalar `ename' = `jp'
+      else if `: list posof "`fk'" in wdb_jfk' > 0 {
+        local ++wdbncaut
+        local wdbc`wdbncaut' the bootstrapped `ename' joint test is unavailable (no usable replication statistic - rank-deficient replication covariances, or a horizon missing from the replications)
+      }
+      * per subgroup (ereturn LOCALS - the analytic macro convention)
+      foreach sg of local sgl {
+        local fk `fam'_s`sg'
+        local jp .
+        if `wdb_jtok' {
+          local jk : list posof "`fk'" in wdb_jfk
+          if `jk' > 0 {
+            local wobs .
+            mata: wooldid_bootjwobs("`fk'", "`jobs'", "wobs")
+            if `wobs' < . {
+              mata: st_local("jp", strofreal((1 + sum(select(st_matrix("`jwacc'")[., `jk'], st_matrix("`jwacc'")[., `jk'] :< .) :>= strtoreal(st_local("wobs")))) / (sum(st_matrix("`jwacc'")[., `jk'] :< .) + 1), "%21x"))
+              mata: st_local("jn", strofreal(sum(st_matrix("`jwacc'")[., `jk'] :< .)))
+              if `jn' < 2 local jp .
+            }
+          }
+        }
+        if `jp' < . ereturn local `ename'_s`sg' = `jp'
+        else if `: list posof "`fk'" in wdb_jfk' > 0 {
+          local ++wdbncaut
+          local wdbc`wdbncaut' the bootstrapped `ename' joint test for subgroup `sg' is unavailable (no usable replication statistic)
+        }
+      }
+    }
+    if `wdb_jtok' {
+      matrix colnames `jwacc' = `wdb_jfk'
+      cap ereturn matrix boot_jointW = `jwacc'
+    }
+  }
+
+  * -------- adversarial line-test p-values (author ruling 2026-09-04: bootstrapped under
+  * boottstat, ABSENT otherwise). The worker posted the ANALYTIC p at estimation time; that
+  * is never left standing under a bootstrap header. Names mirror the worker's posting:
+  * adversarial_pval_<typetext>[_s<sg>], typetext in att att_it ame ame_it
+  if "`adv'`advalt'" != "" {
+    local wdb_advok = ("`bts'" != "" & "`awacc'" != "" & "`aobs'" != "")
+    if `wdb_advok' {
+      cap confirm matrix `awacc'
+      if _rc != 0 local wdb_advok 0
+    }
+    local wdb_alt = ("`advalt'" != "")
+    if `wdb_advok' local wdb_acols : colnames `awacc'
+    local wdb_advblank 0
+    local wdb_advmiss 0
+    foreach ty in att att_it ame ame_it {
+      foreach sgtag in "" `sgl' {
+        local fk `ty'
+        local ename adversarial_pval_`ty'
+        if "`sgtag'" != "" {
+          local fk `ty'_s`sgtag'
+          local ename `ename'_s`sgtag'
+        }
+        if "`e(`ename')'" == "" continue
+        local jp .
+        if `wdb_advok' {
+          local acol `fk'_a`wdb_alt'
+          local ak : list posof "`acol'" in wdb_acols
+          if `ak' > 0 {
+            local wobs .
+            mata: wooldid_bootadvobs("`fk'", `wdb_alt', "`aobs'", `advesrel', ("`advtt'" != ""), "wobs")
+            if `wobs' < . {
+              mata: st_local("jp", strofreal((1 + sum(select(st_matrix("`awacc'")[., `ak'], st_matrix("`awacc'")[., `ak'] :< .) :>= strtoreal(st_local("wobs")))) / (sum(st_matrix("`awacc'")[., `ak'] :< .) + 1), "%21x"))
+              mata: st_local("jn", strofreal(sum(st_matrix("`awacc'")[., `ak'] :< .)))
+              if `jn' < 2 local jp .
+            }
+          }
+        }
+        if `jp' < . ereturn scalar `ename' = `jp'
+        else {
+          ereturn scalar `ename' = .
+          if `wdb_advok' local ++wdb_advmiss
+          else local ++wdb_advblank
+        }
+      }
+    }
+    if `wdb_advblank' > 0 {
+      ereturn local boot_adv_absent 1
+      local ++wdbncaut
+      local wdbc`wdbncaut' the adversarial line-test p-value(s) were not computed: bootstrapping them means bootstrapping the test statistic, which needs boottstat. They are absent rather than shown as analytic tests, which would not be bootstrap quantities
+    }
+    if `wdb_advmiss' > 0 {
+      local ++wdbncaut
+      local wdbc`wdbncaut' `wdb_advmiss' bootstrapped adversarial line-test p-value(s) are unavailable (no usable replication statistic - degenerate replication covariances, or a horizon missing from the replications)
+    }
+    if `wdb_advok' {
+      cap ereturn matrix boot_advW = `awacc'
     }
   }
 
@@ -5829,7 +6402,14 @@ version 16.0
   * whenever the analytic run posted the scalar, i.e. >1 realized sg; blanked-then-
   * filled is now compute-directly)
   if `: word count `sgl'' > 1 {
-    foreach it in att att_it att_i att_itime ame ame_it {
+    * The item list MUST cover every name the worker can post, which is the att family
+    * PLUS its contreat twin under `itemtext = subinstr("`item'","att","ame",.)' (worker
+    * 4218-4219). That mapping turns att_i into ame_i and att_itime into ame_itime, and
+    * an earlier six-name list here omitted exactly those two - so under
+    * bootstrap(bayes) + contreat() + subgroups() their ANALYTIC equality p-values were
+    * never blanked and printed alongside the footer asserting they were absent, with
+    * e(boot_sgjt_absent) set. Keep all eight in step with the worker's posting sites
+    foreach it in att att_it att_i att_itime ame ame_it ame_i ame_itime {
       foreach pre in "" "pre_" {
         local eqwant = cond("`pre'" == "", "main", "pretreatment")
         local cols
@@ -5842,17 +6422,68 @@ version 16.0
           if "`found'" == "" local ok 0
           else local cols `cols' `found'
         }
-        if `ok' & "`e(joint_`pre'`it'_allsgssame)'" != "" {
+        if "`bts'" == "" {
+          * Author ruling 2026-09-03, same as the joint tests above: not bootstrappable
+          * without boottstat, therefore ABSENT. This one has to be actively blanked
+          * rather than merely skipped, because unlike joint_horiz the worker posts the
+          * ANALYTIC subgroup-equality scalar unconditionally (its block is gated only
+          * on there being more than one realized subgroup, not on bootstrap()), so
+          * skipping would leave an analytic p standing under a bootstrap header.
+          * Blanked WITHOUT the `ok' gate on purpose: `ok' reports whether every
+          * subgroup's column could be mapped, and gating the blank on it is exactly
+          * what let an unmapped run keep printing the analytic value
+          if "`e(joint_`pre'`it'_allsgssame)'" != "" {
+            ereturn scalar joint_`pre'`it'_allsgssame = .
+            local wdbsgjtblank 1
+          }
+        }
+        else if `ok' {
+          * NOT gated on the worker having posted the analytic scalar: under boottstat this
+          * is a new bootstrap quantity, and the worker withholds its analytic twin in exactly
+          * the configurations (clustering at or above i) where the bootstrap one is wanted
+          * BOOTSTRAPPED subgroup-equality statistic by polarisation (wooldid_bootsgw): the
+          * per-replication level covariance is rebuilt from the replication's own level
+          * standard errors (seacc) and pairwise standard errors (pwseacc), W_r is the chain
+          * Wald of (b_r - b_obs), and p is the add-one tail against W_obs from the observed
+          * analytic level and pairwise standard errors. Replaces the draw-covariance Wald
           local wdbjp .
-          mata: wooldid_bootjw("`acc'", "`obsb'", "`cols'", "chain", `wdbdf')
-          if `wdbjp' != . ereturn scalar joint_`pre'`it'_allsgssame = `wdbjp'
+          local wdbjn 0
+          local wdb_sgok = ("`pwseacc'" != "" & "`aseobs'" != "")
+          if `wdb_sgok' {
+            cap confirm matrix `pwseacc'
+            if _rc != 0 local wdb_sgok 0
+            cap confirm matrix `aseobs'
+            if _rc != 0 local wdb_sgok 0
+          }
+          if `wdb_sgok' {
+            tempname pairidx pwobs0
+            * the OBSERVED pairwise se by row, read from the pre-rewrite pw copy taken at the
+            * top of this program (column 2 is still the analytic margins se there)
+            matrix `pwobs0' = `pw0'[1..., 2]'
+            local eqwant0 = cond("`pre'" == "", "`it'", "pre_`it'")
+            mata: wooldid_bootpairidx("`eqwant0'", "`sgl'", "`pairidx'")
+            mata: wooldid_bootsgw("`acc'", "`seacc0'", "`pwseacc'", "`obsb'", "`aseobs'", "`pwobs0'", "`cols'", "`pairidx'", "wdbjp", "wdbjn")
+          }
+          if `wdbjp' < . ereturn scalar joint_`pre'`it'_allsgssame = `wdbjp'
           else {
             ereturn scalar joint_`pre'`it'_allsgssame = .
             local ++wdbncaut
-            local wdbc`wdbncaut' the bootstrapped `pre'`it' subgroup-equality test is unavailable (rank-deficient or thin replication covariance)
+            local wdbc`wdbncaut' the bootstrapped `pre'`it' subgroup-equality test is unavailable: forming its studentized statistic needs the observed and per-replication pairwise-contrast standard errors, and at least one of these is missing (the pairwise margins standard error is unavailable in this specification, e.g. under clustering at or above the i level)
           }
         }
+        else if "`e(joint_`pre'`it'_allsgssame)'" != "" {
+          * boottstat requested but the columns could not be mapped: still never leave
+          * the analytic value standing
+          ereturn scalar joint_`pre'`it'_allsgssame = .
+          local ++wdbncaut
+          local wdbc`wdbncaut' the `pre'`it' subgroup-equality test could not be mapped to replication columns and is reported as absent
+        }
       }
+    }
+    if "`wdbsgjtblank'" != "" {
+      ereturn local boot_sgjt_absent 1
+      local ++wdbncaut
+      local wdbc`wdbncaut' the across-subgroup equality tests were not computed, for the same reason as the joint tests: bootstrapping them means bootstrapping their test statistic, which needs boottstat. They are reported as absent rather than as analytic tests
     }
   }
 
@@ -5860,8 +6491,28 @@ version 16.0
   * rewire se/z/p/ci from the bootstrap covariance of the matching estimand columns
   cap confirm matrix e(pwsgs)
   if _rc == 0 {
-    tempname pw
+    tempname pw pwsd pwpct pwbc pwtp pwtb pwts pwt1
     matrix `pw' = e(pwsgs)
+    * under boottstat the contrasts are STUDENTIZED (author ruling 2026-09-03: boottstat
+    * bootstraps t-statistics for the contrasts too). Column 2 of `pw' is still the
+    * observed ANALYTIC pairwise se at this point - bootwire does not touch e(pwsgs) - and
+    * it is the studentization's denominator; it is read here, BEFORE any rewrite
+    local wdbpwts = ("`bts'" != "" & "`pwseacc'" != "")
+    if `wdbpwts' {
+      cap confirm matrix `pwseacc'
+      if _rc != 0 local wdbpwts 0
+    }
+    if `wdbpwts' {
+      matrix `pwtp' = `pw'
+      matrix `pwtb' = `pw'
+      matrix `pwts' = J(10, rowsof(`pw'), .)
+      local pwtmiss 0
+    }
+    * both families for the contrast rows, exactly as for the coefficient tables:
+    * always computed, always stored, bootdisplay() selects which one is displayed
+    matrix `pwsd' = `pw'
+    matrix `pwpct' = `pw'
+    matrix `pwbc' = `pw'
     local prn : rowfullnames `pw'
     local rr 0
     local pwunmapped 0
@@ -5887,19 +6538,88 @@ version 16.0
           if "`wdbeq`k''" == "`eqwant'" & "`wdbnm`k''" == "`item'" & "`wdbsg`k''" == "`sgb'" local kb `k'
         }
         if "`ka'" != "" & "`kb'" != "" {
+          local zc = cond(`wdbdf' < ., invt(`wdbdf', 1 - (100 - `level')/200), invnormal(1 - (100 - `level')/200))
+          * the sd family for this contrast (the historical behaviour)
           local wdbse .
           mata: wooldid_bootpw("`acc'", `ka', `kb')
           if `wdbse' < . & `wdbse' > 0 {
-            matrix `pw'[`rr', 2] = `wdbse'
-            matrix `pw'[`rr', 3] = `pw'[`rr', 1]/`wdbse'
-            matrix `pw'[`rr', 4] = cond(`wdbdf' < ., 2*ttail(`wdbdf', abs(`pw'[`rr', 3])), 2*normal(-abs(`pw'[`rr', 3])))
-            local zc = cond(`wdbdf' < ., invt(`wdbdf', 1 - (100 - `level')/200), invnormal(1 - (100 - `level')/200))
-            matrix `pw'[`rr', 5] = `pw'[`rr', 1] - `zc'*`wdbse'
-            matrix `pw'[`rr', 6] = `pw'[`rr', 1] + `zc'*`wdbse'
+            matrix `pwsd'[`rr', 2] = `wdbse'
+            matrix `pwsd'[`rr', 3] = `pwsd'[`rr', 1]/`wdbse'
+            matrix `pwsd'[`rr', 4] = cond(`wdbdf' < ., 2*ttail(`wdbdf', abs(`pwsd'[`rr', 3])), 2*normal(-abs(`pwsd'[`rr', 3])))
+            matrix `pwsd'[`rr', 5] = `pwsd'[`rr', 1] - `zc'*`wdbse'
+            matrix `pwsd'[`rr', 6] = `pwsd'[`rr', 1] + `zc'*`wdbse'
           }
           else {
             forval cc = 2/6 {
-              matrix `pw'[`rr', `cc'] = .
+              matrix `pwsd'[`rr', `cc'] = .
+            }
+          }
+          * the percentile family for the same contrast: author ruling 2026-09-03, a
+          * 1-vs-1 contrast without boottstat is bootstrapped as a COEFFICIENT - the
+          * difference of the two subgroup coefficients - so it gets exactly the package
+          * a coefficient row gets, interval first and the standard error inverted from it
+          * the contrast's standard error is the standard deviation of the contrast draws
+          * (wooldid_bootpw, computed just above) under every non-studentized display -
+          * never the interval inverted. Author ruling 2026-09-04
+          mata: wooldid_bootpp("`acc'", `ka', `kb', `level', "`comp'", ("`ties'" != ""), "wdplb", "wdpub", "wdpp", "wdpn", "wdpblb", "wdpbub", "wdpbp", "wdpz0")
+          if `wdbse' < . & `wdbse' > 0 & `wdplb' < . & `wdpub' < . {
+            matrix `pwpct'[`rr', 2] = `wdbse'
+            matrix `pwpct'[`rr', 3] = `pwpct'[`rr', 1]/`wdbse'
+            matrix `pwpct'[`rr', 4] = `wdpp'
+            matrix `pwpct'[`rr', 5] = `wdplb'
+            matrix `pwpct'[`rr', 6] = `wdpub'
+          }
+          else {
+            forval cc = 2/6 {
+              matrix `pwpct'[`rr', `cc'] = .
+            }
+          }
+          if `wdbse' < . & `wdbse' > 0 & `wdpblb' < . & `wdpbub' < . {
+            matrix `pwbc'[`rr', 2] = `wdbse'
+            matrix `pwbc'[`rr', 3] = `pwbc'[`rr', 1]/`wdbse'
+            matrix `pwbc'[`rr', 4] = `wdpbp'
+            matrix `pwbc'[`rr', 5] = `wdpblb'
+            matrix `pwbc'[`rr', 6] = `wdpbub'
+          }
+          else {
+            forval cc = 2/6 {
+              matrix `pwbc'[`rr', `cc'] = .
+            }
+          }
+          * the studentized families for this contrast (boottstat): se_analytic, t_obs,
+          * rank p, equal-tailed interval; BC-t twin alongside
+          if `wdbpwts' {
+            local pwj = 0
+            local pwacn : colfullnames `pwseacc'
+            local pwj : list posof "`rn'" in pwacn
+            if `pwj' > 0 & `pw'[`rr', 2] < . & `pw'[`rr', 2] > 0 {
+              mata: wooldid_bootpwt("`acc'", `ka', `kb', "`pwseacc'", `pwj', st_matrix("`pw'")[`rr', 1], st_matrix("`pw'")[`rr', 2], `level', ("`ties'" != ""), "`pwt1'")
+              matrix `pwts'[1, `rr'] = `pwt1'
+            }
+            if `pwts'[10, `rr'] == 1 {
+              matrix `pwtp'[`rr', 2] = `pw'[`rr', 2]
+              matrix `pwtp'[`rr', 3] = `pwts'[2, `rr']
+              matrix `pwtp'[`rr', 4] = `pwts'[3, `rr']
+              matrix `pwtp'[`rr', 5] = `pw'[`rr', 1] - `pwts'[5, `rr']*`pw'[`rr', 2]
+              matrix `pwtp'[`rr', 6] = `pw'[`rr', 1] - `pwts'[4, `rr']*`pw'[`rr', 2]
+            }
+            else {
+              forval cc = 2/6 {
+                matrix `pwtp'[`rr', `cc'] = .
+              }
+              local ++pwtmiss
+            }
+            if `pwts'[10, `rr'] == 1 & `pwts'[7, `rr'] < . {
+              matrix `pwtb'[`rr', 2] = `pw'[`rr', 2]
+              matrix `pwtb'[`rr', 3] = `pwts'[2, `rr']
+              matrix `pwtb'[`rr', 4] = `pwts'[7, `rr']
+              matrix `pwtb'[`rr', 5] = `pw'[`rr', 1] - `pwts'[9, `rr']*`pw'[`rr', 2]
+              matrix `pwtb'[`rr', 6] = `pw'[`rr', 1] - `pwts'[8, `rr']*`pw'[`rr', 2]
+            }
+            else {
+              forval cc = 2/6 {
+                matrix `pwtb'[`rr', `cc'] = .
+              }
             }
           }
         }
@@ -5908,14 +6628,26 @@ version 16.0
           * display attributes to the bootstrap covariance (the commit-C blanking
           * invariant, restored here for every future label surprise as well)
           forval cc = 2/6 {
-            matrix `pw'[`rr', `cc'] = .
+            matrix `pwsd'[`rr', `cc'] = .
+            matrix `pwpct'[`rr', `cc'] = .
+            matrix `pwbc'[`rr', `cc'] = .
+            if `wdbpwts' {
+              matrix `pwtp'[`rr', `cc'] = .
+              matrix `pwtb'[`rr', `cc'] = .
+            }
           }
           local ++pwunmapped
         }
       }
       else {
         forval cc = 2/6 {
-          matrix `pw'[`rr', `cc'] = .
+          matrix `pwsd'[`rr', `cc'] = .
+          matrix `pwpct'[`rr', `cc'] = .
+          matrix `pwbc'[`rr', `cc'] = .
+          if `wdbpwts' {
+            matrix `pwtp'[`rr', `cc'] = .
+            matrix `pwtb'[`rr', `cc'] = .
+          }
         }
         local ++pwunmapped
       }
@@ -5930,31 +6662,66 @@ version 16.0
       local pwc : subinstr local pwc "lb_95ci" "lb_`wdbplvl'ci", word
       local pwc : subinstr local pwc "ub_95ci" "ub_`wdbplvl'ci", word
     }
+    * select the displayed family, then post both twins. `ereturn matrix' MOVES its
+    * source, so the selection has to happen first
+    if `wdbpwts' {
+      * studentized display: percentile-t by default, BC-t under bootdisplay(bc)
+      if "`bdisp'" == "bc" matrix `pw' = `pwtb'
+      else                 matrix `pw' = `pwtp'
+      local pwc : subinstr local pwc "t" "t_pt", word
+      local pwc : subinstr local pwc "z" "t_pt", word
+      local pwc : subinstr local pwc "se" "se_analytic", word
+    }
+    else if "`bdisp'" == "percentile"  matrix `pw' = `pwpct'
+    else if "`bdisp'" == "bc"           matrix `pw' = `pwbc'
+    else                                matrix `pw' = `pwsd'
     matrix colnames `pw' = `pwc'
+    local pwc0 : subinstr local pwc "t_pt" "`=cond(`wdbdf' < ., "t", "z")'", word
+    local pwc0 : subinstr local pwc0 "se_analytic" "se", word
+    matrix colnames `pwsd' = `pwc0'
+    matrix colnames `pwpct' = `pwc0'
+    matrix colnames `pwbc' = `pwc0'
     ereturn matrix pwsgs = `pw'
+    ereturn hidden matrix boot_wald_pwsgs = `pwsd'
+    ereturn hidden matrix boot_pctl_pwsgs = `pwpct'
+    ereturn hidden matrix boot_bc_pwsgs = `pwbc'
+    if `wdbpwts' {
+      matrix colnames `pwtp' = `pwc'
+      matrix colnames `pwtb' = `pwc'
+      ereturn hidden matrix boot_tpctl_pwsgs = `pwtp'
+      ereturn hidden matrix boot_tbc_pwsgs = `pwtb'
+      matrix rownames `pwts' = n t_obs p_pctl qlo_pctl qhi_pctl z0 p_bc qlo_bc qhi_bc live
+      matrix colnames `pwts' = `prn'
+      ereturn matrix boot_tstud_pwsgs = `pwts'
+      * the per-replication contrast standard errors go out compacted on the SAME row mask
+      * as e(bootdist), so d_r = bootdist[ka]-bootdist[kb] pairs row-by-row with these
+      tempname pwsed
+      mata: wooldid_bootdist("`acc'", "`pwsed'", "`pwseacc'", "`pwsed'")
+      cap matrix colnames `pwsed' = `prn'
+      cap ereturn matrix bootdist_pwse = `pwsed'
+      if `pwtmiss' > 0 {
+        local ++wdbncaut
+        local wdbc`wdbncaut' `pwtmiss' pairwise subgroup contrast row(s) had no usable studentized bootstrap distribution; their statistic, p-value and interval are left blank rather than filled from the coefficient-draw families
+      }
+    }
     if `pwunmapped' > 0 {
       local ++wdbncaut
       local wdbc`wdbncaut' `pwunmapped' pairwise subgroup contrast row(s) could not be mapped to replication columns; their bootstrap inference is left missing
     }
+    * disclosure, not a guard: under clustering at or above i the analytic pairwise
+    * margins se is degenerate on some designs (missing, or ~1e-9 with p = 0, seen at HEAD
+    * on a saturated i-as-cohort fixture), and boottstat studentizes by exactly that se
+    * in every replication. boottstat + cluster() always nests i (the re-id leg requires it)
+    if "`bts'" != "" & `nclus' > 0 {
+      local ++wdbncaut
+      local wdbc`wdbncaut' under clustering at or above the i level the analytic pairwise-contrast standard errors can be degenerate (the same limitation behind the refusal of jointtests with analytic clustered SEs), and boottstat studentizes each contrast by that standard error in every replication, so the studentized contrasts and the across-subgroup equality test can be absent or numerically unstable here; the non-studentized bootstrap (bootstrap() without boottstat) forms the contrasts from the coefficient draws instead
+    }
   }
 
-  * -------- CI flavors: normal / percentile / bias-corrected at level(), plus the
-  * BC median-bias z0 (comparison against the REP-0 fastnose comparator per
-  * amendment A3; `ties' adjusts z0 for replicate-comparator ties, the built-in
-  * bootstrap's ties semantics)
-  tempname cin cip cib cz0
-  mata: wooldid_bootci("`acc'", "`obsb'", "`comp'", `level', ("`ties'" != ""), "`cin'", "`cip'", "`cib'", "`cz0'", `wdbdf')
-  local obn : colfullnames `obsb'
-  foreach cm in cin cip cib {
-    matrix colnames ``cm'' = `obn'
-    matrix rownames ``cm'' = ll ul
-  }
-  matrix colnames `cz0' = `obn'
-  ereturn matrix boot_ci_normal = `cin'
-  ereturn matrix boot_ci_percentile = `cip'
-  ereturn matrix boot_ci_bc = `cib'
-  ereturn matrix boot_z0 = `cz0'
-  if "`ties'" != "" ereturn local boot_ties ties
+  * -------- the CI flavors, the percentile p and the BC z0 were computed and posted by
+  * wooldid_bootwire, which runs before this program. They moved there because the
+  * percentile package became a display default and the table rewiring needs the
+  * percentile interval and its dual p in hand; see the comment at that call site
 
   forval cc = 1/`wdbncaut' {
     dis as text "Caution: `wdbc`cc''."
@@ -5964,7 +6731,8 @@ end
 cap prog drop wooldid_permrun
 prog def wooldid_permrun
 version 16.0
-  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis) compname(string)]
+  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis) compname(string) obsb(string) accname(string) seaccname(string) cmpbname(string) cmpsename(string) cellacc(string) cell0(string) dots(integer 1) asgname(string)]
+  if `dots' == -1 local dots 1
 
   * comparison-statistic scalars, filled by the mandatory rep-0 run below (NFPERM-10)
   tempname wdpo1 wdpo2 wdpo3 wdpo4
@@ -5998,11 +6766,18 @@ version 16.0
     * observed assignment absent from their own enumeration). __wdprow keys each row to
     * its generation-time matrix row, making any later reorder harmless
     qui gen long __wdprow = _n
+    * permsave(): the cluster values and observed onsets in generation-row order, so the
+    * assignment block of the saved file can be labelled by cluster
+    if "`asgname'" != "" {
+      mata: st_local("wdp_clusvals", invtokens(strofreal(st_data(., "`clus'")', "%20.0g")))
+      mata: st_local("wdp_obsons", invtokens(strofreal(st_data(., "`ttrevar'")', "%20.0g")))
+    }
   }
 
   * assignments + counts (mata): fills the C x R matrix, sets wdp_R, the possible-
   * assignment count (double + string), and caution flags
   tempname wdpassign wdpP wdpL
+  if "`asgname'" != "" local wdpassign `asgname'
   if "`permute'" == "probabilities" {
     * re-run the shared parser in engine mode: fills the probability matrix (rows in
     * ascending cluster order = the map frame's order) and the level vector
@@ -6043,6 +6818,7 @@ version 16.0
   qui frlink m:1 `clus', frame(`mpfr') generate(`lnk')
   local ndone 0
   local nfail 0
+  local nblank 0
   tempname res
   matrix `res' = J(`wdp_R', `: word count `estimands'', .)
   local wtif
@@ -6055,7 +6831,11 @@ version 16.0
   * keeps the exact test's observed-is-a-member property bitwise. the display still
   * shows the full run's estimate. the statistics are held in tempname SCALARS: a
   * local's decimal round-trip re-parses one ulp off, which breaks the
-  * observed-is-a-member property (measured: b >= local-copy-of-b evaluates FALSE)
+  * observed-is-a-member property (measured: b >= local-copy-of-b evaluates FALSE).
+  * Since the 2026-09-05 fast-mode default the observed run itself takes the fast path
+  * unless permtstat or permanalyticse, and the comparator then equals it bitwise; the
+  * run is kept unconditional (one extra fit) because under permanalyticse it is still
+  * load-bearing
   nobreak {
     global WOOLDID_REPMODE 1
   cap qui wooldid `repcall' `ttrevar' `wtif' , `repopts'
@@ -6099,6 +6879,55 @@ version 16.0
     }
     matrix colnames `compname' = `estimands'
   }
+  * chunk 1 (2026-09-05): the FULL comparator vector and, name-aligned to the observed
+  * e(b) column set, the R x K accumulator every reported surface is built from. Under
+  * permtstat a parallel R x K of replication standard errors (the rep's own e(V)
+  * diagonal) and the comparator's own standard errors
+  local wdp_K 0
+  if "`accname'" != "" {
+    matrix `cmpbname' = e(b)
+    local wdpnames0 : colfullnames `obsb'
+    local wdpnames1 : colfullnames e(b)
+    if "`wdpnames0'" != "`wdpnames1'" {
+      dis as error "Error: the rep-0 coefficient vector does not match the observed run's column set; permutation accumulation would be misaligned. This is unexpected - please report it."
+      error 459
+    }
+    local wdp_K = colsof(`obsb')
+    matrix `accname' = J(`wdp_R', `wdp_K', .)
+    matrix colnames `accname' = `wdpnames0'
+    if "`seaccname'" != "" {
+      matrix `seaccname' = J(`wdp_R', `wdp_K', .)
+      matrix colnames `seaccname' = `wdpnames0'
+      matrix `cmpsename' = J(1, `wdp_K', .)
+      matrix colnames `cmpsename' = `wdpnames0'
+      cap confirm matrix e(V)
+      if _rc == 0 mata: wooldid_permcse("`cmpsename'", `wdp_K')
+    }
+  }
+  * cell accumulators for the continuous-treatment (cfx) matrices, keyed by row name from
+  * the rep-0 run (the same lattice levels the observed run posted), plus a one-row
+  * comparator harvest of the rep-0 cells themselves
+  local wdp_ncfx 0
+  if "`cellacc'" != "" {
+    foreach cm in `e(wdid_cfxmats)' {
+      cap confirm matrix e(`cm')
+      if _rc != 0 continue
+      local ++wdp_ncfx
+      mata: wooldid_bootcellkeys("e(`cm')", "`cellacc'_cfx`wdp_ncfx'", `wdp_R', 0)
+      mata: wooldid_bootcellkeys("e(`cm')", "`cell0'_cfx`wdp_ncfx'", 1, 0)
+      if "`seaccname'" != "" {
+        mata: wooldid_bootcellkeys("e(`cm')", "`cellacc'_cfx`wdp_ncfx'se", `wdp_R', 0)
+        mata: wooldid_bootcellkeys("e(`cm')", "`cell0'_cfx`wdp_ncfx'se", 1, 0)
+      }
+      local wdb_cfxname`wdp_ncfx' `cm'
+    }
+    if `wdp_ncfx' > 0 mata: wooldid_bootcells("`cell0'", 1, `wdp_ncfx', ("`seaccname'" != ""))
+  }
+  c_local wdp_ncfx `wdp_ncfx'
+  forval kk = 1/`wdp_ncfx' {
+    c_local wdb_cfxname`kk' `wdb_cfxname`kk''
+  }
+  if `dots' > 0 dis as text "Permutation replications (`wdp_R'): " _continue
   forval r = 1/`wdp_R' {
     frame `mpfr': qui replace __wdpassign = el("`wdpassign'", __wdprow, `r')
     cap drop `repons'
@@ -6110,6 +6939,10 @@ version 16.0
       global WOOLDID_REPMODE
     }
     cap error `wdrepdone'
+    if _rc == 1 {
+      if `dots' > 0 dis as result " "
+      error 1
+    }
     local badrep 0
     if _rc != 0 local badrep 1
     if `badrep' == 0 {
@@ -6133,7 +6966,18 @@ version 16.0
         if _rc != 0 local badrep 1
       }
     }
-    if `badrep' == 0 local ++ndone
+    if `badrep' == 0 {
+      local ++ndone
+      if "`accname'" != "" {
+        * name-aligned grab of the full rep e(b) into row r (ame-family structural zeros
+        * blanked, A12(b) - a voided ame replication is |0| < |obs| and would otherwise
+        * count as a non-exceedance); under permtstat also this rep's own standard errors
+        local wdb_gblank 0
+        mata: wooldid_bootgrab("`accname'", `r', "`obsb'", "`seaccname'", "")
+        local nblank = `nblank' + `wdb_gblank'
+        if `wdp_ncfx' > 0 mata: wooldid_bootcells("`cellacc'", `r', `wdp_ncfx', ("`seaccname'" != ""))
+      }
+    }
     else {
       local ++nfail
       * blank the whole row: a partially-failed rep (reachable under permtstat with a
@@ -6145,7 +6989,13 @@ version 16.0
         cap matrix `res'[`r', `ec'] = .
       }
     }
+    if `dots' > 0 {
+      if `badrep' dis as error "x" _continue
+      else dis as text "." _continue
+      if mod(`r', 50) == 0 dis as text " " `r' _newline "  " _continue
+    }
   }
+  if `dots' > 0 dis as text " done"
   cap drop `lnk'
   cap drop `repons'
   frame drop `mpfr'
@@ -6157,54 +7007,14 @@ version 16.0
   * NFPERM-01 (lean residue): under permexact ANY failure means the enumeration is
   * incomplete, so the caution fires at nfail > 0 with wording that states the
   * substance; sampled mode keeps the 10% threshold (adjudicated accounting design)
-  if `nfail' > 0 & "`permexact'" != "" dis as text "Caution: `nfail' of `wdp_R' enumerated assignments failed to estimate, so the exact enumeration is incomplete; the reported exact p-value is a share over completed assignments only (the observed-is-a-member and 2/M-floor readings no longer apply)."
+  if `nfail' > 0 & "`permexact'" != "" dis as text "Caution: `nfail' of `wdp_R' enumerated assignments failed to estimate, so the exact enumeration is incomplete; the reported exact p-values are shares over completed assignments only (the observed-is-a-member and 2/M-floor readings no longer apply)."
   else if `nfail' > 0 & `nfail' > 0.1*`wdp_R' dis as text "Caution: `nfail' of `wdp_R' permutation replications failed to estimate and were excluded."
 
-  * summaries per estimand: add-one two-sided p (exact: plain share - the observed
-  * assignment is a member of the enumeration), 5th/95th percentile band, SD
-  tempname rsfr
-  matrix `distname' = J(`ndone', `: word count `estimands'', .)
-  local ec 0
-  foreach ee in `estimands' {
-    local ++ec
-    frame create `rsfr' double s
-    frame `rsfr' {
-      qui set obs `wdp_R'
-      qui replace s = el("`res'", _n, `ec')
-      qui drop if missing(s)
-      qui count if abs(s) >= abs(`wdpo`ec'')
-      local nex = r(N)
-      qui count
-      local nuse = r(N)
-      _pctile s, p(5 95)
-      local lb = r(r1)
-      local ub = r(r2)
-      qui sum s
-      * NFPERM-11: an exact enumeration IS the complete population of assignments, so
-      * report the population SD (denominator M); sampled draws keep the n-1 sample SD.
-      * r(Var) is full double precision - no display-rounding hazard
-      if "`permexact'" != "" local sdv = sqrt(r(Var)*(r(N)-1)/r(N))
-      else local sdv = r(sd)
-      if `sdv' == 0 dis as text "Caution: the permuted `ee' distribution is degenerate (every completed draw equals every other); the permutation p-value is uninformative."
-      local q95 .
-      if "`permtstat'" != "" {
-        qui gen double abss = abs(s)
-        _pctile abss, p(95)
-        local q95 = r(r1)
-        qui drop abss
-      }
-    }
-    frame drop `rsfr'
-    if "`permexact'" != "" local p_`ee' = `nex'/`nuse'
-    else local p_`ee' = (1 + `nex')/(`nuse' + 1)
-    c_local wdp_r_p_`ee' `p_`ee''
-    c_local wdp_r_lb_`ee' `lb'
-    c_local wdp_r_ub_`ee' `ub'
-    c_local wdp_r_sd_`ee' `sdv'
-    c_local wdp_r_q_`ee' `q95'
-  }
-  * dense permdist matrix (completed rows only), built once from res
+  * dense legacy permdist matrix (completed rows only, keyed on the legacy estimands),
+  * built once from res. The per-element statistics now come from the name-aligned
+  * accumulator (wooldid_permwire); this matrix keeps the documented estimand-keyed shape
   local rr 0
+  matrix `distname' = J(max(`ndone', 1), `: word count `estimands'', .)
   forval r = 1/`wdp_R' {
     if !missing(el("`res'", `r', 1)) {
       local ++rr
@@ -6220,8 +7030,670 @@ version 16.0
   c_local wdp_r_reps `wdp_R'
   c_local wdp_r_done `ndone'
   c_local wdp_r_fail `nfail'
+  c_local wdp_r_blank `nblank'
   c_local wdp_r_npd `wdp_npd'
   c_local wdp_r_nps `wdp_nps'
+  if "`asgname'" != "" {
+    c_local wdp_clusvals `wdp_clusvals'
+    c_local wdp_obsons `wdp_obsons'
+  }
+end
+
+cap prog drop wooldid_permwire
+prog def wooldid_permwire, eclass
+version 16.0
+*** chunk 1 (2026-09-05): rewires the reported inference surfaces to the permutation
+*** distribution. Point estimates never change. Every p-value column becomes the
+*** equal-tailed permutation p (coverage by subtraction: an element with no usable
+*** permutation distribution is BLANK, never analytic), every interval the shift
+*** interval, the statistic column the permuted t-ratio under permtstat and blank
+*** otherwise; the standard-error column is left as the worker posted it - the analytic
+*** standard error (labelled se_analytic) under permtstat or permanalyticse, blank
+*** under the fast-mode default. The per-element kernel and the stripe-aligned vectors
+*** are posted by name; the analytic tables are kept as hidden twins
+  syntax , acc(string) obsb(string) cmpb(string) [seacc(string) cmpse(string) level(real 0) m(string) done(integer 0) fail(integer 0) blank(integer 0) ts(integer 0) method(string) reps(integer 0) ase(string) clus(varlist) gt(string)]
+  if `level' == 0 local level 95
+  local wdpM = cond("`m'" == "" | "`m'" == ".", ".", "`m'")
+  if `ts' == 0 {
+    local seacc
+    local cmpse
+  }
+
+  * -------- column-position walk: e(b) col k <-> results-matrix row (positional: e(b)
+  * is built by stacking wdidpooled + the SG blocks in sglist order). excluded columns =
+  * rows whose reported ESTIMATE is missing. The analytic se column is captured in the
+  * same walk (hidden e(perm_ase_obs); permsave() writes it as the observed se_* row)
+  tempname wm excl aseobs
+  matrix `wm' = e(wdidmainresults)
+  local nmain = rowsof(`wm')
+  local K = colsof(`obsb')
+  matrix `excl' = J(1, `K', 0)
+  matrix `aseobs' = J(1, `K', .)
+  local sgl `e(wdid_sglist)'
+  local kk 0
+  forval rr = 1/`nmain' {
+    local ++kk
+    if `wm'[`rr', 1] >= . matrix `excl'[1, `kk'] = 1
+    matrix `aseobs'[1, `kk'] = `wm'[`rr', 2]
+  }
+  foreach sg of local sgl {
+    tempname wsg`sg'
+    cap confirm matrix e(wdidsgresults_`sg')
+    if _rc != 0 continue
+    matrix `wsg`sg'' = e(wdidsgresults_`sg')
+    forval rr = 1/`=rowsof(`wsg`sg'')' {
+      local ++kk
+      if `wsg`sg''[`rr', 1] >= . matrix `excl'[1, `kk'] = 1
+      matrix `aseobs'[1, `kk'] = `wsg`sg''[`rr', 2]
+    }
+  }
+  if `kk' != `K' {
+    dis as error "Error: permutation rewiring found `kk' results-matrix rows against `K' coefficient columns; the inference surfaces cannot be aligned. This is unexpected - please report it."
+    error 459
+  }
+
+  * -------- the per-element kernel (mata): n, s_obs, p, quantiles, sd, shift interval,
+  * shift se, |s| 95th percentile, null band, live
+  tempname kern
+  local wdp_incomplete
+  mata: wooldid_permstat("`acc'", "`seacc'", "`obsb'", "`cmpb'", "`cmpse'", "`excl'", `level', `wdpM', "`kern'")
+  local obn : colfullnames `obsb'
+
+  * -------- rewire the results matrices: col 3 = permuted t-ratio (permtstat) or blank,
+  * col 4 = permutation p, cols 5-6 = shift interval. col 2 stays as posted (analytic se
+  * or blank). Blanked rows are counted for the cautions
+  local wdpmiss 0
+  local wdplow 0
+  local wdpdeg
+  local wdptsmiss 0
+  local wdpoff
+  tempname wma
+  matrix `wma' = `wm'
+  local kk 0
+  forval rr = 1/`nmain' {
+    local ++kk
+    matrix `wm'[`rr', 3] = .
+    if `kern'[13, `kk'] == 1 {
+      if `ts' matrix `wm'[`rr', 3] = `kern'[2, `kk']
+      matrix `wm'[`rr', 4] = `kern'[3, `kk']
+      matrix `wm'[`rr', 5] = `kern'[7, `kk']
+      matrix `wm'[`rr', 6] = `kern'[8, `kk']
+      if `kern'[1, `kk'] < 0.5*`done' local ++wdplow
+      if `kern'[6, `kk'] == 0 local wdpdeg `wdpdeg' `: word `kk' of `obn''
+      if `kern'[10, `kk'] == 1 local wdpoff `wdpoff' `: word `kk' of `obn''
+    }
+    else {
+      forval cc = 4/6 {
+        matrix `wm'[`rr', `cc'] = .
+      }
+      if `excl'[1, `kk'] == 0 {
+        local ++wdpmiss
+        if `ts' & (`aseobs'[1, `kk'] >= . | `aseobs'[1, `kk'] <= 0) local ++wdptsmiss
+      }
+    }
+  }
+  local wdplvltxt = cond(mod(`level',1)==0, strofreal(`level'), subinstr(strofreal(`level',"%9.0g"), ".", "p", .))
+  local wmc : colnames `wm'
+  local wmc : subinstr local wmc "se" "se_analytic", word
+  local wmc : subinstr local wmc "t" "t_perm", word
+  local wmc : subinstr local wmc "z" "t_perm", word
+  local wmc : subinstr local wmc "p" "p_perm", word
+  if `level' != 95 {
+    local wmc : subinstr local wmc "lb_95ci" "lb_`wdplvltxt'ci", word
+    local wmc : subinstr local wmc "ub_95ci" "ub_`wdplvltxt'ci", word
+  }
+  matrix colnames `wm' = `wmc'
+  ereturn hidden matrix perm_analytic_mainresults = `wma'
+  ereturn matrix wdidmainresults = `wm'
+  foreach sg of local sgl {
+    cap confirm matrix `wsg`sg''
+    if _rc != 0 continue
+    tempname wsa`sg'
+    matrix `wsa`sg'' = `wsg`sg''
+    forval rr = 1/`=rowsof(`wsg`sg'')' {
+      local ++kk
+      matrix `wsg`sg''[`rr', 3] = .
+      if `kern'[13, `kk'] == 1 {
+        if `ts' matrix `wsg`sg''[`rr', 3] = `kern'[2, `kk']
+        matrix `wsg`sg''[`rr', 4] = `kern'[3, `kk']
+        matrix `wsg`sg''[`rr', 5] = `kern'[7, `kk']
+        matrix `wsg`sg''[`rr', 6] = `kern'[8, `kk']
+        if `kern'[1, `kk'] < 0.5*`done' local ++wdplow
+        if `kern'[6, `kk'] == 0 local wdpdeg `wdpdeg' `: word `kk' of `obn''
+        if `kern'[10, `kk'] == 1 local wdpoff `wdpoff' `: word `kk' of `obn''
+      }
+      else {
+        forval cc = 4/6 {
+          matrix `wsg`sg''[`rr', `cc'] = .
+        }
+        if `excl'[1, `kk'] == 0 {
+          local ++wdpmiss
+          if `ts' & (`aseobs'[1, `kk'] >= . | `aseobs'[1, `kk'] <= 0) local ++wdptsmiss
+        }
+      }
+    }
+    local wsc : colnames `wsg`sg''
+    local wsc : subinstr local wsc "se" "se_analytic", word
+    local wsc : subinstr local wsc "t" "t_perm", word
+    local wsc : subinstr local wsc "z" "t_perm", word
+    local wsc : subinstr local wsc "p" "p_perm", word
+    if `level' != 95 {
+      local wsc : subinstr local wsc "lb_95ci" "lb_`wdplvltxt'ci", word
+      local wsc : subinstr local wsc "ub_95ci" "ub_`wdplvltxt'ci", word
+    }
+    matrix colnames `wsg`sg'' = `wsc'
+    ereturn hidden matrix perm_analytic_sgresults_`sg' = `wsa`sg''
+    ereturn matrix wdidsgresults_`sg' = `wsg`sg''
+  }
+
+  * -------- gteffects: the cell keys are cohort-by-onset-by-relative-period, and a
+  * cohort's onset is exactly what a replication reassigns, so no cell has a permutation
+  * distribution; the stage-1 inference columns are blanked (never analytic under a
+  * permutation header) and the display note says so
+  if "`gt'" != "" {
+    cap confirm matrix e(gteffects)
+    if _rc == 0 {
+      tempname gtm
+      matrix `gtm' = e(gteffects)
+      local gtcn : colnames `gtm'
+      local gtrn : rowfullnames `gtm'
+      mata: M = st_matrix("`gtm'"); M[., 6..9] = J(rows(M), 4, .); st_matrix("`gtm'", M)
+      matrix colnames `gtm' = `gtcn'
+      matrix rownames `gtm' = `gtrn'
+      ereturn matrix gteffects = `gtm'
+      ereturn scalar perm_gt_blank = 1
+    }
+  }
+
+  * -------- the stripe-aligned surfaces, all colnamed like e(b)
+  tempname pv ci sesh sdv nv nb cmp2 ase2 kern2
+  matrix `pv' = `kern'[3, 1...]
+  matrix colnames `pv' = `obn'
+  ereturn matrix perm_p = `pv'
+  matrix `ci' = `kern'[7..8, 1...]
+  matrix colnames `ci' = `obn'
+  matrix rownames `ci' = ll ul
+  ereturn matrix perm_ci = `ci'
+  matrix `sesh' = `kern'[9, 1...]
+  matrix colnames `sesh' = `obn'
+  ereturn matrix perm_se_shift = `sesh'
+  matrix `sdv' = `kern'[6, 1...]
+  matrix colnames `sdv' = `obn'
+  ereturn matrix perm_sd = `sdv'
+  matrix `nv' = `kern'[1, 1...]
+  matrix colnames `nv' = `obn'
+  ereturn matrix perm_n = `nv'
+  matrix `nb' = `kern'[11..12, 1...]
+  matrix colnames `nb' = `obn'
+  matrix rownames `nb' = p5 p95
+  ereturn matrix perm_nullband = `nb'
+  matrix `cmp2' = `cmpb'
+  matrix colnames `cmp2' = `obn'
+  ereturn matrix perm_comparator_b = `cmp2'
+  if `ts' {
+    tempname cmps2
+    matrix `cmps2' = `cmpse'
+    matrix colnames `cmps2' = `obn'
+    ereturn matrix perm_comparator_se = `cmps2'
+  }
+  matrix `kern2' = `kern'
+  matrix rownames `kern2' = n s_obs p qlo qhi sd lb ub se_shift offcentre band5 band95 live
+  matrix colnames `kern2' = `obn'
+  ereturn hidden matrix perm_kernel = `kern2'
+  matrix `ase2' = `aseobs'
+  matrix colnames `ase2' = `obn'
+  ereturn hidden matrix perm_ase_obs = `ase2'
+  if `done' <= 10000 {
+    tempname pd pds
+    if `ts' {
+      mata: wooldid_bootdist("`acc'", "`pd'", "`seacc'", "`pds'")
+      cap matrix colnames `pds' = `obn'
+      cap ereturn matrix permdist_se = `pds'
+    }
+    else mata: wooldid_bootdist("`acc'", "`pd'")
+    cap matrix colnames `pd' = `obn'
+    cap ereturn matrix permdist_b = `pd'
+  }
+  ereturn scalar perm_level = `level'
+  ereturn scalar perm_exact = (`wdpM' < .)
+  ereturn local perm_incomplete `wdp_incomplete'
+  ereturn local perm_offcentre `wdpoff'
+  ereturn scalar perm_blank = `blank'
+  if "`ase'" != "" ereturn scalar perm_analyticse = 1
+
+  * -------- header: the display reads e(wdid_vcespec) and e(wdid_fastnose)
+  local wdpcl = cond("`clus'" != "", "cluster(`clus')", "unclustered")
+  if `ts' local wdphdr randomization inference on t-ratios (permtstat; permute(`method'), `reps' replications); se_analytic = the analytic `wdpcl' standard error each t-ratio is formed with
+  else if "`ase'" != "" local wdphdr randomization inference (permute(`method'), `reps' replications); se_analytic = the analytic `wdpcl' standard error, shown for reference only
+  else local wdphdr randomization inference (permute(`method'), `reps' replications); analytic standard errors not computed (permanalyticse restores them)
+  ereturn hidden local wdid_vcespec "`wdphdr'"
+  ereturn hidden local wdid_fastnose ""
+
+  * -------- cautions (estimation-time; the footer carries the standing disclosures)
+  if `wdpmiss' > 0 dis as text "Caution: `wdpmiss' reported coefficient(s) have no usable permutation distribution (fewer than 2 completed replications carry them`=cond(`ts', ", or no usable observed standard error to form the t-ratio with", "")'); their p-value and interval are left blank rather than filled from any other source."
+  if `wdplow' > 0 dis as text "Caution: `wdplow' reported coefficient(s) were present in fewer than half of the completed replications (a reassigned onset can make a horizon or a subgroup level inestimable in a replication); their permutation p-values rest on the counts in e(perm_n)."
+  if "`wdpdeg'" != "" dis as text "Caution: the permutation distribution is degenerate (every completed draw equal) for: `wdpdeg'; those permutation p-values are uninformative."
+  if "`wdpoff'" != "" dis as text "Caution: the permutation distribution is not centred at zero (its central `level'% band excludes 0) for: `wdpoff'. The shift interval takes the estimate's sampling error to have that null distribution, so it is not interpretable there and is left blank; the permutation p-value stands. This happens when a quantity is non-zero under reassigned onsets - for example the ame rows under lattice() with contreatcontrols(basic), where the baseline dose slope is not partialled out (see the standing issue on the reference cell) - or under a permute(probabilities) design far from the observed assignment."
+  if `blank' > 0 dis as text "Caution: `blank' replication cell(s) in ame-family columns returned exact structural zeros (reassignments without dose variation in some cells) and were excluded from those columns' permutation distributions."
+  if "`wdp_incomplete'" != "" dis as text "Caution: under permexact the following elements were not estimable in every enumerated assignment, so their p-values use the add-one form over the completed assignments rather than exact shares: `wdp_incomplete'"
+end
+
+cap prog drop wooldid_permjnt
+prog def wooldid_permjnt, eclass
+version 16.0
+*** chunk 1 (2026-09-05): the permutation joint pre-trend tests, across-subgroup
+*** equality tests, adversarial line tests and pairwise subgroup contrasts. The three
+*** quadratic-form families are one-sided upper-tail permutation tests of W = d' S^-1 d
+*** on a FIXED metric S, the permutation covariance of the relevant coefficient draws
+*** (replications plus the comparator row, listwise complete), so they exist in both
+*** the coefficient and the t-ratio modes and consume no per-replication covariance.
+*** Contrasts are permuted as coefficient differences in both modes. Names mirror the
+*** analytic surface so the display prints them unchanged; an analytic value that the
+*** observed run posted (permtstat or permanalyticse) is always overwritten or blanked
+  syntax , acc(string) obsb(string) cmpb(string) [level(real 0) m(string) ts(integer 0) jt(string) adv(string) advalt(string) advesrel(string) advtt(string) esf(string)]
+  if `level' == 0 local level 95
+  local wdpM = cond("`m'" == "" | "`m'" == ".", ".", "`m'")
+  if "`advesrel'" == "" local advesrel -1
+  tempname wm
+  matrix `wm' = e(wdidmainresults)
+  local nmain = rowsof(`wm')
+  local sgl `e(wdid_sglist)'
+  local ncaut 0
+  local wdpprec 0
+
+  * -------- per-column (eq, name, sg, relyr) metadata via the positional walk
+  local kk 0
+  local rnames : rowfullnames `wm'
+  foreach rn of local rnames {
+    local ++kk
+    gettoken eqn nmn : rn, parse(":")
+    local nmn = subinstr("`nmn'", ":", "", 1)
+    local wdpeq`kk' `eqn'
+    local wdpnm`kk' `nmn'
+    local wdpsg`kk' .
+    local wdprl`kk' = `wm'[`kk', 7]
+    if "`eqn'" == "pretreatment" | `wdprl`kk'' < 0 local wdpprec 1
+  }
+  foreach sg of local sgl {
+    tempname wsg
+    cap confirm matrix e(wdidsgresults_`sg')
+    if _rc != 0 continue
+    matrix `wsg' = e(wdidsgresults_`sg')
+    local rnames : rowfullnames `wsg'
+    local rr 0
+    foreach rn of local rnames {
+      local ++kk
+      local ++rr
+      gettoken eqn nmn : rn, parse(":")
+      local nmn = subinstr("`nmn'", ":", "", 1)
+      local wdpeq`kk' `eqn'
+      local wdpnm`kk' `nmn'
+      local wdpsg`kk' `sg'
+      local wdprl`kk' = `wsg'[`rr', 7]
+    }
+  }
+  local K `kk'
+  ereturn scalar perm_precaveat = `wdpprec'
+
+  * -------- joint pre-trend tests (jointtests): identity constraint over the family's
+  * pre-horizon columns (at least two, as the analytic test requires)
+  local wdpjw
+  if "`jt'" != "" {
+    foreach fam in att att_it ame ame_it {
+      local ename = cond(strpos("`fam'", "ame"), "joint_Choriz", "joint_horiz")
+      if "`fam'" == "att_it" | "`fam'" == "ame_it" local ename `ename'_i
+      foreach sgtag in "" `sgl' {
+        local sgw = cond("`sgtag'" == "", ".", "`sgtag'")
+        local cols
+        forval k = 1/`K' {
+          if "`wdpeq`k''" == "ES_`fam'" & "`wdpsg`k''" == "`sgw'" & `wdprl`k'' < 0 local cols `cols' `k'
+        }
+        local q : word count `cols'
+        if `q' < 2 continue
+        tempname Cm Wr
+        matrix `Cm' = I(`q')
+        local jp .
+        local jn 0
+        local jw .
+        mata: wooldid_permqf("`acc'", "`cmpb'", "`cols'", "`Cm'", `wdpM', "jp", "jn", "jw", "`Wr'")
+        local en = cond("`sgtag'" == "", "`ename'", "`ename'_s`sgtag'")
+        if `jp' < . {
+          if "`sgtag'" == "" ereturn scalar `en' = `jp'
+          else ereturn local `en' = `jp'
+          matrix colnames `Wr' = `en'
+          tempname Wo
+          matrix `Wo' = J(1, 1, `jw')
+          matrix colnames `Wo' = `en'
+          if "`wdpjw'" == "" {
+            tempname jwall jwobs
+            matrix `jwall' = `Wr'
+            matrix `jwobs' = `Wo'
+            local wdpjw 1
+          }
+          else {
+            matrix `jwall' = `jwall', `Wr'
+            matrix `jwobs' = `jwobs', `Wo'
+          }
+        }
+        else {
+          local ++ncaut
+          local wdpc`ncaut' the permutation joint pre-trend test `en' is unavailable (fewer than 2 complete replications carry every pre-treatment horizon, or the permutation-covariance metric is degenerate); it is absent rather than analytic
+        }
+      }
+    }
+    if "`wdpjw'" != "" {
+      ereturn matrix perm_jointW = `jwall'
+      ereturn matrix perm_jointWobs = `jwobs'
+    }
+  }
+
+  * -------- across-subgroup equality (allsgssame): chain contrast over the subgroup
+  * level columns of each estimand. Every name the worker can post is walked so that no
+  * analytic value survives under a permutation header
+  if `: word count `sgl'' > 1 {
+    foreach it in att att_it att_i att_itime ame ame_it ame_i ame_itime {
+      foreach pre in "" "pre_" {
+        local eqwant = cond("`pre'" == "", "main", "pretreatment")
+        local cols
+        local ok 1
+        foreach sg of local sgl {
+          local found
+          forval k = 1/`K' {
+            if "`wdpeq`k''" == "`eqwant'" & "`wdpnm`k''" == "`it'" & "`wdpsg`k''" == "`sg'" local found `k'
+          }
+          if "`found'" == "" local ok 0
+          else local cols `cols' `found'
+        }
+        local jp .
+        if `ok' {
+          local mm : word count `cols'
+          tempname Cm Wr
+          matrix `Cm' = J(`mm'-1, `mm', 0)
+          forval j = 1/`=`mm'-1' {
+            matrix `Cm'[`j', `j'] = 1
+            matrix `Cm'[`j', `j'+1] = -1
+          }
+          local jn 0
+          local jw .
+          mata: wooldid_permqf("`acc'", "`cmpb'", "`cols'", "`Cm'", `wdpM', "jp", "jn", "jw", "`Wr'")
+          if `jp' < . {
+            ereturn scalar joint_`pre'`it'_allsgssame = `jp'
+            matrix colnames `Wr' = joint_`pre'`it'_allsgssame
+            tempname Wo
+            matrix `Wo' = J(1, 1, `jw')
+            matrix colnames `Wo' = joint_`pre'`it'_allsgssame
+            if "`wdpsw'" == "" {
+              tempname swall swobs
+              matrix `swall' = `Wr'
+              matrix `swobs' = `Wo'
+              local wdpsw 1
+            }
+            else {
+              matrix `swall' = `swall', `Wr'
+              matrix `swobs' = `swobs', `Wo'
+            }
+          }
+          else {
+            local ++ncaut
+            local wdpc`ncaut' the permutation `pre'`it' subgroup-equality test is unavailable (fewer than 2 complete replications carry every subgroup level, or the permutation-covariance metric is degenerate); it is absent rather than analytic
+          }
+        }
+        if `jp' >= . & "`e(joint_`pre'`it'_allsgssame)'" != "" ereturn scalar joint_`pre'`it'_allsgssame = .
+      }
+    }
+    if "`wdpsw'" != "" {
+      ereturn matrix perm_sgW = `swall'
+      ereturn matrix perm_sgWobs = `swobs'
+    }
+  }
+
+  * -------- adversarial line tests: wooldid_advW on the permutation-covariance metric
+  * over the family's horizon columns; p under the sharp null of no effect at any
+  * horizon (esfixedbaseperiod only, the analytic test's own domain); the V-free display
+  * line is posted where the fast-mode observed run left none
+  local wdpaw
+  if "`adv'" != "" {
+    local alt = ("`advalt'" != "")
+    local esfflag = ("`esf'" != "")
+    foreach fk in att att_it ame ame_it {
+      foreach sgtag in "" `sgl' {
+        local sgw = cond("`sgtag'" == "", ".", "`sgtag'")
+        local cols
+        local rels
+        forval k = 1/`K' {
+          if "`wdpeq`k''" == "ES_`fk'" & "`wdpsg`k''" == "`sgw'" & `wdprl`k'' < . local cols `cols' `k'
+          if "`wdpeq`k''" == "ES_`fk'" & "`wdpsg`k''" == "`sgw'" & `wdprl`k'' < . local rels `rels' `wdprl`k''
+        }
+        if `: word count `cols'' < 1 continue
+        local ename adversarial_pval_`fk'`=cond("`sgtag'" == "", "", "_s`sgtag'")'
+        local lname adversarial_line_`fk'`=cond("`sgtag'" == "", "", "_s`sgtag'")'
+        if `esfflag' {
+          tempname Wr
+          local jp .
+          local jn 0
+          local jw .
+          mata: wooldid_permadv("`acc'", "`cmpb'", "`cols'", "`rels'", `advesrel', ("`advtt'" != ""), `alt', `wdpM', "jp", "jn", "jw", "`Wr'")
+          if `jp' < . {
+            ereturn scalar `ename' = `jp'
+            matrix colnames `Wr' = `ename'
+            tempname Wo
+            matrix `Wo' = J(1, 1, `jw')
+            matrix colnames `Wo' = `ename'
+            if "`wdpaw'" == "" {
+              tempname awall awobs
+              matrix `awall' = `Wr'
+              matrix `awobs' = `Wo'
+              local wdpaw 1
+            }
+            else {
+              matrix `awall' = `awall', `Wr'
+              matrix `awobs' = `awobs', `Wo'
+            }
+          }
+          else {
+            if "`e(`ename')'" != "" ereturn scalar `ename' = .
+            local ++ncaut
+            local wdpc`ncaut' the permutation adversarial line test `ename' is unavailable (fewer than 2 complete replications carry every horizon, or the permutation-covariance metric leaves no testable residual dimension); it is absent rather than analytic
+          }
+        }
+        else if "`e(`ename')'" != "" ereturn scalar `ename' = .
+        cap confirm matrix e(`lname')
+        if _rc != 0 {
+          tempname ln
+          mata: wooldid_permadvline("`cmpb'", "`cols'", "`rels'", `advesrel', ("`advtt'" != ""), `esfflag', `alt', "`ln'")
+          if `ln'[1, 1] < . {
+            matrix colnames `ln' = slope intercept_rt0
+            matrix rownames `ln' = y1
+            ereturn matrix `lname' = `ln'
+          }
+        }
+      }
+    }
+    if "`wdpaw'" != "" {
+      ereturn matrix perm_advW = `awall'
+      ereturn matrix perm_advWobs = `awobs'
+    }
+    ereturn scalar perm_adv = 1
+  }
+
+  * -------- pairwise subgroup contrasts: coefficient differences in both modes
+  cap confirm matrix e(pwsgs)
+  if _rc == 0 {
+    tempname pw pwa pk o1
+    matrix `pw' = e(pwsgs)
+    matrix `pwa' = `pw'
+    local prn : rowfullnames `pw'
+    local npw : word count `prn'
+    matrix `pk' = J(13, `npw', .)
+    local rr 0
+    local pwunmapped 0
+    local pwmiss 0
+    foreach rn of local prn {
+      local ++rr
+      gettoken eqn nmn : rn, parse(":")
+      local nmn = subinstr("`nmn'", ":", "", 1)
+      local ispre = strpos("`eqn'", "pre") > 0
+      local item = subinstr("`eqn'", "pre", "", 1)
+      local item = subinstr("`item'", "_", "", 1)
+      if !`ispre' local item `eqn'
+      local eqwant = cond(`ispre', "pretreatment", "main")
+      local ok 0
+      if regexm("`nmn'", "^([0-9]+)(bn?)?vs([0-9]+)(bn?)?([.].*)?$") {
+        local sga = regexs(1)
+        local sgb = regexs(3)
+        local ka
+        local kb
+        forval k = 1/`K' {
+          if "`wdpeq`k''" == "`eqwant'" & "`wdpnm`k''" == "`item'" & "`wdpsg`k''" == "`sga'" local ka `k'
+          if "`wdpeq`k''" == "`eqwant'" & "`wdpnm`k''" == "`item'" & "`wdpsg`k''" == "`sgb'" local kb `k'
+        }
+        if "`ka'" != "" & "`kb'" != "" {
+          mata: wooldid_permpw("`acc'", "`cmpb'", `ka', `kb', st_matrix("`pw'")[`rr', 1], `level', `wdpM', "`o1'")
+          matrix `pk'[1, `rr'] = `o1'
+          local ok 1
+        }
+      }
+      matrix `pw'[`rr', 3] = .
+      if `ok' & `pk'[13, `rr'] == 1 {
+        matrix `pw'[`rr', 4] = `pk'[3, `rr']
+        matrix `pw'[`rr', 5] = `pk'[7, `rr']
+        matrix `pw'[`rr', 6] = `pk'[8, `rr']
+      }
+      else {
+        forval cc = 4/6 {
+          matrix `pw'[`rr', `cc'] = .
+        }
+        if !`ok' local ++pwunmapped
+        else local ++pwmiss
+      }
+    }
+    local pwc : colnames `pw'
+    local pwc : subinstr local pwc "se" "se_analytic", word
+    local pwc : subinstr local pwc "t" "t_perm", word
+    local pwc : subinstr local pwc "z" "t_perm", word
+    local pwc : subinstr local pwc "p" "p_perm", word
+    if `level' != 95 {
+      local wdplvltxt = cond(mod(`level',1)==0, strofreal(`level'), subinstr(strofreal(`level',"%9.0g"), ".", "p", .))
+      local pwc : subinstr local pwc "lb_95ci" "lb_`wdplvltxt'ci", word
+      local pwc : subinstr local pwc "ub_95ci" "ub_`wdplvltxt'ci", word
+    }
+    matrix colnames `pw' = `pwc'
+    ereturn hidden matrix perm_analytic_pwsgs = `pwa'
+    ereturn matrix pwsgs = `pw'
+    matrix rownames `pk' = n s_obs p qlo qhi sd lb ub se_shift offcentre band5 band95 live
+    matrix colnames `pk' = `prn'
+    ereturn matrix perm_pwsgs_kernel = `pk'
+    if `pwunmapped' > 0 {
+      local ++ncaut
+      local wdpc`ncaut' `pwunmapped' pairwise subgroup contrast row(s) could not be mapped to replication columns; their inference is left blank
+    }
+    if `pwmiss' > 0 {
+      local ++ncaut
+      local wdpc`ncaut' `pwmiss' pairwise subgroup contrast row(s) have no usable permutation distribution (fewer than 2 completed replications carry both levels); their inference is left blank
+    }
+  }
+
+  forval cc = 1/`ncaut' {
+    dis as text "Caution: `wdpc`cc''."
+  }
+end
+
+cap prog drop wooldid_permcellsx
+prog def wooldid_permcellsx, eclass
+version 16.0
+  * rewires every e(cfx*) matrix to permutation inference from the cell accumulators
+  * (chunk 1, 2026-09-05): p = the comparator cell ranked among the replications' cells,
+  * interval = the shift interval about the displayed cell; studentized by the cell
+  * standard errors under permtstat. Lattice types whose bins are functions of the
+  * assignment (baseTreated*, byTreated*, byTtre*) are not permutation statistics -
+  * lattice_k is a different dose range in every replication - so those matrices keep
+  * their points and have their inference columns blanked, with a caution
+  syntax , cell(string) cell0(string) [ncfx(integer 0) names(string) level(real 0) m(string) ts(integer 0) lattype(string) cfxlat(string)]
+  if `level' == 0 local level 95
+  local wdpM = cond("`m'" == "" | "`m'" == ".", ".", "`m'")
+  local drift = (inlist("`lattype'", "baseTreated", "baseTreatedPost", "baseTreatedPre", "baseTreatedRef") | inlist("`lattype'", "byTreated", "byTreatedByTime", "byTtre", "byTtreByTime")) & "`cfxlat'" == ""
+  local ndone 0
+  forval c = 1/`ncfx' {
+    local nm : word `c' of `names'
+    cap confirm matrix e(`nm')
+    if _rc != 0 continue
+    if colsof(e(`nm')) < 6 continue
+    cap confirm matrix `cell'_cfx`c'
+    if _rc != 0 continue
+    tempname cf cfa
+    matrix `cf' = e(`nm')
+    matrix `cfa' = `cf'
+    if `drift' {
+      mata: M = st_matrix("`cf'"); M[., 4..6] = J(rows(M), 3, .); if (!`ts') M[., 3] = J(rows(M), 1, .); st_matrix("`cf'", M)
+    }
+    else {
+      mata: wooldid_permcellwire("`cf'", "`cell'_cfx`c'", "`cell0'_cfx`c'", "`=cond(`ts', "`cell'_cfx`c'se", "")'", "`=cond(`ts', "`cell0'_cfx`c'se", "")'", 1, 2, 4, 5, 6, `level', `wdpM')
+      mata: M = st_matrix("`cf'"); M[., 3] = (`ts' ? M[., 1] :/ M[., 2] : J(rows(M), 1, .)); st_matrix("`cf'", M)
+    }
+    matrix colnames `cf' = `: colnames e(`nm')'
+    matrix rownames `cf' = `: rowfullnames e(`nm')'
+    ereturn matrix `nm' = `cf'
+    if strlen("perm_analytic_`nm'") <= 32 ereturn hidden matrix perm_analytic_`nm' = `cfa'
+    * the cell draws and the comparator cells, keyed by cell, so every cell p and
+    * interval is reconstructable from e() (row 1 of permcmp_* is the comparator)
+    if strlen("permdist_`nm'") <= 32 & !`drift' {
+      tempname cd cd0
+      matrix `cd' = `cell'_cfx`c'
+      matrix `cd0' = `cell0'_cfx`c'
+      cap ereturn hidden matrix permdist_`nm' = `cd'
+      cap ereturn hidden matrix permcmp_`nm' = `cd0'
+      if `ts' {
+        tempname cds cds0
+        matrix `cds' = `cell'_cfx`c'se
+        matrix `cds0' = `cell0'_cfx`c'se
+        cap ereturn hidden matrix permdistse_`nm' = `cds'
+        cap ereturn hidden matrix permcmpse_`nm' = `cds0'
+      }
+    }
+    local ++ndone
+  }
+  if `drift' & `ndone' > 0 {
+    ereturn scalar perm_cfx_blank = 1
+    dis as text "Caution: the lattice type `lattype' bins the dose on treated units' rows, so its bins are functions of the treatment assignment and differ from replication to replication; the continuous-treatment plot cells therefore have no permutation distribution and their inference columns are blank (points only). latticetype all, byCohort, byTime, byCohortByTime, or a user-supplied cfxlattice() variable, give assignment-invariant bins that are permuted."
+  }
+end
+
+cap prog drop wooldid_permsave
+prog def wooldid_permsave
+version 16.0
+  * permsave(): write the replication accumulator to <file>.dta in the working directory
+  * (the bootsave() layout: _rep 0 = observed estimates, 1..R = replications, failed ones
+  * all-missing; se_* under permtstat) plus one onset_<cluster> column per cluster holding
+  * the onset that cluster carried in each replication (row 0: the observed onset)
+  syntax , file(string) acc(string) obsb(string) [seacc(string) aseobs(string) asg(string) clusvals(string) obsons(string) replace]
+  local fn `file'
+  if lower(substr("`fn'", -4, 4)) == ".dta" local fn = substr("`fn'", 1, strlen("`fn'") - 4)
+  if strpos("`fn'", "/") | strpos("`fn'", "\") | "`fn'" == "" {
+    dis as error "Error: permsave() takes a plain file name (no directory part); the file is written to the current working directory."
+    error 198
+  }
+  cap confirm file "`fn'.dta"
+  if _rc == 0 & "`replace'" == "" {
+    dis as error "Error: permsave(`fn') - `fn'.dta already exists in the working directory; add the replace option to overwrite it."
+    error 602
+  }
+  tempname psf
+  cap frame drop `psf'
+  frame create `psf'
+  cap noi frame `psf' {
+    mata: wooldid_bootsavemk("`acc'", "`obsb'", "`seacc'", "`aseobs'", "")
+    if "`asg'" != "" mata: wooldid_permsaveasg("`asg'", "`clusvals'", "`obsons'")
+    label var _rep "permutation replication (0 = observed estimates)"
+    save "`fn'.dta", replace
+    local wdpsn = _N
+  }
+  local wdpsrc = _rc
+  cap frame drop `psf'
+  if `wdpsrc' != 0 {
+    dis as error "Error: permsave(`fn') could not build the replication dataset (rc=`wdpsrc')."
+    error `wdpsrc'
+  }
+  dis as text "permsave(): the permutation draws were written to `fn'.dta (`=`wdpsn'-1' replication rows plus the _rep = 0 observed row`=cond("`asg'" != "", "; the onset_* columns hold the onset assigned to each cluster", "")')."
 end
 
 
@@ -6240,7 +7712,7 @@ version 16.0
 *** bayesboot BITWISE on unweighted data (bootalpha(size), the default) and rwgen
 *** with priorpowers(-n_c) for bootalpha(equal), and is the Rubin generalization
 *** for weighted data ("multiply existing weights by the cluster draw").
-  syntax , [mode(string) reid reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string)]
+  syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string)]
 
   if `dots' == -1 local dots 1
   if "`bootalpha'" == "" local bootalpha equal
@@ -6298,6 +7770,21 @@ version 16.0
   local wtif
   local wtype2 `wtype'
   if "`wtype2'" == "" local wtype2 = cond("`pois'" != "", "pweight", "aweight")
+  * UNCLUSTERED STUDENTIZED FIX (2026-09-04). On this one path the replication multiplicity
+  * is a nonnegative INTEGER count, so passing it as an fweight rather than an aweight makes
+  * each replication's standard error the same functional of the replicate data that the
+  * observed standard error is of the original - which is what percentile-t requires and what
+  * the aweight form violated. An aweight loses the duplicated rows from N (wrong residual
+  * DOF) and squares the weight in the robust meat; an fweight is a literal duplication count
+  * and does neither. Measured arithmetically IDENTICAL to physically expanding the rows
+  * (se_fw^2/se_phys^2 = 1.0000000 on all 400 pairs), and the coefficient draws are BITWISE
+  * unchanged, so no reported estimate or interval family moves.
+  * Every gate is necessary: `wtype' empty means the base weight is 1 so the multiplicity is
+  * the whole weight and is integral; `seaccname' non-empty is boottstat, the only mode that
+  * consumes a replication's own standard error; `clus' empty is the unclustered state, the
+  * clustered defect being a different one that no weight type repairs; and mode standard
+  * excludes bayes, whose Dirichlet mass is continuous and cannot be an fweight
+  if "`wtype'" == "" & "`pois'" == "" & "`seaccname'" != "" & "`clus'" == "" & "`mode'" == "standard" local wtype2 fweight
   local repcall `y' `i' `t' `ttrevar'
   tempvar repw lnk drawv
 
@@ -6332,6 +7819,111 @@ version 16.0
   local wdb_K = colsof(`obsb')
   matrix `accname' = J(`reps', `wdb_K', .)
   matrix colnames `accname' = `wdbnames0'
+  * under boottstat a parallel R x K of per-replication STANDARD ERRORS, filled by the
+  * same name-aligned grab; the reps are not run under fastnose in that mode, so each
+  * one has an e(V) whose diagonal supplies them
+  if "`seaccname'" != "" {
+    matrix `seaccname' = J(`reps', `wdb_K', .)
+    matrix colnames `seaccname' = `wdbnames0'
+  }
+  * under boottstat, ALSO each replication's own pairwise-contrast standard errors: one
+  * column per row of the observed e(pwsgs), keyed by that row's full name (eq:JvsK), and
+  * filled by a name-anchored grab of the replication's e(pwsgs) column 2. That column is
+  * the analytic margins pairwise se, which already folds in the covariance between the two
+  * subgroup levels - the posted e(V) is diagonal, so this is the only place a per-rep
+  * contrast se exists. Absent when the observed run posted no pairwise table
+  * under boottstat, the recentred ES joint statistic W_r per family key, computed INSIDE
+  * each replication (wooldid_bootjwr) from that replication's own e(V_es_*), against the
+  * observed pre-horizon coefficients stacked here while the observed e() is still live.
+  * Keys mirror wooldid_bootwire's family walk: att att_it ame ame_it and their _s<sg>
+  * twins. A key with no observed e(b_es_*) simply contributes no column
+  if "`jwaccname'" != "" {
+    local wdb_jkeys att att_it ame ame_it
+    foreach sg in `e(wdid_sglist)' {
+      local wdb_jkeys `wdb_jkeys' att_s`sg' att_it_s`sg' ame_s`sg' ame_it_s`sg'
+    }
+    local wdb_jobsn 0
+    mata: wooldid_bootjobs("`wdb_jkeys'", "`jobsname'")
+    if `wdb_jobsn' > 0 {
+      local wdb_jfk
+      local wdb_jcs : colfullnames `jobsname'
+      foreach cf of local wdb_jcs {
+        gettoken fk rest : cf, parse(":")
+        if `: list posof "`fk'" in wdb_jfk' == 0 local wdb_jfk `wdb_jfk' `fk'
+      }
+      matrix `jwaccname' = J(`reps', `: word count `wdb_jfk'', .)
+      matrix colnames `jwaccname' = `wdb_jfk'
+    }
+    else {
+      local jwaccname
+      local jobsname
+    }
+  }
+  * under boottstat + adversarial: the recentred adversarial statistic per (family, alt),
+  * computed inside each replication by wooldid_bootadvr against the observed coefficients
+  * over ALL horizons stacked here
+  * cell-level accumulators (gteffects rows keyed by i|onset|relyr; each cfx matrix keyed by
+  * its row names). `cellacc' is a prefix; the matrices are `cellacc'_gt, `cellacc'_gtse and
+  * `cellacc'_cfx<k>, `cellacc'_cfx<k>se with a name map in the locals returned to the shell.
+  * Built while the OBSERVED e() is live, so the keys are the observed cells
+  local wdb_ncfx 0
+  if "`cellacc'" != "" {
+    cap confirm matrix e(gteffects)
+    if _rc == 0 {
+      mata: wooldid_bootcellkeys("e(gteffects)", "`cellacc'_gt", `reps', 1)
+      if "`seaccname'" != "" mata: wooldid_bootcellkeys("e(gteffects)", "`cellacc'_gtse", `reps', 1)
+      if "`wdb_cellkeydup'" != "" dis as text "Caution: the cohort-by-period cells could not be keyed uniquely for the bootstrap; e(gteffects) inference is left analytic and blanked."
+    }
+    foreach cm in `e(wdid_cfxmats)' {
+      cap confirm matrix e(`cm')
+      if _rc != 0 continue
+      local ++wdb_ncfx
+      mata: wooldid_bootcellkeys("e(`cm')", "`cellacc'_cfx`wdb_ncfx'", `reps', 0)
+      if "`seaccname'" != "" mata: wooldid_bootcellkeys("e(`cm')", "`cellacc'_cfx`wdb_ncfx'se", `reps', 0)
+      local wdb_cfxname`wdb_ncfx' `cm'
+    }
+  }
+  c_local wdb_ncfx `wdb_ncfx'
+  forval kk = 1/`wdb_ncfx' {
+    c_local wdb_cfxname`kk' `wdb_cfxname`kk''
+  }
+  if "`awaccname'" != "" {
+    local wdb_akeys att att_it ame ame_it
+    foreach sg in `e(wdid_sglist)' {
+      local wdb_akeys `wdb_akeys' att_s`sg' att_it_s`sg' ame_s`sg' ame_it_s`sg'
+    }
+    local wdb_jobsn 0
+    mata: wooldid_bootjobs("`wdb_akeys'", "`aobsname'", 1)
+    if `wdb_jobsn' > 0 {
+      local wdb_afk
+      local wdb_acs : colfullnames `aobsname'
+      foreach cf of local wdb_acs {
+        gettoken fk rest : cf, parse(":")
+        if `: list posof "`fk'" in wdb_afk' == 0 local wdb_afk `wdb_afk' `fk'
+      }
+      local wdb_acols
+      foreach fk of local wdb_afk {
+        local wdb_acols `wdb_acols' `fk'_a0
+        if "`advalt'" != "" local wdb_acols `wdb_acols' `fk'_a1
+      }
+      matrix `awaccname' = J(`reps', `: word count `wdb_acols'', .)
+      matrix colnames `awaccname' = `wdb_acols'
+    }
+    else {
+      local awaccname
+      local aobsname
+    }
+  }
+  if "`pwseaccname'" != "" {
+    cap confirm matrix e(pwsgs)
+    if _rc == 0 {
+      local wdb_pwn : rowfullnames e(pwsgs)
+      local wdb_npw : word count `wdb_pwn'
+      matrix `pwseaccname' = J(`reps', `wdb_npw', .)
+      matrix colnames `pwseaccname' = `wdb_pwn'
+    }
+    else local pwseaccname
+  }
 
   qui frlink m:1 `clusv', frame(`mbfr') generate(`lnk')
   local ndone 0
@@ -6342,6 +7934,56 @@ version 16.0
   forval r = 1/`reps' {
     if "`mode'" == "bayes" {
       frame `mbfr': qui replace __wdbdraw = el("`wdbdrawm'", __wdbrow, `r')
+    }
+    else if "`phys'" != "" {
+      * physical-expansion leg WITHOUT re-identification (unclustered + user weight +
+      * boottstat): duplicate the drawn observations, keep the original i, carry the user's
+      * weight expression onto every copy via `wtif0'. The replication's own VCE is then the
+      * ordinary robust/homoskedastic one on the expanded rows, the same functional as the
+      * observed - which a multiplicity aweight could not deliver (it loses duplicated rows
+      * from N and squares the weight in the robust meat). Same-seed draws equal the count
+      * leg's (one bsample per rep, same form)
+      cap frame drop `wdbrf'
+      qui frame
+      frame copy `r(currentframe)' `wdbrf'
+      frame `wdbrf' {
+        qui keep if `smp'
+        bsample, cluster(`clusv') idcluster(__wdbns)
+        nobreak {
+          global WOOLDID_REPMODE 1
+        if "${WOOLDID_BOOTDEBUG}" != "" cap noi wooldid `y' `i' `t' `ttrevar' `wtif0' , `repopts'
+        else cap qui wooldid `y' `i' `t' `ttrevar' `wtif0' , `repopts'
+          local wdrepdone = _rc
+          if "${WOOLDID_BOOTDEBUG}" != "" dis as error "WOOLDID_BOOTDEBUG: replication `r' returned rc=`wdrepdone'"
+          global WOOLDID_REPMODE
+        }
+        cap error `wdrepdone'
+        local wdb_rrc = _rc
+      }
+      if `wdb_rrc' == 1 {
+        cap frame drop `wdbrf'
+        if `dots' > 0 dis as result " "
+        error 1
+      }
+      local badrep = `wdb_rrc' != 0
+      if `badrep' == 0 {
+        local wdb_gblank 0
+        mata: wooldid_bootgrab("`accname'", `r', "`obsb'", "`seaccname'", "`pwseaccname'")
+        if "`jwaccname'" != "" mata: wooldid_bootjwr("`jwaccname'", `r', "`jobsname'")
+        if "`awaccname'" != "" mata: wooldid_bootadvr("`awaccname'", `r', "`aobsname'", `advesrel', ("`advtt'" != ""))
+        if "`cellacc'" != "" mata: wooldid_bootcells("`cellacc'", `r', `wdb_ncfx', ("`seaccname'" != ""))
+        local nblank = `nblank' + `wdb_gblank'
+        local ++ndone
+      }
+      else local ++nfail
+      cap frame drop `wdbrf'
+      if `dots' > 0 {
+        if `badrep' dis as error "x" _continue
+        else dis as text "." _continue
+      }
+      * this leg is complete: without this, the count path's common tail below would run
+      * the same replication a second time on frequency weights and overwrite row r
+      continue
     }
     else if "`reid'" == "" {
       * standard count path: cluster multiplicities from bsample on a COPY of the
@@ -6378,9 +8020,18 @@ version 16.0
         qui keep if `smp'
         bsample, cluster(`clusv') idcluster(__wdbns)
         qui gegen double __wdbnewi = group(__wdbns `i')
+        * under boottstat the replication's own VCE must cluster on the RESAMPLED cluster
+        * identity __wdbns (which bsample just generated), not on the user's original
+        * cluster variable that repopts carries: on this expanded frame a twice-drawn
+        * cluster is two physical copies, and clustering on the original id would pool
+        * them back into one score - the exact m^2-for-m inflation this leg exists to
+        * remove. Without boottstat the replication runs under fastnose and has no VCE,
+        * so the substitution is inert there and is skipped to keep those runs bitwise
+        local wdb_ropts `repopts'
+        if "`seaccname'" != "" & "`clus'" != "" local wdb_ropts : subinstr local wdb_ropts "cluster(`clus')" "cluster(__wdbns)"
         nobreak {
           global WOOLDID_REPMODE 1
-        cap qui wooldid `y' __wdbnewi `t' `ttrevar' `wtif0' , `repopts'
+        cap qui wooldid `y' __wdbnewi `t' `ttrevar' `wtif0' , `wdb_ropts'
           local wdrepdone = _rc
           global WOOLDID_REPMODE
         }
@@ -6395,7 +8046,10 @@ version 16.0
       local badrep = `wdb_rrc' != 0
       if `badrep' == 0 {
         local wdb_gblank 0
-        mata: wooldid_bootgrab("`accname'", `r', "`obsb'")
+        mata: wooldid_bootgrab("`accname'", `r', "`obsb'", "`seaccname'", "`pwseaccname'")
+        if "`jwaccname'" != "" mata: wooldid_bootjwr("`jwaccname'", `r', "`jobsname'")
+        if "`awaccname'" != "" mata: wooldid_bootadvr("`awaccname'", `r', "`aobsname'", `advesrel', ("`advtt'" != ""))
+        if "`cellacc'" != "" mata: wooldid_bootcells("`cellacc'", `r', `wdb_ncfx', ("`seaccname'" != ""))
         local nblank = `nblank' + `wdb_gblank'
         local ++ndone
       }
@@ -6428,7 +8082,10 @@ version 16.0
       * zeros (rep 0.0 where observed b != 0) blanked per A12(b); wdb_gblank returns
       * the count blanked this rep
       local wdb_gblank 0
-      mata: wooldid_bootgrab("`accname'", `r', "`obsb'")
+      mata: wooldid_bootgrab("`accname'", `r', "`obsb'", "`seaccname'", "`pwseaccname'")
+        if "`jwaccname'" != "" mata: wooldid_bootjwr("`jwaccname'", `r', "`jobsname'")
+        if "`awaccname'" != "" mata: wooldid_bootadvr("`awaccname'", `r', "`aobsname'", `advesrel', ("`advtt'" != ""))
+        if "`cellacc'" != "" mata: wooldid_bootcells("`cellacc'", `r', `wdb_ncfx', ("`seaccname'" != ""))
       local nblank = `nblank' + `wdb_gblank'
     }
     if `badrep' == 0 local ++ndone
@@ -6470,7 +8127,9 @@ version 16.0
 *** as e(V_es_analytic_*)), the VCE header text, and the e(boot_*) metadata.
 *** pwsgs/prepwsgs inference columns and the allsgssame scalars are BLANKED in this
 *** build (their bootstrap Wald versions land with the joint-test commit).
-  syntax , [mode(string) reps(integer 0) acc(string) obsb(string) done(string) fail(string) blank(string) level(real 0) bootalpha(string) clus(varlist) comp(string) rseed(string) bootdf(string) nclus(integer 0)]
+  syntax , [mode(string) reps(integer 0) acc(string) obsb(string) done(string) fail(string) blank(string) level(real 0) bootalpha(string) clus(varlist) comp(string) TIES rseed(string) bootdf(string) bdisp(string) nclus(integer 0) seacc(string) aseout(string)]
+  local wdbaseobs_out `aseout'
+  if "`wdbaseobs_out'" == "" tempname wdbaseobs_out
   if `level' == 0 local level 95
   if "`bootalpha'" == "" local bootalpha equal
   * reference distribution for the reported statistics (bootdf()): missing = normal
@@ -6495,11 +8154,17 @@ version 16.0
   local nmain = rowsof(`wm')
   local K = colsof(`obsb')
   matrix `excl' = J(1, `K', 0)
+  * boottstat needs the OBSERVED run's own standard errors - the same formula the
+  * replications use - to studentize with, so they are captured here, in the same walk,
+  * before the rewiring below replaces column 2 with the bootstrap ones
+  tempname aseobs
+  matrix `aseobs' = J(1, `K', .)
   local sgl `e(wdid_sglist)'
   local kk 0
   forval rr = 1/`nmain' {
     local ++kk
     if `wm'[`rr', 1] >= . matrix `excl'[1, `kk'] = 1
+    matrix `aseobs'[1, `kk'] = `wm'[`rr', 2]
   }
   foreach sg of local sgl {
     tempname wsg`sg'
@@ -6508,6 +8173,7 @@ version 16.0
       forval rr = 1/`=rowsof(`wsg`sg'')' {
         local ++kk
         if `wsg`sg''[`rr', 1] >= . matrix `excl'[1, `kk'] = 1
+        matrix `aseobs'[1, `kk'] = `wsg`sg''[`rr', 2]
       }
     }
   }
@@ -6529,8 +8195,40 @@ version 16.0
   local wdb_lowav
   mata: wooldid_bootfin("`acc'", "`excl'", "`bse'", "`bmean'", "`bV'", "`bcnt'")
 
-  * -------- rewire the results matrices: cols 2-6 = se t/z p lb ub at level()
+  * -------- the critical value for the reported level. HOISTED to here (it used to be
+  * computed just below, at the head of the rewiring loop) because the percentile
+  * package now needs it before the loop runs: the displayed standard error under that
+  * package is the interval inverted, (ub-lb)/(2*zc). It depends only on `wdbdf', fixed
+  * above, and `level', so moving it up is a pure relocation
   local zc = cond(`wdbdf' < ., invt(`wdbdf', 1 - (100 - `level')/200), invnormal(1 - (100 - `level')/200))
+
+  * -------- CI flavors: normal / percentile / bias-corrected at level(), the classic
+  * percentile p dual to the percentile interval, and the BC median-bias z0 (compared
+  * against the REP-0 fastnose comparator per amendment A3; `ties' adjusts z0 for
+  * replicate-comparator ties, the built-in bootstrap's ties semantics).
+  * This call USED TO LIVE IN wooldid_bootjnt, which runs after this program. It was
+  * hoisted here because the percentile package is now a display default and the
+  * rewiring loop below has to read `cip'/`cipp' to build it; bootjnt cannot supply
+  * them in time, and it can see neither `excl' nor `seacc', both of which the
+  * blanking and boottstat rules need
+  tempname cin cip cib cipp cbp cz0
+  mata: wooldid_bootci("`acc'", "`obsb'", "`comp'", `level', ("`ties'" != ""), "`cin'", "`cip'", "`cib'", "`cipp'", "`cbp'", "`cz0'", `wdbdf')
+
+  * -------- boottstat: the studentized (percentile-t) tail p and critical value per
+  * column, from t_r = (b_r - b_obs)/se_r against t_obs = b_obs/se_obs
+  local wdbts = ("`seacc'" != "")
+  tempname bts
+  if `wdbts' {
+    cap confirm matrix `seacc'
+    if _rc != 0 {
+      dis as text "Caution: boottstat was requested but no per-replication standard errors were harvested; the reported inference falls back to the coefficient-draw families."
+      local wdbts 0
+    }
+    else mata: wooldid_boottp("`acc'", "`seacc'", "`obsb'", "`aseobs'", "`excl'", `level', ("`ties'" != ""), "`bts'")
+  }
+
+  * -------- rewire the results matrices: cols 2-6 = se t/z p lb ub at level()
+  * (`zc' is computed above, before the CI flavors, which consume it)
   local kk 0
   forval rr = 1/`nmain' {
     local ++kk
@@ -6558,10 +8256,138 @@ version 16.0
     local wmc : subinstr local wmc "ub_95ci" "ub_`wdblvltxt'ci", word
   }
   matrix colnames `wm' = `wmc'
+
+  * -------- both inference families, always. Author ruling 2026-09-03: every flavour is
+  * computed and stored in e() on every bootstrap run, and bootdisplay() chooses ONLY
+  * which one the printed table carries. The sd family is what the loop above just
+  * wrote; the percentile family is built here from the percentile interval and its
+  * dual p. The percentile standard error is the interval INVERTED, (ub-lb)/(2*zc),
+  * which deliberately does not satisfy b +/- zc*se when the interval is asymmetric -
+  * the author ruled the interval the primary object and accepted that mismatch. The
+  * statistic column keeps its z/t label and holds b/se_inv; its tail probability is
+  * NOT the reported p, which is a count, and the help says so
+  local bdisp = cond("`bdisp'" == "", "percentile", "`bdisp'")
+  tempname wmsd wmpct wmbc
+  matrix `wmsd' = `wm'
+  matrix `wmpct' = `wm'
+  matrix `wmbc' = `wm'
+  * The standard error column is the bootstrap STANDARD DEVIATION in every non-studentized
+  * display, percentile and bias-corrected included. Author ruling 2026-09-04, overruling
+  * his own earlier preference for a standard error implied by inverting the reported
+  * interval: that construction is not what the literature or Stata's own bootstrap prefix
+  * does, and wooldid follows the convention. So b +/- c*se still does not reproduce a
+  * percentile or BC interval - but that is the ordinary, expected reading of a bootstrap
+  * table, not a wooldid peculiarity.
+  * The endpoints are copied by MATRIX reference, never through a local: `local x =
+  * matrix[i,j]' round-trips the double through a decimal string, which loses the last
+  * bits and would leave the displayed interval merely close to e(boot_ci_percentile)
+  * rather than identical to it
+  local kk 0
+  forval rr = 1/`nmain' {
+    local ++kk
+    if `excl'[1, `kk'] == 0 & `bse'[1, `kk'] < . & `bse'[1, `kk'] > 0 & `cip'[1, `kk'] < . & `cip'[2, `kk'] < . {
+      matrix `wmpct'[`rr', 2] = `bse'[1, `kk']
+      matrix `wmpct'[`rr', 3] = `wmpct'[`rr', 1]/`bse'[1, `kk']
+      matrix `wmpct'[`rr', 4] = `cipp'[1, `kk']
+      matrix `wmpct'[`rr', 5] = `cip'[1, `kk']
+      matrix `wmpct'[`rr', 6] = `cip'[2, `kk']
+    }
+    else {
+      forval cc = 2/6 {
+        matrix `wmpct'[`rr', `cc'] = .
+      }
+    }
+    if `excl'[1, `kk'] == 0 & `bse'[1, `kk'] < . & `bse'[1, `kk'] > 0 & `cib'[1, `kk'] < . & `cib'[2, `kk'] < . {
+      matrix `wmbc'[`rr', 2] = `bse'[1, `kk']
+      matrix `wmbc'[`rr', 3] = `wmbc'[`rr', 1]/`bse'[1, `kk']
+      matrix `wmbc'[`rr', 4] = `cbp'[1, `kk']
+      matrix `wmbc'[`rr', 5] = `cib'[1, `kk']
+      matrix `wmbc'[`rr', 6] = `cib'[2, `kk']
+    }
+    else {
+      forval cc = 2/6 {
+        matrix `wmbc'[`rr', `cc'] = .
+      }
+    }
+  }
+  * NB: `ereturn matrix' MOVES its source (the tempname is dropped), so the selected
+  * family must be copied into `wm' BEFORE the two posts, not after
+  if "`bdisp'" == "percentile" matrix `wm' = `wmpct'
+  else if "`bdisp'" == "bc"       matrix `wm' = `wmbc'
+  ereturn hidden matrix boot_wald_mainresults = `wmsd'
+  ereturn hidden matrix boot_pctl_mainresults = `wmpct'
+  ereturn hidden matrix boot_bc_mainresults = `wmbc'
+
+  * boottstat: the Wald table is preserved as a hidden twin and columns 3-6 are replaced
+  * by the studentized statistic, its percentile-t tail probability and the interval that
+  * inverts it. column 2 keeps the bootstrap standard deviation, which is the quantity a
+  * bootstrap run is asked for; note that the reported statistic is therefore b/se_obs
+  * rather than b/se_reported - the studentization has to use the same standard error the
+  * replications use, and the help says so
+  if `wdbts' {
+    * The studentized families. bootdisplay() composes with boottstat as a 2x2 (author
+    * ruling 2026-09-04): boottstat chooses WHAT is bootstrapped (the t-statistics), and
+    * bootdisplay() chooses how that distribution is summarised - percentile ranks (the
+    * default) or bias-corrected ranks; wald is refused at parse. Both studentized tables
+    * are built and posted; the selected one lands in the reported table. Column 2 is the
+    * ANALYTIC standard error, labelled se_analytic (ruling 2026-09-04): it is the
+    * studentization's own denominator, and a studentized distribution has no standard
+    * deviation in coefficient units. Column 3 is t_obs = b/se_analytic. The interval is
+    * EQUAL-TAILED from the signed t-quantiles, so it is not symmetric about b.
+    * A column whose studentized family is unavailable has columns 3-6 BLANKED rather
+    * than left holding the coefficient-family numbers under a studentized header (that
+    * unmarked mixture was a recorded defect), and is counted for the caution below
+    tempname wmtp wmtb
+    matrix `wmtp' = `wm'
+    matrix `wmtb' = `wm'
+    local wdbtmiss 0
+    local wdbtlow 0
+    local kk 0
+    forval rr = 1/`nmain' {
+      local ++kk
+      local tlive = (`excl'[1, `kk'] == 0 & `bts'[10, `kk'] == 1 & `aseobs'[1, `kk'] < .)
+      if `tlive' {
+        matrix `wmtp'[`rr', 2] = `aseobs'[1, `kk']
+        matrix `wmtp'[`rr', 3] = `bts'[2, `kk']
+        matrix `wmtp'[`rr', 4] = `bts'[3, `kk']
+        matrix `wmtp'[`rr', 5] = `wm'[`rr', 1] - `bts'[5, `kk']*`aseobs'[1, `kk']
+        matrix `wmtp'[`rr', 6] = `wm'[`rr', 1] - `bts'[4, `kk']*`aseobs'[1, `kk']
+        if `bts'[1, `kk'] < 0.5*`done' local ++wdbtlow
+      }
+      else {
+        forval cc = 2/6 {
+          matrix `wmtp'[`rr', `cc'] = .
+        }
+        if `excl'[1, `kk'] == 0 local ++wdbtmiss
+      }
+      if `tlive' & `bts'[7, `kk'] < . {
+        matrix `wmtb'[`rr', 2] = `aseobs'[1, `kk']
+        matrix `wmtb'[`rr', 3] = `bts'[2, `kk']
+        matrix `wmtb'[`rr', 4] = `bts'[7, `kk']
+        matrix `wmtb'[`rr', 5] = `wm'[`rr', 1] - `bts'[9, `kk']*`aseobs'[1, `kk']
+        matrix `wmtb'[`rr', 6] = `wm'[`rr', 1] - `bts'[8, `kk']*`aseobs'[1, `kk']
+      }
+      else {
+        forval cc = 2/6 {
+          matrix `wmtb'[`rr', `cc'] = .
+        }
+      }
+    }
+    local wmc2 : colnames `wm'
+    local wmc2 : subinstr local wmc2 "`wdblab'" "t_pt", word
+    local wmc2 : subinstr local wmc2 "se" "se_analytic", word
+    matrix colnames `wmtp' = `wmc2'
+    matrix colnames `wmtb' = `wmc2'
+    if "`bdisp'" == "bc" matrix `wm' = `wmtb'
+    else                 matrix `wm' = `wmtp'
+    ereturn hidden matrix boot_tpctl_mainresults = `wmtp'
+    ereturn hidden matrix boot_tbc_mainresults = `wmtb'
+  }
   ereturn matrix wdidmainresults = `wm'
   foreach sg of local sgl {
     cap confirm matrix `wsg`sg''
     if _rc != 0 continue
+    local kk0`sg' = `kk'
     forval rr = 1/`=rowsof(`wsg`sg'')' {
       local ++kk
       if `excl'[1, `kk'] == 0 & `bse'[1, `kk'] < . & `bse'[1, `kk'] > 0 {
@@ -6585,6 +8411,95 @@ version 16.0
       local wsc : subinstr local wsc "ub_95ci" "ub_`wdblvltxt'ci", word
     }
     matrix colnames `wsg`sg'' = `wsc'
+
+    * both families for the subgroup coefficient rows too, same rule as the main table
+    * above (and the same `ereturn matrix' move-not-copy caveat: select into the live
+    * matrix BEFORE posting the twins)
+    tempname wssd`sg' wspct`sg' wsbc`sg'
+    matrix `wssd`sg'' = `wsg`sg''
+    matrix `wspct`sg'' = `wsg`sg''
+    matrix `wsbc`sg'' = `wsg`sg''
+    local kkP = `kk0`sg''
+    forval rr = 1/`=rowsof(`wsg`sg'')' {
+      local ++kkP
+      if `excl'[1, `kkP'] == 0 & `bse'[1, `kkP'] < . & `bse'[1, `kkP'] > 0 & `cip'[1, `kkP'] < . & `cip'[2, `kkP'] < . {
+        matrix `wspct`sg''[`rr', 2] = `bse'[1, `kkP']
+        matrix `wspct`sg''[`rr', 3] = `wspct`sg''[`rr', 1]/`bse'[1, `kkP']
+        matrix `wspct`sg''[`rr', 4] = `cipp'[1, `kkP']
+        matrix `wspct`sg''[`rr', 5] = `cip'[1, `kkP']
+        matrix `wspct`sg''[`rr', 6] = `cip'[2, `kkP']
+      }
+      else {
+        forval cc = 2/6 {
+          matrix `wspct`sg''[`rr', `cc'] = .
+        }
+      }
+      if `excl'[1, `kkP'] == 0 & `bse'[1, `kkP'] < . & `bse'[1, `kkP'] > 0 & `cib'[1, `kkP'] < . & `cib'[2, `kkP'] < . {
+        matrix `wsbc`sg''[`rr', 2] = `bse'[1, `kkP']
+        matrix `wsbc`sg''[`rr', 3] = `wsbc`sg''[`rr', 1]/`bse'[1, `kkP']
+        matrix `wsbc`sg''[`rr', 4] = `cbp'[1, `kkP']
+        matrix `wsbc`sg''[`rr', 5] = `cib'[1, `kkP']
+        matrix `wsbc`sg''[`rr', 6] = `cib'[2, `kkP']
+      }
+      else {
+        forval cc = 2/6 {
+          matrix `wsbc`sg''[`rr', `cc'] = .
+        }
+      }
+    }
+    if "`bdisp'" == "percentile"    matrix `wsg`sg'' = `wspct`sg''
+    else if "`bdisp'" == "bc"       matrix `wsg`sg'' = `wsbc`sg''
+    ereturn hidden matrix boot_wald_sgresults_`sg' = `wssd`sg''
+    ereturn hidden matrix boot_pctl_sgresults_`sg' = `wspct`sg''
+    ereturn hidden matrix boot_bc_sgresults_`sg' = `wsbc`sg''
+
+    * boottstat: same treatment as the main table - Wald kept hidden, columns 3-6 replaced
+    if `wdbts' {
+      tempname wstp`sg' wstb`sg'
+      matrix `wstp`sg'' = `wsg`sg''
+      matrix `wstb`sg'' = `wsg`sg''
+      local kkS = `kk0`sg''
+      forval rr = 1/`=rowsof(`wsg`sg'')' {
+        local ++kkS
+        local tlive = (`excl'[1, `kkS'] == 0 & `bts'[10, `kkS'] == 1 & `aseobs'[1, `kkS'] < .)
+        if `tlive' {
+          matrix `wstp`sg''[`rr', 2] = `aseobs'[1, `kkS']
+          matrix `wstp`sg''[`rr', 3] = `bts'[2, `kkS']
+          matrix `wstp`sg''[`rr', 4] = `bts'[3, `kkS']
+          matrix `wstp`sg''[`rr', 5] = `wsg`sg''[`rr', 1] - `bts'[5, `kkS']*`aseobs'[1, `kkS']
+          matrix `wstp`sg''[`rr', 6] = `wsg`sg''[`rr', 1] - `bts'[4, `kkS']*`aseobs'[1, `kkS']
+          if `bts'[1, `kkS'] < 0.5*`done' local ++wdbtlow
+        }
+        else {
+          forval cc = 2/6 {
+            matrix `wstp`sg''[`rr', `cc'] = .
+          }
+          if `excl'[1, `kkS'] == 0 local ++wdbtmiss
+        }
+        if `tlive' & `bts'[7, `kkS'] < . {
+          matrix `wstb`sg''[`rr', 2] = `aseobs'[1, `kkS']
+          matrix `wstb`sg''[`rr', 3] = `bts'[2, `kkS']
+          matrix `wstb`sg''[`rr', 4] = `bts'[7, `kkS']
+          matrix `wstb`sg''[`rr', 5] = `wsg`sg''[`rr', 1] - `bts'[9, `kkS']*`aseobs'[1, `kkS']
+          matrix `wstb`sg''[`rr', 6] = `wsg`sg''[`rr', 1] - `bts'[8, `kkS']*`aseobs'[1, `kkS']
+        }
+        else {
+          forval cc = 2/6 {
+            matrix `wstb`sg''[`rr', `cc'] = .
+          }
+        }
+      }
+      local wsc2 : colnames `wsg`sg''
+      local wsc2 : subinstr local wsc2 "`wdblab'" "t_pt", word
+      local wsc2 : subinstr local wsc2 "se" "se_analytic", word
+      matrix colnames `wstp`sg'' = `wsc2'
+      matrix colnames `wstb`sg'' = `wsc2'
+      if "`bdisp'" == "bc" matrix `wsg`sg'' = `wstb`sg''
+      else                 matrix `wsg`sg'' = `wstp`sg''
+      ereturn hidden matrix boot_tpctl_sgresults_`sg' = `wstp`sg''
+      ereturn hidden matrix boot_tbc_sgresults_`sg' = `wstb`sg''
+      matrix colnames `wsg`sg'' = `wsc2'
+    }
     ereturn matrix wdidsgresults_`sg' = `wsg`sg''
   }
 
@@ -6627,6 +8542,19 @@ version 16.0
       ereturn hidden matrix V_es_analytic_`fk' = `evold'
       ereturn matrix V_es_`fk' = `evnew'
     }
+    else {
+      * the swap failed, so e(V_es_`fk') KEEPS ITS ANALYTIC VALUE. That used to be
+      * inert; since pretrendpower() became compatible with bootstrap (2026-09-04) a
+      * consumer reads this matrix, so a silent fallback would feed Roth's formula an
+      * analytic covariance under a bootstrap header. Record it. Note the marker used
+      * downstream is the ABSENCE of e(V_es_analytic_`fk'), which is created only on the
+      * success branch above - a signal that already exists rather than a new one
+      local wdb_vesbad `wdb_vesbad' `fk'
+    }
+  }
+  if "`wdb_vesbad'" != "" {
+    ereturn local boot_ves_failed `wdb_vesbad'
+    dis as text "Caution: the bootstrap event-study covariance could not be built for: `wdb_vesbad'. Those e(V_es_*) matrices remain ANALYTIC. Any diagnostic that consumes them - pretrendpower() in particular - is skipped for the affected families rather than computed on an analytic covariance under a bootstrap header."
   }
 
 
@@ -6638,13 +8566,48 @@ version 16.0
     local wdbcl observation-level
   }
   else local wdbcl cluster(`wdbcl')
+  * -------- the CI flavors and the percentile p (computed above, before the rewiring
+  * loop that consumes them). Posted here, after the repost, alongside the other
+  * bootstrap surfaces. `ereturn repost' preserves existing e() entries, so the order
+  * relative to 6681 is not load-bearing; keeping them together is for legibility
+  local obn : colfullnames `obsb'
+  foreach cm in cin cip cib {
+    matrix colnames ``cm'' = `obn'
+    matrix rownames ``cm'' = ll ul
+  }
+  matrix colnames `cipp' = `obn'
+  matrix colnames `cbp' = `obn'
+  matrix colnames `cz0' = `obn'
+  ereturn matrix boot_ci_normal = `cin'
+  ereturn matrix boot_ci_percentile = `cip'
+  ereturn matrix boot_ci_bc = `cib'
+  ereturn matrix boot_p_percentile = `cipp'
+  ereturn matrix boot_p_bc = `cbp'
+  ereturn matrix boot_z0 = `cz0'
+  if "`ties'" != "" ereturn local boot_ties ties
+
   ereturn hidden local wdid_vcespec "`wdbmodetext', `wdbcl', reps(`reps')"
   ereturn local boot_method `mode'
   ereturn scalar boot_reps = `reps'
   ereturn scalar boot_completed = `done'
   ereturn scalar boot_failed = `fail'
   ereturn scalar boot_level = `level'
-  ereturn local boot_stat `wdblab'
+  ereturn local boot_stat = cond(`wdbts', "t_pt", "`wdblab'")
+  ereturn local boot_display `bdisp'
+  if `wdbts' {
+    ereturn scalar boot_tstat = 1
+    * the whole studentized kernel goes out with row and column names, so every reported
+    * studentized number is reconstructable from e() by name (not by position)
+    matrix rownames `bts' = n t_obs p_pctl qlo_pctl qhi_pctl z0 p_bc qlo_bc qhi_bc live
+    matrix colnames `bts' = `obn'
+    ereturn matrix boot_tstud = `bts'
+    matrix colnames `aseobs' = `obn'
+    matrix `wdbaseobs_out' = `aseobs'
+    ereturn hidden matrix boot_ase_obs = `aseobs'
+    if `wdbtmiss' > 0 dis as text "Caution: `wdbtmiss' reported coefficient(s) had no usable studentized bootstrap distribution (fewer than 2 replications with a positive standard error, or no observed standard error); their statistic, p-value and interval are left blank rather than filled from the coefficient-draw families."
+    if `wdbtlow' > 0 dis as text "Caution: `wdbtlow' reported coefficient(s) used fewer than half of the completed replications in their studentized distribution, because the remaining replications produced no usable standard error for that coefficient. Replications are dropped by a rule that correlates with the resample being degenerate, so the studentized tail is trimmed in the anti-conservative direction there; inspect e(boot_tstud) row n."
+    dis as text "Caution: boottstat reports studentized (percentile-t) inference: the statistic t_pt is b/se_analytic, and the p-value and interval come from the ranks of the replications' own t-statistics (b_r - b)/se_r, so the standard-error column is the ANALYTIC standard error (se_analytic), the studentization's denominator, not a bootstrap standard deviation; the interval is equal-tailed from the signed t-quantiles and is not symmetric about the estimate. Under boottstat the pairwise subgroup contrasts are studentized the same way from each replication's own pairwise standard error, and the joint pre-trend tests, the across-subgroup equality tests and the adversarial line tests are bootstrapped as test statistics. bootdisplay(bc) applies bias-corrected ranks to the same studentized draws; there is no Wald (normal or t approximation) family under boottstat. The studentized kernel is in e(boot_tstud) and the coefficient and standard-error draws in e(bootdist) and e(bootdist_se)."
+  }
   local wdbdfr0 = e(df_r)
   if `wdbdf' < . {
     ereturn scalar boot_df = `wdbdf'
@@ -6688,9 +8651,20 @@ version 16.0
   }
   if `done' <= 10000 {
     tempname bdist
-    mata: wooldid_bootdist("`acc'", "`bdist'")
-    cap matrix colnames `bdist' = `obn'
-    cap ereturn matrix bootdist = `bdist'
+    if `wdbts' {
+      * both accumulators compacted on ONE mask so the two matrices stay row-aligned
+      tempname bdists
+      mata: wooldid_bootdist("`acc'", "`bdist'", "`seacc'", "`bdists'")
+      cap matrix colnames `bdist' = `obn'
+      cap ereturn matrix bootdist = `bdist'
+      cap matrix colnames `bdists' = `obn'
+      cap ereturn matrix bootdist_se = `bdists'
+    }
+    else {
+      mata: wooldid_bootdist("`acc'", "`bdist'")
+      cap matrix colnames `bdist' = `obn'
+      cap ereturn matrix bootdist = `bdist'
+    }
   }
   if `blank' > 0 dis as text "Caution: `blank' replication cell(s) in ame-family columns returned exact structural zeros (resamples without dose variation in some cells) and were excluded from those columns' bootstrap moments."
   if "`wdb_lowav'" != "" dis as text "Caution: the following estimates were available in fewer than half of the completed replications; their bootstrap standard errors rest on the listed counts: `wdb_lowav'"
@@ -6741,7 +8715,7 @@ end
 cap prog drop wooldid_ptp
 prog def wooldid_ptp, eclass
 version 16.0
-  syntax , levels(numlist) [esrel(string) dfr(string) pois(string) poisexp(string) tvar(string) ttrevar(string) ivar(string) wvar(string) cwm(string)]
+  syntax , levels(numlist) [esrel(string) dfr(string) pois(string) poisexp(string) tvar(string) ttrevar(string) ivar(string) wvar(string) cwm(string) hba(string) hbi(string) HBARonly]
 
   * duplicate power levels (e.g. pretrendpower(80 80)) would otherwise be processed
   * twice, yielding a duplicated row in e(roth_power_*) and in the displayed table;
@@ -6764,6 +8738,18 @@ version 16.0
   * cells (subpop t >= onset), not only the reported event-study window, and using the
   * reported window instead understates the implied bias whenever espostlength is
   * smaller than the largest post relative period
+  * BOOTSTRAP PATH: hba()/hbi() carry the two hbar scalars already computed at worker
+  * level, so the whole data block below is skipped. It has to be, because `ttrevar' and
+  * `wvar' are worker TEMPVARS (ado ~437 and ~348) that Stata drops when the worker
+  * exits - and under bootstrap this program is called from the shell, afterwards, so
+  * that it reads the bootstrap e(V_es_*) rather than the analytic one it would have
+  * seen inside the worker. Everything below this block is pure algebra on
+  * e(b_es_*)/e(V_es_*) plus these two scalars
+  if "`hba'" != "" | "`hbi'" != "" {
+    local ptphbar_att = cond("`hba'" == "" | "`hba'" == ".", ., real("`hba'"))
+    local ptphbar_it  = cond("`hbi'" == "" | "`hbi'" == ".", ., real("`hbi'"))
+  }
+  else {
   tempvar ptprely ptpwa ptppost ptpnum
   qui gen double `ptprely' = `tvar' - `ttrevar'
   qui gen double `ptpwa' = `wvar'
@@ -6787,9 +8773,29 @@ version 16.0
   qui sum `ptpwit' if `ptppost', meanonly
   local ptphbar_it = cond(r(sum) > 0 & r(sum) < ., `ptphnum2'/r(sum), .)
   cap drop `ptprely' `ptpwa' `ptppost' `ptpnum' `ptpwpit' `ptpwit' `ptpnum2'
+  }
+  * stash them so the bootstrap path can hand them back in (hidden: an implementation
+  * detail, not part of the documented surface). `ereturn repost' preserves e(), so these
+  * survive the bootstrap rewiring that happens between the worker and the shell call
+  cap ereturn hidden scalar wdid_ptphbar_att = `ptphbar_att'
+  cap ereturn hidden scalar wdid_ptphbar_it  = `ptphbar_it'
+  * hbaronly: the worker's pass under bootstrap. The two scalars need the worker's
+  * tempvars, so they must be computed HERE; the power algebra needs the bootstrap
+  * covariance, which does not exist yet, so it must NOT be computed here
+  if "`hbaronly'" != "" exit
 
   local ptpheader 0
   foreach ptpty in att att_it ame ame_it {
+    * on a bootstrap run, refuse to run on a family whose bootstrap covariance swap
+    * failed: e(V_es_`ptpty') would still be the ANALYTIC matrix. The success marker is
+    * the hidden analytic twin, which wooldid_bootwire creates only when the swap worked
+    if "`e(boot_method)'" != "" {
+      cap confirm matrix e(V_es_analytic_`ptpty')
+      if _rc != 0 {
+        dis as text "Caution: the bootstrap event-study covariance is unavailable for `ptpty'; pretrendpower() diagnostics skipped for `ptpty' rather than computed on the analytic covariance."
+        continue
+      }
+    }
     cap confirm matrix e(b_es_`ptpty')
     if _rc != 0 continue
     cap confirm matrix e(V_es_`ptpty')
@@ -7060,8 +9066,8 @@ version 16.0
   * store was written under. bump the posted value (in wooldid_worker) whenever the
   * display contract changes; the exact match here refuses cross-version replays
   * instead of misrendering a store this code no longer understands
-  if "`e(wdid_replayv)'" != "1" {
-    dis as error "Error: the stored results were posted by a wooldid version without replay support or with a different replay contract (e(wdid_replayv)='`e(wdid_replayv)'', this version requires '1'); nothing can be redisplayed. Refit wooldid."
+  if "`e(wdid_replayv)'" != "2" {
+    dis as error "Error: the stored results were posted by a wooldid version without replay support or with a different replay contract (e(wdid_replayv)='`e(wdid_replayv)'', this version requires '2'); nothing can be redisplayed. Refit wooldid."
     error 301
   }
   * NFRPL-03: mirror wooldid_esplots' existence guard - on a corrupt/fabricated store the
@@ -7210,7 +9216,8 @@ version 16.0
  if "`adversarial'" != "" {
    foreach typetext in att att_it ame ame_it {
      if "`e(adversarial_pval_`typetext')'" != "" {
-       dis as result "p-value for joint test of null that all (non-reference) `typetext' coefficients are on a single line: " %-6.4f e(adversarial_pval_`typetext')
+       if "`e(perm_method)'" == "" dis as result "p-value for joint test of null that all (non-reference) `typetext' coefficients are on a single line: " %-6.4f e(adversarial_pval_`typetext')
+       else dis as result "permutation p-value (sharp null of no effect at any horizon) of the adversarial line-fit statistic on the `typetext' coefficients: " %-6.4f e(adversarial_pval_`typetext')
      }
    }
  }
@@ -7349,7 +9356,8 @@ version 16.0
         if "`adversarial'" != "" {
           foreach typetext in att att_it ame ame_it {
             if "`e(adversarial_pval_`typetext'_s`sgcase')'" != "" {
-              dis as result "p-value for joint test of null that all (non-reference) `typetext' coefficients for sg=`sgcase' are on a single line: " %-6.4f e(adversarial_pval_`typetext'_s`sgcase')
+              if "`e(perm_method)'" == "" dis as result "p-value for joint test of null that all (non-reference) `typetext' coefficients for sg=`sgcase' are on a single line: " %-6.4f e(adversarial_pval_`typetext'_s`sgcase')
+              else dis as result "permutation p-value (sharp null of no effect at any horizon) of the adversarial line-fit statistic on the `typetext' coefficients for sg=`sgcase': " %-6.4f e(adversarial_pval_`typetext'_s`sgcase')
             }
           }
         }
@@ -7387,7 +9395,8 @@ version 16.0
     dis as result " "
     dis as result "Cohort-by-Relative-Period Effects (regression scale; full table incl. weight totals in e(gteffects)):"
     if "`poisson'" == "poisson" dis as text "Note: under poisson these are on the linear-index (xb) scale; poisexpresults/semielasticity adjustments are not applied."
-    dis as text "Note: standard errors are the stage-1 regression's coefficient-level VCE; rows outside the reported event-study window have inwindow = 0."
+    if "`e(perm_gt_blank)'" == "1" dis as text "Note: under permute() these cells have no permutation distribution (their keys are cohort onsets, which the replications reassign), so their inference columns are blank; rows outside the reported event-study window have inwindow = 0."
+    else dis as text "Note: standard errors are the stage-1 regression's coefficient-level VCE; rows outside the reported event-study window have inwindow = 0."
     if `gtrows' <= 200 {
       tempname gtds
       matrix `gtds' = `gtd'[1..., 1..9]
@@ -7396,25 +9405,45 @@ version 16.0
     else dis as text "  (`gtrows' rows; table not printed - see e(gteffects))"
   }
   }
-  * F6: permutation-inference block - existence-gated on e(perm_method), so replay
-  * reproduces it and older stores print nothing
+  * F6: permutation-inference footer - existence-gated on e(perm_method), so replay
+  * reproduces it and older stores print nothing. Rewritten 2026-09-05 (chunk 1): the
+  * tables above now carry the permutation inference, so this block is the provenance
+  * statement plus the pooled-estimand summaries
   if "`part'" == "perm" {
     if "`e(perm_method)'" != "" {
       dis as result "Randomization Inference (permute(`e(perm_method)')): `e(perm_completed)' of `e(perm_reps)' replications completed; `e(perm_npossible_str)' possible assignments."
-      dis as text "Two-sided permutation p-values; the interval is the 5th-95th percentile band of the permuted-effect distribution (a null band, not a parameter CI); SD is the permuted-effect standard deviation."
-      if "`e(perm_stat)'" == "t" dis as text "Statistics are randomized on t-ratios (permtstat)."
+      local wdplv = cond("`e(perm_level)'" == "", "95", "`e(perm_level)'")
+      local wdpex = cond("`e(perm_exact)'" == "1", "exact shares over the enumerated assignments (the observed assignment is a member of its own reference set)", "the add-one Monte-Carlo form (1 + count)/(replications + 1)")
+      if "`e(perm_stat)'" == "t" dis as result "  Every p-value and interval in the tables above is permutation-based. The permuted statistic is the t-ratio (permtstat): each replication's estimate over its own analytic standard error, ranked against the observed t-ratio t_perm = estimate/se_analytic. p-values are two-sided equal-tailed permutation p-values, `wdpex'; the `wdplv'% intervals are shift intervals - the estimate minus the equal-tailed quantiles of the permuted t-ratios, times se_analytic."
+      else dis as result "  Every p-value and interval in the tables above is permutation-based: the observed estimate is ranked among the replications' estimates under reassigned treatment onsets. p-values are two-sided equal-tailed permutation p-values, `wdpex'; the `wdplv'% intervals are shift intervals - the estimate minus the equal-tailed quantiles of the permutation distribution."
+      dis as result "  A shift interval inverts the permutation test under the fixed-zero-null pivotality approximation (it takes the estimate's sampling error to have the null permutation distribution); it is not a sharp-null randomization-test inversion. Its implied standard errors are in e(perm_se_shift); the per-coefficient p-values, intervals, null-distribution SDs and replication counts are in e(perm_p), e(perm_ci), e(perm_sd) and e(perm_n), and the draws in e(permdist_b)."
+      if "`e(perm_stat)'" == "t" dis as result "  The standard-error column is the ANALYTIC standard error (se_analytic), the t-ratio's own denominator; e(V) and e(V_es_*) hold the analytic covariance, so test or lincom run by hand on them are analytic, not permutation, quantities."
+      else if "`e(perm_analyticse)'" == "1" dis as result "  The standard-error column is the ANALYTIC standard error (se_analytic, permanalyticse), shown for reference only; the t_perm column is blank because the permuted statistic is the estimate itself. e(V) and e(V_es_*) hold the analytic covariance, so test or lincom run by hand on them are analytic, not permutation, quantities."
+      else dis as result "  No analytic standard errors were computed (the permute() fast-mode default; permanalyticse restores them), so the se_analytic and t_perm columns are blank and no e(V) or e(V_es_*) is posted."
+      local wdpqf 0
+      cap confirm matrix e(perm_jointW)
+      if _rc == 0 local wdpqf 1
+      cap confirm matrix e(perm_sgW)
+      if _rc == 0 local wdpqf 1
+      cap confirm matrix e(perm_advW)
+      if _rc == 0 local wdpqf 1
+      if `wdpqf' dis as result "  The joint pre-trend tests, across-subgroup equality tests and adversarial line tests shown are one-sided permutation tests of a quadratic-form statistic in the permutation-covariance metric (the covariance of the replications' coefficients), so they need no per-replication covariance; the adversarial statistic is wooldid's line-fit statistic on that metric, and its p-value tests the sharp null of no effect at any horizon rather than the composite on-a-line null of the analytic test. Replication statistics: e(perm_jointW), e(perm_sgW), e(perm_advW)."
+      if wordcount("`e(wdid_sglist)'") > 1 dis as result "  Pairwise subgroup contrasts are permuted as coefficient differences (in both modes); their kernel is e(perm_pwsgs_kernel)."
+      if "`e(perm_precaveat)'" == "1" dis as result "  Pre-treatment rows (pretreatment estimates, pre-onset event-study horizons, their contrasts, and the joint pre-trend and adversarial statistics) are tested against the sharp null of no effect at ANY horizon, so their permutation p-values fall as the true post-treatment effect grows; a small pre-period p-value is not by itself evidence of a pre-trend."
+      if "`e(perm_gt_blank)'" == "1" dis as result "  The gteffects cells are keyed by cohort onset, which the replications reassign, so they have no permutation distribution: their inference columns are blank."
+      if "`e(perm_cfx_blank)'" == "1" dis as result "  The continuous-treatment plot cells were not permuted (assignment-dependent lattice bins); their inference columns are blank."
+      if "`e(perm_incomplete)'" != "" dis as result "  Elements not estimable in every enumerated assignment (add-one p-values rather than exact shares): `e(perm_incomplete)'"
+      if "`e(perm_offcentre)'" != "" dis as result "  Shift intervals left blank because the permutation distribution is not centred at zero (the p-values stand): `e(perm_offcentre)'"
+      dis as result "  Pooled estimand summaries (p, 5th-95th null band and SD of the permutation distribution`=cond("`e(perm_stat)'" == "t", ", on the t-ratio scale", "")'):"
       local wdptcihedge 0
       foreach wdpe in `e(wdid_permest)' {
-        local wdpsc = cond("`e(perm_stat)'" == "t", " (t-scale)", "")
-        dis as result "  `wdpe': estimate " %10.0g e(b)[1, colnumb(e(b), "main_`wdpe'")] "   p " %6.4f e(perm_p_`wdpe') "   null band`wdpsc' [" %10.0g e(perm_lb_`wdpe') ", " %10.0g e(perm_ub_`wdpe') "]   SD`wdpsc' " %10.0g e(perm_sd_`wdpe')
+        dis as result "    `wdpe': estimate " %10.0g e(b)[1, colnumb(e(b), "main_`wdpe'")] "   p " %6.4f e(perm_p_`wdpe') "   null band [" %10.0g e(perm_lb_`wdpe') ", " %10.0g e(perm_ub_`wdpe') "]   SD " %10.0g e(perm_sd_`wdpe')
         if e(perm_tlb_`wdpe') < . {
-          dis as result "        inverted-t 95% CI [" %10.0g e(perm_tlb_`wdpe') ", " %10.0g e(perm_tub_`wdpe') "]"
+          dis as result "        inverted-|t| 95% CI (permtci) [" %10.0g e(perm_tlb_`wdpe') ", " %10.0g e(perm_tub_`wdpe') "]"
           local wdptcihedge 1
         }
       }
-      * NFPERM-08 (honesty hedge, once per run): the inverted-t CI is an approximation,
-      * not a sharp-null randomization-test inversion
-      if `wdptcihedge' dis as text "The inverted-t CI is a fixed-zero-null pivotality approximation (it relies on the permuted t-ratio distribution approximating the t-ratio's distribution under shifted nulls); it is not a sharp-null randomization-test inversion."
+      if `wdptcihedge' dis as text "The inverted-|t| CI is symmetric about the estimate (the 95th percentile of the permuted absolute t-ratios times se_analytic) and rests on the same pivotality approximation as the shift intervals; it is not a sharp-null randomization-test inversion."
       dis as result " "
     }
   }
@@ -7428,11 +9457,29 @@ version 16.0
    dis as result "Bootstrap Inference (`wdbmt'):"
    dis as result "  " e(boot_completed) " of " e(boot_reps) " replications completed" _continue
    if e(boot_failed) > 0 dis as result " (" e(boot_failed) " failed and excluded)" _continue
-   local wdbrefd = cond("`e(boot_stat)'" == "t", "t(" + strofreal(e(boot_df)) + ")", "standard normal")
-   dis as result "; reported standard errors, `e(boot_stat)' statistics, p-values and " e(boot_level) "% CIs are bootstrap quantities referred to the `wdbrefd' distribution; percentile and bias-corrected CIs are stored in e(boot_ci_percentile)/e(boot_ci_bc)."
+   * the reference distribution is resolved from e(boot_df), NOT from e(boot_stat):
+   * under boottstat the statistic label is "t_pt", which is neither "t" nor "z", so the
+   * old equality test silently took the normal branch and printed the wrong reference
+   local wdbrefd = cond(e(boot_df) < ., "t(" + strofreal(e(boot_df)) + ")", "standard normal")
+   local wdbdsp = cond("`e(boot_display)'" == "", "percentile", "`e(boot_display)'")
+   if "`e(boot_tstat)'" == "1" {
+     dis as result "; the reported " e(boot_level) "% CIs and p-values come from the percentile ranks of the STUDENTIZED bootstrap distribution, and the standard error column is the ANALYTIC standard error (labelled se_analytic), which is the denominator the studentization uses. A studentized distribution has no standard deviation in coefficient units, so no bootstrap standard error is reported here."
+   }
+   else if "`wdbdsp'" == "wald" {
+     dis as result "; reported standard errors are the standard deviation of the bootstrap distribution, and the `e(boot_stat)' statistics, p-values and " e(boot_level) "% CIs are referred to the `wdbrefd' distribution."
+   }
+   else {
+     dis as result "; reported standard errors are the standard deviation of the bootstrap distribution, and the p-values and " e(boot_level) "% CIs come from the " cond("`wdbdsp'" == "bc", "BIAS-CORRECTED percentile", "PERCENTILE") " ranks of that distribution."
+     dis as result "  A percentile interval is not symmetric about the estimate, so the estimate plus or minus a critical value times the reported standard error will not in general reproduce the reported interval - this is the ordinary reading of a bootstrap table, not a wooldid peculiarity. Use bootdisplay(wald) for the normal/t package in which they do agree."
+   }
+   dis as result "  Every family is computed whichever is displayed: intervals in e(boot_ci_normal)/e(boot_ci_percentile)/e(boot_ci_bc), p-values in e(boot_p_percentile)/e(boot_p_bc), and the complete tables in the hidden e(boot_wald_mainresults)/e(boot_pctl_mainresults)/e(boot_bc_mainresults)."
    if e(boot_v_posted) == 1 dis as result "  e(V) holds the bootstrap covariance (complete-replication listwise, e(boot_N_V) replications; the analytic covariance, when one existed, remains in the hidden e(V_analytic))."
    else dis as result "  The bootstrap covariance is stored in e(V_boot); no covariance is posted to e(V) for this run."
-   dis as result "  Joint tests and subgroup contrasts, when requested, are " cond("`e(boot_stat)'" == "t", "F", "chi-squared") " Wald tests on the bootstrap covariance."
+   * e(V) and e(df_r) carry the sd-family inference whichever family is displayed, so a
+   * hand-run test/lincom reproduces the sd package and NOT a displayed percentile p
+   if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  e(V) and e(df_r) carry the standard-deviation family referred to the `wdbrefd' distribution, so test and lincom run by hand reproduce the bootdisplay(wald) numbers rather than the columns printed above."
+   if "`e(boot_jt_absent)'" != "" | "`e(boot_sgjt_absent)'" != "" dis as result "  The joint tests and/or the across-subgroup equality tests are NOT reported for this run: bootstrapping them means bootstrapping their test statistic, which requires boottstat. They are absent rather than shown as analytic tests, which would not be bootstrap quantities."
+   dis as result "  Subgroup contrasts, when requested, are bootstrapped as coefficient differences and carry the same package as the coefficient rows."
  }
 
 end
@@ -7707,6 +9754,124 @@ end
 * to the caller's frame on the normal path. on an error inside this program, stata
 * auto-drops the tempname frame and the wooldid shell's rc-gated epilogue restores the
 * caller's frame - the same net behavior as the pre-F11 inline code.
+cap prog drop wooldid_cfxplots
+prog def wooldid_cfxplots
+version 16.0
+  * continuous-treatment (cfx) plots drawn from the POSTED e(cfx*) matrices - under
+  * bootstrap() those are the rewired ones, so the bands are the displayed family's.
+  * A twoway rendering (connected estimate, rarea band) of what marginsplot drew from the
+  * margins results in an analytic run: same names, same titles, same saveplots() files,
+  * plus one <saveplots>_cfx.dta holding every plotted point. Rows without both bounds
+  * (cfxplotnose, fast mode, or a studentized cell with no analytic se) plot as points only
+  syntax [, SAVEplots(name) replace]
+  if "`e(wdid_replayv)'" != "2" {
+    dis as error "Error: wooldid_cfxplots is internal to wooldid and needs a stored wooldid estimation in e(); run wooldid first."
+    error 301
+  }
+  local mats `e(wdid_cfxmats)'
+  if "`mats'" == "" exit 0
+  qui frame
+  local defaultframe `r(currentframe)'
+  * the x-axis labels: the lattice variable's value labels when it has them (marginsplot
+  * shows those), read here in the caller's frame before we leave it
+  local latvar `e(wdid_cfxlatvar)'
+  local vl
+  if "`latvar'" != "" {
+    cap confirm variable `latvar'
+    if _rc == 0 local vl : value label `latvar'
+  }
+  local levels
+  foreach nm of local mats {
+    cap confirm matrix e(`nm')
+    if _rc != 0 continue
+    foreach rt in `: rownames e(`nm')' {
+      * regexs() must be read on a LATER line: a `=regexs(1)' on the regexm line itself is
+      * macro-expanded before the match runs and returns the previous match
+      if regexm("`rt'", "^lattice_([0-9]+)$") {
+        local lv = regexs(1)
+        local levels `levels' `lv'
+      }
+    }
+  }
+  local levels : list uniq levels
+  local levels : list sort levels
+  local xlab
+  if "`levels'" != "" {
+    local xlab xlabel(
+    foreach v of local levels {
+      if "`vl'" != "" {
+        local lbl : label `vl' `v', strict
+        if `"`lbl'"' == "" local lbl `v'
+        local xlab `xlab' `v' `"`lbl'"'
+      }
+      else local xlab `xlab' `v'
+    }
+    local xlab `xlab')
+  }
+  local xt `"`e(wdid_cfxxt)'"'
+  tempname pf af
+  frame create `pf'
+  frame create `af'
+  frame change `pf'
+  local k 0
+  foreach nm of local mats {
+    local ++k
+    cap confirm matrix e(`nm')
+    if _rc != 0 continue
+    tempname M
+    matrix `M' = e(`nm')
+    local rn : rownames `M'
+    local nr = rowsof(`M')
+    local nc = colsof(`M')
+    clear
+    qui set obs `nr'
+    qui gen str32 matname = "`nm'"
+    qui gen double lattice = .
+    qui gen double b = .
+    qui gen double se = .
+    qui gen double p = .
+    qui gen double ll = .
+    qui gen double ul = .
+    forval r = 1/`nr' {
+      local rt : word `r' of `rn'
+      if regexm("`rt'", "^lattice_([0-9]+)$") {
+        local lv = regexs(1)
+        qui replace lattice = `lv' in `r'
+      }
+      qui replace b = `M'[`r', 1] in `r'
+      if `nc' >= 6 {
+        qui replace se = `M'[`r', 2] in `r'
+        qui replace p = `M'[`r', 4] in `r'
+        qui replace ll = `M'[`r', 5] in `r'
+        qui replace ul = `M'[`r', 6] in `r'
+      }
+    }
+    sort lattice
+    qui count if ll < . & ul < . & b < .
+    local band = r(N) > 0
+    local ttl `"`e(wdid_cfxttl`k')'"'
+    local ytx `"`e(wdid_cfxytx`k')'"'
+    if `band' twoway (rarea ll ul lattice, color(navy%50)) (connected b lattice, color(navy)), `xt' `xlab' ytitle(`"`ytx'"') title(`"`ttl'"') scale(.85) legend(off) name("`nm'", replace)
+    else twoway (connected b lattice, color(navy)), `xt' `xlab' ytitle(`"`ytx'"') title(`"`ttl'"') scale(.85) legend(off) name("`nm'", replace)
+    if "`saveplots'" != "" {
+      qui graph save "`saveplots'_`nm'.gph", `replace'
+      tempfile part
+      qui save `part'
+      frame `af' {
+        cap append using `part'
+      }
+    }
+  }
+  if "`saveplots'" != "" {
+    frame `af' {
+      qui save "`saveplots'_cfx.dta", `replace'
+    }
+  }
+  frame change `defaultframe'
+  frame drop `pf'
+  frame drop `af'
+end
+
 cap prog drop wooldid_esplots
 prog def wooldid_esplots
 version 16.0
@@ -7716,7 +9881,7 @@ version 16.0
   * e() matrix silently reads as a 1x1 missing scalar), stranding a caller who typed
   * this directly from a non-default frame in the default frame
   * exact-match on the replay contract version, mirroring the wooldid_display gate
-  if "`e(wdid_replayv)'" != "1" {
+  if "`e(wdid_replayv)'" != "2" {
     dis as error "Error: wooldid_esplots is internal to wooldid and needs a stored wooldid estimation (replay contract '1') in e(); run wooldid first."
     error 301
   }
@@ -7749,6 +9914,15 @@ version 16.0
     frame create `__wooldidframe'
     frame change `__wooldidframe'
     qui svmat double `wdidpooled', names(col)
+    * the interval columns are read by NAME below; a bootstrap or permutation run at a
+    * level other than 95 renames them lb_<level>ci/ub_<level>ci, so map them back
+    cap confirm variable lb_95ci
+    if _rc != 0 {
+      cap ds lb_*ci
+      if _rc == 0 & wordcount("`r(varlist)'") == 1 rename `r(varlist)' lb_95ci
+      cap ds ub_*ci
+      if _rc == 0 & wordcount("`r(varlist)'") == 1 rename `r(varlist)' ub_95ci
+    }
     qui gen rownamesvar = ""
     local names : roweq `wdidpooled'
     forvalues i=1/`: word count `names'' {
@@ -7843,6 +10017,13 @@ version 16.0
         tempname wdidsgmat
         matrix `wdidsgmat' = e(wdidsgresults_`sgcase')
         qui svmat double `wdidsgmat', names(col)
+        cap confirm variable lb_95ci
+        if _rc != 0 {
+          cap ds lb_*ci
+          if _rc == 0 & wordcount("`r(varlist)'") == 1 rename `r(varlist)' lb_95ci
+          cap ds ub_*ci
+          if _rc == 0 & wordcount("`r(varlist)'") == 1 rename `r(varlist)' ub_95ci
+        }
         qui gen rownamesvar = ""
         local names : roweq `wdidsgmat'
         forvalues i=1/`: word count `names'' {
@@ -8456,20 +10637,30 @@ end
 *** Both statistics use Ftail(q, dfr, W/q) when dfr is a valid residual df and
 *** chi2tail(q, W) otherwise (the wooldid_ptp convention).
 cap mata: mata drop wooldid_advx()
+cap mata: mata drop wooldid_advW()
+cap mata: mata drop wooldid_bootadvr()
+cap mata: mata drop wooldid_bootadvobs()
+cap mata: mata drop wooldid_bootadvrel()
+cap mata: mata drop wooldid_bootcellkey()
+cap mata: mata drop wooldid_bootcellkeys()
+cap mata: mata drop wooldid_bootcells()
+cap mata: mata drop wooldid_bootsavemk()
+cap mata: mata drop wooldid_bootcellwire()
 mata:
-void wooldid_advx(string scalar bn, string scalar vn, string scalar rn,
-                  real scalar esrel, real scalar tt, real scalar alt,
-                  real scalar dfr, string scalar pn)
+// the adversarial statistic W (minimum-distance line test, alt==0; forecast test, alt==1)
+// as a PURE function of (b, V, rel) - factored out of wooldid_advx so the bootstrap can
+// evaluate the SAME construction on a replication's recentred coefficients and its own
+// covariance. Returns W, or missing when the covariance is degenerate / untestable; sets
+// the second output to the residual degrees of freedom q
+real scalar wooldid_advW(real colvector b, real matrix V, real colvector rel,
+                         real scalar esrel, real scalar tt, real scalar alt, real scalar qout)
 {
-    real colvector b, rel, z, g, r, sel, idxP, idxQ, bP, relP, d, c, resid
-    real matrix V, X, U, T, M, ZP, ZQ, ZZi, Aop, VPP, VPQ, VQQ, S, US
+    real colvector z, g, r, sel, idxP, idxQ, bP, relP, d, c, resid
+    real matrix X, U, T, M, ZP, ZQ, ZZi, Aop, VPP, VPQ, VQQ, S, US
     real rowvector lam, sv, lamS
-    real scalar k1, np, npr, nq, scale, tol, rankM, q, W, p
-    st_local("advpstat", "degen")
-    b = st_matrix(bn)'
-    V = st_matrix(vn)
-    rel = st_matrix(rn)
-    if (hasmissing(V) | hasmissing(b) | hasmissing(rel)) return
+    real scalar k1, np, npr, nq, scale, tol, rankM, q, W
+    qout = .
+    if (hasmissing(V) | hasmissing(b) | hasmissing(rel)) return(.)
     if (alt == 0) {
         X = J(rows(rel), 1, 1), rel
         V = (V + V')/2
@@ -8477,18 +10668,18 @@ void wooldid_advx(string scalar bn, string scalar vn, string scalar rn,
         lam = .
         symeigensystem(V, U, lam)
         scale = max(abs(lam))
-        if (scale <= 0 | scale >= .) return
+        if (scale <= 0 | scale >= .) return(.)
         tol = scale*1e-12
         sel = selectindex(lam' :> tol)
         k1 = rows(sel)
-        if (k1 == 0) return
+        if (k1 == 0) return(.)
         T = diag(1:/sqrt(lam[sel]')) * U[., sel]'
         z = T*b
         M = T*X
         sv = svdsv(M)
         rankM = sum(sv :> max(sv)*1e-12)
         q = k1 - rankM
-        if (q <= 0) return
+        if (q <= 0) return(.)
         g = svsolve(M, z)
         r = z - M*g
         W = r'r
@@ -8498,7 +10689,7 @@ void wooldid_advx(string scalar bn, string scalar vn, string scalar rn,
         idxQ = selectindex(rel :>= 0)
         npr = rows(idxP)
         nq = rows(idxQ)
-        if (npr == 0 | nq == 0) return
+        if (npr == 0 | nq == 0) return(.)
         bP = b[idxP] \ 0
         relP = rel[idxP] \ esrel
         if (tt) {
@@ -8509,7 +10700,7 @@ void wooldid_advx(string scalar bn, string scalar vn, string scalar rn,
         ZP = J(np, 1, 1), relP
         ZQ = J(nq, 1, 1), rel[idxQ]
         ZZi = invsym(ZP'ZP)
-        if (ZZi[1,1] == 0 | ZZi[2,2] == 0) return
+        if (ZZi[1,1] == 0 | ZZi[2,2] == 0) return(.)
         Aop = ZQ*ZZi*ZP'
         VPP = J(np, np, 0)
         VPP[|1,1 \ npr,npr|] = V[idxP, idxP]
@@ -8523,16 +10714,36 @@ void wooldid_advx(string scalar bn, string scalar vn, string scalar rn,
         lamS = .
         symeigensystem(S, US, lamS)
         scale = max(abs(lamS))
-        if (scale <= 0 | scale >= .) return
+        if (scale <= 0 | scale >= .) return(.)
         tol = scale*1e-12
         sel = selectindex(lamS' :> tol)
         q = rows(sel)
-        if (q == 0) return
+        if (q == 0) return(.)
         c = US[., sel]'d
         resid = d - US[., sel]*c
-        if (norm(resid) > 1e-8*max((norm(d), sqrt(scale)))) return
+        if (norm(resid) > 1e-8*max((norm(d), sqrt(scale)))) return(.)
         W = sum(c:^2 :/ lamS[sel]')
     }
+    if (W >= .) return(.)
+    qout = q
+    return(W)
+}
+
+void wooldid_advx(string scalar bn, string scalar vn, string scalar rn,
+                  real scalar esrel, real scalar tt, real scalar alt,
+                  real scalar dfr, string scalar pn)
+{
+    real colvector b, rel, z, g, r, sel, idxP, idxQ, bP, relP, d, c, resid
+    real matrix V, X, U, T, M, ZP, ZQ, ZZi, Aop, VPP, VPQ, VQQ, S, US
+    real rowvector lam, sv, lamS
+    real scalar k1, np, npr, nq, scale, tol, rankM, q, W, p
+    st_local("advpstat", "degen")
+    b = st_matrix(bn)'
+    V = st_matrix(vn)
+    rel = st_matrix(rn)
+    if (hasmissing(V) | hasmissing(b) | hasmissing(rel)) return
+    q = .
+    W = wooldid_advW(b, V, rel, esrel, tt, alt, q)
     if (W >= .) return
     if (dfr < .) p = Ftail(q, dfr, W/q)
     else p = chi2tail(q, W)
@@ -8545,14 +10756,32 @@ end
 
 * F-boot mata kernels. drop guards: the file must stay session-reloadable
 cap mata: mata drop wooldid_bootdw()
+cap mata: mata drop wooldid_boottp()
 cap mata: mata drop wooldid_bootgrab()
 cap mata: mata drop wooldid_bootfin()
 cap mata: mata drop wooldid_bootves()
 cap mata: mata drop wooldid_bootdist()
 cap mata: mata drop wooldid_bootjw()
 cap mata: mata drop wooldid_bootpw()
+cap mata: mata drop wooldid_bootpp()
+cap mata: mata drop wooldid_bootpwt()
+cap mata: mata drop wooldid_bootjwr()
+cap mata: mata drop wooldid_bootsgw()
+cap mata: mata drop wooldid_bootjwobs()
+cap mata: mata drop wooldid_bootjobs()
+cap mata: mata drop wooldid_bootpairidx()
 cap mata: mata drop wooldid_bootci()
 cap mata: mata drop wooldid_bootveskey()
+cap mata: mata drop wooldid_permq()
+cap mata: mata drop wooldid_permtail()
+cap mata: mata drop wooldid_permstat()
+cap mata: mata drop wooldid_permpw()
+cap mata: mata drop wooldid_permqf()
+cap mata: mata drop wooldid_permadv()
+cap mata: mata drop wooldid_permcellwire()
+cap mata: mata drop wooldid_permsaveasg()
+cap mata: mata drop wooldid_permcse()
+cap mata: mata drop wooldid_permadvline()
 mata:
 // draw matrix: per-rep (outer) per-cluster-ascending (inner) Gamma(alpha,1) draws -
 // the exact rwgen bayes stream-consumption order; alpha = n_c (size) or 1 (equal);
@@ -8583,17 +10812,116 @@ void wooldid_bootdw(string scalar fr, string scalar amode, real scalar R, string
 // name-aligned grab of the current rep e(b) into row r of the accumulation matrix;
 // ame-family structural zeros (rep value exactly 0 where the observed b is nonzero)
 // are blanked and counted (A12b)
-void wooldid_bootgrab(string scalar accname, real scalar r, string scalar obsbname)
+// boottstat: the studentized (percentile-t) tail probability and critical value, per
+// column. t_r = (b_r - b_obs)/se_r studentizes each replication by ITS OWN standard
+// error, and the observed statistic t_obs = b_obs/se_obs uses the observed run's
+// same-formula (analytic) standard error - the two have to be the same functional or the
+// statistic is not asymptotically pivotal and the refinement is lost. The tail count is
+// add-one, matching the permutation engine's convention, and the critical value is the
+// level-th order statistic of the sorted |t_r|, the rule wooldid_bootci already uses.
+// Columns with fewer than 2 usable replications, or no usable observed standard error,
+// return missing and the caller leaves the Wald numbers in place.
+void wooldid_boottp(string scalar accname, string scalar seaccname, string scalar obsbname,
+                    string scalar aseobsname, string scalar exclname, real scalar lvl,
+                    real scalar ties, string scalar outname)
 {
-  real matrix A, rb, ob
-  string matrix an, rn
-  real scalar k, j, nb
-  transmorphic t
+  // Studentized (percentile-t) inference on the SIGNED t-draws t_r = (b_r - b_obs)/se_r,
+  // referred against t_obs = b_obs/se_obs (both analytic standard errors, so the two are
+  // the same functional - the property the replication-clustering fix restores).
+  // Author rulings 2026-09-03/04: the interval is EQUAL-TAILED from the signed quantiles,
+  // [b_obs - q_hi*se_obs, b_obs - q_lo*se_obs], NOT the earlier symmetric b +/- q(|t|)*se;
+  // the p is the rank of t_obs among the t_r, two-sided, with NO add-one and the SAME
+  // order-statistic rule wooldid_bootci uses for the coefficient families - so the p and
+  // the interval are exact duals up to the even-count averaging boundary measured there
+  // (this also retires the two defects where the p was add-one while the critical value
+  // was a plain order statistic, and where a third quantile rule coexisted). A BC twin
+  // is built the same way from the t-draws, with z0 from the rank of 0 among them (the
+  // t-draws are centred at 0 by construction, so 0 plays the role the rep-0 comparator
+  // plays for coefficients).
+  // Output: a 10 x K matrix, rows = n, t_obs, p_pct, qlo_pct, qhi_pct, z0, p_bc,
+  // qlo_bc, qhi_bc, live. Columns with fewer than 2 usable replications, no usable
+  // observed standard error, or zero dispersion post missing with live = 0.
+  real matrix A, S, ob, ase, ex, out
+  real colvector tr, v
+  real scalar K, R, k, r, n, so, to, al, x, m0, m1, z0, pl, pu, kk2, r0, qbc, sd
+  A = st_matrix(accname)
+  S = st_matrix(seaccname)
+  ob = st_matrix(obsbname)
+  ase = st_matrix(aseobsname)
+  ex = st_matrix(exclname)
+  K = cols(A)
+  R = rows(A)
+  out = J(10, K, .)
+  out[10, .] = J(1, K, 0)
+  al = (100 - lvl)/200
+  for (k = 1; k <= K; k++) {
+    if (ex[1, k] != 0) continue
+    so = ase[1, k]
+    if (so >= . | so <= 0 | ob[1, k] >= .) continue
+    to = ob[1, k] / so
+    tr = J(0, 1, .)
+    for (r = 1; r <= R; r++) {
+      if (A[r, k] >= . | S[r, k] >= . | S[r, k] <= 0) continue
+      tr = tr \ ((A[r, k] - ob[1, k]) / S[r, k])
+    }
+    n = rows(tr)
+    out[1, k] = n
+    if (n < 2) continue
+    v = sort(tr, 1)
+    sd = sqrt(variance(v))
+    if (sd <= 0 | sd >= .) continue
+    out[2, k] = to
+    // percentile-t: equal-tailed signed quantiles, wooldid_bootci's rule
+    x = n*al
+    if (x == floor(x) & x >= 1) out[4, k] = (v[x] + v[min((x+1, n))])/2
+    else out[4, k] = v[max((min((ceil(x), n)), 1))]
+    x = n*(1-al)
+    if (x == floor(x) & x >= 1) out[5, k] = (v[x] + v[min((x+1, n))])/2
+    else out[5, k] = v[max((min((ceil(x), n)), 1))]
+    m0 = sum(v :<= to)
+    m1 = sum(v :>= to)
+    out[3, k] = min((1, (2*min((m0, m1)))/n))
+    out[10, k] = 1
+    // BC-t: median-bias z0 from the rank of 0 among the centred t-draws
+    if (ties) z0 = invnormal((sum(v :< 0) + 0.5*sum(v :== 0))/n)
+    else z0 = invnormal(sum(v :<= 0)/n)
+    if (z0 >= .) continue
+    out[6, k] = z0
+    pl = normal(2*z0 + invnormal(al))
+    pu = normal(2*z0 + invnormal(1-al))
+    kk2 = max((min((ceil(n*pl), n)), 1))
+    out[8, k] = v[kk2]
+    kk2 = max((min((ceil(n*pu), n)), 1))
+    out[9, k] = v[kk2]
+    r0 = m0/n
+    if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
+    else qbc = normal(invnormal(r0) - 2*z0)
+    out[7, k] = min((1, 2*min((qbc, 1-qbc))))
+  }
+  st_matrix(outname, out)
+}
+
+void wooldid_bootgrab(string scalar accname, real scalar r, string scalar obsbname,
+                      | string scalar seaccname, string scalar pwseaccname)
+{
+  real matrix A, rb, ob, S, rV, P, rP
+  string matrix an, rn, pn, rpn
+  real scalar k, j, nb, dose, v, dopw
+  transmorphic t, tp
   A = st_matrix(accname)
   an = st_matrixcolstripe(accname)
   rb = st_matrix("e(b)")
   rn = st_matrixcolstripe("e(b)")
   ob = st_matrix(obsbname)
+  // boottstat: this rep's own standard errors, off the diagonal of its e(V), aligned by
+  // the same colstripe lookup. absent (fastnose reps) or non-positive entries stay
+  // missing, and the studentization drops those replications for that column
+  dose = (args() >= 4 && seaccname != "")
+  if (dose) {
+    S = st_matrix(seaccname)
+    rV = st_matrix("e(V)")
+    if (rows(rV) != rows(rn)) dose = 0
+  }
   t = asarray_create()
   for (j = 1; j <= rows(rn); j++) asarray(t, rn[j,1] + ":" + rn[j,2], j)
   nb = 0
@@ -8605,10 +10933,42 @@ void wooldid_bootgrab(string scalar accname, real scalar r, string scalar obsbna
         A[r, k] = .
         nb++
       }
+      if (dose & A[r, k] < .) {
+        v = rV[j, j]
+        if (v > 0 & v < .) S[r, k] = sqrt(v)
+      }
     }
   }
   st_matrix(accname, A)
   st_matrixcolstripe(accname, an)
+  if (args() >= 4 && seaccname != "") {
+    st_matrix(seaccname, S)
+    st_matrixcolstripe(seaccname, an)
+  }
+  // boottstat: this rep's own pairwise-contrast standard errors, matched to the OBSERVED
+  // contrast rows by full row name (eq:JvsK) - never by position, since a resample can
+  // lose a subgroup level and shorten the table. Unmatched or non-positive entries stay
+  // missing and the studentization drops those replications for that contrast
+  dopw = (args() >= 5 && pwseaccname != "")
+  if (dopw) {
+    rP = st_matrix("e(pwsgs)")
+    if (rows(rP) > 0) {
+      P = st_matrix(pwseaccname)
+      pn = st_matrixcolstripe(pwseaccname)
+      rpn = st_matrixrowstripe("e(pwsgs)")
+      tp = asarray_create()
+      for (j = 1; j <= rows(rpn); j++) asarray(tp, rpn[j,1] + ":" + rpn[j,2], j)
+      for (k = 1; k <= rows(pn); k++) {
+        if (asarray_contains(tp, pn[k,1] + ":" + pn[k,2])) {
+          j = asarray(tp, pn[k,1] + ":" + pn[k,2])
+          v = rP[j, 2]
+          if (v > 0 & v < .) P[r, k] = v
+        }
+      }
+      st_matrix(pwseaccname, P)
+      st_matrixcolstripe(pwseaccname, pn)
+    }
+  }
   st_local("wdb_gblank", strofreal(nb))
 }
 
@@ -8743,13 +11103,22 @@ string scalar wooldid_bootveskey(string scalar fk, string scalar nm)
 }
 
 // dense bootdist (completed rows only)
-void wooldid_bootdist(string scalar accname, string scalar outname)
+void wooldid_bootdist(string scalar accname, string scalar outname, | string scalar seaccname, string scalar seoutname)
 {
-  real matrix A
+  // rows are kept iff the COEFFICIENT row has any non-missing entry, and the same mask is
+  // applied to the standard-error accumulator when one is given - so e(bootdist) and
+  // e(bootdist_se) stay row-aligned and a user pairing them row by row studentizes the
+  // same replication (previously each was compacted on its own mask, so a replication
+  // with coefficients but no usable VCE was kept in one and dropped from the other)
+  real matrix A, S
   real colvector ok
   A = st_matrix(accname)
   ok = rowsum(A :< .) :> 0
   st_matrix(outname, select(A, ok))
+  if (args() >= 4 && seaccname != "") {
+    S = st_matrix(seaccname)
+    st_matrix(seoutname, select(S, ok))
+  }
 }
 
 
@@ -8827,6 +11196,838 @@ void wooldid_bootjw(string scalar accname, string scalar obsbname, string scalar
 }
 
 // bootstrap se of a difference of two columns (listwise over the pair)
+// the percentile package for one pairwise subgroup contrast: the interval, its dual p
+// and the count of usable replications, all built from the CONTRAST draws
+// d_r = b_r[ka] - b_r[kb]. Orientation matters here in a way it does not for the
+// standard error: the row name is "JvsK" = level J minus level K, ka is matched to J
+// and kb to K upstream, so d is formed in that order and the interval is not symmetric.
+// The listwise-complete-PAIR selection is wooldid_bootpw's, verbatim and for the same
+// reason - and selecting BEFORE sorting also matters, because mata's sort() orders
+// missing LAST, so a single incomplete replication would otherwise shift every order
+// statistic. The endpoint rule and the p convention are wooldid_bootci's, so a contrast
+// row and a coefficient row mean the same thing by the same arithmetic
+// observed pre-horizon coefficients for every event-study family key that exists, stacked
+// into one row vector with colstripe (fk, prename). Built while the OBSERVED e() is live
+// (wooldid_bootrun, before any replication), and carried into the rep loop by name
+void wooldid_bootjobs(string scalar keys, string scalar outname, | real scalar allh)
+{
+  real scalar useall
+  useall = (args() >= 3 ? allh : 0)
+  string rowvector ks
+  string matrix cs, out_cs
+  real rowvector b, out
+  real scalar i, j
+  ks = tokens(keys)
+  out = J(1, 0, .)
+  out_cs = J(0, 2, "")
+  for (i = 1; i <= cols(ks); i++) {
+    b = st_matrix("e(b_es_" + ks[i] + ")")
+    if (cols(b) == 0) continue
+    cs = st_matrixcolstripe("e(b_es_" + ks[i] + ")")
+    for (j = 1; j <= rows(cs); j++) {
+      if (!useall & substr(cs[j, 2], 1, 3) != "pre") continue
+      out = out, b[1, j]
+      out_cs = out_cs \ (ks[i], cs[j, 2])
+    }
+  }
+  if (cols(out) == 0) {
+    st_local("wdb_jobsn", "0")
+    return
+  }
+  st_matrix(outname, out)
+  st_matrixcolstripe(outname, out_cs)
+  st_local("wdb_jobsn", strofreal(cols(out)))
+}
+
+// m x m matrix of e(pwsgs) row indices for the pair (a,b) of the ordered subgroup list,
+// for one (eq, item): rows are named "JvsK" (with an optional bn/b marker on either level),
+// J = the higher level minus K = the lower, in the eq given. 0 on the diagonal; missing
+// where a pair has no row (the caller then declines the polarisation)
+void wooldid_bootpairidx(string scalar eqwant, string scalar sglist, string scalar outname)
+{
+  string matrix rs
+  string rowvector sg
+  real matrix M
+  real scalar m, a, b, j, J, K
+  string scalar nm
+  rs = st_matrixrowstripe("e(pwsgs)")
+  sg = tokens(sglist)
+  m = cols(sg)
+  M = J(m, m, .)
+  for (a = 1; a <= m; a++) M[a, a] = 0
+  for (j = 1; j <= rows(rs); j++) {
+    if (rs[j, 1] != eqwant) continue
+    nm = rs[j, 2]
+    if (!regexm(nm, "^([0-9]+)(bn?)?vs([0-9]+)(bn?)?([.].*)?$")) continue
+    J = strtoreal(regexs(1))
+    K = strtoreal(regexs(3))
+    for (a = 1; a <= m; a++) {
+      for (b = 1; b <= m; b++) {
+        if (strtoreal(sg[a]) == J & strtoreal(sg[b]) == K) {
+          M[a, b] = j
+          M[b, a] = j
+        }
+      }
+    }
+  }
+  st_matrix(outname, M)
+}
+
+// ---- bootstrapped CELL surfaces: e(gteffects) and e(cfx*) (task 8, ruling 2026-09-04) ----
+// key for a gteffects row: "i|onset|relyr" from its first, second and fourth columns; key
+// for a cfx row: its row name (the lattice level). An R x ncells accumulator carries the
+// cell estimate (or, in the *se twin, the cell's analytic se) per replication, matched by
+// key so a replication that lacks a cell leaves it missing rather than shifting the rest
+string colvector wooldid_bootcellkey(string scalar mname, real scalar isgt)
+{
+  real matrix M
+  string colvector k
+  string matrix rs
+  real scalar i
+  M = st_matrix(mname)
+  if (isgt) {
+    k = J(rows(M), 1, "")
+    for (i = 1; i <= rows(M); i++) k[i] = strtoname("k" + strofreal(M[i,1], "%16.0g") + "_" + strofreal(M[i,2], "%16.0g") + "_" + strofreal(M[i,4], "%16.0g"))
+  }
+  else {
+    rs = st_matrixrowstripe(mname)
+    k = J(rows(rs), 1, "")
+    for (i = 1; i <= rows(rs); i++) k[i] = strtoname("r" + rs[i, 1] + "_" + rs[i, 2])
+  }
+  return(k)
+}
+void wooldid_bootcellkeys(string scalar mname, string scalar accname, real scalar reps, real scalar isgt)
+{
+  string colvector k
+  real matrix A
+  k = wooldid_bootcellkey(mname, isgt)
+  st_local("wdb_cellkeydup", "")
+  if (rows(uniqrows(k)) != rows(k)) {
+    // sanitised keys collided: two cells would share a column, so this surface is not
+    // bootstrapped rather than bootstrapped wrongly. The caller cautions
+    st_local("wdb_cellkeydup", "1")
+    return
+  }
+  A = J(reps, rows(k), .)
+  st_matrix(accname, A)
+  st_matrixcolstripe(accname, (J(rows(k), 1, ""), k))
+}
+// per-replication harvest: gteffects estimate (col 5) / se (col 6); cfx b (col 1) / se (col 2)
+void wooldid_bootcells(string scalar prefix, real scalar r, real scalar ncfx, real scalar dose)
+{
+  real matrix A, S, M
+  string colvector ak, mk
+  string matrix cs
+  real scalar j, k, c
+  transmorphic t
+  string scalar nm
+  // gteffects
+  M = st_matrix("e(gteffects)")
+  if (rows(M) > 0 & st_matrix(prefix + "_gt") != J(0,0,.)) {
+    A = st_matrix(prefix + "_gt")
+    cs = st_matrixcolstripe(prefix + "_gt")
+    mk = wooldid_bootcellkey("e(gteffects)", 1)
+    t = asarray_create()
+    for (j = 1; j <= rows(mk); j++) asarray(t, mk[j], j)
+    if (dose) S = st_matrix(prefix + "_gtse")
+    for (k = 1; k <= rows(cs); k++) {
+      if (!asarray_contains(t, cs[k, 2])) continue
+      j = asarray(t, cs[k, 2])
+      A[r, k] = M[j, 5]
+      if (dose) {
+        if (M[j, 6] > 0 & M[j, 6] < .) S[r, k] = M[j, 6]
+      }
+    }
+    st_matrix(prefix + "_gt", A)
+    st_matrixcolstripe(prefix + "_gt", cs)
+    if (dose) {
+      st_matrix(prefix + "_gtse", S)
+      st_matrixcolstripe(prefix + "_gtse", cs)
+    }
+  }
+  // cfx matrices, by the names recorded in the observed e(wdid_cfxmats) order
+  for (c = 1; c <= ncfx; c++) {
+    nm = st_local("wdb_cfxname" + strofreal(c))
+    if (nm == "") continue
+    M = st_matrix("e(" + nm + ")")
+    if (rows(M) == 0) continue
+    A = st_matrix(prefix + "_cfx" + strofreal(c))
+    if (A == J(0,0,.)) continue
+    cs = st_matrixcolstripe(prefix + "_cfx" + strofreal(c))
+    mk = wooldid_bootcellkey("e(" + nm + ")", 0)
+    t = asarray_create()
+    for (j = 1; j <= rows(mk); j++) asarray(t, mk[j], j)
+    if (dose) S = st_matrix(prefix + "_cfx" + strofreal(c) + "se")
+    for (k = 1; k <= rows(cs); k++) {
+      if (!asarray_contains(t, cs[k, 2])) continue
+      j = asarray(t, cs[k, 2])
+      A[r, k] = M[j, 1]
+      if (dose & cols(M) >= 2) {
+        if (M[j, 2] > 0 & M[j, 2] < .) S[r, k] = M[j, 2]
+      }
+    }
+    st_matrix(prefix + "_cfx" + strofreal(c), A)
+    st_matrixcolstripe(prefix + "_cfx" + strofreal(c), cs)
+    if (dose) {
+      st_matrix(prefix + "_cfx" + strofreal(c) + "se", S)
+      st_matrixcolstripe(prefix + "_cfx" + strofreal(c) + "se", cs)
+    }
+  }
+}
+// rewire one cell table in place: given the accumulator (and optional se accumulator +
+// observed analytic se), fill columns (secol, pcol, lbcol, ubcol) of matrix mname per
+// bootdisplay(): percentile / bc from the cell draws with the bootstrap SD as se; wald;
+// or, when studentized (seacc given), the studentized families with the analytic se.
+// obscol is the column of mname holding the observed estimate. Rows whose key is not in
+// the accumulator, or with < 2 usable draws, are blanked. Returns nothing; edits mname.
+// bootsave(): fill the (empty) current frame from the accumulators. Row 1 is the observed
+// run (_rep = 0), rows 2.. the replications by index (failed ones all missing). Variable
+// names are the accumulator column names made valid with strtoname(); a name collision
+// or an over-long name makes st_addvar fail, which the caller reports
+void wooldid_bootsavemk(string scalar acc, string scalar obsb, string scalar seacc, string scalar aseobs, string scalar pwseacc)
+{
+  real matrix A, B, S, AS, P
+  string matrix cs, pcs
+  real scalar R, K, k, j, idx
+  string scalar nm
+  A = st_matrix(acc); cs = st_matrixcolstripe(acc); B = st_matrix(obsb)
+  R = rows(A); K = cols(A)
+  st_addobs(R + 1)
+  idx = st_addvar("double", "_rep"); st_store(., idx, (0::R))
+  for (k = 1; k <= K; k++) {
+    nm = strtoname(cs[k, 2])
+    idx = st_addvar("double", nm); st_store(., idx, B[1, k] \ A[., k])
+  }
+  if (seacc != "") {
+    S = st_matrix(seacc); AS = st_matrix(aseobs)
+    for (k = 1; k <= K; k++) {
+      nm = "se_" + strtoname(cs[k, 2])
+      idx = st_addvar("double", nm); st_store(., idx, AS[1, k] \ S[., k])
+    }
+  }
+  if (pwseacc != "") {
+    P = st_matrix(pwseacc); pcs = st_matrixcolstripe(pwseacc)
+    for (j = 1; j <= cols(P); j++) {
+      // the pairwise names repeat across the main and pre-treatment rows ("1vs0.sg"
+      // twice), so the column index is part of the name: pwse<j>_ matches column j
+      // of e(bootdist_pwse)
+      nm = "pwse" + strofreal(j) + "_" + strtoname(pcs[j, 2])
+      idx = st_addvar("double", nm); st_store(., idx, . \ P[., j])
+    }
+  }
+}
+
+void wooldid_bootcellwire(string scalar mname, real scalar isgt, string scalar accname,
+                          string scalar seaccname, real scalar obscol, real scalar secol,
+                          real scalar pcol, real scalar lbcol, real scalar ubcol,
+                          string scalar fam, real scalar lvl, real scalar zc, real scalar dfden, real scalar ties)
+{
+  real matrix M, A, S
+  string colvector mk
+  string matrix cs
+  real colvector v, use, tr
+  real scalar i, k, n, al, x, se, m0, m1, z0, pl, pu, kk2, r0, qbc, b, so, to, lo, hi, p, miss
+  transmorphic t
+  miss = 0
+  M = st_matrix(mname)
+  A = st_matrix(accname)
+  cs = st_matrixcolstripe(accname)
+  t = asarray_create()
+  for (k = 1; k <= rows(cs); k++) asarray(t, cs[k, 2], k)
+  mk = wooldid_bootcellkey(mname, isgt)
+  if (seaccname != "") S = st_matrix(seaccname)
+  al = (100 - lvl)/200
+  for (i = 1; i <= rows(M); i++) {
+    M[i, secol] = .
+    M[i, pcol] = .
+    M[i, lbcol] = .
+    M[i, ubcol] = .
+    if (!asarray_contains(t, mk[i])) continue
+    k = asarray(t, mk[i])
+    b = M[i, obscol]
+    if (b >= .) continue
+    if (seaccname == "") {
+      use = selectindex(A[., k] :< .)
+      n = length(use)
+      if (n < 2) continue
+      v = sort(A[use, k], 1)
+      se = sqrt(variance(v))
+      if (se <= 0 | se >= .) continue
+      M[i, secol] = se
+      if (fam == "wald") {
+        to = b / se
+        M[i, pcol] = (dfden < . ? 2*ttail(dfden, abs(to)) : 2*normal(-abs(to)))
+        M[i, lbcol] = b - zc*se
+        M[i, ubcol] = b + zc*se
+        continue
+      }
+      x = n*al
+      lo = (x == floor(x) & x >= 1 ? (v[x] + v[min((x+1, n))])/2 : v[max((min((ceil(x), n)), 1))])
+      x = n*(1-al)
+      hi = (x == floor(x) & x >= 1 ? (v[x] + v[min((x+1, n))])/2 : v[max((min((ceil(x), n)), 1))])
+      m0 = sum(v :<= 0)
+      m1 = sum(v :>= 0)
+      p = min((1, (2*min((m0, m1)))/n))
+      if (fam == "bc") {
+        if (ties) z0 = invnormal((sum(v :< b) + 0.5*sum(v :== b))/n)
+        else z0 = invnormal(sum(v :<= b)/n)
+        if (z0 >= .) continue
+        pl = normal(2*z0 + invnormal(al))
+        pu = normal(2*z0 + invnormal(1-al))
+        kk2 = max((min((ceil(n*pl), n)), 1))
+        lo = v[kk2]
+        kk2 = max((min((ceil(n*pu), n)), 1))
+        hi = v[kk2]
+        r0 = m0/n
+        if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
+        else qbc = normal(invnormal(r0) - 2*z0)
+        p = min((1, 2*min((qbc, 1-qbc))))
+      }
+      M[i, pcol] = p
+      M[i, lbcol] = lo
+      M[i, ubcol] = hi
+    }
+    else {
+      // studentized: analytic se of the OBSERVED cell is the value already in secol before
+      // we blanked it - so it must be passed in via the matrix's own column; re-read it
+      so = st_matrix(mname)[i, secol]
+      if (so >= . | so <= 0) {
+        miss++
+        continue
+      }
+      to = b / so
+      use = selectindex((A[., k] :< .) :& (S[., k] :< .) :& (S[., k] :> 0))
+      n = length(use)
+      if (n < 2) continue
+      tr = (A[use, k] :- b) :/ S[use, k]
+      v = sort(tr, 1)
+      if (sqrt(variance(v)) <= 0) continue
+      M[i, secol] = so
+      x = n*al
+      lo = (x == floor(x) & x >= 1 ? (v[x] + v[min((x+1, n))])/2 : v[max((min((ceil(x), n)), 1))])
+      x = n*(1-al)
+      hi = (x == floor(x) & x >= 1 ? (v[x] + v[min((x+1, n))])/2 : v[max((min((ceil(x), n)), 1))])
+      m0 = sum(v :<= to)
+      m1 = sum(v :>= to)
+      p = min((1, (2*min((m0, m1)))/n))
+      if (fam == "bc") {
+        if (ties) z0 = invnormal((sum(v :< 0) + 0.5*sum(v :== 0))/n)
+        else z0 = invnormal(sum(v :<= 0)/n)
+        if (z0 >= .) continue
+        pl = normal(2*z0 + invnormal(al))
+        pu = normal(2*z0 + invnormal(1-al))
+        kk2 = max((min((ceil(n*pl), n)), 1))
+        lo = v[kk2]
+        kk2 = max((min((ceil(n*pu), n)), 1))
+        hi = v[kk2]
+        r0 = m0/n
+        if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
+        else qbc = normal(invnormal(r0) - 2*z0)
+        p = min((1, 2*min((qbc, 1-qbc))))
+      }
+      M[i, pcol] = p
+      M[i, lbcol] = b - hi*so
+      M[i, ubcol] = b - lo*so
+    }
+  }
+  st_matrix(mname, M)
+  st_local("wdbcellmiss", strofreal(miss))
+}
+
+// ---- bootstrapped ADVERSARIAL line-test statistic (task 6, author ruling 2026-09-04) ----
+// Under boottstat the adversarial p is the bootstrap of its test STATISTIC: per replication
+// W_r = wooldid_advW(b_r - b_obs, V_r, rel) with the replication's own e(V_es_*), against
+// W_obs = wooldid_advW(b_obs, V_obs_analytic, rel); p = add-one tail. Recentring by b_obs
+// alone imposes the composite null "lies on SOME line" because the minimum-distance
+// statistic is invariant to adding any element of col(X) - VERIFIED numerically
+// 2026-09-05 (max |W(b) - W(b + Xc)| = 3.6e-14 full-rank, 1.2e-14 rank-deficient; recentre
+// by b_obs equals recentre to the fitted line exactly). The forecast (altmethod) statistic
+// is linear in b and recentres the same way. rel is derived from the horizon names
+// (pre# -> -#, post# -> +#), which is the F2 capture's own convention.
+// aobs: 1 x P observed coefficients over ALL horizons with colstripe (fk, name); accname:
+// R x (keys x alts) with colnames <fk>_a0 / <fk>_a1
+real colvector wooldid_bootadvrel(string colvector names)
+{
+  real colvector rel
+  real scalar j
+  rel = J(rows(names), 1, .)
+  for (j = 1; j <= rows(names); j++) {
+    if (substr(names[j], 1, 3) == "pre") rel[j] = -strtoreal(substr(names[j], 4, .))
+    else if (substr(names[j], 1, 4) == "post") rel[j] = strtoreal(substr(names[j], 5, .))
+  }
+  return(rel)
+}
+void wooldid_bootadvr(string scalar accname, real scalar r, string scalar aobsn,
+                      real scalar esrel, real scalar tt)
+{
+  real matrix Wacc, V, Vs
+  real rowvector bo
+  real colvector d, rel, idx
+  string matrix wn, on, vn
+  string colvector nm
+  string scalar fk, key
+  real scalar k, j, np, m, alt, W, q
+  transmorphic t
+  Wacc = st_matrix(accname)
+  wn = st_matrixcolstripe(accname)
+  on = st_matrixcolstripe(aobsn)
+  bo = st_matrix(aobsn)
+  for (k = 1; k <= rows(wn); k++) {
+    key = wn[k, 2]
+    alt = (substr(key, -3, .) == "_a1")
+    fk = substr(key, 1, strlen(key) - 3)
+    V = st_matrix("e(V_es_" + fk + ")")
+    if (rows(V) == 0) continue
+    vn = st_matrixcolstripe("e(V_es_" + fk + ")")
+    t = asarray_create()
+    for (j = 1; j <= rows(vn); j++) asarray(t, vn[j, 2], j)
+    np = 0
+    for (j = 1; j <= rows(on); j++) if (on[j, 1] == fk) np++
+    if (np == 0) continue
+    d = J(np, 1, .)
+    idx = J(np, 1, .)
+    nm = J(np, 1, "")
+    m = 0
+    for (j = 1; j <= rows(on); j++) {
+      if (on[j, 1] != fk) continue
+      m++
+      if (!asarray_contains(t, on[j, 2])) {
+        m = -1
+        break
+      }
+      idx[m] = asarray(t, on[j, 2])
+      nm[m] = on[j, 2]
+      d[m] = st_matrix("e(b_es_" + fk + ")")[1, idx[m]] - bo[1, j]
+    }
+    if (m < 0 | hasmissing(d)) continue
+    Vs = V[idx, idx]
+    rel = wooldid_bootadvrel(nm)
+    if (hasmissing(rel)) continue
+    q = .
+    W = wooldid_advW(d, Vs, rel, esrel, tt, alt, q)
+    if (W < .) Wacc[r, k] = W
+  }
+  st_matrix(accname, Wacc)
+  st_matrixcolstripe(accname, wn)
+}
+void wooldid_bootadvobs(string scalar fk, real scalar alt, string scalar aobsn,
+                        real scalar esrel, real scalar tt, string scalar outloc)
+{
+  real matrix V, Vs
+  real rowvector bo
+  real colvector b, rel, idx
+  string matrix on, vn
+  string colvector nm
+  string scalar vname
+  real scalar j, np, m, W, q
+  transmorphic t
+  st_local(outloc, ".")
+  vname = "e(V_es_analytic_" + fk + ")"
+  V = st_matrix(vname)
+  if (rows(V) == 0) {
+    vname = "e(V_es_" + fk + ")"
+    V = st_matrix(vname)
+  }
+  if (rows(V) == 0) return
+  vn = st_matrixcolstripe(vname)
+  t = asarray_create()
+  for (j = 1; j <= rows(vn); j++) asarray(t, vn[j, 2], j)
+  on = st_matrixcolstripe(aobsn)
+  bo = st_matrix(aobsn)
+  np = 0
+  for (j = 1; j <= rows(on); j++) if (on[j, 1] == fk) np++
+  if (np == 0) return
+  b = J(np, 1, .)
+  idx = J(np, 1, .)
+  nm = J(np, 1, "")
+  m = 0
+  for (j = 1; j <= rows(on); j++) {
+    if (on[j, 1] != fk) continue
+    m++
+    if (!asarray_contains(t, on[j, 2])) return
+    idx[m] = asarray(t, on[j, 2])
+    nm[m] = on[j, 2]
+    b[m] = bo[1, j]
+  }
+  Vs = V[idx, idx]
+  rel = wooldid_bootadvrel(nm)
+  if (hasmissing(rel)) return
+  q = .
+  W = wooldid_advW(b, Vs, rel, esrel, tt, alt, q)
+  if (W < .) st_local(outloc, strofreal(W, "%21x"))
+}
+
+// ---- bootstrapped JOINT statistics (task 5, author ruling 2026-09-03/04) ----
+// A joint test under boottstat is the bootstrap of its TEST STATISTIC: per replication
+// the recentred Wald W_r = (b_r - b_obs)' V_r^+ (b_r - b_obs) on the ES pre-horizon block,
+// using the replication's OWN e(V_es_*) (a genuine full covariance among horizons - the
+// posted e(V) is diagonal, but the F2 event-study capture is not), against
+// W_obs = b_obs' V_obs^+ b_obs from the observed ANALYTIC e(V_es_*). The add-one tail
+// (1 + #{W_r >= W_obs})/(n + 1) is the Monte-Carlo-null convention: unlike the percentile
+// p on raw coefficient draws, this IS a reference distribution simulated under the null.
+// The scale-free eigen guard is wooldid_bootjw's, verbatim in spirit: correlation-
+// normalise, reject on relative rank deficiency, undo the scaling on the inverse.
+
+// recentred per-replication statistic, called INSIDE the rep from wooldid_bootgrab where
+// the rep's e() is live. obsn: 1 x P row of observed pre-coefficients with colstripe
+// (fk, prename); accname: R x nkeys accumulator with colnames = fk. Name-anchored: a rep
+// missing any observed pre-name for a family is dropped for that family (stays missing).
+void wooldid_bootjwr(string scalar accname, real scalar r, string scalar obsn)
+{
+  real matrix Wacc, V, R, Si
+  real rowvector bo, ev, sc
+  real colvector d
+  string matrix wn, on, vn
+  string scalar fk
+  real scalar k, j, m, np, q, W
+  transmorphic t
+  Wacc = st_matrix(accname)
+  wn = st_matrixcolstripe(accname)
+  on = st_matrixcolstripe(obsn)
+  bo = st_matrix(obsn)
+  for (k = 1; k <= rows(wn); k++) {
+    fk = wn[k, 2]
+    V = st_matrix("e(V_es_" + fk + ")")
+    if (rows(V) == 0) continue
+    vn = st_matrixcolstripe("e(V_es_" + fk + ")")
+    t = asarray_create()
+    for (j = 1; j <= rows(vn); j++) asarray(t, vn[j, 2], j)
+    // the observed pre-names of this family, in observed order
+    np = 0
+    for (j = 1; j <= rows(on); j++) if (on[j, 1] == fk) np++
+    if (np == 0) continue
+    d = J(np, 1, .)
+    R = J(np, np, .)
+    m = 0
+    for (j = 1; j <= rows(on); j++) {
+      if (on[j, 1] != fk) continue
+      m++
+      if (!asarray_contains(t, on[j, 2])) {
+        m = -1
+        break
+      }
+      d[m] = st_matrix("e(b_es_" + fk + ")")[1, asarray(t, on[j, 2])] - bo[1, j]
+    }
+    if (m < 0 | hasmissing(d)) continue
+    // V_r on the same names, same order
+    q = 0
+    for (j = 1; j <= rows(on); j++) {
+      if (on[j, 1] != fk) continue
+      q++
+      R[q, .] = J(1, np, .)
+    }
+    // fill R by name lookups
+    {
+      real colvector idx
+      idx = J(np, 1, .)
+      q = 0
+      for (j = 1; j <= rows(on); j++) {
+        if (on[j, 1] != fk) continue
+        q++
+        idx[q] = asarray(t, on[j, 2])
+      }
+      R = V[idx, idx]
+    }
+    if (hasmissing(R)) continue
+    R = (R + R')/2
+    sc = sqrt(diagonal(R))'
+    if (min(sc) <= 0 | missing(sc)) continue
+    R = R :/ (sc' * sc)
+    ev = symeigenvalues(R)
+    if (min(ev) < -1e-8*max(abs(ev)) | max(ev) <= 0 | min(ev) < 1e-8*max(ev)) continue
+    Si = invsym(R) :/ (sc' * sc)
+    W = d' * Si * d
+    if (W < 0 | W >= .) continue
+    Wacc[r, k] = W
+  }
+  st_matrix(accname, Wacc)
+  st_matrixcolstripe(accname, wn)
+}
+
+// observed comparator for one family: W_obs = b' V^+ b on the pre block, from the OBSERVED
+// analytic covariance (V_es_analytic_<fk> when bootwire replaced the live one, else V_es_<fk>).
+// Returns W_obs in the local, "." when the guard rejects.
+void wooldid_bootjwobs(string scalar fk, string scalar obsn, string scalar outloc)
+{
+  real matrix V, R, Si
+  real rowvector bo, ev, sc
+  real colvector b, idx
+  string matrix on, vn
+  string scalar vname
+  real scalar j, np, q, W
+  transmorphic t
+  st_local(outloc, ".")
+  vname = "e(V_es_analytic_" + fk + ")"
+  V = st_matrix(vname)
+  if (rows(V) == 0) {
+    vname = "e(V_es_" + fk + ")"
+    V = st_matrix(vname)
+  }
+  if (rows(V) == 0) return
+  vn = st_matrixcolstripe(vname)
+  t = asarray_create()
+  for (j = 1; j <= rows(vn); j++) asarray(t, vn[j, 2], j)
+  on = st_matrixcolstripe(obsn)
+  bo = st_matrix(obsn)
+  np = 0
+  for (j = 1; j <= rows(on); j++) if (on[j, 1] == fk) np++
+  if (np == 0) return
+  b = J(np, 1, .)
+  idx = J(np, 1, .)
+  q = 0
+  for (j = 1; j <= rows(on); j++) {
+    if (on[j, 1] != fk) continue
+    q++
+    if (!asarray_contains(t, on[j, 2])) return
+    idx[q] = asarray(t, on[j, 2])
+    b[q] = bo[1, j]
+  }
+  R = V[idx, idx]
+  if (hasmissing(R) | hasmissing(b)) return
+  R = (R + R')/2
+  sc = sqrt(diagonal(R))'
+  if (min(sc) <= 0 | missing(sc)) return
+  R = R :/ (sc' * sc)
+  ev = symeigenvalues(R)
+  if (min(ev) < -1e-8*max(abs(ev)) | max(ev) <= 0 | min(ev) < 1e-8*max(ev)) return
+  Si = invsym(R) :/ (sc' * sc)
+  W = b' * Si * b
+  if (W < 0 | W >= .) return
+  st_local(outloc, strofreal(W, "%21x"))
+}
+
+// across-subgroup equality under boottstat, by POLARISATION. For the m subgroup LEVEL
+// columns of one estimand (cols) the per-replication covariance among them is rebuilt from
+// what the replication actually produced: variances from its level standard errors
+// (seacc, the e(V) diagonal) and off-diagonals from its pairwise standard errors
+// (pwseacc, margins' pairwise se) via Cab = (Va + Vb - Var(a-b))/2 - exact when all three
+// come off one margins pass, which they do (verified 2026-09-03 on an asymmetric fixture:
+// three different triples gave one identical covariance and a PSD matrix). W_r is the
+// chain-contrast Wald of (b_r - b_obs); W_obs the same from the OBSERVED analytic level se
+// (aseobs) and observed pairwise se (pwobs). pairidx: m x m matrix of pwseacc/pwobs column
+// indices for the (a,b) pair (0 on the diagonal); symmetric.
+void wooldid_bootsgw(string scalar accname, string scalar seaccname, string scalar pwseaccname,
+                     string scalar obsbname, string scalar aseobsname, string scalar pwobsname,
+                     string scalar colslist, string scalar pairname, string scalar outloc,
+                     string scalar nloc)
+{
+  real matrix A, S, P, Sr, Cm, R, Si, pairidx
+  real rowvector idx, ob, ase, pwo, sc, ev
+  real colvector d, Wr, b, sr
+  real scalar m, r, a, bb, j, W, Wobs, n, nex, ok
+  st_local(outloc, ".")
+  st_local(nloc, "0")
+  idx = strtoreal(tokens(colslist))
+  m = cols(idx)
+  if (m < 2) return
+  A = st_matrix(accname)[., idx']
+  S = st_matrix(seaccname)[., idx']
+  P = st_matrix(pwseaccname)
+  ob = st_matrix(obsbname)[1, idx']
+  ase = st_matrix(aseobsname)[1, idx']
+  pwo = st_matrix(pwobsname)
+  pairidx = st_matrix(pairname)
+  Cm = J(m-1, m, 0)
+  for (j = 1; j <= m-1; j++) {
+    Cm[j, j] = 1
+    Cm[j, j+1] = -1
+  }
+  // W_obs
+  Sr = J(m, m, .)
+  for (a = 1; a <= m; a++) {
+    Sr[a, a] = ase[a]^2
+    for (bb = a+1; bb <= m; bb++) {
+      j = pairidx[a, bb]
+      if (j < 1 | j >= .) return
+      Sr[a, bb] = (ase[a]^2 + ase[bb]^2 - pwo[1, j]^2)/2
+      Sr[bb, a] = Sr[a, bb]
+    }
+  }
+  if (hasmissing(Sr) | hasmissing(ob) | hasmissing(ase)) return
+  R = Cm * Sr * Cm'
+  R = (R + R')/2
+  sc = sqrt(diagonal(R))'
+  if (min(sc) <= 0 | missing(sc)) return
+  R = R :/ (sc' * sc)
+  ev = symeigenvalues(R)
+  if (min(ev) < -1e-8*max(abs(ev)) | max(ev) <= 0 | min(ev) < 1e-8*max(ev)) return
+  Si = invsym(R) :/ (sc' * sc)
+  d = Cm * ob'
+  Wobs = d' * Si * d
+  if (Wobs < 0 | Wobs >= .) return
+  // W_r per replication
+  Wr = J(0, 1, .)
+  for (r = 1; r <= rows(A); r++) {
+    b = A[r, .]'
+    sr = S[r, .]'
+    if (hasmissing(b) | hasmissing(sr)) continue
+    if (min(sr) <= 0) continue
+    ok = 1
+    Sr = J(m, m, .)
+    for (a = 1; a <= m; a++) {
+      Sr[a, a] = sr[a]^2
+      for (bb = a+1; bb <= m; bb++) {
+        j = pairidx[a, bb]
+        if (P[r, j] >= . | P[r, j] <= 0) {
+          ok = 0
+          break
+        }
+        Sr[a, bb] = (sr[a]^2 + sr[bb]^2 - P[r, j]^2)/2
+        Sr[bb, a] = Sr[a, bb]
+      }
+      if (!ok) break
+    }
+    if (!ok) continue
+    R = Cm * Sr * Cm'
+    R = (R + R')/2
+    sc = sqrt(diagonal(R))'
+    if (min(sc) <= 0 | missing(sc)) continue
+    R = R :/ (sc' * sc)
+    ev = symeigenvalues(R)
+    if (min(ev) < -1e-8*max(abs(ev)) | max(ev) <= 0 | min(ev) < 1e-8*max(ev)) continue
+    Si = invsym(R) :/ (sc' * sc)
+    d = Cm * (b - ob')
+    W = d' * Si * d
+    if (W < 0 | W >= .) continue
+    Wr = Wr \ W
+  }
+  n = rows(Wr)
+  st_local(nloc, strofreal(n))
+  if (n < 2) return
+  nex = sum(Wr :>= Wobs)
+  st_local(outloc, strofreal((1 + nex)/(n + 1), "%21x"))
+}
+
+// studentized inference for ONE pairwise contrast: the contrast draws d_r = b_r[ka] -
+// b_r[kb] over the replication's own contrast se (harvested from its e(pwsgs) column 2),
+// referred against t_obs = d_obs/se_obs with the OBSERVED analytic pairwise se. Same
+// construction as wooldid_boottp - equal-tailed signed quantiles, rank p with no add-one,
+// wooldid_bootci's order-statistic rule, and a BC-t twin - so a contrast row and a
+// coefficient row are studentized by one rule. Output: a 10 x 1 column with the same row
+// layout as wooldid_boottp (n, t_obs, p_pct, qlo_pct, qhi_pct, z0, p_bc, qlo_bc, qhi_bc, live)
+void wooldid_bootpwt(string scalar accname, real scalar ka, real scalar kb, string scalar pwseaccname,
+                     real scalar jcol, real scalar dobs, real scalar seobs, real scalar lvl,
+                     real scalar ties, string scalar outname)
+{
+  real matrix A, P
+  real colvector ok, d, se, tr, v
+  real scalar n, al, x, m0, m1, z0, pl, pu, kk2, r0, qbc, to, sd
+  real colvector out
+  out = J(10, 1, .)
+  out[10] = 0
+  st_matrix(outname, out)
+  if (seobs >= . | seobs <= 0 | dobs >= .) return
+  A = st_matrix(accname)[., (ka, kb)]
+  P = st_matrix(pwseaccname)[., jcol]
+  ok = (rowmissing(A) :== 0) :& (P :< .) :& (P :> 0)
+  if (sum(ok) < 2) return
+  d = select(A[., 1] :- A[., 2], ok)
+  se = select(P, ok)
+  tr = (d :- dobs) :/ se
+  v = sort(tr, 1)
+  n = rows(v)
+  out[1] = n
+  sd = sqrt(variance(v))
+  if (sd <= 0 | sd >= .) {
+    st_matrix(outname, out)
+    return
+  }
+  to = dobs / seobs
+  out[2] = to
+  al = (100 - lvl)/200
+  x = n*al
+  if (x == floor(x) & x >= 1) out[4] = (v[x] + v[min((x+1, n))])/2
+  else out[4] = v[max((min((ceil(x), n)), 1))]
+  x = n*(1-al)
+  if (x == floor(x) & x >= 1) out[5] = (v[x] + v[min((x+1, n))])/2
+  else out[5] = v[max((min((ceil(x), n)), 1))]
+  m0 = sum(v :<= to)
+  m1 = sum(v :>= to)
+  out[3] = min((1, (2*min((m0, m1)))/n))
+  out[10] = 1
+  if (ties) z0 = invnormal((sum(v :< 0) + 0.5*sum(v :== 0))/n)
+  else z0 = invnormal(sum(v :<= 0)/n)
+  if (z0 < .) {
+    out[6] = z0
+    pl = normal(2*z0 + invnormal(al))
+    pu = normal(2*z0 + invnormal(1-al))
+    kk2 = max((min((ceil(n*pl), n)), 1))
+    out[8] = v[kk2]
+    kk2 = max((min((ceil(n*pu), n)), 1))
+    out[9] = v[kk2]
+    r0 = m0/n
+    if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
+    else qbc = normal(invnormal(r0) - 2*z0)
+    out[7] = min((1, 2*min((qbc, 1-qbc))))
+  }
+  st_matrix(outname, out)
+}
+
+void wooldid_bootpp(string scalar accname, real scalar ka, real scalar kb, real scalar lvl,
+                    string scalar compname, real scalar ties,
+                    string scalar lbn, string scalar ubn, string scalar pn, string scalar cnt,
+                    string scalar blbn, string scalar bubn, string scalar bpn, string scalar z0n)
+{
+  real matrix A, cmp
+  real colvector ok, d, v
+  real scalar n, al, x, m0, m1, se, dcmp, z0, pl, pu, r0, qbc, kk2
+  st_local(lbn, ".")
+  st_local(ubn, ".")
+  st_local(pn, ".")
+  st_local(cnt, "0")
+  st_local(blbn, ".")
+  st_local(bubn, ".")
+  st_local(bpn, ".")
+  st_local(z0n, ".")
+  A = st_matrix(accname)[., (ka, kb)]
+  ok = rowmissing(A) :== 0
+  if (sum(ok) < 2) return
+  A = select(A, ok)
+  d = A[., 1] :- A[., 2]
+  v = sort(d, 1)
+  n = rows(v)
+  st_local(cnt, strofreal(n))
+  se = sqrt(variance(v))
+  if (se <= 0 | se >= .) return
+  al = (100 - lvl)/200
+  x = n*al
+  if (x == floor(x) & x >= 1) st_local(lbn, strofreal((v[x] + v[min((x+1, n))])/2, "%21x"))
+  else st_local(lbn, strofreal(v[max((min((ceil(x), n)), 1))], "%21x"))
+  x = n*(1-al)
+  if (x == floor(x) & x >= 1) st_local(ubn, strofreal((v[x] + v[min((x+1, n))])/2, "%21x"))
+  else st_local(ubn, strofreal(v[max((min((ceil(x), n)), 1))], "%21x"))
+  m0 = sum(v :<= 0)
+  m1 = sum(v :>= 0)
+  st_local(pn, strofreal(min((1, (2*min((m0, m1)))/n)), "%21x"))
+  // the bias-corrected twin for this contrast. z0 is computed exactly as wooldid_bootci
+  // computes it for a coefficient column - the share of contrast draws at or below the
+  // REP-0 comparator's contrast, pushed through invnormal, with the same `ties'
+  // half-weighting option - so a contrast row and a coefficient row are bias-corrected by
+  // the same rule rather than by two rules that merely resemble each other
+  cmp = st_matrix(compname)
+  dcmp = cmp[1, ka] - cmp[1, kb]
+  if (dcmp >= .) return
+  if (ties) z0 = invnormal((sum(v :< dcmp) + 0.5*sum(v :== dcmp))/n)
+  else z0 = invnormal(sum(v :<= dcmp)/n)
+  // guard exactly as wooldid_bootci does: invnormal() of 0 or 1 returns MISSING in Stata,
+  // so a single missing test covers both degenerate tails. (An earlier version wrote
+  // `z0 <= -.' intending "minus infinity"; in Mata `-.' is missing and `x <= .' is true
+  // for every real x, so that guard rejected every column and the BC contrast family came
+  // out uniformly blank.)
+  if (z0 >= .) return
+  st_local(z0n, strofreal(z0, "%21x"))
+  pl = normal(2*z0 + invnormal(al))
+  pu = normal(2*z0 + invnormal(1-al))
+  kk2 = max((min((ceil(n*pl), n)), 1))
+  st_local(blbn, strofreal(v[kk2], "%21x"))
+  kk2 = max((min((ceil(n*pu), n)), 1))
+  st_local(bubn, strofreal(v[kk2], "%21x"))
+  r0 = m0/n
+  if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
+  else qbc = normal(invnormal(r0) - 2*z0)
+  st_local(bpn, strofreal(min((1, 2*min((qbc, 1-qbc)))), "%21x"))
+}
+
 void wooldid_bootpw(string scalar accname, real scalar ka, real scalar kb)
 {
   real matrix A, dev, S
@@ -8848,12 +12049,12 @@ void wooldid_bootpw(string scalar accname, real scalar ka, real scalar kb)
 // endpoints v[ceil(n*p_adj)] - the bstat rule, pinned exact) with z0 computed
 // against the REP-0 comparator; ties adjusts z0 by half-weighting exact ties.
 // Columns with fewer than 2 available reps or zero dispersion post missing.
-void wooldid_bootci(string scalar accname, string scalar obsbname, string scalar compname, real scalar lvl, real scalar ties, string scalar cinname, string scalar cipname, string scalar cibname, string scalar z0name, real scalar dfden)
+void wooldid_bootci(string scalar accname, string scalar obsbname, string scalar compname, real scalar lvl, real scalar ties, string scalar cinname, string scalar cipname, string scalar cibname, string scalar cippname, string scalar cbpname, string scalar z0name, real scalar dfden)
 {
-  real matrix A, cin, cip, cib
+  real matrix A, cin, cip, cib, cipp, cbp
   real rowvector obs, cmp, z0v
   real colvector v, use
-  real scalar K, kcol, al, zc, nn, se, z0, x, lo, fr, kk2, pl, pu
+  real scalar K, kcol, al, zc, nn, se, z0, x, lo, fr, kk2, pl, pu, m0, m1, r0, qbc
   A = st_matrix(accname)
   obs = st_matrix(obsbname)
   cmp = st_matrix(compname)
@@ -8863,6 +12064,8 @@ void wooldid_bootci(string scalar accname, string scalar obsbname, string scalar
   cin = J(2, K, .)
   cip = J(2, K, .)
   cib = J(2, K, .)
+  cipp = J(1, K, .)
+  cbp = J(1, K, .)
   z0v = J(1, K, .)
   for (kcol = 1; kcol <= K; kcol++) {
     use = selectindex(A[., kcol] :< .)
@@ -8882,6 +12085,37 @@ void wooldid_bootci(string scalar accname, string scalar obsbname, string scalar
     x = nn*(1-al)
     if (x == floor(x) & x >= 1) cip[2, kcol] = (v[x] + v[min((x+1, nn))])/2
     else cip[2, kcol] = v[max((min((ceil(x), nn)), 1))]
+    // equal-tailed percentile p at the null theta = 0: the exact inversion of the
+    // percentile interval built directly above, and the reason it is computed HERE
+    // rather than alongside it - same selection, same nn, same guards, so the two
+    // cannot drift apart. WEAK inequalities on both counts, which is what makes
+    // "v[j] > 0 <=> j > m0" hold and with it the count-to-order-statistic duality;
+    // a draw sitting exactly at the null therefore counts against neither side.
+    // NO add-one, on the STATISTICAL argument only: the permutation engine's
+    // (1+#)/(n+1) is the Monte-Carlo-null convention, where the observed statistic
+    // legitimately joins a reference set drawn UNDER the null. These draws are
+    // resampled under the SAMPLE, so there is no such set for it to join.
+    //
+    // Duality is near-exact but NOT exact, and it is worth being precise about why.
+    // The interval rule directly above averages two adjacent order statistics when
+    // nn*al is an integer, and no count-based p can be exactly dual to an averaged
+    // endpoint, so a boundary disagreement is possible under any convention.
+    // Measured 2026-09-03 over 35,646 constructed cases (levels 90/95/99 x nn in
+    // {39,40,99,100} x the full enumeration of M draws at -1, Z draws exactly at the
+    // null and the rest at +1, which puts the averaged endpoint on the null on
+    // purpose): 6 disagreements with the convention below, against 36 for the
+    // standard two-sided add-one 2*(1+min(m0,m1))/(nn+1). The weak inequalities are
+    // what earn that margin - they are the reason a draw exactly at the null counts
+    // against neither side, which is where add-one does its damage.
+    //
+    // Consequence to document: p can print as exactly 0, meaning no completed
+    // replication fell on the far side of the null; the resolution is 2/nn. The p is
+    // LEVEL-INDEPENDENT, so it is not recomputed when level() moves. It reads the
+    // raw draws, so neither the rep-0 comparator nor ties() touches it; both of
+    // those feed only the bias-corrected z0 below.
+    m0 = sum(v :<= 0)
+    m1 = sum(v :>= 0)
+    cipp[1, kcol] = min((1, (2*min((m0, m1)))/nn))
     if (ties) z0 = invnormal((sum(v :< cmp[kcol]) + 0.5*sum(v :== cmp[kcol]))/nn)
     else z0 = invnormal(sum(v :<= cmp[kcol])/nn)
     if (z0 >= .) continue
@@ -8892,12 +12126,457 @@ void wooldid_bootci(string scalar accname, string scalar obsbname, string scalar
     cib[1, kcol] = v[kk2]
     kk2 = max((min((ceil(nn*pu), nn)), 1))
     cib[2, kcol] = v[kk2]
+    // the BC p-value: the dual of the interval just built, obtained by solving for the
+    // level at which a BC endpoint lands exactly on the null. The endpoint at one-sided
+    // level q is v[ceil(nn*normal(2*z0 + invnormal(q)))], so it reaches 0 when
+    // normal(2*z0 + invnormal(q)) equals r0, the rank of 0 among the draws - giving
+    // q = normal(invnormal(r0) - 2*z0) and the two-sided p = 2*min(q, 1-q). With z0 = 0
+    // this collapses to the plain percentile p, which is the right degenerate behaviour.
+    // r0 uses the same weak inequality the percentile p uses, so a draw exactly at the
+    // null counts the same way in both. r0 at 0 or 1 sends invnormal to -/+ infinity and
+    // the p to 0, matching the percentile p's floor rather than inventing a different one
+    r0 = sum(v :<= 0)/nn
+    if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
+    else qbc = normal(invnormal(r0) - 2*z0)
+    cbp[1, kcol] = min((1, 2*min((qbc, 1-qbc))))
   }
   st_matrix(cinname, cin)
   st_matrix(cipname, cip)
   st_matrix(cibname, cib)
+  st_matrix(cippname, cipp)
+  st_matrix(cbpname, cbp)
   st_matrix(z0name, z0v)
 }
 
-end
 
+// ============================================================================
+// Permutation-inference kernels (chunk 1, 2026-09-05). Every quantity here treats the
+// replication draws as NULL draws: nothing is recentred by the observed value, and the
+// observed statistic is ranked among them. Conventions (author rulings 2026-09-05):
+//  - tail p: EQUAL-TAILED, p = min(1, 2*min(P_lo, P_hi)), P_lo = (1 + #{s_r <= s_obs})
+//    /(n + 1), P_hi = (1 + #{s_r >= s_obs})/(n + 1) for sampled draws (the add-one
+//    Monte-Carlo-null convention the engine has always used); plain shares #{.}/n when
+//    the element is present in every one of the M enumerated assignments (the observed
+//    assignment is then a member of its own reference set). One convention for every
+//    surface, including the legacy e(perm_p_<est>) scalars (formerly |s|-based).
+//  - interval: the SHIFT interval [b - q_hi, b - q_lo], q the equal-tailed quantiles
+//    of the null draws by wooldid_bootci's order-statistic rule, on the statistic's
+//    scale (times se_obs when the statistic is a t-ratio). It inverts the equal-tailed
+//    test under the fixed-zero-null pivotality approximation (Conley-Taber) - it is NOT a
+//    sharp-null randomization-test inversion, which would re-permute adjusted outcomes
+//    at every candidate value; the footer and the help carry that hedge.
+//  - quadratic-form statistics (joint pre-trend, across-subgroup equality, adversarial)
+//    are one-sided upper-tail on a FIXED metric: the permutation covariance of the
+//    draws (replications plus the observed comparator row, listwise complete), so W_obs
+//    and every W_r are exchangeable under the null. No per-replication covariance is
+//    consumed, so the tests exist in both the coefficient and the t-ratio modes.
+// Row layout of the 13-row per-element kernel: 1 n, 2 s_obs, 3 p, 4 qlo, 5 qhi, 6 sd,
+// 7 lb, 8 ub, 9 se_shift, 10 (unused, .), 11 band5, 12 band95, 13 live
+real scalar wooldid_permq(real colvector v, real scalar pr)
+{
+  real scalar n, x
+  n = rows(v)
+  x = n*pr
+  if (x == floor(x) & x >= 1) return((v[x] + v[min((x+1, n))])/2)
+  return(v[max((min((ceil(x), n)), 1))])
+}
+
+real rowvector wooldid_permtail(real colvector draws, real scalar sobs, real scalar exact,
+                                real scalar al, real scalar zc)
+{
+  real colvector v
+  real scalar n, qlo, qhi, m0, m1, plo, phi
+  real rowvector out
+  out = J(1, 13, .)
+  out[13] = 0
+  v = select(draws, draws :< .)
+  n = rows(v)
+  out[1] = n
+  if (n < 2 | sobs >= .) return(out)
+  v = sort(v, 1)
+  out[2] = sobs
+  out[6] = (exact ? sqrt(variance(v)*(n-1)/n) : sqrt(variance(v)))
+  qlo = wooldid_permq(v, al)
+  qhi = wooldid_permq(v, 1 - al)
+  out[4] = qlo
+  out[5] = qhi
+  m0 = sum(v :<= sobs)
+  m1 = sum(v :>= sobs)
+  if (exact) {
+    plo = m0/n
+    phi = m1/n
+  }
+  else {
+    plo = (1 + m0)/(n + 1)
+    phi = (1 + m1)/(n + 1)
+  }
+  out[3] = min((1, 2*min((plo, phi))))
+  // the shift interval takes the estimate's sampling error to have the NULL permutation
+  // distribution, which presumes that distribution is centred at zero. When its central
+  // band excludes 0 the presumption fails (a quantity that is non-zero under reassigned
+  // onsets - e.g. an ame row carrying a baseline dose slope - or a probabilities design
+  // far from the observed assignment) and the interval would not even contain the
+  // estimate: it is left blank and flagged (row 10); the rank p-value stands
+  if (qlo > 0 | qhi < 0) out[10] = 1
+  else {
+    out[7] = sobs - qhi
+    out[8] = sobs - qlo
+    if (zc < . & zc > 0) out[9] = (qhi - qlo)/(2*zc)
+  }
+  out[11] = wooldid_permq(v, 0.05)
+  out[12] = wooldid_permq(v, 0.95)
+  out[13] = 1
+  return(out)
+}
+
+// per-column kernel over the accumulator. Non-studentized: s_r = b_r, s_obs = the rep-0
+// comparator's b (the engine's observed-is-a-member convention; under the fast-mode
+// default it equals the displayed estimate bitwise). Studentized (seaccname != ""):
+// s_r = b_r/se_r, s_obs = b_cmp/se_cmp from the comparator run's own e(b)/e(V). The
+// interval is always placed about the DISPLAYED estimate ob. M is the number of
+// enumerated assignments (. when sampled): an element gets plain shares only when its
+// n equals M
+void wooldid_permstat(string scalar accname, string scalar seaccname, string scalar obsbname,
+                      string scalar cmpname, string scalar cmpsename, string scalar exclname,
+                      real scalar lvl, real scalar M, string scalar outname)
+{
+  real matrix A, S, out
+  real rowvector ob, cm, cs, ex, row
+  real colvector s
+  real scalar K, k, r, al, zc, sobs, ts, exk
+  string scalar lowav, incom
+  A = st_matrix(accname)
+  ob = st_matrix(obsbname)
+  cm = st_matrix(cmpname)
+  ex = st_matrix(exclname)
+  ts = (seaccname != "")
+  if (ts) {
+    S = st_matrix(seaccname)
+    cs = st_matrix(cmpsename)
+  }
+  K = cols(A)
+  al = (100 - lvl)/200
+  zc = invnormal(1 - al)
+  out = J(13, K, .)
+  out[13, .] = J(1, K, 0)
+  lowav = ""
+  incom = ""
+  for (k = 1; k <= K; k++) {
+    if (ex[1, k] != 0) continue
+    if (!ts) {
+      s = A[., k]
+      sobs = cm[1, k]
+    }
+    else {
+      s = J(rows(A), 1, .)
+      for (r = 1; r <= rows(A); r++) {
+        if (A[r, k] < . & S[r, k] < . & S[r, k] > 0) s[r] = A[r, k]/S[r, k]
+      }
+      if (cs[1, k] >= . | cs[1, k] <= 0 | cm[1, k] >= .) sobs = .
+      else sobs = cm[1, k]/cs[1, k]
+    }
+    exk = (M < . & sum(s :< .) == M)
+    if (M < . & sum(s :< .) != M) incom = incom + " " + st_matrixcolstripe(accname)[k, 2]
+    row = wooldid_permtail(s, sobs, exk, al, zc)
+    if (row[13] == 1 & row[10] != 1) {
+      if (!ts) {
+        row[7] = ob[1, k] - row[5]
+        row[8] = ob[1, k] - row[4]
+      }
+      else {
+        row[7] = ob[1, k] - row[5]*cs[1, k]
+        row[8] = ob[1, k] - row[4]*cs[1, k]
+        row[9] = row[9]*cs[1, k]
+      }
+    }
+    out[., k] = row'
+  }
+  st_matrix(outname, out)
+  st_local("wdp_incomplete", strtrim(incom))
+}
+
+// contrast kernel: d_r = b_r[ka] - b_r[kb] over listwise-complete rows, ranked against
+// the comparator's difference; the interval about the displayed difference dobs
+void wooldid_permpw(string scalar accname, string scalar cmpname, real scalar ka, real scalar kb,
+                    real scalar dobs, real scalar lvl, real scalar M, string scalar outname)
+{
+  real matrix A
+  real rowvector cm, row
+  real colvector ok, d
+  real scalar al, zc, sobs, exk
+  A = st_matrix(accname)[., (ka, kb)]
+  cm = st_matrix(cmpname)
+  ok = rowmissing(A) :== 0
+  d = select(A[., 1] :- A[., 2], ok)
+  sobs = cm[1, ka] - cm[1, kb]
+  al = (100 - lvl)/200
+  zc = invnormal(1 - al)
+  exk = (M < . & rows(d) == M)
+  row = wooldid_permtail(d, sobs, exk, al, zc)
+  if (row[13] == 1 & row[10] != 1 & dobs < .) {
+    row[7] = dobs - row[5]
+    row[8] = dobs - row[4]
+  }
+  else {
+    row[7] = .
+    row[8] = .
+    row[9] = .
+  }
+  st_matrix(outname, row')
+}
+
+// fixed-metric quadratic form. cols: the accumulator columns of the statistic's
+// coefficients; C: the constraint matrix (q x m; identity for a joint zero test, the
+// chain contrast for an equality test). Sigma is the covariance of the listwise-complete
+// replication rows PLUS the comparator row over those columns; the metric is
+// correlation-normalised with wooldid_bootjw's relative-rank guard, and a rejected metric
+// posts p = . (never a residual-rank p). W_r = (C a_r)' (C Sigma C')^-1 (C a_r), W_obs the
+// same on the comparator; p is the upper tail, add-one unless every M assignments
+// contributed. Outputs: locals p, n, wobs; matrix outW = the W_r column (missing rows kept)
+void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar colslist,
+                    string scalar Cname, real scalar M, string scalar outp, string scalar outn,
+                    string scalar outwobs, string scalar outW)
+{
+  real matrix A, CC, Cm, R, Si, dev
+  real rowvector idx, cm, sc, ev
+  real colvector ok, Wr, d
+  real scalar n, r, Wobs, nex, exk
+  st_local(outp, ".")
+  st_local(outn, "0")
+  st_local(outwobs, ".")
+  idx = strtoreal(tokens(colslist))
+  A = st_matrix(accname)[., idx']
+  cm = st_matrix(cmpname)[1, idx']
+  Cm = st_matrix(Cname)
+  Wr = J(rows(A), 1, .)
+  st_matrix(outW, Wr)
+  if (hasmissing(cm)) return
+  ok = rowmissing(A) :== 0
+  n = sum(ok)
+  st_local(outn, strofreal(n))
+  if (n < 2) return
+  CC = select(A, ok) \ cm
+  dev = CC :- mean(CC)
+  R = Cm * ((dev' * dev) / (rows(CC) - 1)) * Cm'
+  R = (R + R')/2
+  sc = sqrt(diagonal(R))'
+  if (min(sc) <= 0 | missing(sc)) return
+  R = R :/ (sc' * sc)
+  ev = symeigenvalues(R)
+  if (min(ev) < -1e-8*max(abs(ev)) | max(ev) <= 0 | min(ev) < 1e-8*max(ev)) return
+  Si = invsym(R) :/ (sc' * sc)
+  d = Cm * cm'
+  Wobs = d' * Si * d
+  if (Wobs < 0 | Wobs >= .) return
+  for (r = 1; r <= rows(A); r++) {
+    if (!ok[r]) continue
+    d = Cm * A[r, .]'
+    Wr[r] = d' * Si * d
+  }
+  st_matrix(outW, Wr)
+  exk = (M < . & n == M)
+  nex = sum(select(Wr, Wr :< .) :>= Wobs)
+  st_local(outwobs, strofreal(Wobs, "%21x"))
+  if (exk) st_local(outp, strofreal(nex/n, "%21x"))
+  else st_local(outp, strofreal((1 + nex)/(n + 1), "%21x"))
+}
+
+// adversarial line statistic on the fixed metric: wooldid_advW(b, Sigma, rel, ...) per
+// replication and on the comparator, Sigma the permutation covariance of the family's
+// horizon columns (replications plus comparator, listwise). rel: the relative-year list
+// aligned with cols. One-sided upper tail, same accounting as wooldid_permqf
+void wooldid_permadv(string scalar accname, string scalar cmpname, string scalar colslist,
+                     string scalar rellist, real scalar esrel, real scalar tt, real scalar alt,
+                     real scalar M, string scalar outp, string scalar outn, string scalar outwobs,
+                     string scalar outW)
+{
+  real matrix A, CC, V, dev
+  real rowvector idx, cm
+  real colvector ok, Wr, rel
+  real scalar n, r, Wobs, nex, exk, q
+  st_local(outp, ".")
+  st_local(outn, "0")
+  st_local(outwobs, ".")
+  idx = strtoreal(tokens(colslist))
+  rel = strtoreal(tokens(rellist))'
+  A = st_matrix(accname)[., idx']
+  cm = st_matrix(cmpname)[1, idx']
+  Wr = J(rows(A), 1, .)
+  st_matrix(outW, Wr)
+  if (hasmissing(cm) | hasmissing(rel)) return
+  ok = rowmissing(A) :== 0
+  n = sum(ok)
+  st_local(outn, strofreal(n))
+  if (n < 2) return
+  CC = select(A, ok) \ cm
+  dev = CC :- mean(CC)
+  V = (dev' * dev) / (rows(CC) - 1)
+  q = .
+  Wobs = wooldid_advW(cm', V, rel, esrel, tt, alt, q)
+  if (Wobs >= .) return
+  for (r = 1; r <= rows(A); r++) {
+    if (!ok[r]) continue
+    q = .
+    Wr[r] = wooldid_advW(A[r, .]', V, rel, esrel, tt, alt, q)
+  }
+  st_matrix(outW, Wr)
+  ok = Wr :< .
+  n = sum(ok)
+  st_local(outn, strofreal(n))
+  if (n < 2) return
+  exk = (M < . & n == M)
+  nex = sum(select(Wr, ok) :>= Wobs)
+  st_local(outwobs, strofreal(Wobs, "%21x"))
+  if (exk) st_local(outp, strofreal(nex/n, "%21x"))
+  else st_local(outp, strofreal((1 + nex)/(n + 1), "%21x"))
+}
+
+// cell tables (the e(cfx*) matrices): per row, the cell's draws ranked against the
+// comparator cell (cmp: the rep-0 harvest, 1 row, same keys), the interval about the
+// displayed cell estimate; studentized under permtstat by the replication and comparator
+// cell standard errors. Column secol is left as the worker posted it (analytic or blank),
+// pcol/lbcol/ubcol are rewritten. Rows with no usable draws are blanked
+void wooldid_permcellwire(string scalar mname, string scalar accname, string scalar cmpname,
+                          string scalar seaccname, string scalar cmpsename, real scalar obscol,
+                          real scalar secol, real scalar pcol, real scalar lbcol, real scalar ubcol,
+                          real scalar lvl, real scalar M)
+{
+  real matrix Mx, A, S, C, CS
+  string colvector mk
+  string matrix cs
+  real colvector s
+  real rowvector row
+  real scalar i, k, r, al, zc, b, sobs, ts, exk, so
+  transmorphic t
+  Mx = st_matrix(mname)
+  A = st_matrix(accname)
+  C = st_matrix(cmpname)
+  cs = st_matrixcolstripe(accname)
+  ts = (seaccname != "")
+  if (ts) {
+    S = st_matrix(seaccname)
+    CS = st_matrix(cmpsename)
+  }
+  t = asarray_create()
+  for (k = 1; k <= rows(cs); k++) asarray(t, cs[k, 2], k)
+  mk = wooldid_bootcellkey(mname, 0)
+  al = (100 - lvl)/200
+  zc = invnormal(1 - al)
+  for (i = 1; i <= rows(Mx); i++) {
+    Mx[i, pcol] = .
+    Mx[i, lbcol] = .
+    Mx[i, ubcol] = .
+    if (!asarray_contains(t, mk[i])) continue
+    k = asarray(t, mk[i])
+    b = Mx[i, obscol]
+    if (b >= .) continue
+    if (!ts) {
+      s = A[., k]
+      sobs = C[1, k]
+      so = 1
+    }
+    else {
+      s = J(rows(A), 1, .)
+      for (r = 1; r <= rows(A); r++) {
+        if (A[r, k] < . & S[r, k] < . & S[r, k] > 0) s[r] = A[r, k]/S[r, k]
+      }
+      so = CS[1, k]
+      if (so >= . | so <= 0 | C[1, k] >= .) continue
+      sobs = C[1, k]/so
+    }
+    exk = (M < . & sum(s :< .) == M)
+    row = wooldid_permtail(s, sobs, exk, al, zc)
+    if (row[13] != 1) continue
+    Mx[i, pcol] = row[3]
+    if (row[10] == 1) continue
+    Mx[i, lbcol] = b - row[5]*so
+    Mx[i, ubcol] = b - row[4]*so
+  }
+  st_matrix(mname, Mx)
+}
+
+// permsave(): after wooldid_bootsavemk has laid out _rep and the coefficient (and se_*)
+// columns, append the assignment block - one column per cluster, holding the onset that
+// cluster carried in each replication (row 1: the observed onset)
+void wooldid_permsaveasg(string scalar assignname, string scalar clusvals, string scalar obsons)
+{
+  real matrix Asg
+  real rowvector cv, oo
+  real scalar c, idx
+  string scalar nm
+  Asg = st_matrix(assignname)
+  cv = strtoreal(tokens(clusvals))
+  oo = strtoreal(tokens(obsons))
+  if (cols(cv) != rows(Asg) | cols(oo) != rows(Asg)) return
+  for (c = 1; c <= rows(Asg); c++) {
+    nm = strtoname("onset_" + strofreal(cv[c], "%20.0g"))
+    if (_st_varindex(nm) < .) continue
+    idx = st_addvar("double", nm)
+    st_store(., idx, oo[c] \ Asg[c, .]')
+  }
+}
+
+
+// the comparator run's own standard errors by column (the e(V) diagonal; sentinel and
+// non-positive entries stay missing, as in wooldid_bootgrab)
+void wooldid_permcse(string scalar outname, real scalar K)
+{
+  real matrix V
+  real rowvector out
+  real scalar k, v
+  out = J(1, K, .)
+  V = st_matrix("e(V)")
+  if (rows(V) == K) {
+    for (k = 1; k <= K; k++) {
+      v = V[k, k]
+      if (v > 0 & v < .) out[k] = sqrt(v)
+    }
+  }
+  st_matrix(outname, out)
+}
+
+// the adversarial DISPLAY LINE, V-free, exactly as wooldid_advstat builds it: the real
+// horizon coefficients (missing -> 0) against their relative years, then the planted
+// zero-valued reference row(s) - esf: relyr = esrel (preceded by esrel - 1 under
+// timetrends); pooled: one horizon below the earliest real horizon - fitted by OLS
+// (altmethod: on the rows with relyr <= -1 only); published as [slope, intercept_rt0]
+void wooldid_permadvline(string scalar cmpname, string scalar colslist, string scalar rellist,
+                         real scalar esrel, real scalar tt, real scalar esf, real scalar alt,
+                         string scalar outname)
+{
+  real rowvector idx, cm
+  real colvector rel, b, r, sel
+  real matrix X, F
+  real scalar k
+  idx = strtoreal(tokens(colslist))
+  rel = strtoreal(tokens(rellist))'
+  cm = st_matrix(cmpname)[1, idx']
+  b = cm'
+  for (k = 1; k <= rows(b); k++) if (b[k] >= .) b[k] = 0
+  r = rel
+  if (esf) {
+    if (tt) {
+      b = b \ 0
+      r = r \ (esrel - 1)
+    }
+    b = b \ 0
+    r = r \ esrel
+  }
+  else {
+    b = b \ 0
+    r = r \ (min(rel) - 1)
+  }
+  if (alt) {
+    sel = selectindex(r :<= -1)
+    b = b[sel]
+    r = r[sel]
+  }
+  st_matrix(outname, J(1, 2, .))
+  if (rows(b) < 2) return
+  X = J(rows(r), 1, 1), r
+  if (rank(X'X) < 2) return
+  F = invsym(X'X) * X'b
+  st_matrix(outname, (F[2], F[1]))
+}
+
+end

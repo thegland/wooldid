@@ -143,9 +143,11 @@ if `extfail' == 0 {
   }
 
   * ---- (b) exact p recomputed from the external distribution (plain share) ----
-  mata: st_numscalar("__nex", sum(abs(st_matrix(st_local("EXT"))) :>= abs(st_numscalar(st_local("OBS")))))
+  * equal-tailed convention (2026-09-05): p = min(1, 2 min(#{s <= obs}, #{s >= obs})/M); __nex
+  * reports the smaller tail count for the diagnostics below
+  mata: st_numscalar("__nex", min((sum(st_matrix(st_local("EXT")) :<= st_numscalar(st_local("OBS"))), sum(st_matrix(st_local("EXT")) :>= st_numscalar(st_local("OBS"))))))
   tempname PEXT
-  scalar `PEXT' = __nex/20
+  scalar `PEXT' = min(1, 2*__nex/20)
   if reldif(`PEXT', `pengine') > 1e-12 {
     dis as error "RB FAIL: external exact p = " `PEXT' " (nex=" __nex "/20) vs e(perm_p_att) = " `pengine'
     dis as error "         obs = " %21x `OBS'
@@ -240,7 +242,7 @@ if `extfail' == 0 {
     mata: Es = sort(E_, 1); st_numscalar("__semind", min(Es[|2,1 \ 20,1|] - Es[|1,1 \ 19,1|]))
     mata: st_numscalar("__smaxrd", (rows(pd) == rows(PRED)) ? max(reldif(pd, PRED)) : .)
     mata: st_numscalar("__snbit", (rows(pd) == rows(PRED)) ? sum(pd :== PRED) : 0)
-    mata: st_numscalar("__snex", sum(abs(pd) :>= abs(st_numscalar(st_local("OBS")))))
+    mata: st_numscalar("__snex", min((sum(pd :<= st_numscalar(st_local("OBS"))), sum(pd :>= st_numscalar(st_local("OBS"))))))
     mata: st_numscalar("__snuse", rows(pd))
     * distinctness guard: the by-value frequency keying needs 20 distinct coefficients
     if __semind <= 0 {
@@ -266,7 +268,7 @@ if `extfail' == 0 {
     dis "S6 info: rep-by-rep max reldif = " %12.4e __smaxrd "; bitwise-equal reps = " __snbit " of 200"
     * (Se) sampled-mode add-one p
     tempname PS
-    scalar `PS' = (1 + __snex)/(__snuse + 1)
+    scalar `PS' = min(1, 2*(1 + __snex)/(__snuse + 1))
     if reldif(`PS', `peng2') > 1e-12 {
       dis as error "S7 FAIL: add-one p recomputed = " `PS' " (nex=" __snex "/" __snuse ") vs e(perm_p_att) = " `peng2'
       global pf = $pf + 1
@@ -372,9 +374,9 @@ else {
       dis as error "UM FAIL: observed fastnose stat is not a bitwise member of the external 60-assignment set"
       global pf = $pf + 1
     }
-    mata: st_numscalar("__unex", sum(abs(st_matrix(st_local("UEXT"))) :>= abs(st_numscalar(st_local("UOBS")))))
+    mata: st_numscalar("__unex", min((sum(st_matrix(st_local("UEXT")) :<= st_numscalar(st_local("UOBS"))), sum(st_matrix(st_local("UEXT")) :>= st_numscalar(st_local("UOBS"))))))
     tempname UP
-    scalar `UP' = __unex/60
+    scalar `UP' = min(1, 2*__unex/60)
     if reldif(`UP', `upeng') > 1e-12 {
       dis as error "UB FAIL: external exact p = " `UP' " (nex=" __unex "/60) vs e(perm_p_att) = " `upeng'
       global pf = $pf + 1
@@ -450,6 +452,9 @@ else if `textfail' == 0 {
   mata: st_numscalar("__tbrd", max(reldif(tpd, tb)))
   mata: ttf = st_matrix(st_local("TT")); tbf = st_matrix(st_local("TB"))
   mata: st_numscalar("__tnext", sum(abs(ttf) :>= abs(ttf[1,1]))); st_numscalar("__tnexb", sum(abs(tbf) :>= abs(tbf[1,1])))
+  * equal-tailed convention (2026-09-05): the engine's exact p is min(1, 2 min(#{t <= obs}, #{t >= obs})/M) on
+  * the SIGNED t-ratios; the |t| counts above stay as the ranking-flip design guard (TC)
+  mata: st_numscalar("__tnexeq", min((sum(ttf :<= ttf[1,1]), sum(ttf :>= ttf[1,1]))))
   * (i) the value check: e(permdist) is the t multiset ...
   if __tmaxrd > 1e-10 {
     dis as error "TA FAIL: sorted e(permdist) vs external t multiset (b/se): max reldif = " %12.4e __tmaxrd " (> 1e-10)"
@@ -470,9 +475,9 @@ else if `textfail' == 0 {
   dis "TC info: nex_t = " __tnext ", nex_b = " __tnexb " of 20"
   * (iii) the engine's exact p uses the t ranking (plain share)
   tempname TP
-  scalar `TP' = __tnext/20
+  scalar `TP' = min(1, 2*__tnexeq/20)
   if reldif(`TP', `tpeng') > 1e-12 {
-    dis as error "TD FAIL: external exact t-p = " `TP' " (nex_t=" __tnext "/20) vs e(perm_p_att) = " `tpeng' " (b ranking would give " __tnexb "/20)"
+    dis as error "TD FAIL: external exact equal-tailed t-p = " `TP' " (smaller tail " __tnexeq "/20) vs e(perm_p_att) = " `tpeng' " (|t| ranking would give " __tnext "/20, |b| " __tnexb "/20)"
     global pf = $pf + 1
   }
   dis "TD info: exact t-p = " `TP' " (engine " `tpeng' ")"
@@ -566,7 +571,8 @@ else if `qextfail' == 0 {
   mata: st_numscalar("__qnonm", sum(rowsum(qcomp) :== 0))
   mata: ccnt = (colsum(qcomp) * QS)'
   mata: st_matrix("__qccnt", ccnt)
-  mata: st_numscalar("__qnex", sum(abs(qpd) :>= abs(st_numscalar(st_local("QOBS"))))); st_numscalar("__qnuse", rows(qpd))
+  * equal-tailed convention (2026-09-05): the smaller signed tail count
+  mata: st_numscalar("__qnex", min((sum(qpd :<= st_numscalar(st_local("QOBS"))), sum(qpd :>= st_numscalar(st_local("QOBS")))))); st_numscalar("__qnuse", rows(qpd))
   if __qmind <= 0 {
     dis as error "Q5a FAIL: external subset coefficients are not distinct (min sorted gap = " %12.4e __qmind "); the frequency mapping is ill-defined"
     global pf = $pf + 1
@@ -596,7 +602,7 @@ else if `qextfail' == 0 {
   }
   * sampled add-one p from the design distribution
   tempname QP
-  scalar `QP' = (1 + __qnex)/(__qnuse + 1)
+  scalar `QP' = min(1, 2*(1 + __qnex)/(__qnuse + 1))
   if reldif(`QP', `qpeng') > 1e-12 {
     dis as error "Q7 FAIL: add-one p recomputed = " `QP' " (nex=" __qnex "/" __qnuse ") vs e(perm_p_att) = " `qpeng'
     global pf = $pf + 1

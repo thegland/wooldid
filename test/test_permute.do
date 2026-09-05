@@ -254,7 +254,10 @@ if _rc != 0 | strpos(fileread("perm_p9.txt"), "Randomization Inference") == 0 {
 mkperm 6 3 3
 set seed 777
 qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(25)
-local pd1 = e(perm_p_att)
+* held in a SCALAR: a local's decimal round-trip re-parses one ulp off (the equal-tailed
+* p's k/13-type fractions do not survive it), which is not a determinism failure
+tempname pd1
+scalar `pd1' = e(perm_p_att)
 set seed 777
 qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(25)
 if `pd1' != e(perm_p_att) {
@@ -274,9 +277,10 @@ else {
     dis as error "P12 FAIL: perm_stat=[`e(perm_stat)']"
     global pf = $pf + 1
   }
-  * the t statistic does not inherit the b-mirror symmetry (se varies across
-  * assignments), so the exact floor is 1/20: require p a positive multiple of 1/M
-  if !(e(perm_p_att) >= 0.05 - 1e-12 & abs(e(perm_p_att)*20 - round(e(perm_p_att)*20)) < 1e-9) {
+  * equal-tailed convention (2026-09-05): the observed assignment is a member of its own
+  * reference set, so an exact two-sided p has a floor of 2/M in both modes; require p a
+  * positive multiple of 1/M at or above 2/20
+  if !(e(perm_p_att) >= 0.10 - 1e-12 & abs(e(perm_p_att)*20 - round(e(perm_p_att)*20)) < 1e-9) {
     dis as error "P12 FAIL: exact t-stat p=" e(perm_p_att)
     global pf = $pf + 1
   }
@@ -301,17 +305,30 @@ else {
   }
 }
 
-* ---- P11: additivity - the observed results are untouched by the permutation pass ----
+* ---- P11: additivity under the 2026-09-05 contract - the point estimates are those of
+* the fast-mode run (the permute() default), e(V) is absent by default, and under
+* permanalyticse the observed run equals the full-inference run bitwise ----
 mkperm 6 3 3
-qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
-tempname bb vv
+qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) fastnose
+tempname bb
 matrix `bb' = e(b)
-matrix `vv' = e(V)
 local nn = e(N)
 mkperm 6 3 3
+qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
+tempname bf vf
+matrix `bf' = e(b)
+matrix `vf' = e(V)
+mkperm 6 3 3
 qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20)
-if mreldif(`bb', e(b)) != 0 | mreldif(`vv', e(V)) != 0 | e(N) != `nn' {
-  dis as error "P11 FAIL: observed results moved under permute (b " mreldif(`bb', e(b)) ", V " mreldif(`vv', e(V)) ")"
+cap confirm matrix e(V)
+if mreldif(`bb', e(b)) != 0 | e(N) != `nn' | _rc == 0 {
+  dis as error "P11 FAIL: fast-mode point estimates moved under permute (b " mreldif(`bb', e(b)) ") or e(V) posted"
+  global pf = $pf + 1
+}
+mkperm 6 3 3
+qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) permanalyticse
+if mreldif(`bf', e(b)) != 0 | mreldif(`vf', e(V)) != 0 {
+  dis as error "P11b FAIL: observed results moved under permute + permanalyticse (b " mreldif(`bf', e(b)) ", V " mreldif(`vf', e(V)) ")"
   global pf = $pf + 1
 }
 if "`e(cmd)'" != "wooldid" {

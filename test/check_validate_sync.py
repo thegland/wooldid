@@ -124,7 +124,7 @@ declared = set()
 for m in re.finditer(r"(?<![A-Za-z_])([A-Za-z][A-Za-z_0-9]*)(?=\s*\(|\s|$)", syn[0] if syn else ""):
     declared.add(m.group(1).lower())
 # syntax-line noise that is not an option
-NOISE = {"syntax", "varlist", "numeric", "default", "none", "if", "aw", "pw", "string",
+NOISE = {"syntax", "varlist", "numeric", "default", "none", "if", "aw", "fw", "pw", "string",
          "varname", "integer", "int", "numlist", "real", "name", "namelist", "passthru"}
 uncovered = []
 for opt in sorted(declared - NOISE):
