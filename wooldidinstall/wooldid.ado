@@ -1226,9 +1226,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
     * there are two sets of objects to introduce:
     * interactions between the time variable and the raw interactive controls
-    * interactinos between the de-meaned interactive controls and the dummies for treated units' treatment periods
-    * (I think the null untreated dummy X interactive controls object included should be harmless to include / appears to exist in some of Wooldridge's example files)
-    local interinject i.`_i'#i.`_t'#i.`targetflag'#c.(`interlist')  i.`t'#c.(`interactivecontrols')
+    * interactions between the de-meaned interactive controls and the dummies for treated units' treatment periods
+    * SI-20 (author-ruled, 2026-09-05): the cell interaction is built with 1.targetflag, not
+    * i.targetflag, so the reference cell (_i = _t = targetflag = 0, the pooled untreated
+    * observations) gets NO slope column. That column is exactly collinear with i.t#c.x plus
+    * the treated-cell slopes (modulo the absorbed cohort means), so with i.targetflag the
+    * engine's collinearity drop decided which column survived and the reported horizons,
+    * their standard errors and the joint tests were solver- and order-dependent (the
+    * reference-cell margin was non-zero wherever the covariate varies within cohort over
+    * time, under weights, or on an unbalanced panel). With 1.targetflag the reference-cell
+    * slope is partialled out through i.t#c.x, the reference margin is a structural zero
+    * (0bno.) and the horizons are estimable functions of the model. (The earlier form
+    * mirrored a term in some of Wooldridge's example files; it is not harmless here.)
+    local interinject i.`_i'#i.`_t'#1.`targetflag'#c.(`interlist')  i.`t'#c.(`interactivecontrols')
   }
 
 
@@ -1277,13 +1287,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * handle basic, byTreated, byTtre, and byCohort in order since these are successively more intensive and supersede each other
 
     * basic just partials out the baseline effect of your contreat control. implicitly, this effect is pooled in your control group and reference period
-    * this text initializes contreatcontrolinserterfe correctly if using basic w/o a lattice
+    * this text initializes contreatcontrolinserterfe whenever basic is requested - with or without a lattice (SI-20, author-ruled 2026-09-05:
+    *     the block used to be skipped when a lattice was present, so plain basic + lattice() inserted NO baseline dose control on the default
+    *     path, the base level of contreat stayed margins-visible, and every ame-family row - main, pretreatment, each ES_ame horizon - was off
+    *     by the baseline dose slope; with a lattice the lattice##ringer twin below is added so the base slope is partialled out within each lattice level)
     * and also initializes it this way if there is any chance that this FE object might get kicked outside of an HDFE absorb, in which case this section being included
     * is necessary in order to correctly manipulate the behavior of reg and poisson's colinearity drop rules (nothing in an HDFE is dropped b/c of colinearity with something not in the FE)
 		* re: the nature of the manipulation, specifying null##ringer and lattice##ringer (as opposed to ringer alone or lattice#ringer) -- and doing so explicitly, rather than
 		*     implicitly like in the other control types -- ensures that the base level of contreat gets partialled out. if not specified, it does not always get partialled out, and
 		*     instead one of the contreat control coefficients gets dropped for colinearity instead
-    if (strpos("`contreatcontrols'",  "basic") != 0 & "`latticepart2hash'" == "" ) | "`unconditionalse'" == "unconditionalse" | "`customvce'" != "" | "`poisson'" == "poisson" {
+    if strpos("`contreatcontrols'",  "basic") != 0 | "`unconditionalse'" == "unconditionalse" | "`customvce'" != "" | "`poisson'" == "poisson" {
       tempvar null
       qui gen `null' = 1
       local contreatcontrolinserterFE  i.`null'##`ringerpoly'

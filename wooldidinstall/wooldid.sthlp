@@ -741,7 +741,11 @@ integers (it is used as a factor variable; the value check can be bypassed with 
 specific error at parse time. Be aware that a lattice is the most expensive scaling axis in {it:wooldid}: runtime grows at roughly the 1.9th power of the
 cohort-by-period cell count once a lattice is present (versus about the 1.3rd to 1.7th power without one), and the absorbing regression rather than
 {it:margins} becomes the dominant cost. Each additional lattice point multiplies the terms the regression must carry, so prefer the smallest
-{it:latticenum} that answers the question. See {help wooldid##runtime:Runtime and what drives it}. {p_end}
+{it:latticenum} that answers the question. See {help wooldid##runtime:Runtime and what drives it}.
+When a lattice is combined with {it:contreatcontrols(basic)}, the baseline dose level is always partialled out, within each lattice level (the absorbed baseline dose control and its
+lattice twin are always included in the model). Before 2026-09-05, plain {it:basic} with a lattice inserted no baseline dose control on the default estimation path, so every ame-family
+row (the main and pre-treatment ame and each event-study ame horizon) was off by the baseline dose slope; ame results under {it:lattice()} with {it:contreatcontrols(basic)} changed on
+that date (the att results did not). {p_end}
 
 {phang} {it:latticetype:} Specifies groups in which to estimate {it:latticenum} quantiles of {it:contreat}. Choice of lattice type can be important for both interpretive reasons
 (e.g., when interpreting the output of {it:makecfxplots}) and for estimation feasibility reasons: clustered standard error computation will often fail if multiple clusters are not
@@ -793,7 +797,8 @@ compared. This option must be specified to proceed with a continuous treatment, 
 substantive assumptions. See more on this topic in the description section below. {p_end}
 
 {phang} {it:conttreatcontroltype}: untreatedZero; or one or more of the following: basic, byTreated, byTtre, byCohort, and byTime  {p_end}
-{synopt : {it:basic}} Controls for the effect of contreat (i.e., for f(Contreat_jt)) are added without any interactions.  {p_end}
+{synopt : {it:basic}} Controls for the effect of contreat (i.e., for f(Contreat_jt)) are added without any interactions. The baseline dose level is always partialled out, including when a
+lattice is present (since 2026-09-05; see {it:lattice()}).  {p_end}
 {synopt : {it:byTreated}} Controls for the effect of contreat are interacted with indicators for membership in the treatment group and in the control group. {p_end}
 {synopt : {it:byTtre}} Controls for the effect of contreat are interacted with indicators for membership in each treatment onset group and in the control group.  {p_end}
 {synopt : {it:byCohort}} Controls for the effect of contreat are interacted with cohort (i) membership indicators.  {p_end}
@@ -874,7 +879,12 @@ indicator variables. Second, the variables are de-meaned by cohort (i) and then 
 interactions between the de-meaned controls and all Tz_it dummies included in the model. The specification used is similar to as with {it:coarsecohortcontrols}, but differs in that these terms
 are marked so that variation associated with them is reported as part of the treatment effects (as opposed to being partialled out from the treatment effects). This specification most closely
 mimics the approach to including covariates that appears in Wooldridge (2025). When using only one interactive control, ATTs obtained using this option should be similar to those obtained
-when specifying that variable as a continuous treatment variable and then separately including controls that interact the continuous treatment variable with time dummy variables. {p_end}
+when specifying that variable as a continuous treatment variable and then separately including controls that interact the continuous treatment variable with time dummy variables.
+The treatment-effect interactions are built for the treated cohort-by-period cells only: the pooled reference cell (untreated observations) carries no interaction slope, so its
+de-meaned-control variation is partialled out through the time-period interactions and the reference-period effect is a structural zero. Before 2026-09-05 the reference cell also received a
+slope column that was exactly collinear with the time-period interactions plus the treated-cell slopes, so the estimation engine's collinearity drop decided the reported horizons: the
+horizon estimates, their standard errors, the pre-treatment joint tests and {it:e(b_es_*)}/{it:e(V_es_*)} were solver- and regressor-order-dependent wherever the control varies within
+cohort over time, under weights, or on an unbalanced panel. Results under this option changed on that date. {p_end}
 
 
 {pstd} {ul:Caution Regarding Continuous Treatment Variables and Controls:} If seeking to manually specify additional controls as a function of a continuous treatment variable, be sure not
