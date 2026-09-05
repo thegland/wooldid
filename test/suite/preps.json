@@ -183,5 +183,8 @@
   "qui gen y = 0.05*i + 0.04*t + 0.3*dose*(ttre < . & t >= ttre) + 0.3*sin(2.2*i + 1.1*t + 0.7*unit)",
   "sort i unit t",
   "ereturn clear"
+ ],
+ "covars_coh": [
+  "qui gen coh = cond(ttre==5,1,cond(ttre==9,2,3))"
  ]
 }
