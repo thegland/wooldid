@@ -1,12 +1,13 @@
 * test_poismargins.do - the poisson margins reference-scale gate.
 * Run from test/: stata-mp -e do test_poismargins.do
 *
-* The gate uses predict(xb) where the margins derivative operator is plain dydx (the
-* analytic Jacobian, exact for a linear-in-b contrast) and KEEPS expression(predict(xb))
-* for every ey*/dyex operator, where both code paths take ln of the prediction and the
-* poisson prediction is the sign-unconstrained linear index. Which form aborts there is
-* data-dependent and goes in BOTH directions, so today's rc behaviour - including its
-* failures - is preserved deliberately.
+* The gate uses predict(xb) where the margins derivative operator is dydx or (since
+* 2026-09-06, F032) dyex - the analytic Jacobian, exact for a linear-in-b contrast; dyex logs
+* the regressor, not the prediction - and KEEPS expression(predict(xb)) for the ey*
+* operators, where both code paths take ln of the prediction and the poisson prediction is
+* the sign-unconstrained linear index. Which form aborts there is data-dependent and goes
+* in BOTH directions, so today's rc behaviour - including its failures - is preserved
+* deliberately.
 *
 * P1 the xb reporting scale is unchanged (the documented purpose of the option)
 * P2 poisexpresults still selects the exponentiated scale and is untouched by the gate

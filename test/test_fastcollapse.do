@@ -50,9 +50,10 @@
 *    collapse now carries the cell's estimand-weighted mean of the dose on the surviving row
 *    and puts the user's cohort variable in the key. (a) five eligible reads - plain att; all
 *    four estimands with an event study and jointtests; contreatelasticitytype(dyex); poisson
-*    on the default dydx scale; subgroups() - collapse and agree with fullprecisionslow;
+*    on the default dydx scale; subgroups(); poisson+dyex (since 2026-09-06, F032) - collapse
+*    and agree with fullprecisionslow;
 *    (b) each of the six refused reads (contreatpoly(>1), eyex, eydx, lattice(),
-*    poisson+dyex, the dose inside controls()) skips SILENTLY and stays bit-identical to it;
+*    poisson+eydx, the dose inside controls()) skips SILENTLY and stays bit-identical to it;
 *    (c) an explicit fastcollapse with each is r(198) with no safety(off) escape, while a
 *    plain contreat() run is accepted; (d) the two provisos the worker's form exists for -
 *    a customweightmultiplier() of 0 on the pick row (the mean is written onto every row of
@@ -608,7 +609,9 @@ if "`ctftype'" != "float" {
 * ---- F11a: THE COLLAPSE ENGAGES WITH contreat() AND AGREES WITH fullprecisionslow.
 * Five reads, each compared on e(b), e(V) and the reported table e(wdidmainresults):
 * (1) a plain att run, (2) all four estimands with an event study and the joint tests,
-* (3) contreatelasticitytype(dyex), (4) poisson on the default dydx scale, (5) subgroups().
+* (3) contreatelasticitytype(dyex), (4) poisson on the default dydx scale, (5) subgroups(),
+* (6) poisson with contreatelasticitytype(dyex) (eligible since 2026-09-06, F032: the analytic
+* Jacobian form; the ame rows agree to 6.3e-16, the pretreatment CI bound to 4.5e-12).
 * Residues measured 2026-09-02 sit at 0..9.1e-14, four orders inside the 1e-8 threshold, and
 * the gate-off breakages of F11b's forms run 1e-5 to 0.8 relative - the same headroom F1 has.
 
@@ -711,6 +714,35 @@ if `ra3' != 0 | `ra3u' != 0 | `fa3' != 1 | `da3b' > 1e-8 | `da3v' > 1e-8 | `da3m
   local ++fails
 }
 
+* (6) poisson with contreatelasticitytype(dyex) - eligible since 2026-09-06 (F032): the
+* analytic-Jacobian form under poisson makes the collapsed ame rows exact; an explicit
+* fastcollapse is accepted
+local CT6 att poisson contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(dyex) robust esprelength(2) espostlength(2)
+use "`CCD'", clear
+cap qui wooldid y_count cohort t ttre, `CT6'
+local ra6 = _rc
+local fa6 = e(wdid_fcol)
+cap matrix b11a6 = e(b)
+cap matrix V11a6 = e(V)
+cap matrix M11a6 = e(wdidmainresults)
+use "`CCD'", clear
+cap qui wooldid y_count cohort t ttre, `CT6' fullprecisionslow
+local ra6u = _rc
+cap matrix b11a6u = e(b)
+cap matrix V11a6u = e(V)
+cap matrix M11a6u = e(wdidmainresults)
+local da6b = mreldif(b11a6, b11a6u)
+local da6v = mreldif(V11a6, V11a6u)
+local da6m = mreldif(M11a6, M11a6u)
+use "`CCD'", clear
+cap qui wooldid y_count cohort t ttre, `CT6' fastcollapse
+local ra6x = _rc
+di "F11a6_poisson_dyex rc=" `ra6' "/" `ra6u' "/" `ra6x' " fcol=" `fa6' " (want 1) mreldif b=" `da6b' " V=" `da6v' " table=" `da6m'
+if `ra6' != 0 | `ra6u' != 0 | `ra6x' != 0 | `fa6' != 1 | `da6b' > 1e-8 | `da6v' > 1e-8 | `da6m' > 1e-8 {
+  di as error "F11a6 FAIL: poisson+dyex rc `ra6'/`ra6u'/`ra6x' fcol `fa6' mreldif `da6b'/`da6v'/`da6m' - eligible since F032 and must collapse exactly"
+  local ++fails
+}
+
 * (4) poisson on the default dydx scale (predict(xb), differentiated analytically)
 local CT4 att poisson contreat(dose_vary) contreatcontrols(basic) robust esprelength(2) espostlength(2)
 use "`CCD'", clear
@@ -773,14 +805,15 @@ if `ra5' != 0 | `ra5u' != 0 | `fa5' != 1 | "`ga5'" != "" | `da5b' > 1e-8 | `da5v
 * refused reads must run normally, report e(wdid_fcol)=0, and - because it then takes the SAME
 * code path as fullprecisionslow - reproduce it BIT-IDENTICALLY (mreldif exactly 0, as measured
 * 2026-09-02). Anything else means the gate leaked. The six tokens: contreatpoly(>1),
-* contreatelasticitytype(eyex), contreatelasticitytype(eydx), lattice(), poisson+dyex, and the
-* contreat variable inside controls(). eyex/eydx divide by the prediction, so they run on
+* contreatelasticitytype(eyex), contreatelasticitytype(eydx), lattice(), poisson+eydx (poisson
+* with dyex is eligible since 2026-09-06 - F032 - so eydx under poisson stands in for it), and
+* the contreat variable inside controls(). eyex/eydx divide by the prediction, so they run on
 * y_positive; gate-off, they were measured at 1.1e-5..2.9e-4 relative wrong.
 local BOPT1 att contreat(dose_vary) contreatcontrols(basic) contreatpoly(2) robust esprelength(2) espostlength(2)
 local BOPT2 att contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(eyex) robust esprelength(2) espostlength(2)
 local BOPT3 att contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(eydx) robust esprelength(2) espostlength(2)
 local BOPT4 att contreat(dose_vary) contreatcontrols(basic) lattice(all 2) robust esprelength(2) espostlength(2)
-local BOPT5 att poisson contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(dyex) robust esprelength(2) espostlength(2)
+local BOPT5 att poisson contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(eydx) robust esprelength(2) espostlength(2)
 local BOPT6 att att_it contreat(dose_vary) contreatcontrols(basic) controls(c.dose_vary#c.x1) cluster(person_id) esprelength(2) espostlength(2)
 local BY1 y_cont_vary
 local BY2 y_positive
@@ -792,7 +825,7 @@ local BNM1 contreatpoly(2)
 local BNM2 eyex
 local BNM3 eydx
 local BNM4 lattice()
-local BNM5 poisson+dyex
+local BNM5 poisson+eydx
 local BNM6 contreat-in-controls
 forval k = 1/6 {
   * dropped first, so a run that posted nothing is a loud mreldif error rather than a
@@ -836,7 +869,7 @@ forval k = 1/6 {
   cap qui wooldid `BY`k'' cohort t ttre, `BOPT`k'' fastcollapse safety(off)
   local cx`k' = _rc
 }
-di "F11c_gate_rcs poly2=" `cx1' " eyex=" `cx2' " eydx=" `cx3' " lattice=" `cx4' " pois_dyex=" `cx5' " ctl=" `cx6' " (want 198 x6)"
+di "F11c_gate_rcs poly2=" `cx1' " eyex=" `cx2' " eydx=" `cx3' " lattice=" `cx4' " pois_eydx=" `cx5' " ctl=" `cx6' " (want 198 x6)"
 forval k = 1/6 {
   if `cx`k'' != 198 {
     di as error "F11c FAIL: explicit fastcollapse with `BNM`k'' returned rc `cx`k'' (want 198)"

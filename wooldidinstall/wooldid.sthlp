@@ -335,8 +335,7 @@ built from a {ul:copy} of the treatment variable under a different name is not d
 the copy.) {ul:The reported quantity is not linear in the coefficients, or not linear in the dose:} {it:semielasticity} and the continuous-treatment elasticity forms
 {it:contreatelasticitytype(eyex)} and {it:(eydx)}, which divide by the prediction and so re-introduce the within-cell variation that a plain marginal effect cancels;
 {it:contreatpoly()} above 1, which makes the effect a polynomial in the dose that the cell mean does not reproduce; {it:poisexpresults}, whose exponentiated reporting scale is
-not linear in the coefficients; and {it:poisson} together with {it:contreatelasticitytype(dyex)}, which {it:margins} reports through an {it:expression()} it differentiates
-numerically, so that replacing the dose by its cell mean changes the round-off of the derivative rather than cancelling out of it.
+not linear in the coefficients. ({it:poisson} with {it:contreatelasticitytype(dyex)} left this list on 2026-09-06: {it:dyex} now uses the analytic Jacobian under {it:poisson} as {it:dydx} does, and the collapse reproduces the full-data {it:ame} rows there.)
 {ul:The read splits a cell on something the cell key does not contain:}
 {it:lattice()}, {it:makecfxplots} and {it:cfxlattice()}, which bin the dose. ({it:impvalues}, which computes effects over the clusters, left this list on 2026-09-06: the cluster variable joins the cell key under {it:impvalues}, which makes the per-cluster reads exact - measured at 1e-12 both for a cluster nesting {it:i} and for one crossed with it - at the cost of more cells only when the cluster is crossed with {it:i}.)
 {ul:{it:margins} objects to the collapsed row count itself:} {it:unconditionalse}, whose variance is built from observation-level influence functions and whose row count
@@ -344,7 +343,7 @@ numerically, so that replacing the dose by its cell mean changes the round-off o
 
 {phang2}Everything else is eligible, including several combinations that are easy to assume are not. {it:contreat()} is eligible on the default {it:dydx} scale and under
 {it:contreatelasticitytype(dyex)}, with every flavour of {it:contreatcontrols()} and with {it:ccnoabsorb}. Poisson estimation on the default (log) reporting scale is eligible,
-including with {it:contreat()}. So are {it:fastnose}, {it:jointtests}, {it:adversarial} and {it:altmethod_adversarial}, {it:esfixedbaseperiod} and {it:esrelativeto()},
+including with {it:contreat()} and with {it:contreatelasticitytype(dyex)}. So are {it:fastnose}, {it:jointtests}, {it:adversarial} and {it:altmethod_adversarial}, {it:esfixedbaseperiod} and {it:esrelativeto()},
 {it:pretrendpower()}, {it:histogramcohorteffects}, {it:summarystats}, {it:gteffects} (which {it:wooldid} refuses alongside {it:contreat()} for a separate reason), {it:makeplots}
 and {it:saveplots()}, and the replications of {cmd:permute()} and {cmd:bootstrap()}, which are evaluated collapsed like any other run. {p_end}
 

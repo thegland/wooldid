@@ -2059,18 +2059,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * approximation - agrees only to 3.4e-13. So on dydx sites predict() is both faster
   * (2-10x end to end) and more accurate, and the change moves reported variances toward
   * the exact value rather than away from it.
-  * The ey*/dyex operators are a different matter and KEEP expression(): both code paths
-  * take ln of the prediction, the poisson prediction is the sign-unconstrained linear
-  * index, and which form aborts r(459) is data-dependent and goes in BOTH directions.
-  * Preserving today's rc behaviour there - including its failures - is deliberate; see
-  * the efficiency review and SI-20.
+  * The ey* operators (eyex, eydx) are a different matter and KEEP expression(): both code
+  * paths take ln of the prediction, the poisson prediction is the sign-unconstrained
+  * linear index, and which form aborts r(459) is data-dependent and goes in BOTH
+  * directions. Preserving today's rc behaviour there - including its failures - is
+  * deliberate; see the efficiency review and SI-20. dyex (dy/dln x) logs the REGRESSOR,
+  * not the prediction, so it takes the predict(xb) form like dydx (research record
+  * review_process/research_2026-09-06/F032.md: J*b == margin to 5.2e-16 under this form
+  * against 2.7e-9 under expression(); 1.9-28x faster; author ruling 2026-09-06)
   local poismarginstext
   local poismarginstextC
   if "`poisson'" == "poisson" & "`poisexpresults'" == "" {
     local poismarginstext  expression(predict(xb))
     local poismarginstextC expression(predict(xb))
     if "`semielasticity'"         == "dydx" local poismarginstext  predict(xb)
-    if "`contreatelasticitytype'" == "dydx" local poismarginstextC predict(xb)
+    if "`contreatelasticitytype'" == "dydx" | "`contreatelasticitytype'" == "dyex" local poismarginstextC predict(xb)
   }
 
 
@@ -5070,10 +5073,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if `"`lattice'"' != ""                                                      local fcbad `fcbad' lattice()
     if "`cfxlattice'" != "" | "`makecfxplots'" != ""                            local fcbad `fcbad' makecfxplots/cfxlattice()
     if "`contreatelasticitytype'" == "eyex" | "`contreatelasticitytype'" == "eydx" local fcbad `fcbad' contreatelasticitytype(`contreatelasticitytype')
-    * poisson reports dyex through margins' expression(predict(xb)), which margins
-    * differentiates NUMERICALLY, so replacing a within-cell-varying dose by its mean changes
-    * the round-off of the derivative rather than cancelling out of it
-    if "`poisson'" == "poisson" & "`contreatelasticitytype'" == "dyex"           local fcbad `fcbad' poisson+contreatelasticitytype(dyex)
+    * poisson + contreatelasticitytype(dyex) left this list on 2026-09-06 (F032): dyex now
+    * takes the analytic predict(xb) form under poisson too, and the collapse reproduces the
+    * full-data ame rows to 6.3e-16 there (research record F032.md)
     * the treatment variable inside a user control term (controls(c.dose#c.x) and the like)
     * makes the DOSE derivative vary within a cell on a variable the collapse does not average
     local fcctrl `"`controls' `coarsecohortcontrols' `fe' `ccc_absorb'"'
@@ -5117,8 +5119,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       dis as error "  interactivecontrols() interacts the treatment dummy with a variable that varies inside a cell, so the effect is no longer cell-constant. contreat() itself is eligible - the collapse carries the cell's weighted mean of the dose - but the reads listed below are not."
       dis as error "  contreatpoly() above 1 makes the effect a polynomial in the dose, which the cell mean does not reproduce; lattice(), makecfxplots and cfxlattice() split a cell on a binning of the dose, which is not part of the cell key."
       dis as error "  contreat-in-controls means the contreat variable also appears inside controls(), coarsecohortcontrols(), fe() or ccc_absorb(); the dose derivative then varies inside the cell on a variable the collapse does not average (measured: the ame rows move by up to 0.6 percent while the att rows stay exact)."
-      dis as error "  poisson with contreatelasticitytype(dyex) is reported through margins expression(predict(xb)), which margins differentiates numerically, so the cell mean changes the round-off of the derivative (measured: a reported confidence bound moved 2.8e-4 relative)."
-      dis as error "  semielasticity (and the contreat elasticity forms eyex and eydx) divide by the prediction, which re-introduces the within-cell variation that a plain marginal effect cancels. contreatelasticitytype(dydx) and (dyex) are linear in the dose and stay eligible (dyex except under poisson - see above)."
+      dis as error "  semielasticity (and the contreat elasticity forms eyex and eydx) divide by the prediction, which re-introduces the within-cell variation that a plain marginal effect cancels. contreatelasticitytype(dydx) and (dyex) are linear in the dose and stay eligible."
       dis as error "  poisexpresults reports on the exponentiated scale, which is not linear in the coefficients (measured: estimates moved in the 7th significant digit)."
       dis as error "  unconditionalse asks margins for a variance built from observation-level influence functions; margins verifies the visible row count against e(N) and errors when it is collapsed."
       dis as error "  customvce() is not verified for fastcollapse rather than known-broken; it is refused pending measurement."
