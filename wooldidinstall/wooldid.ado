@@ -65,6 +65,11 @@ version 16.0
   cap macro drop WOOLDID_CLEANUP
   capture noisily wooldid_worker `0'
   local wdsh_rc = _rc
+  * F054: the worker sets level() for the duration of the call; restore the caller's
+  if "$WOOLDID_LEVEL0" != "" {
+    set level $WOOLDID_LEVEL0
+    macro drop WOOLDID_LEVEL0
+  }
   nobreak {
     local wdsh_flags "$WOOLDID_CLEANUP"
     cap macro drop WOOLDID_CLEANUP
@@ -405,7 +410,7 @@ version 16.0
     * (they need tempvars that no longer exist) and are handed back in. Placed between
     * part(1) and part(2) to match the ordering the non-bootstrap path uses
     if "`pretrendpower'" != "" {
-      cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`=cond(e(df_r) < ., string(e(df_r)), ".")') pois(`poisson') poisexp(`poisexpresults') hba(`=cond(e(wdid_ptphbar_att) < ., string(e(wdid_ptphbar_att)), ".")') hbi(`=cond(e(wdid_ptphbar_it) < ., string(e(wdid_ptphbar_it)), ".")')
+      cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`=cond(e(df_r) < ., string(e(df_r)), ".")') pois(`poisson') poisexp(`poisexpresults') hba(`=cond(e(wdid_ptphbar_att) < ., string(e(wdid_ptphbar_att)), ".")') hbi(`=cond(e(wdid_ptphbar_it) < ., string(e(wdid_ptphbar_it)), ".")') level(`=cond(`level' == 0, c(level), `level')')
       local wdsh_prc = _rc
       if `wdsh_prc' != 0 {
         qui frame
@@ -507,6 +512,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * test/check_validate_sync.py) and returns its option/derived locals via c_local.
   * called before cleanmatrices, so a rejected call no longer clears user matrices/mata
   wooldid_validate `0'
+  * F054 (quality review 2026-09-05, author ruling 2026-09-06): level() applies to the
+  * analytic tables too. Every analytic interval comes from margins' r(table) rows at
+  * c(level), so the level is set for the duration of this call and the shell restores
+  * the caller's value on every exit path (WOOLDID_LEVEL0); replications inherit the
+  * outer call's setting and never touch it
+  if `level' != 0 & "`wdrepmode'" == "" {
+    global WOOLDID_LEVEL0 = c(level)
+    set level `level'
+  }
+  local wdlvl = c(level)
+  local wdlvltxt = cond(mod(`wdlvl',1)==0, strofreal(`wdlvl'), subinstr(strofreal(`wdlvl',"%9.0g"), ".", "p", .))
 
 
   ***************************************************************************************************
@@ -1915,7 +1931,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       local gthstart = 1 + `min_t' - `espre'
       if "`esfixedbaseperiod'" == "" local gthstart 1
       local gthend = `gthstart' + `espre' + `espl' - 1
-      mata: wooldid_gtx("`_i'", "`_t'", "`targetflag'", "`gtraw'", "`gtsed'", `min_t', `gthstart', `gthend', "`df_r'", "`gtm'")
+      mata: wooldid_gtx("`_i'", "`_t'", "`targetflag'", "`gtraw'", "`gtsed'", `min_t', `gthstart', `gthend', "`df_r'", "`gtm'", `wdlvl')
     }
     qui drop `gtin' `gtnob' `gtw1' `gtw2' `gtw3' `gtw4' `gttag'
   }
@@ -3816,8 +3832,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   }
 
   matrix rownames `wdidpooled' = `rownamespool'
-  if "`poisson'" == "" matrix colnames `wdidpooled' =  estimate se t p lb_95ci ub_95ci   relyr
-  if "`poisson'" == "poisson" matrix colnames `wdidpooled' =  estimate se z p lb_95ci ub_95ci   relyr
+  if "`poisson'" == "" matrix colnames `wdidpooled' =  estimate se t p lb_`wdlvltxt'ci ub_`wdlvltxt'ci   relyr
+  if "`poisson'" == "poisson" matrix colnames `wdidpooled' =  estimate se z p lb_`wdlvltxt'ci ub_`wdlvltxt'ci   relyr
 
 
   * with the success of the above, we should now repeat it by sg
@@ -3943,8 +3959,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         }
         matrix rownames `wdid_sg`sgcase'' = `rownamessg'
         local rownamessg`sgcase' `rownamessg'
-        if "`poisson'" == "" matrix colnames `wdid_sg`sgcase'' =  estimate se t p lb_95ci ub_95ci   relyr
-        if "`poisson'" == "poisson" matrix colnames `wdid_sg`sgcase'' =  estimate se z p lb_95ci ub_95ci   relyr
+        if "`poisson'" == "" matrix colnames `wdid_sg`sgcase'' =  estimate se t p lb_`wdlvltxt'ci ub_`wdlvltxt'ci   relyr
+        if "`poisson'" == "poisson" matrix colnames `wdid_sg`sgcase'' =  estimate se z p lb_`wdlvltxt'ci ub_`wdlvltxt'ci   relyr
 
 
       }
@@ -3986,8 +4002,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           }
         }
       }
-      if "`poisson'" == "" matrix colnames `pwsgs' =  estimate se t p lb_95ci ub_95ci
-      if "`poisson'" == "poisson" matrix colnames `pwsgs' =  estimate se z p lb_95ci ub_95ci
+      if "`poisson'" == "" matrix colnames `pwsgs' =  estimate se t p lb_`wdlvltxt'ci ub_`wdlvltxt'ci
+      if "`poisson'" == "poisson" matrix colnames `pwsgs' =  estimate se z p lb_`wdlvltxt'ci ub_`wdlvltxt'ci
 
     }
   }
@@ -4521,6 +4537,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   ereturn hidden local wdid_estimands "`att' `att_it' `att_i' `att_itime'"
   ereturn hidden local wdid_cwm "`customweightmultiplier'"
   ereturn hidden local wdid_semielas "`semielasticity'"
+  ereturn scalar level = `wdlvl'
   ereturn hidden local wdid_fcol "`fcon'"
   * F061 (2026-09-06): the realised cell count (missing when the collapse did not run, so
   * "no collapse" and "collapsed to zero cells" cannot be confused) and the skip reason(s)
@@ -4561,8 +4578,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * runs here. WITH bootstrap only the data-dependent half runs here - it needs `ttre'
   * and `w', which are worker tempvars - and the shell re-enters this program after the
   * bootstrap rewiring so the power algebra reads the BOOTSTRAP e(V_es_*)
-  if "`pretrendpower'" != "" & "`bootstrap'" == "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`df_r') pois(`poisson') poisexp(`poisexpresults') tvar(`t') ttrevar(`ttre') ivar(`i') wvar(`w') cwm(`customweightmultiplier')
-  if "`pretrendpower'" != "" & "`bootstrap'" != "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`df_r') pois(`poisson') poisexp(`poisexpresults') tvar(`t') ttrevar(`ttre') ivar(`i') wvar(`w') cwm(`customweightmultiplier') hbaronly
+  if "`pretrendpower'" != "" & "`bootstrap'" == "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`df_r') pois(`poisson') poisexp(`poisexpresults') tvar(`t') ttrevar(`ttre') ivar(`i') wvar(`w') cwm(`customweightmultiplier') level(`wdlvl')
+  if "`pretrendpower'" != "" & "`bootstrap'" != "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`df_r') pois(`poisson') poisexp(`poisexpresults') tvar(`t') ttrevar(`ttre') ivar(`i') wvar(`w') cwm(`customweightmultiplier') hbaronly level(`wdlvl')
   if "`bootstrap'`permute'" == "" wooldid_display , part(2)
 
 
@@ -5993,7 +6010,6 @@ version 16.0
     local bootstray
     if `reps' != 0 local bootstray reps()
     if "`ties'" != "" local bootstray `bootstray' ties
-    if `level' != 0 & "`permute'" == "" local bootstray `bootstray' level()
     if `dots' != -1 & "`permute'" == "" local bootstray `bootstray' dots()
     if "`rseed'" != "" & "`permute'" == "" local bootstray `bootstray' rseed()
     if "`bootalpha'" != "" local bootstray `bootstray' bootalpha()
@@ -6002,7 +6018,7 @@ version 16.0
     if "`bts'" != "" local bootstray `bootstray' boottstat
     if "`bsave'" != "" local bootstray `bootstray' bootsave()
     if "`bootstray'" != "" {
-      dis as error "Error: `bootstray' require(s) the bootstrap() option (level(), dots() and rseed() are also accepted with permute())."
+      dis as error "Error: `bootstray' require(s) the bootstrap() option (dots() and rseed() are also accepted with permute(); level() applies to every run)."
       error 198
     }
     exit 0
@@ -6023,7 +6039,7 @@ version 16.0
 
   * companion-value validation
   if `level' != 0 & (`level' < 10 | `level' > 99.99) {
-    dis as error "Error: level() must be between 10 and 99.99 for bootstrap confidence intervals."
+    dis as error "Error: level() must be between 10 and 99.99."
     error 198
   }
   if `dots' != -1 & `dots' < 0 {
@@ -8903,7 +8919,7 @@ end
 cap prog drop wooldid_ptp
 prog def wooldid_ptp, eclass
 version 16.0
-  syntax , levels(numlist) [esrel(string) dfr(string) pois(string) poisexp(string) tvar(string) ttrevar(string) ivar(string) wvar(string) cwm(string) hba(string) hbi(string) HBARonly]
+  syntax , levels(numlist) [esrel(string) dfr(string) pois(string) poisexp(string) tvar(string) ttrevar(string) ivar(string) wvar(string) cwm(string) hba(string) hbi(string) HBARonly level(real 95)]
 
   * duplicate power levels (e.g. pretrendpower(80 80)) would otherwise be processed
   * twice, yielding a duplicated row in e(roth_power_*) and in the displayed table;
@@ -8918,8 +8934,8 @@ version 16.0
   if "`dfr'" != "" & "`dfr'" != "." {
     if real("`dfr'") > 0 & real("`dfr'") < . local ptpdfok 1
   }
-  if `ptpdfok' local ptpcrit = invttail(`dfr', .025)
-  else local ptpcrit = invnormal(.975)
+  if `ptpdfok' local ptpcrit = invttail(`dfr', (100 - `level')/200)
+  else local ptpcrit = invnormal(1 - (100 - `level')/200)
 
   * hbar: estimand-weighted mean post-treatment relative period over the FULL post
   * support of the estimation sample - the pooled estimands aggregate over all post
@@ -9164,7 +9180,7 @@ version 16.0
       local ptpheader 1
     }
     dis as result "  `ptpty': GLS linear pre-trend fit on `ptpk' pre-treatment coefficient(s); reference relative period = `ptpref'"
-    dis as result "    slope = " %-9.0g `ptpslope' " (se " %-9.0g `ptpse' "; 95% CI " %-9.0g `ptpll' " to " %-9.0g `ptpul' ")"
+    dis as result "    slope = " %-9.0g `ptpslope' " (se " %-9.0g `ptpse' "; `level'% CI " %-9.0g `ptpll' " to " %-9.0g `ptpul' ")"
     if `ptpdfok' dis as result "    joint pre-trend test: F(`ptpkeff', `dfr') = " %-8.0g `=`ptpW'/`ptpkeff'' ", p = " %-6.4f `ptpprep'
     else dis as result "    joint pre-trend test: chi2(`ptpkeff') = " %-8.0g `ptpW' ", p = " %-6.4f `ptpprep'
     if `ptpnisok' dis as result "    size of the any-pre-period-individually-significant pre-test: " %-6.4f real("`ptpnissize'")
@@ -9480,6 +9496,7 @@ version 16.0
     local ptpslope = e(roth_slope_`ptpty')
     local ptpse = e(roth_slope_se_`ptpty')
     local ptpll = e(roth_slope_ll_`ptpty')
+    local ptplvl = cond(e(level) < ., strofreal(e(level)), "95")
     local ptpul = e(roth_slope_ul_`ptpty')
     local ptpprep = e(roth_prep_`ptpty')
     local ptphbar = e(roth_hbar_`ptpty')
@@ -9495,7 +9512,7 @@ version 16.0
       local ptpheader 1
     }
     dis as result "  `ptpty': GLS linear pre-trend fit on `ptpk' pre-treatment coefficient(s); reference relative period = `ptpref'"
-    dis as result "    slope = " %-9.0g `ptpslope' " (se " %-9.0g `ptpse' "; 95% CI " %-9.0g `ptpll' " to " %-9.0g `ptpul' ")"
+    dis as result "    slope = " %-9.0g `ptpslope' " (se " %-9.0g `ptpse' "; `ptplvl'% CI " %-9.0g `ptpll' " to " %-9.0g `ptpul' ")"
     if `ptpdfok' dis as result "    joint pre-trend test: F(`ptpkeff', `dfr') = " %-8.0g `=`ptpW'/`ptpkeff'' ", p = " %-6.4f `ptpprep'
     else dis as result "    joint pre-trend test: chi2(`ptpkeff') = " %-8.0g `ptpW' ", p = " %-6.4f `ptpprep'
     if `ptpnisok' dis as result "    size of the any-pre-period-individually-significant pre-test: " %-6.4f real("`ptpnissize'")
@@ -10375,7 +10392,7 @@ mata:
 void wooldid_gtx(string scalar gtiv, string scalar gttv, string scalar gttf,
                  string scalar rawname, string scalar sedname, real scalar gtmint,
                  real scalar gthstart, real scalar gthend, string scalar gtdfr,
-                 string scalar outname)
+                 string scalar outname, | real scalar gtlvl)
 {
     real matrix cells, raw, out
     real matrix b, sed
@@ -10395,6 +10412,9 @@ void wooldid_gtx(string scalar gtiv, string scalar gttv, string scalar gttf,
     st_local("gtn", strofreal(n))
     if (n == 0) return
     df = strtoreal(gtdfr)
+    // F054: the interval level (default 95 when the caller passes none)
+    gtal = (args() >= 11 ? (100 - gtlvl)/200 : .025)
+    gtlt = subinstr(strofreal(100 - 200*gtal, "%9.0g"), ".", "p", .)
     out = J(n, 15, .)
     for (r = 1; r <= n; r++) {
         g = cells[r, 1]
@@ -10408,11 +10428,11 @@ void wooldid_gtx(string scalar gtiv, string scalar gttv, string scalar gttf,
             z = est / se
             if (df < .) {
                 p = 2 * ttail(df, abs(z))
-                crit = invttail(df, .025)
+                crit = invttail(df, gtal)
             }
             else {
                 p = 2 * normal(-abs(z))
-                crit = invnormal(.975)
+                crit = invnormal(1 - gtal)
             }
             lb = est - crit * se
             ub = est + crit * se
@@ -10440,7 +10460,7 @@ void wooldid_gtx(string scalar gtiv, string scalar gttv, string scalar gttf,
     }
     out = sort(out, (1, 4))
     st_matrix(outname, out)
-    st_matrixcolstripe(outname, (J(15, 1, ""), ("i", "onset", "caltime", "relyr", "estimate", "se", "p", "lb_95ci", "ub_95ci", "inwindow", "nobs", "w_att", "w_att_it", "w_att_i", "w_att_itime")'))
+    st_matrixcolstripe(outname, (J(15, 1, ""), ("i", "onset", "caltime", "relyr", "estimate", "se", "p", "lb_" + gtlt + "ci", "ub_" + gtlt + "ci", "inwindow", "nobs", "w_att", "w_att_it", "w_att_i", "w_att_itime")'))
 }
 end
 
