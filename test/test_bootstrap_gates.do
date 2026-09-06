@@ -600,5 +600,37 @@ if !`: list posof "t_wald" in c29a' | `: list posof "t" in c29a' | "`b29a'" != "
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 
+* G30 (F038, 2026-09-06) a rank-based p of exactly 0 gets a line under the table and a
+* footer sentence saying it means p < 2/n; the cell and e() keep the 0; nothing fires
+* under bootdisplay(wald)
+use `panel', clear
+qui log using boot_gates_g30.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7)
+local g30rc = _rc
+qui log close bg
+chk 30 0 `g30rc'
+local p30 = e(wdidmainresults)[rowsof(e(wdidmainresults)), 4]
+local lg = fileread("boot_gates_g30.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if `p30' != 0 | strpos(`"`lg'"', "p = 0 above means p < 0.200 (2/10 completed replications") == 0 | strpos(`"`lg'"', "The rank-based p-values have resolution 2/10 = 0.200") == 0 {
+  di as error "G30b FAIL: the p = 0 resolution line/footer did not print (att p = `p30')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+use `panel', clear
+qui log using boot_gates_g30.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7) bootdisplay(wald)
+local g30rc = _rc
+qui log close bg
+chk 30c 0 `g30rc'
+local lg = fileread("boot_gates_g30.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "p = 0 above means") > 0 | strpos(`"`lg'"', "have resolution 2/") > 0 {
+  di as error "G30d FAIL: the resolution line fired under bootdisplay(wald)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g30.txt
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

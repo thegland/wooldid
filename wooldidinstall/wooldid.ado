@@ -9250,6 +9250,28 @@ version 16.0
   matrix roweq `cfxm' = _
 end
 
+* F038 (quality review 2026-09-05, author ruling 2026-09-06): a rank-based bootstrap p of
+* exactly 0 means no completed replication fell on the far side of the null - the
+* resolution limit 2/n, not a probability of 0. matlist renders a numeric matrix, so the
+* cell keeps the 0 (e() keeps it too, by the ruling); this line under the table says what
+* the 0 means. Bootstrap only: the permutation add-one p never prints 0, and the Wald
+* display's p is a tail probability
+cap prog drop wooldid_pfloor
+prog def wooldid_pfloor
+  args mat
+  if "`e(boot_completed)'" == "" exit
+  if "`e(boot_display)'" == "wald" & "`e(boot_tstat)'" != "1" exit
+  cap confirm matrix `mat'
+  if _rc != 0 exit
+  tempname pm
+  matrix `pm' = `mat'
+  local pc = colnumb(`pm', "p")
+  if `pc' >= . local pc 4
+  if `pc' > colsof(`pm') exit
+  mata: st_local("wdp0", strofreal(sum(st_matrix("`pm'")[., `pc'] :== 0)))
+  if `wdp0' > 0 dis as text "  p = 0 above means p < " %5.3f 2/e(boot_completed) " (2/" e(boot_completed) " completed replications, the resolution of the rank-based p): no completed replication fell on the far side of the null. The cell and e() keep the 0."
+end
+
 cap prog drop wooldid_display
 prog def wooldid_display
 version 16.0
@@ -9369,6 +9391,7 @@ version 16.0
   dis as result  "Main`poistext' Results (Full Estimation Sample): `elasinj'"
   if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
   matlist e(wdidmainresults)
+  wooldid_pfloor e(wdidmainresults)
 
   * F8: composition table prints with the other descriptive material under summarystats
   cap confirm matrix e(escomp)
@@ -9516,6 +9539,7 @@ version 16.0
         dis as result  "`poistext'Results for Subgroup `subgroups' == `sgcase': `elasinj'"
         if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
         matlist e(wdidsgresults_`sgcase')
+        wooldid_pfloor e(wdidsgresults_`sgcase')
         dis as result  " "
         * F8: per-subgroup composition table under summarystats
         cap confirm matrix e(escomp_s`sgcase')
@@ -9560,6 +9584,7 @@ version 16.0
     if wordcount("`sglist'") > 1 {
       dis as result  "Pairwise Comparisons of Different Subgroups' Estimates: `elasinj'"
       matlist e(pwsgs)
+      wooldid_pfloor e(pwsgs)
       dis as result " "
       foreach item in `estimandlist' {
         if "`e(joint_`item'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same `item': " %-6.4f e(joint_`item'_allsgssame)
@@ -9679,6 +9704,7 @@ version 16.0
      dis as result "  A percentile interval is not symmetric about the estimate, so the estimate plus or minus a critical value times the reported standard error will not in general reproduce the reported interval - this is the ordinary reading of a bootstrap table, not a wooldid peculiarity. Use bootdisplay(wald) for the normal/t package in which they do agree."
    }
    dis as result "  Every family is computed whichever is displayed: intervals in e(boot_ci_normal)/e(boot_ci_percentile)/e(boot_ci_bc), p-values in e(boot_p_percentile)/e(boot_p_bc), and the complete tables in the hidden e(boot_wald_mainresults)/e(boot_pctl_mainresults)/e(boot_bc_mainresults)."
+   if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  The rank-based p-values have resolution 2/" e(boot_completed) " = " %5.3f 2/e(boot_completed) ": a p printed as 0 means p below that (no completed replication on the far side of the null); it is stored as 0 in e()."
    if e(boot_v_posted) == 1 dis as result "  e(V) holds the bootstrap covariance (complete-replication listwise, e(boot_N_V) replications; the analytic covariance, when one existed, remains in the hidden e(V_analytic))."
    else dis as result "  The bootstrap covariance is stored in e(V_boot); no covariance is posted to e(V) for this run."
    * e(V) and e(df_r) carry the sd-family inference whichever family is displayed, so a
