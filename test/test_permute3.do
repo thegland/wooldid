@@ -1188,5 +1188,68 @@ if reldif(Q22T[1,1], q22b_lo) > 1e-12 | reldif(Q22T[2,1], q22b_hi) > 1e-12 | rel
   global pf = $pf + 1
 }
 
+* ================= Q23 (F065, 2026-09-06): the max-|studentized| step-down over the post
+* horizons reconstructs by name from e(permdist_b) and e(perm_comparator_b): fixed-metric
+* studentization (SD of draws + comparator), raw per-horizon |t| shares, single-step max
+* and the monotone step-down in decreasing |t_obs| order, all add-one; the footer names it
+mkperm3 8 4 3
+qui log using perm3_q23.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(2) permute(shuffle) permreps(40) rseed(23)
+local rc = _rc
+qui log close p3
+xrc Q23a 0 `rc'
+cap confirm matrix e(perm_stepdown)
+xrc Q23b 0 _rc
+if _rc == 0 {
+  matrix Q23S = e(perm_stepdown)
+  matrix Q23D = e(permdist_b)
+  matrix Q23C = e(perm_comparator_b)
+  local q23sc : colnames Q23S
+  local q23dc : colnames Q23D
+  local q23idx
+  foreach c of local q23sc {
+    local q23idx `q23idx' `: list posof "`c'" in q23dc'
+  }
+  mata:
+  idx = strtoreal(tokens(st_local("q23idx")))
+  A = st_matrix("Q23D")[., idx']
+  cm = st_matrix("Q23C")[1, idx']
+  ok = rowmissing(A) :== 0
+  D = select(A, ok)
+  n = rows(D)
+  CC = D \ cm
+  sdv = sqrt(diagonal(variance(CC)))'
+  TT = abs(D) :/ sdv
+  tob = abs(cm) :/ sdv
+  H = cols(TT)
+  praw = J(1, H, .)
+  pss = J(1, H, .)
+  psd = J(1, H, .)
+  for (h = 1; h <= H; h++) praw[h] = (1 + sum(TT[., h] :>= tob[h]))/(n + 1)
+  mx = rowmax(TT)
+  for (h = 1; h <= H; h++) pss[h] = (1 + sum(mx :>= tob[h]))/(n + 1)
+  ord = order(-tob', 1)'
+  pp = 0
+  for (j = 1; j <= H; j++) {
+    mx = rowmax(TT[., ord[j..H]])
+    pj = (1 + sum(mx :>= tob[ord[j]]))/(n + 1)
+    if (pj < pp) pj = pp
+    psd[ord[j]] = pj
+    pp = pj
+  }
+  st_matrix("Q23H", tob \ praw \ pss \ psd)
+  st_numscalar("q23_n", n)
+  end
+  di "Q23 H=" colsof(Q23S) " n=" q23_n " maxdiff=" mreldif(Q23S, Q23H) " stepdown=[" Q23S[4,1] " " Q23S[4,2] "] raw=[" Q23S[2,1] " " Q23S[2,2] "]"
+  local lg = fileread("perm3_q23.txt")
+  local lg = subinstr(`"`lg'"', char(13), "", .)
+  local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+  if colsof(Q23S) != 2 | mreldif(Q23S, Q23H) > 1e-12 | Q23S[4,1] < Q23S[2,1] | Q23S[4,2] < Q23S[2,2] | strpos(`"`lg'"', "max-|studentized| step-down") == 0 {
+    dis as error "Q23c FAIL: the step-down record does not reconstruct by name, is not >= the raw p, or is not printed"
+    global pf = $pf + 1
+  }
+}
+cap erase perm3_q23.txt
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

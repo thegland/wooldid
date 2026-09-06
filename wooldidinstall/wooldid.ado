@@ -7747,6 +7747,36 @@ version 16.0
     }
   }
 
+  * -------- F065 (quality review 2026-09-05, author ruling 2026-09-06): multiplicity across
+  * the POST-treatment event-study horizons - the max-|studentized| step-down (Westfall-Young
+  * / Romano-Wolf) from the same accumulator, exact under the sharp null: every horizon's
+  * draws are studentized on the fixed metric (the SD of its null draws, as the kernel's
+  * row 6), the horizons are ordered by |t_obs|, and the j-th adjusted p is the share of
+  * replications whose max |t_r| over the horizons not yet rejected reaches |t_obs(j)|,
+  * made monotone. Posted per family as e(perm_stepdown[_i][_s<sg>]) with rows t_obs,
+  * p_raw (the per-horizon absolute-value share), p_singlestep (max over all post
+  * horizons) and p_stepdown, one named column per horizon; computed whenever at least
+  * two post horizons exist (jointtests is not required)
+  foreach fam in att att_it ame ame_it {
+    local sname = cond(strpos("`fam'", "ame"), "perm_Cstepdown", "perm_stepdown")
+    if "`fam'" == "att_it" | "`fam'" == "ame_it" local sname `sname'_i
+    foreach sgtag in "" `sgl' {
+      local sgw = cond("`sgtag'" == "", ".", "`sgtag'")
+      local cols
+      forval k = 1/`K' {
+        if "`wdpeq`k''" == "ES_`fam'" & "`wdpsg`k''" == "`sgw'" & `wdprl`k'' >= 0 & `wdprl`k'' < . local cols `cols' `k'
+      }
+      if `: word count `cols'' < 2 continue
+      tempname SD
+      mata: wooldid_permstep("`acc'", "`cmpb'", "`cols'", `wdpM', "`SD'")
+      cap confirm matrix `SD'
+      if _rc != 0 continue
+      if rowsof(`SD') < 4 continue
+      local en = cond("`sgtag'" == "", "`sname'", "`sname'_s`sgtag'")
+      if strlen("`en'") <= 32 ereturn matrix `en' = `SD'
+    }
+  }
+
   * -------- across-subgroup equality (allsgssame): chain contrast over the subgroup
   * level columns of each estimand. Every name the worker can post is walked so that no
   * analytic value survives under a permutation header
@@ -9878,6 +9908,23 @@ version 16.0
       cap confirm matrix e(perm_advW)
       if _rc == 0 local wdpqf 1
       if `wdpqf' dis as result "  The joint pre-trend tests, across-subgroup equality tests and adversarial line tests shown are one-sided permutation tests of a quadratic-form statistic in the permutation-covariance metric (the covariance of the replications' coefficients), so they need no per-replication covariance; the adversarial statistic is wooldid's line-fit statistic on that metric, and its p-value tests the sharp null of no effect at any horizon rather than the composite on-a-line null of the analytic test. Replication statistics: e(perm_jointW), e(perm_sgW), e(perm_advW)."
+      * F065: multiplicity-adjusted p-values across the post-treatment horizons
+      foreach wdpsdn in perm_stepdown perm_stepdown_i perm_Cstepdown perm_Cstepdown_i {
+        cap confirm matrix e(`wdpsdn')
+        if _rc != 0 continue
+        local wdpsdf = cond("`wdpsdn'" == "perm_stepdown", "att", cond("`wdpsdn'" == "perm_stepdown_i", "att_it", cond("`wdpsdn'" == "perm_Cstepdown", "ame", "ame_it")))
+        dis as result "  Multiplicity across the post-treatment `wdpsdf' horizons (max-|studentized| step-down, Romano-Wolf; the studentization is the SD of each horizon's null draws): horizon: raw p -> step-down p"
+        tempname wdpsdm
+        matrix `wdpsdm' = e(`wdpsdn')
+        local wdpsdc : colnames `wdpsdm'
+        local wdpsdk 0
+        local wdpsdl
+        foreach wdpsdh of local wdpsdc {
+          local ++wdpsdk
+          local wdpsdl `wdpsdl' `=subinstr("`wdpsdh'", "ES_`wdpsdf':", "", 1)': `=string(`wdpsdm'[2, `wdpsdk'], "%5.3f")' -> `=string(`wdpsdm'[4, `wdpsdk'], "%5.3f")';
+        }
+        dis as result "    `wdpsdl'"
+      }
       if wordcount("`e(wdid_sglist)'") > 1 dis as result "  Pairwise subgroup contrasts are permuted as coefficient differences (in both modes); their kernel is e(perm_pwsgs_kernel)."
       * direction corrected 2026-09-05 (review): the reassigned onsets place actual
   * post-treatment outcomes into the draws' pre-treatment horizons, so the null
@@ -11273,6 +11320,7 @@ cap mata: mata drop wooldid_bootptails()
 cap mata: mata drop wooldid_permstat()
 cap mata: mata drop wooldid_permpw()
 cap mata: mata drop wooldid_permqf()
+cap mata: mata drop wooldid_permstep()
 cap mata: mata drop wooldid_permadv()
 cap mata: mata drop wooldid_permcellwire()
 cap mata: mata drop wooldid_permsaveasg()
@@ -12960,6 +13008,68 @@ void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar 
   st_local(outwobs, strofreal(Wobs, "%21x"))
   if (exk) st_local(outp, strofreal(nex/n, "%21x"))
   else st_local(outp, strofreal((1 + nex)/(n + 1), "%21x"))
+}
+
+// F065 (2026-09-06): max-|studentized| step-down over a set of columns (the post-treatment
+// horizons of one event-study family). Fixed-metric studentization: each column's null
+// draws (replications, plus the comparator row unless the enumeration is complete and
+// exact) are scaled by their standard deviation; the observed statistic is the comparator.
+// Rows of the output: 1 |t_obs|, 2 p_raw (the absolute-value share per column, add-one
+// or exact), 3 p_singlestep (max |t_r| over ALL columns), 4 p_stepdown (max over the
+// columns not yet rejected, in decreasing |t_obs| order, made monotone). Columns keep
+// the accumulator's names; the output is empty (0 x 0) when fewer than 2 complete
+// replications exist or a column has zero dispersion
+void wooldid_permstep(string scalar accname, string scalar cmpname, string scalar colslist,
+                      real scalar M, string scalar outname)
+{
+  real matrix A, CC, T, out
+  real rowvector idx, cm, sd, tobs, ord
+  real colvector ok, mx
+  real scalar n, H, j, h, exk, nex, pprev, pj
+  string matrix cs
+  idx = strtoreal(tokens(colslist))
+  A = st_matrix(accname)[., idx']
+  cs = st_matrixcolstripe(accname)[idx', .]
+  cm = st_matrix(cmpname)[1, idx']
+  st_matrix(outname, J(0, 0, .))
+  if (hasmissing(cm)) return
+  ok = rowmissing(A) :== 0
+  n = sum(ok)
+  if (n < 2) return
+  exk = (M < . & n == M)
+  CC = (exk ? select(A, ok) : select(A, ok) \ cm)
+  sd = sqrt(diagonal(variance(CC)))'
+  if (exk) sd = sd :* sqrt((rows(CC) - 1)/rows(CC))
+  if (min(sd) <= 0 | missing(sd)) return
+  T = abs(select(A, ok)) :/ sd
+  tobs = abs(cm) :/ sd
+  H = cols(T)
+  out = J(4, H, .)
+  out[1, .] = tobs
+  for (h = 1; h <= H; h++) {
+    nex = sum(T[., h] :>= tobs[h])
+    out[2, h] = (exk ? nex/n : (1 + nex)/(n + 1))
+  }
+  mx = rowmax(T)
+  for (h = 1; h <= H; h++) {
+    nex = sum(mx :>= tobs[h])
+    out[3, h] = (exk ? nex/n : (1 + nex)/(n + 1))
+  }
+  // step-down: order by |t_obs| descending; at step j the max runs over columns j..H
+  // of that order; monotone in j
+  ord = order(-tobs', 1)'
+  pprev = 0
+  for (j = 1; j <= H; j++) {
+    mx = rowmax(T[., ord[j..H]])
+    nex = sum(mx :>= tobs[ord[j]])
+    pj = (exk ? nex/n : (1 + nex)/(n + 1))
+    if (pj < pprev) pj = pprev
+    out[4, ord[j]] = pj
+    pprev = pj
+  }
+  st_matrix(outname, out)
+  st_matrixcolstripe(outname, cs)
+  st_matrixrowstripe(outname, (J(4, 1, ""), ("t_obs", "p_raw", "p_singlestep", "p_stepdown")'))
 }
 
 // F034 (2026-09-06): the bootstrap twin of wooldid_permqf. Draws A (rows = replications,
