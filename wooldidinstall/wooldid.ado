@@ -7760,21 +7760,22 @@ version 16.0
     if strlen("perm_analytic_`nm'") <= 32 ereturn hidden matrix perm_analytic_`nm' = `cfa'
     * the cell draws and the comparator cells, keyed by cell, so every cell p and
     * interval is reconstructable from e() (row 1 of permcmp_* is the comparator)
-    * gated on the longest of the four prefixes (permdistse_) so that the se twins can
-    * never be skipped while the coefficient twins post
-    if strlen("permdistse_`nm'") <= 32 & !`drift' {
+    * each twin pair is guarded by its own prefix length (coefficient twins at 9
+    * characters, se twins at 11): a 22-23 character cfx name keeps permdist_/permcmp_
+    * and loses only the se twins, which is what the help says
+    if strlen("permdist_`nm'") <= 32 & !`drift' {
       tempname cd cd0
       matrix `cd' = `cell'_cfx`c'
       matrix `cd0' = `cell0'_cfx`c'
       cap ereturn hidden matrix permdist_`nm' = `cd'
       cap ereturn hidden matrix permcmp_`nm' = `cd0'
-      if `ts' {
-        tempname cds cds0
-        matrix `cds' = `cell'_cfx`c'se
-        matrix `cds0' = `cell0'_cfx`c'se
-        cap ereturn hidden matrix permdistse_`nm' = `cds'
-        cap ereturn hidden matrix permcmpse_`nm' = `cds0'
-      }
+    }
+    if `ts' & strlen("permdistse_`nm'") <= 32 & !`drift' {
+      tempname cds cds0
+      matrix `cds' = `cell'_cfx`c'se
+      matrix `cds0' = `cell0'_cfx`c'se
+      cap ereturn hidden matrix permdistse_`nm' = `cds'
+      cap ereturn hidden matrix permcmpse_`nm' = `cds0'
     }
     local ++ndone
   }
@@ -9536,7 +9537,7 @@ version 16.0
     dis as result "Cohort-by-Relative-Period Effects (regression scale; full table incl. weight totals in e(gteffects)):"
     if "`poisson'" == "poisson" dis as text "Note: under poisson these are on the linear-index (xb) scale; poisexpresults/semielasticity adjustments are not applied."
     if "`e(perm_gt_blank)'" == "1" dis as text "Note: under permute() these cells have no permutation distribution (their keys are cohort onsets, which the replications reassign), so their inference columns are blank; rows outside the reported event-study window have inwindow = 0."
-    else if "`e(boot_method)'" != "" dis as text "Note: under bootstrap() the se, p, lb and ub columns are the `e(boot_gteffects_family)' bootstrap family of each cell's own replications (every family is stored in e(boot_*_gteffects)); rows outside the reported event-study window have inwindow = 0."
+    else if "`e(boot_method)'" != "" dis as text "Note: under bootstrap() the se, p, lb and ub columns are the `=cond("`e(boot_gteffects_family)'" == "", "percentile", "`e(boot_gteffects_family)'")' bootstrap family of each cell's own replications (every family is stored in e(boot_*_gteffects)); rows outside the reported event-study window have inwindow = 0."
     else dis as text "Note: standard errors are the stage-1 regression's coefficient-level VCE; rows outside the reported event-study window have inwindow = 0."
     if `gtrows' <= 200 {
       tempname gtds
@@ -9607,7 +9608,7 @@ version 16.0
    * F-boot summary block (existence-gated: replay of non-bootstrap stores prints
    * nothing). all content from e() only
    if "`e(boot_method)'" == "" exit
-   local wdbmt = cond("`e(boot_method)'" == "bayes", "Bayesian cluster bootstrap (Dirichlet reweighting, alpha = `e(boot_alpha)')", cond("`e(clustvar)'" != "", "cluster bootstrap (resampling with replacement)", "observation-level bootstrap (resampling with replacement)"))
+   local wdbmt = cond("`e(boot_method)'" == "bayes", "Bayesian cluster bootstrap (Dirichlet reweighting, alpha = `e(boot_alpha)')", cond(strpos("`e(wdid_vcespec)'", "observation-level") == 0, "cluster bootstrap (resampling with replacement)", "observation-level bootstrap (resampling with replacement)"))
    dis as result "Bootstrap Inference (`wdbmt'):"
    dis as result "  " e(boot_completed) " of " e(boot_reps) " replications completed" _continue
    if e(boot_failed) > 0 dis as result " (" e(boot_failed) " failed and excluded)" _continue

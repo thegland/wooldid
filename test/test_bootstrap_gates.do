@@ -473,6 +473,12 @@ if strpos(`"`lg'"', "are bootstrapped as coefficient differences") > 0 | strpos(
   di as error "G25d FAIL: the boottstat footer still describes the contrasts as coefficient differences"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
+* the positive half of the label check: this run IS clustered, so the label must say so
+* (the label is keyed on e(wdid_vcespec); wooldid posts no e(clustvar))
+if strpos(`"`lg'"', "cluster bootstrap (resampling with replacement)") == 0 {
+  di as error "G25e FAIL: the footer does not label the clustered run as a cluster bootstrap"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
 cap erase boot_gates_g25b.txt
 
 * G26 pretrendpower() under bootstrap on an att-only run: no 'bootstrap event-study
