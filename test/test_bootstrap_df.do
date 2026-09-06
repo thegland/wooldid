@@ -120,17 +120,22 @@ if reldif(r(p), `pt') > 1e-10 {
 * boottstat, so bootdf() no longer has a joint test to move.
 mkp
 qui wooldid y unit t ttre, att cluster(unit) esprelength(3) espostlength(1) jointtests bootstrap(bayes) reps(40) rseed(99) bootdf(normal)
+* RE-PINNED 2026-09-06 (F034): without boottstat the joint test is PRESENT as the
+* fixed-metric rank test (e(boot_jt_family) = fixedmetric), and bootdf() has nothing to
+* move: the rank test is identical under bootdf(normal) and bootdf(clusters)
 cap confirm scalar e(joint_horiz)
 local rc_z = _rc
-local flag_z `e(boot_jt_absent)'
+local fam_z `e(boot_jt_family)'
+local jp_z = e(joint_horiz)
 mkp
 qui wooldid y unit t ttre, att cluster(unit) esprelength(3) espostlength(1) jointtests bootstrap(bayes) reps(40) rseed(99) bootdf(clusters)
 cap confirm scalar e(joint_horiz)
 local rc_t = _rc
-local flag_t `e(boot_jt_absent)'
-di "T3_absent rc_normal=`rc_z' rc_clusters=`rc_t' flags=[`flag_z'][`flag_t'] (want 111 111 and both flagged)"
-if `rc_z' == 0 | `rc_t' == 0 | "`flag_z'" != "1" | "`flag_t'" != "1" {
-  di as error "T3 FAIL: without boottstat the joint test must be absent and flagged"
+local fam_t `e(boot_jt_family)'
+local jp_t = e(joint_horiz)
+di "T3_fixedmetric rc_normal=`rc_z' rc_clusters=`rc_t' families=[`fam_z'][`fam_t'] p=`jp_z'/`jp_t' (want 0 0, fixedmetric, equal)"
+if `rc_z' != 0 | `rc_t' != 0 | "`fam_z'" != "fixedmetric" | "`fam_t'" != "fixedmetric" | `jp_z' != `jp_t' | `jp_z' >= . {
+  di as error "T3 FAIL: without boottstat the joint test must be the fixed-metric rank test, identical across bootdf()"
   local ++fails
 }
 * and the analytic value must not be what got suppressed - an unclustered analytic run
@@ -142,9 +147,9 @@ mkp
 qui wooldid y unit t ttre, att esprelength(3) espostlength(1) jointtests bootstrap(bayes) reps(40) rseed(99) cluster(unit)
 cap confirm scalar e(joint_horiz)
 local rc_u = _rc
-di "T3b_analytic=" jp_analytic " bootstrap_rc=`rc_u' (want a real analytic value and rc 111)"
-if `rc_u' == 0 {
-  di as error "T3b FAIL: an analytic joint p survived into a bootstrap run"
+di "T3b_analytic=" jp_analytic " bootstrap_rc=`rc_u' bootstrap_p=" e(joint_horiz) " (want a real analytic value, rc 0 and a DIFFERENT p)"
+if `rc_u' != 0 | jp_analytic >= . | e(joint_horiz) >= . | reldif(e(joint_horiz), jp_analytic) < 1e-12 {
+  di as error "T3b FAIL: the bootstrap run must post its own (fixed-metric) joint p, not the analytic value"
   local ++fails
 }
 

@@ -38,12 +38,39 @@ end
 * here, at which point the ET1 identity below must be re-derived, not merely re-toleranced.
 mkpan
 qui wooldid y unit t ttre, att cluster(unit) esprelength(3) espostlength(1) jointtests bootstrap(bayes) reps(40) rseed(99) bootdf(normal)
+* RE-PINNED 2026-09-06 (F034): without boottstat the joint test is PRESENT as the
+* fixed-metric rank test (e(boot_jt_family) = fixedmetric) and reconstructable by name from
+* e(bootdist) and e(b): S = listwise covariance of the pre-horizon draws, W_obs = b' S^-1 b,
+* W_r = (b_r - b)' S^-1 (b_r - b), p = (1 + #{W_r >= W_obs}) / (n + 1); e(boot_jointWobs)
+* holds W_obs and e(boot_jointW) the W_r
 cap confirm scalar e(joint_horiz)
-local et1_absent_rc = _rc
-di "ET1_ABSENT_WITHOUT_BOOTTSTAT rc=`et1_absent_rc' flag=[`e(boot_jt_absent)'] (want 111 and 1)"
-if `et1_absent_rc' == 0 | "`e(boot_jt_absent)'" != "1" {
-  di as error "ET1z FAIL: the joint test must be absent and flagged without boottstat"
+local et1_present_rc = _rc
+local et1_fam `e(boot_jt_family)'
+di "ET1_FIXEDMETRIC_WITHOUT_BOOTTSTAT rc=`et1_present_rc' family=[`et1_fam'] p=" e(joint_horiz)
+if `et1_present_rc' != 0 | "`et1_fam'" != "fixedmetric" | "`e(boot_jt_absent)'" != "" {
+  di as error "ET1z FAIL: the fixed-metric joint test must be present and labelled without boottstat"
   local ++fails
+}
+else {
+  matrix ET1F_B = e(b)
+  matrix ET1F_A = e(bootdist)
+  matrix ET1F_WO = e(boot_jointWobs)
+  * the accumulator columns follow e(wdidmainresults)' rows (the ado's positional walk):
+  * the ES_att pre-horizon columns are the rows with equation ES_att and relyr (col 7) < 0
+  matrix ET1F_M = e(wdidmainresults)
+  local et1frn : rowfullnames ET1F_M
+  local et1fpre
+  local et1fk 0
+  foreach rn of local et1frn {
+    local ++et1fk
+    if strpos("`rn'", "ES_att:") == 1 & ET1F_M[`et1fk', 7] < 0 local et1fpre `et1fpre' `et1fk'
+  }
+  mata: idx = strtoreal(tokens(st_local("et1fpre"))); A = st_matrix("ET1F_A")[., idx']; b0 = st_matrix("ET1F_B")[1, idx']; ok = rowmissing(A) :== 0; D = select(A, ok); n = rows(D); S = variance(D); Si = invsym(S); Wo = b0 * Si * b0'; Wr = J(n, 1, .); for (r = 1; r <= n; r++) Wr[r] = (D[r, .] - b0) * Si * (D[r, .] - b0)'; st_numscalar("et1f_p", (1 + sum(Wr :>= Wo)) / (n + 1)); st_numscalar("et1f_wo", Wo); st_numscalar("et1f_n", n)
+  di "ET1_FIXEDMETRIC hand p=" %18.14f et1f_p " table=" %18.14f e(joint_horiz) " W_obs hand=" %14.8f et1f_wo " posted=" %14.8f ET1F_WO[1,1] " n=" et1f_n " cols=[`et1fpre']"
+  if abs(et1f_p - e(joint_horiz)) > 1e-12 | reldif(et1f_wo, ET1F_WO[1,1]) > 1e-10 | et1f_n < 2 {
+    di as error "ET1y FAIL: the fixed-metric joint test is not reconstructable by name from e(bootdist)/e(b)"
+    local ++fails
+  }
 }
 * RE-DERIVED 2026-09-05 (Layer 2): under boottstat the joint statistic is the bootstrap of the
 * TEST STATISTIC - each replication's recentred Wald (b_r - b)' V_r^-1 (b_r - b) on its own
@@ -290,20 +317,32 @@ use `fxeq', clear
 cap qui wooldid y grp t ttre [aw=w], `EQB'
 local eq_rc0 = _rc
 local eq_present 0
-foreach nm in ame ame_i ame_itime pre_ame pre_ame_i pre_ame_itime {
-  if e(joint_`nm'_allsgssame) < . local ++eq_present
+foreach nm in ame ame_i ame_itime pre_ame pre_ame_i pre_ame_itime att att_i att_itime pre_att pre_att_i pre_att_itime {
+  local eqa_`nm' = e(joint_`nm'_allsgssame)
+  if e(joint_`nm'_allsgssame) < . & strpos("`nm'", "ame") > 0 local ++eq_present
 }
 use `fxeq', clear
 cap qui wooldid y grp t ttre [aw=w], `EQB' bootstrap(bayes) reps(12) rseed(101) dots(0)
 local eq_rc1 = _rc
+* RE-PINNED 2026-09-06 (F034): the equality tests are now PRESENT without boottstat as
+* fixed-metric rank tests; a "leak" is an equality p that EQUALS its analytic baseline
+* value (an add-one share of at most 13 replications cannot coincide with a chi2 tail
+* probability except by construction), or an analytic value standing where the bootstrap
+* produced none
 local eq_leaked 0
+local eq_bootpresent 0
 foreach nm in ame ame_i ame_itime pre_ame pre_ame_i pre_ame_itime att att_i att_itime pre_att pre_att_i pre_att_itime {
   if e(joint_`nm'_allsgssame) < . {
-    local ++eq_leaked
-    di as error "ET9 leaked: joint_`nm'_allsgssame = " e(joint_`nm'_allsgssame)
+    local ++eq_bootpresent
+    if "`eqa_`nm''" != "" & "`eqa_`nm''" != "." {
+      if reldif(e(joint_`nm'_allsgssame), `eqa_`nm'') < 1e-12 {
+        local ++eq_leaked
+        di as error "ET9 leaked: joint_`nm'_allsgssame = " e(joint_`nm'_allsgssame) " equals the analytic value"
+      }
+    }
   }
 }
-di "ET9_rc0=`eq_rc0' rc1=`eq_rc1' analytic_ame_present=`eq_present' leaked=`eq_leaked' sgjt_absent=[`e(boot_sgjt_absent)']"
+di "ET9_rc0=`eq_rc0' rc1=`eq_rc1' analytic_ame_present=`eq_present' boot_present=`eq_bootpresent' leaked=`eq_leaked' family=[`e(boot_jt_family)'] sgjt_absent=[`e(boot_sgjt_absent)']"
 if `eq_rc0' != 0 | `eq_rc1' != 0 {
   di as error "ET9 FAIL (VACUOUS): a run errored, so the leak check proved nothing"
   local ++fails

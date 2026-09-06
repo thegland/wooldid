@@ -6492,11 +6492,68 @@ version 16.0
   * worker suppresses the analytic joint tests whenever bootstrap() is on, so skipping
   * leaves them genuinely absent rather than stale
   if "`jt'" != "" & "`bts'" == "" {
-    * a flag, not just a caution: the cautions below print at estimation time only, so a
-    * REPLAYED run would otherwise carry no disclosure that the joint tests are missing
-    ereturn local boot_jt_absent 1
-    local ++wdbncaut
-    local wdbc`wdbncaut' the joint tests were not computed. Bootstrapping a joint test means bootstrapping its test statistic, which needs each replication's own covariance among the estimands; add boottstat to request that. They are reported as absent rather than as an analytic test, which would not be a bootstrap quantity
+    * F034 (quality review 2026-09-05, author ruling 2026-09-06): without boottstat the
+    * joint pre-trend test is the FIXED-METRIC rank test the permutation engine already
+    * uses (wooldid_permqf's construction): the replication draws recentred at the
+    * observed estimates (the rep-0 comparator, never the draw mean - the F018 lesson),
+    * W_r = (b_r - b)' S^-1 (b_r - b) on the listwise bootstrap covariance S of the
+    * family's pre-horizon columns, against W_obs = b' S^-1 b, p = add-one share of
+    * W_r >= W_obs. It is a bootstrap quantity (the ruling that blanked these tests asked
+    * for one), not the Wald-on-V_boot test a hand `test' reproduces, and is labelled
+    * e(boot_jt_family) = fixedmetric; under boottstat the studentized statistic is kept
+    * and labelled studentized
+    local wdbjw
+    foreach fam in att att_it ame ame_it {
+      local ename = cond(strpos("`fam'", "ame"), "joint_Choriz", "joint_horiz")
+      if "`fam'" == "att_it" | "`fam'" == "ame_it" local ename `ename'_i
+      foreach sgtag in "" `sgl' {
+        local sgw = cond("`sgtag'" == "", ".", "`sgtag'")
+        local cols
+        forval k = 1/`K' {
+          if "`wdbeq`k''" == "ES_`fam'" & "`wdbsg`k''" == "`sgw'" & `wdbrl`k'' < 0 local cols `cols' `k'
+        }
+        local q : word count `cols'
+        if `q' < 2 continue
+        tempname Cm Wr
+        matrix `Cm' = I(`q')
+        local jp .
+        local jn 0
+        local jw .
+        mata: wooldid_bootqf("`acc'", "`obsb'", "`cols'", "`Cm'", "jp", "jn", "jw", "`Wr'")
+        local en = cond("`sgtag'" == "", "`ename'", "`ename'_s`sgtag'")
+        if `jp' < . {
+          if "`sgtag'" == "" ereturn scalar `en' = `jp'
+          else ereturn local `en' = `jp'
+          matrix colnames `Wr' = `en'
+          tempname Wo
+          matrix `Wo' = J(1, 1, `jw')
+          matrix colnames `Wo' = `en'
+          if "`wdbjw'" == "" {
+            tempname jwall jwobs
+            matrix `jwall' = `Wr'
+            matrix `jwobs' = `Wo'
+            local wdbjw 1
+          }
+          else {
+            matrix `jwall' = `jwall', `Wr'
+            matrix `jwobs' = `jwobs', `Wo'
+          }
+        }
+        else {
+          local ++wdbncaut
+          local wdbc`wdbncaut' the bootstrap joint pre-trend test `en' is unavailable (fewer than 2 complete replications carry every pre-treatment horizon, or the bootstrap covariance of those horizons is rank-deficient); it is reported as absent rather than as an analytic test
+        }
+      }
+    }
+    if "`wdbjw'" != "" {
+      ereturn matrix boot_jointW = `jwall'
+      ereturn matrix boot_jointWobs = `jwobs'
+      ereturn local boot_jt_family fixedmetric
+    }
+    else {
+      * a flag, not just a caution, so a REPLAYED run still carries the disclosure
+      ereturn local boot_jt_absent 1
+    }
   }
   if "`jt'" != "" & "`bts'" != "" {
     * BOOTSTRAPPED joint statistics: p = add-one share of recentred W_r >= W_obs, the W_r
@@ -6560,6 +6617,7 @@ version 16.0
     if `wdb_jtok' {
       matrix colnames `jwacc' = `wdb_jfk'
       cap ereturn matrix boot_jointW = `jwacc'
+      ereturn local boot_jt_family studentized
     }
   }
 
@@ -6647,16 +6705,44 @@ version 16.0
           else local cols `cols' `found'
         }
         if "`bts'" == "" {
-          * Author ruling 2026-09-03, same as the joint tests above: not bootstrappable
-          * without boottstat, therefore ABSENT. This one has to be actively blanked
-          * rather than merely skipped, because unlike joint_horiz the worker posts the
-          * ANALYTIC subgroup-equality scalar unconditionally (its block is gated only
-          * on there being more than one realized subgroup, not on bootstrap()), so
-          * skipping would leave an analytic p standing under a bootstrap header.
-          * Blanked WITHOUT the `ok' gate on purpose: `ok' reports whether every
-          * subgroup's column could be mapped, and gating the blank on it is exactly
-          * what let an unmapped run keep printing the analytic value
-          if "`e(joint_`pre'`it'_allsgssame)'" != "" {
+          * F034 (2026-09-06): the fixed-metric rank test on the chain contrast of the
+          * subgroup level columns (recentred draws, bootstrap-covariance metric), the
+          * permutation engine's construction. The worker's ANALYTIC scalar is always
+          * overwritten or blanked first, so no analytic p can stand under a bootstrap
+          * header (the blank is not gated on `ok', which reports whether every
+          * subgroup's column could be mapped)
+          if "`e(joint_`pre'`it'_allsgssame)'" != "" ereturn scalar joint_`pre'`it'_allsgssame = .
+          local jp .
+          if `ok' {
+            local mm : word count `cols'
+            tempname Cm Wr
+            matrix `Cm' = J(`mm'-1, `mm', 0)
+            forval j = 1/`=`mm'-1' {
+              matrix `Cm'[`j', `j'] = 1
+              matrix `Cm'[`j', `j'+1] = -1
+            }
+            local jn 0
+            local jw .
+            mata: wooldid_bootqf("`acc'", "`obsb'", "`cols'", "`Cm'", "jp", "jn", "jw", "`Wr'")
+          }
+          if `jp' < . {
+            ereturn scalar joint_`pre'`it'_allsgssame = `jp'
+            matrix colnames `Wr' = joint_`pre'`it'_allsgssame
+            tempname Wo
+            matrix `Wo' = J(1, 1, `jw')
+            matrix colnames `Wo' = joint_`pre'`it'_allsgssame
+            if "`wdbsw'" == "" {
+              tempname swall swobs
+              matrix `swall' = `Wr'
+              matrix `swobs' = `Wo'
+              local wdbsw 1
+            }
+            else {
+              matrix `swall' = `swall', `Wr'
+              matrix `swobs' = `swobs', `Wo'
+            }
+          }
+          else if `ok' | "`e(joint_`pre'`it'_allsgssame)'" != "" {
             ereturn scalar joint_`pre'`it'_allsgssame = .
             local wdbsgjtblank 1
           }
@@ -6703,6 +6789,10 @@ version 16.0
           local wdbc`wdbncaut' the `pre'`it' subgroup-equality test could not be mapped to replication columns and is reported as absent
         }
       }
+    }
+    if "`wdbsw'" != "" {
+      ereturn matrix boot_sgW = `swall'
+      ereturn matrix boot_sgWobs = `swobs'
     }
     if "`wdbsgjtblank'" != "" {
       ereturn local boot_sgjt_absent 1
@@ -9791,7 +9881,8 @@ version 16.0
    * e(V) and e(df_r) carry the sd-family inference whichever family is displayed, so a
    * hand-run test/lincom reproduces the sd package and NOT a displayed percentile p
    if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  e(V) and e(df_r) carry the standard-deviation family referred to the `wdbrefd' distribution, so test and lincom run by hand reproduce the bootdisplay(wald) numbers rather than the columns printed above."
-   if "`e(boot_jt_absent)'" != "" | "`e(boot_sgjt_absent)'" != "" dis as result "  The joint tests and/or the across-subgroup equality tests are NOT reported for this run: bootstrapping them means bootstrapping their test statistic, which requires boottstat. They are absent rather than shown as analytic tests, which would not be bootstrap quantities."
+   if "`e(boot_jt_family)'" == "fixedmetric" dis as result "  The joint pre-trend tests (and the across-subgroup equality tests, when subgroups are present) are rank tests of the replication draws recentred at the observed estimates on the fixed bootstrap-covariance metric, p = add-one share of replications at or beyond the observed statistic (e(boot_jt_family) = fixedmetric; the replication statistics are in e(boot_jointW) and e(boot_sgW)). Under boottstat they would instead be bootstrapped test statistics."
+   if "`e(boot_jt_absent)'" != "" | "`e(boot_sgjt_absent)'" != "" dis as result "  Some joint tests and/or across-subgroup equality tests are NOT reported for this run (no usable replication statistic - too few complete replications or a rank-deficient bootstrap covariance of the tested columns). They are absent rather than shown as analytic tests, which would not be bootstrap quantities."
    if "`e(boot_tstat)'" == "1" dis as result "  Subgroup contrasts, when requested, are studentized by their own analytic pairwise standard error in every replication (boottstat) and carry the same package as the coefficient rows."
    else dis as result "  Subgroup contrasts, when requested, are bootstrapped as coefficient differences and carry the same package as the coefficient rows."
  }
@@ -11111,7 +11202,7 @@ cap mata: mata drop wooldid_bootgrab()
 cap mata: mata drop wooldid_bootfin()
 cap mata: mata drop wooldid_bootves()
 cap mata: mata drop wooldid_bootdist()
-cap mata: mata drop wooldid_bootjw()
+cap mata: mata drop wooldid_bootqf()
 cap mata: mata drop wooldid_bootpw()
 cap mata: mata drop wooldid_bootpp()
 cap mata: mata drop wooldid_bootpwt()
@@ -11466,90 +11557,6 @@ void wooldid_bootdist(string scalar accname, string scalar outname, | string sca
 }
 
 
-// Wald test of the OBSERVED coefficients in the given columns against zero (or,
-// mode=="chain", of their successive differences - the subgroup-equality null),
-// using the LISTWISE complete-case bootstrap covariance of those columns. Posts
-// st_local wdbjp = p (chi2, df = #constraints) or "." on any guard failure:
-// too few listwise rows, non-PSD covariance, or invsym dropping a constraint
-// (a dropped constraint must post MISSING, never a residual-rank p).
-void wooldid_bootjw(string scalar accname, string scalar obsbname, string scalar colslist, string scalar mode, real scalar dfden)
-{
-  real matrix A, S, Si, CC, dev, Cm, R
-  real rowvector idx
-  real colvector ok, b, d, ev, sc
-  real scalar k, j, W, df
-  idx = strtoreal(tokens(colslist))
-  A = st_matrix(accname)[., idx']
-  b = st_matrix(obsbname)[1, idx']'
-  ok = rowmissing(A) :== 0
-  k = cols(A)
-  if (mode == "chain") {
-    Cm = J(k-1, k, 0)
-    for (j = 1; j <= k-1; j++) {
-      Cm[j, j] = 1
-      Cm[j, j+1] = -1
-    }
-    d = Cm * b
-    df = k - 1
-  }
-  else {
-    Cm = I(k)
-    d = b
-    df = k
-  }
-  if (sum(ok) < df + 2 | missing(d)) {
-    st_local("wdbjp", ".")
-    return
-  }
-  CC = select(A, ok)
-  dev = CC :- mean(CC)
-  S = Cm * ((dev' * dev) / (rows(CC) - 1)) * Cm'
-  // scale-free guard: invsym's pivot tolerance is ABSOLUTE, so on its own it both
-  // misses relative rank deficiency at ordinary scale and refuses well-conditioned
-  // covariances at tiny scale. Correlation-normalise, judge the eigenvalues of the
-  // normalised matrix, then undo the scaling on the inverse. The 1e-8 relative floor
-  // (condition number 1e8) was calibrated on measured conditioning: real event-study
-  // pre-blocks sit around 1.5e-2, a near-collinear construction that invsym alone let
-  // through at ordinary scale sits at 5.7e-10, and the floor separates them with six
-  // orders of margin on the live side
-  sc = sqrt(diagonal(S))
-  if (min(sc) <= 0 | missing(sc)) {
-    st_local("wdbjp", ".")
-    return
-  }
-  R = S :/ (sc * sc')
-  ev = symeigenvalues(R)'
-  if (min(ev) < -1e-8*max(abs(ev)) | max(ev) <= 0 | min(ev) < 1e-8*max(ev)) {
-    st_local("wdbjp", ".")
-    return
-  }
-  Si = invsym(R) :/ (sc * sc')
-  if (min(abs(diagonal(Si))) == 0) {
-    st_local("wdbjp", ".")
-    return
-  }
-  W = d' * Si * d
-  if (W < 0 | W >= .) {
-    st_local("wdbjp", ".")
-    return
-  }
-  // with finite denominator degrees of freedom the joint test is reported as
-  // F(df, dfden) = W/df, the small-sample analogue of the chi-squared Wald form
-  if (dfden < .) st_local("wdbjp", strofreal(Ftail(df, dfden, W/df), "%21x"))
-  else st_local("wdbjp", strofreal(chi2tail(df, W), "%21x"))
-}
-
-// bootstrap se of a difference of two columns (listwise over the pair)
-// the percentile package for one pairwise subgroup contrast: the interval, its dual p
-// and the count of usable replications, all built from the CONTRAST draws
-// d_r = b_r[ka] - b_r[kb]. Orientation matters here in a way it does not for the
-// standard error: the row name is "JvsK" = level J minus level K, ka is matched to J
-// and kb to K upstream, so d is formed in that order and the interval is not symmetric.
-// The listwise-complete-PAIR selection is wooldid_bootpw's, verbatim and for the same
-// reason - and selecting BEFORE sorting also matters, because mata's sort() orders
-// missing LAST, so a single incomplete replication would otherwise shift every order
-// statistic. The endpoint rule and the p convention are wooldid_bootci's, so a contrast
-// row and a coefficient row mean the same thing by the same arithmetic
 // observed pre-horizon coefficients for every event-study family key that exists, stacked
 // into one row vector with colstripe (fk, prename). Built while the OBSERVED e() is live
 // (wooldid_bootrun, before any replication), and carried into the rep loop by name
@@ -12833,6 +12840,58 @@ void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar 
   st_local(outwobs, strofreal(Wobs, "%21x"))
   if (exk) st_local(outp, strofreal(nex/n, "%21x"))
   else st_local(outp, strofreal((1 + nex)/(n + 1), "%21x"))
+}
+
+// F034 (2026-09-06): the bootstrap twin of wooldid_permqf. Draws A (rows = replications,
+// listwise complete on the tested columns) are recentred at the OBSERVED estimates b0
+// (the rep-0 comparator), the metric is the bootstrap covariance of the draws about
+// their mean (the same listwise covariance e(V_boot) carries for those columns, with
+// wooldid_permqf's correlation-normalised eigen guard), W_r = (Cm (b_r - b0))' S^-1
+// (Cm (b_r - b0)), W_obs = (Cm b0)' S^-1 (Cm b0), p = add-one share of W_r >= W_obs
+void wooldid_bootqf(string scalar accname, string scalar obsbname, string scalar colslist,
+                    string scalar Cname, string scalar outp, string scalar outn,
+                    string scalar outwobs, string scalar outW)
+{
+  real matrix A, D, Cm, R, Si, dev
+  real rowvector idx, b0, sc, ev
+  real colvector ok, Wr, d
+  real scalar n, r, Wobs, nex
+  st_local(outp, ".")
+  st_local(outn, "0")
+  st_local(outwobs, ".")
+  idx = strtoreal(tokens(colslist))
+  A = st_matrix(accname)[., idx']
+  b0 = st_matrix(obsbname)[1, idx']
+  Cm = st_matrix(Cname)
+  Wr = J(rows(A), 1, .)
+  st_matrix(outW, Wr)
+  if (hasmissing(b0)) return
+  ok = rowmissing(A) :== 0
+  n = sum(ok)
+  st_local(outn, strofreal(n))
+  if (n < 2) return
+  D = select(A, ok)
+  dev = D :- mean(D)
+  R = Cm * ((dev' * dev) / (n - 1)) * Cm'
+  R = (R + R')/2
+  sc = sqrt(diagonal(R))'
+  if (min(sc) <= 0 | missing(sc)) return
+  R = R :/ (sc' * sc)
+  ev = symeigenvalues(R)
+  if (min(ev) < -1e-8*max(abs(ev)) | max(ev) <= 0 | min(ev) < 1e-8*max(ev)) return
+  Si = invsym(R) :/ (sc' * sc)
+  d = Cm * b0'
+  Wobs = d' * Si * d
+  if (Wobs < 0 | Wobs >= .) return
+  for (r = 1; r <= rows(A); r++) {
+    if (!ok[r]) continue
+    d = Cm * (A[r, .] - b0)'
+    Wr[r] = d' * Si * d
+  }
+  st_matrix(outW, Wr)
+  nex = sum(select(Wr, Wr :< .) :>= Wobs)
+  st_local(outwobs, strofreal(Wobs, "%21x"))
+  st_local(outp, strofreal((1 + nex)/(n + 1), "%21x"))
 }
 
 // adversarial line statistic on the fixed metric: wooldid_advW(b, Sigma, rel, ...) per
