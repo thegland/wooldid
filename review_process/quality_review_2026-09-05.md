@@ -196,3 +196,11 @@ Environment note: the suites and the bstat comparison in G24 ran on Stata/MP 19.
 | Execution | start now in priority order: fixes, then small items, then features, then research and simulations; one commit per item with pins; ship record at the end |
 
 rseed(): confirmed available for both engines (bootstrap() from the start; permute() since d81fb85 with e(perm_seed)); F059 adds the rngstate record.
+
+
+## 10. Execution (2026-09-06)
+
+Every ruled item shipped as one commit each on `bugfixes` (c9b47d8 .. 01a7f7a), with cert pins; the
+research items produced records under `review_process/research_2026-09-06/` and the extended simulations
+(F058) and the practice sweep run as separate workflows. The ship record with the commit table, the
+judgment calls made during execution and the research conclusions is `review_process/qr_ship_2026-09-06.md`.
