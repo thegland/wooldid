@@ -5760,6 +5760,24 @@ version 16.0
     error 459
   }
 
+  * each replication draws ONE onset per cluster and writes it to every observation of
+  * the cluster, so a unit (i) straddling two clusters would carry two onsets in a
+  * replication - undefined for the estimator (every replication fails, or under
+  * permexact the enumeration is over the wrong design). The cluster() variable must
+  * nest i: clustering at i or coarser passes, finer is refused (the bootstrap's re-id
+  * leg has the same requirement). Added 2026-09-05 (review finding econ_perm F4)
+  if "`clus'" != "`ivar'" {
+    tempvar cgrp cmin cmax
+    qui gegen double `cgrp' = group(`clus') if `insmp'
+    qui gegen double `cmin' = min(`cgrp') if `insmp', by(`ivar')
+    qui gegen double `cmax' = max(`cgrp') if `insmp', by(`ivar')
+    qui count if `insmp' & `cmin' != `cmax'
+    if r(N) > 0 {
+      dis as error "Error: permute() requires the cluster() variable to nest i (every i wholly inside one cluster): each replication assigns one onset per cluster to all of its observations, which is undefined when a unit straddles clusters (`r(N)' in-sample observation(s) do). Cluster at or above the i level."
+      error 459
+    }
+  }
+
   * subgroups() under permute() (chunk 1, 2026-09-05): every cluster can become treated in
   * a replication, so the worker's subgroup screens - which run on the OBSERVED treated
   * units only - must hold on the whole design population, or a replication fails by a

@@ -866,6 +866,28 @@ xrc Q14e 198 _rc
 cap noi wooldid y i t ttre, att cluster(i) rseed(77)
 xrc Q14f 198 _rc
 
+* ================= Q15: the cluster() variable must nest i under permute() (gate added
+* 2026-09-05): a cluster finer than the unit would give a unit two onsets in a
+* replication - refused up front (459) with the reason; cluster == i and a coarser
+* cluster (onset constant within it) still run =========================================
+mkperm3 8 4 3
+qui gen c2 = 2*i - (t <= 4)
+qui log using perm3_q15.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(c2) permute(shuffle) permreps(10)
+local rc = _rc
+qui log close p3
+xrc Q15a 459 `rc'
+local lg = fileread("perm3_q15.txt")
+if strpos(`"`lg'"', "requires the cluster() variable to nest i") == 0 {
+  dis as error "Q15b FAIL: the finer-than-i refusal does not name the cause"
+  global pf = $pf + 1
+}
+qui gen s = ceil(i/2)
+cap noi wooldid y i t ttre, att cluster(s) permute(shuffle) permreps(10)
+xrc Q15c 0 _rc
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(10)
+xrc Q15d 0 _rc
+
 * ================= Q11: a plain run after all of this is untouched by the engine ======
 mkperm3 8 4 3
 cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
