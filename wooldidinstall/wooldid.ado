@@ -4504,6 +4504,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   ereturn hidden local wdid_cwm "`customweightmultiplier'"
   ereturn hidden local wdid_semielas "`semielasticity'"
   ereturn hidden local wdid_fcol "`fcon'"
+  * F061 (2026-09-06): the realised cell count (missing when the collapse did not run, so
+  * "no collapse" and "collapsed to zero cells" cannot be confused) and the skip reason(s)
+  if "`fconn'" != "" ereturn hidden scalar wdid_fcncell = `fconn'
+  else ereturn hidden scalar wdid_fcncell = .
+  ereturn hidden local wdid_fcskip "`fcskip'"
   ereturn hidden local wdid_fcguard "`fcguard'"
   ereturn hidden local wdid_cetype "`contreatelasticitytype'"
   ereturn hidden local wdid_suppressjt "`suppressjointtests'"

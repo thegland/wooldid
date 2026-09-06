@@ -1208,5 +1208,26 @@ if f12ud1 != 25 | f12ud2 != 15 | f12ud3 < . {
   local ++fails
 }
 
+* ---- F13 (F061, 2026-09-06): e(wdid_fcncell) is the realised cell count - positive and
+* below the row count on aggregating data, MISSING when the collapse did not run (the
+* off-switch, or a silent skip) - and e(wdid_fcskip) names the skip reason(s)
+use "`ADMIN'", clear
+local n13 = _N
+qui wooldid y cohid year ttre, att robust
+local nc13 = e(wdid_fcncell)
+local fs13 "`e(wdid_fcskip)'"
+use "`ADMIN'", clear
+qui wooldid y cohid year ttre, att robust fullprecisionslow
+local nc13s = e(wdid_fcncell)
+use "`ADMIN'", clear
+qui wooldid y cohid year ttre, att cluster(state) impvalues
+local nc13i = e(wdid_fcncell)
+local fs13i "`e(wdid_fcskip)'"
+di "F13 fcncell default=`nc13' slow=`nc13s' impvalues=`nc13i' (rows `n13') fcskip default=[`fs13'] impvalues=[`fs13i']"
+if `nc13' >= . | `nc13' < 1 | `nc13' >= `n13' | `nc13s' < . | `nc13i' < . | "`fs13'" != "" | "`fs13i'" != "impvalues" {
+  di as error "F13 FAIL: e(wdid_fcncell)/e(wdid_fcskip) do not record the collapse outcome"
+  local ++fails
+}
+
 if `fails' == 0 di as result "FASTCOLLAPSE_ALL_PASS"
 else di as error "FASTCOLLAPSE_FAILS=`fails'"
