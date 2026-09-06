@@ -338,7 +338,7 @@ the copy.) {ul:The reported quantity is not linear in the coefficients, or not l
 not linear in the coefficients; and {it:poisson} together with {it:contreatelasticitytype(dyex)}, which {it:margins} reports through an {it:expression()} it differentiates
 numerically, so that replacing the dose by its cell mean changes the round-off of the derivative rather than cancelling out of it.
 {ul:The read splits a cell on something the cell key does not contain:}
-{it:lattice()}, {it:makecfxplots} and {it:cfxlattice()}, which bin the dose; and {it:impvalues}, which computes effects over the clusters.
+{it:lattice()}, {it:makecfxplots} and {it:cfxlattice()}, which bin the dose. ({it:impvalues}, which computes effects over the clusters, left this list on 2026-09-06: the cluster variable joins the cell key under {it:impvalues}, which makes the per-cluster reads exact - measured at 1e-12 both for a cluster nesting {it:i} and for one crossed with it - at the cost of more cells only when the cluster is crossed with {it:i}.)
 {ul:{it:margins} objects to the collapsed row count itself:} {it:unconditionalse}, whose variance is built from observation-level influence functions and whose row count
 {it:margins} checks against {it:e(N)}. {ul:Unverified rather than known-broken:} {it:customvce()}, refused pending measurement. {p_end}
 

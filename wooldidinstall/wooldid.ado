@@ -2108,8 +2108,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * margins read exact rather than a one-row draw of a within-cell-varying regressor.
     local fckeyx
     local fccont
+    * F062 (quality review 2026-09-05, author ruling 2026-09-06): impvalues reads per-cluster
+    * effects over(cluster), which the collapse reproduces exactly once the cluster variable
+    * is part of the cell key (measured: a cluster crossed with i is zero at 1e-12 with the
+    * key change, broken without it; a cluster nesting i is exact either way). The cell
+    * count grows only when the cluster is crossed with i
+    if "`impvalues'" != "" local fckeyx `fckeyx' `cluster'
     if "`contreat'" != "" {
-      local fckeyx `i'
+      local fckeyx `fckeyx' `i'
       * the ringer (wooldid's double copy of the dose) is averaged the same way: wherever
       * contreatcontrolinserterFE is non-empty it is an explicit regressor whose level shifts
       * the round-off of every prediction
@@ -5096,7 +5102,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`interactivecontrols'" != ""          local fcbad `fcbad' interactivecontrols()
   if "`unconditionalse'" != ""              local fcbad `fcbad' unconditionalse
   if "`semielasticity'" != "dydx"           local fcbad `fcbad' semielasticity
-  if "`impvalues'" != ""                    local fcbad `fcbad' impvalues
   if "`poisexpresults'" != ""               local fcbad `fcbad' poisexpresults
   if `"`customvce'"' != ""                  local fcbad `fcbad' customvce()
   if "`fastcollapse'" != "" & "`fullprecisionslow'" != "" {
@@ -5114,7 +5119,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       dis as error "  semielasticity (and the contreat elasticity forms eyex and eydx) divide by the prediction, which re-introduces the within-cell variation that a plain marginal effect cancels. contreatelasticitytype(dydx) and (dyex) are linear in the dose and stay eligible (dyex except under poisson - see above)."
       dis as error "  poisexpresults reports on the exponentiated scale, which is not linear in the coefficients (measured: estimates moved in the 7th significant digit)."
       dis as error "  unconditionalse asks margins for a variance built from observation-level influence functions; margins verifies the visible row count against e(N) and errors when it is collapsed."
-      dis as error "  impvalues computes per-cluster effects over(cluster), and the cluster variable is not part of the cell key."
       dis as error "  customvce() is not verified for fastcollapse rather than known-broken; it is refused pending measurement."
       dis as error "Drop fastcollapse, or drop the conflicting option. (No safety(off) escape: these are measured wrong answers, not risks.) Without an explicit fastcollapse the run proceeds normally on the full data - the collapse simply does not engage."
       error 198

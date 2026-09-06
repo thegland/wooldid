@@ -201,7 +201,10 @@ use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att robust semielasticity fastcollapse safety(off)
 local g4 = _rc
 use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att cluster(state) impvalues fastcollapse safety(off)
+* 2026-09-06 (F062): impvalues left the ineligible list - the cluster variable joins the
+* cell key - so an explicit fastcollapse with impvalues is now ACCEPTED (rc 0); the gate
+* count below keeps its shape with customvce() as gate 5's stand-in
+cap qui wooldid y cohid year ttre, att customvce(cluster state) fastcollapse safety(off)
 local g5 = _rc
 use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att customvce(cluster state) fastcollapse safety(off)
@@ -255,7 +258,8 @@ cap qui wooldid y cohid year ttre, att robust semielasticity
 local s4 = _rc
 local f4 = e(wdid_fcol)
 use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att cluster(state) impvalues
+* 2026-09-06 (F062): impvalues now collapses (see F15); poisexpresults is the silent skip here
+cap qui wooldid y cohid year ttre, att robust poisson poisexpresults
 local s5 = _rc
 local f5 = e(wdid_fcol)
 use "`ADMIN'", clear
@@ -1220,11 +1224,11 @@ use "`ADMIN'", clear
 qui wooldid y cohid year ttre, att robust fullprecisionslow
 local nc13s = e(wdid_fcncell)
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att cluster(state) impvalues
+qui wooldid y cohid year ttre, att customvce(cluster state)
 local nc13i = e(wdid_fcncell)
 local fs13i "`e(wdid_fcskip)'"
-di "F13 fcncell default=`nc13' slow=`nc13s' impvalues=`nc13i' (rows `n13') fcskip default=[`fs13'] impvalues=[`fs13i']"
-if `nc13' >= . | `nc13' < 1 | `nc13' >= `n13' | `nc13s' < . | `nc13i' < . | "`fs13'" != "" | "`fs13i'" != "impvalues" {
+di "F13 fcncell default=`nc13' slow=`nc13s' customvce=`nc13i' (rows `n13') fcskip default=[`fs13'] customvce=[`fs13i']"
+if `nc13' >= . | `nc13' < 1 | `nc13' >= `n13' | `nc13s' < . | `nc13i' < . | "`fs13'" != "" | "`fs13i'" != "customvce()" {
   di as error "F13 FAIL: e(wdid_fcncell)/e(wdid_fcskip) do not record the collapse outcome"
   local ++fails
 }
@@ -1242,18 +1246,53 @@ local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
 local ok14a = strpos(`"`lg'"', "on the full data (fullprecisionslow).") > 0
 use "`ADMIN'", clear
 qui log using fcol_f14.txt, text replace name(fc)
-cap noi wooldid y cohid year ttre, att cluster(state) impvalues fullprecisionslow verbose
+cap noi wooldid y cohid year ttre, att customvce(cluster state) fullprecisionslow verbose
 local rc14b = _rc
 qui log close fc
 local lg = fileread("fcol_f14.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-local ok14b = strpos(`"`lg'"', "(fullprecisionslow; the default cell collapse would not apply with impvalues either)") > 0
-local ok14c = strpos(`"`lg'"', "does not apply with impvalues (see fastcollapse") == 0
+local ok14b = strpos(`"`lg'"', "(fullprecisionslow; the default cell collapse would not apply with customvce() either)") > 0
+local ok14c = strpos(`"`lg'"', "does not apply with customvce() (see fastcollapse") == 0
 cap erase fcol_f14.txt
 di "F14 rcs=`rc14a'/`rc14b' alone=`ok14a' with_impvalues=`ok14b' old_text_absent=`ok14c'"
 if `rc14a' != 0 | `rc14b' != 0 | !`ok14a' | !`ok14b' | !`ok14c' {
   di as error "F14 FAIL: the verbose collapse line does not name fullprecisionslow as the reason"
+  local ++fails
+}
+
+* ---- F15 (F062, 2026-09-06): impvalues collapses. With the cluster variable in the cell
+* key the per-cluster reads are exact: (a) a cluster CROSSED with i (state x cohid on the
+* admin panel; the key change is what makes it exact - 2,878 cells instead of 60) and (b)
+* a cluster NESTING i (cohid itself, 60 cells) both agree with fullprecisionslow on b, V
+* and the main table at 1e-12; the collapse engages (e(wdid_fcol) = 1) and an explicit
+* fastcollapse is accepted
+use "`ADMIN'", clear
+qui wooldid y cohid year ttre, att cluster(state) impvalues
+matrix bF15a = e(b)
+matrix VF15a = e(V)
+matrix MF15a = e(wdidmainresults)
+local fc15a = e(wdid_fcol)
+local nc15a = e(wdid_fcncell)
+use "`ADMIN'", clear
+qui wooldid y cohid year ttre, att cluster(state) impvalues fullprecisionslow
+local d15a = max(mreldif(bF15a, e(b)), mreldif(VF15a, e(V)), mreldif(MF15a, e(wdidmainresults)))
+use "`ADMIN'", clear
+qui wooldid y cohid year ttre, att cluster(cohid) impvalues
+matrix bF15b = e(b)
+matrix VF15b = e(V)
+matrix MF15b = e(wdidmainresults)
+local fc15b = e(wdid_fcol)
+local nc15b = e(wdid_fcncell)
+use "`ADMIN'", clear
+qui wooldid y cohid year ttre, att cluster(cohid) impvalues fullprecisionslow
+local d15b = max(mreldif(bF15b, e(b)), mreldif(VF15b, e(V)), mreldif(MF15b, e(wdidmainresults)))
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att cluster(state) impvalues fastcollapse
+local rc15c = _rc
+di "F15 crossed: fcol=`fc15a' cells=`nc15a' mreldif=`d15a' | nesting: fcol=`fc15b' cells=`nc15b' mreldif=`d15b' | explicit fastcollapse rc=`rc15c'"
+if `fc15a' != 1 | `fc15b' != 1 | `d15a' > 1e-12 | `d15b' > 1e-12 | `nc15a' <= `nc15b' | `rc15c' != 0 {
+  di as error "F15 FAIL: impvalues under the collapse is not exact or did not engage"
   local ++fails
 }
 
