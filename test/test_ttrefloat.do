@@ -126,6 +126,85 @@ else {
   }
 }
 
+* ---- F5 (bug sweep BS-34): float-stored large codes draw a caution ----
+* a 20-period panel whose t is an 8-digit calendar code. Stored as float, consecutive
+* codes above 2^24 round together and adjacent periods merge with no other symptom;
+* wooldid cannot recover the values but must say so. Expect: the caution on the float
+* run (rc 0), none on the double twin (att = 1.5, the noise-free DGP effect), none on a
+* small float t, and none under safety(off)
+cap program drop scanlog34
+program scanlog34, rclass
+  args fname needle
+  tempname fh
+  local found 0
+  file open `fh' using "`fname'", read text
+  file read `fh' line
+  while r(eof) == 0 {
+    if strpos(`"`macval(line)'"', "`needle'") > 0 local found 1
+    file read `fh' line
+  }
+  file close `fh'
+  return scalar found = `found'
+end
+cap program drop mk34
+program define mk34
+  args ttype base
+  clear
+  qui set obs 12
+  qui gen i = _n
+  qui gen double onset = cond(_n <= 6, 8, .)
+  qui expand 20
+  qui bysort i: gen double k = _n
+  qui gen `ttype' t = `base' + k
+  qui gen `ttype' ttre = cond(onset < ., `base' + onset, .)
+  qui gen double y = 1.5*(k >= onset & onset < .) + 0.3*i + 0.2*k
+end
+set linesize 200
+local f5needle stored as float and holds values above
+local f5 0
+mk34 float 20150000
+qui log using ttf_f5a.txt, text replace name(ttf)
+cap noi wooldid y i t ttre, att
+local rc5a = _rc
+qui log close ttf
+scanlog34 ttf_f5a.txt "`f5needle'"
+local c5a = r(found)
+local att5a = cond(`rc5a' == 0, e(wdidmainresults)[1,1], .)
+mk34 double 20150000
+qui log using ttf_f5b.txt, text replace name(ttf)
+cap noi wooldid y i t ttre, att
+local rc5b = _rc
+qui log close ttf
+scanlog34 ttf_f5b.txt "`f5needle'"
+local c5b = r(found)
+local att5b = cond(`rc5b' == 0, e(wdidmainresults)[1,1], .)
+mk34 float 0
+qui log using ttf_f5c.txt, text replace name(ttf)
+cap noi wooldid y i t ttre, att
+local rc5c = _rc
+qui log close ttf
+scanlog34 ttf_f5c.txt "`f5needle'"
+local c5c = r(found)
+mk34 float 20150000
+qui log using ttf_f5d.txt, text replace name(ttf)
+cap noi wooldid y i t ttre, att safety(off)
+local rc5d = _rc
+qui log close ttf
+scanlog34 ttf_f5d.txt "`f5needle'"
+local c5d = r(found)
+cap erase ttf_f5a.txt
+cap erase ttf_f5b.txt
+cap erase ttf_f5c.txt
+cap erase ttf_f5d.txt
+dis "F5 float big: rc=`rc5a' caution=`c5a' att=`att5a' | double: rc=`rc5b' caution=`c5b' att=`att5b' | float small: rc=`rc5c' caution=`c5c' | float big safety(off): rc=`rc5d' caution=`c5d'"
+if `rc5a' == 0 & `c5a' == 1 & `rc5b' == 0 & `c5b' == 0 & abs(`att5b' - 1.5) < 1e-6 & `rc5c' == 0 & `c5c' == 0 & `rc5d' == 0 & `c5d' == 0 {
+  dis as result "F5 PASS: the float-magnitude caution fires only on the large float codes at default safety"
+}
+else {
+  dis as error "F5 FAIL: float-magnitude caution"
+  global s6f = $s6f + 1
+}
+
 if $s6f == 0 dis "TTREFLOAT_ALL_PASS"
 else dis as error "TTREFLOAT_FAILS=$s6f"
 global s6f

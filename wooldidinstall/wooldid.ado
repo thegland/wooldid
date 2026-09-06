@@ -717,7 +717,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       local f13badid = strtrim(string(r(min), "%18.0g"))
       dis as error "Error: the treatment onset variable `ttre_asgiven' is not constant within `i' (smallest offending `i': `f13badid')."
       dis as error "wooldid requires exactly one treatment onset per group defined by `i': rows of the same `i' carrying different onsets, or a mix of missing and non-missing onsets, are silently split across cohorts, and part of the group can be used as its own control."
-      dis as error "Common causes: an onset recorded only from the onset period onward (fill it in on every in-sample row of a treated group, including pre-treatment rows); underlying units with different onsets combined under one `i' value; or IDs stored as float, which pools distinct large IDs (recast double `i'). Alternatively, restrict the estimation sample with if()."
+      dis as error "Common causes: an onset recorded only from the onset period onward (fill it in on every in-sample row of a treated group, including pre-treatment rows); underlying units with different onsets combined under one `i' value; or IDs stored as float, which rounds distinct large IDs together (regenerate `i' as double from its source; recasting cannot recover the lost values). Alternatively, restrict the estimation sample with if()."
       dis as error "To ignore this error, specify safety(off)."
       error 459
     }
@@ -5041,6 +5041,23 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if _rc != 0 {
       dis as error  "Error: `i' must consist of positive, non-zero integers, but does not"
       error 411
+    }
+  }
+
+  * float storage cannot represent consecutive integers above 2^24 = 16,777,216, so an
+  * 8-digit calendar code, a %tc datetime or a large ID held in float was rounded BEFORE
+  * wooldid saw it: adjacent periods, cohorts or IDs merge with no other symptom and the run
+  * completes with a wrong answer. no exact detector exists (the rounding happened
+  * upstream) and coarse codes above the threshold are representable, so this is a caution
+  * on the only available signal - storage type plus magnitude (bug sweep BS-34)
+  if "`safety'" != "off" {
+    foreach wdfv in `i' `t' `ttre_asgiven' {
+      if "`: type `wdfv''" == "float" {
+        qui gstats sum `wdfv' `ifassert', meanonly
+        if r(N) > 0 & max(abs(r(min)), abs(r(max))) > 16777216 & max(abs(r(min)), abs(r(max))) < . {
+          dis as text "Caution: `wdfv' is stored as float and holds values above 16,777,216 (2^24), beyond which float cannot represent consecutive integers. Its values were rounded before wooldid saw them, which can silently merge adjacent periods, cohorts or IDs. If it is an 8-digit calendar code or a %tc datetime, regenerate it as double from its source (recasting cannot recover the lost values); coarse or even-valued codes above the threshold are unaffected."
+        }
+      }
     }
   }
 
