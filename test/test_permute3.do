@@ -1087,5 +1087,42 @@ if strpos(`"`lg'"', "permtstat with cluster() at the i level") > 0 {
 }
 cap erase perm3_q20.txt
 
+* ================= Q21: the permutation reproducibility record (F059, 2026-09-06):
+* e(perm_rngstate) is posted, replays the draws exactly, and permsave() carries the
+* engine/seed/rngstate characteristics; the projection line prints ===================
+mkperm3 8 4 3
+set seed 2121
+qui log using perm3_q21.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permsave(perm3_q21) replace dots(1)
+local rc = _rc
+qui log close p3
+xrc Q21a 0 `rc'
+local q21st `e(perm_rngstate)'
+matrix Q21D1 = e(permdist_b)
+local lg = fileread("perm3_q21.txt")
+if strlen("`q21st'") < 100 | strpos(`"`lg'"', "projected for 20 replications)") == 0 {
+  dis as error "Q21b FAIL: e(perm_rngstate) not posted or no runtime projection"
+  global pf = $pf + 1
+}
+preserve
+use perm3_q21, clear
+local q21eng `_dta[wooldid_engine]'
+local q21rl = strlen("`_dta[wooldid_rngstate]'")
+restore
+if "`q21eng'" != "permute" | `q21rl' < 100 {
+  dis as error "Q21c FAIL: permsave() characteristics missing (engine=`q21eng' rnglen=`q21rl')"
+  global pf = $pf + 1
+}
+mkperm3 8 4 3
+set rngstate `q21st'
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20)
+xrc Q21d 0 _rc
+if mreldif(Q21D1, e(permdist_b)) != 0 {
+  dis as error "Q21e FAIL: set rngstate e(perm_rngstate) does not replay the permutation draws"
+  global pf = $pf + 1
+}
+cap erase perm3_q21.txt
+cap erase perm3_q21.dta
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

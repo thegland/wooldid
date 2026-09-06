@@ -182,6 +182,7 @@ version 16.0
     * run-level permutation results on the restored observed results
     ereturn local perm_method `permute'
     if "`rseed'" != "" ereturn local perm_seed `rseed'
+    ereturn local perm_rngstate `wdp_r_rng0'
     ereturn hidden local wdid_permest `wdp_est'
     ereturn scalar perm_reps = `wdp_r_reps'
     ereturn scalar perm_completed = `wdp_r_done'
@@ -235,7 +236,7 @@ version 16.0
       wooldid_permcellsx , cell(`wdpcell') cell0(`wdpcell0') ncfx(`wdp_ncfx') names(`wdp_cfxnames') level(`level') m(`wdp_M') ts(`wdp_ts') lattype(`latticetype') cfxlat(`cfxlattice') absp(`permabsp')
     }
     * permsave(): the replication draws as a .dta in the working directory
-    if "`permsave'" != "" wooldid_permsave , file(`permsave') acc(`wdpacc') obsb(`wdpobsb') seacc(`=cond(`wdp_ts', "`wdpsacc'", "")') aseobs(`=cond(`wdp_ts', "e(perm_ase_obs)", "")') asg(`wdpasg') clusvals(`wdp_clusvals') obsons(`wdp_obsons') `replace'
+    if "`permsave'" != "" wooldid_permsave , file(`permsave') acc(`wdpacc') obsb(`wdpobsb') seacc(`=cond(`wdp_ts', "`wdpsacc'", "")') aseobs(`=cond(`wdp_ts', "e(perm_ase_obs)", "")') asg(`wdpasg') clusvals(`wdp_clusvals') obsons(`wdp_obsons') seed(`rseed') rng(`wdp_r_rng0') `replace'
     * deferred display: the worker skipped these under permute(); they read only e(),
     * which now carries the permutation inference (identical formatting, free replay)
     wooldid_display , part(1)
@@ -360,7 +361,8 @@ version 16.0
     * weighted estimands (att/ame); the cell-weighted ones are refused without cluster()
     * at parse and never reach this leg. Author ruling 2026-09-04
     local wdb_phys = cond("`bootstrap'" == "standard" & "`boottstat'" != "" & "`cluster'" == "" & "`wdp_wt'" != "" & "`poisson'" == "", "phys", "")
-    cap noi wooldid_bootrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' `wdb_phys' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp') seaccname(`=cond("`boottstat'" != "", "`wdbsacc'", "")') pwseaccname(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwaccname(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobsname(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awaccname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobsname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') advesrel(`esrelativeto') advtt(`timetrends') advalt(`altmethod_adversarial') cellacc(`=cond("`gteffects'`makecfxplots'" != "", "`wdbcell'", "")')
+    tempname wdbW
+    cap noi wooldid_bootrun , wmat(`wdbW') y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' `wdb_phys' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp') seaccname(`=cond("`boottstat'" != "", "`wdbsacc'", "")') pwseaccname(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwaccname(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobsname(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awaccname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobsname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') advesrel(`esrelativeto') advtt(`timetrends') advalt(`altmethod_adversarial') cellacc(`=cond("`gteffects'`makecfxplots'" != "", "`wdbcell'", "")')
     local wdb_rc = _rc
     qui est restore `wdbobs'
     cap est drop `wdbobs'
@@ -399,7 +401,10 @@ version 16.0
     * standard errors (se_*) and, with subgroups, the replication pairwise-contrast se
     * (pwse_*). Read from the accumulators, not e(bootdist), so the 10,000-row cap on the
     * posted matrix does not apply
-    if "`bootsave'" != "" wooldid_bootsave , file(`bootsave') acc(`wdbacc') obsb(`wdbobsb') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') `replace'
+    * the joint/adversarial accumulators were MOVED into e(boot_jointW)/e(boot_advW) by
+    * wooldid_bootjnt (ereturn matrix moves its source), so bootsave reads them from e()
+    if "`bootsave'" != "" wooldid_bootsave , file(`bootsave') acc(`wdbacc') obsb(`wdbobsb') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') wmat(`=cond("`cluster'" != "", "`wdbW'", "")') wobs(`=cond("`bootstrap'" == "bayes", 1/max(`wdb_r_nclus', 1), 1)') jwacc(`=cond("`boottstat'" != "", "e(boot_jointW)", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advW)", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') seed(`rseed') rng(`wdb_r_rng0') `replace'
+    ereturn local boot_rngstate `wdb_r_rng0'
     * deferred display: worker skipped these under bootstrap; they read only e(),
     * which now carries the bootstrap inference (identical formatting, free replay)
     wooldid_display , part(1)
@@ -6287,7 +6292,7 @@ version 16.0
   * Plain file name only (it is the user's stated design: the file lands in the cwd), an
   * existing file needs wooldid's replace option, and the build runs in its own frame so
   * the user's data are untouched
-  syntax , file(string) acc(string) obsb(string) [seacc(string) aseobs(string) pwseacc(string) replace]
+  syntax , file(string) acc(string) obsb(string) [seacc(string) aseobs(string) pwseacc(string) wmat(string) wobs(real 1) jwacc(string) jobs(string) awacc(string) aobs(string) seed(string) rng(string) replace]
   local fn `file'
   if lower(substr("`fn'", -4, 4)) == ".dta" local fn = substr("`fn'", 1, strlen("`fn'") - 4)
   if strpos("`fn'", "/") | strpos("`fn'", "\") | "`fn'" == "" {
@@ -6303,7 +6308,11 @@ version 16.0
   cap frame drop `bsf'
   frame create `bsf'
   cap noi frame `bsf' {
-    mata: wooldid_bootsavemk("`acc'", "`obsb'", "`seacc'", "`aseobs'", "`pwseacc'")
+    mata: wooldid_bootsavemk("`acc'", "`obsb'", "`seacc'", "`aseobs'", "`pwseacc'", "`wmat'", `wobs', "`jwacc'", "`jobs'", "`awacc'", "`aobs'")
+    * F059: the reproducibility record travels with the file
+    char _dta[wooldid_engine] "bootstrap"
+    char _dta[wooldid_seed] "`seed'"
+    char _dta[wooldid_rngstate] "`rng'"
     label var _rep "bootstrap replication (0 = observed estimates)"
     save "`fn'.dta", replace
     local wdbsn = _N
@@ -6932,6 +6941,8 @@ version 16.0
   * rseed(): seeds the assignment draws (Mata's jumble/runiform share Stata's RNG
   * state), set before anything random runs; accepted under permute() since 2026-09-05
   if "`rseed'" != "" set seed `rseed'
+  * F059 (2026-09-06): the RNG state before the first draw (e(perm_rngstate); permsave())
+  local wdp_rng0 = c(rngstate)
 
   * comparison-statistic scalars, filled by the mandatory rep-0 run below (NFPERM-10)
   tempname wdpo1 wdpo2 wdpo3 wdpo4
@@ -7128,6 +7139,19 @@ version 16.0
   }
   if `dots' > 0 dis as text "Permutation replications (`wdp_R'): " _continue
   forval r = 1/`wdp_R' {
+    * F066 (2026-09-06): time replications 1-5 and print a projection (Stata timer 100)
+    if `r' == 1 & `wdp_R' > 5 {
+      timer clear 100
+      timer on 100
+    }
+    if `r' == 6 {
+      timer off 100
+      qui timer list 100
+      local wdp_proj = r(t100)/5*`wdp_R'
+      timer clear 100
+      local wdp_ptxt = cond(`wdp_proj' < 90, strofreal(round(`wdp_proj')) + " s", strofreal(round(`wdp_proj'/60)) + " min")
+      if `dots' > 0 dis as text " (~`wdp_ptxt' projected for `wdp_R' replications)" _continue
+    }
     frame `mpfr': qui replace __wdpassign = el("`wdpassign'", __wdprow, `r')
     cap drop `repons'
     qui frget `repons' = __wdpassign, from(`lnk')
@@ -7234,6 +7258,7 @@ version 16.0
   c_local wdp_r_blank `nblank'
   c_local wdp_r_npd `wdp_npd'
   c_local wdp_r_nps `wdp_nps'
+  c_local wdp_r_rng0 `wdp_rng0'
   if "`asgname'" != "" {
     c_local wdp_clusvals `wdp_clusvals'
     c_local wdp_obsons `wdp_obsons'
@@ -7877,7 +7902,7 @@ version 16.0
   * (the bootsave() layout: _rep 0 = observed estimates, 1..R = replications, failed ones
   * all-missing; se_* under permtstat) plus one onset_<cluster> column per cluster holding
   * the onset that cluster carried in each replication (row 0: the observed onset)
-  syntax , file(string) acc(string) obsb(string) [seacc(string) aseobs(string) asg(string) clusvals(string) obsons(string) replace]
+  syntax , file(string) acc(string) obsb(string) [seacc(string) aseobs(string) asg(string) clusvals(string) obsons(string) seed(string) rng(string) replace]
   local fn `file'
   if lower(substr("`fn'", -4, 4)) == ".dta" local fn = substr("`fn'", 1, strlen("`fn'") - 4)
   if strpos("`fn'", "/") | strpos("`fn'", "\") | "`fn'" == "" {
@@ -7895,6 +7920,9 @@ version 16.0
   cap noi frame `psf' {
     mata: wooldid_bootsavemk("`acc'", "`obsb'", "`seacc'", "`aseobs'", "")
     if "`asg'" != "" mata: wooldid_permsaveasg("`asg'", "`clusvals'", "`obsons'")
+    char _dta[wooldid_engine] "permute"
+    char _dta[wooldid_seed] "`seed'"
+    char _dta[wooldid_rngstate] "`rng'"
     label var _rep "permutation replication (0 = observed estimates)"
     save "`fn'.dta", replace
     local wdpsn = _N
@@ -7926,7 +7954,7 @@ version 16.0
 *** weighted estimand); under bootalpha(size) the mass is split over the cluster's base
 *** weight (row multiplier = draw_c / W_c), which matches bayesboot BITWISE on unweighted
 *** data. The rwgen priorpowers(-n_c) oracle for equal is its weights times n_c.
-  syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string)]
+  syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string) wmat(string)]
 
   if `dots' == -1 local dots 1
   if "`bootalpha'" == "" local bootalpha equal
@@ -7969,6 +7997,15 @@ version 16.0
     dis as error "Error: bootstrap() requires at least 2 clusters in the estimation sample."
     error 459
   }
+  * F063 (2026-09-06): the resample itself, one row per replication and one column per
+  * cluster (map-frame order) - Dirichlet multipliers under bayes, multiplicities under
+  * standard - kept for bootsave(). Only under cluster(): observation resampling would
+  * mean one column per observation
+  local wdb_dow = ("`wmat'" != "" & "`clus'" != "")
+  if `wdb_dow' {
+    matrix `wmat' = J(`reps', `wdb_C', .)
+    frame `mbfr': mata: wooldid_bootwnames("`wmat'", "`clusv'")
+  }
 
   * draws. bayes: C x R Dirichlet matrix up front - per-rep (outer) per-cluster-
   * ascending (inner) Gamma draws from the seeded mt64 stream, the exact rwgen bayes
@@ -7977,6 +8014,9 @@ version 16.0
   * consumption sequence, so same-seed runs are comparable; nested wooldid calls
   * leave c(rngstate) untouched, measured)
   if "`rseed'" != "" set seed `rseed'
+  * F059 (2026-09-06): the RNG state before the first draw, posted as e(boot_rngstate)
+  * and written into bootsave() files, so a run is replayable from e() alone
+  local wdb_rng0 = c(rngstate)
   tempname wdbdrawm
   if "`mode'" == "bayes" mata: wooldid_bootdw("`mbfr'", "`bootalpha'", `reps', "`wdbdrawm'")
 
@@ -8146,8 +8186,24 @@ version 16.0
   if `dots' > 0 dis as text "Bootstrap replications (`reps'): " _continue
   tempname wdbcf wdbrf
   forval r = 1/`reps' {
+    * F066 (2026-09-06): time replications 1-5 and print a projection for the run (uses
+    * Stata timer 100 for the duration of those five replications)
+    if `r' == 1 & `reps' > 5 {
+      timer clear 100
+      timer on 100
+    }
+    if `r' == 6 {
+      timer off 100
+      qui timer list 100
+      local wdb_proj = r(t100)/5*`reps'
+      timer clear 100
+      * no "." in the text: the dots line is counted by tests and by eye
+      local wdb_ptxt = cond(`wdb_proj' < 90, strofreal(round(`wdb_proj')) + " s", strofreal(round(`wdb_proj'/60)) + " min")
+      if `dots' > 0 dis as text " (~`wdb_ptxt' projected for `reps' replications)" _continue
+    }
     if "`mode'" == "bayes" {
       frame `mbfr': qui replace __wdbdraw = el("`wdbdrawm'", __wdbrow, `r')
+      if `wdb_dow' frame `mbfr': mata: wooldid_bootwrow("`wmat'", `r', "__wdbdraw")
     }
     else if "`phys'" != "" {
       * physical-expansion leg WITHOUT re-identification (unclustered + user weight +
@@ -8207,6 +8263,7 @@ version 16.0
       frame copy `mbfr' `wdbcf'
       frame `wdbcf' {
         bsample, cluster(`clusv') idcluster(__wdbns)
+        if `wdb_dow' mata: wooldid_bootwrowx("`wmat'", `r', "`clusv'", "__wdbns")
         qui gegen double __wdbcnt = count(__wdbns), by(`clusv')
         qui bysort `clusv': keep if _n == 1
       }
@@ -8217,6 +8274,7 @@ version 16.0
         qui frget __wdbcnt = __wdbcnt, from(__wdblnk)
         qui replace __wdbdraw = cond(missing(__wdbcnt), 0, __wdbcnt)
         qui drop __wdbcnt __wdblnk
+        if `wdb_dow' mata: wooldid_bootwrow("`wmat'", `r', "__wdbdraw")
       }
       frame drop `wdbcf'
     }
@@ -8233,6 +8291,7 @@ version 16.0
       frame `wdbrf' {
         qui keep if `smp'
         bsample, cluster(`clusv') idcluster(__wdbns)
+        if `wdb_dow' mata: wooldid_bootwrowx("`wmat'", `r', "`clusv'", "__wdbns")
         qui gegen double __wdbnewi = group(__wdbns `i')
         * under boottstat the replication's own VCE must cluster on the RESAMPLED cluster
         * identity __wdbns (which bsample just generated), not on the user's original
@@ -8331,6 +8390,7 @@ version 16.0
   * the resampling-unit count: clusters, or observations under the observation-level
   * branch. bootdf(clusters) turns this into the t degrees of freedom
   c_local wdb_r_nclus `wdb_C'
+  c_local wdb_r_rng0 `wdb_rng0'
 end
 
 cap prog drop wooldid_bootwire
@@ -10928,6 +10988,9 @@ cap mata: mata drop wooldid_bootcellkeys()
 cap mata: mata drop wooldid_bootcellkeym()
 cap mata: mata drop wooldid_bootcells()
 cap mata: mata drop wooldid_bootsavemk()
+cap mata: mata drop wooldid_bootwnames()
+cap mata: mata drop wooldid_bootwrow()
+cap mata: mata drop wooldid_bootwrowx()
 cap mata: mata drop wooldid_bootcellwire()
 mata:
 // the adversarial statistic W (minimum-distance line test, alt==0; forecast test, alt==1)
@@ -11691,10 +11754,11 @@ void wooldid_bootcells(string scalar prefix, real scalar r, real scalar ncfx, re
 // run (_rep = 0), rows 2.. the replications by index (failed ones all missing). Variable
 // names are the accumulator column names made valid with strtoname(); a name collision
 // or an over-long name makes st_addvar fail, which the caller reports
-void wooldid_bootsavemk(string scalar acc, string scalar obsb, string scalar seacc, string scalar aseobs, string scalar pwseacc)
+void wooldid_bootsavemk(string scalar acc, string scalar obsb, string scalar seacc, string scalar aseobs, string scalar pwseacc,
+                        | string scalar wmat, real scalar wobs, string scalar jwacc, string scalar jobs, string scalar awacc, string scalar aobs)
 {
-  real matrix A, B, S, AS, P
-  string matrix cs, pcs
+  real matrix A, B, S, AS, P, W, JW, JO, AW, AO
+  string matrix cs, pcs, wcs, jcs
   real scalar R, K, k, j, idx
   string scalar nm
   A = st_matrix(acc); cs = st_matrixcolstripe(acc); B = st_matrix(obsb)
@@ -11724,6 +11788,83 @@ void wooldid_bootsavemk(string scalar acc, string scalar obsb, string scalar sea
       idx = st_addvar("double", nm); st_store(., idx, . \ P[., j])
     }
   }
+  // F063: the resample - w_<cluster> multiplicities (standard) or Dirichlet multipliers
+  // (bayes); the observed row carries wobs (1, or 1/C under bayes where the multipliers
+  // sum to 1 per replication). Then the per-replication joint and adversarial statistics
+  // under boottstat, with the observed statistic in row 0
+  if (args() >= 6) {
+    if (wmat != "") {
+      W = st_matrix(wmat); wcs = st_matrixcolstripe(wmat)
+      for (k = 1; k <= cols(W); k++) {
+        nm = substr(strtoname(wcs[k, 2]), 1, 32)
+        if (_st_varindex(nm) < .) continue
+        idx = st_addvar("double", nm); st_store(., idx, wobs \ W[., k])
+      }
+    }
+    if (jwacc != "") {
+      JW = st_matrix(jwacc); jcs = st_matrixcolstripe(jwacc); JO = (jobs != "" ? st_matrix(jobs) : J(1, cols(JW), .))
+      for (k = 1; k <= cols(JW); k++) {
+        nm = substr("jointW_" + strtoname(jcs[k, 2]), 1, 32)
+        if (_st_varindex(nm) < .) continue
+        idx = st_addvar("double", nm); st_store(., idx, (cols(JO) >= k ? JO[1, k] : .) \ JW[., k])
+      }
+    }
+    if (awacc != "") {
+      AW = st_matrix(awacc); AO = (aobs != "" ? st_matrix(aobs) : J(1, 1, .))
+      for (k = 1; k <= cols(AW); k++) {
+        nm = substr("advW" + (cols(AW) > 1 ? strofreal(k) : ""), 1, 32)
+        if (_st_varindex(nm) < .) continue
+        idx = st_addvar("double", nm); st_store(., idx, (cols(AO) >= k ? AO[1, k] : .) \ AW[., k])
+      }
+    }
+  }
+}
+
+// F063 helpers. bootwnames: name the resample matrix's columns w_<cluster value> from the
+// map frame (called inside it; rows are in map-frame order). bootwrow: row r from the map
+// frame's __wdbdraw (count and bayes legs). bootwrowx: row r from an expanded resample
+// frame - the multiplicity of each ORIGINAL cluster is the number of distinct resampled
+// cluster ids (idcluster) it received; clusters not drawn get 0
+void wooldid_bootwnames(string scalar wmat, string scalar clusv)
+{
+  real colvector cv
+  real scalar c
+  string matrix cs
+  cv = st_data(., clusv)
+  cs = J(rows(cv), 2, "")
+  for (c = 1; c <= rows(cv); c++) cs[c, 2] = strtoname("w_" + strofreal(cv[c], "%20.0g"))
+  st_matrixcolstripe(wmat, cs)
+}
+void wooldid_bootwrow(string scalar wmat, real scalar r, string scalar drawv)
+{
+  real matrix W
+  string matrix cs
+  W = st_matrix(wmat)
+  cs = st_matrixcolstripe(wmat)
+  W[r, .] = st_data(., drawv)'
+  // st_matrix() resets the stripes; put the w_<cluster> names back
+  st_matrix(wmat, W)
+  st_matrixcolstripe(wmat, cs)
+}
+void wooldid_bootwrowx(string scalar wmat, real scalar r, string scalar clusv, string scalar nsv)
+{
+  real matrix W, D, U
+  string matrix cs
+  real scalar c, k
+  transmorphic t
+  W = st_matrix(wmat)
+  cs = st_matrixcolstripe(wmat)
+  t = asarray_create()
+  asarray_notfound(t, 0)
+  for (k = 1; k <= rows(cs); k++) asarray(t, cs[k, 2], k)
+  D = uniqrows(st_data(., (clusv, nsv)))
+  W[r, .] = J(1, cols(W), 0)
+  for (c = 1; c <= rows(D); c++) {
+    k = asarray(t, strtoname("w_" + strofreal(D[c, 1], "%20.0g")))
+    if (k > 0) W[r, k] = W[r, k] + 1
+  }
+  st_matrix(wmat, W)
+  st_matrixcolstripe(wmat, cs)
 }
 
 void wooldid_bootcellwire(string scalar mname, real scalar isgt, string scalar accname,

@@ -632,5 +632,107 @@ if strpos(`"`lg'"', "p = 0 above means") > 0 | strpos(`"`lg'"', "have resolution
 }
 cap erase boot_gates_g30.txt
 
+* G31 (F059/F063/F066, 2026-09-06) the reproducibility record and the resample columns:
+* e(boot_rngstate) is posted with or without rseed() and replays the draws exactly; the
+* bootsave() file carries the engine/seed/rngstate characteristics, w_<cluster> columns
+* (counts summing to G, observed row 1) under standard, Dirichlet multipliers summing to
+* 1 (observed row 1/G) under bayes, no w_ columns unclustered, jointW/advW under boottstat;
+* the projection line prints after the fifth replication
+use `panel', clear
+cap erase boot_gates_g31.dta
+qui log using boot_gates_g31.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(8) rseed(7) bootsave(boot_gates_g31) dots(1)
+local g31rc = _rc
+qui log close bg
+chk 31 0 `g31rc'
+local g31rng `e(boot_rngstate)'
+local lg = fileread("boot_gates_g31.txt")
+if strlen("`g31rng'") < 100 | strpos(`"`lg'"', "projected for 8 replications)") == 0 {
+  di as error "G31b FAIL: e(boot_rngstate) not posted or no runtime projection (rng length " strlen("`g31rng'") ")"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+preserve
+use boot_gates_g31, clear
+qui ds w_*
+local g31w : word count `r(varlist)'
+egen double g31s = rowtotal(w_*)
+qui sum g31s if _rep > 0
+local g31min = r(min)
+local g31max = r(max)
+qui sum g31s if _rep == 0
+local g31obs = r(mean)
+local g31eng `_dta[wooldid_engine]'
+local g31seed `_dta[wooldid_seed]'
+local g31rl = strlen("`_dta[wooldid_rngstate]'")
+restore
+di "G31 w-cols=`g31w' rowsums " `g31min' "-" `g31max' " obs=" `g31obs' " chars engine=`g31eng' seed=`g31seed' rnglen=`g31rl'"
+if `g31w' != 12 | `g31min' != 12 | `g31max' != 12 | `g31obs' != 12 | "`g31eng'" != "bootstrap" | "`g31seed'" != "7" | `g31rl' < 100 {
+  di as error "G31c FAIL: the bootsave() resample columns or characteristics are wrong"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+* replay from the posted state: no rseed, then set rngstate and repeat
+use `panel', clear
+set seed 4242
+qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(8)
+matrix G31D1 = e(bootdist)
+local g31st `e(boot_rngstate)'
+use `panel', clear
+set rngstate `g31st'
+qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(8)
+matrix G31D2 = e(bootdist)
+if mreldif(G31D1, G31D2) != 0 {
+  di as error "G31d FAIL: set rngstate e(boot_rngstate) does not replay the draws (mreldif " mreldif(G31D1, G31D2) ")"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+* bayes: multipliers sum to 1, observed row 1/G
+use `panel', clear
+cap erase boot_gates_g31.dta
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(8) rseed(7) bootsave(boot_gates_g31)
+chk 31e 0 _rc
+preserve
+use boot_gates_g31, clear
+egen double g31s = rowtotal(w_*)
+qui sum g31s if _rep > 0
+local g31bmin = r(min)
+local g31bmax = r(max)
+qui sum g31s if _rep == 0
+local g31bobs = r(mean)
+restore
+di "G31 bayes rowsums " %10.8f `g31bmin' "-" %10.8f `g31bmax' " obs=" %10.8f `g31bobs'
+if abs(`g31bmin' - 1) > 1e-10 | abs(`g31bmax' - 1) > 1e-10 | abs(`g31bobs' - 1) > 1e-10 {
+  di as error "G31f FAIL: the bayes resample columns do not sum to 1 (observed row 1/G)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+* unclustered: no w_ columns; boottstat: jointW and advW columns with the observed row
+use `panel', clear
+cap erase boot_gates_g31.dta
+cap qui wooldid y unit t ttre, att bootstrap(standard) reps(8) rseed(7) bootsave(boot_gates_g31)
+chk 31g 0 _rc
+preserve
+use boot_gates_g31, clear
+cap ds w_*
+local g31u = _rc
+restore
+use `panel', clear
+cap erase boot_gates_g31.dta
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(2) esfixedbaseperiod adversarial jointtests bootstrap(standard) reps(8) rseed(7) boottstat bootsave(boot_gates_g31)
+chk 31h 0 _rc
+preserve
+use boot_gates_g31, clear
+cap ds jointW*
+local g31j : word count `r(varlist)'
+cap confirm variable advW
+local g31a = _rc
+qui count if _rep == 0 & advW < .
+local g31a0 = r(N)
+restore
+di "G31 unclustered w_ rc=`g31u' (want 111) jointW cols=`g31j' advW rc=`g31a' observed advW present=`g31a0'"
+if `g31u' != 111 | `g31j' < 1 | `g31a' != 0 | `g31a0' != 1 {
+  di as error "G31i FAIL: unclustered/boottstat file layout"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g31.dta
+cap erase boot_gates_g31.txt
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
