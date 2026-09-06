@@ -161,7 +161,7 @@ version 16.0
     tempname wdpobs wdpdist wdpcomp wdpobsb wdpacc wdpsacc wdpcmpb wdpcmpse wdpcell wdpcell0 wdpasg
     qui est sto `wdpobs'
     matrix `wdpobsb' = e(b)
-    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist') compname(`wdpcomp') obsb(`wdpobsb') accname(`wdpacc') seaccname(`=cond(`wdp_ts', "`wdpsacc'", "")') cmpbname(`wdpcmpb') cmpsename(`=cond(`wdp_ts', "`wdpcmpse'", "")') cellacc(`=cond("`makecfxplots'" != "", "`wdpcell'", "")') cell0(`wdpcell0') dots(`dots') asgname(`=cond("`permsave'" != "", "`wdpasg'", "")')
+    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist') compname(`wdpcomp') obsb(`wdpobsb') accname(`wdpacc') seaccname(`=cond(`wdp_ts', "`wdpsacc'", "")') cmpbname(`wdpcmpb') cmpsename(`=cond(`wdp_ts', "`wdpcmpse'", "")') cellacc(`=cond("`makecfxplots'" != "", "`wdpcell'", "")') cell0(`wdpcell0') dots(`dots') rseed(`rseed') asgname(`=cond("`permsave'" != "", "`wdpasg'", "")')
     local wdp_rc = _rc
     qui est restore `wdpobs'
     cap est drop `wdpobs'
@@ -169,6 +169,7 @@ version 16.0
     if `wdp_rc' != 0 exit `wdp_rc'
     * run-level permutation results on the restored observed results
     ereturn local perm_method `permute'
+    if "`rseed'" != "" ereturn local perm_seed `rseed'
     ereturn hidden local wdid_permest `wdp_est'
     ereturn scalar perm_reps = `wdp_r_reps'
     ereturn scalar perm_completed = `wdp_r_done'
@@ -5859,21 +5860,35 @@ version 16.0
 *** silently no-op before then (the F6 commit-A precedent).
   syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ifr(string asis) jt(string) ptp(string asis) replace]
 
-  * stray-companion screen: every companion requires the master option
+  * rseed() is validated before the stray screen: it is shared with permute() (since
+  * 2026-09-05), whose runs leave this program at the screen's exit below
+  if "`rseed'" != "" {
+    cap confirm number `rseed'
+    local badseed = _rc != 0
+    if `badseed' == 0 {
+      if mod(`rseed',1) != 0 | `rseed' < 0 | `rseed' > 2147483647 local badseed 1
+    }
+    if `badseed' {
+      dis as error "Error: rseed() must be an integer between 0 and 2,147,483,647 (it is passed to set seed)."
+      error 198
+    }
+  }
+  * stray-companion screen: every companion requires the master option; level(),
+  * dots() and rseed() are shared with permute()
   if "`bootstrap'" == "" {
     local bootstray
     if `reps' != 0 local bootstray reps()
     if "`ties'" != "" local bootstray `bootstray' ties
     if `level' != 0 & "`permute'" == "" local bootstray `bootstray' level()
     if `dots' != -1 & "`permute'" == "" local bootstray `bootstray' dots()
-    if "`rseed'" != "" local bootstray `bootstray' rseed()
+    if "`rseed'" != "" & "`permute'" == "" local bootstray `bootstray' rseed()
     if "`bootalpha'" != "" local bootstray `bootstray' bootalpha()
     if "`bootdf'" != "" local bootstray `bootstray' bootdf()
     if "`bdisp'" != "" local bootstray `bootstray' bootdisplay()
     if "`bts'" != "" local bootstray `bootstray' boottstat
     if "`bsave'" != "" local bootstray `bootstray' bootsave()
     if "`bootstray'" != "" {
-      dis as error "Error: `bootstray' require(s) the bootstrap() option."
+      dis as error "Error: `bootstray' require(s) the bootstrap() option (level(), dots() and rseed() are also accepted with permute())."
       error 198
     }
     exit 0
@@ -5900,17 +5915,6 @@ version 16.0
   if `dots' != -1 & `dots' < 0 {
     dis as error "Error: dots() must be a nonnegative integer (0 suppresses the progress display)."
     error 198
-  }
-  if "`rseed'" != "" {
-    cap confirm number `rseed'
-    local badseed = _rc != 0
-    if `badseed' == 0 {
-      if mod(`rseed',1) != 0 | `rseed' < 0 | `rseed' > 2147483647 local badseed 1
-    }
-    if `badseed' {
-      dis as error "Error: rseed() must be an integer between 0 and 2,147,483,647 (it is passed to set seed)."
-      error 198
-    }
   }
   * bootsave(): the name rules (plain file name, cwd, replace to overwrite) are checked
   * here BEFORE the replication loop runs. Until 2026-09-05 only wooldid_bootsave checked
@@ -6762,8 +6766,11 @@ end
 cap prog drop wooldid_permrun
 prog def wooldid_permrun
 version 16.0
-  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis) compname(string) obsb(string) accname(string) seaccname(string) cmpbname(string) cmpsename(string) cellacc(string) cell0(string) dots(integer 1) asgname(string)]
+  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis) compname(string) obsb(string) accname(string) seaccname(string) cmpbname(string) cmpsename(string) cellacc(string) cell0(string) dots(integer 1) asgname(string) rseed(string)]
   if `dots' == -1 local dots 1
+  * rseed(): seeds the assignment draws (Mata's jumble/runiform share Stata's RNG
+  * state), set before anything random runs; accepted under permute() since 2026-09-05
+  if "`rseed'" != "" set seed `rseed'
 
   * comparison-statistic scalars, filled by the mandatory rep-0 run below (NFPERM-10)
   tempname wdpo1 wdpo2 wdpo3 wdpo4

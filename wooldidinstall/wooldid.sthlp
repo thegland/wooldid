@@ -479,7 +479,7 @@ the off-centre check are convention-free. The convention in force is recorded in
 
 {phang}{opt level(#)}: Confidence level for the bootstrap or permutation confidence intervals, between 10 and 99.99; the default is 95. Applies to {cmd:bootstrap()} and {cmd:permute()} output only. {p_end}
 
-{phang}{opt rseed(#)}: Seed for the bootstrap draws, passed to {cmd:set seed}; as with the built-in prefixes this advances the session's random-number state. Without it the draws consume the current state and the run is not reproducible. {p_end}
+{phang}{opt rseed(#)}: Seed for the bootstrap or permutation draws, passed to {cmd:set seed} before the first replication; as with the built-in prefixes this advances the session's random-number state. Without it the draws consume the current state and the run is not reproducible. Applies to {cmd:bootstrap()} and {cmd:permute()}, and is recorded in {it:e(boot_seed)} or {it:e(perm_seed)}. {p_end}
 
 {phang}{opt dots(#)}: Show a progress dot every {it:#} replications (bootstrap or permutation), with {cmd:dots(0)} suppressing the display; the default is 1. {p_end}
 
@@ -1061,7 +1061,7 @@ up to 10,000 completed replications - the draw matrices {it:e(permdist_b)} (and 
 replication statistics behind the joint, equality and adversarial p-values, one named column per test) and {it:e(perm_pwsgs_kernel)} for the contrasts; the tests themselves post under the analytic names
 ({it:e(joint_horiz)} etc., {it:e(joint_*_allsgssame)}, {it:e(adversarial_pval_*)}). Run-level: {it:e(perm_reps)}, {it:e(perm_completed)}, {it:e(perm_failed)}, {it:e(perm_npossible)} (also as the string
 {it:e(perm_npossible_str)}), {it:e(perm_level)}, {it:e(perm_exact)}, {it:e(perm_blank)} (structural-zero ame cells excluded), {it:e(perm_precaveat)}, {it:e(perm_gt_blank)}, {it:e(perm_cfx_blank)},
-{it:e(perm_analyticse)}, {it:e(perm_absp)}; macros {it:e(perm_method)}, {it:e(perm_stat)} ({it:b} or {it:t}), {it:e(perm_pconv)} ({it:equaltailed} or {it:absolute}) and {it:e(perm_incomplete)}. The legacy pooled-estimand scalars {it:e(perm_p_{it:est})} (now the same p
+{it:e(perm_analyticse)}, {it:e(perm_absp)}; macros {it:e(perm_method)}, {it:e(perm_stat)} ({it:b} or {it:t}), {it:e(perm_pconv)} ({it:equaltailed} or {it:absolute}), {it:e(perm_seed)} (under {cmd:rseed()}) and {it:e(perm_incomplete)}. The legacy pooled-estimand scalars {it:e(perm_p_{it:est})} (now the same p
 the table carries, in the convention in force), {it:e(perm_lb_{it:est})}/{it:e(perm_ub_{it:est})} (the {cmd:level()} null band), {it:e(perm_sd_{it:est})} and, under {cmd:permtci}, {it:e(perm_tlb_{it:est})}/{it:e(perm_tub_{it:est})}, the
 estimand-keyed comparator {it:e(perm_comparator)} and the estimand-keyed draw matrix {it:e(permdist)} (on the {it:e(perm_stat)} scale) are kept.{p_end}
 

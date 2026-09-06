@@ -835,6 +835,37 @@ if "`q13sd0'" != "" & "`q13sd30'" != "" {
   }
 }
 
+* ================= Q14: rseed() under permute() (accepted since 2026-09-05): the same
+* seed reproduces the draws bitwise whatever the session's RNG state, e(perm_seed) records
+* it, and the integer validation now runs under permute() too =========================
+mkperm3 8 4 3
+set seed 1
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(25) rseed(77)
+xrc Q14a 0 _rc
+if _rc == 0 {
+  tempname q14a
+  matrix `q14a' = e(permdist_b)
+  if "`e(perm_seed)'" != "77" {
+    dis as error "Q14b FAIL: e(perm_seed) = `e(perm_seed)'"
+    global pf = $pf + 1
+  }
+  set seed 999
+  qui gen double q14junk = runiform()
+  drop q14junk
+  cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(25) rseed(77)
+  xrc Q14c 0 _rc
+  if _rc == 0 {
+    if mreldif(e(permdist_b), `q14a') != 0 {
+      dis as error "Q14d FAIL: rseed(77) did not reproduce the permutation draws"
+      global pf = $pf + 1
+    }
+  }
+}
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(25) rseed(1.5)
+xrc Q14e 198 _rc
+cap noi wooldid y i t ttre, att cluster(i) rseed(77)
+xrc Q14f 198 _rc
+
 * ================= Q11: a plain run after all of this is untouched by the engine ======
 mkperm3 8 4 3
 cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
