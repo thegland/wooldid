@@ -20,6 +20,8 @@ scalar|contreatpost_mean|+1.403769afc962eX+003
 scalar|contreatpost_med|+1.3f3fae0000000X+003
 scalar|contreatpost_sd|+1.dfadc7491e0b3X-002
 scalar|N|+1.f400000000000X+009
+scalar|wdid_fcncell|+1.9000000000000X+006
+scalar|level|+1.7c00000000000X+006
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|rss|+1.6a74b26b463bdX-004
 scalar|rmse|+1.44eb7c256df2eX-007

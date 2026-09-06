@@ -13,6 +13,8 @@ scalar|rmse|+1.cd2eec0618260X-004
 scalar|rss|+1.2415d656edd16X-001
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|joint_att_allsgssame|+1.0a7a4c0e372dbX-029
+scalar|level|+1.7c00000000000X+006
+scalar|wdid_fcncell|+1.b000000000000X+005
 macro|cmd|wooldid
 macro|wdid_replayv|2
 macro|wdid_esrel|-1

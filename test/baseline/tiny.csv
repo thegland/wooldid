@@ -19,6 +19,8 @@ scalar|r2_withinadj|+1.13c024280bcf2X-001
 scalar|rmse|+1.2647f49e6d441X-002
 scalar|rss|+1.e649717ee319cX+000
 scalar|N_dropped|+0.0000000000000X-3ff
+scalar|level|+1.7c00000000000X+006
+scalar|wdid_fcncell|+1.4000000000000X+004
 macro|cmd|wooldid
 macro|wdid_replayv|2
 macro|wdid_esrel|-1

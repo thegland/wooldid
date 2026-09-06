@@ -20,6 +20,8 @@ scalar|r2_within|+1.ff37db33f2d14X-001
 scalar|r2_withinadj|+1.fda7919bd873bX-001
 scalar|rmse|+1.e8be1c67f4fadX-004
 scalar|rss|+1.89a501bfaf742X-002
+scalar|wdid_fcncell|+1.0800000000000X+006
+scalar|level|+1.7c00000000000X+006
 scalar|joint_pre_att_allsgssame|+1.f2a31a70c516cX-001
 scalar|joint_att_allsgssame|+1.c1eeecb5232c9X-01f
 scalar|N_dropped|+0.0000000000000X-3ff

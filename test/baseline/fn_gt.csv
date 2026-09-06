@@ -18,6 +18,8 @@ scalar|r2_withinadj|+1.88a42d1d88411X-003
 scalar|rmse|+1.06396227c9496X-001
 scalar|rss|+1.03281c3652b60X+007
 scalar|N_dropped|+0.0000000000000X-3ff
+scalar|level|+1.7c00000000000X+006
+scalar|wdid_fcncell|+1.8c00000000000X+008
 macro|cmd|wooldid
 macro|wdid_replayv|2
 macro|wdid_fastnose|fastnose
