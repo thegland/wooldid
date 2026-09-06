@@ -4960,7 +4960,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * bootstrap() absent it enforces the stray-companion screen and exits. it sits AFTER
   * the safetyinput capture above deliberately - the bayes cell-weighted gate keys on
   * the user's own safety() value (contreatwithin rewrites the working copy later)
-  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') `replace'
+  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') ttrevar(`ttre_asgiven') `replace'
   if _rc != 0 error _rc
 
   * register verbose retention with the shell's error-path cleanup epilogue (top of this
@@ -5956,7 +5956,7 @@ version 16.0
 *** commit-B state: the full gate set is live, but a passing call still exits r(198)
 *** loudly at the tail - the engine lands in a later commit and the option must never
 *** silently no-op before then (the F6 commit-A precedent).
-  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ifr(string asis) jt(string) ptp(string asis) replace]
+  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ttrevar(varname) ifr(string asis) jt(string) ptp(string asis) replace]
 
   * rseed() is validated before the stray screen: it is shared with permute() (since
   * 2026-09-05), whose runs leave this program at the screen's exit below
@@ -6205,6 +6205,27 @@ version 16.0
       error 459
     }
     if r(max) < 10 dis as text "Caution: only " r(max) " clusters are available for the bootstrap; bootstrap inference is unreliable with very few clusters."
+    * F050 (quality review 2026-09-05, author ruling 2026-09-06): the total-cluster caution
+    * above cannot see the case the few-cluster literature is about - few TREATED clusters.
+    * The pairs cluster bootstrap keeps only the replications that draw at least one
+    * treated cluster (the others fail and are excluded), so the retained distribution is
+    * conditional on that event, and MacKinnon-Webb (2017, 2018) find it badly sized there;
+    * the Bayesian bootstrap shares its first two moments. The wild cluster bootstrap-t is
+    * the literature's remedy and is NOT offered (a self-contained wild bootstrap of the
+    * margins functional would be a new engine with a refit per replication - feasibility
+    * verdict F1, 2026-09), so the caution names permute() and boottest on the stage-1
+    * regression. Keyed on the treated resampling clusters; the unclustered leg resamples
+    * observations and is not covered
+    if "`ttrevar'" != "" {
+      tempvar trt ctr ctag
+      qui gen byte `trt' = (`ttrevar' < .) if `smp2'
+      qui gegen byte `ctr' = max(`trt') if `smp2', by(`cgrp')
+      qui gegen byte `ctag' = tag(`cgrp') if `smp2' & `ctr' == 1
+      qui count if `ctag' == 1
+      if r(N) < 6 {
+        dis as text "Caution: only " r(N) " treated cluster(s) are available for resampling. What is implemented is the " cond("`bootstrap'" == "bayes", "Bayesian bootstrap, which shares the pairs cluster bootstrap's first two moments", "pairs cluster bootstrap, which keeps only the replications that draw at least one treated cluster, so the retained distribution is conditional on that event") "; with few treated clusters the literature finds this bootstrap badly sized (MacKinnon and Webb 2017, 2018), and boottstat is not a cure for it. Consider permute() - randomization inference over the treatment assignment - or the wild cluster bootstrap-t (boottest, on the stage-1 regression outside wooldid), which wooldid does not offer."
+      }
+    }
   }
 
   * C-stage refusals. jointtests: the bootstrap Wald joint tests land in a later

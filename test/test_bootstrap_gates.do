@@ -523,5 +523,51 @@ if e(boot_df) != 11 {
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 
+* G28 (F050, 2026-09-06) the treated-cluster caution: fewer than 6 treated resampling
+* clusters -> a caution naming permute() and boottest (pairs wording under standard, the
+* moments wording under bayes); silent with 8 treated clusters; not keyed on the total
+use `panel', clear
+qui replace ttre = . if unit > 2
+qui log using boot_gates_g28.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7)
+local g28rc = _rc
+qui log close bg
+chk 28 0 `g28rc'
+local lg = fileread("boot_gates_g28.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "only 2 treated cluster(s) are available for resampling") == 0 | strpos(`"`lg'"', "pairs cluster bootstrap, which keeps only the replications") == 0 | strpos(`"`lg'"', "permute()") == 0 | strpos(`"`lg'"', "boottest") == 0 {
+  di as error "G28b FAIL: no treated-cluster caution with 2 treated clusters under bootstrap(standard)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+use `panel', clear
+qui replace ttre = . if unit > 2
+qui log using boot_gates_g28.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(10) rseed(7)
+local g28rc = _rc
+qui log close bg
+chk 28c 0 `g28rc'
+local lg = fileread("boot_gates_g28.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "only 2 treated cluster(s) are available for resampling") == 0 | strpos(`"`lg'"', "Bayesian bootstrap, which shares the pairs cluster bootstrap's first two moments") == 0 {
+  di as error "G28d FAIL: no treated-cluster caution with 2 treated clusters under bootstrap(bayes)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+use `panel', clear
+qui log using boot_gates_g28.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7)
+local g28rc = _rc
+qui log close bg
+chk 28e 0 `g28rc'
+local lg = fileread("boot_gates_g28.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "treated cluster(s) are available for resampling") > 0 {
+  di as error "G28f FAIL: the treated-cluster caution fired with 8 treated clusters"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g28.txt
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
