@@ -8176,7 +8176,7 @@ version 16.0
         mata: wooldid_bootgrab("`accname'", `r', "`obsb'", "`seaccname'", "`pwseaccname'")
         if "`jwaccname'" != "" mata: wooldid_bootjwr("`jwaccname'", `r', "`jobsname'")
         if "`awaccname'" != "" mata: wooldid_bootadvr("`awaccname'", `r', "`aobsname'", `advesrel', ("`advtt'" != ""))
-        if "`cellacc'" != "" mata: wooldid_bootcells("`cellacc'", `r', `wdb_ncfx', ("`seaccname'" != ""))
+        if "`cellacc'" != "" mata: wooldid_bootcells("`cellacc'", `r', `wdb_ncfx', ("`seaccname'" != ""), "`wdbrf'", "`i'")
         local nblank = `nblank' + `wdb_gblank'
         local ++ndone
       }
@@ -10822,6 +10822,7 @@ cap mata: mata drop wooldid_bootadvobs()
 cap mata: mata drop wooldid_bootadvrel()
 cap mata: mata drop wooldid_bootcellkey()
 cap mata: mata drop wooldid_bootcellkeys()
+cap mata: mata drop wooldid_bootcellkeym()
 cap mata: mata drop wooldid_bootcells()
 cap mata: mata drop wooldid_bootsavemk()
 cap mata: mata drop wooldid_bootcellwire()
@@ -11457,6 +11458,14 @@ void wooldid_bootpairidx(string scalar eqwant, string scalar sglist, string scal
 // for a cfx row: its row name (the lattice level). An R x ncells accumulator carries the
 // cell estimate (or, in the *se twin, the cell's analytic se) per replication, matched by
 // key so a replication that lacks a cell leaves it missing rather than shifting the rest
+string colvector wooldid_bootcellkeym(real matrix M)
+{
+  string colvector k
+  real scalar i
+  k = J(rows(M), 1, "")
+  for (i = 1; i <= rows(M); i++) k[i] = strtoname("k" + strofreal(M[i,1], "%16.0g") + "_" + strofreal(M[i,2], "%16.0g") + "_" + strofreal(M[i,4], "%16.0g"))
+  return(k)
+}
 string colvector wooldid_bootcellkey(string scalar mname, real scalar isgt)
 {
   real matrix M
@@ -11464,10 +11473,7 @@ string colvector wooldid_bootcellkey(string scalar mname, real scalar isgt)
   string matrix rs
   real scalar i
   M = st_matrix(mname)
-  if (isgt) {
-    k = J(rows(M), 1, "")
-    for (i = 1; i <= rows(M); i++) k[i] = strtoname("k" + strofreal(M[i,1], "%16.0g") + "_" + strofreal(M[i,2], "%16.0g") + "_" + strofreal(M[i,4], "%16.0g"))
-  }
+  if (isgt) k = wooldid_bootcellkeym(M)
   else {
     rs = st_matrixrowstripe(mname)
     k = J(rows(rs), 1, "")
@@ -11492,22 +11498,46 @@ void wooldid_bootcellkeys(string scalar mname, string scalar accname, real scala
   st_matrixcolstripe(accname, (J(rows(k), 1, ""), k))
 }
 // per-replication harvest: gteffects estimate (col 5) / se (col 6); cfx b (col 1) / se (col 2)
-void wooldid_bootcells(string scalar prefix, real scalar r, real scalar ncfx, real scalar dose)
+// mapfr/ivar (optional): under the physical re-id leg the replication ran on fresh unit
+// codes (__wdbnewi = group(resampled cluster, i)), so its e(gteffects) rows are keyed on
+// codes that mean nothing to the observed table - matching them by code harvested the
+// wrong cells when the original codes were 1..N and nothing otherwise (2026-09-05 review).
+// The frame that ran the replication still holds both columns: translate each row's unit
+// code back to the ORIGINAL i before keying. A twice-drawn cluster yields two copies
+// with identical cell coefficients; the first copy is kept. Cells of undrawn units stay
+// missing for the replication
+void wooldid_bootcells(string scalar prefix, real scalar r, real scalar ncfx, real scalar dose, | string scalar mapfr, string scalar ivar)
 {
   real matrix A, S, M
   string colvector ak, mk
   string matrix cs
-  real scalar j, k, c
-  transmorphic t
-  string scalar nm
+  real scalar j, k, c, remap
+  real colvector nv, ov
+  transmorphic t, tm
+  string scalar nm, cur
+  remap = (args() >= 6 ? mapfr != "" : 0)
   // gteffects
   M = st_matrix("e(gteffects)")
   if (rows(M) > 0 & st_matrix(prefix + "_gt") != J(0,0,.)) {
     A = st_matrix(prefix + "_gt")
     cs = st_matrixcolstripe(prefix + "_gt")
-    mk = wooldid_bootcellkey("e(gteffects)", 1)
+    if (remap) {
+      cur = st_framecurrent()
+      st_framecurrent(mapfr)
+      nv = st_data(., "__wdbnewi")
+      ov = st_data(., ivar)
+      st_framecurrent(cur)
+      tm = asarray_create("real")
+      for (j = 1; j <= rows(nv); j++) asarray(tm, nv[j], ov[j])
+      for (j = 1; j <= rows(M); j++) {
+        if (asarray_contains(tm, M[j, 1])) M[j, 1] = asarray(tm, M[j, 1])
+      }
+    }
+    mk = wooldid_bootcellkeym(M)
     t = asarray_create()
-    for (j = 1; j <= rows(mk); j++) asarray(t, mk[j], j)
+    for (j = 1; j <= rows(mk); j++) {
+      if (!asarray_contains(t, mk[j])) asarray(t, mk[j], j)
+    }
     if (dose) S = st_matrix(prefix + "_gtse")
     for (k = 1; k <= rows(cs); k++) {
       if (!asarray_contains(t, cs[k, 2])) continue

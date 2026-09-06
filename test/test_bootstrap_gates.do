@@ -395,5 +395,33 @@ if `g22rc' == 0 {
 }
 cap erase boot_gates_g22.txt
 
+
+* G23 gteffects under the physical re-id leg (cell-weighted estimand + nesting cluster):
+* the replication's cells are keyed on its fresh unit codes, so they must be translated
+* back to the original units before harvesting (review 2026-09-05: with codes 1..N the
+* wrong cells were harvested, with any other coding nothing was). Pin: relabelling the
+* units by +100 must leave the bootstrapped cell columns bitwise unchanged, and they
+* must be populated
+use `panel', clear
+cap qui wooldid y unit t ttre, att_it cluster(unit) esprelength(1) espostlength(1) gteffects bootstrap(standard) reps(12) rseed(7)
+chk 23 0 _rc
+if _rc == 0 {
+  matrix G23_A = e(gteffects)
+  use `panel', clear
+  gen unit2 = unit + 100
+  cap qui wooldid y unit2 t ttre, att_it cluster(unit2) esprelength(1) espostlength(1) gteffects bootstrap(standard) reps(12) rseed(7)
+  chk 23b 0 _rc
+  if _rc == 0 {
+    matrix G23_B = e(gteffects)
+    * matrix == is missing-aware (a missing cell equals only a missing cell), where a
+    * max(abs(.)) comparison would skip the blanks that the pristine build produces
+    mata: A = st_matrix("G23_A"); B = st_matrix("G23_B"); ok = (rows(A) == rows(B) & cols(A) == cols(B)); if (ok) ok = (A[., 2..cols(A)] == B[., 2..cols(B)]) & (B[., 1] == A[., 1] :+ 100); nse = min((sum(A[., 6] :< .), sum(B[., 6] :< .))); st_numscalar("g23ok", ok); st_numscalar("g23nse", nse)
+    if g23ok != 1 | g23nse == 0 {
+      di as error "G23c FAIL: gteffects bootstrap columns are not relabelling-invariant under the re-id leg, or no cell carries a bootstrap se (ok=" g23ok ", cells with se=" g23nse ")"
+      global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+    }
+  }
+}
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
