@@ -5854,6 +5854,14 @@ version 16.0
   * permexact the enumeration is over the wrong design). The cluster() variable must
   * nest i: clustering at i or coarser passes, finer is refused (the bootstrap's re-id
   * leg has the same requirement). Added 2026-09-05 (review finding econ_perm F4)
+  * F049 (quality review 2026-09-05, author ruling 2026-09-06): the studentized statistic is
+  * MacKinnon-Webb (2020)'s remedy for atypical treated clusters, but it presumes a
+  * cluster-robust se that sees each treated cluster's own variance. With cluster() at i
+  * and one observation per i-period the treated cohort-period cells are absorbed by their
+  * own terms, so the se cannot see them and permtstat does not restore size (measured:
+  * 7 of 30 null datasets rejected at 5% with treated-cluster error sd 3 vs 1, against 6
+  * of 30 for the raw coefficient). Say so; the run proceeds
+  if "`ts'" != "" & "`clus'" == "`ivar'" dis as text "Caution: permtstat with cluster() at the i level. The studentized permutation statistic protects against treated clusters being atypical in variance only when the cluster-robust standard error is informative about them - many observations per treated cohort-period cell, with cluster() coarser than the cell. With one observation per i-period the treated cells are absorbed by their own cohort-period terms, the standard error cannot see their variance, and permtstat is not protected there either (MacKinnon and Webb 2020); the test presumes exchangeable clusters in both forms."
   if "`clus'" != "`ivar'" {
     tempvar cgrp cmin cmax
     qui gegen double `cgrp' = group(`clus') if `insmp'

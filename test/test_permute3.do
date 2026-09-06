@@ -1041,5 +1041,51 @@ if strpos(`"`lg'"', "smallest attainable permutation p-value") > 0 {
 }
 cap erase perm3_q19.txt
 
+* ================= Q20: the permtstat-at-cluster(i) caution (F049, 2026-09-06): the
+* studentized statistic is not protected when the cluster-robust se cannot see the treated
+* clusters; the caution fires at cluster() = i with permtstat, and is silent with a coarser
+* cluster or without permtstat ==========================================================
+mkperm3 8 4 3
+qui log using perm3_q20.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permtstat rseed(20)
+local rc = _rc
+qui log close p3
+xrc Q20a 0 `rc'
+local lg = fileread("perm3_q20.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "permtstat with cluster() at the i level") == 0 {
+  dis as error "Q20b FAIL: no caution for permtstat at cluster() = i"
+  global pf = $pf + 1
+}
+mkperm3 8 4 3
+qui gen s = ceil(i/2)
+qui log using perm3_q20.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(s) permute(shuffle) permreps(20) permtstat rseed(20)
+local rc = _rc
+qui log close p3
+xrc Q20c 0 `rc'
+local lg = fileread("perm3_q20.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "permtstat with cluster() at the i level") > 0 {
+  dis as error "Q20d FAIL: the caution fired with a cluster coarser than i"
+  global pf = $pf + 1
+}
+mkperm3 8 4 3
+qui log using perm3_q20.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) rseed(20)
+local rc = _rc
+qui log close p3
+xrc Q20e 0 `rc'
+local lg = fileread("perm3_q20.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "permtstat with cluster() at the i level") > 0 {
+  dis as error "Q20f FAIL: the caution fired without permtstat"
+  global pf = $pf + 1
+}
+cap erase perm3_q20.txt
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"
