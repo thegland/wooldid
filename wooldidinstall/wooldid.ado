@@ -210,7 +210,7 @@ version 16.0
           * permuted |t|) x observed se. The shell's level is 0-means-95: resolve it here
           local wdptb = _b[main_`wdpe']
           local wdpts = _se[main_`wdpe']
-          local wdptclv = cond(`level' == 0, 95, `level')
+          local wdptclv = cond(`level' == 0, c(level), `level')
           tempname wdpq
           mata: st_numscalar("`wdpq'", wooldid_permq(sort(abs(select(st_matrix("`wdpacc'")[., `wdpc'] :/ st_matrix("`wdpsacc'")[., `wdpc'], (st_matrix("`wdpacc'")[., `wdpc'] :< .) :& (st_matrix("`wdpsacc'")[., `wdpc'] :> 0) :& (st_matrix("`wdpsacc'")[., `wdpc'] :< .))), 1), `wdptclv'/100))
           if `wdpts' < . & `wdpts' > 0 & `wdpq' < . {
@@ -5456,6 +5456,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * silently strand the worker on the stale syntax-parsed value. varlist/if/weight/exp
   * are excluded: the worker's own syntax call already parsed them identically and this
   * subprogram never alters them.
+  * CS-2 (consistency sweep 2026-09-06): an unspecified level() means c(level) - the
+  * analytic tables already used it (F054) while every engine rewiring fell back to a
+  * literal 95, so `set level 90' produced lb_90ci columns holding 95% intervals under
+  * bootstrap() / permute(). Resolve it once here; every consumer sees a number
+  if `level' == 0 local level = c(level)
   foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
@@ -6366,7 +6371,7 @@ version 16.0
   }
   * the shell's level() defaults to 0 (meaning c(level)); resolve it here exactly as the
   * coefficient-row rewiring does, else al = 0.5 collapses every interval onto the median
-  if `level' == 0 local level 95
+  if `level' == 0 local level = c(level)
   local wdbdf = .
   if "`bootdf'" != "" & "`bootdf'" != "normal" {
     if "`bootdf'" == "clusters" local wdbdf = `nclus' - 1
@@ -6451,7 +6456,7 @@ version 16.0
   cap matrix `pw0' = e(pwsgs)
   local seacc0 `seacc'
   local bdisp = cond("`bdisp'" == "", "percentile", "`bdisp'")
-  if `level' == 0 local level 95
+  if `level' == 0 local level = c(level)
   * reference distribution (bootdf()): missing = normal/chi-squared, else t/F with
   * these denominator degrees of freedom
   local wdbdf = .
@@ -7414,7 +7419,7 @@ version 16.0
 *** under the fast-mode default. The per-element kernel and the stripe-aligned vectors
 *** are posted by name; the analytic tables are kept as hidden twins
   syntax , acc(string) obsb(string) cmpb(string) [seacc(string) cmpse(string) level(real 0) m(string) done(integer 0) fail(integer 0) blank(integer 0) ts(integer 0) method(string) reps(integer 0) ase(string) clus(varlist) gt(string) absp(string) side(string) rawp(string)]
-  if `level' == 0 local level 95
+  if `level' == 0 local level = c(level)
   * p-value convention code (F052/F064, 2026-09-06): 0 equal-tailed (default), 1 absolute
   * add-one (permabsp), 2 raw |s| share c/n without add-one (permrawp: the ritest / Stata
   * permute number), 3 left one-sided, 4 right one-sided (permside())
@@ -7678,7 +7683,7 @@ version 16.0
 *** analytic surface so the display prints them unchanged; an analytic value that the
 *** observed run posted (permtstat or permanalyticse) is always overwritten or blanked
   syntax , acc(string) obsb(string) cmpb(string) [level(real 0) m(string) ts(integer 0) jt(string) adv(string) advalt(string) advesrel(string) advtt(string) esf(string) absp(string) side(string) rawp(string)]
-  if `level' == 0 local level 95
+  if `level' == 0 local level = c(level)
   * p-value convention code (F052/F064, 2026-09-06): 0 equal-tailed (default), 1 absolute
   * add-one (permabsp), 2 raw |s| share c/n without add-one (permrawp: the ritest / Stata
   * permute number), 3 left one-sided, 4 right one-sided (permside())
@@ -8030,7 +8035,7 @@ version 16.0
   * lattice_k is a different dose range in every replication - so those matrices keep
   * their points and have their inference columns blanked, with a caution
   syntax , cell(string) cell0(string) [ncfx(integer 0) names(string) level(real 0) m(string) ts(integer 0) lattype(string) cfxlat(string) absp(string) side(string) rawp(string)]
-  if `level' == 0 local level 95
+  if `level' == 0 local level = c(level)
   * p-value convention code (F052/F064, 2026-09-06): 0 equal-tailed (default), 1 absolute
   * add-one (permabsp), 2 raw |s| share c/n without add-one (permrawp: the ritest / Stata
   * permute number), 3 left one-sided, 4 right one-sided (permside())
@@ -8641,7 +8646,7 @@ version 16.0
   syntax , [mode(string) reps(integer 0) acc(string) obsb(string) done(string) fail(string) blank(string) level(real 0) bootalpha(string) clus(varlist) comp(string) TIES rseed(string) bootdf(string) bdisp(string) nclus(integer 0) seacc(string) aseout(string) jkacc(string)]
   local wdbaseobs_out `aseout'
   if "`wdbaseobs_out'" == "" tempname wdbaseobs_out
-  if `level' == 0 local level 95
+  if `level' == 0 local level = c(level)
   if "`bootalpha'" == "" local bootalpha equal
   * reference distribution for the reported statistics (bootdf()): missing = normal
   local wdbdf = .

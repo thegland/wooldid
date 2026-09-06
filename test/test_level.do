@@ -155,5 +155,36 @@ if `rc9a' != 0 | `rc9b' != 198 | c(level) != 95 {
   local ++fails
 }
 
+* ---- L10 (CS-2, consistency sweep 2026-09-06): an UNSPECIFIED level() means c(level) on
+* every path. Under `set level 90' with no level() option a bootstrap run and a permute run
+* must equal the explicit level(90) runs bit for bit (columns, intervals, e(boot_level) /
+* e(perm_level)), instead of labelling lb_90ci columns that hold 95% intervals
+set level 90
+use `panel', clear
+qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7)
+matrix L10B = e(wdidmainresults)
+local l10bc : colnames L10B
+local l10bl = e(boot_level)
+matrix L10BP = e(boot_ci_percentile)
+use `panel', clear
+qui wooldid y unit t ttre, att cluster(unit) permute(shuffle) permreps(20) rseed(7)
+matrix L10P = e(wdidmainresults)
+local l10pc : colnames L10P
+local l10pl = e(perm_level)
+set level 95
+use `panel', clear
+qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7) level(90)
+matrix L10Bx = e(wdidmainresults)
+matrix L10BPx = e(boot_ci_percentile)
+use `panel', clear
+qui wooldid y unit t ttre, att cluster(unit) permute(shuffle) permreps(20) rseed(7) level(90)
+matrix L10Px = e(wdidmainresults)
+di "L10 set-level-90: boot cols=[`l10bc'] e(boot_level)=`l10bl' mreldif vs level(90)=" mreldif(L10B, L10Bx) "/" mreldif(L10BP, L10BPx) " | perm cols=[`l10pc'] e(perm_level)=`l10pl' mreldif=" mreldif(L10P, L10Px) " c(level)=" c(level)
+if !`: list posof "lb_90ci" in l10bc' | `l10bl' != 90 | mreldif(L10B, L10Bx) != 0 | mreldif(L10BP, L10BPx) != 0 ///
+   | !`: list posof "lb_90ci" in l10pc' | `l10pl' != 90 | mreldif(L10P, L10Px) != 0 | c(level) != 95 {
+  di as error "L10 FAIL: an unspecified level() under set level 90 does not match level(90) on the engines"
+  local ++fails
+}
+
 if `fails' == 0 di as result "LEVEL_ALL_PASS"
 else di as error "LEVEL_FAILS=`fails'"
