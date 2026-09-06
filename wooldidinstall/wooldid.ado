@@ -386,7 +386,7 @@ version 16.0
     * rewire the posted inference surfaces to the bootstrap covariance (eclass sub)
     wooldid_bootwire , mode(`bootstrap') reps(`reps') level(`level') bootalpha(`bootalpha') clus(`cluster') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') `ties' done(`wdb_r_done') fail(`wdb_r_fail') blank(`wdb_r_blank') rseed(`rseed') bootdf(`bootdf') bdisp(`bootdisplay') nclus(`wdb_r_nclus') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseout(`=cond("`boottstat'" != "", "`wdbaseobs'", "")')
     * bootstrapped joint tests, subgroup contrasts and CI flavors (eclass sub)
-    wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') bootdf(`bootdf') bts(`boottstat') bdisp(`bootdisplay') nclus(`wdb_r_nclus') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwacc(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends')
+    wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') bootdf(`bootdf') bts(`boottstat') bdisp(`bootdisplay') nclus(`wdb_r_nclus') clus(`cluster') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwacc(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends')
     * bootsave(): the replication draws as a .dta in the working directory (author request
     * 2026-09-04). One row per replication (_rep = 1..reps; a failed replication keeps its
     * row, all missing) plus a _rep = 0 row carrying the observed estimates, so the file
@@ -6310,7 +6310,7 @@ version 16.0
 *** residual-rank p - the ed780ac precedent). Joint-test e() names and the
 *** per-subgroup macro-vs-scalar split mirror the analytic surface exactly, so the
 *** existing display prints them unchanged (amendment A14).
-  syntax , [level(real 0) acc(string) obsb(string) comp(string) jt(string) ties done(string) bootdf(string) bts(string) bdisp(string) nclus(integer 0) pwseacc(string) jwacc(string) jobs(string) aseobs(string) seacc(string) awacc(string) aobs(string) adv(string) advalt(string) advesrel(string) advtt(string)]
+  syntax , [level(real 0) acc(string) obsb(string) comp(string) jt(string) ties done(string) bootdf(string) bts(string) bdisp(string) nclus(integer 0) pwseacc(string) jwacc(string) jobs(string) aseobs(string) seacc(string) awacc(string) aobs(string) adv(string) advalt(string) advesrel(string) advtt(string) clus(varlist)]
   * a pre-rewrite copy of the observed pairwise table: column 2 is the analytic margins se,
   * which the polarisation route needs as its observed comparator. Taken before anything
   * below touches e(pwsgs)
@@ -6821,8 +6821,9 @@ version 16.0
     * disclosure, not a guard: under clustering at or above i the analytic pairwise
     * margins se is degenerate on some designs (missing, or ~1e-9 with p = 0, seen at HEAD
     * on a saturated i-as-cohort fixture), and boottstat studentizes by exactly that se
-    * in every replication. boottstat + cluster() always nests i (the re-id leg requires it)
-    if "`bts'" != "" & `nclus' > 0 {
+    * in every replication. boottstat + cluster() always nests i (the re-id leg requires it).
+    * Gated on cluster() itself: nclus() is the observation count on an unclustered run
+    if "`bts'" != "" & "`clus'" != "" {
       local ++wdbncaut
       local wdbc`wdbncaut' under clustering at or above the i level the analytic pairwise-contrast standard errors can be degenerate (the same limitation behind the refusal of jointtests with analytic clustered SEs), and boottstat studentizes each contrast by that standard error in every replication, so the studentized contrasts and the across-subgroup equality test can be absent or numerically unstable here; the non-studentized bootstrap (bootstrap() without boottstat) forms the contrasts from the coefficient draws instead
     }

@@ -377,5 +377,23 @@ else {
 }
 cap erase boot_gates_g21.txt
 
+
+* G22 the boottstat pairwise-contrast caution names clustering at or above the i level;
+* on an UNCLUSTERED run it must not print (nclus was the observation count there)
+use `panel', clear
+qui log using boot_gates_g22.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att bootstrap(standard) reps(10) rseed(7) boottstat subgroups(s)
+local g22rc = _rc
+qui log close bg
+chk 22 0 `g22rc'
+if `g22rc' == 0 {
+  local lg = fileread("boot_gates_g22.txt")
+  if strpos(`"`lg'"', "under clustering at or above the i level") > 0 {
+    di as error "G22b FAIL: the clustered pairwise-se caution printed on an unclustered run"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+}
+cap erase boot_gates_g22.txt
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
