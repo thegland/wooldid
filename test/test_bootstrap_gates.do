@@ -271,5 +271,28 @@ if _rc == 0 {
 }
 cap erase "boot_gates_g17.dta"
 
+
+* G18 bootsave() with a long subgroup variable name: the pwse<j>_ column names are
+* truncated to Stata's 32-character limit (the index keeps them unique); r(3300) before
+* 2026-09-05. boottstat + cluster(unit) nests i, so the pairwise-se accumulator exists
+use `panel', clear
+gen sg_a_very_long_subgroup_name_xx = s
+cap erase "boot_gates_g18.dta"
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7) boottstat subgroups(sg_a_very_long_subgroup_name_xx) bootsave(boot_gates_g18)
+chk 18 0 _rc
+cap confirm file "boot_gates_g18.dta"
+chk 18b 0 _rc
+if _rc == 0 {
+  preserve
+  use "boot_gates_g18.dta", clear
+  cap ds pwse1_*
+  if _rc != 0 {
+    di as error "G18c FAIL: no pwse1_ column in the saved draws"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+  restore
+}
+cap erase "boot_gates_g18.dta"
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

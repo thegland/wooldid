@@ -1053,7 +1053,7 @@ none, and prints a computational-fragility caution (suggesting a larger {it:regt
 
 {synopt:{it:Permutation inference}} When {cmd:permute()} is used, the reported tables themselves carry the permutation inference (columns {it:se_analytic}, {it:t_perm}, {it:p_perm} and the
 {cmd:level()} interval), and the hidden {it:e(perm_analytic_mainresults)}, {it:e(perm_analytic_sgresults_*)}, {it:e(perm_analytic_pwsgs)} and {it:e(perm_analytic_}{it:cfxname}{it:)} keep the tables as the
-observed run posted them. Stripe-aligned surfaces, one named column per coefficient of {it:e(b)}: {it:e(perm_p)} (the equal-tailed permutation p, or the absolute-value p under {cmd:permabsp}), {it:e(perm_ci)} (rows {it:ll}/{it:ul}, the shift interval),
+observed run posted them (a hidden twin whose name would exceed Stata's 32-character limit - a subgroup value of 9 or more digits, or a long cfx name - is skipped; the visible table is unaffected). Stripe-aligned surfaces, one named column per coefficient of {it:e(b)}: {it:e(perm_p)} (the equal-tailed permutation p, or the absolute-value p under {cmd:permabsp}), {it:e(perm_ci)} (rows {it:ll}/{it:ul}, the shift interval),
 {it:e(perm_se_shift)} (the interval-implied standard error), {it:e(perm_sd)} (SD of the permutation distribution), {it:e(perm_n)} (replications carrying the element), {it:e(perm_nullband)} (rows {it:lo}/{it:hi}: the
 equal-tailed {cmd:level()} quantiles of the null draws),
 {it:e(perm_comparator_b)} (the rep-0 comparator vector), the hidden {it:e(perm_kernel)} (every row of the per-element kernel, by name) and {it:e(perm_ase_obs)} (the observed analytic standard errors), and -

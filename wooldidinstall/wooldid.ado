@@ -7240,7 +7240,9 @@ version 16.0
       local wsc : subinstr local wsc "ub_95ci" "ub_`wdplvltxt'ci", word
     }
     matrix colnames `wsg`sg'' = `wsc'
-    ereturn hidden matrix perm_analytic_sgresults_`sg' = `wsa`sg''
+    * the hidden twin is skipped when its name would exceed 32 characters (a 9+ digit
+    * subgroup value); the visible table is unaffected
+    if strlen("perm_analytic_sgresults_`sg'") <= 32 ereturn hidden matrix perm_analytic_sgresults_`sg' = `wsa`sg''
     ereturn matrix wdidsgresults_`sg' = `wsg`sg''
   }
 
@@ -7698,7 +7700,9 @@ version 16.0
     if strlen("perm_analytic_`nm'") <= 32 ereturn hidden matrix perm_analytic_`nm' = `cfa'
     * the cell draws and the comparator cells, keyed by cell, so every cell p and
     * interval is reconstructable from e() (row 1 of permcmp_* is the comparator)
-    if strlen("permdist_`nm'") <= 32 & !`drift' {
+    * gated on the longest of the four prefixes (permdistse_) so that the se twins can
+    * never be skipped while the coefficient twins post
+    if strlen("permdistse_`nm'") <= 32 & !`drift' {
       tempname cd cd0
       matrix `cd' = `cell'_cfx`c'
       matrix `cd0' = `cell0'_cfx`c'
@@ -8511,9 +8515,13 @@ version 16.0
     }
     if "`bdisp'" == "percentile"    matrix `wsg`sg'' = `wspct`sg''
     else if "`bdisp'" == "bc"       matrix `wsg`sg'' = `wsbc`sg''
-    ereturn hidden matrix boot_wald_sgresults_`sg' = `wssd`sg''
-    ereturn hidden matrix boot_pctl_sgresults_`sg' = `wspct`sg''
-    ereturn hidden matrix boot_bc_sgresults_`sg' = `wsbc`sg''
+    * the hidden twins are skipped when a name would exceed 32 characters (a 13+ digit
+    * subgroup value); the visible table is unaffected
+    if strlen("boot_pctl_sgresults_`sg'") <= 32 {
+      ereturn hidden matrix boot_wald_sgresults_`sg' = `wssd`sg''
+      ereturn hidden matrix boot_pctl_sgresults_`sg' = `wspct`sg''
+      ereturn hidden matrix boot_bc_sgresults_`sg' = `wsbc`sg''
+    }
 
     * boottstat: same treatment as the main table - Wald kept hidden, columns 3-6 replaced
     if `wdbts' {
@@ -8558,8 +8566,10 @@ version 16.0
       matrix colnames `wstb`sg'' = `wsc2'
       if "`bdisp'" == "bc" matrix `wsg`sg'' = `wstb`sg''
       else                 matrix `wsg`sg'' = `wstp`sg''
-      ereturn hidden matrix boot_tpctl_sgresults_`sg' = `wstp`sg''
-      ereturn hidden matrix boot_tbc_sgresults_`sg' = `wstb`sg''
+      if strlen("boot_tpctl_sgresults_`sg'") <= 32 {
+        ereturn hidden matrix boot_tpctl_sgresults_`sg' = `wstp`sg''
+        ereturn hidden matrix boot_tbc_sgresults_`sg' = `wstb`sg''
+      }
       matrix colnames `wsg`sg'' = `wsc2'
     }
     ereturn matrix wdidsgresults_`sg' = `wsg`sg''
@@ -11476,7 +11486,7 @@ void wooldid_bootsavemk(string scalar acc, string scalar obsb, string scalar sea
   if (seacc != "") {
     S = st_matrix(seacc); AS = st_matrix(aseobs)
     for (k = 1; k <= K; k++) {
-      nm = "se_" + strtoname(cs[k, 2])
+      nm = substr("se_" + strtoname(cs[k, 2]), 1, 32)
       idx = st_addvar("double", nm); st_store(., idx, AS[1, k] \ S[., k])
     }
   }
@@ -11486,7 +11496,9 @@ void wooldid_bootsavemk(string scalar acc, string scalar obsb, string scalar sea
       // the pairwise names repeat across the main and pre-treatment rows ("1vs0.sg"
       // twice), so the column index is part of the name: pwse<j>_ matches column j
       // of e(bootdist_pwse)
-      nm = "pwse" + strofreal(j) + "_" + strtoname(pcs[j, 2])
+      // ... and the index makes a truncation to Stata's 32-character limit collision-
+      // free (a long subgroup variable name pushed the full name past it: r(3300))
+      nm = substr("pwse" + strofreal(j) + "_" + strtoname(pcs[j, 2]), 1, 32)
       idx = st_addvar("double", nm); st_store(., idx, . \ P[., j])
     }
   }

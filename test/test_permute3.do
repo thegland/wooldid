@@ -920,6 +920,24 @@ if _rc == 0 {
   }
 }
 
+* ================= Q17: a subgroup value of 9+ digits would push the hidden analytic
+* twin's name past 32 characters; the twin is skipped and the run completes (guard added
+* 2026-09-05; e(wdidsgresults_<sg>) itself is 23 characters and unaffected) ============
+mkperm3 8 4 3
+qui replace sg = 100000000 + sg
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(10) subgroups(sg)
+xrc Q17a 0 _rc
+if _rc == 0 {
+  cap confirm matrix e(wdidsgresults_100000001)
+  local bad = _rc != 0
+  cap confirm matrix e(perm_analytic_sgresults_100000001)
+  if _rc == 0 local ++bad
+  if `bad' {
+    dis as error "Q17b FAIL: long subgroup value - visible table absent or the >32-char twin posted"
+    global pf = $pf + 1
+  }
+}
+
 * ================= Q11: a plain run after all of this is untouched by the engine ======
 mkperm3 8 4 3
 cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
