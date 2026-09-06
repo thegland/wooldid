@@ -294,5 +294,33 @@ if _rc == 0 {
 }
 cap erase "boot_gates_g18.dta"
 
+
+* G19 verbose + bootstrap(): the observed run's retained ___wooldidfullmodel survives the
+* replications (each replication stored ITS model under that name until 2026-09-05, so
+* est restore handed back the last replication's reweighted fit); replications store
+* under ___wooldidrepmodel and drop it at exit
+use `panel', clear
+cap est drop _all
+qui wooldid y unit t ttre, att cluster(unit) verbose
+qui est restore ___wooldidfullmodel
+matrix G19_B = e(b)
+cap est drop _all
+cap qui wooldid y unit t ttre, att cluster(unit) verbose bootstrap(standard) reps(10) rseed(7)
+chk 19 0 _rc
+cap qui est restore ___wooldidfullmodel
+chk 19b 0 _rc
+if _rc == 0 {
+  if mreldif(e(b), G19_B) != 0 {
+    di as error "G19c FAIL: ___wooldidfullmodel after a verbose bootstrap run is not the observed run's model"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+}
+cap qui est restore ___wooldidrepmodel
+if _rc == 0 {
+  di as error "G19d FAIL: a replication's ___wooldidrepmodel leaked"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap est drop _all
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

@@ -82,6 +82,7 @@ version 16.0
       if "`r(currentframe)'" != "`wdsh_frame'" cap frame change `wdsh_frame'
       if strpos("`wdsh_flags'", "keep") == 0 {
         if strpos("`wdsh_flags'", "fullmodel") != 0 cap est drop ___wooldidfullmodel
+        if strpos("`wdsh_flags'", "repmodel") != 0 cap est drop ___wooldidrepmodel
         * frame-qualified: if the failure destroyed the snapshot frame, the restore above
         * cap-fails and an unqualified drop would act on whatever frame is current -
         * deleting an unrelated variable of this name there. qualified, it cap-fails
@@ -419,6 +420,13 @@ version 16.0
   * which the setters' nobreak discipline already prevents - affects at most one run.
   local wdrepmode "${WOOLDID_REPMODE}"
   global WOOLDID_REPMODE
+  * the stored full model. Replications (nested wooldid calls under bootstrap() or
+  * permute()) store theirs under a separate name and always drop it at exit, so they
+  * never overwrite - or, at their exit, delete - the observed run's ___wooldidfullmodel
+  * that verbose retains for the user (until 2026-09-05 a verbose bootstrap run left the
+  * LAST replication's model under that name)
+  local wdfm ___wooldidfullmodel
+  if "`wdrepmode'" != "" local wdfm ___wooldidrepmodel
   * Every Stata replication prefix (bootstrap/jackknife/simulate/permute) runs its
   * replication loop under `set coeftabresults off', which silently removes margins
   * r(table) - and this worker harvests r(table) at 16+ sites, dying r(503)
@@ -1489,8 +1497,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * itself can fail (a real trigger: the estimates directory at Stata's 300-store
   * limit), which previously leaked the variable through the unregistered window
   if "`poisson'" == "poisson" & "`unconditionalse'" == "" & "`customvce'" == "" global WOOLDID_CLEANUP $WOOLDID_CLEANUP ppml
-  qui est sto ___wooldidfullmodel
-  global WOOLDID_CLEANUP $WOOLDID_CLEANUP fullmodel
+  qui est sto `wdfm'
+  global WOOLDID_CLEANUP $WOOLDID_CLEANUP `=cond("`wdrepmode'" != "", "repmodel", "fullmodel")'
   if "`verbose'" == "verbose" dis as text "Wooldid has finished regression estimation and is preparing to begin margins calculations."
 
 	* check on dropped obs
@@ -1545,8 +1553,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       if `amevzi' + `amevzt' <= 450 {
         dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix; wooldid is re-estimating through the explicit-dummies fallback to recover the standard errors that survive (recovered cluster-robust variances for treated-cell quantities remain subject to the cell-containment caution above)."
         qui reg `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `vcespecifier'
-        cap est drop ___wooldidfullmodel
-        qui est sto ___wooldidfullmodel
+        cap est drop `wdfm'
+        qui est sto `wdfm'
         cap drop `esamp'
         qui gen byte `esamp' = e(sample)
         local df_r = e(df_r)
@@ -1873,7 +1881,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       local Wpre_trebase = e(b)[1,2]
       local Wpre_treused = e(b)[1,1]
       local Wpre_rat = round(100*`Wpre_trebase' / (`Wpre_trebase' + `Wpre_treused'),.01)
-      qui est restore ___wooldidfullmodel
+      qui est restore `wdfm'
     }
 
 
@@ -2341,7 +2349,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             local adversarial
           }
           if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose"     {
-            wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial')
+            wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') fm(`wdfm')
             local advstatus `r(status)'
             * a gap-cancelled altmethod fit calls off adversarial as a whole (overall section)
             if "`advstatus'" == "gapskip" local adversarial
@@ -2821,7 +2829,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               local adversarial
             }
             if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose" & `amescrub' == 0   {
-              wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial')
+              wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') fm(`wdfm')
               local advstatus `r(status)'
               if "`advstatus'" == "gapskip" local adversarial
               else {
@@ -3173,7 +3181,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                   dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': `sgndrop' relative period effect(s) were dropped as not estimable, so its coefficients no longer span a complete relative-time grid and a line fit through them would not be interpretable."
                 }
                 else if  `finaladvtest' > 2  {
-                  wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase')
+                  wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm')
                   local advstatus `r(status)'
                   if "`advstatus'" != "gapskip" {
                     if "`advstatus'" == "ok" local adversarialP_`horizitem'_s`sgcase' = r(p)
@@ -3258,7 +3266,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstext' `marginsdof' `sgpost' `fcnoes'
           if `fcsg' wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') `verbose'
           if `fcsg' == 0 | `fcrerun' == 0 continue, break
-          if "`sgpost'" != "" qui est restore ___wooldidfullmodel
+          if "`sgpost'" != "" qui est restore `wdfm'
           restore, preserve
           local fcnoes
           local fcsg 0
@@ -3298,7 +3306,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             }
           }
           else local joint_`item'_sdiff
-          qui est restore ___wooldidfullmodel
+          qui est restore `wdfm'
           if "`sgfallback'" != "" {
             qui  margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstext' `marginsdof' `fcnoes'
             local joint_`item'_sdiff = r(p)[1,2]
@@ -3313,7 +3321,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             local fcprerc = _rc
             if `fcsg' & `fcprerc' == 0 wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') `verbose'
             if `fcsg' == 0 | `fcprerc' != 0 | `fcrerun' == 0 continue, break
-            if "`sgpost'" != "" qui est restore ___wooldidfullmodel
+            if "`sgpost'" != "" qui est restore `wdfm'
             restore, preserve
             local fcnoes
             local fcsg 0
@@ -3322,7 +3330,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             * the pre-ame only exists for 1 sg (or margins otherwise refused): no joint
             * test and no pairwise rows, exactly as under the previous contrast-first order
             local prejoint_`item'_sdiff
-            if "`sgpost'" != "" qui est restore ___wooldidfullmodel
+            if "`sgpost'" != "" qui est restore `wdfm'
             * EFF3 fallback: the level margins were deferred to this pass, which just
             * refused. the plain over(`subgroups') call does NOT refuse here (it merely
             * returns the single realized subgroup), so run it now, after the restore
@@ -3374,7 +3382,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 }
               }
               else local prejoint_`item'_sdiff
-              qui est restore ___wooldidfullmodel
+              qui est restore `wdfm'
               if "`sgfallback'" != "" {
                 qui  margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstext' `marginsdof' `fcnoes'
                 cap local prejoint_`item'_sdiff = r(p)[1,2]
@@ -3482,7 +3490,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
                 if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose" & `amescrub' == 0  {
                   if  `finaladvtest' > 1  {
-                    wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase')
+                    wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm')
                     local advstatus `r(status)'
                     if "`advstatus'" != "gapskip" {
                       if "`advstatus'" == "ok" local adversarialP_C`horizitem'_s`sgcase' = r(p)
@@ -3576,7 +3584,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               }
             }
             else local joint_C`item'_sdiff
-            qui est restore ___wooldidfullmodel
+            qui est restore `wdfm'
             if "`sgfallback'" != "" {
               qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') `poismarginstextC' noestimcheck over(`subgroups') contrast(overjoint) `marginsdof' `fcnoes'
               local joint_C`item'_sdiff = r(p)[1,1]
@@ -3589,7 +3597,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             cap qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups')  pwcompare(effects) `poismarginstextC' `marginsdof' `sgpost' `fcnoes'
             if _rc != 0 {
               local prejoint_C`item'_sdiff
-              if "`sgpost'" != "" qui est restore ___wooldidfullmodel
+              if "`sgpost'" != "" qui est restore `wdfm'
             }
             else {
               tempname prepwsgs_C`item'
@@ -3622,7 +3630,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                   }
                 }
                 else local prejoint_C`item'_sdiff
-                qui est restore ___wooldidfullmodel
+                qui est restore `wdfm'
                 if "`sgfallback'" != "" {
                   qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 & `ttre' != .) noestimcheck over(`subgroups') contrast(overjoint)  `poismarginstextC' `marginsdof' `fcnoes'
                   cap local prejoint_C`item'_sdiff = r(p)[1,1]
@@ -4522,7 +4530,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     matrix drop _all
   }
 
-  if "`verbose'" != "verbose" qui est drop ___wooldidfullmodel
+  if "`verbose'" != "verbose" | "`wdrepmode'" != "" qui est drop `wdfm'
   * clean up after ppmlhdfe. under verbose, retain _ppmlhdfe_d alongside the retained
   * ___wooldidfullmodel (author directive, 2026-07). note this alone does not make
   * predict/margins replay work after est restore: the model's regressors (_i, _t,
@@ -9597,7 +9605,8 @@ end
 cap prog drop wooldid_advstat
 prog def wooldid_advstat, rclass
 version 16.0
-  syntax , b(string) v(string) relyr(string) mint(string) esrel(string) [dfr(string) esf(string) tt(string) alt(string) sg(string)]
+  syntax , b(string) v(string) relyr(string) mint(string) esrel(string) [dfr(string) esf(string) tt(string) alt(string) sg(string) fm(string)]
+  if "`fm'" == "" local fm ___wooldidfullmodel
 
   * B16 gap backstop (altmethod): the planted reference row(s) always satisfy the
   * pre-period cut, so require at least one REAL pre-period coefficient beyond them
@@ -9644,8 +9653,9 @@ version 16.0
   matrix `advB' = e(b)
   frame change `advfr0'
   frame drop `advfr'
-  * the little reg clobbered e(); put the main model back (stored at worker start)
-  qui est restore ___wooldidfullmodel
+  * the little reg clobbered e(); put the main model back (stored at worker start,
+  * under the replication name inside a bootstrap/permutation replication)
+  qui est restore `fm'
   matrix `advL' = (`advB'[1,1], `advB'[1,2] + (`mint'+1)*`advB'[1,1])
   matrix colnames `advL' = slope intercept_rt0
   matrix rownames `advL' = y1
