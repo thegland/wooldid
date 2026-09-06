@@ -423,5 +423,72 @@ if _rc == 0 {
   }
 }
 
+
+* G24 the bias-corrected endpoints follow bstat's order-statistic rule (integer n*p averages
+* the adjacent order statistics; the same p round-trip through normal(2*z0 + invnormal(p))
+* that bstat performs, floating-point noise included): with z0 = 0 the BC interval equals
+* bstat's e(ci_bc) exactly. Synthetic n = 40 draws 1..40, comparator 20.5 (z0 = 0), level
+* 95: bstat gives BC [2, 39.5] and percentile [1.5, 39.5]; the pristine v[ceil(n*p)] rule
+* gave the BC upper endpoint as 39
+preserve
+clear
+qui set obs 40
+gen double b = _n
+qui bstat b, stat(20.5) n(40) level(95)
+matrix G24_BS_BC = e(ci_bc)
+matrix G24_BS_PC = e(ci_percentile)
+restore
+mata: A = (1::40); st_matrix("G24_A", A); st_matrix("G24_OB", 20.5); st_matrix("G24_CMP", 20.5)
+tempname g24n g24p g24b g24pp g24bp g24z
+mata: wooldid_bootci("G24_A", "G24_OB", "G24_CMP", 95, 0, "`g24n'", "`g24p'", "`g24b'", "`g24pp'", "`g24bp'", "`g24z'", .)
+if `g24z'[1,1] != 0 | `g24b'[1,1] != G24_BS_BC[1,1] | `g24b'[2,1] != G24_BS_BC[2,1] | `g24p'[1,1] != G24_BS_PC[1,1] | `g24p'[2,1] != G24_BS_PC[2,1] | G24_BS_BC[2,1] != 39.5 {
+  di as error "G24 FAIL: z0=" `g24z'[1,1] " BC=[" `g24b'[1,1] ", " `g24b'[2,1] "] vs bstat [" G24_BS_BC[1,1] ", " G24_BS_BC[2,1] "]; percentile=[" `g24p'[1,1] ", " `g24p'[2,1] "] vs bstat [" G24_BS_PC[1,1] ", " G24_BS_PC[2,1] "]"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+
+* G25 footer wording: the method label says observation-level on an unclustered run, and the
+* contrast line under boottstat says studentized (both lines were unconditional)
+use `panel', clear
+qui log using boot_gates_g25.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att bootstrap(standard) reps(10) rseed(7)
+local g25rc = _rc
+qui log close bg
+chk 25 0 `g25rc'
+local lg = fileread("boot_gates_g25.txt")
+if strpos(`"`lg'"', "observation-level bootstrap (resampling with replacement)") == 0 {
+  di as error "G25b FAIL: the footer does not label the unclustered run as an observation-level bootstrap"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g25.txt
+use `panel', clear
+qui log using boot_gates_g25b.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7) boottstat subgroups(s)
+local g25rc = _rc
+qui log close bg
+chk 25c 0 `g25rc'
+local lg = fileread("boot_gates_g25b.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "are bootstrapped as coefficient differences") > 0 | strpos(`"`lg'"', "studentized by their own analytic pairwise standard error") == 0 {
+  di as error "G25d FAIL: the boottstat footer still describes the contrasts as coefficient differences"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g25b.txt
+
+* G26 pretrendpower() under bootstrap on an att-only run: no 'bootstrap event-study
+* covariance is unavailable' caution for families that were never estimated
+use `panel', clear
+qui log using boot_gates_g26.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(2) esfixedbaseperiod pretrendpower(50) bootstrap(standard) reps(10) rseed(7)
+local g26rc = _rc
+qui log close bg
+chk 26 0 `g26rc'
+local lg = fileread("boot_gates_g26.txt")
+if strpos(`"`lg'"', "bootstrap event-study covariance is unavailable") > 0 {
+  di as error "G26b FAIL: spurious covariance-unavailable caution for a family that was never estimated"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g26.txt
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

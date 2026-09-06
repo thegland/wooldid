@@ -8925,6 +8925,10 @@ version 16.0
     * on a bootstrap run, refuse to run on a family whose bootstrap covariance swap
     * failed: e(V_es_`ptpty') would still be the ANALYTIC matrix. The success marker is
     * the hidden analytic twin, which wooldid_bootwire creates only when the swap worked
+    * (families that were never estimated are skipped silently first: the caution is for
+    * a family that exists but whose bootstrap swap failed - review 2026-09-05)
+    cap confirm matrix e(b_es_`ptpty')
+    if _rc != 0 continue
     if "`e(boot_method)'" != "" {
       cap confirm matrix e(V_es_analytic_`ptpty')
       if _rc != 0 {
@@ -9603,7 +9607,7 @@ version 16.0
    * F-boot summary block (existence-gated: replay of non-bootstrap stores prints
    * nothing). all content from e() only
    if "`e(boot_method)'" == "" exit
-   local wdbmt = cond("`e(boot_method)'" == "bayes", "Bayesian cluster bootstrap (Dirichlet reweighting, alpha = `e(boot_alpha)')", "cluster bootstrap (resampling with replacement)")
+   local wdbmt = cond("`e(boot_method)'" == "bayes", "Bayesian cluster bootstrap (Dirichlet reweighting, alpha = `e(boot_alpha)')", cond("`e(clustvar)'" != "", "cluster bootstrap (resampling with replacement)", "observation-level bootstrap (resampling with replacement)"))
    dis as result "Bootstrap Inference (`wdbmt'):"
    dis as result "  " e(boot_completed) " of " e(boot_reps) " replications completed" _continue
    if e(boot_failed) > 0 dis as result " (" e(boot_failed) " failed and excluded)" _continue
@@ -9629,7 +9633,8 @@ version 16.0
    * hand-run test/lincom reproduces the sd package and NOT a displayed percentile p
    if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  e(V) and e(df_r) carry the standard-deviation family referred to the `wdbrefd' distribution, so test and lincom run by hand reproduce the bootdisplay(wald) numbers rather than the columns printed above."
    if "`e(boot_jt_absent)'" != "" | "`e(boot_sgjt_absent)'" != "" dis as result "  The joint tests and/or the across-subgroup equality tests are NOT reported for this run: bootstrapping them means bootstrapping their test statistic, which requires boottstat. They are absent rather than shown as analytic tests, which would not be bootstrap quantities."
-   dis as result "  Subgroup contrasts, when requested, are bootstrapped as coefficient differences and carry the same package as the coefficient rows."
+   if "`e(boot_tstat)'" == "1" dis as result "  Subgroup contrasts, when requested, are studentized by their own analytic pairwise standard error in every replication (boottstat) and carry the same package as the coefficient rows."
+   else dis as result "  Subgroup contrasts, when requested, are bootstrapped as coefficient differences and carry the same package as the coefficient rows."
  }
 
 end
@@ -10951,6 +10956,7 @@ cap mata: mata drop wooldid_bootjwobs()
 cap mata: mata drop wooldid_bootjobs()
 cap mata: mata drop wooldid_bootpairidx()
 cap mata: mata drop wooldid_bootci()
+cap mata: mata drop wooldid_bootqs()
 cap mata: mata drop wooldid_bootveskey()
 cap mata: mata drop wooldid_permq()
 cap mata: mata drop wooldid_permtail()
@@ -11069,10 +11075,8 @@ void wooldid_boottp(string scalar accname, string scalar seaccname, string scala
     out[6, k] = z0
     pl = normal(2*z0 + invnormal(al))
     pu = normal(2*z0 + invnormal(1-al))
-    kk2 = max((min((ceil(n*pl), n)), 1))
-    out[8, k] = v[kk2]
-    kk2 = max((min((ceil(n*pu), n)), 1))
-    out[9, k] = v[kk2]
+    out[8, k] = wooldid_bootqs(v, pl)
+    out[9, k] = wooldid_bootqs(v, pu)
     r0 = m0/n
     if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
     else qbc = normal(invnormal(r0) - 2*z0)
@@ -11685,10 +11689,8 @@ void wooldid_bootcellwire(string scalar mname, real scalar isgt, string scalar a
         if (z0 >= .) continue
         pl = normal(2*z0 + invnormal(al))
         pu = normal(2*z0 + invnormal(1-al))
-        kk2 = max((min((ceil(n*pl), n)), 1))
-        lo = v[kk2]
-        kk2 = max((min((ceil(n*pu), n)), 1))
-        hi = v[kk2]
+        lo = wooldid_bootqs(v, pl)
+        hi = wooldid_bootqs(v, pu)
         r0 = m0/n
         if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
         else qbc = normal(invnormal(r0) - 2*z0)
@@ -11727,10 +11729,8 @@ void wooldid_bootcellwire(string scalar mname, real scalar isgt, string scalar a
         if (z0 >= .) continue
         pl = normal(2*z0 + invnormal(al))
         pu = normal(2*z0 + invnormal(1-al))
-        kk2 = max((min((ceil(n*pl), n)), 1))
-        lo = v[kk2]
-        kk2 = max((min((ceil(n*pu), n)), 1))
-        hi = v[kk2]
+        lo = wooldid_bootqs(v, pl)
+        hi = wooldid_bootqs(v, pu)
         r0 = m0/n
         if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
         else qbc = normal(invnormal(r0) - 2*z0)
@@ -12162,10 +12162,8 @@ void wooldid_bootpwt(string scalar accname, real scalar ka, real scalar kb, stri
     out[6] = z0
     pl = normal(2*z0 + invnormal(al))
     pu = normal(2*z0 + invnormal(1-al))
-    kk2 = max((min((ceil(n*pl), n)), 1))
-    out[8] = v[kk2]
-    kk2 = max((min((ceil(n*pu), n)), 1))
-    out[9] = v[kk2]
+    out[8] = wooldid_bootqs(v, pl)
+    out[9] = wooldid_bootqs(v, pu)
     r0 = m0/n
     if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
     else qbc = normal(invnormal(r0) - 2*z0)
@@ -12229,10 +12227,8 @@ void wooldid_bootpp(string scalar accname, real scalar ka, real scalar kb, real 
   st_local(z0n, strofreal(z0, "%21x"))
   pl = normal(2*z0 + invnormal(al))
   pu = normal(2*z0 + invnormal(1-al))
-  kk2 = max((min((ceil(n*pl), n)), 1))
-  st_local(blbn, strofreal(v[kk2], "%21x"))
-  kk2 = max((min((ceil(n*pu), n)), 1))
-  st_local(bubn, strofreal(v[kk2], "%21x"))
+  st_local(blbn, strofreal(wooldid_bootqs(v, pl), "%21x"))
+  st_local(bubn, strofreal(wooldid_bootqs(v, pu), "%21x"))
   r0 = m0/n
   if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
   else qbc = normal(invnormal(r0) - 2*z0)
@@ -12255,9 +12251,23 @@ void wooldid_bootpw(string scalar accname, real scalar ka, real scalar kb)
   st_local("wdbse", strofreal(sqrt(S[1,1] + S[2,2] - 2*S[1,2]), "%21x"))
 }
 
+// order statistic at probability p under bstat's rule (integer n*p: the average of the
+// adjacent order statistics; otherwise the ceil(n*p) order statistic) - the rule the
+// percentile interval already used, now shared by every bias-corrected endpoint (the
+// v[ceil(n*p)] rule they used disagreed with bstat whenever z0 = 0 and n*alpha was
+// integral, i.e. at exactly half the draws below the comparator; 2026-09-05 review)
+real scalar wooldid_bootqs(real colvector v, real scalar p)
+{
+  real scalar n, x
+  n = rows(v)
+  x = n*p
+  if (x == floor(x) & x >= 1) return((v[x] + v[min((x+1, n))])/2)
+  return(v[max((min((ceil(x), n)), 1))])
+}
 // CI flavors per column: normal (obs +/- zc*se), percentile (classic Stata
 // rule, pinned vs bstat at even AND odd rep counts), bias-corrected (order-statistic
-// endpoints v[ceil(n*p_adj)] - the bstat rule, pinned exact) with z0 computed
+// endpoints at p_adj under the same order-statistic rule as the percentile family,
+// bstat's, so the two coincide at z0 = 0) with z0 computed
 // against the REP-0 comparator; ties adjusts z0 by half-weighting exact ties.
 // Columns with fewer than 2 available reps or zero dispersion post missing.
 void wooldid_bootci(string scalar accname, string scalar obsbname, string scalar compname, real scalar lvl, real scalar ties, string scalar cinname, string scalar cipname, string scalar cibname, string scalar cippname, string scalar cbpname, string scalar z0name, real scalar dfden)
@@ -12333,10 +12343,8 @@ void wooldid_bootci(string scalar accname, string scalar obsbname, string scalar
     z0v[kcol] = z0
     pl = normal(2*z0 + invnormal(al))
     pu = normal(2*z0 + invnormal(1-al))
-    kk2 = max((min((ceil(nn*pl), nn)), 1))
-    cib[1, kcol] = v[kk2]
-    kk2 = max((min((ceil(nn*pu), nn)), 1))
-    cib[2, kcol] = v[kk2]
+    cib[1, kcol] = wooldid_bootqs(v, pl)
+    cib[2, kcol] = wooldid_bootqs(v, pu)
     // the BC p-value: the dual of the interval just built, obtained by solving for the
     // level at which a BC endpoint lands exactly on the null. The endpoint at one-sided
     // level q is v[ceil(nn*normal(2*z0 + invnormal(q)))], so it reaches 0 when

@@ -832,7 +832,11 @@ if "`q13sd0'" != "" & "`q13sd30'" != "" {
     dis as error "Q13c FAIL: pre-period null SD `q13sd0' -> `q13sd30', p `q13p0' -> `q13p30', joint p `q13j0' -> `q13j30' (expected the null band to widen and the p-values to rise with the true effect)"
     global pf = $pf + 1
   }
+  * the footer line wraps at linesize, so the scan runs on the newline-collapsed log
   local lg = fileread("perm3_q13.txt")
+  local lg = subinstr(`"`lg'"', char(13), "", .)
+  local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+  local lg = subinstr(`"`lg'"', char(10), " ", .)
   if strpos(`"`lg'"', "rise toward 1 as the true effect grows") == 0 | strpos(`"`lg'"', "p-values fall as the true post-treatment effect grows") > 0 {
     dis as error "Q13d FAIL: the footer caveat does not state the corrected (rising p-value) direction"
     global pf = $pf + 1
@@ -877,19 +881,22 @@ xrc Q14f 198 _rc
 mkperm3 8 4 3
 qui gen c2 = 2*i - (t <= 4)
 qui log using perm3_q15.txt, text replace name(p3)
-cap noi wooldid y i t ttre, att cluster(c2) permute(shuffle) permreps(10)
+cap noi wooldid y i t ttre, att cluster(c2) permute(shuffle) permreps(20)
 local rc = _rc
 qui log close p3
 xrc Q15a 459 `rc'
 local lg = fileread("perm3_q15.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local lg = subinstr(`"`lg'"', char(10), " ", .)
 if strpos(`"`lg'"', "requires the cluster() variable to nest i") == 0 {
   dis as error "Q15b FAIL: the finer-than-i refusal does not name the cause"
   global pf = $pf + 1
 }
 qui gen s = ceil(i/2)
-cap noi wooldid y i t ttre, att cluster(s) permute(shuffle) permreps(10)
+cap noi wooldid y i t ttre, att cluster(s) permute(shuffle) permreps(20)
 xrc Q15c 0 _rc
-cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(10)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20)
 xrc Q15d 0 _rc
 
 * ================= Q16: exact enumeration and the fixed metric (fix 2026-09-05): when
@@ -928,8 +935,9 @@ if _rc == 0 {
 * twin's name past 32 characters; the twin is skipped and the run completes (guard added
 * 2026-09-05; e(wdidsgresults_<sg>) itself is 23 characters and unaffected) ============
 mkperm3 8 4 3
-qui replace sg = 100000000 + sg
-cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(10) subgroups(sg)
+* (double: a 9-digit value is not representable as the fixture's float sg)
+qui gen double sg2 = 100000000 + sg
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) subgroups(sg2)
 xrc Q17a 0 _rc
 if _rc == 0 {
   cap confirm matrix e(wdidsgresults_100000001)
