@@ -6063,7 +6063,7 @@ version 16.0
   }
   if "`bdisp'" != "" {
     if !inlist("`bdisp'", "percentile", "bc", "wald") {
-      dis as error "Error: bootdisplay() must be bootdisplay(percentile) - the default: the p-value and confidence interval from the percentile ranks of the bootstrap distribution - or bootdisplay(bc) - the bias-corrected percentile method - or bootdisplay(wald) - the p-value and interval from a normal or t approximation, the choice between them governed by bootdf(). The reported standard error is the standard deviation of the bootstrap distribution under all three; every family is computed and stored in e() whichever is displayed."
+      dis as error "Error: bootdisplay() must be bootdisplay(percentile) - the default: the p-value and confidence interval from the percentile ranks of the bootstrap distribution - or bootdisplay(bc) - the bias-corrected percentile method - or bootdisplay(wald) - the p-value and interval from a normal or t approximation, the choice between them governed by bootdf(). The reported standard error is the standard deviation of the bootstrap distribution under all three; every family is computed and stored in e() whichever is displayed. Under boottstat only bootdisplay(percentile) is available: the studentized draws have no Wald or bias-corrected family."
       error 198
     }
     * bootdisplay(wald) is meaningless after studentizing: boottstat reports the ANALYTIC
@@ -6072,6 +6072,18 @@ version 16.0
     * has no standard error to be built from. Refused rather than silently reinterpreted
     if "`bdisp'" == "wald" & "`bts'" != "" {
       dis as error "Error: bootdisplay(wald) may not be combined with boottstat. A studentized bootstrap reports the analytic standard error and takes its p-value and confidence interval from the percentile ranks of the studentized distribution; there is no bootstrap standard deviation of a studentized statistic for a normal or t approximation to be built on. Drop boottstat for the Wald package, or drop bootdisplay(wald) for the studentized one."
+      error 198
+    }
+    * bootdisplay(bc) under boottstat is refused as well (quality review 2026-09-05 F003,
+    * author ruling 2026-09-06). The former BC-t twin applied Efron's z0 shift to the
+    * quantiles of the centred t-draws and then reflected them through the percentile-t
+    * construction, which moves the interval AGAINST the median bias - its upper endpoint
+    * coincided with the naive percentile-of-b_r endpoint that BC was invented to repair
+    * (measured on t_r = z - 1: percentile-t [.52, 2.48], BC-t [-.15, 1.48]). No BC-t
+    * construction exists in Efron-Tibshirani or Davison-Hinkley; percentile-t is already
+    * second-order accurate. Refused rather than silently shown as percentile-t
+    if "`bdisp'" == "bc" & "`bts'" != "" {
+      dis as error "Error: bootdisplay(bc) may not be combined with boottstat. The studentized (percentile-t) bootstrap is already second-order accurate, and applying the bias-corrected shift to the studentized quantiles and then reflecting them moves the interval against the median bias, so there is no bias-corrected studentized family. Drop boottstat for the bias-corrected percentile interval, or drop bootdisplay(bc) for the studentized one."
       error 198
     }
   }
@@ -6242,7 +6254,8 @@ version 16.0
   }
   local zc = cond(`wdbdf' < ., invt(`wdbdf', 1 - (100 - `level')/200), invnormal(1 - (100 - `level')/200))
   local famlist percentile bc wald
-  if "`bts'" != "" local famlist percentile bc
+  * studentized: percentile-t only (bootdisplay(bc) is refused with boottstat, F003)
+  if "`bts'" != "" local famlist percentile
   local wdbcellmissall 0
   * ---- gteffects: cols estimate(5) se(6) p(7) lb(8) ub(9)
   cap confirm matrix e(gteffects)
@@ -6601,7 +6614,7 @@ version 16.0
   * rewire se/z/p/ci from the bootstrap covariance of the matching estimand columns
   cap confirm matrix e(pwsgs)
   if _rc == 0 {
-    tempname pw pwsd pwpct pwbc pwtp pwtb pwts pwt1
+    tempname pw pwsd pwpct pwbc pwtp pwts pwt1
     matrix `pw' = e(pwsgs)
     * under boottstat the contrasts are STUDENTIZED (author ruling 2026-09-03: boottstat
     * bootstraps t-statistics for the contrasts too). Column 2 of `pw' is still the
@@ -6614,8 +6627,7 @@ version 16.0
     }
     if `wdbpwts' {
       matrix `pwtp' = `pw'
-      matrix `pwtb' = `pw'
-      matrix `pwts' = J(10, rowsof(`pw'), .)
+      matrix `pwts' = J(6, rowsof(`pw'), .)
       local pwtmiss 0
     }
     * both families for the contrast rows, exactly as for the coefficient tables:
@@ -6696,8 +6708,9 @@ version 16.0
               matrix `pwbc'[`rr', `cc'] = .
             }
           }
-          * the studentized families for this contrast (boottstat): se_analytic, t_obs,
-          * rank p, equal-tailed interval; BC-t twin alongside
+          * the studentized (percentile-t) family for this contrast (boottstat): se_analytic,
+          * t_obs, rank p, equal-tailed interval. No BC-t twin: bootdisplay(bc) is refused
+          * under boottstat (F003, 2026-09-06)
           if `wdbpwts' {
             local pwj = 0
             local pwacn : colfullnames `pwseacc'
@@ -6706,7 +6719,7 @@ version 16.0
               mata: wooldid_bootpwt("`acc'", `ka', `kb', "`pwseacc'", `pwj', st_matrix("`pw'")[`rr', 1], st_matrix("`pw'")[`rr', 2], `level', ("`ties'" != ""), "`pwt1'")
               matrix `pwts'[1, `rr'] = `pwt1'
             }
-            if `pwts'[10, `rr'] == 1 {
+            if `pwts'[6, `rr'] == 1 {
               matrix `pwtp'[`rr', 2] = `pw'[`rr', 2]
               matrix `pwtp'[`rr', 3] = `pwts'[2, `rr']
               matrix `pwtp'[`rr', 4] = `pwts'[3, `rr']
@@ -6719,18 +6732,6 @@ version 16.0
               }
               local ++pwtmiss
             }
-            if `pwts'[10, `rr'] == 1 & `pwts'[7, `rr'] < . {
-              matrix `pwtb'[`rr', 2] = `pw'[`rr', 2]
-              matrix `pwtb'[`rr', 3] = `pwts'[2, `rr']
-              matrix `pwtb'[`rr', 4] = `pwts'[7, `rr']
-              matrix `pwtb'[`rr', 5] = `pw'[`rr', 1] - `pwts'[9, `rr']*`pw'[`rr', 2]
-              matrix `pwtb'[`rr', 6] = `pw'[`rr', 1] - `pwts'[8, `rr']*`pw'[`rr', 2]
-            }
-            else {
-              forval cc = 2/6 {
-                matrix `pwtb'[`rr', `cc'] = .
-              }
-            }
           }
         }
         else {
@@ -6741,10 +6742,7 @@ version 16.0
             matrix `pwsd'[`rr', `cc'] = .
             matrix `pwpct'[`rr', `cc'] = .
             matrix `pwbc'[`rr', `cc'] = .
-            if `wdbpwts' {
-              matrix `pwtp'[`rr', `cc'] = .
-              matrix `pwtb'[`rr', `cc'] = .
-            }
+            if `wdbpwts' matrix `pwtp'[`rr', `cc'] = .
           }
           local ++pwunmapped
         }
@@ -6754,10 +6752,7 @@ version 16.0
           matrix `pwsd'[`rr', `cc'] = .
           matrix `pwpct'[`rr', `cc'] = .
           matrix `pwbc'[`rr', `cc'] = .
-          if `wdbpwts' {
-            matrix `pwtp'[`rr', `cc'] = .
-            matrix `pwtb'[`rr', `cc'] = .
-          }
+          if `wdbpwts' matrix `pwtp'[`rr', `cc'] = .
         }
         local ++pwunmapped
       }
@@ -6775,9 +6770,9 @@ version 16.0
     * select the displayed family, then post both twins. `ereturn matrix' MOVES its
     * source, so the selection has to happen first
     if `wdbpwts' {
-      * studentized display: percentile-t by default, BC-t under bootdisplay(bc)
-      if "`bdisp'" == "bc" matrix `pw' = `pwtb'
-      else                 matrix `pw' = `pwtp'
+      * studentized display: percentile-t (bootdisplay(bc) and bootdisplay(wald) are
+      * refused with boottstat)
+      matrix `pw' = `pwtp'
       local pwc : subinstr local pwc "t" "t_pt", word
       local pwc : subinstr local pwc "z" "t_pt", word
       local pwc : subinstr local pwc "se" "se_analytic", word
@@ -6797,10 +6792,8 @@ version 16.0
     ereturn hidden matrix boot_bc_pwsgs = `pwbc'
     if `wdbpwts' {
       matrix colnames `pwtp' = `pwc'
-      matrix colnames `pwtb' = `pwc'
       ereturn hidden matrix boot_tpctl_pwsgs = `pwtp'
-      ereturn hidden matrix boot_tbc_pwsgs = `pwtb'
-      matrix rownames `pwts' = n t_obs p_pctl qlo_pctl qhi_pctl z0 p_bc qlo_bc qhi_bc live
+      matrix rownames `pwts' = n t_obs p_pctl qlo_pctl qhi_pctl live
       matrix colnames `pwts' = `prn'
       ereturn matrix boot_tstud_pwsgs = `pwts'
       * the per-replication contrast standard errors go out compacted on the SAME row mask
@@ -8457,11 +8450,12 @@ version 16.0
   * rather than b/se_reported - the studentization has to use the same standard error the
   * replications use, and the help says so
   if `wdbts' {
-    * The studentized families. bootdisplay() composes with boottstat as a 2x2 (author
-    * ruling 2026-09-04): boottstat chooses WHAT is bootstrapped (the t-statistics), and
-    * bootdisplay() chooses how that distribution is summarised - percentile ranks (the
-    * default) or bias-corrected ranks; wald is refused at parse. Both studentized tables
-    * are built and posted; the selected one lands in the reported table. Column 2 is the
+    * The studentized (percentile-t) family. boottstat chooses WHAT is bootstrapped (the
+    * t-statistics); how that distribution is summarised is fixed at its equal-tailed
+    * percentile ranks - bootdisplay(wald) is refused at parse (no standard deviation of
+    * a studentized statistic) and so is bootdisplay(bc) (F003, author ruling 2026-09-06:
+    * the BC shift on reflected studentized quantiles moved the interval against the
+    * median bias; the former BC-t twin is withdrawn). Column 2 is the
     * ANALYTIC standard error, labelled se_analytic (ruling 2026-09-04): it is the
     * studentization's own denominator, and a studentized distribution has no standard
     * deviation in coefficient units. Column 3 is t_obs = b/se_analytic. The interval is
@@ -8469,15 +8463,14 @@ version 16.0
     * A column whose studentized family is unavailable has columns 3-6 BLANKED rather
     * than left holding the coefficient-family numbers under a studentized header (that
     * unmarked mixture was a recorded defect), and is counted for the caution below
-    tempname wmtp wmtb
+    tempname wmtp
     matrix `wmtp' = `wm'
-    matrix `wmtb' = `wm'
     local wdbtmiss 0
     local wdbtlow 0
     local kk 0
     forval rr = 1/`nmain' {
       local ++kk
-      local tlive = (`excl'[1, `kk'] == 0 & `bts'[10, `kk'] == 1 & `aseobs'[1, `kk'] < .)
+      local tlive = (`excl'[1, `kk'] == 0 & `bts'[6, `kk'] == 1 & `aseobs'[1, `kk'] < .)
       if `tlive' {
         matrix `wmtp'[`rr', 2] = `aseobs'[1, `kk']
         matrix `wmtp'[`rr', 3] = `bts'[2, `kk']
@@ -8492,28 +8485,13 @@ version 16.0
         }
         if `excl'[1, `kk'] == 0 local ++wdbtmiss
       }
-      if `tlive' & `bts'[7, `kk'] < . {
-        matrix `wmtb'[`rr', 2] = `aseobs'[1, `kk']
-        matrix `wmtb'[`rr', 3] = `bts'[2, `kk']
-        matrix `wmtb'[`rr', 4] = `bts'[7, `kk']
-        matrix `wmtb'[`rr', 5] = `wm'[`rr', 1] - `bts'[9, `kk']*`aseobs'[1, `kk']
-        matrix `wmtb'[`rr', 6] = `wm'[`rr', 1] - `bts'[8, `kk']*`aseobs'[1, `kk']
-      }
-      else {
-        forval cc = 2/6 {
-          matrix `wmtb'[`rr', `cc'] = .
-        }
-      }
     }
     local wmc2 : colnames `wm'
     local wmc2 : subinstr local wmc2 "`wdblab'" "t_pt", word
     local wmc2 : subinstr local wmc2 "se" "se_analytic", word
     matrix colnames `wmtp' = `wmc2'
-    matrix colnames `wmtb' = `wmc2'
-    if "`bdisp'" == "bc" matrix `wm' = `wmtb'
-    else                 matrix `wm' = `wmtp'
+    matrix `wm' = `wmtp'
     ereturn hidden matrix boot_tpctl_mainresults = `wmtp'
-    ereturn hidden matrix boot_tbc_mainresults = `wmtb'
   }
   ereturn matrix wdidmainresults = `wm'
   foreach sg of local sgl {
@@ -8591,13 +8569,12 @@ version 16.0
 
     * boottstat: same treatment as the main table - Wald kept hidden, columns 3-6 replaced
     if `wdbts' {
-      tempname wstp`sg' wstb`sg'
+      tempname wstp`sg'
       matrix `wstp`sg'' = `wsg`sg''
-      matrix `wstb`sg'' = `wsg`sg''
       local kkS = `kk0`sg''
       forval rr = 1/`=rowsof(`wsg`sg'')' {
         local ++kkS
-        local tlive = (`excl'[1, `kkS'] == 0 & `bts'[10, `kkS'] == 1 & `aseobs'[1, `kkS'] < .)
+        local tlive = (`excl'[1, `kkS'] == 0 & `bts'[6, `kkS'] == 1 & `aseobs'[1, `kkS'] < .)
         if `tlive' {
           matrix `wstp`sg''[`rr', 2] = `aseobs'[1, `kkS']
           matrix `wstp`sg''[`rr', 3] = `bts'[2, `kkS']
@@ -8612,30 +8589,13 @@ version 16.0
           }
           if `excl'[1, `kkS'] == 0 local ++wdbtmiss
         }
-        if `tlive' & `bts'[7, `kkS'] < . {
-          matrix `wstb`sg''[`rr', 2] = `aseobs'[1, `kkS']
-          matrix `wstb`sg''[`rr', 3] = `bts'[2, `kkS']
-          matrix `wstb`sg''[`rr', 4] = `bts'[7, `kkS']
-          matrix `wstb`sg''[`rr', 5] = `wsg`sg''[`rr', 1] - `bts'[9, `kkS']*`aseobs'[1, `kkS']
-          matrix `wstb`sg''[`rr', 6] = `wsg`sg''[`rr', 1] - `bts'[8, `kkS']*`aseobs'[1, `kkS']
-        }
-        else {
-          forval cc = 2/6 {
-            matrix `wstb`sg''[`rr', `cc'] = .
-          }
-        }
       }
       local wsc2 : colnames `wsg`sg''
       local wsc2 : subinstr local wsc2 "`wdblab'" "t_pt", word
       local wsc2 : subinstr local wsc2 "se" "se_analytic", word
       matrix colnames `wstp`sg'' = `wsc2'
-      matrix colnames `wstb`sg'' = `wsc2'
-      if "`bdisp'" == "bc" matrix `wsg`sg'' = `wstb`sg''
-      else                 matrix `wsg`sg'' = `wstp`sg''
-      if strlen("boot_tpctl_sgresults_`sg'") <= 32 {
-        ereturn hidden matrix boot_tpctl_sgresults_`sg' = `wstp`sg''
-        ereturn hidden matrix boot_tbc_sgresults_`sg' = `wstb`sg''
-      }
+      matrix `wsg`sg'' = `wstp`sg''
+      if strlen("boot_tpctl_sgresults_`sg'") <= 32 ereturn hidden matrix boot_tpctl_sgresults_`sg' = `wstp`sg''
       matrix colnames `wsg`sg'' = `wsc2'
     }
     ereturn matrix wdidsgresults_`sg' = `wsg`sg''
@@ -8736,7 +8696,7 @@ version 16.0
     ereturn scalar boot_tstat = 1
     * the whole studentized kernel goes out with row and column names, so every reported
     * studentized number is reconstructable from e() by name (not by position)
-    matrix rownames `bts' = n t_obs p_pctl qlo_pctl qhi_pctl z0 p_bc qlo_bc qhi_bc live
+    matrix rownames `bts' = n t_obs p_pctl qlo_pctl qhi_pctl live
     matrix colnames `bts' = `obn'
     ereturn matrix boot_tstud = `bts'
     matrix colnames `aseobs' = `obn'
@@ -8744,7 +8704,7 @@ version 16.0
     ereturn hidden matrix boot_ase_obs = `aseobs'
     if `wdbtmiss' > 0 dis as text "Caution: `wdbtmiss' reported coefficient(s) had no usable studentized bootstrap distribution (fewer than 2 replications with a positive standard error, or no observed standard error); their statistic, p-value and interval are left blank rather than filled from the coefficient-draw families."
     if `wdbtlow' > 0 dis as text "Caution: `wdbtlow' reported coefficient(s) used fewer than half of the completed replications in their studentized distribution, because the remaining replications produced no usable standard error for that coefficient. Replications are dropped by a rule that correlates with the resample being degenerate, so the studentized tail is trimmed in the anti-conservative direction there; inspect e(boot_tstud) row n."
-    dis as text "Caution: boottstat reports studentized (percentile-t) inference: the statistic t_pt is b/se_analytic, and the p-value and interval come from the ranks of the replications' own t-statistics (b_r - b)/se_r, so the standard-error column is the ANALYTIC standard error (se_analytic), the studentization's denominator, not a bootstrap standard deviation; the interval is equal-tailed from the signed t-quantiles and is not symmetric about the estimate. Under boottstat the pairwise subgroup contrasts are studentized the same way from each replication's own pairwise standard error, and the joint pre-trend tests, the across-subgroup equality tests and the adversarial line tests are bootstrapped as test statistics. bootdisplay(bc) applies bias-corrected ranks to the same studentized draws; there is no Wald (normal or t approximation) family under boottstat. The studentized kernel is in e(boot_tstud) and the coefficient and standard-error draws in e(bootdist) and e(bootdist_se)."
+    dis as text "Caution: boottstat reports studentized (percentile-t) inference: the statistic t_pt is b/se_analytic, and the p-value and interval come from the ranks of the replications' own t-statistics (b_r - b)/se_r, so the standard-error column is the ANALYTIC standard error (se_analytic), the studentization's denominator, not a bootstrap standard deviation; the interval is equal-tailed from the signed t-quantiles and is not symmetric about the estimate. Under boottstat the pairwise subgroup contrasts are studentized the same way from each replication's own pairwise standard error, and the joint pre-trend tests, the across-subgroup equality tests and the adversarial line tests are bootstrapped as test statistics. bootdisplay(bc) and bootdisplay(wald) are refused under boottstat: the studentized draws have no bias-corrected or Wald (normal or t approximation) family. The studentized kernel is in e(boot_tstud) and the coefficient and standard-error draws in e(bootdist) and e(bootdist_se)."
   }
   local wdbdfr0 = e(df_r)
   if `wdbdf' < . {
@@ -11029,16 +10989,17 @@ void wooldid_boottp(string scalar accname, string scalar seaccname, string scala
   // order-statistic rule wooldid_bootci uses for the coefficient families - so the p and
   // the interval are exact duals up to the even-count averaging boundary measured there
   // (this also retires the two defects where the p was add-one while the critical value
-  // was a plain order statistic, and where a third quantile rule coexisted). A BC twin
-  // is built the same way from the t-draws, with z0 from the rank of 0 among them (the
-  // t-draws are centred at 0 by construction, so 0 plays the role the rep-0 comparator
-  // plays for coefficients).
-  // Output: a 10 x K matrix, rows = n, t_obs, p_pct, qlo_pct, qhi_pct, z0, p_bc,
-  // qlo_bc, qhi_bc, live. Columns with fewer than 2 usable replications, no usable
-  // observed standard error, or zero dispersion post missing with live = 0.
+  // was a plain order statistic, and where a third quantile rule coexisted). The former
+  // BC-t twin (rows 6-9: z0 from the rank of 0 among the centred t-draws, then Efron's
+  // shift on the reflected quantiles) is WITHDRAWN (quality review F003, author ruling
+  // 2026-09-06): the shift moved the interval against the median bias, and percentile-t
+  // is already second-order accurate; bootdisplay(bc) is refused with boottstat.
+  // Output: a 6 x K matrix, rows = n, t_obs, p_pct, qlo_pct, qhi_pct, live. Columns
+  // with fewer than 2 usable replications, no usable observed standard error, or zero
+  // dispersion post missing with live = 0.
   real matrix A, S, ob, ase, ex, out
   real colvector tr, v
-  real scalar K, R, k, r, n, so, to, al, x, m0, m1, z0, pl, pu, kk2, r0, qbc, sd
+  real scalar K, R, k, r, n, so, to, al, x, m0, m1, sd
   A = st_matrix(accname)
   S = st_matrix(seaccname)
   ob = st_matrix(obsbname)
@@ -11046,8 +11007,8 @@ void wooldid_boottp(string scalar accname, string scalar seaccname, string scala
   ex = st_matrix(exclname)
   K = cols(A)
   R = rows(A)
-  out = J(10, K, .)
-  out[10, .] = J(1, K, 0)
+  out = J(6, K, .)
+  out[6, .] = J(1, K, 0)
   al = (100 - lvl)/200
   for (k = 1; k <= K; k++) {
     if (ex[1, k] != 0) continue
@@ -11076,20 +11037,7 @@ void wooldid_boottp(string scalar accname, string scalar seaccname, string scala
     m0 = sum(v :<= to)
     m1 = sum(v :>= to)
     out[3, k] = min((1, (2*min((m0, m1)))/n))
-    out[10, k] = 1
-    // BC-t: median-bias z0 from the rank of 0 among the centred t-draws
-    if (ties) z0 = invnormal((sum(v :< 0) + 0.5*sum(v :== 0))/n)
-    else z0 = invnormal(sum(v :<= 0)/n)
-    if (z0 >= .) continue
-    out[6, k] = z0
-    pl = normal(2*z0 + invnormal(al))
-    pu = normal(2*z0 + invnormal(1-al))
-    out[8, k] = wooldid_bootqs(v, pl)
-    out[9, k] = wooldid_bootqs(v, pu)
-    r0 = m0/n
-    if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
-    else qbc = normal(invnormal(r0) - 2*z0)
-    out[7, k] = min((1, 2*min((qbc, 1-qbc))))
+    out[6, k] = 1
   }
   st_matrix(outname, out)
 }
@@ -11599,7 +11547,8 @@ void wooldid_bootcells(string scalar prefix, real scalar r, real scalar ncfx, re
 // rewire one cell table in place: given the accumulator (and optional se accumulator +
 // observed analytic se), fill columns (secol, pcol, lbcol, ubcol) of matrix mname per
 // bootdisplay(): percentile / bc from the cell draws with the bootstrap SD as se; wald;
-// or, when studentized (seacc given), the studentized families with the analytic se.
+// or, when studentized (seacc given), the percentile-t family with the analytic se
+// (bootdisplay(bc) is refused with boottstat - F003 - so fam is "percentile" there).
 // obscol is the column of mname holding the observed estimate. Rows whose key is not in
 // the accumulator, or with < 2 usable draws, are blanked. Returns nothing; edits mname.
 // bootsave(): fill the (empty) current frame from the accumulators. Row 1 is the observed
@@ -11732,19 +11681,6 @@ void wooldid_bootcellwire(string scalar mname, real scalar isgt, string scalar a
       m0 = sum(v :<= to)
       m1 = sum(v :>= to)
       p = min((1, (2*min((m0, m1)))/n))
-      if (fam == "bc") {
-        if (ties) z0 = invnormal((sum(v :< 0) + 0.5*sum(v :== 0))/n)
-        else z0 = invnormal(sum(v :<= 0)/n)
-        if (z0 >= .) continue
-        pl = normal(2*z0 + invnormal(al))
-        pu = normal(2*z0 + invnormal(1-al))
-        lo = wooldid_bootqs(v, pl)
-        hi = wooldid_bootqs(v, pu)
-        r0 = m0/n
-        if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
-        else qbc = normal(invnormal(r0) - 2*z0)
-        p = min((1, 2*min((qbc, 1-qbc))))
-      }
       M[i, pcol] = p
       M[i, lbcol] = b - hi*so
       M[i, ubcol] = b - lo*so
@@ -12122,19 +12058,19 @@ void wooldid_bootsgw(string scalar accname, string scalar seaccname, string scal
 // b_r[kb] over the replication's own contrast se (harvested from its e(pwsgs) column 2),
 // referred against t_obs = d_obs/se_obs with the OBSERVED analytic pairwise se. Same
 // construction as wooldid_boottp - equal-tailed signed quantiles, rank p with no add-one,
-// wooldid_bootci's order-statistic rule, and a BC-t twin - so a contrast row and a
-// coefficient row are studentized by one rule. Output: a 10 x 1 column with the same row
-// layout as wooldid_boottp (n, t_obs, p_pct, qlo_pct, qhi_pct, z0, p_bc, qlo_bc, qhi_bc, live)
+// wooldid_bootci's order-statistic rule - so a contrast row and a coefficient row are
+// studentized by one rule (no BC-t twin: F003). Output: a 6 x 1 column with the same row
+// layout as wooldid_boottp (n, t_obs, p_pct, qlo_pct, qhi_pct, live)
 void wooldid_bootpwt(string scalar accname, real scalar ka, real scalar kb, string scalar pwseaccname,
                      real scalar jcol, real scalar dobs, real scalar seobs, real scalar lvl,
                      real scalar ties, string scalar outname)
 {
   real matrix A, P
   real colvector ok, d, se, tr, v
-  real scalar n, al, x, m0, m1, z0, pl, pu, kk2, r0, qbc, to, sd
+  real scalar n, al, x, m0, m1, to, sd
   real colvector out
-  out = J(10, 1, .)
-  out[10] = 0
+  out = J(6, 1, .)
+  out[6] = 0
   st_matrix(outname, out)
   if (seobs >= . | seobs <= 0 | dobs >= .) return
   A = st_matrix(accname)[., (ka, kb)]
@@ -12164,20 +12100,7 @@ void wooldid_bootpwt(string scalar accname, real scalar ka, real scalar kb, stri
   m0 = sum(v :<= to)
   m1 = sum(v :>= to)
   out[3] = min((1, (2*min((m0, m1)))/n))
-  out[10] = 1
-  if (ties) z0 = invnormal((sum(v :< 0) + 0.5*sum(v :== 0))/n)
-  else z0 = invnormal(sum(v :<= 0)/n)
-  if (z0 < .) {
-    out[6] = z0
-    pl = normal(2*z0 + invnormal(al))
-    pu = normal(2*z0 + invnormal(1-al))
-    out[8] = wooldid_bootqs(v, pl)
-    out[9] = wooldid_bootqs(v, pu)
-    r0 = m0/n
-    if (r0 <= 0 | r0 >= 1) qbc = (r0 <= 0 ? 0 : 1)
-    else qbc = normal(invnormal(r0) - 2*z0)
-    out[7] = min((1, 2*min((qbc, 1-qbc))))
-  }
+  out[6] = 1
   st_matrix(outname, out)
 }
 

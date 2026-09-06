@@ -49,25 +49,33 @@ local b_stat `e(boot_stat)'
 local b_ts = e(boot_tstat)
 local b_cn : colnames B2
 local b_done = e(boot_completed)
-cap matrix TS = e(boot_tstud)
+* existence is probed with confirm: `cap matrix X = e(absent)' returns rc 0 with a
+* fabricated 1x1 missing (the F2 trap the ado itself documents), so the old rcs were vacuous
+cap confirm matrix e(boot_tstud)
 local rc_tq = _rc
 local rc_tn = _rc
-cap matrix BS = e(bootdist_se)
+cap matrix TS = e(boot_tstud)
+cap confirm matrix e(bootdist_se)
 local rc_bs = _rc
-cap matrix WM = e(boot_wald_mainresults)
+cap matrix BS = e(bootdist_se)
+cap confirm matrix e(boot_wald_mainresults)
 local rc_wm = _rc
-cap matrix TPM = e(boot_tpctl_mainresults)
+cap matrix WM = e(boot_wald_mainresults)
+cap confirm matrix e(boot_tpctl_mainresults)
 local rc_tpm = _rc
-cap matrix TBM = e(boot_tbc_mainresults)
+cap matrix TPM = e(boot_tpctl_mainresults)
+cap confirm matrix e(boot_tbc_mainresults)
 local rc_tbm = _rc
-cap matrix AS = e(boot_ase_obs)
+cap confirm matrix e(boot_ase_obs)
 local rc_as = _rc
+cap matrix AS = e(boot_ase_obs)
 di "T2_surface stat=[`b_stat'] boot_tstat=`b_ts' completed=`b_done' cols=[`b_cn']"
 di "T2_rcs tstud=`rc_tq' bootdist_se=`rc_bs' wald_twin=`rc_wm' tpctl_twin=`rc_tpm' tbc_twin=`rc_tbm' ase_obs=`rc_as'"
 * 2026-09-05: the studentized kernel is one NAMED matrix e(boot_tstud); the reported table
-* under boottstat carries se_analytic, and both studentized families are posted as twins
+* under boottstat carries se_analytic and the percentile-t twin is posted. 2026-09-06
+* (F003): the BC-t twin e(boot_tbc_mainresults) is WITHDRAWN and must be ABSENT
 if "`b_stat'" != "t_pt" | `b_ts' != 1 | strpos("`b_cn'", "t_pt") == 0 | strpos("`b_cn'", "se_analytic") == 0 ///
-   | `rc_tq' != 0 | `rc_bs' != 0 | `rc_wm' != 0 | `rc_tpm' != 0 | `rc_tbm' != 0 | `rc_as' != 0 {
+   | `rc_tq' != 0 | `rc_bs' != 0 | `rc_wm' != 0 | `rc_tpm' != 0 | `rc_tbm' == 0 | `rc_as' != 0 {
   di as error "T2 FAIL: the boottstat e() surface is incomplete"
   local ++fails
 }
@@ -333,5 +341,25 @@ if _rc != 0 | e(boot_failed) != 0 {
   local ++fails
 }
 
+* T11 (F003, author ruling 2026-09-06): bootdisplay(bc) is refused with boottstat (198) -
+* the BC shift on reflected studentized quantiles moved the interval against the median
+* bias - and the studentized kernel has exactly the 6 percentile-t rows
+mkp
+cap qui wooldid y unit t ttre, `SPEC' bootstrap(standard) reps(30) rseed(7) boottstat bootdisplay(bc)
+local rc_bc = _rc
+mkp
+qui wooldid y unit t ttre, `SPEC' bootstrap(standard) reps(30) rseed(7) boottstat
+local ts_rows = rowsof(e(boot_tstud))
+local ts_rn : rownames e(boot_tstud)
+local ts_rn : list retokenize ts_rn
+cap confirm matrix e(boot_tbc_pwsgs)
+local rc_tbp = _rc
+cap confirm matrix e(boot_tbc_mainresults)
+local rc_tbm2 = _rc
+di "T11 rc_bc=`rc_bc' tstud_rows=`ts_rows' rownames=[`ts_rn'] tbc_pwsgs_rc=`rc_tbp' tbc_main_rc=`rc_tbm2'"
+if `rc_bc' != 198 | `ts_rows' != 6 | "`ts_rn'" != "n t_obs p_pctl qlo_pctl qhi_pctl live" | `rc_tbp' == 0 | `rc_tbm2' == 0 {
+  di as error "T11 FAIL: bootdisplay(bc) with boottstat must be refused (198), e(boot_tstud) must have the 6 percentile-t rows, and no e(boot_tbc_*) twin may be posted"
+  local ++fails
+}
 if `fails' == 0 di as result "BOOTTS_ALL_PASS"
 else di as error "BOOTTS_FAILS=`fails'"
