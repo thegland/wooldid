@@ -734,5 +734,69 @@ if `g31u' != 111 | `g31j' < 1 | `g31a' != 0 | `g31a0' != 1 {
 cap erase boot_gates_g31.dta
 cap erase boot_gates_g31.txt
 
+* G32 (F067, 2026-09-06) bootdisplay(bca): the acceleration equals the hand delete-one-
+* cluster jackknife (G fastnose fits dropping each cluster), the BCa endpoints and p
+* reconstruct from e(bootdist), e(boot_z0) and e(boot_accel) with the order-statistic rule,
+* the displayed table carries them, the cells fall back to bc with a caution, and bca is
+* refused with boottstat
+use `panel', clear
+qui log using boot_gates_g32.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(40) rseed(7) bootdisplay(bca) gteffects esprelength(1) espostlength(1)
+local g32rc = _rc
+qui log close bg
+chk 32 0 `g32rc'
+matrix G32M = e(wdidmainresults)
+matrix G32D = e(bootdist)
+matrix G32Z = e(boot_z0)
+matrix G32A = e(boot_accel)
+matrix G32CI = e(boot_ci_bca)
+matrix G32P = e(boot_p_bca)
+local g32jk = e(boot_jk_completed)
+local g32fam `e(boot_gteffects_family)'
+local g32cn : colnames G32A
+local g32k : list posof "main_att" in g32cn
+local lg = fileread("boot_gates_g32.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local g32caut = strpos(`"`lg'"', "cells carry the bias-corrected (bc) family under bootdisplay(bca)") > 0
+* hand jackknife: drop each unit in turn, fastnose
+local g32hand
+forval g = 1/12 {
+  use `panel', clear
+  qui drop if unit == `g'
+  * the SAME specification as the bootstrap run (the event-study window changes the
+  * regression and with it the pooled att; gteffects does not)
+  qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) fastnose
+  local g32hand `g32hand' `=string(e(b)[1, colnumb(e(b), "main_att")], "%21x")'
+}
+mata: th = strtoreal(tokens(st_local("g32hand")))'; d2 = sum((mean(th) :- th):^2); d3 = sum((mean(th) :- th):^3); st_numscalar("g32_a", d3/(6*d2^1.5))
+* hand endpoints and p from the draws with the same rule as the shipped bootqs
+local g32dn : colnames G32D
+local g32kd : list posof "main_att" in g32dn
+mata: v = sort(select(st_matrix("G32D")[., `g32kd'], st_matrix("G32D")[., `g32kd'] :< .), 1); n = rows(v); z0 = st_matrix("G32Z")[1, `g32k']; a = st_matrix("G32A")[1, `g32k']; al = .025; w = z0 + invnormal(al); p1 = normal(z0 + w/(1 - a*w)); w = z0 + invnormal(1 - al); p2 = normal(z0 + w/(1 - a*w)); x = n*p1; lo = (x == floor(x) & x >= 1 ? (v[x] + v[min((x+1, n))])/2 : v[max((min((ceil(x), n)), 1))]); x = n*p2; hi = (x == floor(x) & x >= 1 ? (v[x] + v[min((x+1, n))])/2 : v[max((min((ceil(x), n)), 1))]); r0 = sum(v :<= 0)/n; q = (r0 <= 0 ? 0 : (r0 >= 1 ? 1 : normal((invnormal(r0) - z0)/(1 + a*(invnormal(r0) - z0)) - z0))); st_numscalar("g32_lo", lo); st_numscalar("g32_hi", hi); st_numscalar("g32_p", min((1, 2*min((q, 1 - q)))))
+* the pooled att row of the main table (the last row is an event-study horizon here)
+local r32 0
+local g32rn : rowfullnames G32M
+local g32ri 0
+foreach rn of local g32rn {
+  local ++g32ri
+  if "`rn'" == "main:att" local r32 `g32ri'
+}
+if `r32' == 0 local r32 1
+di "G32 a=" %12.8f G32A[1,`g32k'] " hand=" %12.8f g32_a " ci=[" %12.8f G32CI[1,`g32k'] "," %12.8f G32CI[2,`g32k'] "] hand=[" %12.8f g32_lo "," %12.8f g32_hi "] p=" %10.8f G32P[1,`g32k'] " hand=" %10.8f g32_p " table lb/ub/p=" %12.8f G32M[`r32',5] "/" %12.8f G32M[`r32',6] "/" %10.8f G32M[`r32',4] " jk=`g32jk' cells=`g32fam' caution=`g32caut'"
+if reldif(G32A[1,`g32k'], g32_a) > 1e-10 | reldif(G32CI[1,`g32k'], g32_lo) > 1e-12 | reldif(G32CI[2,`g32k'], g32_hi) > 1e-12 | reldif(G32P[1,`g32k'], g32_p) > 1e-12 ///
+   | G32M[`r32',5] != G32CI[1,`g32k'] | G32M[`r32',6] != G32CI[2,`g32k'] | G32M[`r32',4] != G32P[1,`g32k'] | `g32jk' != 12 | "`g32fam'" != "bc" | !`g32caut' {
+  di as error "G32b FAIL: the BCa family does not reconstruct (acceleration, endpoints, p, table, cells)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+use `panel', clear
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7) bootdisplay(bca) boottstat
+chk 32c 198 _rc
+use `panel', clear
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7)
+cap confirm matrix e(boot_ci_bca)
+chk 32d 111 _rc
+cap erase boot_gates_g32.txt
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

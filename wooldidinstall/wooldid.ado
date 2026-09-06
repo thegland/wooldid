@@ -361,8 +361,8 @@ version 16.0
     * weighted estimands (att/ame); the cell-weighted ones are refused without cluster()
     * at parse and never reach this leg. Author ruling 2026-09-04
     local wdb_phys = cond("`bootstrap'" == "standard" & "`boottstat'" != "" & "`cluster'" == "" & "`wdp_wt'" != "" & "`poisson'" == "", "phys", "")
-    tempname wdbW
-    cap noi wooldid_bootrun , wmat(`wdbW') y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' `wdb_phys' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp') seaccname(`=cond("`boottstat'" != "", "`wdbsacc'", "")') pwseaccname(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwaccname(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobsname(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awaccname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobsname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') advesrel(`esrelativeto') advtt(`timetrends') advalt(`altmethod_adversarial') cellacc(`=cond("`gteffects'`makecfxplots'" != "", "`wdbcell'", "")')
+    tempname wdbW wdbjk
+    cap noi wooldid_bootrun , wmat(`wdbW') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")') y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' `wdb_phys' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp') seaccname(`=cond("`boottstat'" != "", "`wdbsacc'", "")') pwseaccname(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwaccname(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobsname(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awaccname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobsname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') advesrel(`esrelativeto') advtt(`timetrends') advalt(`altmethod_adversarial') cellacc(`=cond("`gteffects'`makecfxplots'" != "", "`wdbcell'", "")')
     local wdb_rc = _rc
     qui est restore `wdbobs'
     cap est drop `wdbobs'
@@ -391,9 +391,9 @@ version 16.0
     * valid by construction)
     if "`bootdf'" == "" local bootdf = cond("`cluster'" != "", "clusters", "normal")
     * rewire the posted inference surfaces to the bootstrap covariance (eclass sub)
-    wooldid_bootwire , mode(`bootstrap') reps(`reps') level(`level') bootalpha(`bootalpha') clus(`cluster') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') `ties' done(`wdb_r_done') fail(`wdb_r_fail') blank(`wdb_r_blank') rseed(`rseed') bootdf(`bootdf') bdisp(`bootdisplay') nclus(`wdb_r_nclus') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseout(`=cond("`boottstat'" != "", "`wdbaseobs'", "")')
+    wooldid_bootwire , mode(`bootstrap') reps(`reps') level(`level') bootalpha(`bootalpha') clus(`cluster') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') `ties' done(`wdb_r_done') fail(`wdb_r_fail') blank(`wdb_r_blank') rseed(`rseed') bootdf(`bootdf') bdisp(`bootdisplay') nclus(`wdb_r_nclus') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseout(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")')
     * bootstrapped joint tests, subgroup contrasts and CI flavors (eclass sub)
-    wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') bootdf(`bootdf') bts(`boottstat') bdisp(`bootdisplay') nclus(`wdb_r_nclus') clus(`cluster') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwacc(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends')
+    wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') bootdf(`bootdf') bts(`boottstat') bdisp(`bootdisplay') nclus(`wdb_r_nclus') clus(`cluster') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwacc(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")')
     * bootsave(): the replication draws as a .dta in the working directory (author request
     * 2026-09-04). One row per replication (_rep = 1..reps; a failed replication keeps its
     * row, all missing) plus a _rep = 0 row carrying the observed estimates, so the file
@@ -6144,8 +6144,8 @@ version 16.0
     error 198
   }
   if "`bdisp'" != "" {
-    if !inlist("`bdisp'", "percentile", "bc", "wald") {
-      dis as error "Error: bootdisplay() must be bootdisplay(percentile) - the default: the p-value and confidence interval from the percentile ranks of the bootstrap distribution - or bootdisplay(bc) - the bias-corrected percentile method - or bootdisplay(wald) - the p-value and interval from a normal or t approximation, the choice between them governed by bootdf(). The reported standard error is the standard deviation of the bootstrap distribution under all three; every family is computed and stored in e() whichever is displayed. Under boottstat only bootdisplay(percentile) is available: the studentized draws have no Wald or bias-corrected family."
+    if !inlist("`bdisp'", "percentile", "bc", "bca", "wald") {
+      dis as error "Error: bootdisplay() must be bootdisplay(percentile) - the default: the p-value and confidence interval from the percentile ranks of the bootstrap distribution - or bootdisplay(bc) - the bias-corrected percentile method - or bootdisplay(bca) - the bias-corrected and accelerated method, whose acceleration comes from a delete-one-cluster jackknife of G extra fast fits - or bootdisplay(wald) - the p-value and interval from a normal or t approximation, the choice between them governed by bootdf(). The reported standard error is the standard deviation of the bootstrap distribution under all three; every family is computed and stored in e() whichever is displayed. Under boottstat only bootdisplay(percentile) is available: the studentized draws have no Wald or bias-corrected family."
       error 198
     }
     * bootdisplay(wald) is meaningless after studentizing: boottstat reports the ANALYTIC
@@ -6164,8 +6164,8 @@ version 16.0
     * (measured on t_r = z - 1: percentile-t [.52, 2.48], BC-t [-.15, 1.48]). No BC-t
     * construction exists in Efron-Tibshirani or Davison-Hinkley; percentile-t is already
     * second-order accurate. Refused rather than silently shown as percentile-t
-    if "`bdisp'" == "bc" & "`bts'" != "" {
-      dis as error "Error: bootdisplay(bc) may not be combined with boottstat. The studentized (percentile-t) bootstrap is already second-order accurate, and applying the bias-corrected shift to the studentized quantiles and then reflecting them moves the interval against the median bias, so there is no bias-corrected studentized family. Drop boottstat for the bias-corrected percentile interval, or drop bootdisplay(bc) for the studentized one."
+    if inlist("`bdisp'", "bc", "bca") & "`bts'" != "" {
+      dis as error "Error: bootdisplay(`bdisp') may not be combined with boottstat. The studentized (percentile-t) bootstrap is already second-order accurate, and applying the bias-corrected shift to the studentized quantiles and then reflecting them moves the interval against the median bias, so there is no bias-corrected (or accelerated) studentized family. Drop boottstat for the bias-corrected percentile interval, or drop bootdisplay(`bdisp') for the studentized one."
       error 198
     }
   }
@@ -6350,6 +6350,13 @@ version 16.0
   * (studentized). Twins are posted per family so every family is retrievable
   syntax , cell(string) [ncfx(integer 0) names(string) bdisp(string) bts(string) level(real 0) bootdf(string) nclus(integer 0) ties]
   local bdisp = cond("`bdisp'" == "", "percentile", "`bdisp'")
+  * F067: the cells have no jackknife (the acceleration would need a delete-one-cluster
+  * jackknife of every cell), so under bootdisplay(bca) they carry the bias-corrected
+  * family, said so by e(boot_gteffects_family) and a caution
+  if "`bdisp'" == "bca" {
+    local bdisp bc
+    dis as text "Caution: the gteffects/cfx cells carry the bias-corrected (bc) family under bootdisplay(bca): the BCa acceleration is not computed for the cells (it would need a delete-one-cluster jackknife of every cell)."
+  }
   * the accumulator index k pairs with the k-th NAME wooldid_bootrun recorded; a count
   * mismatch would misalign the cell tables silently, so it is an error, not a fallback
   if `ncfx' > 0 & `: word count `names'' != `ncfx' {
@@ -6435,7 +6442,7 @@ version 16.0
 *** residual-rank p - the ed780ac precedent). Joint-test e() names and the
 *** per-subgroup macro-vs-scalar split mirror the analytic surface exactly, so the
 *** existing display prints them unchanged (amendment A14).
-  syntax , [level(real 0) acc(string) obsb(string) comp(string) jt(string) ties done(string) bootdf(string) bts(string) bdisp(string) nclus(integer 0) pwseacc(string) jwacc(string) jobs(string) aseobs(string) seacc(string) awacc(string) aobs(string) adv(string) advalt(string) advesrel(string) advtt(string) clus(varlist)]
+  syntax , [level(real 0) acc(string) obsb(string) comp(string) jt(string) ties done(string) bootdf(string) bts(string) bdisp(string) nclus(integer 0) pwseacc(string) jwacc(string) jobs(string) aseobs(string) seacc(string) awacc(string) aobs(string) adv(string) advalt(string) advesrel(string) advtt(string) clus(varlist) jkacc(string)]
   * a pre-rewrite copy of the observed pairwise table: column 2 is the analytic margins se,
   * which the polarisation route needs as its observed comparator. Taken before anything
   * below touches e(pwsgs)
@@ -6816,7 +6823,7 @@ version 16.0
   * rewire se/z/p/ci from the bootstrap covariance of the matching estimand columns
   cap confirm matrix e(pwsgs)
   if _rc == 0 {
-    tempname pw pwsd pwpct pwbc pwtp pwts pwt1
+    tempname pw pwsd pwpct pwbc pwbca pwtp pwts pwt1
     matrix `pw' = e(pwsgs)
     * under boottstat the contrasts are STUDENTIZED (author ruling 2026-09-03: boottstat
     * bootstraps t-statistics for the contrasts too). Column 2 of `pw' is still the
@@ -6837,6 +6844,7 @@ version 16.0
     matrix `pwsd' = `pw'
     matrix `pwpct' = `pw'
     matrix `pwbc' = `pw'
+    matrix `pwbca' = `pw'
     local prn : rowfullnames `pw'
     local rr 0
     local pwunmapped 0
@@ -6910,6 +6918,23 @@ version 16.0
               matrix `pwbc'[`rr', `cc'] = .
             }
           }
+          * F067: the BCa twin for the contrast, acceleration from the jackknife contrasts
+          local wdpalb .
+          local wdpaub .
+          local wdpap .
+          if "`jkacc'" != "" mata: wooldid_bootppa("`acc'", `ka', `kb', `level', "`comp'", ("`ties'" != ""), "`jkacc'", "wdpalb", "wdpaub", "wdpap")
+          if `wdbse' < . & `wdbse' > 0 & `wdpalb' < . & `wdpaub' < . {
+            matrix `pwbca'[`rr', 2] = `wdbse'
+            matrix `pwbca'[`rr', 3] = `pwbca'[`rr', 1]/`wdbse'
+            matrix `pwbca'[`rr', 4] = `wdpap'
+            matrix `pwbca'[`rr', 5] = `wdpalb'
+            matrix `pwbca'[`rr', 6] = `wdpaub'
+          }
+          else {
+            forval cc = 2/6 {
+              matrix `pwbca'[`rr', `cc'] = .
+            }
+          }
           * the studentized (percentile-t) family for this contrast (boottstat): se_analytic,
           * t_obs, rank p, equal-tailed interval. No BC-t twin: bootdisplay(bc) is refused
           * under boottstat (F003, 2026-09-06)
@@ -6944,6 +6969,7 @@ version 16.0
             matrix `pwsd'[`rr', `cc'] = .
             matrix `pwpct'[`rr', `cc'] = .
             matrix `pwbc'[`rr', `cc'] = .
+            matrix `pwbca'[`rr', `cc'] = .
             if `wdbpwts' matrix `pwtp'[`rr', `cc'] = .
           }
           local ++pwunmapped
@@ -6954,6 +6980,7 @@ version 16.0
           matrix `pwsd'[`rr', `cc'] = .
           matrix `pwpct'[`rr', `cc'] = .
           matrix `pwbc'[`rr', `cc'] = .
+          matrix `pwbca'[`rr', `cc'] = .
           if `wdbpwts' matrix `pwtp'[`rr', `cc'] = .
         }
         local ++pwunmapped
@@ -6981,6 +7008,7 @@ version 16.0
     }
     else if "`bdisp'" == "percentile"  matrix `pw' = `pwpct'
     else if "`bdisp'" == "bc"           matrix `pw' = `pwbc'
+    else if "`bdisp'" == "bca"          matrix `pw' = `pwbca'
     else                                matrix `pw' = `pwsd'
     local pwc0 : subinstr local pwc "t_pt" "`=cond(`wdbdf' < ., "t", "z")'", word
     local pwc0 : subinstr local pwc0 "se_analytic" "se", word
@@ -6992,10 +7020,12 @@ version 16.0
     matrix colnames `pwsd' = `pwc0'
     matrix colnames `pwpct' = `pwcw'
     matrix colnames `pwbc' = `pwcw'
+    matrix colnames `pwbca' = `pwcw'
     ereturn matrix pwsgs = `pw'
     ereturn hidden matrix boot_wald_pwsgs = `pwsd'
     ereturn hidden matrix boot_pctl_pwsgs = `pwpct'
     ereturn hidden matrix boot_bc_pwsgs = `pwbc'
+    if "`jkacc'" != "" ereturn hidden matrix boot_bca_pwsgs = `pwbca'
     if `wdbpwts' {
       matrix colnames `pwtp' = `pwc'
       ereturn hidden matrix boot_tpctl_pwsgs = `pwtp'
@@ -8114,7 +8144,7 @@ version 16.0
 *** weighted estimand); under bootalpha(size) the mass is split over the cluster's base
 *** weight (row multiplier = draw_c / W_c), which matches bayesboot BITWISE on unweighted
 *** data. The rwgen priorpowers(-n_c) oracle for equal is its weights times n_c.
-  syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string) wmat(string)]
+  syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string) wmat(string) jkacc(string)]
 
   if `dots' == -1 local dots 1
   if "`bootalpha'" == "" local bootalpha equal
@@ -8533,6 +8563,44 @@ version 16.0
     }
   }
   if `dots' > 0 dis as text " done"
+  * F067 (quality review 2026-09-05, author ruling 2026-09-06): the BCa acceleration
+  * needs a delete-one-cluster jackknife - G extra fast fits, each dropping one cluster
+  * by a zero weight through the same map-frame link the count leg uses (a zero weight
+  * excludes the observation under every weight type). Rows of jkacc = clusters in
+  * map-frame order; a fit that fails leaves its row missing (the acceleration then uses
+  * the clusters that fitted, with a caution downstream). Only under bootdisplay(bca)
+  if "`jkacc'" != "" {
+    matrix `jkacc' = J(`wdb_C', `wdb_K', .)
+    matrix colnames `jkacc' = `wdbnames0'
+    if `dots' > 0 dis as text "Jackknife for the BCa acceleration (`wdb_C' clusters): " _continue
+    forval g = 1/`wdb_C' {
+      frame `mbfr': qui replace __wdbdraw = (__wdbrow != `g')
+      cap drop `drawv'
+      qui frget `drawv' = __wdbdraw, from(`lnk')
+      cap drop `repw'
+      qui gen double `repw' = `basew' * `drawv'
+      nobreak {
+        global WOOLDID_REPMODE 1
+      cap qui wooldid `repcall' [`wtype2'=`repw'] , `repopts'
+        local wdrepdone = _rc
+        global WOOLDID_REPMODE
+      }
+      cap error `wdrepdone'
+      if _rc == 1 {
+        if `dots' > 0 dis as result " "
+        error 1
+      }
+      if _rc == 0 {
+        local wdb_gblank 0
+        mata: wooldid_bootgrab("`jkacc'", `g', "`obsb'")
+      }
+      if `dots' > 0 {
+        if `wdrepdone' != 0 dis as error "x" _continue
+        else if mod(`g', `dots') == 0 dis as text "." _continue
+      }
+    }
+    if `dots' > 0 dis as text " done"
+  }
   cap drop `lnk'
   cap drop `drawv'
   cap drop `repw'
@@ -8564,7 +8632,7 @@ version 16.0
 *** as e(V_es_analytic_*)), the VCE header text, and the e(boot_*) metadata.
 *** pwsgs/prepwsgs inference columns and the allsgssame scalars are BLANKED in this
 *** build (their bootstrap Wald versions land with the joint-test commit).
-  syntax , [mode(string) reps(integer 0) acc(string) obsb(string) done(string) fail(string) blank(string) level(real 0) bootalpha(string) clus(varlist) comp(string) TIES rseed(string) bootdf(string) bdisp(string) nclus(integer 0) seacc(string) aseout(string)]
+  syntax , [mode(string) reps(integer 0) acc(string) obsb(string) done(string) fail(string) blank(string) level(real 0) bootalpha(string) clus(varlist) comp(string) TIES rseed(string) bootdf(string) bdisp(string) nclus(integer 0) seacc(string) aseout(string) jkacc(string)]
   local wdbaseobs_out `aseout'
   if "`wdbaseobs_out'" == "" tempname wdbaseobs_out
   if `level' == 0 local level 95
@@ -8650,6 +8718,22 @@ version 16.0
   * blanking and boottstat rules need
   tempname cin cip cib cipp cbp cz0
   mata: wooldid_bootci("`acc'", "`obsb'", "`comp'", `level', ("`ties'" != ""), "`cin'", "`cip'", "`cib'", "`cipp'", "`cbp'", "`cz0'", `wdbdf')
+  * F067: the BCa family (only under bootdisplay(bca), when the jackknife ran): the
+  * acceleration a_k from the delete-one-cluster jackknife, z0 as the BC family's, the
+  * endpoints at the BCa-adjusted levels by the same order-statistic rule, and the p
+  * that inverts them at the null
+  local wdbbca = ("`jkacc'" != "")
+  if `wdbbca' {
+    cap confirm matrix `jkacc'
+    if _rc != 0 local wdbbca 0
+  }
+  tempname ciba cbap cacc
+  if `wdbbca' mata: wooldid_bootbca("`acc'", "`obsb'", "`comp'", "`jkacc'", `level', ("`ties'" != ""), "`ciba'", "`cbap'", "`cacc'")
+  else {
+    matrix `ciba' = J(2, colsof(`obsb'), .)
+    matrix `cbap' = J(1, colsof(`obsb'), .)
+    matrix `cacc' = J(1, colsof(`obsb'), .)
+  }
 
   * -------- boottstat: the studentized (percentile-t) tail p and critical value per
   * column, from t_r = (b_r - b_obs)/se_r against t_obs = b_obs/se_obs
@@ -8704,10 +8788,11 @@ version 16.0
   * statistic column keeps its z/t label and holds b/se_inv; its tail probability is
   * NOT the reported p, which is a count, and the help says so
   local bdisp = cond("`bdisp'" == "", "percentile", "`bdisp'")
-  tempname wmsd wmpct wmbc
+  tempname wmsd wmpct wmbc wmbca
   matrix `wmsd' = `wm'
   matrix `wmpct' = `wm'
   matrix `wmbc' = `wm'
+  matrix `wmbca' = `wm'
   * The standard error column is the bootstrap STANDARD DEVIATION in every non-studentized
   * display, percentile and bias-corrected included. Author ruling 2026-09-04, overruling
   * his own earlier preference for a standard error implied by inverting the reported
@@ -8746,6 +8831,18 @@ version 16.0
         matrix `wmbc'[`rr', `cc'] = .
       }
     }
+    if `excl'[1, `kk'] == 0 & `bse'[1, `kk'] < . & `bse'[1, `kk'] > 0 & `ciba'[1, `kk'] < . & `ciba'[2, `kk'] < . {
+      matrix `wmbca'[`rr', 2] = `bse'[1, `kk']
+      matrix `wmbca'[`rr', 3] = `wmbca'[`rr', 1]/`bse'[1, `kk']
+      matrix `wmbca'[`rr', 4] = `cbap'[1, `kk']
+      matrix `wmbca'[`rr', 5] = `ciba'[1, `kk']
+      matrix `wmbca'[`rr', 6] = `ciba'[2, `kk']
+    }
+    else {
+      forval cc = 2/6 {
+        matrix `wmbca'[`rr', `cc'] = .
+      }
+    }
   }
   * NB: `ereturn matrix' MOVES its source (the tempname is dropped), so the selected
   * family must be copied into `wm' BEFORE the two posts, not after
@@ -8757,11 +8854,14 @@ version 16.0
   local wmcw : subinstr local wmcw "`wdblab'" "`wdblab'_wald", word
   matrix colnames `wmpct' = `wmcw'
   matrix colnames `wmbc' = `wmcw'
+  matrix colnames `wmbca' = `wmcw'
   if "`bdisp'" == "percentile" matrix `wm' = `wmpct'
   else if "`bdisp'" == "bc"       matrix `wm' = `wmbc'
+  else if "`bdisp'" == "bca"      matrix `wm' = `wmbca'
   ereturn hidden matrix boot_wald_mainresults = `wmsd'
   ereturn hidden matrix boot_pctl_mainresults = `wmpct'
   ereturn hidden matrix boot_bc_mainresults = `wmbc'
+  if `wdbbca' ereturn hidden matrix boot_bca_mainresults = `wmbca'
 
   * boottstat: the Wald table is preserved as a hidden twin and columns 3-6 are replaced
   * by the studentized statistic, its percentile-t tail probability and the interval that
@@ -8846,10 +8946,11 @@ version 16.0
     * both families for the subgroup coefficient rows too, same rule as the main table
     * above (and the same `ereturn matrix' move-not-copy caveat: select into the live
     * matrix BEFORE posting the twins)
-    tempname wssd`sg' wspct`sg' wsbc`sg'
+    tempname wssd`sg' wspct`sg' wsbc`sg' wsbca`sg'
     matrix `wssd`sg'' = `wsg`sg''
     matrix `wspct`sg'' = `wsg`sg''
     matrix `wsbc`sg'' = `wsg`sg''
+    matrix `wsbca`sg'' = `wsg`sg''
     local kkP = `kk0`sg''
     forval rr = 1/`=rowsof(`wsg`sg'')' {
       local ++kkP
@@ -8877,19 +8978,34 @@ version 16.0
           matrix `wsbc`sg''[`rr', `cc'] = .
         }
       }
+      if `excl'[1, `kkP'] == 0 & `bse'[1, `kkP'] < . & `bse'[1, `kkP'] > 0 & `ciba'[1, `kkP'] < . & `ciba'[2, `kkP'] < . {
+        matrix `wsbca`sg''[`rr', 2] = `bse'[1, `kkP']
+        matrix `wsbca`sg''[`rr', 3] = `wsbca`sg''[`rr', 1]/`bse'[1, `kkP']
+        matrix `wsbca`sg''[`rr', 4] = `cbap'[1, `kkP']
+        matrix `wsbca`sg''[`rr', 5] = `ciba'[1, `kkP']
+        matrix `wsbca`sg''[`rr', 6] = `ciba'[2, `kkP']
+      }
+      else {
+        forval cc = 2/6 {
+          matrix `wsbca`sg''[`rr', `cc'] = .
+        }
+      }
     }
     local wscw : colnames `wsg`sg''
     local wscw : subinstr local wscw "`wdblab'" "`wdblab'_wald", word
     matrix colnames `wspct`sg'' = `wscw'
     matrix colnames `wsbc`sg'' = `wscw'
+    matrix colnames `wsbca`sg'' = `wscw'
     if "`bdisp'" == "percentile"    matrix `wsg`sg'' = `wspct`sg''
     else if "`bdisp'" == "bc"       matrix `wsg`sg'' = `wsbc`sg''
+    else if "`bdisp'" == "bca"      matrix `wsg`sg'' = `wsbca`sg''
     * the hidden twins are skipped when a name would exceed 32 characters (a 13+ digit
     * subgroup value); the visible table is unaffected
     if strlen("boot_pctl_sgresults_`sg'") <= 32 {
       ereturn hidden matrix boot_wald_sgresults_`sg' = `wssd`sg''
       ereturn hidden matrix boot_pctl_sgresults_`sg' = `wspct`sg''
       ereturn hidden matrix boot_bc_sgresults_`sg' = `wsbc`sg''
+      if `wdbbca' ereturn hidden matrix boot_bca_sgresults_`sg' = `wsbca`sg''
     }
 
     * boottstat: same treatment as the main table - Wald kept hidden, columns 3-6 replaced
@@ -9016,6 +9132,18 @@ version 16.0
   ereturn hidden matrix boot_ptails = `wdbpt'
   ereturn matrix boot_p_bc = `cbp'
   ereturn matrix boot_z0 = `cz0'
+  if `wdbbca' {
+    matrix colnames `ciba' = `obn'
+    matrix rownames `ciba' = ll ul
+    matrix colnames `cbap' = `obn'
+    matrix colnames `cacc' = `obn'
+    ereturn matrix boot_ci_bca = `ciba'
+    ereturn matrix boot_p_bca = `cbap'
+    ereturn matrix boot_accel = `cacc'
+    mata: st_local("wdbjkn", strofreal(sum(rowmissing(st_matrix("`jkacc'")) :== 0)))
+    ereturn scalar boot_jk_completed = `wdbjkn'
+    if `wdbjkn' < rowsof(`jkacc') dis as text "Caution: `=rowsof(`jkacc') - `wdbjkn'' of `=rowsof(`jkacc')' delete-one-cluster jackknife fits failed; the BCa acceleration uses the clusters that fitted."
+  }
   if "`ties'" != "" ereturn local boot_ties ties
 
   ereturn hidden local wdid_vcespec "`wdbmodetext', `wdbcl', reps(`reps')"
@@ -9971,7 +10099,8 @@ version 16.0
      dis as result "; reported standard errors are the standard deviation of the bootstrap distribution, and the `e(boot_stat)' statistics, p-values and " e(boot_level) "% CIs are referred to the `wdbrefd' distribution."
    }
    else {
-     dis as result "; reported standard errors are the standard deviation of the bootstrap distribution, and the p-values and " e(boot_level) "% CIs come from the " cond("`wdbdsp'" == "bc", "BIAS-CORRECTED percentile", "PERCENTILE") " ranks of that distribution."
+     dis as result "; reported standard errors are the standard deviation of the bootstrap distribution, and the p-values and " e(boot_level) "% CIs come from the " cond("`wdbdsp'" == "bc", "BIAS-CORRECTED percentile", cond("`wdbdsp'" == "bca", "BIAS-CORRECTED AND ACCELERATED (BCa) percentile", "PERCENTILE")) " ranks of that distribution."
+     if "`wdbdsp'" == "bca" dis as result "  The BCa acceleration comes from a delete-one-cluster jackknife (" e(boot_jk_completed) " fits; e(boot_accel)); its intervals are in e(boot_ci_bca) and p-values in e(boot_p_bca). The gteffects/cfx cells carry the bias-corrected family."
      dis as result "  A percentile interval is not symmetric about the estimate, so the estimate plus or minus a critical value times the reported standard error will not in general reproduce the reported interval - this is the ordinary reading of a bootstrap table, not a wooldid peculiarity. Use bootdisplay(wald) for the normal/t package in which they do agree."
    }
    dis as result "  Every family is computed whichever is displayed: intervals in e(boot_ci_normal)/e(boot_ci_percentile)/e(boot_ci_bc), p-values in e(boot_p_percentile)/e(boot_p_bc), and the complete tables in the hidden e(boot_wald_mainresults)/e(boot_pctl_mainresults)/e(boot_bc_mainresults)."
@@ -11312,6 +11441,8 @@ cap mata: mata drop wooldid_bootjwobs()
 cap mata: mata drop wooldid_bootjobs()
 cap mata: mata drop wooldid_bootpairidx()
 cap mata: mata drop wooldid_bootci()
+cap mata: mata drop wooldid_bootbca()
+cap mata: mata drop wooldid_bootppa()
 cap mata: mata drop wooldid_bootqs()
 cap mata: mata drop wooldid_bootveskey()
 cap mata: mata drop wooldid_permq()
@@ -12720,6 +12851,124 @@ void wooldid_bootptails(string scalar accname, string scalar obsbname, real scal
     out[5, k] = min((1, 2*cph))
   }
   st_matrix(outname, out)
+}
+
+// F067 (2026-09-06): the BCa family. Per column: z0 as wooldid_bootci computes it (the
+// rank of the rep-0 comparator among the draws, ties half-weighted on request), the
+// acceleration a from the delete-one-cluster jackknife estimates theta_g (Efron 1987:
+// a = sum(m - theta_g)^3 / (6 [sum(m - theta_g)^2]^1.5), m the jackknife mean; missing
+// rows - failed fits - are dropped), the endpoints at the BCa-adjusted levels
+// alpha_j = Phi(z0 + (z0 + z_j)/(1 - a (z0 + z_j))) by the same order-statistic rule
+// (wooldid_bootqs), and the p that inverts the interval at the null: with r0 the rank
+// of 0 among the draws, w = (Phi^-1(r0) - z0)/(1 + a (Phi^-1(r0) - z0)), q = Phi(w - z0),
+// p = 2 min(q, 1 - q) (a = 0 gives the BC p exactly). Columns with fewer than 2 draws,
+// zero dispersion, a degenerate z0 or fewer than 3 jackknife fits post missing
+void wooldid_bootbca(string scalar accname, string scalar obsbname, string scalar compname,
+                     string scalar jkname, real scalar lvl, real scalar ties,
+                     string scalar ciname, string scalar pname, string scalar aname)
+{
+  real matrix A, JK, ci
+  real rowvector cmp, p, av
+  real colvector v, use, th
+  real scalar K, k, nn, al, z0, a, d2, d3, w, q, r0, zr
+  A = st_matrix(accname)
+  JK = st_matrix(jkname)
+  cmp = st_matrix(compname)
+  K = cols(A)
+  al = (100 - lvl)/200
+  ci = J(2, K, .)
+  p = J(1, K, .)
+  av = J(1, K, .)
+  for (k = 1; k <= K; k++) {
+    use = selectindex(A[., k] :< .)
+    nn = length(use)
+    if (nn < 2) continue
+    v = sort(A[use, k], 1)
+    if (sqrt(variance(v)) <= 0) continue
+    if (ties) z0 = invnormal((sum(v :< cmp[k]) + 0.5*sum(v :== cmp[k]))/nn)
+    else z0 = invnormal(sum(v :<= cmp[k])/nn)
+    if (z0 >= .) continue
+    if (cols(JK) < k) continue
+    th = select(JK[., k], JK[., k] :< .)
+    if (rows(th) < 3) continue
+    d2 = sum((mean(th) :- th):^2)
+    d3 = sum((mean(th) :- th):^3)
+    if (d2 <= 0) continue
+    a = d3 / (6 * d2^1.5)
+    av[k] = a
+    w = z0 + invnormal(al)
+    if (1 - a*w <= 0) continue
+    ci[1, k] = wooldid_bootqs(v, normal(z0 + w/(1 - a*w)))
+    w = z0 + invnormal(1 - al)
+    if (1 - a*w <= 0) continue
+    ci[2, k] = wooldid_bootqs(v, normal(z0 + w/(1 - a*w)))
+    r0 = sum(v :<= 0)/nn
+    if (r0 <= 0 | r0 >= 1) q = (r0 <= 0 ? 0 : 1)
+    else {
+      zr = invnormal(r0) - z0
+      if (1 + a*zr <= 0) continue
+      w = zr/(1 + a*zr)
+      q = normal(w - z0)
+    }
+    p[k] = min((1, 2*min((q, 1 - q))))
+  }
+  st_matrix(ciname, ci)
+  st_matrix(pname, p)
+  st_matrix(aname, av)
+}
+
+// the BCa twin for ONE pairwise contrast: contrast draws d_r = b_r[ka] - b_r[kb], the
+// comparator's contrast for z0, the jackknife contrasts for the acceleration
+void wooldid_bootppa(string scalar accname, real scalar ka, real scalar kb, real scalar lvl,
+                     string scalar compname, real scalar ties, string scalar jkname,
+                     string scalar lbn, string scalar ubn, string scalar pn)
+{
+  real matrix A, cmp, JK
+  real colvector ok, v, th
+  real scalar n, al, z0, a, d2, d3, w, q, r0, zr, dcmp, lo, hi
+  st_local(lbn, ".")
+  st_local(ubn, ".")
+  st_local(pn, ".")
+  A = st_matrix(accname)[., (ka, kb)]
+  ok = rowmissing(A) :== 0
+  if (sum(ok) < 2) return
+  A = select(A, ok)
+  v = sort(A[., 1] :- A[., 2], 1)
+  n = rows(v)
+  if (sqrt(variance(v)) <= 0) return
+  cmp = st_matrix(compname)
+  dcmp = cmp[1, ka] - cmp[1, kb]
+  if (dcmp >= .) return
+  if (ties) z0 = invnormal((sum(v :< dcmp) + 0.5*sum(v :== dcmp))/n)
+  else z0 = invnormal(sum(v :<= dcmp)/n)
+  if (z0 >= .) return
+  JK = st_matrix(jkname)
+  if (cols(JK) < max((ka, kb))) return
+  JK = JK[., (ka, kb)]
+  ok = rowmissing(JK) :== 0
+  if (sum(ok) < 3) return
+  th = select(JK[., 1] :- JK[., 2], ok)
+  d2 = sum((mean(th) :- th):^2)
+  d3 = sum((mean(th) :- th):^3)
+  if (d2 <= 0) return
+  a = d3 / (6 * d2^1.5)
+  al = (100 - lvl)/200
+  w = z0 + invnormal(al)
+  if (1 - a*w <= 0) return
+  lo = wooldid_bootqs(v, normal(z0 + w/(1 - a*w)))
+  w = z0 + invnormal(1 - al)
+  if (1 - a*w <= 0) return
+  hi = wooldid_bootqs(v, normal(z0 + w/(1 - a*w)))
+  r0 = sum(v :<= 0)/n
+  if (r0 <= 0 | r0 >= 1) q = (r0 <= 0 ? 0 : 1)
+  else {
+    zr = invnormal(r0) - z0
+    if (1 + a*zr <= 0) return
+    q = normal(zr/(1 + a*zr) - z0)
+  }
+  st_local(lbn, strofreal(lo, "%21x"))
+  st_local(ubn, strofreal(hi, "%21x"))
+  st_local(pn, strofreal(min((1, 2*min((q, 1 - q)))), "%21x"))
 }
 
 // Permutation-inference kernels (chunk 1, 2026-09-05). Every quantity here treats the
