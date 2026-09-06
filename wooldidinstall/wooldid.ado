@@ -38,7 +38,8 @@ version 16.0
     * S5 c_local closure, and this check lives strictly inside the empty-line
     * branch, so "wooldid, update" and every other non-empty call is untouched
     if "${WOOLDID_LASTRC}" != "" {
-      dis as error "Error: the last wooldid call failed with r(${WOOLDID_LASTRC}); the stored results predate that failed call. Refit wooldid before replaying."
+      if "${WOOLDID_LASTRC}" == "postloop" dis as error "Error: the last wooldid call failed after its replication loop, while rewiring the stored results to the permutation or bootstrap inference; the stored results are partially rewired. Refit wooldid before replaying."
+      else dis as error "Error: the last wooldid call failed with r(${WOOLDID_LASTRC}); the stored results predate that failed call. Refit wooldid before replaying."
       exit 198
     }
     wooldid_display , part(1)
@@ -168,6 +169,11 @@ version 16.0
     cap est drop `wdpobs'
     global WOOLDID_LASTRC
     if `wdp_rc' != 0 exit `wdp_rc'
+    * from here until the display completes, e() is being rewired to the permutation
+    * inference: an uncaught failure in between leaves a half-rewired e() that the replay
+    * branch must refuse (the marker is consumed there and cleared at the end of this
+    * block; a plot failure records its rc the same way). Added 2026-09-05
+    global WOOLDID_LASTRC postloop
     * run-level permutation results on the restored observed results
     ereturn local perm_method `permute'
     if "`rseed'" != "" ereturn local perm_seed `rseed'
@@ -232,19 +238,36 @@ version 16.0
       local wdcfopts
       if "`saveplots'" != "" local wdcfopts saveplots(`saveplots')
       cap noi wooldid_cfxplots , `wdcfopts' `replace'
+      local wdsh_prc = _rc
+      if `wdsh_prc' != 0 {
+        qui frame
+        if "`r(currentframe)'" != "`wdsh_frame'" cap frame change `wdsh_frame'
+        global WOOLDID_LASTRC `wdsh_prc'
+        exit `wdsh_prc'
+      }
     }
     wooldid_display , part(2)
     * event-study plots, deferred from the worker so they read the REWIRED tables: their
-    * bands are the permutation shift intervals the table prints
+    * bands are the permutation shift intervals the table prints. A plot failure is an
+    * error of this call (its rc propagates, the caller's frame is restored and the
+    * replay marker is set), as it is on a plain run
     if "`makeplots'" == "makeplots" {
       local wdesopts
       if "`saveplots'" != "" local wdesopts saveplots(`saveplots')
       cap noi wooldid_esplots , `wdesopts' `replace'
+      local wdsh_prc = _rc
+      if `wdsh_prc' != 0 {
+        qui frame
+        if "`r(currentframe)'" != "`wdsh_frame'" cap frame change `wdsh_frame'
+        global WOOLDID_LASTRC `wdsh_prc'
+        exit `wdsh_prc'
+      }
     }
     wooldid_display , part(perm)
     * the one surface still drawn from the analytic covariance (mirrors the bootstrap block)
     if "`histogramcohorteffects'" != "" dis as text "Caution: histogram outputs are drawn from the stage-1 ANALYTIC covariance during estimation; the reported tables, the cfx matrices, the event-study and continuous-treatment plots and the e() inference above are permutation-based."
     dis as result " "
+    global WOOLDID_LASTRC
   }
 
   * F-boot: bootstrap-SE orchestration - runs only after a fully successful estimation.
@@ -338,6 +361,8 @@ version 16.0
     cap est drop `wdbobs'
     global WOOLDID_LASTRC
     if `wdb_rc' != 0 exit `wdb_rc'
+    * post-loop rewiring marker (see the permutation block): cleared at the end of this block
+    global WOOLDID_LASTRC postloop
     * A10: the re-id leg duplicates clusters but user covariates keyed to unit
     * identity keep their original codes across copies (the official idcluster
     * convention shares this) - say so once
@@ -379,7 +404,16 @@ version 16.0
     * rather than an analytic one. The two hbar scalars were computed at worker level
     * (they need tempvars that no longer exist) and are handed back in. Placed between
     * part(1) and part(2) to match the ordering the non-bootstrap path uses
-    if "`pretrendpower'" != "" cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`=cond(e(df_r) < ., string(e(df_r)), ".")') pois(`poisson') poisexp(`poisexpresults') hba(`=cond(e(wdid_ptphbar_att) < ., string(e(wdid_ptphbar_att)), ".")') hbi(`=cond(e(wdid_ptphbar_it) < ., string(e(wdid_ptphbar_it)), ".")')
+    if "`pretrendpower'" != "" {
+      cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`=cond(e(df_r) < ., string(e(df_r)), ".")') pois(`poisson') poisexp(`poisexpresults') hba(`=cond(e(wdid_ptphbar_att) < ., string(e(wdid_ptphbar_att)), ".")') hbi(`=cond(e(wdid_ptphbar_it) < ., string(e(wdid_ptphbar_it)), ".")')
+      local wdsh_prc = _rc
+      if `wdsh_prc' != 0 {
+        qui frame
+        if "`r(currentframe)'" != "`wdsh_frame'" cap frame change `wdsh_frame'
+        global WOOLDID_LASTRC `wdsh_prc'
+        exit `wdsh_prc'
+      }
+    }
     * cell-level surfaces rewired to the bootstrap (ruling 2026-09-04): e(gteffects) columns
     * se/p/lb/ub and each e(cfx*) matrix's se/t/pvalue/ll/ul, per bootdisplay(); studentized
     * under boottstat from the replications' own cell standard errors
@@ -391,15 +425,29 @@ version 16.0
       local wdcfopts
       if "`saveplots'" != "" local wdcfopts saveplots(`saveplots')
       cap noi wooldid_cfxplots , `wdcfopts' `replace'
+      local wdsh_prc = _rc
+      if `wdsh_prc' != 0 {
+        qui frame
+        if "`r(currentframe)'" != "`wdsh_frame'" cap frame change `wdsh_frame'
+        global WOOLDID_LASTRC `wdsh_prc'
+        exit `wdsh_prc'
+      }
     }
     wooldid_display , part(2)
     * event-study plots, deferred from the worker so they read the REWIRED tables. The
     * bands are therefore whichever family bootdisplay() selected - percentile, BC or
-    * wald - and match the printed table exactly
+    * wald - and match the printed table exactly. A plot failure is an error of this call
     if "`makeplots'" == "makeplots" {
       local wdesopts
       if "`saveplots'" != "" local wdesopts saveplots(`saveplots')
       cap noi wooldid_esplots , `wdesopts' `replace'
+      local wdsh_prc = _rc
+      if `wdsh_prc' != 0 {
+        qui frame
+        if "`r(currentframe)'" != "`wdsh_frame'" cap frame change `wdsh_frame'
+        global WOOLDID_LASTRC `wdsh_prc'
+        exit `wdsh_prc'
+      }
     }
     wooldid_display , part(boot)
     * the list shrank on 2026-09-05: gteffects cells and the cfx matrices are now rewired to
@@ -407,6 +455,7 @@ version 16.0
     * absent otherwise, and event-study plots are drawn after the rewiring
     if "`histogramcohorteffects'" != "" dis as text "Caution: histogram outputs are drawn from the ANALYTIC covariance during estimation; the reported tables, the gteffects cells, the cfx matrices, the event-study and continuous-treatment plots and the e() inference above are bootstrap-based."
     dis as result " "
+    global WOOLDID_LASTRC
   }
 end
 

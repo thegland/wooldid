@@ -322,5 +322,34 @@ if _rc == 0 {
 }
 cap est drop _all
 
+
+* G20 a failure after the replication loop is an error of the call (review 2026-09-05):
+* the event-study plot save is refused without replace (602), the rc propagates (it was
+* swallowed: rc 0 with a stale saved file), the caller's frame is restored, and the
+* replay branch refuses until a wooldid call completes
+use `panel', clear
+foreach f in boot_gates_g20_ES_att.gph boot_gates_g20_ES.dta {
+  cap erase "`f'"
+}
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20)
+chk 20 0 _rc
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20)
+chk 20b 602 _rc
+qui frame
+if "`r(currentframe)'" != "default" {
+  di as error "G20c FAIL: current frame is `r(currentframe)' after the plot failure"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  frame change default
+}
+cap qui wooldid
+chk 20d 198 _rc
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20) replace
+chk 20e 0 _rc
+cap qui wooldid
+chk 20f 0 _rc
+foreach f in boot_gates_g20_ES_att.gph boot_gates_g20_ES.dta {
+  cap erase "`f'"
+}
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
