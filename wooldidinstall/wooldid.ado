@@ -871,7 +871,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
     *get min viable _t and max; set up relative period variable to have no negative values
     qui gstats sum `_t' if `ifstatement', meanonly
-    local min_t = abs(r(min))
+    * min_t counts the realized pre-treatment horizons; when no treated unit is observed at or
+    * before its onset (an onset-period gap, or an onset off the panel's time grid) r(min) is
+    * positive and abs() would invent a pre-window that nothing realizes (bug sweep BS-33)
+    local min_t = max(0, -r(min))
     local max_t = r(max) + 1
     qui replace `_t' = `_t' + `min_t' + 1
     qui replace `_t' = 0 if `_t' == . & `ifstatement'
@@ -1759,6 +1762,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         if "`relyrlist'" != "" local relyrlist `relyrlist' , `relyr'
         if "`relyrlist'" == "" local relyrlist `relyrlist' `relyr'
       }
+    }
+    if "`relyrlist'" == "" {
+      * no treated unit realizes any requested relative period: name the window and what the
+      * sample actually contains instead of letting matrix () die with a bare r(198) (BS-33)
+      local wdreal
+      qui levelsof `_t' if `_t' > 0 & `_t' < ., local(wdtl)
+      foreach v of local wdtl {
+        local wdreal `wdreal' `=`v' - `min_t' - 1'
+      }
+      dis as error "Error: no treated unit is observed at any of the requested event-study relative periods (`=`horizonstarter' - `min_t' - 1' through `=`horizonend' - `min_t' - 1'). Relative periods realized by treated units in the estimation sample: `wdreal'."
+      dis as error "This usually means the onset period is missing for every treated cohort (an onset-period gap in the panel, or an onset that falls off the panel's time grid, such as an even-year onset in a biennial panel). Widen esprelength()/espostlength() to reach a realized period, or place ttre on the panel's grid."
+      error 459
     }
     matrix `relyrcolumn' = (`relyrlist')'
   }
