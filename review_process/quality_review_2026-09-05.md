@@ -155,3 +155,44 @@ Grouped by theme. "Recommend" is my view; the numbers are the reviewers' measure
 **What the full assessment suite (test/suite/configs.csv) should expect from these fixes.** No config in that suite exercises the three number-moving fixes: F002 needs gteffects with a re-id bootstrap leg (none: boot_std_reid has no gteffects), F011 needs permexact with jointtests or adversarial (scr_permexact_t has neither), and F004 fires only when z0 = 0 and n*alpha is an integer (reps 20-25 at level 95 or 90 never is; reps 40, 80, 120, 200 can be - the MC harness, not the suite). Expect log-text differences only: the sharp-null caveat wording in every permute config with pre-period rows; the footer method label "observation-level bootstrap" in boot_obs; the studentized contrast line in boot_tstat; the gteffects note only where gteffects meets bootstrap (nowhere in the suite today). Numbers and return codes should be identical everywhere else; a numeric mover outside those three mechanisms is a regression to raise.
 
 Environment note: the suites and the bstat comparison in G24 ran on Stata/MP 19.0; older releases' bstat may not post e(ci_bc).
+
+## 9. Author rulings (2026-09-06, given item by item in chat)
+
+| item | ruling |
+|---|---|
+| F001 bayes /W_c split | FIX NOW: drop the split under bootalpha(equal), keep it under size; re-pin cert O2; rerun mc_bootse with unequal clusters; update the help's bayes numbers |
+| F003 BC-t | REFUSE bootdisplay(bc) with boottstat; remove the tbc kernels, consumers and postings; help + test_bootstrap_tstat |
+| F030 low-reps caution | do nothing (rulings stand) |
+| F034 joint tests without boottstat | BUILD the fixed-metric rank test (recentred draws on the bootstrap-covariance metric); delete wooldid_bootjw (F045) |
+| F035 shift interval | TEXT NOW: calibrated only near the null, widens with the effect; drop the Conley-Taber attribution |
+| F033 two p conventions | MORE RESEARCH: size of the joint tests under both conventions at reps 99/199/999 |
+| F036 permreps floor | CAUTION when 2/(permreps+1) > .05 (1/(permreps+1) under permabsp) + reps-for-resolution help line; floor stays 20 |
+| F053 t column under percentile/bc | RELABEL t_wald (z_wald under bootdf(normal)) |
+| F049/F051 exchangeability, RI-t | HELP CAVEAT (exchangeability; not robust to atypical treated clusters; when permtstat helps) + CAUTION when cluster() == i and permtstat |
+| F052 p convention | HELP PARAGRAPH beside ritest's |s| c/n rule with the floors + a plain c/n cross-check option |
+| F050 few treated clusters | CAUTION when treated resampling clusters < 6, naming permute() and boottest; record the wild-bootstrap infeasibility verdict in the help |
+| F057 observation-level bootstrap on panels | do nothing |
+| F054 level() on analytic runs | ACCEPT level() on the analytic path; post e(level); pin against `set level` |
+| F040 bootdf(clusters) without cluster() | REFUSE with r(198) |
+| F039 Roth slope under bootstrap | do nothing (documented) |
+| F044 ptp level() | PASS level() into wooldid_ptp / part(roth) |
+| F032 dyex gate | MORE RESEARCH FIRST: J*b == margin identity under both forms; extend + lift the collapse ban only if it passes |
+| F043 permute(dose) mode | DEFER (standing issues) |
+| F046 bootcellsx names | PASS names() explicitly; assert the count |
+| F037 verbose collapse line | PRINT the fullprecisionslow reason |
+| F060 customvce collapse gate | do nothing (stays ineligible) |
+| F062 impvalues collapse gate | ADD the cluster variable to the key under impvalues; lift the refusal; F4 equivalence leg with a crossed cluster |
+| F061 collapse diagnostics | POST e(wdid_fcncell) and e(wdid_fcskip) |
+| F058 calibration simulations | RUN the extended mc_bootse / mc_ri (incl. the F001 unequal-cluster rerun) |
+| F059 rngstate | POST e(boot_rngstate)/e(perm_rngstate); seed + rngstate as characteristics in bootsave/permsave |
+| F063 bootsave resample | ADD w_<cluster> columns (all legs) + jointW/advW columns under boottstat |
+| F064 one-sided p | ADD NOW: P_lo/P_hi kernel rows, SE(p) + Clopper-Pearson CI, permside(left|right), bootstrap analogues |
+| F065 step-down multiplicity | BUILD the max-|studentized| step-down over the post horizons under permute() |
+| F066 runtime projection | PRINT a projection from replications 1-5 |
+| F067 BCa | BUILD (jackknife acceleration leg + bootdisplay(bca)) |
+| F012 contreat subgroup screen | MORE RESEARCH: construct the ame-singular / att-healthy case first |
+| F038 p prints 0 | PRINT '< 2/n' in the table and footer; e() keeps 0 |
+| F018 cell z0 comparator | MORE RESEARCH: how often the two z0 values differ on the assessment datasets |
+| Execution | start now in priority order: fixes, then small items, then features, then research and simulations; one commit per item with pins; ship record at the end |
+
+rseed(): confirmed available for both engines (bootstrap() from the start; permute() since d81fb85 with e(perm_seed)); F059 adds the rngstate record.
