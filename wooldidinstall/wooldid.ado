@@ -12242,8 +12242,9 @@ void wooldid_bootci(string scalar accname, string scalar obsbname, string scalar
 //    at every candidate value; the footer and the help carry that hedge.
 //  - quadratic-form statistics (joint pre-trend, across-subgroup equality, adversarial)
 //    are one-sided upper-tail on a FIXED metric: the permutation covariance of the
-//    draws (replications plus the observed comparator row, listwise complete), so W_obs
-//    and every W_r are exchangeable under the null. No per-replication covariance is
+//    draws (replications plus the observed comparator row, listwise complete; under a
+//    complete exact enumeration the enumerated rows alone, the observed assignment being
+//    one of them), so W_obs and every W_r are exchangeable under the null. No per-replication covariance is
 //    consumed, so the tests exist in both the coefficient and the t-ratio modes.
 //  - permabsp (absp = 1): the absolute-value convention instead - p = #{|s_r| >= |s_obs|}
 //    with the same add-one / plain-share rule - and the interval its symmetric dual,
@@ -12447,7 +12448,11 @@ void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar 
   n = sum(ok)
   st_local(outn, strofreal(n))
   if (n < 2) return
-  CC = select(A, ok) \ cm
+  // exact enumeration with every assignment complete: the observed assignment is one of
+  // the n rows already, so the comparator is NOT appended (it was counted twice until
+  // 2026-09-05, which shrank the metric and moved the exact-mode joint p-values)
+  exk = (M < . & n == M)
+  CC = (exk ? select(A, ok) : select(A, ok) \ cm)
   dev = CC :- mean(CC)
   R = Cm * ((dev' * dev) / (rows(CC) - 1)) * Cm'
   R = (R + R')/2
@@ -12466,7 +12471,6 @@ void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar 
     Wr[r] = d' * Si * d
   }
   st_matrix(outW, Wr)
-  exk = (M < . & n == M)
   nex = sum(select(Wr, Wr :< .) :>= Wobs)
   st_local(outwobs, strofreal(Wobs, "%21x"))
   if (exk) st_local(outp, strofreal(nex/n, "%21x"))
@@ -12500,7 +12504,10 @@ void wooldid_permadv(string scalar accname, string scalar cmpname, string scalar
   n = sum(ok)
   st_local(outn, strofreal(n))
   if (n < 2) return
-  CC = select(A, ok) \ cm
+  // same rule as wooldid_permqf: under complete exact enumeration the comparator is
+  // already one of the rows
+  exk = (M < . & n == M)
+  CC = (exk ? select(A, ok) : select(A, ok) \ cm)
   dev = CC :- mean(CC)
   V = (dev' * dev) / (rows(CC) - 1)
   q = .

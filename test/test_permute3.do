@@ -888,6 +888,38 @@ xrc Q15c 0 _rc
 cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(10)
 xrc Q15d 0 _rc
 
+* ================= Q16: exact enumeration and the fixed metric (fix 2026-09-05): when
+* every assignment is enumerated the observed assignment is one of the draws, so the
+* permutation covariance is formed from the draws alone (appending the comparator counted
+* it twice). Reconstruct W_obs and the plain-share p of joint_horiz from the draws ======
+mkperm3 6 3 3
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permexact jointtests
+xrc Q16a 0 _rc
+if _rc == 0 {
+  local bad 0
+  if e(perm_exact) != 1 | e(perm_completed) != e(perm_npossible) local ++bad
+  local rn : roweq e(wdidmainresults)
+  local k 0
+  local q16cols
+  foreach r of local rn {
+    local ++k
+    if "`r'" == "ES_att" & e(wdidmainresults)[`k', 7] < 0 local q16cols `q16cols' `k'
+  }
+  if wordcount("`q16cols'") < 2 local ++bad
+  cap local jc = colnumb(e(perm_jointW), "joint_horiz")
+  if _rc != 0 | `jc' >= . local ++bad
+  if `bad' == 0 {
+    mata: idx = strtoreal(tokens(st_local("q16cols"))); A = st_matrix("e(permdist_b)")[., idx']; ok = rowmissing(A) :== 0; A = select(A, ok); n = rows(A); d = st_matrix("e(perm_comparator_b)")[1, idx']'; dev = A :- mean(A); S = (dev' * dev) / (n - 1); W = d' * invsym(S) * d; Wr = st_matrix("e(perm_jointW)")[., `jc']; Wo = st_matrix("e(perm_jointWobs)")[1, `jc']; st_numscalar("__q16n", n); st_numscalar("__q16w", W); st_numscalar("__q16wo", Wo); st_numscalar("__q16p", sum(select(Wr, Wr :< .) :>= W)/n)
+    if __q16n != e(perm_npossible) local ++bad
+    if reldif(__q16w, __q16wo) > 1e-8 local ++bad
+    if reldif(__q16p, e(joint_horiz)) > 1e-12 local ++bad
+  }
+  if `bad' {
+    dis as error "Q16b FAIL: exact-mode joint test not reconstructable from the draws-only metric (n=`=__q16n', W=`=__q16w' vs posted `=__q16wo', p=`=__q16p' vs `=e(joint_horiz)')"
+    global pf = $pf + 1
+  }
+}
+
 * ================= Q11: a plain run after all of this is untouched by the engine ======
 mkperm3 8 4 3
 cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
