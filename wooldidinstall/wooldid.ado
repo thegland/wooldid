@@ -417,7 +417,16 @@ version 16.0
     * cell-level surfaces rewired to the bootstrap (ruling 2026-09-04): e(gteffects) columns
     * se/p/lb/ub and each e(cfx*) matrix's se/t/pvalue/ll/ul, per bootdisplay(); studentized
     * under boottstat from the replications' own cell standard errors
-    if "`gteffects'`makecfxplots'" != "" wooldid_bootcellsx , cell(`wdbcell') ncfx(`wdb_ncfx') bdisp(`bootdisplay') bts(`boottstat') level(`level') bootdf(`bootdf') nclus(`wdb_r_nclus') `ties'
+    if "`gteffects'`makecfxplots'" != "" {
+      * the cfx accumulators are numbered by wooldid_bootrun's existence count and named
+      * in its c_locals; pass the names explicitly (as the permute block does) rather than
+      * re-deriving them from e(wdid_cfxmats) by position (F046, 2026-09-06)
+      local wdb_cfxnames
+      forval wdk = 1/`wdb_ncfx' {
+        local wdb_cfxnames `wdb_cfxnames' `wdb_cfxname`wdk''
+      }
+      wooldid_bootcellsx , cell(`wdbcell') ncfx(`wdb_ncfx') names(`wdb_cfxnames') bdisp(`bootdisplay') bts(`boottstat') level(`level') bootdf(`bootdf') nclus(`wdb_r_nclus') `ties'
+    }
     * continuous-treatment plots, deferred like the event-study plots (author ruling
     * 2026-09-05): drawn from the rewired e(cfx*) matrices, so their bands are the
     * displayed bootstrap family's; the worker drew nothing and saved nothing under bootstrap()
@@ -6262,8 +6271,14 @@ version 16.0
   * accumulators filled in wooldid_bootrun. Same families and the same conventions as the
   * coefficient rows; se is the bootstrap SD (non-studentized) or the analytic cell se
   * (studentized). Twins are posted per family so every family is retrievable
-  syntax , cell(string) [ncfx(integer 0) bdisp(string) bts(string) level(real 0) bootdf(string) nclus(integer 0) ties]
+  syntax , cell(string) [ncfx(integer 0) names(string) bdisp(string) bts(string) level(real 0) bootdf(string) nclus(integer 0) ties]
   local bdisp = cond("`bdisp'" == "", "percentile", "`bdisp'")
+  * the accumulator index k pairs with the k-th NAME wooldid_bootrun recorded; a count
+  * mismatch would misalign the cell tables silently, so it is an error, not a fallback
+  if `ncfx' > 0 & `: word count `names'' != `ncfx' {
+    dis as error "Error: wooldid_bootcellsx received `ncfx' continuous-treatment cell accumulators but `: word count `names'' matrix names; the bootstrap cell rewiring cannot pair them. This is an internal inconsistency - please report it."
+    error 498
+  }
   * the shell's level() defaults to 0 (meaning c(level)); resolve it here exactly as the
   * coefficient-row rewiring does, else al = 0.5 collapses every interval onto the median
   if `level' == 0 local level 95
@@ -6303,8 +6318,7 @@ version 16.0
   }
   * ---- cfx matrices: cols b(1) se(2) t(3) pvalue(4) ll(5) ul(6) when the full shape is present
   forval c = 1/`ncfx' {
-    local nm `e(wdid_cfxmats)'
-    local nm : word `c' of `nm'
+    local nm : word `c' of `names'
     cap confirm matrix e(`nm')
     if _rc != 0 continue
     cap confirm matrix `cell'_cfx`c'
