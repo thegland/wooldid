@@ -586,3 +586,30 @@ on the pristine build). 18 `si20_*` suite configs, 208 ledger rows and the re-bl
 `test/baseline` accompany it. Judgment calls left to the author (df_a over-count from the absorbed
 ringer terms; the `ext_san_input_missing` all-zero-VCV knife edge; the permute pre-ame
 mis-centring under a real dose effect; the 24-minute cert suite) are in the ship record.
+
+
+### SI-19. Per-horizon permutation p-values (migrated from the standing issues 2026-09-06)
+
+- **SI-19 — per-horizon permutation p-values (author-ruled 2026-08-31: "we absolutely
+  should compute per horizon p values for the permutation tests", as a separate ticket).**
+  Today `permute()` reports statistics for the POOLED estimands only: `e(wdid_permest)` is
+  e.g. "att att_it" and `e(permdist)` carries exactly one column per estimand, with no
+  `ES_` entries anywhere (verified 2026-08-31). Yet every replication already computes the
+  full event-study horizon vector and discards it - measured at 16% of permute wall time,
+  and 43% under `permtstat` where each horizon's delta-method SE is computed and thrown
+  away too. So this feature costs almost nothing to add: the work is already being done.
+  WHY IT MATTERS: randomization inference exists precisely for the few-cluster setting
+  where analytic pre-trend tests are unreliable, so per-horizon RI p-values are wanted
+  exactly where they are hardest to get any other way.
+  IMPLEMENTATION NOTE: each replication's `e(b)` already carries the complete named
+  `ES_att_pre#/post#` vector, and `wooldid_bootrun` already performs exactly this
+  name-aligned accumulation (stacking rep vectors by column name with per-column
+  availability counts) - so the pattern to copy is in the file. Open questions for the
+  implementation: the e() naming for per-horizon results, the display surface, and whether
+  the 5th-95th null band and the add-one p-value carry the same interpretation per horizon
+  as they do pooled.
+  CONSEQUENCE FOR THE EFFICIENCY REVIEW: the "permute computes a discarded event study"
+  finding (16-43%) is hereby RETIRED as an efficiency item - the computation is not waste,
+  it is the input to this feature, and must NOT be gated off.
+
+**RESOLVED** (`1561386` 2026-09-05, extended 2026-09-06): under `permute()` every displayed p-value and interval is permutation-based, including every event-study horizon and the subgroup rows (the e(b)-aligned accumulator the ticket pointed to); per-element records live in `e(perm_p)`, `e(perm_ci)`, `e(perm_kernel)` and the twins named in the help's stored-results section. The 2026-09-06 execution (`review_process/qr_ship_2026-09-06.md`) added the one-sided shares `e(perm_p_lo)`/`e(perm_p_hi)`, `permside(left|right)`, the plain c/n `permrawp`, the Monte-Carlo precision record `e(perm_p_se)`/`e(perm_p_ci)`, and the max-|studentized| step-down over the post horizons (`e(perm_stepdown)`), which answers the ticket's open question about the per-horizon interpretation: the raw per-horizon p-values are exact under the sharp null but do not control the family-wise error rate; the step-down does. The efficiency-review item "permute computes a discarded event study" stays retired.

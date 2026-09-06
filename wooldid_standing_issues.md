@@ -704,28 +704,6 @@ inference). SI-5 (ame oversized under every VCE) = G1+G5 jointly; closes via R1+
   problems, PASS.
 
 
-- **SI-19 — per-horizon permutation p-values (author-ruled 2026-08-31: "we absolutely
-  should compute per horizon p values for the permutation tests", as a separate ticket).**
-  Today `permute()` reports statistics for the POOLED estimands only: `e(wdid_permest)` is
-  e.g. "att att_it" and `e(permdist)` carries exactly one column per estimand, with no
-  `ES_` entries anywhere (verified 2026-08-31). Yet every replication already computes the
-  full event-study horizon vector and discards it - measured at 16% of permute wall time,
-  and 43% under `permtstat` where each horizon's delta-method SE is computed and thrown
-  away too. So this feature costs almost nothing to add: the work is already being done.
-  WHY IT MATTERS: randomization inference exists precisely for the few-cluster setting
-  where analytic pre-trend tests are unreliable, so per-horizon RI p-values are wanted
-  exactly where they are hardest to get any other way.
-  IMPLEMENTATION NOTE: each replication's `e(b)` already carries the complete named
-  `ES_att_pre#/post#` vector, and `wooldid_bootrun` already performs exactly this
-  name-aligned accumulation (stacking rep vectors by column name with per-column
-  availability counts) - so the pattern to copy is in the file. Open questions for the
-  implementation: the e() naming for per-horizon results, the display surface, and whether
-  the 5th-95th null band and the add-one p-value carry the same interpretation per horizon
-  as they do pooled.
-  CONSEQUENCE FOR THE EFFICIENCY REVIEW: the "permute computes a discarded event study"
-  finding (16-43%) is hereby RETIRED as an efficiency item - the computation is not waste,
-  it is the input to this feature, and must NOT be gated off.
-
 ## D. Suite-side residuals (test infrastructure, not wooldid defects)
 
 - **SI-14 — NFADV unpost-path coverage.** The pooled-reference/degenerate-q
