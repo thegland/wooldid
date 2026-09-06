@@ -1124,5 +1124,69 @@ if mreldif(Q21D1, e(permdist_b)) != 0 {
 cap erase perm3_q21.txt
 cap erase perm3_q21.dta
 
+* ================= Q22 (F052/F064, 2026-09-06): the p-value conventions and the
+* Monte-Carlo precision record. From the same draws: permrawp = c/n |s| share with no
+* add-one; permside(left|right) = the one-sided add-one shares, which e(perm_p_lo) /
+* e(perm_p_hi) carry under every convention and whose 2*min is the default p; e(perm_p_se)
+* and e(perm_p_ci) follow the documented formulas; the conventions are mutually exclusive
+mkperm3 8 4 3
+qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(22)
+local q22n = e(perm_completed)
+matrix Q22D = e(permdist_b)
+matrix Q22C = e(perm_comparator_b)
+local q22p0 = e(perm_p)[1, 1]
+local q22lo = e(perm_p_lo)[1, 1]
+local q22hi = e(perm_p_hi)[1, 1]
+local q22se = e(perm_p_se)[1, 1]
+local q22cl = e(perm_p_ci)[1, 1]
+local q22ch = e(perm_p_ci)[2, 1]
+mata: D = st_matrix("Q22D")[., 1]; c = st_matrix("Q22C")[1, 1]; D = select(D, D :< .); n = rows(D); m0 = sum(D :<= c); m1 = sum(D :>= c); ma = sum(abs(D) :>= abs(c)); st_numscalar("q22_n", n); st_numscalar("q22_plo", (1 + m0)/(n + 1)); st_numscalar("q22_phi", (1 + m1)/(n + 1)); st_numscalar("q22_raw", ma/n); cc = min((m0, m1)); q = cc/n; st_numscalar("q22_se", 2*sqrt(q*(1 - q)/n)); st_numscalar("q22_cl", min((1, 2*(cc <= 0 ? 0 : invibeta(cc, n - cc + 1, .025))))); st_numscalar("q22_ch", min((1, 2*(cc >= n ? 1 : invibeta(cc + 1, n - cc, .975)))))
+di "Q22 n=`q22n'/" q22_n " p=" %10.8f `q22p0' " 2min=" %10.8f min(1, 2*min(q22_plo, q22_phi)) " lo=" %10.8f `q22lo' "/" %10.8f q22_plo " hi=" %10.8f `q22hi' "/" %10.8f q22_phi " se=" %10.8f `q22se' "/" %10.8f q22_se " ci=[" %8.6f `q22cl' "," %8.6f `q22ch' "] hand=[" %8.6f q22_cl "," %8.6f q22_ch "] pconv=`e(perm_pconv)'"
+if reldif(`q22p0', min(1, 2*min(q22_plo, q22_phi))) > 1e-12 | reldif(`q22lo', q22_plo) > 1e-12 | reldif(`q22hi', q22_phi) > 1e-12 ///
+   | reldif(`q22se', q22_se) > 1e-10 | reldif(`q22cl', q22_cl) > 1e-8 | reldif(`q22ch', q22_ch) > 1e-8 | "`e(perm_pconv)'" != "equaltailed" {
+  dis as error "Q22a FAIL: the tail-share / precision record does not reconstruct from the draws"
+  global pf = $pf + 1
+}
+mkperm3 8 4 3
+qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(22) permrawp
+local q22r = e(perm_p)[1, 1]
+di "Q22 permrawp p=" %10.8f `q22r' " hand c/n=" %10.8f q22_raw " pconv=`e(perm_pconv)' absp=" e(perm_absp)
+if reldif(`q22r', q22_raw) > 1e-12 | "`e(perm_pconv)'" != "raw" | e(perm_absp) != 0 {
+  dis as error "Q22b FAIL: permrawp is not the plain c/n absolute share"
+  global pf = $pf + 1
+}
+mkperm3 8 4 3
+qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(22) permside(left)
+local q22l = e(perm_p)[1, 1]
+local q22lconv `e(perm_pconv)'
+mkperm3 8 4 3
+qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(22) permside(right)
+local q22rt = e(perm_p)[1, 1]
+di "Q22 left p=" %10.8f `q22l' " (" %10.8f q22_plo ") right p=" %10.8f `q22rt' " (" %10.8f q22_phi ") convs=`q22lconv'/`e(perm_pconv)'"
+if reldif(`q22l', q22_plo) > 1e-12 | reldif(`q22rt', q22_phi) > 1e-12 | "`q22lconv'" != "left" | "`e(perm_pconv)'" != "right" {
+  dis as error "Q22c FAIL: permside() does not report the one-sided add-one share"
+  global pf = $pf + 1
+}
+mkperm3 8 4 3
+cap qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permside(up)
+xrc Q22d 198 _rc
+mkperm3 8 4 3
+cap qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permrawp permabsp
+xrc Q22e 198 _rc
+mkperm3 8 4 3
+cap qui wooldid y i t ttre, att cluster(i) permside(left)
+xrc Q22f 198 _rc
+* the bootstrap analogue: hidden e(boot_ptails) reconstructs from e(bootdist)
+mkperm3 8 4 3
+qui wooldid y i t ttre, att cluster(i) bootstrap(standard) reps(40) rseed(22)
+matrix Q22B = e(bootdist)
+matrix Q22T = e(boot_ptails)
+mata: D = st_matrix("Q22B")[., 1]; D = select(D, D :< .); n = rows(D); m0 = sum(D :<= 0); m1 = sum(D :>= 0); cc = min((m0, m1)); q = cc/n; st_numscalar("q22b_lo", m0/n); st_numscalar("q22b_hi", m1/n); st_numscalar("q22b_se", 2*sqrt(q*(1 - q)/n)); st_numscalar("q22b_cl", min((1, 2*(cc <= 0 ? 0 : invibeta(cc, n - cc + 1, .025))))); st_numscalar("q22b_ch", min((1, 2*(cc >= n ? 1 : invibeta(cc + 1, n - cc, .975)))))
+di "Q22 boot_ptails: lo=" Q22T[1,1] "/" q22b_lo " hi=" Q22T[2,1] "/" q22b_hi " se=" Q22T[3,1] "/" q22b_se " ci=[" Q22T[4,1] "," Q22T[5,1] "] hand=[" q22b_cl "," q22b_ch "]"
+if reldif(Q22T[1,1], q22b_lo) > 1e-12 | reldif(Q22T[2,1], q22b_hi) > 1e-12 | reldif(Q22T[3,1], q22b_se) > 1e-10 | reldif(Q22T[4,1], q22b_cl) > 1e-8 | reldif(Q22T[5,1], q22b_ch) > 1e-8 {
+  dis as error "Q22g FAIL: e(boot_ptails) does not reconstruct from e(bootdist)"
+  global pf = $pf + 1
+}
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"
