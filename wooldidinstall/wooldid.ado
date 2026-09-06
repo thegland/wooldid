@@ -4879,7 +4879,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * bootstrap() absent it enforces the stray-companion screen and exits. it sits AFTER
   * the safetyinput capture above deliberately - the bayes cell-weighted gate keys on
   * the user's own safety() value (contreatwithin rewrites the working copy later)
-  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower')
+  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') `replace'
   if _rc != 0 error _rc
 
   * register verbose retention with the shell's error-path cleanup epilogue (top of this
@@ -5857,7 +5857,7 @@ version 16.0
 *** commit-B state: the full gate set is live, but a passing call still exits r(198)
 *** loudly at the tail - the engine lands in a later commit and the option must never
 *** silently no-op before then (the F6 commit-A precedent).
-  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ifr(string asis) jt(string) ptp(string asis)]
+  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ifr(string asis) jt(string) ptp(string asis) replace]
 
   * stray-companion screen: every companion requires the master option
   if "`bootstrap'" == "" {
@@ -5910,6 +5910,22 @@ version 16.0
     if `badseed' {
       dis as error "Error: rseed() must be an integer between 0 and 2,147,483,647 (it is passed to set seed)."
       error 198
+    }
+  }
+  * bootsave(): the name rules (plain file name, cwd, replace to overwrite) are checked
+  * here BEFORE the replication loop runs. Until 2026-09-05 only wooldid_bootsave checked
+  * them, after the loop, so a name clash cost the whole run (permsave() checks in permctl)
+  if "`bsave'" != "" {
+    local wdbfn `bsave'
+    if lower(substr("`wdbfn'", -4, 4)) == ".dta" local wdbfn = substr("`wdbfn'", 1, strlen("`wdbfn'") - 4)
+    if strpos("`wdbfn'", "/") | strpos("`wdbfn'", "\") | "`wdbfn'" == "" {
+      dis as error "Error: bootsave() takes a plain file name (no directory part); the file is written to the current working directory."
+      error 198
+    }
+    cap confirm file "`wdbfn'.dta"
+    if _rc == 0 & "`replace'" == "" {
+      dis as error "Error: bootsave(`wdbfn') - `wdbfn'.dta already exists in the working directory; add the replace option to overwrite it."
+      error 602
     }
   }
   if "`bootalpha'" != "" {

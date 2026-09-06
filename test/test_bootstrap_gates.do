@@ -247,5 +247,29 @@ cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) 
 chk 16e 0 _rc
 cap erase "boot_gates_g16.dta"
 
+
+* G17 bootsave() name rules are checked BEFORE the replication loop (review 2026-09-05):
+* a clash or a bad name is refused with nothing posted (e(boot_reps) absent), where it
+* used to surface only after every replication had run
+use `panel', clear
+qui save "boot_gates_g17.dta", replace
+ereturn clear
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(15) rseed(7) bootsave(boot_gates_g17)
+chk 17 602 _rc
+cap confirm scalar e(boot_reps)
+if _rc == 0 {
+  di as error "G17b FAIL: e(boot_reps) is posted, so the replication loop ran before the bootsave() clash was refused"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+ereturn clear
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(15) rseed(7) bootsave(sub/boot_gates_g17)
+chk 17c 198 _rc
+cap confirm scalar e(boot_reps)
+if _rc == 0 {
+  di as error "G17d FAIL: e(boot_reps) is posted after a bad bootsave() name"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase "boot_gates_g17.dta"
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
