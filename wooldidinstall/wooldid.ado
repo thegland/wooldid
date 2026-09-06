@@ -6024,6 +6024,13 @@ version 16.0
   * correction when the number of clusters is modest; a positive integer sets the
   * degrees of freedom directly
   if "`bootdf'" != "" {
+    * bootdf(clusters) without cluster() used to resolve silently to t(N-1) - the
+    * observation count is the resampling-unit count there (quality review 2026-09-05
+    * F040, author ruling 2026-09-06: refuse rather than substitute)
+    if "`bootdf'" == "clusters" & "`clus'" == "" {
+      dis as error "Error: bootdf(clusters) requires cluster(): without it the resampling unit is the observation, so the cluster-count degrees of freedom would silently be t(N-1), indistinguishable from the normal. Use bootdf(normal) - the default without cluster() - or give the degrees of freedom as a positive integer."
+      error 198
+    }
     if !inlist("`bootdf'", "normal", "clusters") {
       cap confirm number `bootdf'
       local baddf = _rc != 0

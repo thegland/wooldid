@@ -496,5 +496,32 @@ if strpos(`"`lg'"', "bootstrap event-study covariance is unavailable") > 0 {
 }
 cap erase boot_gates_g26.txt
 
+* G27 (F040, 2026-09-06) bootdf(clusters) without cluster() is refused (198) instead of
+* resolving silently to t(N-1); bootdf(normal) and an integer stay legal unclustered
+use `panel', clear
+qui log using boot_gates_g27.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att bootstrap(standard) reps(10) rseed(7) bootdf(clusters)
+local g27rc = _rc
+qui log close bg
+chk 27 198 `g27rc'
+local lg = fileread("boot_gates_g27.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "bootdf(clusters) requires cluster()") == 0 {
+  di as error "G27b FAIL: the refusal message does not name the requirement"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g27.txt
+use `panel', clear
+cap qui wooldid y unit t ttre, att bootstrap(standard) reps(10) rseed(7) bootdf(normal)
+chk 27c 0 _rc
+use `panel', clear
+cap qui wooldid y unit t ttre, att bootstrap(standard) reps(10) rseed(7) bootdf(11)
+chk 27d 0 _rc
+if e(boot_df) != 11 {
+  di as error "G27e FAIL: an integer bootdf() unclustered must post e(boot_df) = 11, got " e(boot_df)
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
