@@ -996,5 +996,50 @@ foreach f of local gl {
   cap erase `f'
 }
 
+* ================= Q19: the permreps resolution caution (F036, 2026-09-06): below 39
+* replications the default equal-tailed p cannot reach .05, so a caution names the floor;
+* it is silent at 40 and silent under permabsp at 20 (1/21 < .05) ======================
+mkperm3 8 4 3
+qui log using perm3_q19.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) rseed(19)
+local rc = _rc
+qui log close p3
+xrc Q19a 0 `rc'
+local lg = fileread("perm3_q19.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local lg = subinstr(`"`lg'"', char(10), " ", .)
+if strpos(`"`lg'"', "smallest attainable permutation p-value is 0.095 (2/(permreps + 1))") == 0 {
+  dis as error "Q19b FAIL: no resolution caution at permreps(20)"
+  global pf = $pf + 1
+}
+mkperm3 8 4 3
+qui log using perm3_q19.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(19)
+local rc = _rc
+qui log close p3
+xrc Q19c 0 `rc'
+local lg = fileread("perm3_q19.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "smallest attainable permutation p-value") > 0 {
+  dis as error "Q19d FAIL: the resolution caution fired at permreps(40)"
+  global pf = $pf + 1
+}
+mkperm3 8 4 3
+qui log using perm3_q19.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permabsp rseed(19)
+local rc = _rc
+qui log close p3
+xrc Q19e 0 `rc'
+local lg = fileread("perm3_q19.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if strpos(`"`lg'"', "smallest attainable permutation p-value") > 0 {
+  dis as error "Q19f FAIL: the resolution caution fired under permabsp at permreps(20)"
+  global pf = $pf + 1
+}
+cap erase perm3_q19.txt
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

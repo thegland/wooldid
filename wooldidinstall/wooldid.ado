@@ -4946,7 +4946,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * run down the no-SE path it is about to be studentized against
   if "`permtci'" != "" & "`permtstat'" == "" local permtstat permtstat
   if "`permute'" != "" {
-    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safety') psave(`permsave') level(`level') `replace'
+    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safety') psave(`permsave') level(`level') `replace'
     if _rc != 0 error _rc
   }
 
@@ -5693,7 +5693,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) replace]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) replace]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -5769,6 +5769,14 @@ version 16.0
   if `permreps' > 0 & `permreps' < 20 {
     dis as error "Error: permreps() must be at least 20: the engine refuses inference on fewer than 20 completed replications, so a smaller request can only ever burn the run."
     error 198
+  }
+  * F036 (quality review 2026-09-05, author ruling 2026-09-06: caution, floor stays 20). The
+  * sampled-draw p-value has floor 2/(permreps + 1) under the default equal-tailed
+  * convention (1/(permreps + 1) under permabsp), so below 39 replications a 5% rejection
+  * is unreachable by construction and every row prints the floor as if it were evidence
+  if `permreps' > 0 & "`permexact'" == "" {
+    local wdp_floor = cond("`absp'" != "", 1/(`permreps' + 1), 2/(`permreps' + 1))
+    if `wdp_floor' > .05 dis as text "Caution: with permreps(`permreps') the smallest attainable permutation p-value is " %5.3f `wdp_floor' " (" cond("`absp'" != "", "1", "2") "/(permreps + 1)), above .05, so no result can reject at the 5% level whatever the data say, and a p-value printed at that floor is the resolution limit rather than evidence. Use at least " cond("`absp'" != "", "20", "40") " replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002)."
   }
   if "`permmethod'" == "probabilities" {
     cap confirm numeric variable `clus'
