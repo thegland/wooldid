@@ -613,7 +613,7 @@ local p30 = e(wdidmainresults)[rowsof(e(wdidmainresults)), 4]
 local lg = fileread("boot_gates_g30.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-if `p30' != 0 | strpos(`"`lg'"', "p = 0 above means p < 0.200 (2/10 completed replications") == 0 | strpos(`"`lg'"', "The rank-based p-values have resolution 2/10 = 0.200") == 0 {
+if `p30' != 0 | strpos(`"`lg'"', "p = 0 above means p < 0.200 (2/10 completed replications") == 0 | strpos(`"`lg'"', "The rank-based coefficient p-values have resolution 2/10 = 0.200") == 0 {
   di as error "G30b FAIL: the p = 0 resolution line/footer did not print (att p = `p30')"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
