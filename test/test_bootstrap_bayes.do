@@ -52,7 +52,10 @@ if `w1' > 1e-12 {
   local ++fails
 }
 
-* ---- O2: equal alpha vs rwgen priorpowers(-n_c)
+* ---- O2: equal alpha vs rwgen priorpowers(-n_c). rwgen's weight is p_c / n_c per row;
+* since 2026-09-06 (quality-review F001) the engine multiplies every row of cluster c by
+* p_c itself, so the oracle is rwgen's weight times n_c (identical on this balanced
+* fixture up to scale, which aweights ignore; O2c below is the discriminating case)
 mkpan
 qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(8) rseed(555) bootalpha(equal)
 matrix ENG2 = e(bootdist)
@@ -62,7 +65,8 @@ gen double pv = -nc
 rwgen bayes RE, reps(8) id(unit) priorpowers(pv) rseed(555)
 matrix MAN2 = J(8, `engK', .)
 forval r = 1/8 {
-  qui wooldid y unit t ttre [aw=RE`r'], att cluster(unit) esprelength(1) espostlength(1) fastnose
+  qui gen double REx`r' = RE`r' * nc
+  qui wooldid y unit t ttre [aw=REx`r'], att cluster(unit) esprelength(1) espostlength(1) fastnose
   matrix MAN2[`r', 1] = e(b)
 }
 local w2 0
@@ -74,6 +78,71 @@ forval r = 1/8 {
 di "O2_ORACLE_EQUAL_MAXRELDIF=" `w2'
 if `w2' > 1e-12 {
   di as error "O2 FAIL"
+  local ++fails
+}
+
+* ---- O2c: the discriminating case - UNBALANCED clusters (12 states of 1..12 units, T = 8,
+* odd states treated at t = 5 with tau_s = 0.1 n_s; the design the review measured), where
+* the old p_c / W_c split gave every state the same total mass whatever its size and
+* centred the replications on the equal-cluster estimand. The engine must equal the
+* rwgen-times-n_c oracle here too, and its replication mean must sit beside the standard
+* engine's (Rubin: the first two moments match the pairs cluster bootstrap)
+cap prog drop mkpan_unb
+prog def mkpan_unb
+  clear
+  set obs 12
+  gen state = _n
+  gen nunits = _n
+  expand nunits
+  gen unit = _n
+  gen ttre = cond(mod(state, 2) == 1, 5, .)
+  expand 8
+  bysort unit: gen t = _n
+  set seed 12
+  gen y = (0.1*nunits)*(t>=ttre & ttre<.) + 0.1*state + 0.05*t + rnormal()
+end
+mkpan_unb
+qui wooldid y unit t ttre, att cluster(state) bootstrap(bayes) reps(8) rseed(555)
+matrix ENG2c = e(bootdist)
+local engKc = colsof(ENG2c)
+local attobs = e(b)[1, 1]
+mkpan_unb
+bysort state: gen double nc = _N
+gen double pv = -nc
+rwgen bayes RU, reps(8) id(state) priorpowers(pv) rseed(555)
+matrix MAN2c = J(8, `engKc', .)
+forval r = 1/8 {
+  qui gen double RUx`r' = RU`r' * nc
+  qui wooldid y unit t ttre [aw=RUx`r'], att cluster(state) fastnose
+  matrix MAN2c[`r', 1] = e(b)
+}
+local w2c 0
+forval r = 1/8 {
+  forval c = 1/`engKc' {
+    local w2c = max(`w2c', reldif(ENG2c[`r',`c'], MAN2c[`r',`c']))
+  }
+}
+di "O2c_ORACLE_EQUAL_UNBALANCED_MAXRELDIF=" `w2c'
+if `w2c' > 1e-12 {
+  di as error "O2c FAIL: unbalanced-panel equal-alpha engine is not rwgen x n_c"
+  local ++fails
+}
+* Rubin's cluster Bayesian bootstrap shares its first two moments with the pairs cluster
+* bootstrap, so the equal-alpha replication mean must sit beside the standard engine's on
+* the same data (the old split put it at the equal-cluster estimand, 0.7 away on this
+* fixture); the size-alpha mean is printed for reference
+mkpan_unb
+qui wooldid y unit t ttre, att cluster(state) bootstrap(bayes) reps(80) rseed(556)
+mata: st_numscalar("o2c_mean", mean(select(st_matrix("e(bootdist)")[., 1], st_matrix("e(bootdist)")[., 1] :< .)))
+mkpan_unb
+qui wooldid y unit t ttre, att cluster(state) bootstrap(standard) reps(80) rseed(556)
+mata: st_numscalar("o2c_meanstd", mean(select(st_matrix("e(bootdist)")[., 1], st_matrix("e(bootdist)")[., 1] :< .)))
+mkpan_unb
+qui wooldid y unit t ttre, att cluster(state) bootstrap(bayes) reps(80) rseed(556) bootalpha(size)
+mata: st_numscalar("o2c_meansz", mean(select(st_matrix("e(bootdist)")[., 1], st_matrix("e(bootdist)")[., 1] :< .)))
+di "O2c_MEAN_EQUAL=" o2c_mean " MEAN_STANDARD=" o2c_meanstd " MEAN_SIZE=" o2c_meansz " ATT=" `attobs'
+if abs(o2c_mean - o2c_meanstd) > 0.15 {
+  di as error "O2c FAIL: equal-alpha replication mean " o2c_mean " is not beside the standard engine's " o2c_meanstd
   local ++fails
 }
 

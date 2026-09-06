@@ -7834,12 +7834,13 @@ version 16.0
 *** rep loop as nested fastnose wooldid calls under reweighted [aw/pw], and
 *** accumulates the FULL rep e(b) vectors name-aligned into the caller's matrix.
 *** bayes semantics (2026-08-30; default flipped to bootalpha(equal) on the MC evidence
-*** in review_process/bootstrap_report_2026-08-30.md section 4): cluster c receives total
-*** Dirichlet mass draw_c; within the cluster the mass is split in proportion to existing
-*** weights (row multiplier = draw_c / W_c, W_c = cluster base-weight total). This matches
-*** bayesboot BITWISE on unweighted data under bootalpha(size) and rwgen with
-*** priorpowers(-n_c) under bootalpha(equal), the default. (The /W_c split's estimand
-*** under equal is a live review question, quality review 2026-09-05.)
+*** in review_process/bootstrap_report_2026-08-30.md section 4; the equal-alpha row
+*** multiplier corrected 2026-09-06, quality-review F001): cluster c draws Dirichlet mass
+*** draw_c. Under bootalpha(equal) every row of the cluster is multiplied by draw_c (cluster
+*** total = W_c * draw_c, Rubin's cluster Bayesian bootstrap, centred on the observation-
+*** weighted estimand); under bootalpha(size) the mass is split over the cluster's base
+*** weight (row multiplier = draw_c / W_c), which matches bayesboot BITWISE on unweighted
+*** data. The rwgen priorpowers(-n_c) oracle for equal is its weights times n_c.
   syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string)]
 
   if `dots' == -1 local dots 1
@@ -10992,7 +10993,14 @@ void wooldid_bootdw(string scalar fr, string scalar amode, real scalar R, string
     }
   }
   P = E :/ colsum(E)
-  P = P :/ W
+  // bootalpha(size) only: split the cluster's mass over its base weight so that every row
+  // carries p_c / W_c - the bayesboot / rwgen priorpowers convention. Under bootalpha(equal)
+  // (the default) every row carries p_c itself, so the cluster's TOTAL replicate mass is
+  // W_c * p_c: Rubin's Bayesian bootstrap with clusters as the exchangeable units, whose
+  // replications stay centred on the observation-weighted estimand. Until 2026-09-06 the
+  // split applied under equal too, which centred the replications on the equal-cluster-
+  // weighted estimand (rep mean .80 vs att 1.69 on a 12-state unbalanced fixture)
+  if (amode == "size") P = P :/ W
   st_matrix(outname, P)
 }
 
