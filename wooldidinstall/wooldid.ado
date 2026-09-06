@@ -8184,7 +8184,8 @@ version 16.0
       cap frame drop `wdbrf'
       if `dots' > 0 {
         if `badrep' dis as error "x" _continue
-        else dis as text "." _continue
+        else if mod(`r', `dots') == 0 dis as text "." _continue
+        if mod(`r', 50*`dots') == 0 dis as text " " `r' _newline "  " _continue
       }
       continue
     }
