@@ -142,7 +142,10 @@ forval m = `FIRST'/`LAST' {
       reps(`REPS') rseed(`=800000 + `m'') dots(0) safety(off)
   local std_rc = _rc
   if `std_rc' == 0 {
-    matrix `M' = e(wdidmainresults)
+    * the Wald family (estimate +/- z * bootstrap SE): the arms compare a normal-theory
+    * interval with the prefix's; the displayed table carries the percentile family by
+    * default since 2026-09-04
+    matrix `M' = e(boot_wald_mainresults)
     local b        = el(`M',1,1)
     local std_se   = el(`M',1,2)
     local std_lb   = el(`M',1,5)
@@ -161,7 +164,7 @@ forval m = `FIRST'/`LAST' {
       reps(`REPS') rseed(`=810000 + `m'') dots(0) safety(off)
   local bayeq_rc = _rc
   if `bayeq_rc' == 0 {
-    matrix `M2' = e(wdidmainresults)
+    matrix `M2' = e(boot_wald_mainresults)
     local bayeq_se = el(`M2',1,2)
     local bayeq_lb = el(`M2',1,5)
     local bayeq_ub = el(`M2',1,6)
@@ -174,7 +177,7 @@ forval m = `FIRST'/`LAST' {
         bootalpha(size) reps(`REPS') rseed(`=820000 + `m'') dots(0) safety(off)
     local baysz_rc = _rc
     if `baysz_rc' == 0 {
-      matrix `M3' = e(wdidmainresults)
+      matrix `M3' = e(boot_wald_mainresults)
       local baysz_se = el(`M3',1,2)
       local baysz_lb = el(`M3',1,5)
       local baysz_ub = el(`M3',1,6)

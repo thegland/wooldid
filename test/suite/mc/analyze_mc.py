@@ -59,7 +59,7 @@ def verdict(name, ok, marginal=None, detail=""):
 # ---------------- M1: RI size ----------------
 RI_BAND_05 = (11, 29)     # prereg counts, M=400
 RI_BAND_10 = (28, 52)
-BAND_COV = (348, 372)     # comparator in [lb,ub], Binomial(400,.90)
+BAND_COV = (371, 389)     # comparator in [lb,ub], Binomial(400,.95): the null band follows level() (default 95) since 310fa61
 TCI_COV = (371, 389)      # 0 in [tlb,tub], Binomial(400,.95)
 
 L.append("# MC calibration report\n")

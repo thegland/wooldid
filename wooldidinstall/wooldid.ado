@@ -7832,12 +7832,13 @@ version 16.0
 *** generates the Dirichlet draw matrix (mata, rwgen-bitwise arithmetic), runs the
 *** rep loop as nested fastnose wooldid calls under reweighted [aw/pw], and
 *** accumulates the FULL rep e(b) vectors name-aligned into the caller's matrix.
-*** bayes semantics (locked 2026-08-30): cluster c receives total Dirichlet mass
-*** draw_c; within the cluster the mass is split in proportion to existing weights
-*** (row multiplier = draw_c / W_c, W_c = cluster base-weight total). This matches
-*** bayesboot BITWISE on unweighted data (bootalpha(size), the default) and rwgen
-*** with priorpowers(-n_c) for bootalpha(equal), and is the Rubin generalization
-*** for weighted data ("multiply existing weights by the cluster draw").
+*** bayes semantics (2026-08-30; default flipped to bootalpha(equal) on the MC evidence
+*** in review_process/bootstrap_report_2026-08-30.md section 4): cluster c receives total
+*** Dirichlet mass draw_c; within the cluster the mass is split in proportion to existing
+*** weights (row multiplier = draw_c / W_c, W_c = cluster base-weight total). This matches
+*** bayesboot BITWISE on unweighted data under bootalpha(size) and rwgen with
+*** priorpowers(-n_c) under bootalpha(equal), the default. (The /W_c split's estimand
+*** under equal is a live review question, quality review 2026-09-05.)
   syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string)]
 
   if `dots' == -1 local dots 1
@@ -9530,6 +9531,7 @@ version 16.0
     dis as result "Cohort-by-Relative-Period Effects (regression scale; full table incl. weight totals in e(gteffects)):"
     if "`poisson'" == "poisson" dis as text "Note: under poisson these are on the linear-index (xb) scale; poisexpresults/semielasticity adjustments are not applied."
     if "`e(perm_gt_blank)'" == "1" dis as text "Note: under permute() these cells have no permutation distribution (their keys are cohort onsets, which the replications reassign), so their inference columns are blank; rows outside the reported event-study window have inwindow = 0."
+    else if "`e(boot_method)'" != "" dis as text "Note: under bootstrap() the se, p, lb and ub columns are the `e(boot_gteffects_family)' bootstrap family of each cell's own replications (every family is stored in e(boot_*_gteffects)); rows outside the reported event-study window have inwindow = 0."
     else dis as text "Note: standard errors are the stage-1 regression's coefficient-level VCE; rows outside the reported event-study window have inwindow = 0."
     if `gtrows' <= 200 {
       tempname gtds
@@ -10993,8 +10995,8 @@ void wooldid_bootdw(string scalar fr, string scalar amode, real scalar R, string
 // error, and the observed statistic t_obs = b_obs/se_obs uses the observed run's
 // same-formula (analytic) standard error - the two have to be the same functional or the
 // statistic is not asymptotically pivotal and the refinement is lost. The tail count is
-// add-one, matching the permutation engine's convention, and the critical value is the
-// level-th order statistic of the sorted |t_r|, the rule wooldid_bootci already uses.
+// the rank of t_obs among the t_r WITHOUT add-one (see below: the p and the critical
+// value share one order-statistic rule, the one wooldid_bootci already uses).
 // Columns with fewer than 2 usable replications, or no usable observed standard error,
 // return missing and the caller leaves the Wald numbers in place.
 void wooldid_boottp(string scalar accname, string scalar seaccname, string scalar obsbname,
