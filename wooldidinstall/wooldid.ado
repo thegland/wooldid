@@ -7103,9 +7103,11 @@ version 16.0
       }
     }
     if `dots' > 0 {
+      * one mark every dots() replications - the documented cadence (a failed
+      * replication always prints its x) - with the count after every 50 marks
       if `badrep' dis as error "x" _continue
-      else dis as text "." _continue
-      if mod(`r', 50) == 0 dis as text " " `r' _newline "  " _continue
+      else if mod(`r', `dots') == 0 dis as text "." _continue
+      if mod(`r', 50*`dots') == 0 dis as text " " `r' _newline "  " _continue
     }
   }
   if `dots' > 0 dis as text " done"
@@ -8214,9 +8216,11 @@ version 16.0
     if `badrep' == 0 local ++ndone
     else local ++nfail
     if `dots' > 0 {
+      * one mark every dots() replications - the documented cadence (a failed
+      * replication always prints its x) - with the count after every 50 marks
       if `badrep' dis as error "x" _continue
-      else dis as text "." _continue
-      if mod(`r', 50) == 0 dis as text " " `r' _newline "  " _continue
+      else if mod(`r', `dots') == 0 dis as text "." _continue
+      if mod(`r', 50*`dots') == 0 dis as text " " `r' _newline "  " _continue
     }
   }
   if `dots' > 0 dis as text " done"

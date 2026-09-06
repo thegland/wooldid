@@ -942,6 +942,29 @@ if _rc == 0 {
   }
 }
 
+* ================= Q18: dots(#) under permute(): one mark every # replications ========
+mkperm3 8 4 3
+qui log using perm3_q18.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) dots(10)
+local rc = _rc
+qui log close p3
+xrc Q18a 0 `rc'
+local lg = fileread("perm3_q18.txt")
+local p0 = strpos(`"`lg'"', "Permutation replications (20): ")
+if `p0' == 0 {
+  dis as error "Q18b FAIL: no progress line in the log"
+  global pf = $pf + 1
+}
+else {
+  local seg = substr(`"`lg'"', `p0' + 31, 300)
+  local seg = substr(`"`seg'"', 1, strpos(`"`seg'"', "done") - 1)
+  local nd = length(`"`seg'"') - length(subinstr(`"`seg'"', ".", "", .))
+  if `nd' != 2 {
+    dis as error "Q18c FAIL: dots(10) with permreps(20) printed `nd' marks (expected 2)"
+    global pf = $pf + 1
+  }
+}
+
 * ================= Q11: a plain run after all of this is untouched by the engine ======
 mkperm3 8 4 3
 cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
@@ -954,7 +977,7 @@ if _rc == 0 {
 }
 
 cap erase perm3_q1.dta
-foreach f in perm3_q1.txt perm3_q1r.txt perm3_q5.txt perm3_q7.txt perm3_q7b.txt perm3_q12.txt perm3_q13.txt perm3_q14.txt perm3_q15.txt perm3_q16.txt perm3_q17.txt {
+foreach f in perm3_q1.txt perm3_q1r.txt perm3_q5.txt perm3_q7.txt perm3_q7b.txt perm3_q12.txt perm3_q13.txt perm3_q14.txt perm3_q15.txt perm3_q16.txt perm3_q17.txt perm3_q18.txt {
   cap erase `f'
 }
 cap erase perm3_q1_ES.dta

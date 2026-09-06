@@ -351,5 +351,31 @@ foreach f in boot_gates_g20_ES_att.gph boot_gates_g20_ES.dta {
   cap erase "`f'"
 }
 
+
+* G21 dots(#) prints one mark every # replications, as documented (every replication
+* printed a mark whatever # was, until 2026-09-05)
+use `panel', clear
+qui log using boot_gates_g21.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20) rseed(7) dots(5)
+local g21rc = _rc
+qui log close bg
+chk 21 0 `g21rc'
+local lg = fileread("boot_gates_g21.txt")
+local p0 = strpos(`"`lg'"', "Bootstrap replications (20): ")
+if `p0' == 0 {
+  di as error "G21b FAIL: no progress line in the log"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+else {
+  local seg = substr(`"`lg'"', `p0' + 29, 300)
+  local seg = substr(`"`seg'"', 1, strpos(`"`seg'"', "done") - 1)
+  local nd = length(`"`seg'"') - length(subinstr(`"`seg'"', ".", "", .))
+  if `nd' != 4 {
+    di as error "G21c FAIL: dots(5) with reps(20) printed `nd' marks (expected 4)"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+}
+cap erase boot_gates_g21.txt
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
