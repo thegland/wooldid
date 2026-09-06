@@ -2341,8 +2341,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       local se = r(se)
       local imt = r(t)
       local imp = r(p)
-      local im_ll = `b' + invt(r(df_t),.025)*`se'
-      local im_ul = `b' - invt(r(df_t),.025)*`se'
+      local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
+      local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
       if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
         local se .
         local imt .
@@ -2390,8 +2390,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         local se = r(se)
         local imt = r(t)
         local imp = r(p)
-        local im_ll = `b' + invt(r(df_t),.025)*`se'
-        local im_ul = `b' - invt(r(df_t),.025)*`se'
+        local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
+        local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
         if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
           local se .
           local imt .
@@ -2503,8 +2503,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             local se = r(se)
             local imt = r(t)
             local imp = r(p)
-            local im_ll = `b' + invt(r(df_t),.025)*`se'
-            local im_ul = `b' - invt(r(df_t),.025)*`se'
+            local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
+            local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
             if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
               local se .
               local imt .
@@ -2601,8 +2601,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         local se = r(se)
         local imt = r(t)
         local imp = r(p)
-        local im_ll = `b' + invt(r(df_t),.025)*`se'
-        local im_ul = `b' - invt(r(df_t),.025)*`se'
+        local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
+        local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
         if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
           local se .
           local imt .
@@ -2654,8 +2654,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           local se = r(se)
           local imt = r(t)
           local imp = r(p)
-          local im_ll = `b' + invt(r(df_t),.025)*`se'
-          local im_ul = `b' - invt(r(df_t),.025)*`se'
+          local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
+          local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
           if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
             local se .
             local imt .
@@ -2981,8 +2981,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               local se = r(se)
               local imt = r(t)
               local imp = r(p)
-              local im_ll = `b' + invt(r(df_t),.025)*`se'
-              local im_ul = `b' - invt(r(df_t),.025)*`se'
+              local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
+              local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
               if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
                 local se .
                 local imt .

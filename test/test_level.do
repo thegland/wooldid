@@ -13,6 +13,8 @@
 *    and c(level) restored after the replication loop
 * L9 the stray-companion screen no longer refuses level() without an engine, and the
 *    range check still refuses level(5)
+* L11 impvalues at level(90): the Ibragimov-Muller interval follows level() (bug sweep BS-5);
+*    b/se/t/p bit-identical to the default run, the 95% interval pinned, columns lb_90ci
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -183,6 +185,28 @@ di "L10 set-level-90: boot cols=[`l10bc'] e(boot_level)=`l10bl' mreldif vs level
 if !`: list posof "lb_90ci" in l10bc' | `l10bl' != 90 | mreldif(L10B, L10Bx) != 0 | mreldif(L10BP, L10BPx) != 0 ///
    | !`: list posof "lb_90ci" in l10pc' | `l10pl' != 90 | mreldif(L10P, L10Px) != 0 | c(level) != 95 {
   di as error "L10 FAIL: an unspecified level() under set level 90 does not match level(90) on the engines"
+  local ++fails
+}
+
+* ---- L11 impvalues: the hand-built IM interval follows level() (BS-5)
+use data/dta_binary.dta, clear
+qui wooldid y i t ttre, att cluster(i) impvalues esprelength(2) espostlength(2)
+matrix L11A = e(wdidmainresults)
+use data/dta_binary.dta, clear
+qui wooldid y i t ttre, att cluster(i) impvalues esprelength(2) espostlength(2) level(90)
+matrix L11B = e(wdidmainresults)
+local l11bc : colnames L11B
+local l11lv = e(level)
+local l11rn : rownames L11A
+local k : list posof "att" in l11rn
+local hw95 = (L11A[`k',6] - L11A[`k',5])/(2*L11A[`k',2])
+local hw90 = (L11B[`k',6] - L11B[`k',5])/(2*L11B[`k',2])
+mata: st_local("d14", strofreal(max(abs(st_matrix("L11B")[., 1..4] - st_matrix("L11A")[., 1..4]))))
+di "L11 impvalues att b=" %10.8f L11A[`k',1] " se=" %10.8f L11A[`k',2] " 95 int=[" %10.8f L11A[`k',5] "," %10.8f L11A[`k',6] "] hw/se=" %9.6f `hw95' " vs invttail(49,.025)=" %9.6f invttail(49,.025) " | level(90) int=[" %10.8f L11B[`k',5] "," %10.8f L11B[`k',6] "] hw/se=" %9.6f `hw90' " vs invttail(49,.05)=" %9.6f invttail(49,.05) " cols=[`l11bc'] e(level)=`l11lv' |b..p diff|=`d14'"
+if abs(L11A[`k',5] - .61519121) > 1e-7 | abs(L11A[`k',6] - .87494362) > 1e-7 | abs(`hw95' - invttail(49,.025)) > 1e-6 ///
+   | abs(`hw90' - invttail(49,.05)) > 1e-6 | abs(L11B[`k',5] - .63671413) > 1e-7 | abs(L11B[`k',6] - .85342071) > 1e-7 ///
+   | `d14' != 0 | !`: list posof "lb_90ci" in l11bc' | `l11lv' != 90 {
+  di as error "L11 FAIL: the impvalues interval does not follow level()"
   local ++fails
 }
 
