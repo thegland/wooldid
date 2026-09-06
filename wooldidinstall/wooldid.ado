@@ -6852,12 +6852,16 @@ version 16.0
     else if "`bdisp'" == "percentile"  matrix `pw' = `pwpct'
     else if "`bdisp'" == "bc"           matrix `pw' = `pwbc'
     else                                matrix `pw' = `pwsd'
-    matrix colnames `pw' = `pwc'
     local pwc0 : subinstr local pwc "t_pt" "`=cond(`wdbdf' < ., "t", "z")'", word
     local pwc0 : subinstr local pwc0 "se_analytic" "se", word
+    * F053: the rank-based displays label the Wald statistic column t_wald / z_wald
+    local pwcw : subinstr local pwc0 "t" "t_wald", word
+    local pwcw : subinstr local pwcw "z" "z_wald", word
+    if !`wdbpwts' & "`bdisp'" != "wald" local pwc `pwcw'
+    matrix colnames `pw' = `pwc'
     matrix colnames `pwsd' = `pwc0'
-    matrix colnames `pwpct' = `pwc0'
-    matrix colnames `pwbc' = `pwc0'
+    matrix colnames `pwpct' = `pwcw'
+    matrix colnames `pwbc' = `pwcw'
     ereturn matrix pwsgs = `pw'
     ereturn hidden matrix boot_wald_pwsgs = `pwsd'
     ereturn hidden matrix boot_pctl_pwsgs = `pwpct'
@@ -8509,6 +8513,14 @@ version 16.0
   }
   * NB: `ereturn matrix' MOVES its source (the tempname is dropped), so the selected
   * family must be copied into `wm' BEFORE the two posts, not after
+  * F053 (quality review 2026-09-05, author ruling 2026-09-06): under the rank-based
+  * displays the statistic column is b over the bootstrap standard deviation - a Wald
+  * object whose tail probability is NOT the printed rank-based p - so it is labelled
+  * t_wald / z_wald there (and in the percentile and bc twins); the wald twin keeps t / z
+  local wmcw : colnames `wm'
+  local wmcw : subinstr local wmcw "`wdblab'" "`wdblab'_wald", word
+  matrix colnames `wmpct' = `wmcw'
+  matrix colnames `wmbc' = `wmcw'
   if "`bdisp'" == "percentile" matrix `wm' = `wmpct'
   else if "`bdisp'" == "bc"       matrix `wm' = `wmbc'
   ereturn hidden matrix boot_wald_mainresults = `wmsd'
@@ -8560,6 +8572,7 @@ version 16.0
     }
     local wmc2 : colnames `wm'
     local wmc2 : subinstr local wmc2 "`wdblab'" "t_pt", word
+    local wmc2 : subinstr local wmc2 "`wdblab'_wald" "t_pt", word
     local wmc2 : subinstr local wmc2 "se" "se_analytic", word
     matrix colnames `wmtp' = `wmc2'
     matrix `wm' = `wmtp'
@@ -8629,6 +8642,10 @@ version 16.0
         }
       }
     }
+    local wscw : colnames `wsg`sg''
+    local wscw : subinstr local wscw "`wdblab'" "`wdblab'_wald", word
+    matrix colnames `wspct`sg'' = `wscw'
+    matrix colnames `wsbc`sg'' = `wscw'
     if "`bdisp'" == "percentile"    matrix `wsg`sg'' = `wspct`sg''
     else if "`bdisp'" == "bc"       matrix `wsg`sg'' = `wsbc`sg''
     * the hidden twins are skipped when a name would exceed 32 characters (a 13+ digit
@@ -8664,6 +8681,7 @@ version 16.0
       }
       local wsc2 : colnames `wsg`sg''
       local wsc2 : subinstr local wsc2 "`wdblab'" "t_pt", word
+      local wsc2 : subinstr local wsc2 "`wdblab'_wald" "t_pt", word
       local wsc2 : subinstr local wsc2 "se" "se_analytic", word
       matrix colnames `wstp`sg'' = `wsc2'
       matrix `wsg`sg'' = `wstp`sg''
@@ -8762,7 +8780,7 @@ version 16.0
   ereturn scalar boot_completed = `done'
   ereturn scalar boot_failed = `fail'
   ereturn scalar boot_level = `level'
-  ereturn local boot_stat = cond(`wdbts', "t_pt", "`wdblab'")
+  ereturn local boot_stat = cond(`wdbts', "t_pt", cond("`bdisp'" == "wald", "`wdblab'", "`wdblab'_wald"))
   ereturn local boot_display `bdisp'
   if `wdbts' {
     ereturn scalar boot_tstat = 1

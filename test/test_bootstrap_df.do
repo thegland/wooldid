@@ -37,7 +37,8 @@ local df1 = e(boot_df)
 mkp
 qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(20) rseed(9) bootdf(clusters)
 di "T1a_clustered_default_vs_clusters=" mreldif(D1, e(wdidmainresults)) " stat=[`st1'] boot_df=`df1'"
-if mreldif(D1, e(wdidmainresults)) > 0 | "`st1'" != "t" | `df1' != 11 {
+* 2026-09-06 (F053): the default percentile display labels the Wald statistic t_wald
+if mreldif(D1, e(wdidmainresults)) > 0 | "`st1'" != "t_wald" | `df1' != 11 {
   di as error "T1a FAIL: clustered default must be t(G-1)"
   local ++fails
 }
@@ -60,7 +61,7 @@ local st1c `e(boot_stat)'
 mkp
 qui wooldid y unit t ttre, att robust esprelength(1) espostlength(1) bootstrap(bayes) reps(20) rseed(9) bootdf(normal)
 di "T1c_unclustered_default_vs_normal=" mreldif(D1c, e(wdidmainresults)) " stat=[`st1c']"
-if mreldif(D1c, e(wdidmainresults)) > 0 | "`st1c'" != "z" {
+if mreldif(D1c, e(wdidmainresults)) > 0 | "`st1c'" != "z_wald" {
   di as error "T1c FAIL: unclustered default must be normal"
   local ++fails
 }

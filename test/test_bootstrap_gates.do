@@ -569,5 +569,36 @@ if strpos(`"`lg'"', "treated cluster(s) are available for resampling") > 0 {
 }
 cap erase boot_gates_g28.txt
 
+* G29 (F053, 2026-09-06) the statistic column is labelled t_wald / z_wald under the
+* rank-based displays (and in the pctl/bc twins), t / z under bootdisplay(wald) and in the
+* wald twin, t_pt under boottstat; e(boot_stat) matches the displayed label
+use `panel', clear
+qui wooldid y unit t ttre, att cluster(unit) subgroups(s) bootstrap(standard) reps(10) rseed(7)
+local c29a : colnames e(wdidmainresults)
+local c29w : colnames e(boot_wald_mainresults)
+local c29p : colnames e(boot_pctl_mainresults)
+local c29s : colnames e(wdidsgresults_1)
+local c29pw : colnames e(pwsgs)
+local c29pww : colnames e(boot_wald_pwsgs)
+local b29a `e(boot_stat)'
+use `panel', clear
+qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7) bootdisplay(wald)
+local c29b : colnames e(wdidmainresults)
+local b29b `e(boot_stat)'
+use `panel', clear
+qui wooldid y unit t ttre, att bootstrap(standard) reps(10) rseed(7)
+local c29c : colnames e(wdidmainresults)
+local b29c `e(boot_stat)'
+di "G29 default=[`c29a'] stat=`b29a' | wald=[`c29b'] stat=`b29b' | unclustered=[`c29c'] stat=`b29c'"
+di "G29 twins wald=[`c29w'] pctl=[`c29p'] sg=[`c29s'] pwsgs=[`c29pw'] pwsgs_wald=[`c29pww']"
+if !`: list posof "t_wald" in c29a' | `: list posof "t" in c29a' | "`b29a'" != "t_wald" ///
+   | !`: list posof "t" in c29b' | `: list posof "t_wald" in c29b' | "`b29b'" != "t" ///
+   | !`: list posof "z_wald" in c29c' | "`b29c'" != "z_wald" ///
+   | !`: list posof "t" in c29w' | !`: list posof "t_wald" in c29p' | !`: list posof "t_wald" in c29s' ///
+   | !`: list posof "t_wald" in c29pw' | !`: list posof "t" in c29pww' {
+  di as error "G29 FAIL: the statistic column label does not follow the displayed family"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
