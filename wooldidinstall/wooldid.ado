@@ -2093,7 +2093,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`subgroups'" != "" local fcsg 1
     if "`verbose'" == "verbose" dis as text "Wooldid is evaluating the margins calls on one row per cell (`fconn' cells; see fastcollapse / fullprecisionslow in the help file)."
   }
-  else if "`verbose'" == "verbose" & "`fcskip'" != "" dis as text "Wooldid is evaluating the margins calls on the full data: the default cell collapse does not apply with `fcskip' (see fastcollapse in the help file)."
+  else if "`verbose'" == "verbose" {
+    * F037 (2026-09-06): the user's own switch is the reason whenever it is given, with the
+    * ineligible option(s) noted beside it; the option-naming text covers the silent skip
+    if "`fullprecisionslow'" != "" {
+      local fcwhy (fullprecisionslow)
+      if "`fcskip'" != "" local fcwhy (fullprecisionslow; the default cell collapse would not apply with `fcskip' either)
+      dis as text "Wooldid is evaluating the margins calls on the full data `fcwhy'."
+    }
+    else if "`fcskip'" != "" dis as text "Wooldid is evaluating the margins calls on the full data: the default cell collapse does not apply with `fcskip' (see fastcollapse in the help file)."
+  }
 
   * since semielasticities are allowed, we need text for inserting that info into plots
   local effecttype Effects

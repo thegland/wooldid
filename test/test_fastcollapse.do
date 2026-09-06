@@ -1229,5 +1229,33 @@ if `nc13' >= . | `nc13' < 1 | `nc13' >= `n13' | `nc13s' < . | `nc13i' < . | "`fs
   local ++fails
 }
 
+* ---- F14 (F037, 2026-09-06): the verbose collapse-decision line names fullprecisionslow as
+* the reason, alone and beside an ineligible option (which used to be blamed instead)
+use "`ADMIN'", clear
+qui log using fcol_f14.txt, text replace name(fc)
+cap noi wooldid y cohid year ttre, att robust fullprecisionslow verbose
+local rc14a = _rc
+qui log close fc
+local lg = fileread("fcol_f14.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local ok14a = strpos(`"`lg'"', "on the full data (fullprecisionslow).") > 0
+use "`ADMIN'", clear
+qui log using fcol_f14.txt, text replace name(fc)
+cap noi wooldid y cohid year ttre, att cluster(state) impvalues fullprecisionslow verbose
+local rc14b = _rc
+qui log close fc
+local lg = fileread("fcol_f14.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local ok14b = strpos(`"`lg'"', "(fullprecisionslow; the default cell collapse would not apply with impvalues either)") > 0
+local ok14c = strpos(`"`lg'"', "does not apply with impvalues (see fastcollapse") == 0
+cap erase fcol_f14.txt
+di "F14 rcs=`rc14a'/`rc14b' alone=`ok14a' with_impvalues=`ok14b' old_text_absent=`ok14c'"
+if `rc14a' != 0 | `rc14b' != 0 | !`ok14a' | !`ok14b' | !`ok14c' {
+  di as error "F14 FAIL: the verbose collapse line does not name fullprecisionslow as the reason"
+  local ++fails
+}
+
 if `fails' == 0 di as result "FASTCOLLAPSE_ALL_PASS"
 else di as error "FASTCOLLAPSE_FAILS=`fails'"
