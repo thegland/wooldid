@@ -73,8 +73,6 @@ SI7-sg-m,ext_contract10_rcs_factor_fe,mat,wdidsgresults_*,,SI-7 fix: the non-est
 SI7-sg-n,ext_contract10_rcs_factor_fe,matnames,wdidsgresults_*,,SI-7 fix: same - sg1 loses its pre2 row label
 SI7-eb-n,ext_contract10_rcs_factor_fe,matnames,b,,SI-7 fix: e(b) loses the ES_att_SG1_pre2 entry (the non-estimable subgroup horizon), 11 names -> 10
 SI7-eb-m,ext_contract10_rcs_factor_fe,mat,b,,SI-7 fix: removing that one entry SHIFTS every later e(b) cell up one slot - the cells are relabelled, not recomputed (old also carried a machine-zero 8.9e-16 in the removed slot)
-SI7-pw,ext_contract10_rcs_factor_fe,mat,pwsgs,,SI-7 fix: near-zero subgroup cell moves between machine zeros (1.8e-15 vs 8.9e-16) once the non-estimable horizon is gone
-SI7-wm,ext_contract10_rcs_factor_fe,mat,wdidmainresults,,SI-7 fix: same class - a machine-zero cell (8.9e-16 -> 0)
 SIA4-d3p,trig_d3void,macro,properties,,SI-A4/R6: on the d3 class old failed to post V (b-only); new posts b plus a sentinel-diagonal V via the standard not-identified machinery ([b] -> [b V])
 SIA4-gp-p,cont_sg_gap,mat,pwsgs,,SI-A4/R6 void on a d3-class fixture (all treated dose slopes dropped; dupcol family): fabricated sg-ame zeros -> missing
 SIA4-gp-s,cont_sg_gap,mat,wdidsgresults_*,,SI-A4/R6 void: fabricated sg-ame zeros -> missing
@@ -121,7 +119,6 @@ A15-mint-e,trig_mintsent_off,esamp,*,,mint 0c03010: new drops the sentinel-coded
 DDG-pw-1,ext_cov10_rcs_pweight_ddd_c1,mat,pwsgs,,v1.3 returns MISSING pairwise-SG cells (degenerate/rank-deficient tests; %21x missing codes) where HEAD returns valid values via the E1 posted-pwcompare + rank guard; plus one residual -8.9e-16 garbage SE cell -> clean 0
 DDG-pw-2,ext_cov10_rcs_pweight_ddd_c2,mat,pwsgs,,same missing-cells-recovered class
 DDG-pw-3,ext_cov10_rcs_twoway_cluster_c1,mat,pwsgs,,same
-DDG-pw-4,ext_cov10_rcs_twoway_cluster_c2,mat,pwsgs,,same
 DDG-jt-1,ext_cov10_rcs_pweight_ddd_c1,scalar,joint_*,,same class in the allsgssame joint scalars
 DDG-jt-2,ext_cov10_rcs_pweight_ddd_c2,scalar,joint_*,,same
 DDG-jt-3,ext_cov10_rcs_twoway_cluster_c1,scalar,joint_*,,same
@@ -368,6 +365,8 @@ ULP-upw-b,adm_uncond_pw,mat,b,1e-6,unconditionalse ULP class (documented 1-2 ulp
 ULP-upw-V,adm_uncond_pw,mat,V,1e-6,same
 ULP-upw-w,adm_uncond_pw,mat,wdidmainresults,1e-5,same; t/p cells amplify (ceiling 2.9e-7)
 # ---------------- SI-20 parity pins and bounded classes on the new configs (measured 2026-09-05) ----
+QR-sgjt-1,cont_sg,macro,joint_horiz_s*,,subgroup cell collapse (2026-09-01 default; blessed in test/baseline 2026-09-05): per-subgroup joint pre-trend p (an ereturn LOCAL, compared as a string) moves at 4e-12 relative under contreat()+subgroups()+jointtests; deterministic across reruns, not in today's (2026-09-06) commits - bit-identical to the 09-05 baseline
+QR-sgjt-2,cont_sg,scalar,joint_pre_att_allsgssame,1e-9,same class: a ~1e-19 chi2 tail moves 1.8e-10 relative
 SI20-P-ext_cont_ext_cfx-cfxatt,ext_cont_ext_cfx,mat,cfxatt_*,1e-1,SI-20 fix 1 df-factor class on the att cfx bins: b unchanged; se/t move by sqrt(df_old/df_new) (3.9e-4); p and near-zero ci cells tail-amplify (measured worst 2.4e-2 on a p of 2.6e-14) - bounded so a real att-bin regression cannot hide
 SI20-P-ext_cont_ext_cfx_subgroups-cfxatt,ext_cont_ext_cfx_subgroups,mat,cfxatt_*,1e-1,SI-20 fix 1 df-factor class on the att cfx bins: b unchanged; se/t move by sqrt(df_old/df_new) (3.9e-4); p and near-zero ci cells tail-amplify (measured worst 2.4e-2 on a p of 2.6e-14) - bounded so a real att-bin regression cannot hide
 SI20-P-ext_cov10_cfx_inference-cfxatt,ext_cov10_cfx_inference,mat,cfxatt_*,1e-1,SI-20 fix 1 df-factor class on the att cfx bins: b unchanged; se/t move by sqrt(df_old/df_new) (3.9e-4); p and near-zero ci cells tail-amplify (measured worst 2.4e-2 on a p of 2.6e-14) - bounded so a real att-bin regression cannot hide
