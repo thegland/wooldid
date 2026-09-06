@@ -257,7 +257,12 @@ version 16.0
     * bands are the permutation shift intervals the table prints. A plot failure is an
     * error of this call (its rc propagates, the caller's frame is restored and the
     * replay marker is set), as it is on a plain run
-    if "`makeplots'" == "makeplots" {
+    * CS-87 (consistency sweep 2026-09-06): the worker draws the event-study plot only when
+    * horizons exist (esprelength/espostlength > 0 after the panel clips them); the deferred
+    * engine call must apply the same guard, else wooldid_esplots runs on an empty frame,
+    * dies r(2000) and loses the whole run. The horizons are visible here as ES_ columns of
+    * the (rewired) e(b)
+    if "`makeplots'" == "makeplots" & strpos("`: colfullnames e(b)'", "ES_") > 0 {
       local wdesopts
       if "`saveplots'" != "" local wdesopts saveplots(`saveplots')
       cap noi wooldid_esplots , `wdesopts' `replace'
@@ -456,7 +461,12 @@ version 16.0
     * event-study plots, deferred from the worker so they read the REWIRED tables. The
     * bands are therefore whichever family bootdisplay() selected - percentile, BC or
     * wald - and match the printed table exactly. A plot failure is an error of this call
-    if "`makeplots'" == "makeplots" {
+    * CS-87 (consistency sweep 2026-09-06): the worker draws the event-study plot only when
+    * horizons exist (esprelength/espostlength > 0 after the panel clips them); the deferred
+    * engine call must apply the same guard, else wooldid_esplots runs on an empty frame,
+    * dies r(2000) and loses the whole run. The horizons are visible here as ES_ columns of
+    * the (rewired) e(b)
+    if "`makeplots'" == "makeplots" & strpos("`: colfullnames e(b)'", "ES_") > 0 {
       local wdesopts
       if "`saveplots'" != "" local wdesopts saveplots(`saveplots')
       cap noi wooldid_esplots , `wdesopts' `replace'

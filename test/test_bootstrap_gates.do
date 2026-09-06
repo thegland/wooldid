@@ -798,5 +798,18 @@ cap confirm matrix e(boot_ci_bca)
 chk 32d 111 _rc
 cap erase boot_gates_g32.txt
 
+* G33 (CS-87, 2026-09-06) makeplots with no event-study window under bootstrap() used to
+* die r(2000) in the deferred plot call (the analytic path skips the plot); now rc 0 with
+* the results intact, and makeplots WITH a window still draws
+use `panel', clear
+set graphics off
+cap qui wooldid y unit t ttre, att cluster(unit) makeplots bootstrap(standard) reps(5) rseed(7)
+chk 33 0 _rc
+cap confirm matrix e(wdidmainresults)
+chk 33b 0 _rc
+use `panel', clear
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) makeplots bootstrap(standard) reps(5) rseed(7)
+chk 33c 0 _rc
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

@@ -1251,5 +1251,14 @@ if _rc == 0 {
 }
 cap erase perm3_q23.txt
 
+* ================= Q24 (CS-87, 2026-09-06): makeplots with no event-study window under
+* permute() no longer dies r(2000) in the deferred plot call ===========================
+mkperm3 8 4 3
+set graphics off
+cap qui wooldid y i t ttre, att cluster(i) makeplots permute(shuffle) permreps(20) rseed(24)
+xrc Q24a 0 _rc
+cap confirm matrix e(wdidmainresults)
+xrc Q24b 0 _rc
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"
