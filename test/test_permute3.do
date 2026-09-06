@@ -777,6 +777,64 @@ mkperm3 8 4 3
 cap noi wooldid y i t ttre, att cluster(i) permabsp
 xrc Q12l 198 _rc
 
+* ================= Q13: sharp-null caveat direction (review 2026-09-05). In a staggered
+* design the reassigned onsets move actual post-treatment outcomes into the draws'
+* pre-treatment horizons, so the pre-period null distribution WIDENS with the true
+* effect while the observed pre-period statistic (no pre-trend in the DGP) does not:
+* the pre-period p rises and the null SD grows. Same seed, same draws, effect 0 vs 30.
+* The footer and help used to say the p-values FALL; the footer text is scanned =========
+cap program drop mkperm3s
+program define mkperm3s
+  args eff
+  clear
+  set seed 4242
+  set sortseed 4242
+  qui set obs 12
+  qui gen i = _n
+  qui gen ttre = cond(_n <= 4, 4, cond(_n <= 8, 6, .))
+  qui expand 9
+  qui bysort i: gen t = _n
+  qui gen y = `eff'*(t >= ttre & ttre < .) + 0.1*i + rnormal()
+end
+foreach eff in 0 30 {
+  mkperm3s `eff'
+  set seed 113
+  qui log using perm3_q13.txt, text replace name(p3)
+  cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(80) jointtests
+  local rc = _rc
+  qui log close p3
+  xrc Q13a_`eff' 0 `rc'
+  if `rc' == 0 {
+    local rn : roweq e(wdidmainresults)
+    local k 0
+    local q13k 0
+    foreach r of local rn {
+      local ++k
+      if "`r'" == "ES_att" & e(wdidmainresults)[`k', 7] == -2 local q13k `k'
+    }
+    if `q13k' == 0 {
+      dis as error "Q13b_`eff' FAIL: no ES_att row at relyr -2"
+      global pf = $pf + 1
+    }
+    else {
+      local q13p`eff' = e(perm_p)[1, `q13k']
+      local q13sd`eff' = e(perm_sd)[1, `q13k']
+      local q13j`eff' = e(joint_horiz)
+    }
+  }
+}
+if "`q13sd0'" != "" & "`q13sd30'" != "" {
+  if !(`q13sd30' > 3*`q13sd0' & `q13p30' >= `q13p0' & `q13j30' >= `q13j0') {
+    dis as error "Q13c FAIL: pre-period null SD `q13sd0' -> `q13sd30', p `q13p0' -> `q13p30', joint p `q13j0' -> `q13j30' (expected the null band to widen and the p-values to rise with the true effect)"
+    global pf = $pf + 1
+  }
+  local lg = fileread("perm3_q13.txt")
+  if strpos(`"`lg'"', "rise toward 1 as the true effect grows") == 0 | strpos(`"`lg'"', "p-values fall as the true post-treatment effect grows") > 0 {
+    dis as error "Q13d FAIL: the footer caveat does not state the corrected (rising p-value) direction"
+    global pf = $pf + 1
+  }
+}
+
 * ================= Q11: a plain run after all of this is untouched by the engine ======
 mkperm3 8 4 3
 cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2)
@@ -789,7 +847,7 @@ if _rc == 0 {
 }
 
 cap erase perm3_q1.dta
-foreach f in perm3_q1.txt perm3_q1r.txt perm3_q5.txt perm3_q7.txt perm3_q7b.txt perm3_q12.txt {
+foreach f in perm3_q1.txt perm3_q1r.txt perm3_q5.txt perm3_q7.txt perm3_q7b.txt perm3_q12.txt perm3_q13.txt perm3_q14.txt perm3_q15.txt perm3_q16.txt perm3_q17.txt {
   cap erase `f'
 }
 cap erase perm3_q1_ES.dta

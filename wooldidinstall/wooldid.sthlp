@@ -419,8 +419,11 @@ run ({it:fullprecisionslow} opts out); its degenerate-subgroup fallback reads a 
 {ul:Joint, equality and adversarial tests} are one-sided permutation tests of a quadratic-form statistic in the {ul:permutation-covariance metric} - the covariance of the replications' coefficients over the
 relevant elements (replications plus the observed comparator, listwise complete) - so they exist in both modes and consume no per-replication covariance: the joint pre-trend tests ({cmd:jointtests}) test the
 pre-treatment horizons jointly, the across-subgroup equality tests use the chain contrast of the subgroup levels, and the adversarial line test ({cmd:adversarial} with {cmd:esfixedbaseperiod}) is {it:wooldid}'s
-line-fit statistic evaluated on that metric. Their p-values, like every pre-treatment row and contrast, test the {ul:sharp null of no effect at any horizon}, so they fall as the true post-treatment effect grows - a
-small pre-period p-value is not by itself evidence of a pre-trend, and the adversarial p is not the composite on-a-line test of the analytic run. The replication statistics are in {it:e(perm_jointW)},
+line-fit statistic evaluated on that metric. Their p-values, like every pre-treatment row and contrast, test the {ul:sharp null of no effect at any horizon}: in staggered designs the reassigned onsets move actual
+post-treatment outcomes into the draws' pre-treatment horizons, so the null distribution widens with the true post-treatment effect while the observed pre-period statistics do
+not, and the pre-period p-values rise toward 1 as the true effect grows. A large pre-period p-value is therefore not by itself evidence of no pre-trend (the tests lose power
+against pre-trends as the effect grows; with a single onset date the reference distribution is unaffected), and the adversarial p is not the composite on-a-line test of the
+analytic run. The replication statistics are in {it:e(perm_jointW)},
 {it:e(perm_sgW)} and {it:e(perm_advW)}. Pairwise subgroup contrasts are permuted as coefficient differences in both modes. {cmd:jointtests} under {cmd:permute()} is exempt from the analytic joint-test screen
 described under {cmd:jointtests} - randomization inference is what that screen recommends.
 {ul:Subgroups} enter the replications. Because any cluster can be assigned treatment in a replication, the subgroup variable must satisfy the subgroup screens (non-negative integers; constant within
