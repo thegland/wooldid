@@ -24,7 +24,7 @@ scalar|N_dropped|+0.0000000000000X-3ff
 scalar|rss|+1.d7a4d8b935943X+006
 scalar|rmse|+1.f447d1a2c45e0X-002
 macro|cmd|wooldid
-macro|wdid_replayv|1
+macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_wprat|68.28
 macro|wdid_nprat|69.23

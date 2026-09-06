@@ -24,11 +24,11 @@ scalar|joint_att_allsgssame|+1.409d4533725c9X-022
 scalar|joint_horiz|+1.00ab01850231eX-001
 scalar|N_dropped|+0.0000000000000X-3ff
 macro|cmd|wooldid
-macro|wdid_replayv|1
+macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
 macro|wdid_cetype|dydx
-macro|wdid_fcol|0
+macro|wdid_fcol|1
 macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_sglist|1 2

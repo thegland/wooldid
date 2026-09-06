@@ -33,11 +33,12 @@ scalar|r2_withinadj|+1.88a42d1d88411X-003
 scalar|r2_within|+1.14bea906b3797X-001
 scalar|r2adj|+1.9b84685ee140fX-001
 macro|cmd|wooldid
-macro|wdid_replayv|1
+macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
 macro|wdid_cetype|dydx
-macro|wdid_fcol|0
+macro|wdid_fcguard|caution
+macro|wdid_fcol|1
 macro|wdid_semielas|dydx
 macro|wdid_estimands|att att_it  
 macro|wdid_sglist|0 1 2

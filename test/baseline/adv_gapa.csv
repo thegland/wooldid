@@ -21,7 +21,7 @@ scalar|rss|+1.1af7cb789dd86X+006
 scalar|N_dropped|+1.6800000000000X+006
 scalar|adversarial_pval_att|+1.2b9fccea5feb4X-006
 macro|cmd|wooldid
-macro|wdid_replayv|1
+macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|3
 macro|wdid_adversarial|adversarial

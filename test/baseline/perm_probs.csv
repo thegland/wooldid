@@ -4,10 +4,15 @@ scalar|perm_reps|+1.e000000000000X+004
 scalar|perm_completed|+1.e000000000000X+004
 scalar|perm_failed|+0.0000000000000X-3ff
 scalar|perm_npossible|+1.cd52000000000X+00f
-scalar|perm_p_att|+1.084210842107fX-005
-scalar|perm_lb_att|-1.a1a71f61f81f7X-002
-scalar|perm_ub_att|+1.8ebad2c8b3158X-002
+scalar|perm_level|+1.7c00000000000X+006
+scalar|perm_exact|+0.0000000000000X-3ff
+scalar|perm_blank|+0.0000000000000X-3ff
+scalar|perm_absp|+0.0000000000000X-3ff
+scalar|perm_p_att|+1.0842108421084X-004
+scalar|perm_lb_att|-1.6fa761f4cccccX-001
+scalar|perm_ub_att|+1.6b4fc31f33324X-001
 scalar|perm_sd_att|+1.0f7caa9b20601X-002
+scalar|perm_precaveat|+0.0000000000000X-3ff
 scalar|df_r|+1.2000000000000X+003
 scalar|N|+1.e000000000000X+006
 scalar|Nclus|+1.4000000000000X+003
@@ -20,15 +25,16 @@ scalar|r2_withinadj|+1.f55ff60cde7ffX-003
 scalar|rmse|+1.095385a0531ffX-001
 scalar|rss|+1.1b95f615068c5X+004
 scalar|N_dropped|+0.0000000000000X-3ff
+macro|wdid_vcespec|randomization inference (permute(probabilities), 30 replications); analytic standard errors not computed (permanalyticse restores them)
+macro|perm_pconv|equaltailed
 macro|perm_stat|b
 macro|perm_npossible_str|59049
 macro|wdid_permest|att
 macro|perm_method|probabilities
 macro|depvar|y
-macro|properties|b V
+macro|properties|b
 macro|cmdline|wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(30) permprobs((ttre 2005 2008 .) (1 .3 .3 .4) (2 .3 .3 .4) (3 .3 .3 .4) (26 .3 .3 .4) (27 .3 .3 .4) (28 .3 .3 .4) (51 .3 .3 .4) (52 .3 .3 .4) (53 .3 .3 .4) (54 .3 .3 .4))
 macro|estimate_type|pooled_reference_period
-macro|wdid_vcespec|cluster(i)
 macro|wdid_estimands|att   
 macro|wdid_semielas|dydx
 macro|wdid_fcol|1
@@ -36,12 +42,10 @@ macro|wdid_cetype|dydx
 macro|wdid_suppressjt|suppressjointtests
 macro|wdid_espre|0
 macro|wdid_esrel|-1
-macro|wdid_replayv|1
+macro|wdid_replayv|2
 macro|cmd|wooldid
 matnames|b|1x1|y1|main_att
-mat|b|1|1|+1.f8b79f3fc7414X-001
-matnames|V|1x1|main_att|main_att
-mat|V|1|1|+1.e5a13bcedf784X-008
+mat|b|1|1|+1.f8b79f3fc7418X-001
 matnames|perm_comparator|1x1|r1|att
 mat|perm_comparator|1|1|+1.f8b79f3fc7418X-001
 matnames|permdist|30x1|r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 r16 r17 r18 r19 r20 r21 r22 r23 r24 r25 r26 r27 r28 r29 r30|att
@@ -75,11 +79,82 @@ mat|permdist|27|1|-1.f50e98ccccd00X-004
 mat|permdist|28|1|-1.80cadab8da190X-003
 mat|permdist|29|1|-1.27fbac1bed660X-004
 mat|permdist|30|1|+1.40a6143ccccc0X-003
-matnames|wdidmainresults|1x7|main:att|estimate se t p lb_95ci ub_95ci relyr
-mat|wdidmainresults|1|1|+1.f8b79f3fc7414X-001
-mat|wdidmainresults|1|2|+1.60979803b4aa7X-004
-mat|wdidmainresults|1|3|+1.6e735ccd43b83X+003
-mat|wdidmainresults|1|4|+1.339092ce1ba65X-014
-mat|wdidmainresults|1|5|+1.9503d1520d329X-001
-mat|wdidmainresults|1|6|+1.2e35b696c0a80X+000
+matnames|permdist_b|30x1|r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 r16 r17 r18 r19 r20 r21 r22 r23 r24 r25 r26 r27 r28 r29 r30|main_att
+mat|permdist_b|1|1|-1.7dfd348fcbb80X-006
+mat|permdist_b|2|1|+1.5aab22f851e90X-003
+mat|permdist_b|3|1|-1.3bd1ae62fc9c0X-004
+mat|permdist_b|4|1|+1.6fb5c1c93a540X-005
+mat|permdist_b|5|1|-1.332102ccfe738X-002
+mat|permdist_b|6|1|-1.79420f9928200X-005
+mat|permdist_b|7|1|+1.6b4fc31f33324X-001
+mat|permdist_b|8|1|-1.56efdec2f4340X-004
+mat|permdist_b|9|1|-1.6fa761f4cccccX-001
+mat|permdist_b|10|1|+1.ff0d742afb900X-004
+mat|permdist_b|11|1|-1.0541f729999b0X-002
+mat|permdist_b|12|1|+1.87f87b5a63dc0X-004
+mat|permdist_b|13|1|+1.c6fba1dddddd0X-003
+mat|permdist_b|14|1|+1.8ebad2c8b3158X-002
+mat|permdist_b|15|1|+1.36186804a78c0X-005
+mat|permdist_b|16|1|+1.1593b560b6080X-003
+mat|permdist_b|17|1|-1.64ccae1999980X-006
+mat|permdist_b|18|1|-1.3f7c5c60d8300X-007
+mat|permdist_b|19|1|-1.1d7525fb1fb20X-004
+mat|permdist_b|20|1|-1.cfe54b1240b60X-003
+mat|permdist_b|21|1|-1.f2c508c1b3d40X-004
+mat|permdist_b|22|1|+1.26c68261dc2f8X-002
+mat|permdist_b|23|1|-1.125539dcfae70X-002
+mat|permdist_b|24|1|-1.4182b595a95a8X-002
+mat|permdist_b|25|1|-1.a1a71f61f81f8X-002
+mat|permdist_b|26|1|+1.347020b62ca60X-003
+mat|permdist_b|27|1|-1.f50e98ccccd00X-004
+mat|permdist_b|28|1|-1.80cadab8da190X-003
+mat|permdist_b|29|1|-1.27fbac1bed660X-004
+mat|permdist_b|30|1|+1.40a6143ccccc0X-003
+matnames|perm_ase_obs|1x1|r1|main_att
+mat|perm_ase_obs|1|1|+1.0000000000000X+3ff
+matnames|perm_kernel|13x1|n s_obs p qlo qhi sd lb ub se_shift offcentre bandlo bandhi live|main_att
+mat|perm_kernel|1|1|+1.e000000000000X+004
+mat|perm_kernel|2|1|+1.f8b79f3fc7418X-001
+mat|perm_kernel|3|1|+1.0842108421084X-004
+mat|perm_kernel|4|1|-1.6fa761f4cccccX-001
+mat|perm_kernel|5|1|+1.6b4fc31f33324X-001
+mat|perm_kernel|6|1|+1.0f7caa9b20601X-002
+mat|perm_kernel|7|1|+1.1acfb841281e8X-002
+mat|perm_kernel|8|1|+1.b42f809a4a072X+000
+mat|perm_kernel|9|1|+1.74f2c9966ac86X-002
+mat|perm_kernel|10|1|+1.0000000000000X+3ff
+mat|perm_kernel|11|1|-1.6fa761f4cccccX-001
+mat|perm_kernel|12|1|+1.6b4fc31f33324X-001
+mat|perm_kernel|13|1|+1.0000000000000X+000
+matnames|perm_comparator_b|1x1|y1|main_att
+mat|perm_comparator_b|1|1|+1.f8b79f3fc7418X-001
+matnames|perm_nullband|2x1|lo hi|main_att
+mat|perm_nullband|1|1|-1.6fa761f4cccccX-001
+mat|perm_nullband|2|1|+1.6b4fc31f33324X-001
+matnames|perm_n|1x1|r1|main_att
+mat|perm_n|1|1|+1.e000000000000X+004
+matnames|perm_sd|1x1|r6|main_att
+mat|perm_sd|1|1|+1.0f7caa9b20601X-002
+matnames|perm_se_shift|1x1|r9|main_att
+mat|perm_se_shift|1|1|+1.74f2c9966ac86X-002
+matnames|perm_ci|2x1|ll ul|main_att
+mat|perm_ci|1|1|+1.1acfb841281e8X-002
+mat|perm_ci|2|1|+1.b42f809a4a072X+000
+matnames|perm_p|1x1|r3|main_att
+mat|perm_p|1|1|+1.0842108421084X-004
+matnames|wdidmainresults|1x7|main:att|estimate se_analytic t_perm p_perm lb_95ci ub_95ci relyr
+mat|wdidmainresults|1|1|+1.f8b79f3fc7418X-001
+mat|wdidmainresults|1|2|+1.0000000000000X+3ff
+mat|wdidmainresults|1|3|+1.0000000000000X+3ff
+mat|wdidmainresults|1|4|+1.0842108421084X-004
+mat|wdidmainresults|1|5|+1.1acfb841281e8X-002
+mat|wdidmainresults|1|6|+1.b42f809a4a072X+000
 mat|wdidmainresults|1|7|+1.0000000000000X+3ff
+matnames|perm_analytic_mainresults|1x7|main:att|estimate se t p lb_95ci ub_95ci relyr
+mat|perm_analytic_mainresults|1|1|+1.f8b79f3fc7418X-001
+mat|perm_analytic_mainresults|1|2|+1.0000000000000X+3ff
+mat|perm_analytic_mainresults|1|3|+1.0000000000000X+3ff
+mat|perm_analytic_mainresults|1|4|+1.0000000000000X+3ff
+mat|perm_analytic_mainresults|1|5|+1.0000000000000X+3ff
+mat|perm_analytic_mainresults|1|6|+1.0000000000000X+3ff
+mat|perm_analytic_mainresults|1|7|+1.0000000000000X+3ff

@@ -9,7 +9,7 @@ scalar|rmse|+1.ce7ede94055a7X-003
 scalar|rss|+1.e4aff78108b87X+004
 scalar|N_dropped|+0.0000000000000X-3ff
 macro|cmd|wooldid
-macro|wdid_replayv|1
+macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|0
 macro|wdid_suppressjt|suppressjointtests

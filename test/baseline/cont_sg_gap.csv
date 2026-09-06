@@ -25,12 +25,13 @@ scalar|joint_att_allsgssame|+1.389053af0ff8bX-028
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|rss|+1.5d46f7bc7bf3dX+006
 macro|cmd|wooldid
-macro|wdid_replayv|1
+macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
 macro|wdid_suppressjt|suppressjointtests
 macro|wdid_cetype|dydx
-macro|wdid_fcol|0
+macro|wdid_fcguard|fallback
+macro|wdid_fcol|1
 macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_sglist|0 1 2

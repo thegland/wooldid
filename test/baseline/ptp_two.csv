@@ -19,7 +19,7 @@ scalar|r2_withinadj|+1.96cd05071f3fdX-003
 scalar|rmse|+1.0519a995312caX-001
 scalar|rss|+1.4bd65e9d9a68eX+006
 scalar|N_dropped|+0.0000000000000X-3ff
-scalar|roth_slope_att|-1.6acd20d37896aX-006
+scalar|wdid_ptphbar_att|+1.3a2e8ba2e8ba4X+001
 scalar|roth_ok|+1.0000000000000X+000
 scalar|roth_W_att|+1.aeb1314d95c9eX+000
 scalar|roth_nissize_att|+1.e82591acfc868X-004
@@ -30,8 +30,10 @@ scalar|roth_prep_att|+1.48f0fefdffc9cX-001
 scalar|roth_slope_ul_att|+1.2941a4bdb4eb5X-005
 scalar|roth_slope_ll_att|-1.4a0762c896c10X-004
 scalar|roth_slope_se_att|+1.e0f41cc17a9caX-006
+scalar|roth_slope_att|-1.6acd20d37896aX-006
+scalar|wdid_ptphbar_it|+1.3a2e8ba2e8ba4X+001
 macro|cmd|wooldid
-macro|wdid_replayv|1
+macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|4
 macro|wdid_suppressjt|suppressjointtests

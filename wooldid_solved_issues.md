@@ -500,3 +500,89 @@ DELIBERATE SCOPE CALLS (documented, not defects): plots, saved plot data, gteffe
 
 ## SI-17: permute() + cleanmatrices killed the permutation engine (r3499) — FIXED
 **Landed 2026-08-31 (6693e2f), author-ruled fix (a): refuse the combination.** Found by the bootstrap plan's blind reviewer. `cleanmatrices` asks the worker to clear mata on its way out, which destroys the ado's own compiled mata functions — so the shell's post-estimation permutation engine died r(3499) "wooldid_permx() not found" AFTER a fully successful estimation, with the observed results computed and then thrown away. Pre-existing since F6. `wooldid_permctl` gains a `cm()` input and a named refusal beside its other incompatibility gates. Bisectable: the pre-fix build (58e4467) reaches the r(3499) failure on the identical command line. test_permute2.do carries S17a-S17d (return code, the named message rather than an incidental parse error, and both options still working alone); battery bit-identical. One unrelated line rode into the commit from the working tree and is disclosed in its amended message.
+
+## SI-20: non-zero event-study reference-period margins under interactivecontrols() and lattice()+contreatcontrols(basic) — FIXED
+
+Original ticket (author-filed 2026-08-31), verbatim:
+
+- **SI-20 — BUG TICKET (author-filed 2026-08-31, investigate; do not fix blind): the
+  event-study REFERENCE PERIOD can carry a non-zero estimated effect under
+  `interactivecontrols()` and under `lattice()` + `contreatcontrols(basic)`.** Found while
+  investigating an unrelated efficiency proposal; the efficiency change was refused, but
+  this is the substantive residue and it is filed on its own merits.
+
+  **WHAT WAS MEASURED.** The reference cell's *coefficient* is normalised away as usual,
+  but the quantity that matters downstream is its *margin* - the average derivative at
+  that cell - and in two configurations that margin is genuinely non-zero:
+  - `interactivecontrols()`: margins stops flagging the reference over-cell as omitted
+    (the column name comes back `0bn.` rather than `0bno.`) and returns a real value:
+    b = 0.20499468989847358, V = 0.012009578810927056. Reproduced across 3 datasets and
+    7 configs, at all four binary joint-test sites.
+  - `lattice()` + `contreatcontrols(basic)`: anchor b = 1.0198262516390375,
+    V = 1.784e-3. Reproduced with `lattice(all 3)`, `lattice(baseTreated 2)` and with
+    subgroups.
+  - CONTROLS THAT RESTORE A ZERO ANCHOR (so the mechanism is pinned, not guessed): adding
+    `byTreated` to `contreatcontrols()`, or adding `unconditionalse`. The lattice case
+    traces to the guard at ado line 1113,
+    `(strpos("\`contreatcontrols'","basic")!=0 & "\`latticepart2hash'"=="") |
+    unconditionalse | customvce | poisson`, which skips the `i.\`null'##\`ringerpoly''
+    initialisation when a lattice is present with plain `basic` - leaving the
+    margins-visible base level of contreat estimated rather than partialled out. The
+    disjuncts are exactly the two escapes measured, which is why `unconditionalse` cures
+    it.
+  - CORROBORATION FROM THE SOURCE ITSELF: the author comment immediately above that guard
+    (lines 1110-1112) states that specifying `null##ringer` and `lattice##ringer`
+    explicitly "ensures that the base level of contreat gets partialled out. if not
+    specified, it does not always get partialled out, and instead one of the contreat
+    control coefficients gets dropped for colinearity instead." So the mechanism was
+    known at the estimation layer. What is new here is its consequence one layer up: when
+    the base level survives, the reference-period MARGIN is non-zero, and the joint tests
+    and the event-study handoff both assume it is not.
+  - Across 193 probes the divergence set is EXACTLY the non-zero-anchor set: 136
+    bit-exact, 21 agreeing to last bits, 14 both-missing, 20 divergent - no exceptions.
+
+  **WHY IT MATTERS, and this is the part to investigate.** Two consumers assume the
+  reference period is a structural zero:
+  1. `e(joint_horiz)` and its twins are computed as a `contrast(overjoint)` over a set
+     that INCLUDES the reference cell, so the null they actually test is "pre-treatment
+     effects equal the REFERENCE-CELL effect". Where the anchor is zero that is identical
+     to "pre-treatment effects are jointly zero"; where it is not, the two differ - the
+     measured gap reached p 0.146 vs 0.615, and 3.6e-3 vs 7.3e-44.
+  2. More seriously, `e(b_es_*)`/`e(V_es_*)` are handed to HonestDiD, the `pretrends`
+     package and `wooldid_advstat` as event-study coefficients measured RELATIVE TO a
+     normalised reference. If the reference period carries a real effect, that
+     normalisation premise does not hold in these configurations, and every consumer
+     inherits the problem. This was not investigated and should be.
+
+  **QUESTIONS TO SETTLE.** Is a non-zero reference margin correct behaviour (the model
+  genuinely estimates something there) or a specification defect in how the lattice /
+  interactive-control terms enter? If correct, should the joint tests keep contrasting
+  against the anchor, and should the event-study handoff be re-normalised or documented?
+  If a defect, the fix is in the model construction, not in the tests. NOTHING should be
+  changed until that is answered - the author explicitly declined a change to the joint
+  tests pending this investigation.
+
+  Evidence: the efficiency investigation's probe artefacts (`probe_v6.txt`,
+  `EQUIV_TABLE.txt`) in the session scratchpad; summary in
+  `review_process/efficiency_review_2026-08-31.md`.
+
+**RESOLVED** (`1df8613` and the branch `si20-fix` merged 2026-09-05; investigation in
+`wooldid_ado_review.md` "Findings (Claude, 2026-09-05)"; ship record
+`review_process/si20_ship_2026-09-05.md`): the answer to the ticket's question is "a
+specification defect in how the terms enter", fixed in the model construction, not in the
+tests. (1) `interactivecontrols()`: the cell interaction is built with `1.targetflag` instead of
+`i.targetflag`, so the pooled reference cell gets no slope column; the previous column was
+exactly collinear with `i.t#c.x` plus the treated-cell slopes, so the engine's collinearity drop
+decided the reported horizons (solver- and order-dependent; on a trending covariate a spurious
+pre-trend and a 2.6x ATT). (2) `lattice()` + `contreatcontrols(basic)`: the guard that skipped
+the ringer initialisation whenever a lattice was present is gone, so basic always absorbs the
+baseline dose control and, with a lattice, its lattice twin; every ame-family row had been off by
+the baseline dose slope. Verified by a fable-class manager with six pool agents: 183 lattice
+configs and 116 interactivecontrols config-build rows (fixed anchor exactly 0 wherever the
+pristine one was non-zero; untouched paths bit-identical over 14,541 cells; rc identical; no new
+failures), the battery signature exactly as pre-registered (only `cont_lat`, ame rows by -2.0043),
+11/11 cert suites green, and the new `test/test_refmargin.do` (ALL_PASS on the fix, 52 failures
+on the pristine build). 18 `si20_*` suite configs, 208 ledger rows and the re-blessed
+`test/baseline` accompany it. Judgment calls left to the author (df_a over-count from the absorbed
+ringer terms; the `ext_san_input_missing` all-zero-VCV knife edge; the permute pre-ame
+mis-centring under a real dose effect; the 24-minute cert suite) are in the ship record.

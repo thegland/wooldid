@@ -25,11 +25,11 @@ scalar|joint_att_itime_allsgssame|+1.6b195a54c06c4X-060
 scalar|joint_horiz_i|+1.45c838f32df50X-001
 scalar|N_dropped|+0.0000000000000X-3ff
 macro|cmd|wooldid
-macro|wdid_replayv|1
+macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
 macro|wdid_cetype|dydx
-macro|wdid_fcol|0
+macro|wdid_fcol|1
 macro|wdid_semielas|dydx
 macro|wdid_estimands|   att_itime
 macro|wdid_sglist|1 2
