@@ -8310,7 +8310,12 @@ version 16.0
   * cell-level accumulators (gteffects rows keyed by i|onset|relyr; each cfx matrix keyed by
   * its row names). `cellacc' is a prefix; the matrices are `cellacc'_gt, `cellacc'_gtse and
   * `cellacc'_cfx<k>, `cellacc'_cfx<k>se with a name map in the locals returned to the shell.
-  * Built while the OBSERVED e() is live, so the keys are the observed cells
+  * NB (F018 research record, 2026-09-06): these keys are minted from the REP-0 comparator
+  * run's e(), which is live here (nothing restores the observed e() between the comparator
+  * assignment above and this point), not from the observed run's. Measured on every
+  * configuration tested the two key sets coincide (no observed cell lacked a rep-0 key and
+  * the cfx matrix name lists match); a keyless observed cell would be left with missing
+  * inference by wooldid_bootcellwire rather than mis-keyed
   local wdb_ncfx 0
   if "`cellacc'" != "" {
     cap confirm matrix e(gteffects)
@@ -10105,7 +10110,7 @@ version 16.0
      dis as result "  A percentile interval is not symmetric about the estimate, so the estimate plus or minus a critical value times the reported standard error will not in general reproduce the reported interval - this is the ordinary reading of a bootstrap table, not a wooldid peculiarity. Use bootdisplay(wald) for the normal/t package in which they do agree."
    }
    dis as result "  Every family is computed whichever is displayed: intervals in e(boot_ci_normal)/e(boot_ci_percentile)/e(boot_ci_bc), p-values in e(boot_p_percentile)/e(boot_p_bc), and the complete tables in the hidden e(boot_wald_mainresults)/e(boot_pctl_mainresults)/e(boot_bc_mainresults)."
-   if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  The rank-based p-values have resolution 2/" e(boot_completed) " = " %5.3f 2/e(boot_completed) ": a p printed as 0 means p below that (no completed replication on the far side of the null); it is stored as 0 in e()."
+   if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  The rank-based coefficient p-values have resolution 2/" e(boot_completed) " = " %5.3f 2/e(boot_completed) ": a p printed as 0 means p below that (no completed replication on the far side of the null); it is stored as 0 in e(). The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
    if e(boot_v_posted) == 1 dis as result "  e(V) holds the bootstrap covariance (complete-replication listwise, e(boot_N_V) replications; the analytic covariance, when one existed, remains in the hidden e(V_analytic))."
    else dis as result "  The bootstrap covariance is stored in e(V_boot); no covariance is posted to e(V) for this run."
    * e(V) and e(df_r) carry the sd-family inference whichever family is displayed, so a
@@ -12164,6 +12169,12 @@ void wooldid_bootcellwire(string scalar mname, real scalar isgt, string scalar a
       m1 = sum(v :>= 0)
       p = min((1, (2*min((m0, m1)))/n))
       if (fam == "bc") {
+        // z0 ranks the DISPLAYED cell estimate b (the coefficient families rank the rep-0
+        // comparator). Deliberate and measured immaterial (F018 research record,
+        // 2026-09-06): gteffects cells are stage-1 e(b) entries that fastnose cannot move,
+        // so b equals the comparator bitwise; cfx cells differ from it only in margins'
+        // last digits (~2e-9 bootstrap SDs); 0 of 4,425 cells had a different z0. The
+        // amevoid case is caught by the b >= . guard above
         if (ties) z0 = invnormal((sum(v :< b) + 0.5*sum(v :== b))/n)
         else z0 = invnormal(sum(v :<= b)/n)
         if (z0 >= .) continue
