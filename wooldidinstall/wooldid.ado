@@ -10002,11 +10002,19 @@ version 16.0
     * the interval columns are read by NAME below; a bootstrap or permutation run at a
     * level other than 95 renames them lb_<level>ci/ub_<level>ci, so map them back
     cap confirm variable lb_95ci
+    local wdes_lbname
+    local wdes_ubname
     if _rc != 0 {
       cap ds lb_*ci
-      if _rc == 0 & wordcount("`r(varlist)'") == 1 rename `r(varlist)' lb_95ci
+      if _rc == 0 & wordcount("`r(varlist)'") == 1 {
+        local wdes_lbname `r(varlist)'
+        rename `r(varlist)' lb_95ci
+      }
       cap ds ub_*ci
-      if _rc == 0 & wordcount("`r(varlist)'") == 1 rename `r(varlist)' ub_95ci
+      if _rc == 0 & wordcount("`r(varlist)'") == 1 {
+        local wdes_ubname `r(varlist)'
+        rename `r(varlist)' ub_95ci
+      }
     }
     qui gen rownamesvar = ""
     local names : roweq `wdidpooled'
@@ -10093,7 +10101,14 @@ version 16.0
     }
 
 
-    if "`saveplots'" != "" qui save "`saveplots'_ES.dta", `replace'
+    if "`saveplots'" != "" {
+      * the saved data keep the table's own interval names (lb_<level>ci): the lb_95ci
+      * alias above served the twoway calls only (saved as lb_95ci at every level until
+      * 2026-09-05)
+      if "`wdes_lbname'" != "" rename lb_95ci `wdes_lbname'
+      if "`wdes_ubname'" != "" rename ub_95ci `wdes_ubname'
+      qui save "`saveplots'_ES.dta", `replace'
+    }
     clear
 
     * repeat by SG if appropriate
@@ -10103,11 +10118,19 @@ version 16.0
         matrix `wdidsgmat' = e(wdidsgresults_`sgcase')
         qui svmat double `wdidsgmat', names(col)
         cap confirm variable lb_95ci
+        local wdes_lbname
+        local wdes_ubname
         if _rc != 0 {
           cap ds lb_*ci
-          if _rc == 0 & wordcount("`r(varlist)'") == 1 rename `r(varlist)' lb_95ci
+          if _rc == 0 & wordcount("`r(varlist)'") == 1 {
+            local wdes_lbname `r(varlist)'
+            rename `r(varlist)' lb_95ci
+          }
           cap ds ub_*ci
-          if _rc == 0 & wordcount("`r(varlist)'") == 1 rename `r(varlist)' ub_95ci
+          if _rc == 0 & wordcount("`r(varlist)'") == 1 {
+            local wdes_ubname `r(varlist)'
+            rename `r(varlist)' ub_95ci
+          }
         }
         qui gen rownamesvar = ""
         local names : roweq `wdidsgmat'
@@ -10180,7 +10203,11 @@ version 16.0
           if "`saveplots'" != "" qui graph save "`saveplots'_`graph'_sg`sgcase'.gph", `replace'
         }
 
-        if "`saveplots'" != ""  qui save "`saveplots'_ES_`subgroups'_`sgcase'.dta", `replace'
+        if "`saveplots'" != "" {
+          if "`wdes_lbname'" != "" rename lb_95ci `wdes_lbname'
+          if "`wdes_ubname'" != "" rename ub_95ci `wdes_ubname'
+          qui save "`saveplots'_ES_`subgroups'_`sgcase'.dta", `replace'
+        }
         clear
       }
     }

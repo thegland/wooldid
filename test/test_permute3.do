@@ -552,10 +552,14 @@ if _rc == 0 {
     local rl = relyr[`r']
     forval j = 1/`=rowsof(`W')' {
       if `W'[`j', 7] == `rl' {
-        if lb_95ci[`r'] != `W'[`j', 5] | ub_95ci[`r'] != `W'[`j', 6] local ++nb
+        * the saved data carry the table's own names (lb_90ci; saved as lb_95ci until
+        * the 2026-09-05 fix)
+        if lb_90ci[`r'] != `W'[`j', 5] | ub_90ci[`r'] != `W'[`j', 6] local ++nb
       }
     }
   }
+  cap confirm variable lb_95ci
+  if _rc == 0 local ++nb
   restore
   if `nb' != 0 local ++bad
   if `bad' {
