@@ -3584,7 +3584,29 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                   matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
                   matrix rownames `f9tab' = b se t pvalue ll ul
                 }
-                matrix `___`horizitem'_Choriz_s`sgcase'' = ( `f9tab'[1..6, 1..`=colsof(r(b))']',`relyrcolumn_s`sgcase'')
+                * label this call from ITS OWN colnames (bug sweep BS-8): the binary call's relyr
+                * column has already been SI-7-filtered on THAT call's omission markers, and margins
+                * flags the dose slope independently of the level effect, so the two column sets can
+                * differ - concatenating them was a conformability error r(503) on every SI-7 drop
+                * under contreat(). r() is consumed here, before wooldid_sgamelbl (whose glevelsof
+                * fallback is rclass) scans, labels and filters the call
+                tempname namegetC relyrcolumn_Cs`sgcase'
+                matrix `namegetC' = r(table)[1, 1..`=colsof(r(b))']
+                local namesC: colnames `namegetC'
+                matrix drop `namegetC'
+                local finaladvtest = colsof(r(b))
+                local f2kC = cond("`horizitem'" == "att", "ame", "ame_it")
+                local f2optC
+                if "`marginsdof'" != "nose" {
+                  tempname f2bmat f2vmat
+                  matrix `f2bmat' = r(b)[1, 1..`=colsof(r(b))']
+                  matrix `f2vmat' = r(V)[1..`=colsof(r(b))', 1..`=colsof(r(b))']
+                  local f2optC b(`f2bmat') v(`f2vmat')
+                }
+                wooldid_sgamelbl , names(`namesC') tab(`f9tab') mint(`min_t') old(`oldsyntax') sg(`sgcase') tvar(`_t') fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_Cs`sgcase'') lbl(relyrlist_s`sgcase'_`f2kC') `f2optC'
+                if `wdsg_skip' continue
+                local finaladvtest = `finaladvtest' - `wdsg_ndrop'
+                matrix `___`horizitem'_Choriz_s`sgcase'' = ( `f9tab'', `relyrcolumn_Cs`sgcase'')
                 * AMESE R1 scrub: null se/t/p/ci columns of the per-sg ame ES rows
                 if `amescrub' {
                   forval amer = 1/`=rowsof(`___`horizitem'_Choriz_s`sgcase'')' {
@@ -3595,16 +3617,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 }
                 * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
                 if "`marginsdof'" != "nose" {
-                  tempname f2bmat f2vmat
-                  matrix `f2bmat' = r(b)[1, 1..`=colsof(r(b))']
-                  matrix `f2vmat' = r(V)[1..`=colsof(r(b))', 1..`=colsof(r(b))']
-                  local f2k = cond("`horizitem'"=="att","ame","ame_it") + "_s`sgcase'"
+                  local f2k `f2kC'_s`sgcase'
                   local f2b_`f2k' `f2bmat'
                   local f2v_`f2k' `f2vmat'
                   local f2keys `f2keys' `f2k'
                   local f2rl_`f2k'
-                  forval f2ri = 1/`=rowsof(`relyrcolumn_s`sgcase'')' {
-                    local f2rv = `relyrcolumn_s`sgcase''[`f2ri',1]
+                  forval f2ri = 1/`=rowsof(`relyrcolumn_Cs`sgcase'')' {
+                    local f2rv = `relyrcolumn_Cs`sgcase''[`f2ri',1]
                     if `f2rv' < 0  local f2rl_`f2k' `f2rl_`f2k'' pre`=abs(`f2rv')'
                     else          local f2rl_`f2k' `f2rl_`f2k'' post`f2rv'
                   }
@@ -3612,15 +3631,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 * handle the adversarial pre-trends test
                 * NFADV-01/02/05: statistics + display line via wooldid_advstat (see the
                 * overall binary site); a gap-cancelled fit only skips THIS subgroup
-                local finaladvtest
-                cap confirm matrix r(b)
-                if _rc == 0 {
-                  local finaladvtest  `=colsof(r(b))'
-                }
-                if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
                 if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose" & `amescrub' == 0  {
                   if  `finaladvtest' > 1  {
-                    wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm')
+                    wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_Cs`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm')
                     local advstatus `r(status)'
                     if "`advstatus'" != "gapskip" {
                       if "`advstatus'" == "ok" local adversarialP_C`horizitem'_s`sgcase' = r(p)
@@ -3959,11 +3972,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             matrix drop `___att_it_horiz_s`sgcase''
           }
           if "`contreat'" != "" {
-            if "`att'" == "att" {
+            cap confirm matrix `___att_Choriz_s`sgcase''
+            if "`att'" == "att" & _rc == 0 {
               matrix `wdid_sg`sgcase'' = `wdid_sg`sgcase'' \  `___att_Choriz_s`sgcase''
               matrix drop `___att_Choriz_s`sgcase''
             }
-            if "`att_i'" == "att_i"  |  "`att_it'" == "att_it" |  "`att_itime'" == "att_itime" {
+            cap confirm matrix `___att_it_Choriz_s`sgcase''
+            if ("`att_i'" == "att_i"  |  "`att_it'" == "att_it" |  "`att_itime'" == "att_itime") & _rc == 0 {
               matrix `wdid_sg`sgcase'' = `wdid_sg`sgcase'' \  `___att_it_Choriz_s`sgcase''
               matrix drop `___att_it_Choriz_s`sgcase''
             }
@@ -3995,11 +4010,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             * each ES block is named from ITS estimand's horizon list: att and att_it can
             * keep different horizon sets for a subgroup (SI-7 drops), and naming both
             * from one list either mislabels rows (stata pads a short namelist by
-            * repeating its last name) or errors r(503). the contreat (ES_ame*) rows keep
-            * the unsuffixed list, as before
+            * repeating its last name) or errors r(503). the contreat (ES_ame*) rows are
+            * named from the AME call's own kept horizons (BS-8)
             local sgeslist `relyrlist_s`sgcase''
             if strpos("`rownametest'","ES_att:") == 1    local sgeslist `relyrlist_s`sgcase'_att'
             if strpos("`rownametest'","ES_att_it:") == 1 local sgeslist `relyrlist_s`sgcase'_att_it'
+            if strpos("`rownametest'","ES_ame:") == 1    local sgeslist `relyrlist_s`sgcase'_ame'
+            if strpos("`rownametest'","ES_ame_it:") == 1 local sgeslist `relyrlist_s`sgcase'_ame_it'
             if strpos("`sgeslist' ","`testtext' ") != 0 local rownamessg `rownamessg' `rownametest'
             * note: the spaces above are required to avoid triggering "1 is present" when presented with "11"
           }
@@ -10204,6 +10221,93 @@ end
 *      the wooldid_ptp df_r convention.
 * Returns r(status): "ok" (line + p), "nop" (line only), "gapskip" (nothing - the B16
 * gap backstop: the altmethod fit sample has no real pre-period coefficient).
+* BS-8 (2026-09-06): label the continuous-treatment subgroup-by-horizon margins call from
+* its OWN colnames. positional omission scan mirroring the binary block in the worker:
+* every column carrying margins' o. marker is dropped from the six-row table (and from
+* b/V when given), a caution names the dropped horizons, and the relative periods of the
+* kept columns come back as the column matrix rel() and the row-label list lbl(). lives
+* outside wooldid_worker to conserve that program's compiled-size headroom. the caller
+* consumes r() first: the single-level fallback below is rclass and wipes it
+cap prog drop wooldid_sgamelbl
+prog def wooldid_sgamelbl
+  syntax , names(string) tab(name) mint(real) old(integer) sg(string) tvar(name) fb(string asis) rel(name) lbl(name) [b(name) v(name)]
+  local keep
+  local droplbl
+  local ndrop 0
+  local idx 0
+  foreach nm of local names {
+    local ++idx
+    if strpos("`nm'", "o.") != 0 {
+      local ++ndrop
+      if regexm("`nm'", "^([0-9]+)") {
+        local drel = real(regexs(1)) - `mint' - 1
+        if `drel' < 0 local droplbl `droplbl' pre`=abs(`drel')'
+        else          local droplbl `droplbl' post`drel'
+      }
+    }
+    else local keep `keep' `idx'
+  }
+  c_local wdsg_ndrop `ndrop'
+  c_local wdsg_skip 0
+  c_local `lbl'
+  if `ndrop' > 0 {
+    dis as text "Caution: the continuous-treatment relative period effect(s) `droplbl' are not estimable for subgroup `sg' (margins reports them as omitted), so they are dropped from that subgroup's continuous-treatment event study; its remaining relative periods, and all other subgroups, are unaffected."
+    if "`keep'" == "" {
+      dis as text "Caution: no continuous-treatment relative period effect is estimable for subgroup `sg', so its continuous-treatment event study is skipped entirely."
+      c_local wdsg_skip 1
+      exit
+    }
+  }
+  * relative periods from the kept names. margins names a single-level over() result
+  * without the level (see the binary block's note in the worker), so fall back to the
+  * realized levels of the subpop when a kept name does not parse
+  local kn
+  foreach k of local keep {
+    local w : word `k' of `names'
+    local kn `kn' `w'
+  }
+  local kn = subinstr("`kn'", "bn", "", .)
+  local kn = subinstr("`kn'", "`tvar'", "", .)
+  local ok 1
+  foreach w of local kn {
+    if !regexm("`w'", "^[0-9]+[.]?$") local ok 0
+  }
+  if `ok' == 0 | wordcount("`kn'") == 0 qui glevelsof(`tvar') if `fb', clean local(kn)
+  if wordcount("`kn'") != wordcount("`keep'") {
+    dis as error "Error: the continuous-treatment event-study margins for subgroup `sg' returned `=wordcount("`keep'")' estimable columns but `=wordcount("`kn'")' relative-period labels could be recovered for them. This is unexpected - please report it."
+    error 459
+  }
+  local relcol
+  local lbls
+  foreach w of local kn {
+    local r = `w' - `mint' - 1
+    if `r' >= 0 local lbls `lbls' post`r'
+    if `r' == 0 & `old' == 1 local lbls `lbls' contemp
+    if `r' < 0 local lbls `lbls' pre`=abs(`r')'
+    if "`relcol'" == "" local relcol `r'
+    else local relcol `relcol' , `r'
+  }
+  matrix `rel' = (`relcol')'
+  * the six-row table keeps the estimable columns only (column by column, as the binary
+  * block does, so an undropped call is the same slice as before)
+  tempname kt
+  local first 1
+  foreach k of local keep {
+    if `first' {
+      matrix `kt' = `tab'[1..6, `k']
+      local first 0
+    }
+    else matrix `kt' = (`kt', `tab'[1..6, `k'])
+  }
+  matrix `tab' = `kt'
+  if "`b'" != "" & `ndrop' > 0 {
+    local keepm = subinstr(trim("`keep'"), " ", ",", .)
+    mata: st_matrix("`b'", st_matrix("`b'")[1, (`keepm')])
+    mata: st_matrix("`v'", st_matrix("`v'")[(`keepm'), (`keepm')])
+  }
+  c_local `lbl' `lbls'
+end
+
 cap prog drop wooldid_advstat
 prog def wooldid_advstat, rclass
 version 16.0

@@ -180,6 +180,125 @@ foreach leg in "permute(shuffle) permreps(20) rseed(11)" "bootstrap(standard) re
   }
 }
 
+
+* ---- T8-T10 (bug sweep BS-8): the contreat subgroup event study under an SI-7 drop ----
+* the continuous-treatment (AME) horizon call was labelled from the binary call's
+* already-filtered relyr column, so any SI-7 drop was a bare conformability error
+* r(503) right after the caution. The AME call is now scanned and labelled on its own.
+* T8: the sweep's fixture (dose constant within cohort-period cells, so no AME horizon
+*     is identified): rc 0, the binary caution, both "skipped entirely" cautions and
+*     empty ES_ame blocks. T9/T10: a dose with within-cell variation everywhere except
+*     subgroup 2's pre2 cells, so exactly that AME horizon is dropped: sg2 ES_ame (and
+*     ES_ame_it) = post0 with the caution naming it, sg1 keeps pre2 post0, the binary
+*     rows are untouched, and no label repeats (Stata pads a short namelist by repeating
+*     its last name, so a duplicate is the signature of the old mislabelling)
+cap program drop ameblock
+program define ameblock, rclass
+  args sg pfx
+  tempname S
+  cap matrix `S' = e(wdidsgresults_`sg')
+  if _rc != 0 {
+    return scalar n = -1
+    return scalar dup = -1
+    exit
+  }
+  local rn : rowfullnames `S'
+  local n 0
+  local dup 0
+  local seen
+  local rows
+  foreach r of local rn {
+    if strpos("`r'", "`pfx':") == 1 {
+      local ++n
+      if strpos(" `seen' ", " `r' ") > 0 local dup 1
+      local seen `seen' `r'
+      local rows `rows' `=subinstr("`r'", "`pfx':", "", .)'
+    }
+  }
+  return scalar n = `n'
+  return scalar dup = `dup'
+  return local rows `rows'
+end
+use suite/data/survey_rcs.dta, clear
+qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+qui gen double dose = 1 + 0.2*mod(state,7) + 0.05*t
+qui log using si7_t8.txt, text replace name(si7)
+cap noi wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) contreat(dose) ///
+    contreatcontrols(basic) fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state)
+local rc8 = _rc
+qui log close si7
+scanlog si7_t8.txt "the relative period effect(s) pre2 are not estimable for subgroup 2"
+local caut8 = r(found)
+scanlog si7_t8.txt "no continuous-treatment relative period effect is estimable for subgroup 1"
+local skip8a = r(found)
+scanlog si7_t8.txt "no continuous-treatment relative period effect is estimable for subgroup 2"
+local skip8b = r(found)
+scanlog si7_t8.txt "conformability"
+local conf8 = r(found)
+cap erase si7_t8.txt
+ameblock 1 ES_ame
+local n81 = r(n)
+ameblock 2 ES_ame
+local n82 = r(n)
+if `rc8' == 0 & `caut8' == 1 & `skip8a' == 1 & `skip8b' == 1 & `conf8' == 0 & `n81' == 0 & `n82' == 0 {
+  dis as result "T8 PASS: the sweep's fixture runs rc 0 (no AME horizon identified: both contreat event studies skipped with a caution, binary caution intact)"
+}
+else {
+  dis as error "T8 FAIL: rc=`rc8' binarycaution=`caut8' skip1=`skip8a' skip2=`skip8b' conformability=`conf8' ES_ame n1=`n81' n2=`n82'"
+  global pf = $pf + 1
+}
+
+use suite/data/survey_rcs.dta, clear
+qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+set seed 8008
+qui gen double dose = 1 + 0.2*mod(state,7) + 0.05*t + rnormal()
+qui replace dose = 1 + 0.2*mod(state,7) + 0.05*t if group == 2 & ttre < . & t - ttre == -2
+tempfile fx9
+save `fx9'
+local k 8
+foreach leg in "att" "att att_it" {
+  local ++k
+  use `fx9', clear
+  qui log using si7_t9.txt, text replace name(si7)
+  cap noi wooldid y_rcs state_group t ttre [pw=survey_weight], `leg' subgroups(group) contreat(dose) ///
+      contreatcontrols(basic) fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state)
+  local rck = _rc
+  qui log close si7
+  scanlog si7_t9.txt "the continuous-treatment relative period effect(s) pre2 are not estimable for subgroup 2"
+  local cautk = r(found)
+  scanlog si7_t9.txt "not estimable for subgroup 1"
+  local caut1k = r(found)
+  scanlog si7_t9.txt "conformability"
+  local confk = r(found)
+  cap erase si7_t9.txt
+  local okk 1
+  local pfxs ES_ame
+  if "`leg'" == "att att_it" local pfxs ES_ame ES_ame_it
+  local rep
+  foreach pfx of local pfxs {
+    ameblock 1 `pfx'
+    local r1 `r(rows)'
+    local d1 = r(dup)
+    ameblock 2 `pfx'
+    local r2 `r(rows)'
+    local d2 = r(dup)
+    local rep `rep' `pfx' sg1=[`r1'] sg2=[`r2']
+    if "`r1'" != "pre2 post0" | "`r2'" != "post0" | `d1' != 0 | `d2' != 0 local okk 0
+  }
+  ameblock 1 ES_att
+  local b1 `r(rows)'
+  ameblock 2 ES_att
+  local b2 `r(rows)'
+  if "`b1'" != "pre2 post0" | "`b2'" != "pre2 post0" local okk 0
+  if `rck' == 0 & `cautk' == 1 & `caut1k' == 0 & `confk' == 0 & `okk' {
+    dis as result "T`k' PASS: contreat + `leg' -> rc 0, sg2's pre2 AME dropped with its caution;`rep'; ES_att sg1=[`b1'] sg2=[`b2']"
+  }
+  else {
+    dis as error "T`k' FAIL: contreat + `leg' -> rc=`rck' caution2=`cautk' caution1=`caut1k' conformability=`confk';`rep'; ES_att sg1=[`b1'] sg2=[`b2']"
+    global pf = $pf + 1
+  }
+}
+
 if $pf == 0 dis as result "SI7_ALL_PASS"
 else dis as error "SI7_FAILURES: $pf"
 exit, clear
