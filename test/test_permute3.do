@@ -1009,7 +1009,7 @@ local lg = fileread("perm3_q19.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
 local lg = subinstr(`"`lg'"', char(10), " ", .)
-if strpos(`"`lg'"', "smallest attainable permutation p-value is 0.095 (2/(permreps + 1))") == 0 {
+if strpos(`"`lg'"', "smallest attainable per-coefficient permutation p-value is 0.095 (2/(permreps + 1))") == 0 {
   dis as error "Q19b FAIL: no resolution caution at permreps(20)"
   global pf = $pf + 1
 }
@@ -1022,7 +1022,7 @@ xrc Q19c 0 `rc'
 local lg = fileread("perm3_q19.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-if strpos(`"`lg'"', "smallest attainable permutation p-value") > 0 {
+if strpos(`"`lg'"', "smallest attainable per-coefficient permutation p-value") > 0 {
   dis as error "Q19d FAIL: the resolution caution fired at permreps(40)"
   global pf = $pf + 1
 }
@@ -1035,7 +1035,7 @@ xrc Q19e 0 `rc'
 local lg = fileread("perm3_q19.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-if strpos(`"`lg'"', "smallest attainable permutation p-value") > 0 {
+if strpos(`"`lg'"', "smallest attainable per-coefficient permutation p-value") > 0 {
   dis as error "Q19f FAIL: the resolution caution fired under permabsp at permreps(20)"
   global pf = $pf + 1
 }
@@ -1259,6 +1259,145 @@ cap qui wooldid y i t ttre, att cluster(i) makeplots permute(shuffle) permreps(2
 xrc Q24a 0 _rc
 cap confirm matrix e(wdidmainresults)
 xrc Q24b 0 _rc
+
+
+* ================= Q25-Q28 (bug sweep BS-20/22/24/25, 2026-09-06): the follow-ups
+cap program drop scan3
+program define scan3, rclass
+  args lf needle
+  tempname fh
+  local found 0
+  file open `fh' using "`lf'", read text
+  file read `fh' line
+  while r(eof) == 0 {
+    if strpos(`"`macval(line)'"', `"`needle'"') != 0 local ++found
+    file read `fh' line
+  }
+  file close `fh'
+  return scalar found = `found'
+end
+* Q25 (BS-20): the resolution caution follows the convention in force - at permreps(20)
+* the equal-tailed floor 2/21 = .095 draws it, the one-sided/absolute floor 1/21 does
+* not, and the plain share has no floor; the "cannot reject" claim and the printed p
+* must never disagree in one output
+mkperm3 8 4 3
+tempfile q25
+save `q25'
+local q25n
+foreach conv in "" "permabsp" "permside(right)" "permrawp" {
+  use `q25', clear
+  qui log using perm3_q25.txt, text replace name(p3)
+  cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) rseed(25) `conv'
+  local rc = _rc
+  qui log close p3
+  xrc "Q25 `conv'" 0 `rc'
+  scan3 perm3_q25.txt "smallest attainable per-coefficient permutation p-value"
+  local q25n `q25n' `r(found)'
+  local q25p_`=cond("`conv'" == "", "eq", cond("`conv'" == "permabsp", "abs", cond("`conv'" == "permrawp", "raw", "right")))' = e(perm_p)[1,1]
+}
+cap erase perm3_q25.txt
+dis "Q25 caution counts (eq abs right raw) = `q25n'; p: eq=`q25p_eq' abs=`q25p_abs' right=`q25p_right' raw=`q25p_raw'"
+if "`q25n'" != "1 0 0 0" | `q25p_right' >= .05 | `q25p_raw' >= .05 {
+  dis as error "Q25 FAIL: the floor caution does not follow the convention (counts `q25n'; right p `q25p_right', raw p `q25p_raw')"
+  global pf = $pf + 1
+}
+* Q26 (BS-22): under permexact the shares are exact - e(perm_p_se) and e(perm_p_ci) are
+* missing and the footer says so; a sampled companion reports both (the SE is 0 when no
+* draw reaches the observed statistic, as Stata's permute reports), and the interval
+* brackets the p
+use `q25', clear
+qui log using perm3_q26.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact
+local rc = _rc
+qui log close p3
+xrc Q26a 0 `rc'
+matrix Q26S = e(perm_p_se)
+matrix Q26C = e(perm_p_ci)
+matrix Q26P = e(perm_p)
+mata: st_local("q26miss", strofreal(allof(st_matrix("Q26S"), .) & allof(st_matrix("Q26C"), .)))
+scan3 perm3_q26.txt "exhaustive, so the p-values are exact shares"
+local q26f = r(found)
+scan3 perm3_q26.txt "Monte-Carlo precision of the p-values"
+local q26g = r(found)
+cap erase perm3_q26.txt
+use `q25', clear
+qui log using perm3_q26.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(26)
+local rc = _rc
+qui log close p3
+xrc Q26b 0 `rc'
+matrix Q26S2 = e(perm_p_se)
+matrix Q26C2 = e(perm_p_ci)
+matrix Q26P2 = e(perm_p)
+scan3 perm3_q26.txt "Monte-Carlo precision of the p-values"
+local q26h = r(found)
+cap erase perm3_q26.txt
+dis "Q26 exact: p=" Q26P[1,1] " se/ci all missing=`q26miss' footer exact=`q26f' mc=`q26g' | sampled: p=" Q26P2[1,1] " se=" Q26S2[1,1] " ci=[" Q26C2[1,1] "," Q26C2[2,1] "] footer mc=`q26h'"
+if `q26miss' != 1 | `q26f' != 1 | `q26g' != 0 | Q26P[1,1] >= . | Q26S2[1,1] >= . | Q26S2[1,1] < 0 | Q26C2[1,1] > Q26P2[1,1] | Q26C2[2,1] < Q26P2[1,1] | `q26h' != 1 {
+  dis as error "Q26 FAIL: Monte-Carlo precision under permexact / sampled draws"
+  global pf = $pf + 1
+}
+* Q27 (BS-24): the step-down footer names its own metric (p_raw), and the kernel row is
+* the documented p_raw
+use `q25', clear
+qui log using perm3_q27.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(2) permute(shuffle) permreps(40) rseed(23)
+local rc = _rc
+qui log close p3
+xrc Q27a 0 `rc'
+scan3 perm3_q27.txt "horizon: p_raw -> step-down p, where p_raw is the two-sided |t| share"
+local q27a = r(found)
+scan3 perm3_q27.txt "raw p -> step-down"
+local q27b = r(found)
+cap erase perm3_q27.txt
+local q27rn : rownames e(perm_stepdown)
+dis "Q27 footer new=`q27a' old=`q27b' rows=[`q27rn']"
+if `q27a' != 1 | `q27b' != 0 | !`: list posof "p_raw" in q27rn' {
+  dis as error "Q27 FAIL: step-down footer / kernel row"
+  global pf = $pf + 1
+}
+* Q28 (BS-25): a plain-share p of exactly 0 (permrawp, sampled draws, a strong effect on
+* a large assignment space) draws the resolution note; the add-one conventions and an
+* exact enumeration do not (an exact share is never below 1/M since the observed
+* assignment is a member)
+mkperm3 20 8 3
+tempfile q28
+save `q28'
+qui log using perm3_q28.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(99) rseed(28) permrawp
+local rc = _rc
+qui log close p3
+xrc Q28a 0 `rc'
+local q28p = e(perm_p)[1,1]
+scan3 perm3_q28.txt "p = 0 above means p <"
+local q28n = r(found)
+local q28x
+foreach conv in "" "permabsp" {
+  use `q28', clear
+  qui log using perm3_q28.txt, text replace name(p3)
+  cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(99) rseed(28) `conv'
+  local rc = _rc
+  qui log close p3
+  xrc "Q28 `conv'" 0 `rc'
+  scan3 perm3_q28.txt "p = 0 above means p <"
+  local q28x `q28x' `r(found)'
+}
+use `q25', clear
+qui log using perm3_q28.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact permrawp
+local rc = _rc
+qui log close p3
+xrc Q28d 0 `rc'
+mata: st_local("q28min", strofreal(min(st_matrix("e(perm_p)"))))
+local q28M = e(perm_completed)
+scan3 perm3_q28.txt "p = 0 above means p <"
+local q28e = r(found)
+cap erase perm3_q28.txt
+dis "Q28 permrawp sampled: p=`q28p' note=`q28n' | default/permabsp notes=`q28x' | exact permrawp: min p=`q28min' completed=`q28M' note=`q28e'"
+if `q28p' != 0 | `q28n' != 1 | "`q28x'" != "0 0" | `q28min' < 1/`q28M' - 1e-6 | `q28e' != 0 {
+  dis as error "Q28 FAIL: the p = 0 resolution note under permrawp"
+  global pf = $pf + 1
+}
 
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

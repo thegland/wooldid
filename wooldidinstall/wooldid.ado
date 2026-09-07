@@ -5767,11 +5767,14 @@ version 16.0
   }
   * F036 (quality review 2026-09-05, author ruling 2026-09-06: caution, floor stays 20). The
   * sampled-draw p-value has floor 2/(permreps + 1) under the default equal-tailed
-  * convention (1/(permreps + 1) under permabsp), so below 39 replications a 5% rejection
+  * convention; 1/(permreps + 1) under permabsp and permside(); no floor under permrawp,
+  * whose plain c/n share can be 0 (bug sweep BS-20: the caution follows the convention in
+  * force, the five-way code wooldid_permwire builds), so below 39 replications a 5% rejection
   * is unreachable by construction and every row prints the floor as if it were evidence
   if `permreps' > 0 & "`permexact'" == "" {
-    local wdp_floor = cond("`absp'" != "", 1/(`permreps' + 1), 2/(`permreps' + 1))
-    if `wdp_floor' > .05 dis as text "Caution: with permreps(`permreps') the smallest attainable permutation p-value is " %5.3f `wdp_floor' " (" cond("`absp'" != "", "1", "2") "/(permreps + 1)), above .05, so no result can reject at the 5% level whatever the data say, and a p-value printed at that floor is the resolution limit rather than evidence. Use at least " cond("`absp'" != "", "20", "40") " replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002)."
+    local wdpcv = cond("`rawp'" != "", 2, cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != ""))))
+    local wdp_floor = cond(`wdpcv' == 0, 2/(`permreps' + 1), cond(`wdpcv' == 2, 0, 1/(`permreps' + 1)))
+    if `wdp_floor' > .05 dis as text "Caution: with permreps(`permreps') the smallest attainable per-coefficient permutation p-value is " %5.3f `wdp_floor' " (" cond(`wdpcv' == 0, "2", "1") "/(permreps + 1)), above .05, so no coefficient p-value can reject at the 5% level whatever the data say, and a p-value printed at that floor is the resolution limit rather than evidence. Use at least " cond("`absp'" != "", "20", "40") " replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). The joint, equality and step-down tests are one-sided add-one shares with floor 1/(permreps + 1)."
   }
   if "`permmethod'" == "probabilities" {
     cap confirm numeric variable `clus'
@@ -9589,13 +9592,25 @@ end
 * exactly 0 means no completed replication fell on the far side of the null - the
 * resolution limit 2/n, not a probability of 0. matlist renders a numeric matrix, so the
 * cell keeps the 0 (e() keeps it too, by the ruling); this line under the table says what
-* the 0 means. Bootstrap only: the permutation add-one p never prints 0, and the Wald
-* display's p is a tail probability
+* the 0 means. Under permute() only the plain c/n share (permrawp) can print 0 from a
+* sampled enumeration - the add-one conventions never do, and an exact enumeration's 0
+* would be a true share (bug sweep BS-25); the Wald display's p is a tail probability
 cap prog drop wooldid_pfloor
 prog def wooldid_pfloor
   args mat
-  if "`e(boot_completed)'" == "" exit
-  if "`e(boot_display)'" == "wald" & "`e(boot_tstat)'" != "1" exit
+  if "`e(boot_completed)'" != "" {
+    if "`e(boot_display)'" == "wald" & "`e(boot_tstat)'" != "1" exit
+    local wdpn = e(boot_completed)
+    local wdpres = 2/`wdpn'
+    local wdpmsg (2/`wdpn' completed replications, the resolution of the rank-based p): no completed replication fell on the far side of the null. The cell and e() keep the 0.
+  }
+  else if "`e(perm_completed)'" != "" {
+    if "`e(perm_pconv)'" != "raw" | "`e(perm_exact)'" == "1" exit
+    local wdpn = e(perm_completed)
+    local wdpres = 1/`wdpn'
+    local wdpmsg (1/`wdpn' completed replications, the resolution of the plain c/n share): no completed replication reached the observed absolute statistic. The cell and e() keep the 0; e(perm_p_ci) holds the Clopper-Pearson upper bound.
+  }
+  else exit
   cap confirm matrix `mat'
   if _rc != 0 exit
   tempname pm
@@ -9604,7 +9619,7 @@ prog def wooldid_pfloor
   if `pc' >= . local pc 4
   if `pc' > colsof(`pm') exit
   mata: st_local("wdp0", strofreal(sum(st_matrix("`pm'")[., `pc'] :== 0)))
-  if `wdp0' > 0 dis as text "  p = 0 above means p < " %5.3f 2/e(boot_completed) " (2/" e(boot_completed) " completed replications, the resolution of the rank-based p): no completed replication fell on the far side of the null. The cell and e() keep the 0."
+  if `wdp0' > 0 dis as text "  p = 0 above means p < " %5.3f `wdpres' " `wdpmsg'"
 end
 
 cap prog drop wooldid_display
@@ -9973,7 +9988,7 @@ version 16.0
         local wdpiv symmetric shift intervals dual to that p-value - the estimate plus or minus the `wdplv'th-percentile absolute
       }
       else if "`e(perm_pconv)'" == "raw" {
-        local wdppc two-sided absolute-value permutation p-values WITHOUT the add-one adjustment (permrawp): c/n, the share of replications whose absolute statistic is at or above the observed absolute statistic - the number ritest and Stata's permute prefix report
+        local wdppc two-sided absolute-value permutation p-values WITHOUT the add-one adjustment (permrawp): c/n, the share of replications whose absolute statistic is at or above the observed absolute statistic - the number ritest and Stata's permute prefix report; a p of exactly 0 means no replication reached the observed absolute statistic (the note under the table gives the resolution)
         local wdpiv symmetric shift intervals - the estimate plus or minus the `wdplv'th-percentile absolute
       }
       else if "`e(perm_pconv)'" == "left" | "`e(perm_pconv)'" == "right" {
@@ -9990,7 +10005,8 @@ version 16.0
       if "`e(perm_stat)'" == "t" dis as result "  The standard-error column is the ANALYTIC standard error (se_analytic), the t-ratio's own denominator; e(V) and e(V_es_*) hold the analytic covariance, so test or lincom run by hand on them are analytic, not permutation, quantities."
       else if "`e(perm_analyticse)'" == "1" dis as result "  The standard-error column is the ANALYTIC standard error (se_analytic, permanalyticse), shown for reference only; the t_perm column is blank because the permuted statistic is the estimate itself. e(V) and e(V_es_*) hold the analytic covariance, so test or lincom run by hand on them are analytic, not permutation, quantities."
       else dis as result "  No analytic standard errors were computed (the permute() fast-mode default; permanalyticse restores them), so the se_analytic and t_perm columns are blank and no e(V) or e(V_es_*) is posted."
-      dis as result "  Monte-Carlo precision of the p-values: e(perm_p_se) holds the standard error of each p-value's underlying share and e(perm_p_ci) its `wdplv'% Clopper-Pearson interval (doubled under the equal-tailed rule); the one-sided shares are in e(perm_p_lo) and e(perm_p_hi)."
+      if "`e(perm_exact)'" == "1" dis as result "  The enumeration is exhaustive, so the p-values are exact shares with no Monte-Carlo error; e(perm_p_se) and e(perm_p_ci) are left missing. The one-sided shares are in e(perm_p_lo) and e(perm_p_hi)."
+      else dis as result "  Monte-Carlo precision of the p-values: e(perm_p_se) holds the standard error of each p-value's underlying share and e(perm_p_ci) its `wdplv'% Clopper-Pearson interval (doubled under the equal-tailed rule); the one-sided shares are in e(perm_p_lo) and e(perm_p_hi)."
       local wdpqf 0
       cap confirm matrix e(perm_jointW)
       if _rc == 0 local wdpqf 1
@@ -10004,7 +10020,7 @@ version 16.0
         cap confirm matrix e(`wdpsdn')
         if _rc != 0 continue
         local wdpsdf = cond("`wdpsdn'" == "perm_stepdown", "att", cond("`wdpsdn'" == "perm_stepdown_i", "att_it", cond("`wdpsdn'" == "perm_Cstepdown", "ame", "ame_it")))
-        dis as result "  Multiplicity across the post-treatment `wdpsdf' horizons (max-|studentized| step-down, Romano-Wolf; the studentization is the SD of each horizon's null draws): horizon: raw p -> step-down p"
+        dis as result "  Multiplicity across the post-treatment `wdpsdf' horizons (max-|studentized| step-down, Romano-Wolf; the studentization is the SD of each horizon's null draws): horizon: p_raw -> step-down p, where p_raw is the two-sided |t| share (add-one) in the step-down's own metric, not the table's convention - compare the two columns with each other rather than with the table"
         tempname wdpsdm
         matrix `wdpsdm' = e(`wdpsdn')
         local wdpsdc : colnames `wdpsdm'
@@ -13147,13 +13163,17 @@ real rowvector wooldid_permtail(real colvector draws, real scalar sobs, real sca
   // Clopper-Pearson interval of the underlying share cc/n (Stata's permute and ritest
   // report both); under the equal-tailed 2*min rule both are doubled, the upper end
   // capped at 1
-  qq = cc/n
-  out[16] = mult*sqrt(qq*(1 - qq)/n)
-  al2 = al
-  cpl = (cc <= 0 ? 0 : invibeta(cc, n - cc + 1, al2))
-  cph = (cc >= n ? 1 : invibeta(cc + 1, n - cc, 1 - al2))
-  out[17] = min((1, mult*cpl))
-  out[18] = min((1, mult*cph))
+  // under an exact enumeration the shares are exact, not Monte-Carlo estimates, so rows
+  // 16-18 keep the missing they were initialised to (bug sweep BS-22)
+  if (!exact) {
+    qq = cc/n
+    out[16] = mult*sqrt(qq*(1 - qq)/n)
+    al2 = al
+    cpl = (cc <= 0 ? 0 : invibeta(cc, n - cc + 1, al2))
+    cph = (cc >= n ? 1 : invibeta(cc + 1, n - cc, 1 - al2))
+    out[17] = min((1, mult*cpl))
+    out[18] = min((1, mult*cph))
+  }
   // the shift interval takes the estimate's sampling error to have the NULL permutation
   // distribution, which presumes that distribution is centred at zero. When its central
   // band excludes 0 the presumption fails (a quantity that is non-zero under reassigned
