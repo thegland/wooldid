@@ -800,7 +800,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     qui gen `_t' = `t' - `ttre' if `ifstatement'
 
     if "`timetrends'" == "" {
-      if "`safety'" == "off" | `esprelength' <= 1{
+      * the caution branch runs whenever a pre-treatment horizon is requested at all
+      * (bug sweep BS-2: <= 1 gated it off at esprelength(1), the smallest case it exists for)
+      if "`safety'" == "off" | `esprelength' == 0 {
         qui replace `_t' = . if `_t' < -`esprelength'  | `t' == `mint'
       }
       else{
@@ -812,7 +814,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           dis as text "Caution: reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
           dis as text "This does not break estimation, but event study estimates can carry counterintuitive meanings and reflect effect levels by cohort."
           dis as text "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
-          dis as text "(Or request estimates for fewer pre-treatment horizons.)"
+          if `esprelength' > 1 dis as text "(Or request estimates for fewer pre-treatment horizons.)"
           dis as text " "
           * If this condition triggers, event study coefficients are very difficult to interpret
         }
@@ -820,7 +822,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     }
     else{
       * if using timetrends, never use the 2nd observation either - dont just always skip the first!
-      if "`safety'" == "off" | `esprelength' <= 1{
+      * the caution branch runs whenever a pre-treatment horizon is requested at all
+      * (bug sweep BS-2: <= 1 gated it off at esprelength(1), the smallest case it exists for)
+      if "`safety'" == "off" | `esprelength' == 0 {
         qui replace `_t' = . if `_t' < -`esprelength'  | `t' <= `mintp1'
       }
       else{
@@ -832,7 +836,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           dis as text "Caution: reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
           dis as text "This does not break estimation, but event study estimates can carry counterintuitive meanings and reflect effect levels by cohort."
           dis as text "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
-          dis as text "(Or: request estimates for fewer pre-treatment horizons, drop request to include timetrends.)"
+          if `esprelength' > 1 dis as text "(Or: request estimates for fewer pre-treatment horizons, or drop the request to include timetrends.)"
+          else dis as text "(Or drop the request to include timetrends.)"
           dis as text " "
         }
       }
@@ -1601,6 +1606,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   tempvar esamp
   qui gen byte `esamp' = e(sample)
   local df_r = e(df_r)
+  * one cluster leaves e(df_r) = 0 and the run then died r(125) inside margins under a
+  * caution blaming continuous treatment; stop here with the reason (bug sweep BS-35).
+  * fast mode asks margins for no variance and may proceed
+  if "`fastnose'" == "" & `df_r' < 1 {
+    if e(N_clust) < 2 dis as error "Error: cluster(`cluster') leaves `=e(N_clust)' cluster(s) in the estimation sample; cluster-robust inference needs at least 2. Use a finer cluster variable, robust, or fastnose."
+    else dis as error "Error: the model leaves no residual degrees of freedom (e(df_r) = `df_r'), so no variance can be estimated."
+    error 459
+  }
 
   * AMESE R1 (standing-issues family A): the structural cell-containment predicate.
   * Fires only with contreat + a cluster-type VCE, never under fastnose (no variances),
@@ -1632,7 +1645,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * single-variable cluster() (official regress has no multi-way cluster), never for
   * poisson, and behind a maxvar feasibility count.
   if "`fastnose'" == "" {
-    wooldid_amescreen , mode(vzero) r1fired(`amescrub')
+    wooldid_amescreen , mode(vzero) r1fired(`amescrub') contreat(`contreat')
     if r(vzero) == 1 & `amescrub' == 1 & "`poisson'" != "poisson" & wordcount("`cluster'") == 1 & "`customvce'" == "" & "`fe'" == "" & "`ccc_absorbinserter'" == "" {
       * cap: on huge-cardinality i the levels list can overflow the macro length
       * (rc 920) - treat as refit-infeasible rather than aborting the run
@@ -4325,6 +4338,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * CORE-10: prefix the command name so e(cmdline) matches the Stata convention (the
   * worker's `0' is never rewritten, so this single posting site is authoritative)
   ereturn local cmdline `"wooldid `0'"'
+  * posted here rather than as the worker's last statement: a failure in the display or
+  * plot stages after the post left e() without e(cmd), so the shell's replay refusal was
+  * unreachable and a bare wooldid fell through to a syntax error (bug sweep BS-32)
+  ereturn local cmd "wooldid"
   local estimate_type "pooled_reference_period"
   if "`esfixedbaseperiod'" != "" local estimate_type "fixed_reference_period"
   ereturn local estimate_type "`estimate_type'"
@@ -4579,7 +4596,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
   * program ends!
   dis as result  " "
-  ereturn local cmd "wooldid"
 
 
 
@@ -4677,6 +4693,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     error 198
   }
 
+  * unconditionalse estimates through regress/poisson and takes its variance from margins,
+  * vce(unconditional), which accepts one cluster variable; a second one reached regress as
+  * a raw "too many variables specified" (bug sweep BS-14)
+  if "`unconditionalse'" != "" & wordcount("`cluster'") > 1 {
+    dis as error "Error: unconditionalse supports a single cluster() variable; multiway clustering is not available with unconditional standard errors."
+    dis as text  "unconditionalse estimates through regress/poisson and obtains the variance from margins, vce(unconditional), which accepts only one cluster variable."
+    error 198
+  }
   if "`impvalues'" != "" & wordcount("`cluster'") > 1 {
     dis as error "Error: Ibragimov and Muller p-values only allowed with a single cluster variable."
     error 198
@@ -5023,7 +5047,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`contreat'" != "" {
     if `contreatpoly' > 1                                                       local fcbad `fcbad' contreatpoly(>1)
     if `"`lattice'"' != ""                                                      local fcbad `fcbad' lattice()
-    if "`cfxlattice'" != "" | "`makecfxplots'" != ""                            local fcbad `fcbad' makecfxplots/cfxlattice()
+    * only makecfxplots reads the bins (from lattice() or cfxlattice()); cfxlattice() on its
+    * own is announced as ignored and must not decide the collapse (bug sweep BS-27)
+    if "`makecfxplots'" != ""                                                   local fcbad `fcbad' makecfxplots
     if "`contreatelasticitytype'" == "eyex" | "`contreatelasticitytype'" == "eydx" local fcbad `fcbad' contreatelasticitytype(`contreatelasticitytype')
     * poisson + contreatelasticitytype(dyex) left this list on 2026-09-06 (F032): dyex now
     * takes the analytic predict(xb) form under poisson too, and the collapse reproduces the
@@ -10517,7 +10543,8 @@ version 16.0
     * the caution defers to the more precise cell-containment caution when that one
     * already displayed (r1fired); detection is still returned for the refit logic
     if `vzero' & "`r1fired'" != "1" {
-      dis as text "Caution: estimation returned an all-zero variance-covariance matrix. The issue is likely related to continuous treatment effect estimation coupled with use of analytic clustered SEs, with clusters occuring at a high level of aggregation. Consider switching to use of bootstrap SEs, IM p-values, or randomization inference if finer clustering levels are non-viable."
+      if "`contreat'" != "" dis as text "Caution: estimation returned an all-zero variance-covariance matrix. The issue is likely related to continuous treatment effect estimation coupled with use of analytic clustered SEs, with clusters occuring at a high level of aggregation. Consider switching to use of bootstrap SEs, IM p-values, or randomization inference if finer clustering levels are non-viable."
+      else dis as text "Caution: estimation returned an all-zero variance-covariance matrix. This usually reflects a degenerate clustering (very few clusters, or clusters at a high level of aggregation relative to the design). Consider switching to bootstrap SEs, IM p-values, or randomization inference."
     }
     return scalar vzero = `vzero'
     exit
@@ -10999,7 +11026,13 @@ end
 *** marker; a second-half level variance is missing, all are zero, or one is <= tol x the
 *** largest; the adjacent-difference contrast VCE of the second-half levels (the object
 *** the subgroup-equality chain -test- and the overjoint pre-trend tests act on; skipped
-*** for the event-study levels under `levels', which nothing contrasts) has its largest
+*** for the event-study levels under `levels': those levels ARE contrasted - by the
+*** adversarial line test and by whatever consumes e(V_es_*) - but both make their own
+*** rank decision at 1e-12 of the largest eigenvalue, three orders tighter than tol, so
+*** a residue-level direction is dropped identically whether the call ran collapsed or
+*** on the full data, while a 1e-9 contrast test here would fire on every run whose
+*** cluster count is below its horizon count, which is healthy and common (measured
+*** 2026-09-06: 4/5/6 clusters against 8 horizons; bug sweep BS-29)) has its largest
 *** eigenvalue <= tol x the largest level variance or its smallest <= tol x the larger of
 *** its largest and the largest level variance; or a second-half pairwise variance is
 *** missing or <= tol x the largest level variance.

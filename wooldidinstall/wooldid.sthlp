@@ -240,7 +240,7 @@ regression estimation using this option will underlying rely on either {help reg
 {phang}{opt rob:ust}: Heteroskedasticity robust standard errors; relevant only if cluster() is not specified. By default, regression estimation using this
 option will underlyingly rely on either {it:reghdfe} or, for poisson, {it:ppmlhdfe}. {p_end}
 
-{phang}{opt uncond:itionalse}: Compute standard errors that account for sampling variation in covariates. This option also forces {it:wooldid} to abandon
+{phang}{opt uncond:itionalse}: Compute standard errors that account for sampling variation in covariates. With {cmd:cluster()}, a single cluster variable is supported: the variance comes from {it:margins, vce(unconditional)}, which accepts one. This option also forces {it:wooldid} to abandon
 high dimensional fixed effect estimation packages for the underlying two-way fixed effect regression in favor of the commands {it:regress} and {it:poisson}.
 As such, this option should be slower to use on average. This option requires specifying either robust or clustered standard errors (a robust or clustered vce supplied via {it:customvce()} also satisfies this requirement, as do pweights, which imply robust standard errors). {p_end}
 
@@ -337,7 +337,7 @@ the copy.) {ul:The reported quantity is not linear in the coefficients, or not l
 {it:contreatpoly()} above 1, which makes the effect a polynomial in the dose that the cell mean does not reproduce; {it:poisexpresults}, whose exponentiated reporting scale is
 not linear in the coefficients. ({it:poisson} with {it:contreatelasticitytype(dyex)} left this list on 2026-09-06: {it:dyex} now uses the analytic Jacobian under {it:poisson} as {it:dydx} does, and the collapse reproduces the full-data {it:ame} rows there.)
 {ul:The read splits a cell on something the cell key does not contain:}
-{it:lattice()}, {it:makecfxplots} and {it:cfxlattice()}, which bin the dose. ({it:impvalues}, which computes effects over the clusters, left this list on 2026-09-06: the cluster variable joins the cell key under {it:impvalues}, which makes the per-cluster reads exact - measured at 1e-12 both for a cluster nesting {it:i} and for one crossed with it - at the cost of more cells only when the cluster is crossed with {it:i}.)
+{it:lattice()} and {it:makecfxplots} (with the bins of {it:lattice()} or {it:cfxlattice()}), which bin the dose; {it:cfxlattice()} on its own is ignored and does not affect the collapse. ({it:impvalues}, which computes effects over the clusters, left this list on 2026-09-06: the cluster variable joins the cell key under {it:impvalues}, which makes the per-cluster reads exact - measured at 1e-12 both for a cluster nesting {it:i} and for one crossed with it - at the cost of more cells only when the cluster is crossed with {it:i}.)
 {ul:{it:margins} objects to the collapsed row count itself:} {it:unconditionalse}, whose variance is built from observation-level influence functions and whose row count
 {it:margins} checks against {it:e(N)}. {ul:Unverified rather than known-broken:} {it:customvce()}, refused pending measurement. {p_end}
 
@@ -350,7 +350,7 @@ and {it:saveplots()}, and the replications of {cmd:permute()} and {cmd:bootstrap
 {phang2}{ul:{bf:subgroups()} is eligible, but screened, for a subtler reason worth understanding.} When {it:margins} judges a subgroup-by-horizon effect not estimable it does not
 error - it computes the number anyway and flags it only by marking the name it returns, and that flag rests on a rank decision made at the last digit. wooldid's subgroup code is
 the one place that reads the flag, and it does so three separate ways: to drop the affected horizon with a caution, to skip the adversarial pre-trend test, and inside the subgroup
-joint tests. So it is the one place where the collapse's last-digit change in summation order can change {bf:what} is reported rather than its low-order digits: a horizon that
+joint tests. A fourth exact-zero branch is the adversarial line test's own rank truncation, at 1e-12 of the largest eigenvalue of the event-study covariance, which runs on every event study (subgroup or not) and is three orders tighter than the collapse screen's tolerance - so a residue-level direction is dropped identically collapsed or not. So it is the one place where the collapse's last-digit change in summation order can change {bf:what} is reported rather than its low-order digits: a horizon that
 should be dropped can come back as a meaningless near-zero, or a reported joint test can turn to missing. This can only happen where the variance matrix has a direction that is
 singular in truth - a subgroup effect, or a contrast between subgroups, whose true variance is zero, as when a fixed effect absorbs every cell ({it:fe()} on a cohort-by-period
 variable), the fit is exact, or the clustered variance is rank-deficient - so that the number {it:margins} computes there is cancellation residue rather than an estimate. wooldid
@@ -377,7 +377,7 @@ set. Healthy
 subgroup runs pass untouched: realistic heteroskedasticity leaves the screened variance ratios between 0.1 and 1, seven to eight orders of magnitude from the tolerance. The
 one way a healthy variance matrix reaches it is outcome scales differing between subgroups by more than about a factor of 1e4 (a variance ratio of 1e-9): the cost is then the
 speedup under the default safety, and under {it:safety(off)} a caution that overstates the situation. Non-subgroup runs are not exposed: no code outside the subgroup path reads a
-{it:margins} result name, and 123 non-subgroup comparisons on aggregating data showed no structural difference at all. {p_end}
+{it:margins} result name, and 123 non-subgroup comparisons on aggregating data showed no structural difference at all. (The adversarial rank truncation just described applies to non-subgroup event studies too, but it is a fixed rule of the test itself, not a read of a {it:margins} result name.) {p_end}
 
 {phang2}{ul:Memory.} The full data is held aside while the collapsed window runs, so peak memory includes an extra copy of your dataset. This is immaterial for typical panels but
 worth knowing if you are already near your memory limit, particularly if you have issued your own {help preserve} before calling {it:wooldid}; {opt fullprecisionslow} removes
@@ -1175,8 +1175,7 @@ to represent the missing reference period. {p_end}
 {pstd} {ul:Replay:} Typing {it:wooldid} by itself after a successful estimation redisplays the full stored results from {it:e()} - the header, summary statistics, all results tables,
 the joint, adversarial, and pre-trend power diagnostics, and the event-study composition, cohort-by-period, and randomization-inference blocks when present - byte-for-byte as originally shown. Replay works after {it:estimates restore} of a stored {it:wooldid} model (subject to the failed-call
 refusal below), after {it:cleanmatrices}, and with no dataset in memory. It does not re-draw plots, does not repeat estimation-time Caution messages (which describe the estimation run, not the results),
-and accepts no options: any non-empty command line - including {it:wooldid, update} - is processed as a normal call. If a {it:wooldid} call fails anywhere in its main pass - parsing, estimation, diagnostics, display, or plots - {it:e()} still holds the previous successful estimation
-(standard Stata behavior), but replay then refuses with an informative error until a {it:wooldid} call completes successfully: redisplaying results that predate the failed call would
+and accepts no options: any non-empty command line - including {it:wooldid, update} - is processed as a normal call. If a {it:wooldid} call fails at the parse or estimation stage, {it:e()} still holds the previous successful estimation (standard Stata behavior); if it fails later - diagnostics, display, or plots, after the results were posted - {it:e()} holds the failed call's own partial post. Either way replay refuses with an informative error until a {it:wooldid} call completes successfully: redisplaying results that predate the failed call would
 be misleading. The refusal is session-scoped (an internal {it:WOOLDID_LASTRC} marker; {it:WOOLDID_*} global names are reserved by {it:wooldid}): it also blocks replay of models
 explicitly selected with {it:estimates restore} until some {it:wooldid} call completes. If a failure instead occurs in the separate post-estimation randomization-inference phase of a
 {cmd:permute()} call, that call's own completed ordinary estimation is restored, valid, and remains replayable (the permutation request itself failed loudly). Replay requires results posted by a

@@ -1329,5 +1329,32 @@ if `fc15a' != 1 | `fc15b' != 1 | `d15a' > 1e-12 | `d15b' > 1e-12 | `nc15a' <= `n
   local ++fails
 }
 
+
+* ---- F16 (bug sweep BS-27, 2026-09-06): cfxlattice() without makecfxplots is ignored, as
+* announced, and no longer disables the default collapse or refuses fastcollapse; the
+* real bin-readers (makecfxplots with cfxlattice(), lattice()) still refuse fastcollapse
+use "`REPO'/test/data/dta_cont.dta", clear
+gen zbin = mod(i, 3)
+tempfile f16
+save `f16'
+cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) cfxlattice(zbin)
+local f16rc = _rc
+local f16col = e(wdid_fcol)
+local f16skip `e(wdid_fcskip)'
+use `f16', clear
+cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) cfxlattice(zbin) fastcollapse
+local f16rcb = _rc
+use `f16', clear
+cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) makecfxplots cfxlattice(zbin) fastcollapse
+local f16rcc = _rc
+use `f16', clear
+cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) lattice(zbin) fastcollapse
+local f16rcd = _rc
+di "F16 cfxlattice alone: rc=`f16rc' fcol=`f16col' fcskip=[`f16skip'] | +fastcollapse rc=`f16rcb' | makecfxplots+cfxlattice+fastcollapse rc=`f16rcc' | lattice+fastcollapse rc=`f16rcd'"
+if `f16rc' != 0 | `f16col' != 1 | "`f16skip'" != "" | `f16rcb' != 0 | `f16rcc' != 198 | `f16rcd' != 198 {
+  di as error "F16 FAIL: cfxlattice() alone must not decide the collapse"
+  local ++fails
+}
+
 if `fails' == 0 di as result "FASTCOLLAPSE_ALL_PASS"
 else di as error "FASTCOLLAPSE_FAILS=`fails'"

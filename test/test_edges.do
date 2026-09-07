@@ -150,5 +150,172 @@ if `rc5' != 0 | abs(`b5' - .8235285) > 5e-8 | abs(`se5' - .0629643) > 5e-8 | row
   local ++fails
 }
 
+
+cap program drop scanE
+program define scanE, rclass
+  args lf needle
+  tempname fh
+  local found 0
+  file open `fh' using "`lf'", read text
+  file read `fh' line
+  while r(eof) == 0 {
+    if strpos(`"`macval(line)'"', `"`needle'"') != 0 local ++found
+    file read `fh' line
+  }
+  file close `fh'
+  return scalar found = `found'
+end
+set linesize 255
+
+* ---- E6 (bug sweep BS-2): the forced-reference caution fires at esprelength(1)
+* panel A's treated units with onset 2: the requested pre1 horizon is the panel's first
+* period, so the reference is forced onto a requested horizon. The caution must print at
+* esprelength(1) (it was gated off there), not at esprelength(0), and not on an
+* untruncated onset; the fast branch (safety(off)) gives the identical att
+clear
+set obs 12
+gen i = _n
+gen ttre = cond(i <= 4, 2, .)
+expand 6
+bysort i: gen t = _n
+gen y = 1.5*(t >= ttre & ttre < .) + 0.3*i + 0.2*t
+tempfile pe6
+save `pe6'
+local e6c
+local e6att
+foreach leg in "esprelength(1)" "esprelength(1) safety(off)" "esprelength(0)" {
+  use `pe6', clear
+  qui log using edges_e6.txt, text replace name(ed)
+  cap noi wooldid y i t ttre, att `leg' espostlength(1)
+  local rc = _rc
+  qui log close ed
+  scanE edges_e6.txt "reference period for some units forced"
+  local e6c `e6c' `r(found)'
+  matrix E6 = e(wdidmainresults)
+  rowk E6 att
+  local e6att `e6att' `=string(E6[r(k),1], "%16.0g")'
+  if `rc' != 0 {
+    di as error "E6 FAIL: rc=`rc' under `leg'"
+    local ++fails
+  }
+}
+use `pe6', clear
+replace ttre = 4 if ttre < .
+qui log using edges_e6.txt, text replace name(ed)
+cap noi wooldid y i t ttre, att esprelength(1) espostlength(1)
+qui log close ed
+scanE edges_e6.txt "reference period for some units forced"
+local e6c `e6c' `r(found)'
+cap erase edges_e6.txt
+local a1 : word 1 of `e6att'
+local a2 : word 2 of `e6att'
+di "E6 caution counts (pre1, pre1 safety(off), pre0, onset-4) = `e6c'; att pre1 = `a1' vs fast branch `a2'"
+if "`e6c'" != "1 0 0 0" | "`a1'" != "`a2'" {
+  di as error "E6 FAIL: the forced-reference caution should fire exactly at esprelength(1) with the att unchanged"
+  local ++fails
+}
+
+* ---- E7 (BS-14): unconditionalse with a multiway cluster() is refused by name
+use data/dta_binary.dta, clear
+gen c2 = mod(i, 4)
+qui log using edges_e7.txt, text replace name(ed)
+cap noi wooldid y i t ttre, att cluster(i c2) unconditionalse
+local rc7 = _rc
+qui log close ed
+scanE edges_e7.txt "unconditionalse supports a single cluster() variable"
+local e7a = r(found)
+cap erase edges_e7.txt
+use data/dta_binary.dta, clear
+cap noi wooldid y i t ttre, att cluster(i) unconditionalse
+local rc7b = _rc
+di "E7 multiway+unconditionalse rc=`rc7' named=`e7a' | single cluster rc=`rc7b'"
+if `rc7' != 198 | `e7a' != 1 | `rc7b' != 0 {
+  di as error "E7 FAIL: the unconditionalse multiway gate"
+  local ++fails
+}
+
+* ---- E8 (BS-29): the levels exemption's consequence - the subgroup adversarial p is
+* identical collapsed and on the full data, with no fallback
+use data/dta_binary.dta, clear
+gen cl8 = mod(i, 4)
+cap noi wooldid y i t ttre, att cluster(cl8) subgroups(sg) esfixedbaseperiod esprelength(4) espostlength(4) adversarial
+local rc8 = _rc
+local p8a = e(adversarial_pval_att_s1)
+local g8 `e(wdid_fcguard)'
+use data/dta_binary.dta, clear
+gen cl8 = mod(i, 4)
+cap noi wooldid y i t ttre, att cluster(cl8) subgroups(sg) esfixedbaseperiod esprelength(4) espostlength(4) adversarial fullprecisionslow
+local rc8b = _rc
+local p8b = e(adversarial_pval_att_s1)
+di "E8 adversarial p (sg1) default=`p8a' fullprecisionslow=`p8b' fcguard=[`g8'] rc=`rc8'/`rc8b'"
+if `rc8' != 0 | `rc8b' != 0 | "`p8a'" != "`p8b'" | "`g8'" != "" | "`p8a'" == "" {
+  di as error "E8 FAIL: the subgroup adversarial p should be identical collapsed and uncollapsed with no fallback"
+  local ++fails
+}
+
+* ---- E9 (BS-32): a failure after the post (a saveplots() name clash in the plot stage)
+* leaves e(cmd) posted, so the documented replay refusal is reachable
+use `pe6', clear
+replace ttre = 4 if ttre < .
+cap erase v1_ES.dta
+cap erase v1_ES.gph
+qui wooldid y i t ttre, att esprelength(1) espostlength(1) makeplots saveplots(v1)
+cap noi wooldid y i t ttre, att esprelength(1) espostlength(1) makeplots saveplots(v1)
+local rc9 = _rc
+local e9cmd `e(cmd)'
+qui log using edges_e9.txt, text replace name(ed)
+cap noi wooldid
+local rc9b = _rc
+qui log close ed
+scanE edges_e9.txt "predate that failed call"
+local e9r = r(found)
+cap erase edges_e9.txt
+local e9files : dir . files "v1*"
+foreach f of local e9files {
+  cap erase "`f'"
+}
+di "E9 second saveplots(v1) rc=`rc9' e(cmd)=[`e9cmd'] replay rc=`rc9b' refusal named=`e9r'"
+if `rc9' == 0 | "`e9cmd'" != "wooldid" | `rc9b' != 198 | `e9r' != 1 {
+  di as error "E9 FAIL: e(cmd) must survive a post-estimation failure so replay refuses by name"
+  local ++fails
+}
+* a fresh successful call clears the refusal
+use `pe6', clear
+replace ttre = 4 if ttre < .
+qui wooldid y i t ttre, att
+cap wooldid
+if _rc != 0 {
+  di as error "E9b FAIL: replay after a successful call rc=`=_rc'"
+  local ++fails
+}
+
+* ---- E10 (BS-35): one cluster stops with the cluster count, not r(125) under a
+* continuous-treatment caution; fastnose, robust and two clusters run
+use `pe6', clear
+replace ttre = 4 if ttre < .
+gen c1 = 1
+gen c2 = (i <= 6) + 1
+local e10
+foreach leg in "cluster(c1)" "cluster(c1) fastnose" "robust" "cluster(c2)" {
+  use `pe6', clear
+  replace ttre = 4 if ttre < .
+  gen c1 = 1
+  gen c2 = (i <= 6) + 1
+  qui log using edges_e10.txt, text replace name(ed)
+  cap noi wooldid y i t ttre, att `leg'
+  local rc = _rc
+  qui log close ed
+  scanE edges_e10.txt "cluster-robust inference needs at least 2"
+  local m = r(found)
+  scanE edges_e10.txt "continuous"
+  local c = r(found)
+  local e10 `e10' [`leg': rc=`rc' msg=`m' continuous=`c']
+  if "`leg'" == "cluster(c1)" & (`rc' != 459 | `m' != 1) local ++fails
+  if "`leg'" != "cluster(c1)" & `rc' != 0 local ++fails
+  if `c' > 0 local ++fails
+}
+cap erase edges_e10.txt
+di "E10 `e10'"
+
 if `fails' == 0 di as result "EDGES_ALL_PASS"
 else di as error "EDGES_FAILS=`fails'"
