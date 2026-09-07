@@ -410,5 +410,15 @@ else {
   }
 }
 
+* ET11 (bug sweep BS-19, 2026-09-06): the across-subgroup equality caution no longer says
+* the test "needs boottstat" (F034 made it a fixed-metric rank test); the phrase survives
+* only in the adversarial caution, which is still true
+mata: st_local("et11n", strofreal(sum(strpos(cat("../wooldidinstall/wooldid.ado"), "needs boottstat") :> 0)))
+di "ET11 lines carrying 'needs boottstat' in the ado: `et11n' (expect 1, the adversarial caution)"
+if `et11n' != 1 {
+  di as error "ET11 FAIL: the stale 'needs boottstat' wording is back (or the adversarial caution is gone)"
+  local ++fails
+}
+
 if `fails' == 0 di as result "BOOTJOINT_ALL_PASS"
 else di as error "BOOTJOINT_FAILS=`fails'"

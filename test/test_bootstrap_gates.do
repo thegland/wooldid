@@ -811,5 +811,154 @@ use `panel', clear
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) makeplots bootstrap(standard) reps(5) rseed(7)
 chk 33c 0 _rc
 
+set linesize 255
+cap prog drop unwrap
+prog def unwrap
+  args fname
+  local lg = fileread("`fname'")
+  local lg = subinstr(`"`lg'"', char(13), "", .)
+  local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+  c_local lg `"`lg'"'
+end
+* G34 (bug sweep BS-16, 2026-09-06): bootdisplay(bca) without cluster() is refused (the
+* jackknife would be one fit per observation); with cluster() the jackknife runs once per
+* cluster, the acceleration is posted, and the runtime projection counts the extra fits
+use `panel', clear
+qui log using boot_gates_g34.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att bootstrap(standard) reps(8) rseed(7) bootdisplay(bca)
+local g34rc = _rc
+qui log close bg
+chk 34 198 `g34rc'
+unwrap boot_gates_g34.txt
+if strpos(`"`lg'"', "bootdisplay(bca) requires cluster()") == 0 {
+  di as error "G34b FAIL: the bca-without-cluster refusal does not name the reason"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g34.txt
+use `panel', clear
+qui log using boot_gates_g34.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(8) rseed(7) bootdisplay(bca) dots(1)
+local g34rc = _rc
+qui log close bg
+chk 34c 0 `g34rc'
+local g34jk = e(boot_jk_completed)
+mata: st_local("g34acc", strofreal(sum(st_matrix("e(boot_accel)") :< .)))
+unwrap boot_gates_g34.txt
+di "G34 jk_completed=`g34jk' accel non-missing=`g34acc' projection has jackknife=" strpos(`"`lg'"', "+ 12 jackknife fits")
+if `g34jk' != 12 | `g34acc' == 0 | strpos(`"`lg'"', "+ 12 jackknife fits") == 0 {
+  di as error "G34d FAIL: the clustered bca run should jackknife 12 clusters, post an acceleration and project the extra fits"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g34.txt
+
+* G35 (BS-17): with two clusters the jackknife has at most two fits, so no acceleration exists;
+* the BCa p-value and interval are blank, but the bootstrap SD (and b/sd) survive the
+* display switch, the caution names the blank family, and the footer stops claiming an
+* acceleration
+use `panel', clear
+gen s2 = (unit <= 6) + 1
+qui log using boot_gates_g35.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(s2) bootstrap(standard) reps(8) rseed(7) bootdisplay(bca)
+local g35rc = _rc
+qui log close bg
+chk 35 0 `g35rc'
+local g35jk = e(boot_jk_completed)
+mata: st_local("g35cimiss", strofreal(allof(st_matrix("e(boot_ci_bca)"), .)))
+matrix G35M = e(wdidmainresults)
+matrix G35B = e(boot_bc_mainresults)
+local g35sd = G35M[1,2]
+local g35sdbc = G35B[1,2]
+mata: st_local("g35blank", strofreal(allof(st_matrix("G35M")[1, 4..6], .)))
+local lg = fileread("boot_gates_g35.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local g35c = strpos(`"`lg'"', "had no usable BCa family") > 0
+local g35f = strpos(`"`lg'"', "No BCa acceleration could be computed") > 0
+local g35g = strpos(`"`lg'"', "The BCa acceleration comes from") > 0
+di "G35 jk=`g35jk' ci_bca all missing=`g35cimiss' sd=`g35sd' (bc sd `g35sdbc') cols4-6 blank=`g35blank' caution=`g35c' footer-none=`g35f' footer-claims=`g35g'"
+if `g35jk' > 2 | `g35cimiss' != 1 | `g35sd' >= . | `g35sd' != `g35sdbc' | `g35blank' != 1 | !`g35c' | !`g35f' | `g35g' {
+  di as error "G35b FAIL: an unavailable BCa family should blank only the p/interval, with the caution and the corrected footer"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g35.txt
+
+* G36 (BS-18): bootsave() under bootalpha(size) writes row 0 on the replication scale -
+* the invariant sum_c W_c w_c = 1 (W_c = 8 rows per unit here, so the row total of the
+* w_ columns is 1/8) holds on every row including _rep = 0
+use `panel', clear
+cap erase boot_gates_g36.dta
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) bootalpha(size) reps(8) rseed(7) bootsave(boot_gates_g36)
+local g36rc = _rc
+chk 36 0 `g36rc'
+preserve
+use boot_gates_g36, clear
+egen double g36s = rowtotal(w_*)
+qui sum g36s
+local g36min = r(min)
+local g36max = r(max)
+qui sum g36s if _rep == 0
+local g36obs = r(mean)
+restore
+di "G36 size: w row totals " `g36min' "-" `g36max' " obs row " `g36obs' " (expect 1/8 = .125 throughout)"
+if abs(`g36min' - 1/8) > 1e-9 | abs(`g36max' - 1/8) > 1e-9 | abs(`g36obs' - 1/8) > 1e-9 {
+  di as error "G36b FAIL: bootsave() row 0 under bootalpha(size) is not on the replication scale"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g36.dta
+
+* G37 (BS-31): the bayes header names the resampling unit, as the standard one does
+use `panel', clear
+qui log using boot_gates_g37.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att bootstrap(bayes) reps(8) rseed(7)
+local g37rc = _rc
+qui log close bg
+chk 37 0 `g37rc'
+unwrap boot_gates_g37.txt
+local g37a = strpos(`"`lg'"', "Bayesian bootstrap (Dirichlet reweighting over observations") > 0
+local g37b = strpos(`"`lg'"', "Bayesian cluster bootstrap") > 0
+cap erase boot_gates_g37.txt
+use `panel', clear
+qui log using boot_gates_g37.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(8) rseed(7)
+local g37rc = _rc
+qui log close bg
+chk 37c 0 `g37rc'
+unwrap boot_gates_g37.txt
+local g37c = strpos(`"`lg'"', "Bayesian cluster bootstrap") > 0
+local g37d = strpos(`"`lg'"', "over observations") > 0
+cap erase boot_gates_g37.txt
+di "G37 unclustered: observations=`g37a' cluster-label=`g37b' | clustered: cluster-label=`g37c' observations=`g37d'"
+if !`g37a' | `g37b' | !`g37c' | `g37d' {
+  di as error "G37e FAIL: the bayes header does not follow the resampling unit"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+
+* G38 (BS-30): adversarial under bootstrap() without boottstat has no bootstrap p-value;
+* the display must not print a bare "." line, and the bare replay discloses the absence
+use `panel', clear
+qui log using boot_gates_g38.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) esfixedbaseperiod esprelength(2) espostlength(1) adversarial bootstrap(standard) reps(8) rseed(7)
+local g38rc = _rc
+qui log close bg
+chk 38 0 `g38rc'
+unwrap boot_gates_g38.txt
+local g38a = strpos(`"`lg'"', "single line: .") > 0
+local g38adv `e(boot_adv_absent)'
+qui log using boot_gates_g38b.txt, text replace name(bg)
+cap noi wooldid
+local g38rc2 = _rc
+qui log close bg
+unwrap boot_gates_g38b.txt
+local lg2 `"`lg'"'
+local g38b = strpos(`"`lg2'"', "single line: .") > 0
+local g38c = strpos(`"`lg2'"', "adversarial line tests are NOT reported") > 0
+cap erase boot_gates_g38.txt
+cap erase boot_gates_g38b.txt
+di "G38 live bare-dot=`g38a' e(boot_adv_absent)=`g38adv' | replay rc=`g38rc2' bare-dot=`g38b' disclosure=`g38c'"
+if `g38a' | "`g38adv'" != "1" | `g38rc2' != 0 | `g38b' | !`g38c' {
+  di as error "G38d FAIL: the absent adversarial bootstrap p prints as a bare dot or is not disclosed on replay"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
