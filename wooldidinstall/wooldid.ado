@@ -1606,6 +1606,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   tempvar esamp
   qui gen byte `esamp' = e(sample)
   local df_r = e(df_r)
+  if "`poisson'" != "" {
+    qui count if `esamp' == 0 & `targetflag' == 1 & `w' > 0 & `ifstatement'
+    if r(N) > 0 dis as text "Caution: ppmlhdfe excluded `r(N)' treated observation(s) from the estimation sample (separation, or a singleton fixed-effect group), so their cohort-period cells contribute nothing to the reported effects."
+  }
   * one cluster leaves e(df_r) = 0 and the run then died r(125) inside margins under a
   * caution blaming continuous treatment; stop here with the reason (bug sweep BS-35).
   * fast mode asks margins for no variance and may proceed
@@ -1851,11 +1855,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
             if `wordcountproblem' <= 3 {
               local problem_t = `problem_t' - `min_t' - 1
-              dis as error  "Error: a treated cohort-period dummy coefficient was dropped for multicollinearity."
+              * under poisson an omitted cell dummy whose rows ppmlhdfe dropped is perfect
+              * separation, not multicollinearity (bug sweep BS-4)
+              local wdsep 0
+              if "`poisson'" != "" {
+                qui count if `_i' == `problem_i' & `_t' == `problem_t' + `min_t' + 1 & `targetflag' == 1 & `esamp' & `ifstatement'
+                local wdsep = r(N) == 0
+              }
+              if `wdsep' dis as error "Error: ppmlhdfe dropped every observation of the treated cohort-period cell `i' == `problem_i', relative-`t' == `problem_t' (perfect separation: the outcome is zero on all of them, so the cell's coefficient does not exist). This is not multicollinearity. Coarsen `i', drop the cohort, or specify safety(off) to proceed with the separated cells excluded."
+              else dis as error  "Error: a treated cohort-period dummy coefficient was dropped for multicollinearity."
               if "`verbose'" != "" dis as error  "The specific problematic coefficient is: ``testbvar''"
               if "`verbose'" != "" dis as error  "For reference, _i is `_i', _t is `_t', and targetflag is `targetflag'"
-              dis as error  "The problem seems to be with the treatment dummy for `i' == `problem_i', relative-`t' == `problem_t'"
-              dis as error  "Specify contreatwithin if you have a continuous treatment intensity variable and wish to partial out any effect of treatment when the treatment intensity is 0."
+              if !`wdsep' dis as error  "The problem seems to be with the treatment dummy for `i' == `problem_i', relative-`t' == `problem_t'"
+              if !`wdsep' & "`contreat'" != "" dis as error  "Specify contreatwithin if you have a continuous treatment intensity variable and wish to partial out any effect of treatment when the treatment intensity is 0."
               dis as error  "You can ignore this check if you specify safety(off), but be careful."
               dis as error  " "
               * verbose not specified triggers error here (rather than later after looping through them all )
@@ -1914,6 +1926,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         local amescrublo 1
       }
     }
+    * interactivecontrols() twin of the screen above (bug sweep BS-3): when no cohort-period
+    * cell holds within-cell variation in a control, every treated-cell slope term drops
+    * out and the run silently reduces to controls(i.t#c.x); the scan lives in
+    * wooldid_icscreen (worker headroom)
+    if "`interactivecontrols'" != "" & "`fastnose'" == "" & strpos("`bvars'", "o.") != 0 wooldid_icscreen , bvars(`bvars') iv(`_i') tv(`_t') tf(`targetflag') ics(`interlist') names(`interactivecontrols')
   }
 
 
@@ -10309,6 +10326,33 @@ prog def wooldid_sglbl
   }
   c_local `lbl' `lbls'
   if "`f2l'" != "" c_local `f2l' `f2lbls'
+end
+
+* bug sweep BS-3 (2026-09-06): interactivecontrols() is silently inert when no cohort-period
+* cell holds within-cell variation in a control - every treated-cell slope term
+* i._i#i._t#1.targetflag#c.<ic> is dropped for collinearity and the run reduces to
+* controls(i.t#c.x). twin of the contreat R6 screen in the worker: a named caution, since
+* the generic collinearity caution cannot say which control or what the run reduced to.
+* ics() are the demeaned copies in the user's order, so word k maps back to names()
+cap prog drop wooldid_icscreen
+prog def wooldid_icscreen
+  syntax , bvars(string asis) iv(name) tv(name) tf(name) ics(string) names(string)
+  local k 0
+  foreach ic of local ics {
+    local ++k
+    local live 0
+    local drop 0
+    foreach tok of local bvars {
+      if strpos("`tok'", "`iv'") != 0 & strpos("`tok'", "`tv'") != 0 & (strpos("`tok'", "1.`tf'") != 0 | strpos("`tok'", "1o.`tf'") != 0) & (strpos("`tok'#", "c.`ic'#") != 0 | strpos("`tok'#", "co.`ic'#") != 0) {
+        if strpos("`tok'", "o.") == 0 local ++live
+        else local ++drop
+      }
+    }
+    if `live' == 0 & `drop' > 0 {
+      local nm : word `k' of `names'
+      dis as text "Caution: every treated cohort-period slope term for the interactive control `nm' was dropped for multicollinearity: `nm' does not vary within the cohort-period cells (for example i is as fine as the unit and `nm' is a unit-level variable, or `nm' is constant across units within a period), so the treatment effects cannot vary with it and this run is identical to controls(i.t#c.`nm'). Coarsen i so that cells hold variation in `nm', or move it to controls()."
+    }
+  }
 end
 
 cap prog drop wooldid_advstat

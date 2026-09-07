@@ -886,7 +886,7 @@ This option differs from simply specifying cohort
 by time period interactions with a given control in that it pools the effect of the controls in the reference period and the control group. Note that all specified coarse cohort controls must be
 specified using factor notation, so that {it:wooldid} knows if they are to be interacted as a continuous variable (prefixed with "c.") or as a categorical variable (prefixed with "i."). {p_end}
 
-{phang}{opt inter:activecontrols()}: Includes the specified variables in the regression in two capacities. First, the variables are included as controls interacted with time period-specific
+{phang}{opt inter:activecontrols()}: Includes the specified variables in the regression in two capacities. The cell slopes exist only where a control varies within cohort-period cells; if it does not (for example {it:i} is the unit and the control is a unit-level variable), every slope term drops out and the run is identical to {it:controls(i.t#c.x)} - {it:wooldid} then prints a caution naming the control. First, the variables are included as controls interacted with time period-specific
 indicator variables. Second, the variables are de-meaned by cohort (i) and then treatment effects are permitted to vary linearly with the de-meaned variables. This is achieved by including
 interactions between the de-meaned controls and all Tz_it dummies included in the model. The specification used is similar to as with {it:coarsecohortcontrols}, but differs in that these terms
 are marked so that variation associated with them is reported as part of the treatment effects (as opposed to being partialled out from the treatment effects). This specification most closely

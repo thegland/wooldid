@@ -317,5 +317,95 @@ foreach leg in "cluster(c1)" "cluster(c1) fastnose" "robust" "cluster(c2)" {
 cap erase edges_e10.txt
 di "E10 `e10'"
 
+* ---- E11 (bug sweep BS-3): interactivecontrols() inert -> named caution
+* fine i (the unit) with a unit-level covariate: every cell slope drops, the caution names
+* xtv, and att equals the controls(i.t#c.xtv) run; coarse i (pairs) gives within-cell
+* variation, no caution and a different att; coarse i with a covariate constant across
+* units within a period (period-level, so time-VARYING) still has no within-cell
+* variation and must draw the caution - the screen keys on cell variation, not on time
+clear
+set obs 12
+gen unit = _n
+gen g = ceil(unit/2)
+gen ttre = cond(unit <= 4, 4, .)
+expand 8
+bysort unit: gen t = _n
+set seed 311
+gen xtv = 0.3*unit + 0.1*t + rnormal()
+bysort t (unit): gen xt = 0.2*t + rnormal() if _n == 1
+bysort t (unit): replace xt = xt[1]
+gen y = 1.5*(t >= ttre & ttre < .) + 0.3*unit + 0.2*t + 0.4*xtv + rnormal()
+tempfile pe11
+save `pe11'
+local e11
+local e11att
+foreach leg in "unit interactivecontrols(xtv)" "unit controls(i.t#c.xtv)" "g interactivecontrols(xtv)" "g controls(i.t#c.xtv)" "g interactivecontrols(xt)" {
+  use `pe11', clear
+  local iv : word 1 of `leg'
+  local opts : subinstr local leg "`iv' " ""
+  qui log using edges_e11.txt, text replace name(ed)
+  cap noi wooldid y `iv' t ttre, att `opts'
+  local rc = _rc
+  qui log close ed
+  scanE edges_e11.txt "slope term for the interactive control"
+  local c = r(found)
+  cap erase edges_e11.txt
+  local a .
+  if `rc' == 0 {
+    matrix E11 = e(wdidmainresults)
+    rowk E11 att
+    local a = E11[r(k), 1]
+  }
+  local e11 `e11' `c'
+  local e11att `e11att' `=string(`a', "%16.0g")'
+  if `rc' != 0 {
+    di as error "E11 FAIL: rc=`rc' under [`leg']"
+    local ++fails
+  }
+}
+tokenize `e11att'
+di "E11 cautions (fine ic, fine ctrl, coarse ic, coarse ctrl, coarse period-level ic) = `e11'; att fine ic=`1' vs ctrl=`2' | coarse ic=`3' vs ctrl=`4'"
+if "`e11'" != "1 0 0 0 1" | abs(`1' - `2') > 1e-8 | abs(`3' - `4') < 1e-6 {
+  di as error "E11 FAIL: the interactivecontrols inertness caution"
+  local ++fails
+}
+
+* ---- E12 (BS-4): a ppmlhdfe separation is reported as separation, not multicollinearity
+clear
+set obs 12
+gen i = _n
+gen ttre = cond(i <= 4, 4, .)
+expand 6
+bysort i: gen t = _n
+set seed 412
+gen y = rpoisson(exp(0.5 + 0.3*(t >= ttre & ttre < .) + 0.05*i + 0.02*t))
+replace y = 0 if i == 1 & t == 5
+tempfile pe12
+save `pe12'
+qui log using edges_e12.txt, text replace name(ed)
+cap noi wooldid y i t ttre, att poisson
+local rc12 = _rc
+qui log close ed
+scanE edges_e12.txt "perfect separation"
+local e12a = r(found)
+scanE edges_e12.txt "dropped for multicollinearity"
+local e12b = r(found)
+scanE edges_e12.txt "contreatwithin"
+local e12c = r(found)
+cap erase edges_e12.txt
+use `pe12', clear
+qui log using edges_e12.txt, text replace name(ed)
+cap noi wooldid y i t ttre, att poisson safety(off)
+local rc12b = _rc
+qui log close ed
+scanE edges_e12.txt "treated observation(s) from the estimation sample (separation"
+local e12d = r(found)
+cap erase edges_e12.txt
+di "E12 poisson separation: rc=`rc12' separation=`e12a' multicollinearity=`e12b' contreatwithin=`e12c' | safety(off) rc=`rc12b' excluded-caution=`e12d'"
+if `rc12' != 322 | `e12a' != 1 | `e12b' != 0 | `e12c' != 0 | `rc12b' != 0 | `e12d' != 1 {
+  di as error "E12 FAIL: the ppmlhdfe separation branch"
+  local ++fails
+}
+
 if `fails' == 0 di as result "EDGES_ALL_PASS"
 else di as error "EDGES_FAILS=`fails'"
