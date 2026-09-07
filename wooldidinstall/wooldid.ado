@@ -134,8 +134,8 @@ version 16.0
     if "`customweightmultiplier'" != "" local wdp_ro `wdp_ro' customweightmultiplier(`customweightmultiplier')
     * a cell-collapse fallback in the observed run (e(wdid_fcguard), see wooldid_fcdeg)
     * extends to the reps, as in the bootstrap block. NB the screen reads a subgroup
-    * margins r(V), so under the fast-mode default it never fires: this rule bites only
-    * under permtstat or permanalyticse, and the help says so
+    * margins r(V); under the fast-mode default only the subgroup-by-horizon call
+    * carries one (BS-26), so the rule bites there and under permtstat/permanalyticse
     local wdp_fb = cond("`e(wdid_fcguard)'" == "fallback", "fallback", "")
     if "`fastcollapse'" != "" & "`wdp_fb'" == "" local wdp_ro `wdp_ro' fastcollapse
     if "`fullprecisionslow'`wdp_fb'" != "" local wdp_ro `wdp_ro' fullprecisionslow
@@ -2285,6 +2285,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * is padded through `f9tab' first. (the jointmarginsdof sites above are unreachable
   * under fastnose: jointtests + fastnose is refused at parse time)
   if "`fastnose'" != "" local marginsdof nose
+  * the subgroup-by-horizon margins call keeps its VCE even in fast mode: the SI-7
+  * estimability drop reads margins' omission marker, which nose suppresses, so under
+  * fastnose a structural-zero horizon was reported (and ranked by permute()) and the
+  * observed and replication column sets diverged, aborting bootstrap()/permute()
+  * permanalyticse with r(459) at rep 0. the F2 b/V capture stays keyed on `marginsdof',
+  * so fast mode still posts no e(V_es_*) (bug sweep BS-26)
+  local sgmarginsdof `marginsdof'
+  if "`fastnose'" != "" & "`subgroups'" != "" & `espre' + `espl' > 0 local sgmarginsdof df(`df_r')
   tempname f9tab
 
   * initialize the joint-test p-value locals
@@ -3115,7 +3123,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               * F-collapse screen (see wooldid_fcdeg): a flagged call is re-issued on the full
               * data, and every later call runs there too (`fcsg' disarms, `fcnoes' clears)
               forval fcpass = 1/2 {
-                qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `marginsdof' `fcnoes'
+                qui margins [`weight'=`w_`horizitem''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstext' `sgmarginsdof' `fcnoes'
                 if `fcsg' wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') levels `verbose'
                 if `fcsg' == 0 | `fcrerun' == 0 continue, break
                 restore, preserve

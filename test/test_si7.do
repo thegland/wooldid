@@ -58,13 +58,15 @@ end
 * On this fixture the non-estimability is intrinsic to the data (the documented
 * knife-edge design), not caused by fe() - the recorded bisection shows dropping
 * fe() does NOT avoid it. Expect: rc 0, the caution names pre2 and sg1, sg1 loses
-* ONLY that horizon, sg2 keeps all of its.
+* ONLY that horizon, sg2 keeps all of its. fullprecisionslow because safety(off)
+* with the default cell collapse keeps the collapsed rows (documented), on which the
+* horizon happens to be estimable (bug sweep 5c-1).
 use suite/data/survey_rcs.dta, clear
 qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
 qui log using si7_t1.txt, text replace name(si7)
 cap noi wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) ///
     fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) ///
-    safety(off) adversarial
+    safety(off) adversarial fullprecisionslow
 local rc1 = _rc
 qui log close si7
 scanlog si7_t1.txt "are not estimable for subgroup 1"
@@ -124,6 +126,58 @@ if `rc2' == 0 & `caut2' == 0 & `h1b' == 1 & `h2b' == 1 {
 else {
   dis as error "T2 FAIL: rc=`rc2' caution=`caut2' sg1haspre2=`h1b' sg2haspre2=`h2b'"
   global pf = $pf + 1
+}
+
+
+* ---- T3 (bug sweep BS-26): fast mode keeps the SI-7 drop ----
+* fastnose runs every other margins call with nose, which suppresses the omission
+* marker the SI-7 scan reads; the subgroup-by-horizon call is exempt, so the drop and
+* its caution survive fast mode and sg1 keeps the same row set as the analytic run
+use suite/data/survey_rcs.dta, clear
+qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+qui log using si7_t3.txt, text replace name(si7)
+cap noi wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) ///
+    fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) ///
+    fastnose fullprecisionslow
+local rc3 = _rc
+qui log close si7
+scanlog si7_t3.txt "are not estimable for subgroup 1"
+local caut3 = r(found)
+sgrows 1 pre2
+local n3 = r(n)
+local has3 = r(has)
+cap erase si7_t3.txt
+if `rc3' == 0 & `caut3' == 1 & `has3' == 0 & `n3' == `n1' {
+  dis as result "T3 PASS: fastnose keeps the SI-7 drop (caution printed, sg1 has `n3' rows, no pre2)"
+}
+else {
+  dis as error "T3 FAIL: rc=`rc3' caution=`caut3' sg1rows=`n3' (analytic `n1') sg1haspre2=`has3'"
+  global pf = $pf + 1
+}
+
+* ---- T4-T7 (BS-26): the replication engines on the same fixture ----
+* the observed run and the replications must agree on the column set: before the fix
+* the reps (run under fastnose) kept the non-estimable horizon while the observed
+* analytic run dropped it, and bootstrap()/permute() permanalyticse aborted r(459) at
+* rep 0, while plain permute() reported and ranked the structural-zero row
+local k 3
+foreach leg in "permute(shuffle) permreps(20) rseed(11)" "bootstrap(standard) reps(10) rseed(11)" "bootstrap(bayes) reps(10) rseed(11)" "permute(shuffle) permreps(20) rseed(11) permanalyticse" {
+  local ++k
+  use suite/data/survey_rcs.dta, clear
+  qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+  cap noi wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) ///
+      fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) `leg'
+  local rck = _rc
+  sgrows 1 pre2
+  local nk = r(n)
+  local hask = r(has)
+  if `rck' == 0 & `hask' == 0 & `nk' == `n1' {
+    dis as result "T`k' PASS: `leg' -> rc 0, sg1 has `nk' rows and no pre2"
+  }
+  else {
+    dis as error "T`k' FAIL: `leg' -> rc=`rck' sg1rows=`nk' (analytic `n1') sg1haspre2=`hask'"
+    global pf = $pf + 1
+  }
 }
 
 if $pf == 0 dis as result "SI7_ALL_PASS"
