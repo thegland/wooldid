@@ -1783,10 +1783,20 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`relyrlist'" == "" {
       * no treated unit realizes any requested relative period: name the window and what the
       * sample actually contains instead of letting matrix () die with a bare r(198) (BS-33)
+      * two causes, and the message must not blame the wrong one: either the sample has no
+      * treated observation at any requested relative period, or it has them and the fitted
+      * model carries no matching coefficient (the treatment terms were absorbed or dropped)
       local wdreal
+      local wdhit 0
       qui levelsof `_t' if `_t' > 0 & `_t' < ., local(wdtl)
       foreach v of local wdtl {
         local wdreal `wdreal' `=`v' - `min_t' - 1'
+        if `v' >= `horizonstarter' & `v' <= `horizonend' local wdhit 1
+      }
+      if `wdhit' {
+        dis as error "Error: the fitted model carries no estimable treatment-effect coefficient at any of the requested event-study relative periods (`=`horizonstarter' - `min_t' - 1' through `=`horizonend' - `min_t' - 1'), although the estimation sample does contain those periods."
+        dis as error "This means the cohort-by-period treatment terms were absorbed or dropped by the specification rather than estimated: check absorbed fixed effects (ccc_absorb() in particular, which can absorb the treatment interactions themselves), fe(), and any control set collinear with the treatment cells."
+        error 459
       }
       dis as error "Error: no treated unit is observed at any of the requested event-study relative periods (`=`horizonstarter' - `min_t' - 1' through `=`horizonend' - `min_t' - 1'). Relative periods realized by treated units in the estimation sample: `wdreal'."
       dis as error "This usually means the onset period is missing for every treated cohort (an onset-period gap in the panel, or an onset that falls off the panel's time grid, such as an even-year onset in a biennial panel). Widen esprelength()/espostlength() to reach a realized period, or place ttre on the panel's grid."

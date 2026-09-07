@@ -407,5 +407,26 @@ if `rc12' != 322 | `e12a' != 1 | `e12b' != 0 | `e12c' != 0 | `rc12b' != 0 | `e12
   local ++fails
 }
 
+* ---- E13 (BS-33 follow-up): the two causes of an empty horizon scan get different
+* messages. E3 above covers the data cause (the requested period is never realized).
+* Here the periods ARE realized but ccc_absorb() absorbs the cohort-by-period treatment
+* interactions, so the fitted model carries no coefficient to find; the run must say so
+* rather than blaming the data (it used to die with a bare invalid-syntax r(198))
+use suite/data/dta_s_covars.dta, clear
+qui log using edges_e13.txt, text replace name(ed)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) ccc_absorb(x2)
+local rc13 = _rc
+qui log close ed
+scanE edges_e13.txt "fitted model carries no estimable treatment-effect coefficient"
+local e13a = r(found)
+scanE edges_e13.txt "no treated unit is observed at any of the requested"
+local e13b = r(found)
+cap erase edges_e13.txt
+di "E13 ccc_absorb rc=`rc13' absorbed-message=`e13a' data-message=`e13b'"
+if `rc13' != 459 | `e13a' != 1 | `e13b' != 0 {
+  di as error "E13 FAIL: an absorbed treatment term must not be reported as missing data"
+  local ++fails
+}
+
 if `fails' == 0 di as result "EDGES_ALL_PASS"
 else di as error "EDGES_FAILS=`fails'"
