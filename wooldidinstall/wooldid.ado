@@ -3210,6 +3210,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               local sgndrop `wdsg_ndrop'
               local finaladvtest = `finaladvtest' - `sgndrop'
               local relyrlist_s`sgcase' `relyrlist_s`sgcase'_`horizitem''
+              * BS-26 keeps this call's variance so the estimability markers exist in fast
+              * mode; the variance itself is not part of fast mode's output, so discard it
+              * here and leave the se/t/p/interval cells missing as before
+              if "`fastnose'" != "" {
+                forval fnj = 2/6 {
+                  forval fni = 1/`=colsof(`f9tab')' {
+                    matrix `f9tab'[`fnj', `fni'] = .
+                  }
+                }
+              }
               matrix `___`horizitem'_horiz_s`sgcase'' = ( `f9tab'', `relyrcolumn_s`sgcase'')
 
               * we construct relyrcolumn_s`sgcase' because not all sgs have all relyrs, necessarily
