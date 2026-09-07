@@ -3140,7 +3140,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
                 matrix rownames `f9tab' = b se t pvalue ll ul
               }
-              matrix `___`horizitem'_horiz_s`sgcase'' =  `f9tab'[1..6, `matrixstartgrab'..`=colsof(r(b))']'
               * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
               if "`marginsdof'" != "nose" {
                 tempname f2bmat f2vmat
@@ -3155,11 +3154,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
               * SGs need not have the same number of relative periods appear for each
               * this code block below figures out what relative periods appear for them
-              tempname nameget
+              tempname nameget relyrcolumn_s`sgcase'
               matrix `nameget' = r(table)[1, `matrixstartgrab'..`=colsof(r(b))']
               local names: colnames `nameget'
               matrix drop `nameget'
-
               * SI-7 (author-ruled 2026-08-27): margins marks a subgroup-by-horizon margin it
               * deems NOT ESTIMABLE with an omission marker (e.g. 5bno.<tvar>). Because this call
               * passes noestimcheck, margins computes such a margin anyway - so the marker is the
@@ -3171,125 +3169,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               * supported below ("not all sgs have all relyrs, necessarily"). The drop must be
               * positional: names, the estimates matrix and the F2 b/V all index the same margins
               * columns, and the matrix concatenation below requires them to stay conformable.
-              local sgkeep
-              local sgdroplbl
-              local sgndrop 0
-              local sgidx 0
-              foreach sgnm of local names {
-                local ++sgidx
-                if strpos("`sgnm'", "o.") != 0 {
-                  local ++sgndrop
-                  if regexm("`sgnm'", "^([0-9]+)") {
-                    local sgdrelyr = real(regexs(1)) - `min_t' - 1
-                    if `sgdrelyr' < 0 local sgdroplbl `sgdroplbl' pre`=abs(`sgdrelyr')'
-                    else              local sgdroplbl `sgdroplbl' post`sgdrelyr'
-                  }
-                }
-                else local sgkeep `sgkeep' `sgidx'
-              }
-              if `sgndrop' > 0 {
-                dis as text "Caution: the relative period effect(s) `sgdroplbl' are not estimable for subgroup `sgcase' (margins reports them as omitted), so they are dropped from that subgroup's event study; its remaining relative periods, and all other subgroups, are unaffected. This typically arises when the specified fixed effects absorb the subgroup-by-time variation (for example fe() interacting the subgroups() variable with time), or when a subgroup has no usable observations at that relative period."
-                if "`sgkeep'" == "" {
-                  dis as text "Caution: no relative period effect is estimable for subgroup `sgcase', so its event study is skipped entirely."
-                  cap matrix drop `___`horizitem'_horiz_s`sgcase''
-                  continue
-                }
-                local sgnames
-                foreach sgi of local sgkeep {
-                  local sgw : word `sgi' of `names'
-                  local sgnames `sgnames' `sgw'
-                }
-                local names `sgnames'
-                tempname sgkm
-                local sgfirst 1
-                foreach sgi of local sgkeep {
-                  if `sgfirst' {
-                    matrix `sgkm' = `___`horizitem'_horiz_s`sgcase''[`sgi', 1...]
-                    local sgfirst 0
-                  }
-                  else matrix `sgkm' = `sgkm' \ `___`horizitem'_horiz_s`sgcase''[`sgi', 1...]
-                }
-                matrix `___`horizitem'_horiz_s`sgcase'' = `sgkm'
-                matrix drop `sgkm'
-                if "`marginsdof'" != "nose" {
-                  tempname sgkb sgkv sgkrow
-                  local sgfirst 1
-                  foreach sgi of local sgkeep {
-                    if `sgfirst' {
-                      matrix `sgkb' = `f2bmat'[1, `sgi']
-                      local sgfirst 0
-                    }
-                    else matrix `sgkb' = (`sgkb', `f2bmat'[1, `sgi'])
-                  }
-                  local sgfirst 1
-                  foreach sgi of local sgkeep {
-                    local sgfirst2 1
-                    foreach sgj of local sgkeep {
-                      if `sgfirst2' {
-                        matrix `sgkrow' = `f2vmat'[`sgi', `sgj']
-                        local sgfirst2 0
-                      }
-                      else matrix `sgkrow' = (`sgkrow', `f2vmat'[`sgi', `sgj'])
-                    }
-                    if `sgfirst' {
-                      matrix `sgkv' = `sgkrow'
-                      local sgfirst 0
-                    }
-                    else matrix `sgkv' = `sgkv' \ `sgkrow'
-                  }
-                  matrix `f2bmat' = `sgkb'
-                  matrix `f2vmat' = `sgkv'
-                  matrix drop `sgkb' `sgkv' `sgkrow'
-                }
-                * the adversarial gate counts margins columns; discount the removed ones
-                local finaladvtest = `finaladvtest' - `sgndrop'
-              }
-
-              local names = subinstr("`names'", "bn","",.)
-              local names = subinstr("`names'", "`_t'","",.)
-              local names = subinstr("`names'", "1.`targetflag'","",.)
-              if wordcount("`names'") == 0 {
-                * how do we end up in this if statement?
-                * margins will not report the levels of _t examined if there is only 1 level of _t examined
-                * instead, it will return 1.`targetflag' as the relevant level (because the if made the over(_t) statement irrelevant by restricting to a sg with only one _t)
-                * when we remove 1.`targetflag', there should be nothing left in names, meaning we need to figure out what the missing _t level is and put it back into names
-                * why not just by default figure out what the correct _t levels are?
-                * this approach requires a levelsof() statement, which can take longer than the text processing for large datasets
-                qui  glevelsof(`_t')  if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0, clean local(names)
-              }
-
-              local relyrbysg
-              local relyrlist_s`sgcase'
-              foreach relyrsg in `names' {
-                local relyrinj = `relyrsg' -`min_t' -1
-                if `relyrinj' >= 0 local relyrlist_s`sgcase' `relyrlist_s`sgcase'' post`relyrinj'
-                if `relyrinj' == 0 & `oldsyntax' ==1 local relyrlist_s`sgcase' `relyrlist_s`sgcase'' contemp
-
-                if `relyrinj' < 0 {
-                  local absinj = abs(`relyrinj')
-                  local relyrlist_s`sgcase' `relyrlist_s`sgcase'' pre`absinj'
-                }
-                * per-estimand copy: att and att_it can keep DIFFERENT horizon sets for a
-                * subgroup (SI-7 drops), and the rowname filter below names each ES block
-                * from its own estimand's list; the unsuffixed local (last estimand
-                * computed) still serves the contreat ES rows
-                local relyrlist_s`sgcase'_`horizitem' `relyrlist_s`sgcase''
-                if "`relyrbysg'" == "" {
-                  local relyrbysg  `relyrinj'
-                }
-                else{
-                  local relyrbysg `relyrbysg' ,  `relyrinj'
-                }
-              }
-              tempname relyrcolumn_s`sgcase'
-              matrix `relyrcolumn_s`sgcase'' = (`relyrbysg')'
-              matrix `___`horizitem'_horiz_s`sgcase'' = ( `___`horizitem'_horiz_s`sgcase'',`relyrcolumn_s`sgcase'')
-              local f2rl_`horizitem'_s`sgcase'
-              forval f2ri = 1/`=rowsof(`relyrcolumn_s`sgcase'')' {
-                local f2rv = `relyrcolumn_s`sgcase''[`f2ri',1]
-                if `f2rv' < 0  local f2rl_`horizitem'_s`sgcase' `f2rl_`horizitem'_s`sgcase'' pre`=abs(`f2rv')'
-                else          local f2rl_`horizitem'_s`sgcase' `f2rl_`horizitem'_s`sgcase'' post`f2rv'
-              }
+              * the scan, the drop and its caution, the relative-period labels and the positional
+              * filter of the table and the F2 b/V live in wooldid_sglbl, shared with the
+              * continuous-treatment twin below (moved out of this program on 2026-09-06 to
+              * recover compiled-size headroom; the numbers are unchanged)
+              local f2opt
+              if "`marginsdof'" != "nose" local f2opt b(`f2bmat') v(`f2vmat')
+              wooldid_sglbl , names(`names') tab(`f9tab') first(`matrixstartgrab') mint(`min_t') old(`oldsyntax') sg(`sgcase') tvar(`_t') strip(1.`targetflag') fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_s`sgcase'') lbl(relyrlist_s`sgcase'_`horizitem') f2l(f2rl_`horizitem'_s`sgcase') `f2opt'
+              if `wdsg_skip' continue
+              local sgndrop `wdsg_ndrop'
+              local finaladvtest = `finaladvtest' - `sgndrop'
+              local relyrlist_s`sgcase' `relyrlist_s`sgcase'_`horizitem''
+              matrix `___`horizitem'_horiz_s`sgcase'' = ( `f9tab'', `relyrcolumn_s`sgcase'')
 
               * we construct relyrcolumn_s`sgcase' because not all sgs have all relyrs, necessarily
 
@@ -3588,7 +3479,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 * column has already been SI-7-filtered on THAT call's omission markers, and margins
                 * flags the dose slope independently of the level effect, so the two column sets can
                 * differ - concatenating them was a conformability error r(503) on every SI-7 drop
-                * under contreat(). r() is consumed here, before wooldid_sgamelbl (whose glevelsof
+                * under contreat(). r() is consumed here, before wooldid_sglbl (whose glevelsof
                 * fallback is rclass) scans, labels and filters the call
                 tempname namegetC relyrcolumn_Cs`sgcase'
                 matrix `namegetC' = r(table)[1, 1..`=colsof(r(b))']
@@ -3603,7 +3494,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                   matrix `f2vmat' = r(V)[1..`=colsof(r(b))', 1..`=colsof(r(b))']
                   local f2optC b(`f2bmat') v(`f2vmat')
                 }
-                wooldid_sgamelbl , names(`namesC') tab(`f9tab') mint(`min_t') old(`oldsyntax') sg(`sgcase') tvar(`_t') fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_Cs`sgcase'') lbl(relyrlist_s`sgcase'_`f2kC') `f2optC'
+                wooldid_sglbl , names(`namesC') tab(`f9tab') mint(`min_t') old(`oldsyntax') sg(`sgcase') tvar(`_t') kind(continuous-treatment) fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_Cs`sgcase'') lbl(relyrlist_s`sgcase'_`f2kC') f2l(f2rl_`f2kC'_s`sgcase') `f2optC'
                 if `wdsg_skip' continue
                 local finaladvtest = `finaladvtest' - `wdsg_ndrop'
                 matrix `___`horizitem'_Choriz_s`sgcase'' = ( `f9tab'', `relyrcolumn_Cs`sgcase'')
@@ -3621,12 +3512,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                   local f2b_`f2k' `f2bmat'
                   local f2v_`f2k' `f2vmat'
                   local f2keys `f2keys' `f2k'
-                  local f2rl_`f2k'
-                  forval f2ri = 1/`=rowsof(`relyrcolumn_Cs`sgcase'')' {
-                    local f2rv = `relyrcolumn_Cs`sgcase''[`f2ri',1]
-                    if `f2rv' < 0  local f2rl_`f2k' `f2rl_`f2k'' pre`=abs(`f2rv')'
-                    else          local f2rl_`f2k' `f2rl_`f2k'' post`f2rv'
-                  }
                 }
                 * handle the adversarial pre-trends test
                 * NFADV-01/02/05: statistics + display line via wooldid_advstat (see the
@@ -10221,16 +10106,19 @@ end
 *      the wooldid_ptp df_r convention.
 * Returns r(status): "ok" (line + p), "nop" (line only), "gapskip" (nothing - the B16
 * gap backstop: the altmethod fit sample has no real pre-period coefficient).
-* BS-8 (2026-09-06): label the continuous-treatment subgroup-by-horizon margins call from
-* its OWN colnames. positional omission scan mirroring the binary block in the worker:
-* every column carrying margins' o. marker is dropped from the six-row table (and from
-* b/V when given), a caution names the dropped horizons, and the relative periods of the
-* kept columns come back as the column matrix rel() and the row-label list lbl(). lives
-* outside wooldid_worker to conserve that program's compiled-size headroom. the caller
-* consumes r() first: the single-level fallback below is rclass and wipes it
-cap prog drop wooldid_sgamelbl
-prog def wooldid_sgamelbl
-  syntax , names(string) tab(name) mint(real) old(integer) sg(string) tvar(name) fb(string asis) rel(name) lbl(name) [b(name) v(name)]
+* BS-8 (2026-09-06): label a subgroup-by-horizon margins call from its OWN colnames.
+* positional omission scan (SI-7, author-ruled 2026-08-27): every column carrying margins'
+* o. marker is dropped from the six-row table (and from b/V when given), a caution names
+* the dropped horizons, and the relative periods of the kept columns come back as the
+* column matrix rel(), the rowname membership list lbl() and the strict per-column label
+* list f2l(). serves the binary call (first() = the 1.targetflag half, strip(1.targetflag))
+* and the continuous-treatment call (kind(continuous-treatment)). lives outside
+* wooldid_worker to conserve that program's compiled-size headroom. the caller consumes
+* r() first: the single-level fallback below is rclass and wipes it
+cap prog drop wooldid_sglbl
+prog def wooldid_sglbl
+  syntax , names(string) tab(name) mint(real) old(integer) sg(string) tvar(name) fb(string asis) rel(name) lbl(name) [f2l(name) b(name) v(name) first(integer 1) strip(string) kind(string)]
+  local kk = cond("`kind'" == "", "", "`kind' ")
   local keep
   local droplbl
   local ndrop 0
@@ -10250,17 +10138,20 @@ prog def wooldid_sgamelbl
   c_local wdsg_ndrop `ndrop'
   c_local wdsg_skip 0
   c_local `lbl'
+  if "`f2l'" != "" c_local `f2l'
   if `ndrop' > 0 {
-    dis as text "Caution: the continuous-treatment relative period effect(s) `droplbl' are not estimable for subgroup `sg' (margins reports them as omitted), so they are dropped from that subgroup's continuous-treatment event study; its remaining relative periods, and all other subgroups, are unaffected."
+    dis as text "Caution: the `kk'relative period effect(s) `droplbl' are not estimable for subgroup `sg' (margins reports them as omitted), so they are dropped from that subgroup's `kk'event study; its remaining relative periods, and all other subgroups, are unaffected. This typically arises when the specified fixed effects absorb the subgroup-by-time variation (for example fe() interacting the subgroups() variable with time), or when a subgroup has no usable observations at that relative period."
     if "`keep'" == "" {
-      dis as text "Caution: no continuous-treatment relative period effect is estimable for subgroup `sg', so its continuous-treatment event study is skipped entirely."
+      dis as text "Caution: no `kk'relative period effect is estimable for subgroup `sg', so its `kk'event study is skipped entirely."
       c_local wdsg_skip 1
       exit
     }
   }
   * relative periods from the kept names. margins names a single-level over() result
-  * without the level (see the binary block's note in the worker), so fall back to the
-  * realized levels of the subpop when a kept name does not parse
+  * without the level (it returns 1.targetflag, or nothing, as the relevant level, because
+  * the subpop made over(_t) irrelevant), so fall back to the realized levels of the
+  * subpop when a kept name does not parse - a levelsof pass costs more than the text
+  * processing on large data, hence not by default
   local kn
   foreach k of local keep {
     local w : word `k' of `names'
@@ -10268,36 +10159,40 @@ prog def wooldid_sgamelbl
   }
   local kn = subinstr("`kn'", "bn", "", .)
   local kn = subinstr("`kn'", "`tvar'", "", .)
+  if "`strip'" != "" local kn = subinstr("`kn'", "`strip'", "", .)
   local ok 1
   foreach w of local kn {
     if !regexm("`w'", "^[0-9]+[.]?$") local ok 0
   }
   if `ok' == 0 | wordcount("`kn'") == 0 qui glevelsof(`tvar') if `fb', clean local(kn)
   if wordcount("`kn'") != wordcount("`keep'") {
-    dis as error "Error: the continuous-treatment event-study margins for subgroup `sg' returned `=wordcount("`keep'")' estimable columns but `=wordcount("`kn'")' relative-period labels could be recovered for them. This is unexpected - please report it."
+    dis as error "Error: the `kk'event-study margins for subgroup `sg' returned `=wordcount("`keep'")' estimable columns but `=wordcount("`kn'")' relative-period labels could be recovered for them. This is unexpected - please report it."
     error 459
   }
   local relcol
   local lbls
+  local f2lbls
   foreach w of local kn {
     local r = `w' - `mint' - 1
     if `r' >= 0 local lbls `lbls' post`r'
     if `r' == 0 & `old' == 1 local lbls `lbls' contemp
     if `r' < 0 local lbls `lbls' pre`=abs(`r')'
+    local f2lbls `f2lbls' `=cond(`r' < 0, "pre" + strofreal(abs(`r')), "post" + strofreal(`r'))'
     if "`relcol'" == "" local relcol `r'
     else local relcol `relcol' , `r'
   }
   matrix `rel' = (`relcol')'
-  * the six-row table keeps the estimable columns only (column by column, as the binary
-  * block does, so an undropped call is the same slice as before)
+  * the six-row table keeps the estimable columns only (column by column, as the in-line
+  * code did, so an undropped call is the same slice as before)
   tempname kt
-  local first 1
+  local firstk 1
   foreach k of local keep {
-    if `first' {
-      matrix `kt' = `tab'[1..6, `k']
-      local first 0
+    local c = `first' + `k' - 1
+    if `firstk' {
+      matrix `kt' = `tab'[1..6, `c']
+      local firstk 0
     }
-    else matrix `kt' = (`kt', `tab'[1..6, `k'])
+    else matrix `kt' = (`kt', `tab'[1..6, `c'])
   }
   matrix `tab' = `kt'
   if "`b'" != "" & `ndrop' > 0 {
@@ -10306,6 +10201,7 @@ prog def wooldid_sgamelbl
     mata: st_matrix("`v'", st_matrix("`v'")[(`keepm'), (`keepm')])
   }
   c_local `lbl' `lbls'
+  if "`f2l'" != "" c_local `f2l' `f2lbls'
 end
 
 cap prog drop wooldid_advstat
