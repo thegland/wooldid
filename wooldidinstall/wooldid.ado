@@ -1646,81 +1646,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
     * get some summary statistics on the outcome variable and the continuous treatment variable (if existent) in the estimation sample
     * this code block is inefficient / a result of some legacy choices
-    local rownamessum
-    if "`contreat'" == "" local sumvarlist y
-    if "`contreat'" != "" local sumvarlist y contreat
-    * gstats sum accepts pweights directly, so the regression weights pass through to these descriptive computations unchanged
-    foreach sumvar in `sumvarlist' {
-      local sumvar2 c
-      if "`sumvar'" == "y" local sumvar2 y
-      qui gstats sum ``sumvar'' `weightinserter' if e(sample), detail
-      local `sumvar'_mean = r(mean)
-      local `sumvar'_med = r(p50)
-      local `sumvar'_sd = r(sd)
-      local `sumvar'_p25 = r(p25)
-      local `sumvar'_p75 = r(p75)
-      local `sumvar'_iqr = ``sumvar'_p75' - ``sumvar'_p25'
-      local `sumvar'_min = r(min)
-      local `sumvar'_max = r(max)
-      local rownamessum `rownamessum' `sumvar2'_insample
-
-      * do the same in the pre-treatment treated sample
-      if "`sumvar'" == "y" | ("`contreatcontrols'" != "untreatedZero" & "`sumvar'" == "contreat") {
-        qui gstats sum ``sumvar'' `weightinserter' if e(sample) & `ttre' <. & `t' < `ttre', detail
-        local `sumvar'pre_mean = r(mean)
-        local `sumvar'pre_med = r(p50)
-        local `sumvar'pre_sd = r(sd)
-        local `sumvar'pre_p25 = r(p25)
-        local `sumvar'pre_p75 = r(p75)
-        local `sumvar'pre_iqr = ``sumvar'pre_p75' - ``sumvar'pre_p25'
-        local `sumvar'pre_min = r(min)
-        local `sumvar'pre_max = r(max)
-        local rownamessum `rownamessum' `sumvar2'_pretreat
-      }
-
-      * do the same in the post-treatment treated sample
-      qui gstats sum ``sumvar'' `weightinserter' if e(sample) & `ttre' <. & `t' >= `ttre', detail
-      local `sumvar'post_mean = r(mean)
-      local `sumvar'post_med = r(p50)
-      local `sumvar'post_sd = r(sd)
-      local `sumvar'post_p25 = r(p25)
-      local `sumvar'post_p75 = r(p75)
-      local `sumvar'post_iqr = ``sumvar'post_p75' - ``sumvar'post_p25'
-      local `sumvar'post_min = r(min)
-      local `sumvar'post_max = r(max)
-      local rownamessum `rownamessum' `sumvar2'_posttreat
-
-      * do the same in the control group (units never treated in-window: `ttre' == . covers never-treated and out-of-window-treated units)
-      if "`contreatwithin'" == "" & ("`sumvar'" == "y" | ("`contreatcontrols'" != "untreatedZero" & "`sumvar'" == "contreat"))  {
-        qui gstats sum ``sumvar'' `weightinserter' if e(sample) & `ttre' == ., detail
-        local `sumvar'con_mean = r(mean)
-        local `sumvar'con_med = r(p50)
-        local `sumvar'con_sd = r(sd)
-        local `sumvar'con_p25 = r(p25)
-        local `sumvar'con_p75 = r(p75)
-        local `sumvar'con_iqr = ``sumvar'con_p75' - ``sumvar'con_p25'
-        local `sumvar'con_min = r(min)
-        local `sumvar'con_max = r(max)
-        local rownamessum `rownamessum' `sumvar2'_control
-
-      }
-    }
-
-    * store these into a summary stats matrix
+    * the summary-statistics table lives in wooldid_sumstat (worker compiled-size headroom,
+    * 2026-09-08): identical behaviour; the matrix name is minted here so it survives the
+    * call and can be posted as e(summarystats) below
     tempname summarystats
-    matrix `summarystats' = (`y_mean' , `y_med', `y_sd', `y_iqr', `y_p25', `y_p75', `y_min', `y_max')
-    matrix `summarystats' = `summarystats' \ (`ypre_mean' , `ypre_med', `ypre_sd', `ypre_iqr', `ypre_p25', `ypre_p75', `ypre_min', `ypre_max')
-    matrix `summarystats' = `summarystats' \ (`ypost_mean' , `ypost_med', `ypost_sd', `ypost_iqr', `ypost_p25', `ypost_p75', `ypost_min', `ypost_max')
-    if "`contreatwithin'" == "" matrix `summarystats' = `summarystats' \ (`ycon_mean' , `ycon_med', `ycon_sd', `ycon_iqr', `ycon_p25', `ycon_p75', `ycon_min', `ycon_max')
-
-    if "`contreat'" != "" {
-      matrix `summarystats' = `summarystats' \ (`contreat_mean' , `contreat_med', `contreat_sd', `contreat_iqr', `contreat_p25', `contreat_p75', `contreat_min', `contreat_max')
-      if "`contreatcontrols'" != "untreatedZero"  matrix `summarystats' = `summarystats' \ (`contreatpre_mean' , `contreatpre_med', `contreatpre_sd', `contreatpre_iqr', `contreatpre_p25', `contreatpre_p75', `contreatpre_min', `contreatpre_max')
-      matrix `summarystats' = `summarystats' \ (`contreatpost_mean' , `contreatpost_med', `contreatpost_sd', `contreatpost_iqr', `contreatpost_p25', `contreatpost_p75', `contreatpost_min', `contreatpost_max')
-      if "`contreatwithin'" == "" & "`contreatcontrols'" != "untreatedZero"  matrix `summarystats' = `summarystats' \ (`contreatcon_mean' , `contreatcon_med', `contreatcon_sd', `contreatcon_iqr', `contreatcon_p25', `contreatcon_p75', `contreatcon_min', `contreatcon_max')
-    }
-
-    matrix colnames `summarystats' = mean median sd iqr p25 p75 min max
+    wooldid_sumstat , ss(`summarystats') y(`y') tvar(`t') ttrevar(`ttre') ct(`contreat') ctc(`contreatcontrols') ctw(`contreatwithin') wi(`weightinserter')
     matrix rownames `summarystats' = `rownamessum'
   }
 
@@ -10397,6 +10327,119 @@ version 16.0
   }
   if "`verbose'" == "verbose" dis as text "Wooldid has finished producing histograms."
 
+end
+
+* ============================================================================
+* The summarystats table: outcome and continuous-treatment distributions over the
+* estimation sample, its pre and post halves, and the comparison rows. Moved verbatim out
+* of wooldid_worker (per-program compiled-size ceiling) on 2026-09-08. The matrix name is
+* minted by the CALLER and passed in: a tempname created here would be dropped on return
+* and the ereturn of e(summarystats) would fail. The reference-period branch stays in the
+* worker so the temp-name allocation order is untouched. Plain program, NOT rclass: the
+* gstats calls consume their own r() line by line and the caller's r() is left as the
+* inline code left it. Only the thirteen locals the e() posts read come back.
+cap prog drop wooldid_sumstat
+prog def wooldid_sumstat
+version 16.0
+  syntax , ss(name) y(name) tvar(name) ttrevar(name) [ct(string) ctc(string) ctw(string) wi(string asis)]
+  * re-establish the worker's own names so the body below is byte-identical to the code
+  * it replaced (the stat locals are built by double dereference off `sumvar', so `y' and
+  * `contreat' must exist under exactly those names here)
+  local summarystats `ss'
+  local t `tvar'
+  local ttre `ttrevar'
+  local contreat `ct'
+  local contreatcontrols `ctc'
+  local contreatwithin `ctw'
+  local weightinserter `wi'
+local rownamessum
+if "`contreat'" == "" local sumvarlist y
+if "`contreat'" != "" local sumvarlist y contreat
+* gstats sum accepts pweights directly, so the regression weights pass through to these descriptive computations unchanged
+foreach sumvar in `sumvarlist' {
+  local sumvar2 c
+  if "`sumvar'" == "y" local sumvar2 y
+  qui gstats sum ``sumvar'' `weightinserter' if e(sample), detail
+  local `sumvar'_mean = r(mean)
+  local `sumvar'_med = r(p50)
+  local `sumvar'_sd = r(sd)
+  local `sumvar'_p25 = r(p25)
+  local `sumvar'_p75 = r(p75)
+  local `sumvar'_iqr = ``sumvar'_p75' - ``sumvar'_p25'
+  local `sumvar'_min = r(min)
+  local `sumvar'_max = r(max)
+  local rownamessum `rownamessum' `sumvar2'_insample
+
+  * do the same in the pre-treatment treated sample
+  if "`sumvar'" == "y" | ("`contreatcontrols'" != "untreatedZero" & "`sumvar'" == "contreat") {
+    qui gstats sum ``sumvar'' `weightinserter' if e(sample) & `ttre' <. & `t' < `ttre', detail
+    local `sumvar'pre_mean = r(mean)
+    local `sumvar'pre_med = r(p50)
+    local `sumvar'pre_sd = r(sd)
+    local `sumvar'pre_p25 = r(p25)
+    local `sumvar'pre_p75 = r(p75)
+    local `sumvar'pre_iqr = ``sumvar'pre_p75' - ``sumvar'pre_p25'
+    local `sumvar'pre_min = r(min)
+    local `sumvar'pre_max = r(max)
+    local rownamessum `rownamessum' `sumvar2'_pretreat
+  }
+
+  * do the same in the post-treatment treated sample
+  qui gstats sum ``sumvar'' `weightinserter' if e(sample) & `ttre' <. & `t' >= `ttre', detail
+  local `sumvar'post_mean = r(mean)
+  local `sumvar'post_med = r(p50)
+  local `sumvar'post_sd = r(sd)
+  local `sumvar'post_p25 = r(p25)
+  local `sumvar'post_p75 = r(p75)
+  local `sumvar'post_iqr = ``sumvar'post_p75' - ``sumvar'post_p25'
+  local `sumvar'post_min = r(min)
+  local `sumvar'post_max = r(max)
+  local rownamessum `rownamessum' `sumvar2'_posttreat
+
+  * do the same in the control group (units never treated in-window: `ttre' == . covers never-treated and out-of-window-treated units)
+  if "`contreatwithin'" == "" & ("`sumvar'" == "y" | ("`contreatcontrols'" != "untreatedZero" & "`sumvar'" == "contreat"))  {
+    qui gstats sum ``sumvar'' `weightinserter' if e(sample) & `ttre' == ., detail
+    local `sumvar'con_mean = r(mean)
+    local `sumvar'con_med = r(p50)
+    local `sumvar'con_sd = r(sd)
+    local `sumvar'con_p25 = r(p25)
+    local `sumvar'con_p75 = r(p75)
+    local `sumvar'con_iqr = ``sumvar'con_p75' - ``sumvar'con_p25'
+    local `sumvar'con_min = r(min)
+    local `sumvar'con_max = r(max)
+    local rownamessum `rownamessum' `sumvar2'_control
+
+  }
+}
+
+* store these into a summary stats matrix
+matrix `summarystats' = (`y_mean' , `y_med', `y_sd', `y_iqr', `y_p25', `y_p75', `y_min', `y_max')
+matrix `summarystats' = `summarystats' \ (`ypre_mean' , `ypre_med', `ypre_sd', `ypre_iqr', `ypre_p25', `ypre_p75', `ypre_min', `ypre_max')
+matrix `summarystats' = `summarystats' \ (`ypost_mean' , `ypost_med', `ypost_sd', `ypost_iqr', `ypost_p25', `ypost_p75', `ypost_min', `ypost_max')
+if "`contreatwithin'" == "" matrix `summarystats' = `summarystats' \ (`ycon_mean' , `ycon_med', `ycon_sd', `ycon_iqr', `ycon_p25', `ycon_p75', `ycon_min', `ycon_max')
+
+if "`contreat'" != "" {
+  matrix `summarystats' = `summarystats' \ (`contreat_mean' , `contreat_med', `contreat_sd', `contreat_iqr', `contreat_p25', `contreat_p75', `contreat_min', `contreat_max')
+  if "`contreatcontrols'" != "untreatedZero"  matrix `summarystats' = `summarystats' \ (`contreatpre_mean' , `contreatpre_med', `contreatpre_sd', `contreatpre_iqr', `contreatpre_p25', `contreatpre_p75', `contreatpre_min', `contreatpre_max')
+  matrix `summarystats' = `summarystats' \ (`contreatpost_mean' , `contreatpost_med', `contreatpost_sd', `contreatpost_iqr', `contreatpost_p25', `contreatpost_p75', `contreatpost_min', `contreatpost_max')
+  if "`contreatwithin'" == "" & "`contreatcontrols'" != "untreatedZero"  matrix `summarystats' = `summarystats' \ (`contreatcon_mean' , `contreatcon_med', `contreatcon_sd', `contreatcon_iqr', `contreatcon_p25', `contreatcon_p75', `contreatcon_min', `contreatcon_max')
+}
+
+matrix colnames `summarystats' = mean median sd iqr p25 p75 min max
+matrix rownames `summarystats' = `rownamessum'
+  c_local ypre_mean `ypre_mean'
+  c_local ypre_med `ypre_med'
+  c_local ypre_sd `ypre_sd'
+  c_local ypre_iqr `ypre_iqr'
+  c_local contreat_mean `contreat_mean'
+  c_local contreat_med `contreat_med'
+  c_local contreat_sd `contreat_sd'
+  c_local contreatpre_mean `contreatpre_mean'
+  c_local contreatpre_med `contreatpre_med'
+  c_local contreatpre_sd `contreatpre_sd'
+  c_local contreatpost_mean `contreatpost_mean'
+  c_local contreatpost_med `contreatpost_med'
+  c_local contreatpost_sd `contreatpost_sd'
 end
 
 cap prog drop wooldid_sglbl
