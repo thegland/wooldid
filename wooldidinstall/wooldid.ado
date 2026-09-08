@@ -731,176 +731,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
   * we begin by handling the case where the user wants the comparison period to be the beginning of the sample, possibly multiple such periods
   if "`esfixedbaseperiod'" != "esfixedbaseperiod" {
-
-    *  calculate the minimum time unit observed w/in the sample for each unit i
-    * make a variable to drop all i where we see no pre period
-    tempvar mint
-
-    qui gegen `mint' = min(`t') if `ifstatement', by(`i')
-
-
-    * if requesting time trends, figuring the 2nd from the minimum time unit observed for each i
-    if "`timetrends'" == "timetrends" {
-      tempvar mintp1
-      tempvar tp1
-      qui gen double `tp1' = `t' if `t' != `mint'
-      qui gegen `mintp1' = min(`tp1' ) if `ifstatement' , by(`i')
-      qui drop `tp1'
-    }
-
-    * drop cohorts which do not have a pre-treatment period (or 2 such periods if using time trends)
-    * F4: before applying the drops, report units that are dropped only BECAUSE of the
-    * anticipation shift (shifted onset at/before their first usable period while the
-    * recorded onset is not) - otherwise the only signal is a smaller N in the header
-    if `anticipation' > 0 {
-      local anticmintvar `mint'
-      if "`timetrends'" == "timetrends" local anticmintvar `mintp1'
-      qui count if `ttre' <= `anticmintvar' & `ttre_asgiven' > `anticmintvar' & `ttre_asgiven' < . & `ifstatement'
-      if r(N) > 0 {
-        local anticdroppedobs = r(N)
-        tempvar antictag
-        qui gegen `antictag' = tag(`i') if `ttre' <= `anticmintvar' & `ttre_asgiven' > `anticmintvar' & `ttre_asgiven' < . & `ifstatement'
-        qui count if `antictag' == 1
-        dis as text "Caution: anticipation(`anticipation') places the effective onset of `r(N)' unit(s) at or before their first usable pre-period; those unit(s) and their `anticdroppedobs' observations are dropped from the sample."
-        qui drop `antictag'
-      }
-    }
-    * the drop is UNIT-level by construction (gegen max by i): with a within-unit-varying
-    * ttre (reachable only under safety(off), F13 forbids it otherwise) the old row-level
-    * form could remove a surviving unit's t==mint rows, leaving the per-unit mint/mintp1
-    * below stale and the reference-forcing clauses targeting a period that no longer
-    * exists - a silent collinearity route (dropped treated dummies, biased estimates)
-    tempvar nopre
-    if "`timetrends'" == "" qui gegen byte `nopre' = max(`ttre' <= `mint') if `ifstatement', by(`i')
-    if "`timetrends'" == "timetrends" qui gegen byte `nopre' = max(`ttre' <= `mintp1') if `ifstatement', by(`i')
-    qui replace `ifvar' = 0 if `nopre' == 1
-    qui drop `nopre'
-    qui replace `ttre' = . if `ifvar' == 0
-    * invariant guard: recompute mint/mintp1 on the post-drop sample. with the unit-level
-    * drop above this is a provable no-op (drops remove whole units, so surviving units'
-    * first periods are unchanged); it stays as insurance that the reference-forcing
-    * clauses below can never target a period absent from the surviving sample
-    qui drop `mint'
-    qui gegen `mint' = min(`t') if `ifstatement', by(`i')
-    if "`timetrends'" == "timetrends" {
-      tempvar tp1g
-      qui drop `mintp1'
-      qui gen double `tp1g' = `t' if `t' != `mint'
-      qui gegen `mintp1' = min(`tp1g') if `ifstatement', by(`i')
-      qui drop `tp1g'
-    }
-
-
-    * construct _t, which contains dummies for treatment periods of interest - it will be specified in terms of relative periods
-    * _t is born as a relative period variable, which we missing out for relyrs before the event study prelength and for the very first observation we have for everyone
-    * note that if the first observation for a unit is a period for which treatment effects are requested, this observation still ends up being the reference period
-    * this creates much mischief in interpreting event study results when it happens and using the fixed base period approach should be used when this is relevant
-    * the third replace statement just insures that the minimum value is always 1; the 4th 0s the missings
-
-    qui gen `_t' = `t' - `ttre' if `ifstatement'
-
-    if "`timetrends'" == "" {
-      * the caution branch runs whenever a pre-treatment horizon is requested at all
-      * (bug sweep BS-2: <= 1 gated it off at esprelength(1), the smallest case it exists for)
-      if "`safety'" == "off" | `esprelength' == 0 {
-        qui replace `_t' = . if `_t' < -`esprelength'  | `t' == `mint'
-      }
-      else{
-        qui replace `_t' = . if `_t' < -`esprelength'
-        cap assert `_t' == . if  `t' == `mint' &  `ifstatement'
-        if _rc != 0 {
-          qui replace `_t' = . if `t' == `mint'
-          dis as text " "
-          dis as text "Caution: reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
-          dis as text "This does not break estimation, but event study estimates can carry counterintuitive meanings and reflect effect levels by cohort."
-          dis as text "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
-          if `esprelength' > 1 dis as text "(Or request estimates for fewer pre-treatment horizons.)"
-          dis as text " "
-          * If this condition triggers, event study coefficients are very difficult to interpret
-        }
-      }
-    }
-    else{
-      * if using timetrends, never use the 2nd observation either - dont just always skip the first!
-      * the caution branch runs whenever a pre-treatment horizon is requested at all
-      * (bug sweep BS-2: <= 1 gated it off at esprelength(1), the smallest case it exists for)
-      if "`safety'" == "off" | `esprelength' == 0 {
-        qui replace `_t' = . if `_t' < -`esprelength'  | `t' <= `mintp1'
-      }
-      else{
-        qui replace `_t' = . if `_t' < -`esprelength'
-        cap assert `_t' == . if  `t' <= `mintp1' &  `ifstatement'
-        if _rc != 0 {
-          qui replace `_t' = . if `t' <= `mintp1'
-          dis as text " "
-          dis as text "Caution: reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
-          dis as text "This does not break estimation, but event study estimates can carry counterintuitive meanings and reflect effect levels by cohort."
-          dis as text "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
-          if `esprelength' > 1 dis as text "(Or: request estimates for fewer pre-treatment horizons, or drop the request to include timetrends.)"
-          else dis as text "(Or drop the request to include timetrends.)"
-          dis as text " "
-        }
-      }
-      qui drop `mintp1'
-    }
-
-
-    * update _t and ttre
-    qui replace `_t' = . if `ifvar' == 0
-    qui replace `ttre'  = . if `ifvar' == 0
-
-    * produce a check that each _t interaction will be estimable in that there is an untreated cohort for it
-    * note that you can have periods with only treated units in them in the pre period provided they are periods pooled into an pooled reference period
-    * allowing for the above is why we use _t instead of ttre here like in the ensuing section
-    * do not apply test if not using a purely untreated control group (contreatwithin case)
-    if "`contreatwithin'" == "" {
-      tempvar controlcheck
-      tempvar controlcheck2
-      qui gen `controlcheck' = `_t' ==. & `ifstatement'
-      qui gegen `controlcheck2' = max(`controlcheck') if `ifstatement' , by(`t')
-      qui replace `ifvar'  = 0 if `controlcheck2' == 0
-
-      * update _t and ttre
-      qui replace `_t' = . if `ifvar' == 0
-      qui replace `ttre'  = . if `ifvar' == 0
-
-      if "`safety'" != "off"  {
-        cap assert `controlcheck2' != 0
-        if _rc != 0 {
-          dis as text "Caution: estimability checks found time periods exist in sample without a control unit, causing them to be dropped."
-          if "`contreat'" != "" dis as text "If intending to only use within treated-cohorts variation in your continuous treatment variable, specify option contreatwithin to prevent these time periods from being dropped."
-        }
-      }
-      qui drop `controlcheck' `controlcheck2'
-    }
-
-    *get min viable _t and max; set up relative period variable to have no negative values
-    qui gstats sum `_t' if `ifstatement', meanonly
-    * min_t counts the realized pre-treatment horizons; when no treated unit is observed at or
-    * before its onset (an onset-period gap, or an onset off the panel's time grid) r(min) is
-    * positive and abs() would invent a pre-window that nothing realizes (bug sweep BS-33)
-    local min_t = max(0, -r(min))
-    local max_t = r(max) + 1
-    qui replace `_t' = `_t' + `min_t' + 1
-    qui replace `_t' = 0 if `_t' == . & `ifstatement'
-
-    * check that some cohort has a post period and that some has a pre-period
-    cap assert `max_t' > 0 & `max_t' < .
-    if _rc != 0 {
-      dis as error  "Error: cannot find either a treated time period for any treated units or sufficient untreated periods for treated units."
-      if "`timetrends'" != "" dis as error  "Note that including cohort-specific time trends raises the number of untreated periods required."
-      if `anticipation' > 0 dis as error  "Note: anticipation(`anticipation') shifted every effective onset earlier; a shift larger than the available pre-period window can leave no estimable treated periods."
-      error 459
-    }
-    * produce modified identifiers _i
-    * _i is unit identifiers that are positive integers if i is ever treated in sample and 0 otherwise
-    qui gen double `_i' = `i' if  `_t' > 0 & `_t' < . & `ifstatement'
-    qui replace `_i' = 0 if `_i' == . & `ifstatement'
-
-    local espl = min(`max_t',`espostlength')
-    local espre = `min_t'
-    drop `mint'
-    * end data setup work in the case not using relyr = -1 as a fixed base period
+    * relative-time construction lives in wooldid_reltime (worker compiled-size headroom,
+    * 2026-09-07): identical behaviour; _t, _i, ifvar and ttre are mutated in place under
+    * the caller's tempvar names and the four window locals come back by c_local
+    wooldid_reltime , ivar(`i') tvar(`t') ttrevar(`ttre') rawttre(`ttre_asgiven') ifv(`ifvar') relt(`_t') relid(`_i') epre(`esprelength') epost(`espostlength') antic(`anticipation') ifs(`ifstatement') tt(`timetrends') sfty(`safety') ct(`contreat') cw(`contreatwithin')
   }
   else{
     * enter the es fixed base period case - esfixedbaseperiod
@@ -1075,100 +909,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   ****** after the above estimability checks and processing, does the SG variable have surviving members?
   * while we're at it, figure out how many levels the sg variable takes on during the treatment period - will be useful down the line
 
-  if "`subgroups'" != "" {
-    * VAL-G15A: negative-value screen, moved here from wooldid_validate. domain =
-    * in-sample rows (ifstatement folds the deterministic markout, curing false
-    * rejections on e.g. missing-outcome rows) of units with a nonmissing internal
-    * onset - both pre- and post-onset rows, because the SG pre-trend margins consume
-    * pre-onset rows too; strictly looser than the old raw-if domain (never-treated,
-    * marked-out, and out-of-window-onset rows newly tolerated; nothing newly rejected).
-    * placed before the sglist screens so negative values error first and never enter
-    * sglist. the integer screen below keeps its own adjudicated t >= ttre domain
-    cap assert `subgroups' >= 0 | `subgroups' >= . if `ifstatement' & `ttre' < .
-    if _rc != 0 {
-      dis as error "Error: the subgroups() variable contains negative values on in-sample rows of treated units (pre- or post-onset); subgroup values must be non-negative integers (or missing) there."
-      error 411
-    }
-    qui glevelsof(`subgroups') if `ifstatement' & `t' >= `ttre' , clean local(sglist)
-    if wordcount("`sglist'") == 0 {
-      dis as error  "Error: subgroups() is specified, but the subgroup variable contains no values within sample during the treatment period."
-      error 459
-    }
-    * subgroup values reaching the treated estimation sample must be integer-valued: a non-integer
-    * value yields an sglist token like 1.5 that later crashes the naming machinery (locals,
-    * matrices, ereturns named ..._s1.5) with an unexplained r(198). the check deliberately uses
-    * the levelsof domain above, so values appearing only outside it (never-treated units, screened
-    * observations) stay tolerated exactly as before, and missing values pass (int(.) == .)
-    cap assert `subgroups' == int(`subgroups') if `ifstatement' & `t' >= `ttre'
-    if _rc != 0 {
-      dis as error "Error: the subgroup variable contains non-integer values within the treated estimation sample; it must contain only non-negative integers."
-      error 411
-    }
-    * F13: subgroup containment. sg never enters the regression - the unit-by-period cell
-    * coefficients are shared by every subgroup a unit touches. sg varying WITHIN a unit-period
-    * cell therefore makes by-subgroup contrasts structurally unable to reflect within-cell
-    * heterogeneity (each subgroup only reweights the same pooled cell effects; contrasts can
-    * come back identical under strong true heterogeneity) -> error. sg varying within a unit
-    * only ACROSS periods leaves by-sg att/att_it correct (row-weighted) but makes
-    * att_i/att_itime weight a straddling unit by its weight share rather than equally ->
-    * caution. domains: missing sg rows belong to no subgroup by design and never-treated
-    * units never enter any sg subpop, so both are excluded (cond() folds extended missings)
-    if "`safetyinput'" != "off" {
-      tempvar f13sgitmin f13sgitmax
-      qui gegen double `f13sgitmin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i' `t')
-      qui gegen double `f13sgitmax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i' `t')
-      cap assert `f13sgitmin' == `f13sgitmax' if `ifstatement' & `ttre' != .
-      if _rc != 0 {
-        dis as error "Error: the subgroup variable `subgroups' varies within `i'-by-`t' cells of the treated estimation sample."
-        dis as error "wooldid estimates effects at the `i'-by-period level, so subgroup estimates built from cells that mix subgroups cannot reflect within-cell subgroup differences - each subgroup only reweights the same pooled cell effects, and subgroup contrasts can come back identical even when true effects differ sharply by subgroup."
-        dis as error "Define `i' at the finer level over which the subgroup varies (e.g., egen newi = group(`i' `subgroups')), or drop the subgroups() option."
-        dis as error "To ignore this error, specify safety(off)."
-        error 459
-      }
-      qui drop `f13sgitmin' `f13sgitmax'
-    }
-    * a unit split across multiple subgroups over time (subgroup varies within i across
-    * periods) is refused under default safety - a unit cannot belong to more than one
-    * subgroup, and the share-weighted fallback deserves an explicit opt-in. under
-    * safety(off) the run proceeds with share weighting and a caution (author directive,
-    * 2026-07-28; this check runs regardless of the safety setting)
-    tempvar f13sgimin f13sgimax
-    qui gegen double `f13sgimin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
-    qui gegen double `f13sgimax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
-    cap assert `f13sgimin' == `f13sgimax' if `ifstatement' & `ttre' != .
-    if _rc != 0 {
-      if "`safetyinput'" != "off" {
-        dis as error "Error: the subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time. A unit cannot belong to more than one subgroup."
-        dis as error "To proceed anyway, specify safety(off): by-subgroup att and att_it then weight each observation to its own subgroup as usual, while att_i and att_itime enter a split unit into each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply."
-        error 459
-      }
-      else dis as text "Caution: the subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time; proceeding under safety(off) using share weighting. att_i and att_itime enter a split unit into each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply; by-subgroup att and att_it results are unaffected."
-    }
-    qui drop `f13sgimin' `f13sgimax'
-    * long subgroup values overflow stata's 31/32-character name limits when embedded in
-    * constructed local/matrix/rowname/graph/e() names (the worst prefixes reach 24-25
-    * characters: the makecfxplotsbysg tempnames, the adversarial-by-sg ereturns, and the
-    * pooled pretreatment_SG<value>_att_itime rownames all crash at 8-digit values; the
-    * bysg tempnames also embed the relative year, so with 3-digit relyr plot requests
-    * even 7-digit values overflow), and values beyond 2,147,483,647 exceed the
-    * factor-variable level cap that margins over() relies on. whether a given run
-    * crashes depends on the options requested, so this is a caution rather than an
-    * error. the sglist domain matches the checks above: only values reaching the
-    * treated estimation sample are ever injected into names
-    local sgmaxlen 0
-    foreach sgcase in `sglist' {
-      if strlen("`sgcase'") > `sgmaxlen' local sgmaxlen = strlen("`sgcase'")
-    }
-    if `sgmaxlen' >= 8 | (`sgmaxlen' == 7 & "`makecfxplotsbysg'" != "") {
-      dis as text "Caution: the subgroup variable takes values up to `sgmaxlen' digits long. wooldid embeds subgroup values in the names of stored results, matrices, and plots, and Stata caps such names at 31-32 characters, so values 8 or more digits long (7, with makecfxplotsbysg and 3-digit relative-year plot requests) can sometimes cause unexplained r(198) invalid-name crashes; att_itime results tables, adversarial, and makecfxplotsbysg are most exposed. Values above 2,147,483,647 will generally fail outright at Stata's factor-variable level cap."
-      dis as text "If wooldid crashes, recode ID-style subgroup values to small integers first (e.g., egen newsg = group(oldsg))."
-    }
-    * initialize these for later
-    foreach sgcase in `sglist' {
-      local joint_horiz_i_s`sgcase'
-      local joint_Choriz_i_s`sgcase'
-    }
-  }
+  * subgroup-domain validation lives in wooldid_sgdom (worker compiled-size headroom,
+  * 2026-09-07): identical behaviour, gate kept here, sglist returned by c_local
+  if "`subgroups'" != "" wooldid_sgdom , sg(`subgroups') ivar(`i') tvar(`t') ttrevar(`ttre') ifs(`ifstatement') si(`safetyinput') `makecfxplotsbysg'
 
 
 
@@ -1811,137 +1554,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * unconditionally, so they are initialized outside the safety gate
   local amevoid 0
   local amescrublo 2
-  if "`safety'" != "off"  {
-    local bvars: colnames e(b)
-    local catastrophe 0
-    local bigcatastrophe 0
-    * "o." appears in e(b) colnames iff some term carries an omission flag (a dot only ever
-    * follows a factor operator, and a token cannot straddle whitespace), so when it is
-    * absent the loop below provably cannot fire -- skip the whole interpreted scan
-    if strpos("`bvars'", "o.") != 0 {
-    tokenize `bvars'
-    local maxwordcount = wordcount("`bvars'")
-    forval testbvar = 1(1)`maxwordcount' {
-      if strpos("``testbvar''", "o.") != 0   & strpos("``testbvar''", "0b.") == 0 & strpos("``testbvar''", "`_i'") != 0 & strpos("``testbvar''", "`_t'") != 0  & ( strpos("``testbvar''", "1o.`targetflag'") != 0 | strpos("``testbvar''", "1.`targetflag'") != 0)  {
-        * the above triggers if and only if (a) the variable has an omission flag (and thus was dropped), and
-        * (b) it contains _i, _t, and targetflag (and thus is associated with a main treatment effect), and
-        * (c) targetflag (omitted or not) has a value of 1 (meaning it is supposed to correspond with a treatment effect), and
-        * (d) base values of 0 are not present anywhere (meaning it is supposed to correspond with a treatment effect)
-        * note that these conditions are required in combination since some nonsense cells can form with values like "treatflag = 1 for _i == 0 ", which can't occur in the data
-        * note also that this doesn't always work very well for continuous treatments - it is really only high value for the regular non contreat items
-
-        * below, we will test to confirm that there isnt just something weird going on w/ duplicative entries --
-        * check that the variable minus the omitteds isn't present somewhere.
-        * note that the white space below actually matters!
-        local checkifpresent = subinstr("``testbvar''","o.",".",.)
-        local checkifpresent = subinstr("`checkifpresent'"," ","",.)
-        if strpos("`bvars'"," `checkifpresent' ") == 0 {
-          * passing into this if means that the omitted object isn't just a duplicate of any actually existing object (which shouldn't usually happen anyway)
-          * next, figure out exactly where the problem occurred
-          * proceed only if there is serious reason to believe the coef should've existed
-
-          * strip out the _i _t targetflag etc from the word as well as the hashes
-          * what's left behind should be the values of _i and _t associated with the missing object
-          foreach word in b. . `_i' `_t' `targetflag' {
-            local checkifpresent = subinstr("`checkifpresent'","`word'","",.)
-          }
-          local checkifpresent = subinstr("`checkifpresent'","#"," ",.)
-          local problem_i = word("`checkifpresent'",1)
-          local problem_t = word("`checkifpresent'",2)
-          * 2 remaining cases. wordcount = 3, in which case what we have is probably a dropped i-t dummy
-          * or wordcount > 3, in which case we have something else, like a contreat interaction
-          local wordcountproblem = wordcount("`checkifpresent'")
-
-          * are there observations falling in the _i _t cell associated with the missing coefficient? if not, this isn't a problem
-          * note: this regrettably is a bit computationally intensive -- and its result is
-          * consumed only through the r(N) gate below, whose branches ALL require
-          * wordcount <= 3, no lattice, or verbose: when the flagged term is an interaction
-          * (wordcount > 3) with a lattice active and verbose off, nothing can consume the
-          * count, so skip the full-data pass entirely (lattice drops there are expected)
-          if `wordcountproblem' <= 3 | "`lattice'" == "" | "`verbose'" != "" {
-          qui count if `_i' == `problem_i' & `_t' == `problem_t' & `targetflag' == 1 & `w' > 0 & `ifstatement'
-          if r(N) > 0 {
-            * if we proceeded to this point, then the omitted object has associated observations, so this is an actual problem!
-
-            if `wordcountproblem' <= 3 {
-              local problem_t = `problem_t' - `min_t' - 1
-              * under poisson an omitted cell dummy whose rows ppmlhdfe dropped is perfect
-              * separation, not multicollinearity (bug sweep BS-4)
-              local wdsep 0
-              if "`poisson'" != "" {
-                qui count if `_i' == `problem_i' & `_t' == `problem_t' + `min_t' + 1 & `targetflag' == 1 & `esamp' & `ifstatement'
-                local wdsep = r(N) == 0
-              }
-              if `wdsep' dis as error "Error: ppmlhdfe dropped every observation of the treated cohort-period cell `i' == `problem_i', relative-`t' == `problem_t' (perfect separation: the outcome is zero on all of them, so the cell's coefficient does not exist). This is not multicollinearity. Coarsen `i', drop the cohort, or specify safety(off) to proceed with the separated cells excluded."
-              else dis as error  "Error: a treated cohort-period dummy coefficient was dropped for multicollinearity."
-              if "`verbose'" != "" dis as error  "The specific problematic coefficient is: ``testbvar''"
-              if "`verbose'" != "" dis as error  "For reference, _i is `_i', _t is `_t', and targetflag is `targetflag'"
-              if !`wdsep' dis as error  "The problem seems to be with the treatment dummy for `i' == `problem_i', relative-`t' == `problem_t'"
-              if !`wdsep' & "`contreat'" != "" dis as error  "Specify contreatwithin if you have a continuous treatment intensity variable and wish to partial out any effect of treatment when the treatment intensity is 0."
-              dis as error  "You can ignore this check if you specify safety(off), but be careful."
-              dis as error  " "
-              * verbose not specified triggers error here (rather than later after looping through them all )
-              if "`verbose'" == "" error 322
-              local bigcatastrophe 1
-            }
-            if `wordcountproblem' > 3  & ("`lattice'" == "" | "`verbose'" == "verbose"){
-              * > 3 implies we have more than _i, _t, and targetflag (the variable that is 1 for obs contributed to an estimate and 0 otherwise) forming the dropped variable
-              * this implies it is not a main effect treatment dummy
-              local problem_t = `problem_t' - `min_t' - 1
-              if `catastrophe' == 0 dis as text  "Caution: a treatment period coefficient interacted with something (likely, a term implementing a continuous treatment variable or an interactive control variable) was dropped for multicollinearity."
-              if `catastrophe' == 0 & "`lattice'" != "" dis as text  "If using a lattice, this is likely innocuous."
-              if `catastrophe' == 0 dis as text  "This could imply your results are not identified, depending on exactly what was dropped."
-              if `catastrophe' == 0 dis as text  "Re-estimate with option verbose for details on what was dropped."
-              if "`verbose'" != "" dis as text " "
-              if "`verbose'" != "" dis as text  "The specific problematic coefficient is: ``testbvar''"
-              if "`verbose'" != "" dis as text  "For reference, _i is `_i', _t is `_t', and targetflag is `targetflag'"
-              if "`verbose'" != "" dis as text  "Given we are looking at something with an _i _t (other items here) structure,"
-              if "`verbose'" != "" dis as text  "the problem values of `i' and relative-`t' are `problem_i', `problem_t'."
-              local catastrophe = `catastrophe' + 1
-            }
-          }
-          }
-        }
-      }
-    }
-    }
-    if `catastrophe' > 0 dis as text "Note: the multicollinearity caution above was triggered `catastrophe' times total."
-    if `bigcatastrophe' == 1 error 322
-
-    * SI-A4/R6 (author-ruled 2026-08-25): when EVERY treated-cell dose-slope term was
-    * dropped for multicollinearity (zero live c.contreat treated terms while dropped
-    * ones exist - the d3 class, e.g. dose constant within each cohort), the within-cell
-    * ame estimand is unidentified and the regression's ame entries are exact structural
-    * zeros. Name the refusal, void the ame block INCLUDING the point estimates (the R1
-    * scrub keeps b; R6 must not - the zeros are fabricated), and continue: the att side
-    * is untouched by construction. Scoping on targetflag==1 exempts untreatedZero's
-    * expected zero-dose reference periods by construction. Skipped under fastnose (R1
-    * convention) and under safety(off) (this whole screen block).
-    if "`contreat'" != "" & "`fastnose'" == "" & strpos("`bvars'", "o.") != 0 {
-      local amelive 0
-      local amedrop 0
-      foreach r6tok of local bvars {
-        * omitted continuous interactions carry the co. marker (not a bare c. plus
-        * o. elsewhere), so a dose term is c.<contreat> OR co.<contreat>
-        if strpos("`r6tok'", "`_i'") != 0 & strpos("`r6tok'", "`_t'") != 0 & (strpos("`r6tok'", "1.`targetflag'") != 0 | strpos("`r6tok'", "1o.`targetflag'") != 0) & (strpos("`r6tok'#", "c.`contreat'#") != 0 | strpos("`r6tok'#", "co.`contreat'#") != 0) {
-          if strpos("`r6tok'", "o.") == 0 local ++amelive
-          else local ++amedrop
-        }
-      }
-      if `amelive' == 0 & `amedrop' > 0 {
-        dis as text "Caution: every treated cohort-period dose-slope term for the continuous treatment variable `contreat' was dropped for multicollinearity (see the caution counts above); this occurs, for example, when `contreat' is constant within each cohort. The within-cell average marginal effects (ame) that wooldid reports for continuous treatments are NOT IDENTIFIED in this design - the regression's ame entries are structural zeros, not estimates - so wooldid is reporting the ame results as missing and skipping the ame-based tests (only the raw e(b) coefficient vector retains the structural zeros: Stata cannot post missing coefficients). The att-side results are unaffected."
-        dis as text "Consider whether a coarser definition of `i' (so that cohort-period cells contain dose variation) matches your design, or estimate binary att effects without contreat(). You can ignore this check if you specify safety(off), but be careful: with safety(off) the ame output will contain the structural zeros."
-        local amevoid 1
-        local amescrub 1
-        local amescrublo 1
-      }
-    }
-    * interactivecontrols() twin of the screen above (bug sweep BS-3): when no cohort-period
-    * cell holds within-cell variation in a control, every treated-cell slope term drops
-    * out and the run silently reduces to controls(i.t#c.x); the scan lives in
-    * wooldid_icscreen (worker headroom)
-    if "`interactivecontrols'" != "" & "`fastnose'" == "" & strpos("`bvars'", "o.") != 0 wooldid_icscreen , bvars(`bvars') iv(`_i') tv(`_t') tf(`targetflag') ics(`interlist') names(`interactivecontrols')
-  }
+  * the collinearity screens live in wooldid_ccscreen (worker compiled-size headroom,
+  * 2026-09-07): identical behaviour, the gate kept here so safety(off) never enters
+  if "`safety'" != "off" wooldid_ccscreen , iv(`_i') tv(`_t') tf(`targetflag') wt(`w') es(`esamp') ifs(`ifstatement') mint(`min_t') ui(`i') ut(`t') lat(`lattice') ct(`contreat') ics(`interlist') icn(`interactivecontrols') `verbose' `poisson' `fastnose'
 
 
 
@@ -2221,81 +1836,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * stick them into a matrix
   * use the matrix to populate a dataset that we will use to make the histogram
   if "`histogramcohorteffects'" != "" {
-    if "`verbose'" == "verbose" dis as text "Wooldid is now producing histograms."
+    * the histogram diagnostic lives in wooldid_hist (worker compiled-size headroom,
+    * 2026-09-07): identical behaviour; the matrix name is minted here so it survives the
+    * call and can be posted as e(histogramestimates) below
     tempname ___hist
-    * graph window management: graphs are created with name(..., replace) so re-runs overwrite wooldid's own prior graphs; wooldid no longer clears the user's unrelated graphs from memory
-
-    * we pool att with att_i b/c they conceptually should match into the same histograms
-    if "`att_i'" == "att_i" |  "`att'" == "att"  {
-      local whichweight w_att
-      if "`att'" == "" local whichweight w_att_i
-      qui margins [`weight'=``whichweight''], `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstext' `fcnoes'
-      local matrixstartgrab floor(`=colsof(r(b))'/2)+1
-      matrix `___hist' = r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
-      matrix colnames `___hist' = att_i
-      if "`contreat'" != "" {
-        qui margins [`weight'=``whichweight''], `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstextC' `fcnoes'
-        tempname ___Chist
-        matrix `___Chist' = r(b)[1, 1..`=colsof(r(b))']'
-        matrix `___hist' = (`___hist',`___Chist')
-        matrix drop `___Chist'
-        matrix colnames `___hist' = att_i ame_i
-      }
-      tempname wooldidframe
-      frame create `wooldidframe'
-      frame change `wooldidframe'
-      qui svmat double `___hist'
-      rename `___hist'1 att_i
-      if "`contreat'" != "" rename `___hist'2 ame_i
-      local bininserter
-      if _N < 100 local bininserter bin(20)
-      qui hist att_i, freq   xtitle("Cohort-Specific Average Treatment `effecttype'") name(hist_att_i, replace) gap(5) `bininserter' color(navy)
-      if "`saveplots'" != "" qui graph save "`saveplots'_hist_att_i.gph", `replace'
-      if "`contreat'" != "" qui hist ame_i, freq   xtitle("Cohort-Specific Average Marginal Treatment `Ceffecttype'") name(hist_ame_i, replace) gap(5) `bininserter' color(navy)
-      if "`contreat'" != "" & "`saveplots'" != ""  qui graph save "`saveplots'_hist_ame_i.gph", `replace'
-      frame change `defaultframe'
-      frame drop `wooldidframe'
-    }
-
-    * bundle these for conceptually both generating the same histograms
-    if "`att_itime'" == "att_itime" |  "`att_it'" == "att_it"  {
-      qui margins [`weight'=`w_att_it'], `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstext' `fcnoes'
-      local matrixstartgrab floor(`=colsof(r(b))'/2)+1
-      tempname ___hist2
-      matrix `___hist2' = r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
-      matrix colnames `___hist2' = att_itime
-      if "`contreat'" != "" {
-        tempname ___Chist2
-        qui margins [`weight'=`w_att_it'], `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstextC' `fcnoes'
-        matrix `___Chist2' = r(b)[1, 1..`=colsof(r(b))']'
-        matrix `___hist2' = (`___hist2',`___Chist2')
-        matrix drop `___Chist2'
-        matrix colnames `___hist2' = att_itime ame_itime
-      }
-      tempname wooldidframe
-      frame create `wooldidframe'
-      frame change `wooldidframe'
-      qui svmat double `___hist2'
-      rename `___hist2'1 att_itime
-      if "`contreat'" != "" rename `___hist2'2 ame_itime
-      local bininserter
-      if _N < 100 local bininserter bin(20)
-      qui hist att_itime, freq   xtitle("Cohort-Specific i-t Cell Average Treatment `effecttype'") name(hist_att_itime, replace) gap(5) `bininserter' color(navy)
-      if "`saveplots'" != "" qui graph save "`saveplots'_hist_att_itime.gph", `replace'
-      if "`contreat'" != "" qui hist ame_itime, freq   xtitle("Cohort-Specific i-t Cell Average Marginal Treatment `Ceffecttype'") name(hist_ame_itime, replace) gap(5) `bininserter' color(navy)
-      if "`contreat'" != "" &   "`saveplots'" != ""   qui graph save "`saveplots'_hist_ame_itime.gph", `replace'
-      frame change `defaultframe'
-      frame drop `wooldidframe'
-      if "`att_i'" == "att_i" |  "`att'" == "att"  {
-        matrix `___hist' = (`___hist',`___hist2')
-      }
-      else{
-        matrix `___hist' = `___hist2'
-      }
-      cap matrix drop `___hist2'
-    }
-    if "`verbose'" == "verbose" dis as text "Wooldid has finished producing histograms."
-
+    wooldid_hist , h(`___hist') iv(`_i') tv(`t') tf(`targetflag') ttrevar(`ttre') wtype(`weight') semi(`semielasticity') ifs(`ifstatement') dfr(`defaultframe') wa(`w_att') wai(`w_att_i') wait(`w_att_it') ct(`contreat') cet(`contreatelasticitytype') pm(`poismarginstext') pmc(`poismarginstextC') fcn(`fcnoes') sp(`saveplots') elbl(`effecttype') celbl(`Ceffecttype') `att' `att_it' `att_i' `att_itime' `verbose' `replace'
   }
 
 
@@ -10259,6 +9804,601 @@ end
 * and the continuous-treatment call (kind(continuous-treatment)). lives outside
 * wooldid_worker to conserve that program's compiled-size headroom. the caller consumes
 * r() first: the single-level fallback below is rclass and wipes it
+* ============================================================================
+* The post-estimation collinearity screens: the dropped treated cohort-period dummy
+* check (error 322, with the poisson separation branch of bug sweep BS-4), the
+* interaction-drop caution, the SI-A4/R6 continuous-treatment dose-slope screen, and the
+* BS-3 interactivecontrols twin. Moved verbatim out of wooldid_worker (per-program
+* compiled-size ceiling) on 2026-09-07; the gate stays at the call site so safety(off)
+* never enters, and the three locals the R6 branch sets come back by c_local.
+* Deliberately PLAIN (not rclass, not eclass): the screens read colnames e(b) of the
+* still-active stage-1 model, and an rclass return would blank the caller's r() on the
+* path where the inline code left it untouched. `bvars' is recomputed here rather than
+* passed, since colnames e(b) grows with the cohort-by-period cell count and could
+* overflow a command line on high-cardinality i.
+cap prog drop wooldid_ccscreen
+prog def wooldid_ccscreen
+version 16.0
+  syntax , iv(name) tv(name) tf(name) wt(string) es(name) ifs(string asis) mint(real) ui(name) ut(name) [lat(string asis) ct(string) ics(string) icn(string) VERbose POISson FASTnose]
+  * re-establish the worker's own names so the screen body below is byte-identical to
+  * the code it replaced
+  local _i `iv'
+  local _t `tv'
+  local targetflag `tf'
+  local w `wt'
+  local esamp `es'
+  local ifstatement `ifs'
+  local min_t `mint'
+  local i `ui'
+  local t `ut'
+  local lattice `lat'
+  local contreat `ct'
+  local interlist `ics'
+  local interactivecontrols `icn'
+  local bvars: colnames e(b)
+  local catastrophe 0
+  local bigcatastrophe 0
+  * "o." appears in e(b) colnames iff some term carries an omission flag (a dot only ever
+  * follows a factor operator, and a token cannot straddle whitespace), so when it is
+  * absent the loop below provably cannot fire -- skip the whole interpreted scan
+  if strpos("`bvars'", "o.") != 0 {
+  tokenize `bvars'
+  local maxwordcount = wordcount("`bvars'")
+  forval testbvar = 1(1)`maxwordcount' {
+    if strpos("``testbvar''", "o.") != 0   & strpos("``testbvar''", "0b.") == 0 & strpos("``testbvar''", "`_i'") != 0 & strpos("``testbvar''", "`_t'") != 0  & ( strpos("``testbvar''", "1o.`targetflag'") != 0 | strpos("``testbvar''", "1.`targetflag'") != 0)  {
+      * the above triggers if and only if (a) the variable has an omission flag (and thus was dropped), and
+      * (b) it contains _i, _t, and targetflag (and thus is associated with a main treatment effect), and
+      * (c) targetflag (omitted or not) has a value of 1 (meaning it is supposed to correspond with a treatment effect), and
+      * (d) base values of 0 are not present anywhere (meaning it is supposed to correspond with a treatment effect)
+      * note that these conditions are required in combination since some nonsense cells can form with values like "treatflag = 1 for _i == 0 ", which can't occur in the data
+      * note also that this doesn't always work very well for continuous treatments - it is really only high value for the regular non contreat items
+
+      * below, we will test to confirm that there isnt just something weird going on w/ duplicative entries --
+      * check that the variable minus the omitteds isn't present somewhere.
+      * note that the white space below actually matters!
+      local checkifpresent = subinstr("``testbvar''","o.",".",.)
+      local checkifpresent = subinstr("`checkifpresent'"," ","",.)
+      if strpos("`bvars'"," `checkifpresent' ") == 0 {
+        * passing into this if means that the omitted object isn't just a duplicate of any actually existing object (which shouldn't usually happen anyway)
+        * next, figure out exactly where the problem occurred
+        * proceed only if there is serious reason to believe the coef should've existed
+
+        * strip out the _i _t targetflag etc from the word as well as the hashes
+        * what's left behind should be the values of _i and _t associated with the missing object
+        foreach word in b. . `_i' `_t' `targetflag' {
+          local checkifpresent = subinstr("`checkifpresent'","`word'","",.)
+        }
+        local checkifpresent = subinstr("`checkifpresent'","#"," ",.)
+        local problem_i = word("`checkifpresent'",1)
+        local problem_t = word("`checkifpresent'",2)
+        * 2 remaining cases. wordcount = 3, in which case what we have is probably a dropped i-t dummy
+        * or wordcount > 3, in which case we have something else, like a contreat interaction
+        local wordcountproblem = wordcount("`checkifpresent'")
+
+        * are there observations falling in the _i _t cell associated with the missing coefficient? if not, this isn't a problem
+        * note: this regrettably is a bit computationally intensive -- and its result is
+        * consumed only through the r(N) gate below, whose branches ALL require
+        * wordcount <= 3, no lattice, or verbose: when the flagged term is an interaction
+        * (wordcount > 3) with a lattice active and verbose off, nothing can consume the
+        * count, so skip the full-data pass entirely (lattice drops there are expected)
+        if `wordcountproblem' <= 3 | "`lattice'" == "" | "`verbose'" != "" {
+        qui count if `_i' == `problem_i' & `_t' == `problem_t' & `targetflag' == 1 & `w' > 0 & `ifstatement'
+        if r(N) > 0 {
+          * if we proceeded to this point, then the omitted object has associated observations, so this is an actual problem!
+
+          if `wordcountproblem' <= 3 {
+            local problem_t = `problem_t' - `min_t' - 1
+            * under poisson an omitted cell dummy whose rows ppmlhdfe dropped is perfect
+            * separation, not multicollinearity (bug sweep BS-4)
+            local wdsep 0
+            if "`poisson'" != "" {
+              qui count if `_i' == `problem_i' & `_t' == `problem_t' + `min_t' + 1 & `targetflag' == 1 & `esamp' & `ifstatement'
+              local wdsep = r(N) == 0
+            }
+            if `wdsep' dis as error "Error: ppmlhdfe dropped every observation of the treated cohort-period cell `i' == `problem_i', relative-`t' == `problem_t' (perfect separation: the outcome is zero on all of them, so the cell's coefficient does not exist). This is not multicollinearity. Coarsen `i', drop the cohort, or specify safety(off) to proceed with the separated cells excluded."
+            else dis as error  "Error: a treated cohort-period dummy coefficient was dropped for multicollinearity."
+            if "`verbose'" != "" dis as error  "The specific problematic coefficient is: ``testbvar''"
+            if "`verbose'" != "" dis as error  "For reference, _i is `_i', _t is `_t', and targetflag is `targetflag'"
+            if !`wdsep' dis as error  "The problem seems to be with the treatment dummy for `i' == `problem_i', relative-`t' == `problem_t'"
+            if !`wdsep' & "`contreat'" != "" dis as error  "Specify contreatwithin if you have a continuous treatment intensity variable and wish to partial out any effect of treatment when the treatment intensity is 0."
+            dis as error  "You can ignore this check if you specify safety(off), but be careful."
+            dis as error  " "
+            * verbose not specified triggers error here (rather than later after looping through them all )
+            if "`verbose'" == "" error 322
+            local bigcatastrophe 1
+          }
+          if `wordcountproblem' > 3  & ("`lattice'" == "" | "`verbose'" == "verbose"){
+            * > 3 implies we have more than _i, _t, and targetflag (the variable that is 1 for obs contributed to an estimate and 0 otherwise) forming the dropped variable
+            * this implies it is not a main effect treatment dummy
+            local problem_t = `problem_t' - `min_t' - 1
+            if `catastrophe' == 0 dis as text  "Caution: a treatment period coefficient interacted with something (likely, a term implementing a continuous treatment variable or an interactive control variable) was dropped for multicollinearity."
+            if `catastrophe' == 0 & "`lattice'" != "" dis as text  "If using a lattice, this is likely innocuous."
+            if `catastrophe' == 0 dis as text  "This could imply your results are not identified, depending on exactly what was dropped."
+            if `catastrophe' == 0 dis as text  "Re-estimate with option verbose for details on what was dropped."
+            if "`verbose'" != "" dis as text " "
+            if "`verbose'" != "" dis as text  "The specific problematic coefficient is: ``testbvar''"
+            if "`verbose'" != "" dis as text  "For reference, _i is `_i', _t is `_t', and targetflag is `targetflag'"
+            if "`verbose'" != "" dis as text  "Given we are looking at something with an _i _t (other items here) structure,"
+            if "`verbose'" != "" dis as text  "the problem values of `i' and relative-`t' are `problem_i', `problem_t'."
+            local catastrophe = `catastrophe' + 1
+          }
+        }
+        }
+      }
+    }
+  }
+  }
+  if `catastrophe' > 0 dis as text "Note: the multicollinearity caution above was triggered `catastrophe' times total."
+  if `bigcatastrophe' == 1 error 322
+
+  * SI-A4/R6 (author-ruled 2026-08-25): when EVERY treated-cell dose-slope term was
+  * dropped for multicollinearity (zero live c.contreat treated terms while dropped
+  * ones exist - the d3 class, e.g. dose constant within each cohort), the within-cell
+  * ame estimand is unidentified and the regression's ame entries are exact structural
+  * zeros. Name the refusal, void the ame block INCLUDING the point estimates (the R1
+  * scrub keeps b; R6 must not - the zeros are fabricated), and continue: the att side
+  * is untouched by construction. Scoping on targetflag==1 exempts untreatedZero's
+  * expected zero-dose reference periods by construction. Skipped under fastnose (R1
+  * convention) and under safety(off) (this whole screen block).
+  if "`contreat'" != "" & "`fastnose'" == "" & strpos("`bvars'", "o.") != 0 {
+    local amelive 0
+    local amedrop 0
+    foreach r6tok of local bvars {
+      * omitted continuous interactions carry the co. marker (not a bare c. plus
+      * o. elsewhere), so a dose term is c.<contreat> OR co.<contreat>
+      if strpos("`r6tok'", "`_i'") != 0 & strpos("`r6tok'", "`_t'") != 0 & (strpos("`r6tok'", "1.`targetflag'") != 0 | strpos("`r6tok'", "1o.`targetflag'") != 0) & (strpos("`r6tok'#", "c.`contreat'#") != 0 | strpos("`r6tok'#", "co.`contreat'#") != 0) {
+        if strpos("`r6tok'", "o.") == 0 local ++amelive
+        else local ++amedrop
+      }
+    }
+    if `amelive' == 0 & `amedrop' > 0 {
+      dis as text "Caution: every treated cohort-period dose-slope term for the continuous treatment variable `contreat' was dropped for multicollinearity (see the caution counts above); this occurs, for example, when `contreat' is constant within each cohort. The within-cell average marginal effects (ame) that wooldid reports for continuous treatments are NOT IDENTIFIED in this design - the regression's ame entries are structural zeros, not estimates - so wooldid is reporting the ame results as missing and skipping the ame-based tests (only the raw e(b) coefficient vector retains the structural zeros: Stata cannot post missing coefficients). The att-side results are unaffected."
+      dis as text "Consider whether a coarser definition of `i' (so that cohort-period cells contain dose variation) matches your design, or estimate binary att effects without contreat(). You can ignore this check if you specify safety(off), but be careful: with safety(off) the ame output will contain the structural zeros."
+      c_local amevoid 1
+      c_local amescrub 1
+      c_local amescrublo 1
+    }
+  }
+  * interactivecontrols() twin of the screen above (bug sweep BS-3): when no cohort-period
+  * cell holds within-cell variation in a control, every treated-cell slope term drops
+  * out and the run silently reduces to controls(i.t#c.x); the scan lives in
+  * wooldid_icscreen (worker headroom)
+  if "`interactivecontrols'" != "" & "`fastnose'" == "" & strpos("`bvars'", "o.") != 0 wooldid_icscreen , bvars(`bvars') iv(`_i') tv(`_t') tf(`targetflag') ics(`interlist') names(`interactivecontrols')
+end
+
+* ============================================================================
+* Relative-time construction on the POOLED-reference branch: the anticipation shift, the
+* usable-window screens, the estimation-sample narrowing, and the birth of the relative
+* period variable and the pooled cohort identifier. Moved verbatim out of wooldid_worker
+* (per-program compiled-size ceiling) on 2026-09-07. The esfixedbaseperiod twin stays
+* inline. `_t', `_i', `ifvar' and `ttre' are the CALLER's tempvars, passed by name and
+* mutated in place - a tempvar created here would die on return. Plain program: it reads
+* no r() or e() and posts none.
+cap prog drop wooldid_reltime
+prog def wooldid_reltime
+version 16.0
+  * the three window integers sit in the OPTIONAL list: Stata rejects a default value on
+  * a REQUIRED option (r(197) at the syntax line), and the caller always supplies them
+  syntax , ivar(name) tvar(name) ttrevar(name) rawttre(string) ifv(name) relt(name) relid(name) ifs(string asis) [epre(integer 0) epost(integer 0) antic(integer 0) tt(string) sfty(string) ct(string) cw(string)]
+  * re-establish the worker's own names so the body below is byte-identical to the code
+  * it replaced
+  local i `ivar'
+  local t `tvar'
+  local ttre `ttrevar'
+  local ttre_asgiven `rawttre'
+  local ifvar `ifv'
+  local _t `relt'
+  local _i `relid'
+  local esprelength `epre'
+  local espostlength `epost'
+  local anticipation `antic'
+  local ifstatement `ifs'
+  local timetrends `tt'
+  local safety `sfty'
+  local contreat `ct'
+  local contreatwithin `cw'
+
+  *  calculate the minimum time unit observed w/in the sample for each unit i
+  * make a variable to drop all i where we see no pre period
+  tempvar mint
+
+  qui gegen `mint' = min(`t') if `ifstatement', by(`i')
+
+
+  * if requesting time trends, figuring the 2nd from the minimum time unit observed for each i
+  if "`timetrends'" == "timetrends" {
+    tempvar mintp1
+    tempvar tp1
+    qui gen double `tp1' = `t' if `t' != `mint'
+    qui gegen `mintp1' = min(`tp1' ) if `ifstatement' , by(`i')
+    qui drop `tp1'
+  }
+
+  * drop cohorts which do not have a pre-treatment period (or 2 such periods if using time trends)
+  * F4: before applying the drops, report units that are dropped only BECAUSE of the
+  * anticipation shift (shifted onset at/before their first usable period while the
+  * recorded onset is not) - otherwise the only signal is a smaller N in the header
+  if `anticipation' > 0 {
+    local anticmintvar `mint'
+    if "`timetrends'" == "timetrends" local anticmintvar `mintp1'
+    qui count if `ttre' <= `anticmintvar' & `ttre_asgiven' > `anticmintvar' & `ttre_asgiven' < . & `ifstatement'
+    if r(N) > 0 {
+      local anticdroppedobs = r(N)
+      tempvar antictag
+      qui gegen `antictag' = tag(`i') if `ttre' <= `anticmintvar' & `ttre_asgiven' > `anticmintvar' & `ttre_asgiven' < . & `ifstatement'
+      qui count if `antictag' == 1
+      dis as text "Caution: anticipation(`anticipation') places the effective onset of `r(N)' unit(s) at or before their first usable pre-period; those unit(s) and their `anticdroppedobs' observations are dropped from the sample."
+      qui drop `antictag'
+    }
+  }
+  * the drop is UNIT-level by construction (gegen max by i): with a within-unit-varying
+  * ttre (reachable only under safety(off), F13 forbids it otherwise) the old row-level
+  * form could remove a surviving unit's t==mint rows, leaving the per-unit mint/mintp1
+  * below stale and the reference-forcing clauses targeting a period that no longer
+  * exists - a silent collinearity route (dropped treated dummies, biased estimates)
+  tempvar nopre
+  if "`timetrends'" == "" qui gegen byte `nopre' = max(`ttre' <= `mint') if `ifstatement', by(`i')
+  if "`timetrends'" == "timetrends" qui gegen byte `nopre' = max(`ttre' <= `mintp1') if `ifstatement', by(`i')
+  qui replace `ifvar' = 0 if `nopre' == 1
+  qui drop `nopre'
+  qui replace `ttre' = . if `ifvar' == 0
+  * invariant guard: recompute mint/mintp1 on the post-drop sample. with the unit-level
+  * drop above this is a provable no-op (drops remove whole units, so surviving units'
+  * first periods are unchanged); it stays as insurance that the reference-forcing
+  * clauses below can never target a period absent from the surviving sample
+  qui drop `mint'
+  qui gegen `mint' = min(`t') if `ifstatement', by(`i')
+  if "`timetrends'" == "timetrends" {
+    tempvar tp1g
+    qui drop `mintp1'
+    qui gen double `tp1g' = `t' if `t' != `mint'
+    qui gegen `mintp1' = min(`tp1g') if `ifstatement', by(`i')
+    qui drop `tp1g'
+  }
+
+
+  * construct _t, which contains dummies for treatment periods of interest - it will be specified in terms of relative periods
+  * _t is born as a relative period variable, which we missing out for relyrs before the event study prelength and for the very first observation we have for everyone
+  * note that if the first observation for a unit is a period for which treatment effects are requested, this observation still ends up being the reference period
+  * this creates much mischief in interpreting event study results when it happens and using the fixed base period approach should be used when this is relevant
+  * the third replace statement just insures that the minimum value is always 1; the 4th 0s the missings
+
+  qui gen `_t' = `t' - `ttre' if `ifstatement'
+
+  if "`timetrends'" == "" {
+    * the caution branch runs whenever a pre-treatment horizon is requested at all
+    * (bug sweep BS-2: <= 1 gated it off at esprelength(1), the smallest case it exists for)
+    if "`safety'" == "off" | `esprelength' == 0 {
+      qui replace `_t' = . if `_t' < -`esprelength'  | `t' == `mint'
+    }
+    else{
+      qui replace `_t' = . if `_t' < -`esprelength'
+      cap assert `_t' == . if  `t' == `mint' &  `ifstatement'
+      if _rc != 0 {
+        qui replace `_t' = . if `t' == `mint'
+        dis as text " "
+        dis as text "Caution: reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
+        dis as text "This does not break estimation, but event study estimates can carry counterintuitive meanings and reflect effect levels by cohort."
+        dis as text "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
+        if `esprelength' > 1 dis as text "(Or request estimates for fewer pre-treatment horizons.)"
+        dis as text " "
+        * If this condition triggers, event study coefficients are very difficult to interpret
+      }
+    }
+  }
+  else{
+    * if using timetrends, never use the 2nd observation either - dont just always skip the first!
+    * the caution branch runs whenever a pre-treatment horizon is requested at all
+    * (bug sweep BS-2: <= 1 gated it off at esprelength(1), the smallest case it exists for)
+    if "`safety'" == "off" | `esprelength' == 0 {
+      qui replace `_t' = . if `_t' < -`esprelength'  | `t' <= `mintp1'
+    }
+    else{
+      qui replace `_t' = . if `_t' < -`esprelength'
+      cap assert `_t' == . if  `t' <= `mintp1' &  `ifstatement'
+      if _rc != 0 {
+        qui replace `_t' = . if `t' <= `mintp1'
+        dis as text " "
+        dis as text "Caution: reference period for some units forced (for want of panel length) to include time period for which treatment effects were requested."
+        dis as text "This does not break estimation, but event study estimates can carry counterintuitive meanings and reflect effect levels by cohort."
+        dis as text "Recommendation: use option esfixedbaseperiod to change estimation approach to using a specific time period relative to treatment as your reference period."
+        if `esprelength' > 1 dis as text "(Or: request estimates for fewer pre-treatment horizons, or drop the request to include timetrends.)"
+        else dis as text "(Or drop the request to include timetrends.)"
+        dis as text " "
+      }
+    }
+    qui drop `mintp1'
+  }
+
+
+  * update _t and ttre
+  qui replace `_t' = . if `ifvar' == 0
+  qui replace `ttre'  = . if `ifvar' == 0
+
+  * produce a check that each _t interaction will be estimable in that there is an untreated cohort for it
+  * note that you can have periods with only treated units in them in the pre period provided they are periods pooled into an pooled reference period
+  * allowing for the above is why we use _t instead of ttre here like in the ensuing section
+  * do not apply test if not using a purely untreated control group (contreatwithin case)
+  if "`contreatwithin'" == "" {
+    tempvar controlcheck
+    tempvar controlcheck2
+    qui gen `controlcheck' = `_t' ==. & `ifstatement'
+    qui gegen `controlcheck2' = max(`controlcheck') if `ifstatement' , by(`t')
+    qui replace `ifvar'  = 0 if `controlcheck2' == 0
+
+    * update _t and ttre
+    qui replace `_t' = . if `ifvar' == 0
+    qui replace `ttre'  = . if `ifvar' == 0
+
+    if "`safety'" != "off"  {
+      cap assert `controlcheck2' != 0
+      if _rc != 0 {
+        dis as text "Caution: estimability checks found time periods exist in sample without a control unit, causing them to be dropped."
+        if "`contreat'" != "" dis as text "If intending to only use within treated-cohorts variation in your continuous treatment variable, specify option contreatwithin to prevent these time periods from being dropped."
+      }
+    }
+    qui drop `controlcheck' `controlcheck2'
+  }
+
+  *get min viable _t and max; set up relative period variable to have no negative values
+  qui gstats sum `_t' if `ifstatement', meanonly
+  * min_t counts the realized pre-treatment horizons; when no treated unit is observed at or
+  * before its onset (an onset-period gap, or an onset off the panel's time grid) r(min) is
+  * positive and abs() would invent a pre-window that nothing realizes (bug sweep BS-33)
+  local min_t = max(0, -r(min))
+  local max_t = r(max) + 1
+  qui replace `_t' = `_t' + `min_t' + 1
+  qui replace `_t' = 0 if `_t' == . & `ifstatement'
+
+  * check that some cohort has a post period and that some has a pre-period
+  cap assert `max_t' > 0 & `max_t' < .
+  if _rc != 0 {
+    dis as error  "Error: cannot find either a treated time period for any treated units or sufficient untreated periods for treated units."
+    if "`timetrends'" != "" dis as error  "Note that including cohort-specific time trends raises the number of untreated periods required."
+    if `anticipation' > 0 dis as error  "Note: anticipation(`anticipation') shifted every effective onset earlier; a shift larger than the available pre-period window can leave no estimable treated periods."
+    error 459
+  }
+  * produce modified identifiers _i
+  * _i is unit identifiers that are positive integers if i is ever treated in sample and 0 otherwise
+  qui gen double `_i' = `i' if  `_t' > 0 & `_t' < . & `ifstatement'
+  qui replace `_i' = 0 if `_i' == . & `ifstatement'
+
+  local espl = min(`max_t',`espostlength')
+  local espre = `min_t'
+  drop `mint'
+  * end data setup work in the case not using relyr = -1 as a fixed base period
+  c_local min_t `min_t'
+  c_local max_t `max_t'
+  c_local espl `espl'
+  c_local espre `espre'
+end
+
+* ============================================================================
+* Subgroup-domain validation and the realized subgroup list: the integrality and
+* within-unit-constancy screens (F13 family), the split-unit ruling under safety(off),
+* the name-length caution, and glevelsof over the treated estimation rows. Moved
+* verbatim out of wooldid_worker (per-program compiled-size ceiling) on 2026-09-07;
+* the caller keeps the gate, so a run without subgroups() never enters. Plain program,
+* NOT rclass: glevelsof's r() residue is left exactly as the inline code left it. The
+* only thing the worker needs back is `sglist'.
+cap prog drop wooldid_sgdom
+prog def wooldid_sgdom
+version 16.0
+  syntax , sg(name) ivar(name) tvar(name) ttrevar(name) ifs(string asis) [si(string) MAKECfxplotsbysg]
+  * re-establish the worker's own names so the body below is byte-identical to the code
+  * it replaced
+  local subgroups `sg'
+  local i `ivar'
+  local t `tvar'
+  local ttre `ttrevar'
+  local ifstatement `ifs'
+  local safetyinput `si'
+  * VAL-G15A: negative-value screen, moved here from wooldid_validate. domain =
+  * in-sample rows (ifstatement folds the deterministic markout, curing false
+  * rejections on e.g. missing-outcome rows) of units with a nonmissing internal
+  * onset - both pre- and post-onset rows, because the SG pre-trend margins consume
+  * pre-onset rows too; strictly looser than the old raw-if domain (never-treated,
+  * marked-out, and out-of-window-onset rows newly tolerated; nothing newly rejected).
+  * placed before the sglist screens so negative values error first and never enter
+  * sglist. the integer screen below keeps its own adjudicated t >= ttre domain
+  cap assert `subgroups' >= 0 | `subgroups' >= . if `ifstatement' & `ttre' < .
+  if _rc != 0 {
+    dis as error "Error: the subgroups() variable contains negative values on in-sample rows of treated units (pre- or post-onset); subgroup values must be non-negative integers (or missing) there."
+    error 411
+  }
+  qui glevelsof(`subgroups') if `ifstatement' & `t' >= `ttre' , clean local(sglist)
+  if wordcount("`sglist'") == 0 {
+    dis as error  "Error: subgroups() is specified, but the subgroup variable contains no values within sample during the treatment period."
+    error 459
+  }
+  * subgroup values reaching the treated estimation sample must be integer-valued: a non-integer
+  * value yields an sglist token like 1.5 that later crashes the naming machinery (locals,
+  * matrices, ereturns named ..._s1.5) with an unexplained r(198). the check deliberately uses
+  * the levelsof domain above, so values appearing only outside it (never-treated units, screened
+  * observations) stay tolerated exactly as before, and missing values pass (int(.) == .)
+  cap assert `subgroups' == int(`subgroups') if `ifstatement' & `t' >= `ttre'
+  if _rc != 0 {
+    dis as error "Error: the subgroup variable contains non-integer values within the treated estimation sample; it must contain only non-negative integers."
+    error 411
+  }
+  * F13: subgroup containment. sg never enters the regression - the unit-by-period cell
+  * coefficients are shared by every subgroup a unit touches. sg varying WITHIN a unit-period
+  * cell therefore makes by-subgroup contrasts structurally unable to reflect within-cell
+  * heterogeneity (each subgroup only reweights the same pooled cell effects; contrasts can
+  * come back identical under strong true heterogeneity) -> error. sg varying within a unit
+  * only ACROSS periods leaves by-sg att/att_it correct (row-weighted) but makes
+  * att_i/att_itime weight a straddling unit by its weight share rather than equally ->
+  * caution. domains: missing sg rows belong to no subgroup by design and never-treated
+  * units never enter any sg subpop, so both are excluded (cond() folds extended missings)
+  if "`safetyinput'" != "off" {
+    tempvar f13sgitmin f13sgitmax
+    qui gegen double `f13sgitmin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i' `t')
+    qui gegen double `f13sgitmax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i' `t')
+    cap assert `f13sgitmin' == `f13sgitmax' if `ifstatement' & `ttre' != .
+    if _rc != 0 {
+      dis as error "Error: the subgroup variable `subgroups' varies within `i'-by-`t' cells of the treated estimation sample."
+      dis as error "wooldid estimates effects at the `i'-by-period level, so subgroup estimates built from cells that mix subgroups cannot reflect within-cell subgroup differences - each subgroup only reweights the same pooled cell effects, and subgroup contrasts can come back identical even when true effects differ sharply by subgroup."
+      dis as error "Define `i' at the finer level over which the subgroup varies (e.g., egen newi = group(`i' `subgroups')), or drop the subgroups() option."
+      dis as error "To ignore this error, specify safety(off)."
+      error 459
+    }
+    qui drop `f13sgitmin' `f13sgitmax'
+  }
+  * a unit split across multiple subgroups over time (subgroup varies within i across
+  * periods) is refused under default safety - a unit cannot belong to more than one
+  * subgroup, and the share-weighted fallback deserves an explicit opt-in. under
+  * safety(off) the run proceeds with share weighting and a caution (author directive,
+  * 2026-07-28; this check runs regardless of the safety setting)
+  tempvar f13sgimin f13sgimax
+  qui gegen double `f13sgimin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
+  qui gegen double `f13sgimax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
+  cap assert `f13sgimin' == `f13sgimax' if `ifstatement' & `ttre' != .
+  if _rc != 0 {
+    if "`safetyinput'" != "off" {
+      dis as error "Error: the subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time. A unit cannot belong to more than one subgroup."
+      dis as error "To proceed anyway, specify safety(off): by-subgroup att and att_it then weight each observation to its own subgroup as usual, while att_i and att_itime enter a split unit into each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply."
+      error 459
+    }
+    else dis as text "Caution: the subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time; proceeding under safety(off) using share weighting. att_i and att_itime enter a split unit into each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply; by-subgroup att and att_it results are unaffected."
+  }
+  qui drop `f13sgimin' `f13sgimax'
+  * long subgroup values overflow stata's 31/32-character name limits when embedded in
+  * constructed local/matrix/rowname/graph/e() names (the worst prefixes reach 24-25
+  * characters: the makecfxplotsbysg tempnames, the adversarial-by-sg ereturns, and the
+  * pooled pretreatment_SG<value>_att_itime rownames all crash at 8-digit values; the
+  * bysg tempnames also embed the relative year, so with 3-digit relyr plot requests
+  * even 7-digit values overflow), and values beyond 2,147,483,647 exceed the
+  * factor-variable level cap that margins over() relies on. whether a given run
+  * crashes depends on the options requested, so this is a caution rather than an
+  * error. the sglist domain matches the checks above: only values reaching the
+  * treated estimation sample are ever injected into names
+  local sgmaxlen 0
+  foreach sgcase in `sglist' {
+    if strlen("`sgcase'") > `sgmaxlen' local sgmaxlen = strlen("`sgcase'")
+  }
+  if `sgmaxlen' >= 8 | (`sgmaxlen' == 7 & "`makecfxplotsbysg'" != "") {
+    dis as text "Caution: the subgroup variable takes values up to `sgmaxlen' digits long. wooldid embeds subgroup values in the names of stored results, matrices, and plots, and Stata caps such names at 31-32 characters, so values 8 or more digits long (7, with makecfxplotsbysg and 3-digit relative-year plot requests) can sometimes cause unexplained r(198) invalid-name crashes; att_itime results tables, adversarial, and makecfxplotsbysg are most exposed. Values above 2,147,483,647 will generally fail outright at Stata's factor-variable level cap."
+    dis as text "If wooldid crashes, recode ID-style subgroup values to small integers first (e.g., egen newsg = group(oldsg))."
+  }
+  * initialize these for later
+  foreach sgcase in `sglist' {
+    local joint_horiz_i_s`sgcase'
+    local joint_Choriz_i_s`sgcase'
+  }
+  c_local sglist `sglist'
+end
+
+* ============================================================================
+* The histogramcohorteffects() diagnostic: per-cohort and per-cohort-period marginal
+* effects, their histograms, and the matrix behind e(histogramestimates). Moved verbatim
+* out of wooldid_worker (per-program compiled-size ceiling) on 2026-09-07. `___hist' is
+* created by the CALLER and passed in by name: a tempname minted here would be dropped on
+* return and the ereturn of e(histogramestimates) would fail. Plain program - it reads the
+* fitted model from e() and must not post into it, and its margins calls consume their own
+* r() immediately, so nothing outside depends on r() here.
+cap prog drop wooldid_hist
+prog def wooldid_hist
+version 16.0
+  syntax , h(name) iv(name) tv(name) tf(name) ttrevar(name) wtype(string) semi(string) ifs(string asis) dfr(name) [att att_it att_i att_itime VERbose replace wa(string) wai(string) wait(string) ct(string) cet(string) pm(string asis) pmc(string asis) fcn(string) sp(string) elbl(string asis) celbl(string asis)]
+  * re-establish the worker's own names so the body below is byte-identical to the code
+  * it replaced (`whichweight' resolves w_att / w_att_i by double dereference, so both
+  * weight variables must exist under their original names here)
+  local ___hist `h'
+  local _i `iv'
+  local t `tv'
+  local targetflag `tf'
+  local ttre `ttrevar'
+  local weight `wtype'
+  local semielasticity `semi'
+  local ifstatement `ifs'
+  local defaultframe `dfr'
+  local w_att `wa'
+  local w_att_i `wai'
+  local w_att_it `wait'
+  local contreat `ct'
+  local contreatelasticitytype `cet'
+  local poismarginstext `pm'
+  local poismarginstextC `pmc'
+  local fcnoes `fcn'
+  local saveplots `sp'
+  local effecttype `elbl'
+  local Ceffecttype `celbl'
+  if "`verbose'" == "verbose" dis as text "Wooldid is now producing histograms."
+  * graph window management: graphs are created with name(..., replace) so re-runs overwrite wooldid's own prior graphs; wooldid no longer clears the user's unrelated graphs from memory
+
+  * we pool att with att_i b/c they conceptually should match into the same histograms
+  if "`att_i'" == "att_i" |  "`att'" == "att"  {
+    local whichweight w_att
+    if "`att'" == "" local whichweight w_att_i
+    qui margins [`weight'=``whichweight''], `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstext' `fcnoes'
+    local matrixstartgrab floor(`=colsof(r(b))'/2)+1
+    matrix `___hist' = r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
+    matrix colnames `___hist' = att_i
+    if "`contreat'" != "" {
+      qui margins [`weight'=``whichweight''], `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstextC' `fcnoes'
+      tempname ___Chist
+      matrix `___Chist' = r(b)[1, 1..`=colsof(r(b))']'
+      matrix `___hist' = (`___hist',`___Chist')
+      matrix drop `___Chist'
+      matrix colnames `___hist' = att_i ame_i
+    }
+    tempname wooldidframe
+    frame create `wooldidframe'
+    frame change `wooldidframe'
+    qui svmat double `___hist'
+    rename `___hist'1 att_i
+    if "`contreat'" != "" rename `___hist'2 ame_i
+    local bininserter
+    if _N < 100 local bininserter bin(20)
+    qui hist att_i, freq   xtitle("Cohort-Specific Average Treatment `effecttype'") name(hist_att_i, replace) gap(5) `bininserter' color(navy)
+    if "`saveplots'" != "" qui graph save "`saveplots'_hist_att_i.gph", `replace'
+    if "`contreat'" != "" qui hist ame_i, freq   xtitle("Cohort-Specific Average Marginal Treatment `Ceffecttype'") name(hist_ame_i, replace) gap(5) `bininserter' color(navy)
+    if "`contreat'" != "" & "`saveplots'" != ""  qui graph save "`saveplots'_hist_ame_i.gph", `replace'
+    frame change `defaultframe'
+    frame drop `wooldidframe'
+  }
+
+  * bundle these for conceptually both generating the same histograms
+  if "`att_itime'" == "att_itime" |  "`att_it'" == "att_it"  {
+    qui margins [`weight'=`w_att_it'], `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstext' `fcnoes'
+    local matrixstartgrab floor(`=colsof(r(b))'/2)+1
+    tempname ___hist2
+    matrix `___hist2' = r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
+    matrix colnames `___hist2' = att_itime
+    if "`contreat'" != "" {
+      tempname ___Chist2
+      qui margins [`weight'=`w_att_it'], `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstextC' `fcnoes'
+      matrix `___Chist2' = r(b)[1, 1..`=colsof(r(b))']'
+      matrix `___hist2' = (`___hist2',`___Chist2')
+      matrix drop `___Chist2'
+      matrix colnames `___hist2' = att_itime ame_itime
+    }
+    tempname wooldidframe
+    frame create `wooldidframe'
+    frame change `wooldidframe'
+    qui svmat double `___hist2'
+    rename `___hist2'1 att_itime
+    if "`contreat'" != "" rename `___hist2'2 ame_itime
+    local bininserter
+    if _N < 100 local bininserter bin(20)
+    qui hist att_itime, freq   xtitle("Cohort-Specific i-t Cell Average Treatment `effecttype'") name(hist_att_itime, replace) gap(5) `bininserter' color(navy)
+    if "`saveplots'" != "" qui graph save "`saveplots'_hist_att_itime.gph", `replace'
+    if "`contreat'" != "" qui hist ame_itime, freq   xtitle("Cohort-Specific i-t Cell Average Marginal Treatment `Ceffecttype'") name(hist_ame_itime, replace) gap(5) `bininserter' color(navy)
+    if "`contreat'" != "" &   "`saveplots'" != ""   qui graph save "`saveplots'_hist_ame_itime.gph", `replace'
+    frame change `defaultframe'
+    frame drop `wooldidframe'
+    if "`att_i'" == "att_i" |  "`att'" == "att"  {
+      matrix `___hist' = (`___hist',`___hist2')
+    }
+    else{
+      matrix `___hist' = `___hist2'
+    }
+    cap matrix drop `___hist2'
+  }
+  if "`verbose'" == "verbose" dis as text "Wooldid has finished producing histograms."
+
+end
+
 cap prog drop wooldid_sglbl
 prog def wooldid_sglbl
   syntax , names(string) tab(name) mint(real) old(integer) sg(string) tvar(name) fb(string asis) rel(name) lbl(name) [f2l(name) b(name) v(name) first(integer 1) strip(string) kind(string)]
