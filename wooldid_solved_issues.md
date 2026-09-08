@@ -451,6 +451,19 @@ HEADLINE DOCUMENTED ISSUE (NF-1/NF-2/NF-3, bug-report §5; fixes deferred to the
 Also recorded: singleton-cell V_es structural note (oracle O16); honestdid v1.1.2 upstream mata-assert 3498 crash on delta(sd)/binary_mixed_imbalanced (rm clean; courtesy-report candidate); legitimately-empty Rambachan-Roth C-LF sets on strong-pretrend data (allowlisted, not a handoff defect); pretrends package has no data-fitted slope (structural N/A). Suite state after the chunk: newfeat 7/7 PASS; battery 34/34 bit-deterministic (29 pre-existing IDENTICAL, 5 new blessed); mc/ component standing with MC_REPORT_2026-08-24.md as the judged record. wooldid.ado UNTOUCHED this chunk — the 2026-08-23 450/450 oldnew state remains valid.
 
 ## AMESE R1+R3+R4 implementation (family-A structural refusal; author-ruled, R2 skipped)
+
+> **R4 WITHDRAWN 2026-09-08 (author ruling).** The blackout-repair half of this entry - the
+> explicit-dummies `regress` refit that recovered the surviving att standard errors when Stata's
+> variance screen zeroed the covariance - has been removed. It re-solved a large collinear system on
+> every such run to salvage part of an inference the cell containment had already invalidated, which
+> delayed the point at which the user learned the specification was broken. The detection and the
+> caution stay: the run now states that no standard error is identified and continues. R1 and R3 are
+> unaffected. Two consequences ruled at the same time: the estimates on those runs are marginally more
+> accurate, since the partialled fit is better conditioned than the dummy solve it replaced, and a
+> family whose covariance is entirely non-identified now posts its point estimates and pre-horizon
+> count under a caution rather than withholding them along with the covariance. Commits b801282 and
+> 3743aec; battery re-blessed on cont_lat, cont_uz, cont_uz_ss, cont_sg_gap and cont_sg_tidose;
+> research record review_process/research_2026-09-08/fastnose_precision.md.
 **Landed 2026-08-24/25, final green at 294513a: 7054878 (core R1/R3/R4 + wooldid_amescreen subprogram + sthlp + battery re-bless + cert suite), ea69544 (R4 narrowing after the first oldnew exposed refit over-reach: binary-timetrends V resurrection, the rcs o.-crash side-cure, a two-way-cluster 0->198 regression), c184ea0 (cert cwd convention), the AMESE ledger commits (26 scoped rows incl. V3's reason/bound amendments), the V2-wave fix commit (glevelsof capture, sescan differing-estimates signature, cluster-abbreviation parse, cfx-ame scrub + noci), 294513a (V1-wave closing: refit barred under fe()/ccc_absorb, caution texts corrected), 42d12d9 (verifier reports preserved), a603f38 (T-M2 evidence banked PRE-R3 per the author's mandated protocol - R3 suppresses the defect sites on the pinning config).**
 
 Design contract: review_process/amese/R1_design_note.md (committed before implementation). Behavior: with contreat() and a cluster-type VCE, if ANY treated cohort-by-period cell lies wholly inside one cluster, wooldid prints an explanatory caution (mechanism + three valid alternatives incl. the probe-verified impvalues steer), scrubs every ame-family se/t/p/ci cell across all surfaces (incl. cfx matrices and plot CI bands), withholds e(V_es_ame*) while posting e(b_es_ame*), and skips the ame-side V_es tests; never fires under fastnose/impvalues/unconditionalse; att-side untouched by design (the predicate is true on standard binary usage). R4 detects Stata's ereturn-post V-zeroing unconditionally (surfacing the swallowed warning) and rescues the att block via an explicit-dummies regress refit under a deliberately narrow gate (firing predicate, single cluster(), no customvce/poisson/fe()/ccc_absorb, maxvar-feasible) - the former byCohort 20-of-20 blackouts now return att inference. Generic guard: identical-SEs-with-differing-estimates caution.
