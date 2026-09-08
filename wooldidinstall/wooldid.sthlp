@@ -915,7 +915,7 @@ standard errors, tests, and joint diagnostics (adversarial ame p-values, ame joi
 {it:e(V_es_ame*)} while still returning the unaffected point estimates and {it:e(b_es_ame*)}. Valid ame inference under such designs: bootstrap standard errors, IM p-values
 ({it:impvalues} — cross-cluster dispersion inference, which remains valid), randomization inference, {it:vce(robust)} when errors are independent across observations (not appropriate
 under within-unit serial dependence), or clustering on a variable strictly finer than the cohort-by-period cells. Note that binary-treatment (att) standard errors under cohort-level clustering are also somewhat understated on such saturated designs (a milder, documented
-phenomenon); wooldid does not suppress them. {p_end}
+phenomenon); wooldid does not suppress them. On some of these designs the estimation command returns an ALL-ZERO covariance outright, in which case no standard error in the run is identified: {it:wooldid} says so and continues, the reported estimates stand, and every standard error, test statistic, p-value and interval is missing. Versions before 2026 re-estimated the specification through {cmd:regress} with the fixed effects written out as explicit dummies, to salvage the standard errors that survived; that rescue was removed, because it re-solved a large collinear system to recover part of an inference the containment had already invalidated, and it delayed the point at which the specification's problem became visible. {p_end}
 
 
 {marker technical}{...}
