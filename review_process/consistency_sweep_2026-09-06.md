@@ -1065,6 +1065,8 @@ it reverses a deliberate, well-reasoned choice. *Not verified (cap).*
 
 #### CS-32 — the two engines disagree in both directions about when a failed replication deserves a caution and when a run should stop
 
+**CORRECTION (2026-09-08, engine-parity research).** This entry's verdict is backwards. The bootstrap's caution on ANY failed replication is the principled one: dropping failures conditions the retained distribution on estimability, which is not the sampling distribution the engine is approximating, so any failure attacks the target. Permutation's tolerance for a failure fraction is the side that needs justifying, not the bootstrap's strictness.
+
 **X.** `bootstrap()` cautions whenever any replication fails, with no threshold (ado:8614, "Caution: `nfail'
 of `reps' bootstrap replications failed to estimate and were excluded") and refuses only when zero completed
 (8610-8612).
@@ -1553,6 +1555,8 @@ lines print `as text`; remedy lines print in the same class as their error) and 
 *Not verified (cap).*
 
 #### CS-48 — `customvce()` is refused by the bootstrap for a reason that also holds under `boottstat`, and is silently inert — then quietly honoured — under permute
+
+**CORRECTION (2026-09-08, engine-parity research).** The three-outcome story filed here (refused under bootstrap, silently inert then quietly honoured under permute) does not hold in the current tree, and the truth is worse for the user rather than better: `permute()` with `customvce()` is ALWAYS an error, refused in `wooldid_validate`. The item should be re-read as a single refusal that the help does not describe.
 
 **X.** `bootstrap()` refuses it: ado:6192, "bootstrap() may not be combined with customvce(); the reported
 standard errors would be bootstrap-based, contradicting the custom-VCE request." That rationale is right for
@@ -2911,6 +2915,8 @@ the `impvalues` refusal at 9249 is parallel in reasoning but not the same string
 
 #### CS-96 — assignment-dependent cfx lattice types are blanked under `permute()` and bootstrapped without comment under `bootstrap()`
 
+**CORRECTION (2026-09-08, engine-parity research).** The verdict "not defensible" recorded here is wrong. Blanking the inference columns for lattice types whose bins are functions of the assignment is correct under `permute()` and correctly absent under `bootstrap()`: a reassignment moves the bins themselves, so the cell has no permutation distribution, while a resample does not move them. Surprising, but right once explained. The fix is documentation, not behaviour.
+
 **X.** `wooldid_permcellsx` computes a `drift` flag for lattice types whose bins are functions of the
 assignment — `baseTreated`, `baseTreatedPost`, `baseTreatedPre`, `baseTreatedRef`, `byTreated`,
 `byTreatedByTime`, `byTtre`, `byTtreByTime` — and blanks their inference columns: the `drift` local at
@@ -3354,6 +3360,8 @@ prerequisite and reacts differently — no code change. Defensible. *Not verifie
 the same option's *other*, mute cancellation.
 
 #### CS-113 — `saveplots()` writes a different set of files, drawn by a different command, depending on the inference engine
+
+**CORRECTION (2026-09-08, engine-parity research).** The premise of this item is false: the two ENGINES behave identically here. The gate is `"`bootstrap'`permute'" == ""`, which separates the analytic path from either engine, not bootstrap from permute. `wooldid_cfxplots` is invoked from both engine blocks. The real difference is analytic versus resampled, and it is documented behaviour.
 
 Same fact as **CS-86** (display lens); see there for the mechanics and pathways. **Adds where the user would
 look:** the help admits the difference in the `gteffects` entry ("as twoway renderings of the matrices rather
