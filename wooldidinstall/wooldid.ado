@@ -1384,33 +1384,26 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   }
 
   * AMESE R4: catch Stata's ereturn-post variance screen zeroing the whole VCE (the
-  * quiet estimation call swallows the only warning). Detection + caution are
-  * unconditional (outside fast mode); the att-rescue REFIT through the
-  * explicit-dummies regress path is deliberately NARROW: it runs only under a firing
-  * containment predicate (the blackout-collateral cases this remedy exists for -
-  * binary timetrends' designed b-only fallback is NOT overridden), only for a
-  * single-variable cluster() (official regress has no multi-way cluster), never for
-  * poisson, and behind a maxvar feasibility count.
+  * quiet estimation call swallows the only warning) and SAY SO. Detection and the
+  * caution are unconditional outside fast mode.
+  *
+  * The att-rescue refit that used to sit here - a re-estimation of the same
+  * specification through regress with the fixed effects written out as explicit
+  * dummies - was REMOVED on 2026-09-08 by author ruling. It was ruled in on
+  * 2026-08-24 inside the larger AMESE package, where its runtime cost was never put
+  * separately. What it bought was the subset of standard errors that survive a
+  * specification whose cell-level containment has already made the ame inference
+  * invalid; what it cost was a solve over hundreds of collinear dummy columns on
+  * every such run, which delays the moment the user learns the specification is
+  * broken, and which is numerically far noisier than the partialled fit it replaced
+  * (measured 2026-09-08: reordering the input rows moves the explicit-dummies answers
+  * by up to 1.6e-8 relative, against 1e-13 for the partialled fit; research record
+  * review_process/research_2026-09-08/fastnose_precision.md). The run now reports the
+  * all-zero covariance and continues with the standard errors it actually has.
   if "`fastnose'" == "" {
     wooldid_amescreen , mode(vzero) r1fired(`amescrub') contreat(`contreat')
-    if r(vzero) == 1 & `amescrub' == 1 & "`poisson'" != "poisson" & wordcount("`cluster'") == 1 & "`customvce'" == "" & "`fe'" == "" & "`ccc_absorbinserter'" == "" {
-      * cap: on huge-cardinality i the levels list can overflow the macro length
-      * (rc 920) - treat as refit-infeasible rather than aborting the run
-      local amevzi 99999
-      local amevzt 99999
-      cap qui glevelsof `i' if `esamp'
-      if _rc == 0 local amevzi : word count `r(levels)'
-      cap qui glevelsof `t' if `esamp'
-      if _rc == 0 local amevzt : word count `r(levels)'
-      if `amevzi' + `amevzt' <= 450 {
-        dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix; wooldid is re-estimating through the explicit-dummies fallback to recover the standard errors that survive (recovered cluster-robust variances for treated-cell quantities remain subject to the cell-containment caution above)."
-        qui reg `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `vcespecifier'
-        cap est drop `wdfm'
-        qui est sto `wdfm'
-        cap drop `esamp'
-        qui gen byte `esamp' = e(sample)
-        local df_r = e(df_r)
-      }
+    if r(vzero) == 1 {
+      dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix, so no standard error in this run is identified. The reported estimates stand; every standard error, test statistic, p-value and interval is missing. This is a property of the specification, not a numerical accident: see the cell-containment caution above for the mechanism and for the alternatives (impvalues dispersion inference, a finer-than-cell clustering, or conditional robust standard errors)."
     }
   }
 
@@ -3800,12 +3793,20 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           if `f2vm'[`f2d',`f2d'] > 0 & `f2vm'[`f2d',`f2d'] < . local f2ok 1
           else local ++f2nbad
         }
+        * 2026-09-08 author ruling: the POINT ESTIMATES post even when no diagonal is
+        * usable. A family whose covariance is entirely non-identified - the all-zero-VCE
+        * case that the removed explicit-dummies refit used to paper over, or timetrends -
+        * still has meaningful estimates, and withholding them took the honestdid and
+        * pretrendpower inputs down with the inference. The covariance still posts only
+        * when some diagonal entry is positive and finite.
+        * SI-A4/R6: under a voided ame block the captured points are structural
+        * zeros, so b_es_ame* is withheld along with V_es_ame* (do not trust
+        * f2ok=0 to do this - it was observed on the audited d3 runs, not
+        * guaranteed across the class)
+        if !(`amevoid' & strpos("`f2ky'", "ame") == 1) cap ereturn matrix b_es_`f2ky' = `f2bm'
+        cap ereturn scalar numpre_`f2ky' = `f2np'
+        if `f2ok' == 0 & !(`amevoid' & strpos("`f2ky'", "ame") == 1) dis as text "Caution: no horizon of the `f2ky' event study has an identified variance, so e(b_es_`f2ky') posts without e(V_es_`f2ky'). The estimates stand; anything needing their covariance - honestdid, pretrendpower(), a joint test - has no input on this run."
         if `f2ok' {
-          * SI-A4/R6: under a voided ame block the captured points are structural
-          * zeros, so b_es_ame* is withheld along with V_es_ame* (do not trust
-          * f2ok=0 to do this - it was observed on the audited d3 runs, not
-          * guaranteed across the class)
-          if !(`amevoid' & strpos("`f2ky'", "ame") == 1) cap ereturn matrix b_es_`f2ky' = `f2bm'
           * AMESE R1: withhold e(V_es_ame*) under cell containment — the captured V is
           * not the sampling covariance of the ame estimates (honestdid/lincom/test
           * consumers would ingest it silently); the points still post above
@@ -3814,7 +3815,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             cap ereturn matrix V_es_`f2ky' = `f2vm'
             local f2vrc = _rc
           }
-          cap ereturn scalar numpre_`f2ky' = `f2np'
           if `f2vrc' == 0 & `f2nbad' > 0 {
             dis as text "Caution: e(V_es_`f2ky') contains `f2nbad' of `f2k' horizons with zero or missing variance (structurally degenerate rows); inspect the diagonal before joint inference - honestdid/lincom on those rows is not meaningful."
             cap ereturn scalar es_ndegen_`f2ky' = `f2nbad'

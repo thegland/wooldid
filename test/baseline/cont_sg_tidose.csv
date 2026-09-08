@@ -2,6 +2,7 @@ rc|0
 varlist|i ttre t dose y sg
 scalar|df_r|+1.8800000000000X+005
 scalar|numpre_att|+1.0000000000000X+001
+scalar|numpre_ame|+1.0000000000000X+001
 scalar|numpre_att_s0|+1.0000000000000X+001
 scalar|numpre_att_s1|+1.0000000000000X+001
 scalar|numpre_att_s2|+1.0000000000000X+001
@@ -19,14 +20,13 @@ scalar|r2|+1.9adf191bd402dX-001
 scalar|r2adj|+1.0b1a5a6a8dd52X-001
 scalar|r2_within|+1.4b3c63f923fc3X-001
 scalar|r2_withinadj|+1.d04a68105232eX-003
-scalar|rmse|+1.89e9d5a37a623X-001
 scalar|wdid_fcncell|+1.4500000000000X+009
 scalar|level|+1.7c00000000000X+006
 scalar|joint_pre_att_allsgssame|+1.1485d92503219X-01f
 scalar|joint_att_allsgssame|+1.4b805b4c1eae7X-123
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|rss|+1.3d44a27068e5bX+007
-macro|cmd|wooldid
+scalar|rmse|+1.89e9d5a37a623X-001
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
@@ -40,6 +40,7 @@ macro|wdid_sgvar|sg
 macro|wdid_contreat|dose
 macro|wdid_vcespec|cluster(i)
 macro|estimate_type|pooled_reference_period
+macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, contreat(dose) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg)
 macro|properties|b V
 macro|depvar|y

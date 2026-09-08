@@ -117,15 +117,57 @@ if _rc != 0 {
 }
 else assertfire A4 1
 
-* A5: byCohort + cluster(i) — Stata's V-zeroing screen fires; the R4 explicit-dummies
-* refit must recover a positive att SE (formerly a 20-of-20 blackout) with ame scrubbed
+* A5: byCohort + cluster(i) — Stata's V-zeroing screen fires, so the whole covariance
+* comes back zero. The explicit-dummies refit that used to rescue the surviving att SE
+* was removed by author ruling on 2026-09-08 (it re-solved the specification over
+* hundreds of collinear dummy columns to salvage part of an inference the containment
+* had already invalidated, delaying the user's discovery that the specification was
+* broken). Expect now: rc 0, the run completes, EVERY standard error is missing, and
+* the new caution says so in as many words.
 mkdemo
+qui log using ames_a5.txt, text replace name(ames)
 cap noi wooldid y i t ttre, att contreat(dose) contreatcontrols(byCohort) cluster(i) esf espre(2) espost(2)
-if _rc != 0 {
-  dis as error "A5 FAIL rc=" _rc
+local a5rc = _rc
+qui log close ames
+cap program drop scana5
+program define scana5, rclass
+  args lf needle
+  tempname fh
+  local found 0
+  file open `fh' using "`lf'", read text
+  file read `fh' line
+  while r(eof) == 0 {
+    if strpos(`"`macval(line)'"', `"`needle'"') != 0 local found 1
+    file read `fh' line
+  }
+  file close `fh'
+  return scalar found = `found'
+end
+scana5 ames_a5.txt "all-zero variance-covariance matrix, so no standard error in this run is identified"
+local a5msg = r(found)
+scana5 ames_a5.txt "re-estimating through the explicit-dummies fallback"
+local a5old = r(found)
+cap erase ames_a5.txt
+tempname A5W
+local a5attse .
+local a5amese .
+if `a5rc' == 0 {
+  cap matrix `A5W' = e(wdidmainresults)
+  if _rc == 0 {
+    local a5ra = rownumb(`A5W', "main:att")
+    local a5rm = rownumb(`A5W', "main:ame")
+    local a5attse = cond(`a5ra' < ., `A5W'[`a5ra', 2], .)
+    local a5amese = cond(`a5rm' < ., `A5W'[`a5rm', 2], .)
+  }
+}
+dis "A5 rc=`a5rc' attse=`a5attse' amese=`a5amese' newcaution=`a5msg' oldrefit=`a5old'"
+if `a5rc' == 0 & missing(`a5attse') & missing(`a5amese') & `a5msg' == 1 & `a5old' == 0 {
+  dis "A5 ok"
+}
+else {
+  dis as error "A5 FAIL: the all-zero-VCE run should complete with every SE missing and the new caution, and must not refit"
   global pf = $pf + 1
 }
-else assertfire A5 1
 
 * A6: fastnose — predicate must stay off (no SEs anywhere by design, rc 0)
 mkdemo
