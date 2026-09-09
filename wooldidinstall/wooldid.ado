@@ -4277,23 +4277,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * subprogram - the worker is close to Stata's per-program size ceiling)
   if "`pretrendpower'" != "" wooldid_ptpcheck , levels(`pretrendpower') esf(`esfixedbaseperiod') impv(`impvalues') espre(`esprelength')
 
-  * CS-38 (author ruling 2026-09-08): screen adversarial's prerequisites here, beside its
-  * sibling above, instead of clearing the option silently mid-run. This catches the window
-  * that could NEVER have supported the test - the user asked for no pre-treatment or no
-  * post-treatment horizons - and refuses with a named remedy. A window the data merely
-  * fails to realize is a caution in the worker, not a refusal.
-  if "`adversarial'" != "" {
-    if `esprelength' <= 0 | `espostlength' <= 0 {
-      dis as error "Error: adversarial requires at least one pre-treatment and one post-treatment event-study horizon; the adversarial pre-trend test fits a line through the reported relative-period coefficients, and this window requests `esprelength' pre and `espostlength' post."
-      dis as error "Specify esprelength() and espostlength() of at least 1, or drop adversarial."
-      error 198
-    }
-    if "`timetrends'" != "" & `esprelength' + `espostlength' + 1 < 3 {
-      dis as error "Error: adversarial with timetrends requires at least three event-study coefficients in the requested window (the reference period counts as one); this window requests `esprelength' pre and `espostlength' post."
-      dis as error "Widen esprelength()/espostlength(), drop timetrends, or drop adversarial."
-      error 198
-    }
-  }
 
   * check conditions for using im p-values --
   * for the joint tests, I have not seen IM characterize multi-way tests. implementing a test here of some sort would be easy,
@@ -4926,6 +4909,29 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * permutation inference reports consumes the analytic standard errors, so the margins
   * variance work they cost is wasted. permanalyticse restores them (the tables then carry
   * them labelled se_analytic). Placed AFTER the fast-mode refusals above, which key on the
+  * placed AFTER the fastnose incompatibility gates on purpose: clearing adversarial here
+  * would otherwise mask the documented "fastnose is not compatible with adversarial"
+  * refusal, turning it into a caution about the window instead (test_fastnose T4).
+  * CS-38 (author rulings 2026-09-08): the defect was that a requested adversarial test
+  * could be dropped in SILENCE. The first ruling screened it like its sibling
+  * pretrendpower() and refused; measured against the suite that refused 121 of 501
+  * configurations, every one carrying the option across a grid rather than asking for the
+  * test deliberately, which is how a user setting options from a macro would hit it too.
+  * The second ruling is therefore to CAUTION rather than refuse: the user still learns the
+  * test was not performed, which is the whole defect, and a decorative option no longer
+  * breaks a working script. The caution for a window the DATA fails to realize lives in
+  * the worker; this one covers a window that could never have supported the test.
+  if "`adversarial'" != "" {
+    if `esprelength' <= 0 | `espostlength' <= 0 {
+      dis as text "Caution: adversarial pre-trend testing was dropped: the test fits a line through the reported relative-period coefficients and needs at least one pre-treatment and one post-treatment horizon, but this window requests `esprelength' pre and `espostlength' post. Specify esprelength() and espostlength() of at least 1 to run it."
+      local adversarial
+    }
+    else if "`timetrends'" != "" & `esprelength' + `espostlength' + 1 < 3 {
+      dis as text "Caution: adversarial pre-trend testing was dropped: with timetrends the test needs at least three event-study coefficients in the requested window (the reference period counts as one), and this window requests `esprelength' pre and `espostlength' post. Widen the window or drop timetrends to run it."
+      local adversarial
+    }
+  }
+
   * USER's fastnose: under permute() the adversarial and joint-test surfaces are
   * permutation quantities built by the shell after the replications, not analytic ones
   * that fast mode cannot produce, and pretrendpower() is refused by wooldid_permctl.

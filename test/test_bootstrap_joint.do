@@ -122,9 +122,12 @@ local t2a = _rc
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(1) jointtests bootstrap(standard) reps(20) rseed(4) boottstat
 local t2b = _rc
 di "ET2_ANALYTIC_RC=" `t2a' " BOOT_RC=" `t2b' " jp=" e(joint_horiz)
-* the carve-out is unchanged - analytic refuses r(198), the bootstrap route does not - but
-* since the 2026-09-04 ruling the bootstrap route only PRODUCES a joint test under boottstat
-if `t2a' != 198 | `t2b' != 0 | e(joint_horiz) >= . {
+* since the 2026-09-08 ruling the analytic route no longer REFUSES under the carve-out: it
+* computes the test with a named caution about the degenerate covariance (the comparator
+* packages run it at panel-level clustering with no gate, and wooldid's help recommends the
+* clustering that trips the condition). The bootstrap route is unchanged, and since the
+* 2026-09-04 ruling it only PRODUCES a joint test under boottstat
+if `t2a' != 0 | `t2b' != 0 | e(joint_horiz) >= . {
   di as error "ET2 FAIL"
   local ++fails
 }
