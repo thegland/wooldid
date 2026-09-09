@@ -1,6 +1,7 @@
 * test_jointclus.do — certification of the SI-A1 joint-test screen (author-ruled
-* 2026-08-25): jointtests + analytic clustered SEs clustered at the cohort-i level
-* or above -> error 198 under default safety (the joint p-values are severely
+* 2026-08-25, DOWNGRADED 2026-09-08): jointtests + analytic clustered SEs clustered at
+* the cohort-i level or above -> the test computes under a named caution rather than
+* refusing (the joint p-values are severely
 * oversized there); safety(off) downgrades to a caution and proceeds with the
 * p-values computed; finer clustering, robust, and jointtests-free runs untouched.
 * customvce cluster-type counts as clustered; two-way cluster fires on ANY
@@ -73,8 +74,11 @@ program define runjc
   }
 end
 
-* T1: cluster(i) + jointtests -> refused r198 with the error text
-runjc T1 "cluster(i) jointtests" 198 1 0
+* T1: cluster(i) + jointtests -> computes with the caution (author ruling 2026-09-08:
+* the hard error is downgraded, since the comparator packages run this test at panel-level
+* clustering with no gate and wooldid's own help twice recommends the clustering that
+* trips the condition; the caution states why the covariance is degenerate)
+runjc T1 "cluster(i) jointtests" 0 0 1
 
 * T2: safety(off) -> caution + proceed, joint p's actually computed
 mkjc
@@ -97,17 +101,17 @@ runjc T3 "robust jointtests" 0 0 0
 * T4: cluster(unitid) + jointtests -> clean (clustering FINER than i)
 runjc T4 "cluster(unitid) jointtests" 0 0 0
 
-* T5: cluster(state) + jointtests -> refused (clustering ABOVE i)
-runjc T5 "cluster(state) jointtests" 198 1 0
+* T5: cluster(state) + jointtests -> computes with the caution (clustering ABOVE i)
+runjc T5 "cluster(state) jointtests" 0 0 1
 
-* T6: two-way cluster(i unitid) + jointtests -> refused (ANY member i-or-above)
-runjc T6 "cluster(i unitid) jointtests" 198 1 0
+* T6: two-way cluster(i unitid) + jointtests -> computes with the caution (ANY member i-or-above)
+runjc T6 "cluster(i unitid) jointtests" 0 0 1
 
 * T7: cluster(i) WITHOUT jointtests -> screen entirely dormant
 runjc T7 "cluster(i)" 0 0 0
 
 * T8: customvce cluster-type at the i level counts as clustered
-runjc T8 "customvce(cluster i) jointtests" 198 1 0
+runjc T8 "customvce(cluster i) jointtests" 0 0 1
 
 if $pf == 0 dis as result "JOINTCLUS_ALL_PASS"
 else dis as error "JOINTCLUS_FAILURES: $pf"

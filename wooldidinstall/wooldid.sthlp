@@ -240,6 +240,8 @@ regression estimation using this option will underlying rely on either {help reg
 {phang}{opt rob:ust}: Heteroskedasticity robust standard errors; relevant only if cluster() is not specified. By default, regression estimation using this
 option will underlyingly rely on either {it:reghdfe} or, for poisson, {it:ppmlhdfe}. {p_end}
 
+{pmore}Note on degrees of freedom: the default estimation path and the {cmd:regress}-based path used by {it:customvce()} and {it:unconditionalse} apply different rules for fixed effects nested within the clustering variable, so the same specification can return slightly different standard errors depending on which path it takes. The divergence is conservative on the {cmd:regress} path rather than anti-conservative, and it does not generalise to the non-cluster variance strings, which is why wooldid documents the difference rather than rescaling one path onto the other. {p_end}
+
 {phang}{opt uncond:itionalse}: Compute standard errors that account for sampling variation in covariates. With {cmd:cluster()}, a single cluster variable is supported: the variance comes from {it:margins, vce(unconditional)}, which accepts one. This option also forces {it:wooldid} to abandon
 high dimensional fixed effect estimation packages for the underlying two-way fixed effect regression in favor of the commands {it:regress} and {it:poisson}.
 As such, this option should be slower to use on average. This option requires specifying either robust or clustered standard errors (a robust or clustered vce supplied via {it:customvce()} also satisfies this requirement, as do pweights, which imply robust standard errors). {p_end}
@@ -566,13 +568,17 @@ option). Results of this sort will thus not have a log-type interpretation. Spec
 {marker eventstudy}{...}
 {dlgtab:Event Study Estimation}
 
-{phang}{opt esf:ixedbaseperiod}: Use a fixed reference period for estimation, rather than a pooled reference period.   {p_end}
+{phang}{opt esf:ixedbaseperiod}: Use a fixed reference period for estimation, rather than a pooled reference period.
+
+{pmore}One reading note about the output under this option. The {it:pretreatment} row of the results table averages EVERY estimable pre-treatment period, not the window named by {it:esprelength()}: it is a whole-pre-history placebo, and it does not narrow when you shorten the requested pre-window. The joint pre-trend test on the same run does use the requested window, so the two quantities can cover different sets of periods in one table. Read the row as a placebo over all available pre-treatment time, and the joint test as a statement about the horizons you asked for. {p_end}
 
 {phang}{opt esr:elativeto(-integer)}: The relative time period used as the fixed reference period, if a fixed reference period is being used. The default is -1, the time period immediately
 prior to treatment. Values above -1 (the onset period or later) are rejected with an error: the fixed reference period must lie strictly before onset. Without {it:esfixedbaseperiod}, this option has no effect and a Caution is printed. {p_end}
 
 {phang}{opt espre:length(integer)}: The number of pre-treatment relative time period-specific effects to be estimated. If any pre-treatment effects are requested and
-{it:esfixedbaseperiod} is specified, all relative time period effects between the {it:esrelativeto()} period and treatment onset will be presented.{p_end}
+{it:esfixedbaseperiod} is specified, all relative time period effects between the {it:esrelativeto()} period and treatment onset will be presented.
+
+{pmore}Both this option and {it:espostlength()} count CONTIGUOUS INTEGER relative-period slots, not realized horizons. On a panel whose relative-period axis has gaps - a biennial panel, or any design whose onsets sit off the observed time grid - the requested block contains slots no cell realizes, each of which consumes one horizon from the far end of the window. A biennial panel asked for two pre and three post horizons therefore returns one and two, and a realized horizon that IS estimated, appears in {it:e(b)} and enters the reported {it:att} can fall outside the reported event-study table. Widen the request until the window reaches the horizons you want.{p_end}
 
 {phang}{opt espost:length(integer)}: The number of post-treatment relative time period-specific effects to be estimated. With {it:subgroups()} and {it:esprelength()} > 0, a value of
 0 is raised to 1 (a caution prints): subgroup estimation requires at least one post-treatment horizon. {p_end}
@@ -872,7 +878,9 @@ since in the absence of an untreated group, the time period interactions will fo
 {phang}{opt control:s()}: The contents of this option are passed directly to {it:reghdfe} as controls, without any modification. {p_end}
 
 {phang}{opt fe()}: The contents of this option are passed directly to {it:reghdfe} as fixed effects (into its absorb statement) without modification. Variables given will be interpreted as
-categorical variables, though i.X##c.X2 type notation is also permitted for passing heterogeneous slope controls and the like.  {p_end}
+categorical variables, though i.X##c.X2 type notation is also permitted for passing heterogeneous slope controls and the like.
+
+{pmore}This holds on the default estimation path. Under {it:customvce()} or {it:unconditionalse}, estimation runs through {cmd:regress} rather than {it:reghdfe}, and a BARE token there is read as a CONTINUOUS variable: {it:fe(state)} fits a linear term in the state code rather than a set of state indicators. Write the prefix explicitly - {it:fe(i.state)} - whenever those options are in use, or on any specification you may later run both ways.{p_end}
 
 {phang}{opt timetrend:s}: Control for cohort specific time trends in the regression (i.e., for i.i##c.t). Importantly, this option is required for heterogeneous time trend controls to work,
 even when they are specified manually, as it also updates {it:wooldid}'s various estimability checks, drops cohorts without sufficient pre-treatment data to estimate a time trend,
@@ -944,7 +952,7 @@ with variables being inappropriately dropped from the regression. {p_end}
 {phang}{opt ccc_absorb()}: An alternate version of coarsecohortcontrols() that admits only continuous variables and passes the controls to the {it:absorb()} statement when using
 a high dimensional fixed effects estimator. This is often less efficient than the alternative approach in terms of computation time, but can be important in terms of memory
 efficiency in the main regression or under certain other circumstances. Note: be extra careful to ensure that specifications featuring ccc_absorb() are identified; not all cases
-of identification failure in this case are bound to be automatically detected. {p_end}
+of identification failure in this case are bound to be automatically detected. It cannot be combined with an event-study window: the absorbed set takes in the cohort-by-period treatment interactions themselves, so the fitted model carries no coefficient at any relative period and the run stops with an error saying so. {p_end}
 
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses, displays raw output from the regression estimated, and prints progress reports throughout the estimation process.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
@@ -965,9 +973,7 @@ linear-index (xb) scale ({it:poisexpresults} and {it:semielasticity} are not app
 {cmd:interactivecontrols()} the interaction coefficients absorb control variation and the cell-level reading is unreliable. Not available with {cmd:contreat()}, where the
 cohort-by-period interaction coefficients are dose-zero intercepts rather than treatment effects. Fully available under {it:fastnose} (the regression's own VCE is intact even
 though the {it:margins} stage skips variances), making {it:gteffects} the one inference surface that survives fast mode. Under {cmd:bootstrap()} the cell standard errors, p-values and intervals are bootstrap quantities as well: each replication's cells are harvested by cohort and relative period, and the columns follow {cmd:bootdisplay()} and {cmd:boottstat} exactly as the main tables do (the standard error is the bootstrap standard deviation of the cell, or its analytic standard error under {cmd:boottstat}). The same holds for the {it:e(cfx*)} matrices behind the continuous-treatment plots, and under {cmd:bootstrap()} those plots are redrawn from the bootstrapped matrices after the rewiring (as {cmd:twoway} renderings of the matrices rather than {cmd:marginsplot} output, so they can differ cosmetically from an analytic run's plots, and {cmd:saveplots()} additionally writes one {it:name}{cmd:_cfx.dta} with every plotted point); only the {it:histogramcohorteffects} outputs remain analytic under {cmd:bootstrap()}. Under {cmd:permute()} the {it:gteffects} cells are keyed by cohort onset, which the replications reassign, so they have no permutation distribution and their inference columns are blank (the points stay); the {it:e(cfx*)} matrices are permuted for assignment-invariant lattice types and blanked otherwise, and the plots are redrawn from them as under {cmd:bootstrap()}. If no cohort-by-period coefficients can be read off the
-fit (heavily collinear designs), no table is returned and a caution prints. Two reading notes: the weighted-mean identity itself
-remains exact even under time-varying {cmd:interactivecontrols()} (the caveat there concerns interpreting individual cells, not the aggregation); and when the reported
-event-study window has no post-treatment horizons (e.g. {cmd:espostlength(0)}), {it:inwindow} is 0 on every post-treatment row by construction. {p_end}
+fit (heavily collinear designs), no table is returned and a caution prints. Two reading notes. First, under {cmd:interactivecontrols()} the CELLS are approximate: the interaction coefficients absorb control variation, as the caveat above says, so a cell is not the clean cohort-by-period treatment effect it is elsewhere, and the weighted-mean identity that aggregates them inherits that approximation. (An earlier version of this passage asserted the identity remained exact there, contradicting the caveat fifteen lines above it; the assertion was wrong and has been withdrawn.) Recovering exact cells under that option would need an estimation-weighted within-cell mean per control and would turn each cell standard error from a diagonal read into a quadratic form; wooldid does not do this. Second, when the reported event-study window has no post-treatment horizons (e.g. {cmd:espostlength(0)}), {it:inwindow} is 0 on every post-treatment row by construction. {p_end}
 
 {phang}{opt emptycellsoverride}: By default, {it:wooldid} tells Stata to drop interaction terms that correspond with empty cells, which is achieved by the command
 {it:set emptycells drop}, which improves estimation efficiency in this setting. This option overrides this behavior. This should only be of interest in conjunction

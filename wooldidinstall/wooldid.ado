@@ -890,8 +890,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   }
 
   * if number of requested horizons is too short, don't do adversarial pre-trend testing
-  * the + 1 is to account for the 0 reference period
-  if (`espre' + `espl'+ 1 < 3 & "`timetrends'" != "") | `espl' == 0 | `espre' == 0 local adversarial
+  * the + 1 is to account for the 0 reference period.
+  * CS-38 (author ruling 2026-09-08): say so. pretrendpower() refuses at parse time when its
+  * prerequisites are missing, while this cleared its option silently and the run completed
+  * with no sign the requested test had been dropped. A window the user asked for but the
+  * DATA cannot support is a caution here; a window that could never have supported it is
+  * refused in wooldid_validate before estimation starts.
+  if (`espre' + `espl'+ 1 < 3 & "`timetrends'" != "") | `espl' == 0 | `espre' == 0 {
+    if "`adversarial'" != "" dis as text "Caution: adversarial pre-trend testing was dropped: the estimation sample realizes `espre' pre-treatment and `espl' post-treatment horizon(s), and the test needs at least one of each (at least three coefficients in total under timetrends). Widen esprelength()/espostlength() to a window the data can support, or drop adversarial."
+    local adversarial
+  }
 
   * B16 guard: under esfixedbaseperiod + altmethod_adversarial the reference line is fit on
   * the pre-period coefficients plus the planted reference row; with esrelativeto(-1) and a
@@ -1279,14 +1287,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       if `jtni' > 0 & `jtnic' == `jtni' & "`jtcoarse'" == "" local jtcoarse `jtcv'
     }
     if "`jtcoarse'" != "" {
-      if "`safetyinput'" != "off" {
-        dis as error "Error: jointtests is not compatible with wooldid's analytic clustered SEs when clustering at the level of the cohort variable i or above (`i' is nested within the clustering variable `jtcoarse'). The joint test p-values are severely oversized in this configuration: the cluster-robust covariance cannot capture the within-cluster cross-horizon variation that the joint tests depend on."
-        dis as error "Consider wooldid's built-in randomization inference (the permute() option) or bootstrap-based clustered SEs for joint-type inference here, or cluster at a finer level. Alternatively, specify safety(off) to proceed anyway; this error then becomes a caution and the joint test p-values are reported as-is (they remain unreliable)."
-        error 198
-      }
-      else {
-        dis as text "Caution: jointtests was combined with analytic clustered SEs clustered at the level of the cohort variable i or above (`i' is nested within the clustering variable `jtcoarse'), and safety(off) was specified, so estimation is proceeding - but the joint test p-values are severely oversized in this configuration: the cluster-robust covariance cannot capture the within-cluster cross-horizon variation that the joint tests depend on. Consider wooldid's built-in randomization inference (the permute() option) or bootstrap-based clustered SEs for joint-type inference here, or cluster at a finer level."
-      }
+      * PS-64 (author ruling 2026-09-08): compute the test with a named caution instead of
+      * refusing. The comparator packages run their pre-trend tests at panel-level
+      * clustering with no gate, and wooldid's own help twice recommends the clustering
+      * that trips this condition, so a hard error sent users into a documented dead end.
+      * The caution states what is wrong with the covariance; the number is the user's to
+      * weigh. This supersedes the earlier ruling to suppress the same statistic under
+      * pretrendpower(): one statistic, one rule, in both entry points.
+      dis as text "Caution: jointtests was combined with analytic clustered SEs clustered at the level of the cohort variable i or above (`i' is nested within the clustering variable `jtcoarse'). The saturated cell dummies leave each cell's residuals with no within-cluster variation to identify, so the joint test's covariance is degenerate and its p-value should not be read as a calibrated test. wooldid's randomization inference (permute()) or bootstrap-based clustered SEs give a joint test that is valid under this design, as does clustering strictly finer than the cohort-by-period cells."
     }
   }
 
@@ -4269,6 +4277,24 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * subprogram - the worker is close to Stata's per-program size ceiling)
   if "`pretrendpower'" != "" wooldid_ptpcheck , levels(`pretrendpower') esf(`esfixedbaseperiod') impv(`impvalues') espre(`esprelength')
 
+  * CS-38 (author ruling 2026-09-08): screen adversarial's prerequisites here, beside its
+  * sibling above, instead of clearing the option silently mid-run. This catches the window
+  * that could NEVER have supported the test - the user asked for no pre-treatment or no
+  * post-treatment horizons - and refuses with a named remedy. A window the data merely
+  * fails to realize is a caution in the worker, not a refusal.
+  if "`adversarial'" != "" {
+    if `esprelength' <= 0 | `espostlength' <= 0 {
+      dis as error "Error: adversarial requires at least one pre-treatment and one post-treatment event-study horizon; the adversarial pre-trend test fits a line through the reported relative-period coefficients, and this window requests `esprelength' pre and `espostlength' post."
+      dis as error "Specify esprelength() and espostlength() of at least 1, or drop adversarial."
+      error 198
+    }
+    if "`timetrends'" != "" & `esprelength' + `espostlength' + 1 < 3 {
+      dis as error "Error: adversarial with timetrends requires at least three event-study coefficients in the requested window (the reference period counts as one); this window requests `esprelength' pre and `espostlength' post."
+      dis as error "Widen esprelength()/espostlength(), drop timetrends, or drop adversarial."
+      error 198
+    }
+  }
+
   * check conditions for using im p-values --
   * for the joint tests, I have not seen IM characterize multi-way tests. implementing a test here of some sort would be easy,
   * but I am not sure if it would technically be valid.
@@ -4380,6 +4406,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   }
 
  * issue warnings pertaining to cfxplot types
+  * CS-98 (author ruling 2026-09-08): resolve the EFFECTIVE safety() value before any
+  * message keyed on it prints. contreatwithin with contreat() relaxes safety further down;
+  * doing it there let the caution below announce a refusal that the relaxation then
+  * overturned, so the run printed "will not produce these plots" and produced them. The
+  * user's own value is kept as `safetyuser' for the checks that must see what was typed.
+  local safetyuser `safety'
+  if "`contreatwithin'" == "contreatwithin" & "`contreat'" != "" local safety off
   if "`makecfxplots'" != "" & ("`att_it'" == "att_it" | "`att_itime'" == "att_itime" | "`att_i'" == "att_i" )   {
     if "`safety'" == "off" {
       dis as text "Caution: interpretation of continuous treatment effects plots for estimands other than the ATT is difficult unless i-t cells (and sometimes cohorts i) are wholly contained within lattice bins."
@@ -4454,10 +4487,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if _rc != 0 error _rc
   }
 
-  * capture the user's own safety() input before any internal relaxation (contreatwithin sets
-  * the working copy to off further down); the identifying-assumption checks gate on this copy
-  * so an internal relaxation does not silently disable them
-  local safetyinput `safety'
+  * capture the user's own safety() input, unaffected by the contreatwithin relaxation that
+  * is now resolved earlier (CS-98); the identifying-assumption checks gate on this copy so
+  * an internal relaxation does not silently disable them
+  local safetyinput `safetyuser'
 
   * F-boot: bootstrap-SE screens; deep checks live in the subprogram (wooldid_bootctl)
   * to conserve this program's compiled-size headroom. called UNCONDITIONALLY: with
@@ -4646,16 +4679,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * also, set safety to off
   if "`contreatwithin'" == "contreatwithin" & "`contreat'" != "" {
     if strpos("`contreatcontrols'","byTime") != 0  {
-      if "`safety'" == "off" dis as text "Caution: contreatwithin is specified in conjunction with the byTime contreatcontrol type."
-      if "`safety'" != "off" dis as error "Error: contreatwithin is specified in conjunction with the byTime contreatcontrol type."
+      if "`safetyuser'" == "off" dis as text "Caution: contreatwithin is specified in conjunction with the byTime contreatcontrol type."
+      if "`safetyuser'" != "off" dis as error "Error: contreatwithin is specified in conjunction with the byTime contreatcontrol type."
       if "`verbose'" == "verbose" dis as text "Typically, this partials out some treatment effects and yields unidentified estimates."
-      if "`safety'" != "off" {
+      if "`safetyuser'" != "off" {
         dis as error "To proceed anyway in a new estimation run, manually set safety(off) before proceeding."
         error 198
       }
     }
-    local safety off
-    * the above is required since we are intentionally making the base effects irrelevant
+    * safety was already relaxed above, where the effective value is resolved before any
+    * message keys on it (CS-98). The relaxation is required because contreatwithin
+    * intentionally makes the base effects irrelevant
   }
 
 
@@ -4863,11 +4897,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       dis as error "Error: fastnose is not compatible with impvalues; Ibragimov-Muller inference reports standard errors and p-values, which fast mode does not estimate."
       error 198
     }
-    if "`adversarial'" != "" {
+    * CS-23 (author ruling 2026-09-08): under permute() without permtstat/permanalyticse,
+    * fast mode is what wooldid itself selects below, and the adversarial and joint-test
+    * surfaces are permutation quantities the shell builds after the replications. Typing
+    * the word that is already in force was an error while omitting it ran fine; these two
+    * refusals now stand down in exactly that case. Every other fastnose incompatibility
+    * (unconditionalse, impvalues, pretrendpower) is unaffected.
+    local fnperm = ("`permute'" != "" & "`permtstat'" == "" & "`permanalyticse'" == "")
+    if "`adversarial'" != "" & !`fnperm' {
       dis as error "Error: fastnose is not compatible with adversarial; the adversarial pre-trends test needs a variance-covariance matrix, which fast mode does not estimate."
       error 198
     }
-    if "`jointtests'" != "" {
+    if "`jointtests'" != "" & !`fnperm' {
       dis as error "Error: fastnose is not compatible with jointtests; fast mode reports point estimates only."
       error 198
     }
@@ -11708,9 +11749,17 @@ end
 *** minimized distance W = min_g (b - Xg)' V^+ (b - Xg) is computed in the whitened
 *** eigenspace of V (z = L^-1/2 U' b, M = L^-1/2 U' X, W = ||z - M ghat||^2), which
 *** is exactly chi-squared with q = rank(V) - rank(M) degrees of freedom under the
-*** null. The planted zero-variance reference rows receive zero weight under V^+ and
-*** so are mathematically inert here (they are constants equal to their expectation);
-*** omitting them from the computation is identical to including them.
+*** null. NOTE ON THE REFERENCE PERIOD (comment corrected 2026-09-08; the previous text
+*** claimed the planted zero-variance reference rows receive zero weight under V^+ and are
+*** mathematically inert, so that omitting them is identical to including them - both
+*** halves of that were wrong). The reference row is not in b/V at all: relyrcolumn is
+*** built only from relative periods carrying an estimable coefficient, so under
+*** esfixedbaseperiod the omitted base level never enters. wooldid_advstat plants the
+*** reference rows into the DISPLAY frame only, and passes the unplanted b/V here. Nor
+*** would including them be inert: with X = [1, relyr] the fitted line has a free
+*** intercept, so a reference-period level shift is absorbed rather than detected, which
+*** is precisely the power gap the 2026-09-08 study measured (research record
+*** review_process/research_2026-09-08/adversarial_null.md).
 ***
 *** alt == 1, altmethod (NFADV-02): the forecast test. P = the altmethod fit set
 *** (real relyr <= -1 plus the planted reference row(s)), Q = the real post horizons.

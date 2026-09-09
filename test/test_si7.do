@@ -22,14 +22,25 @@ global pf 0
 cap program drop scanlog
 program define scanlog, rclass
   args lf needle
+  * Stata wraps a long display line in the log and continues it after "> ". A needle that
+  * spans the wrap is then on no single line, which is how T10 failed while its shorter
+  * twin passed. Rejoin continuations before searching.
   tempname fh
   local found 0
+  local acc
   file open `fh' using "`lf'", read text
   file read `fh' line
   while r(eof) == 0 {
-    if strpos(`"`macval(line)'"', `"`needle'"') != 0 local found 1
+    if substr(`"`macval(line)'"', 1, 2) == "> " {
+      local acc `"`macval(acc)'`=substr(`"`macval(line)'"', 3, .)'"'
+    }
+    else {
+      if strpos(`"`macval(acc)'"', `"`needle'"') != 0 local found 1
+      local acc `"`macval(line)'"'
+    }
     file read `fh' line
   }
+  if strpos(`"`macval(acc)'"', `"`needle'"') != 0 local found 1
   file close `fh'
   return scalar found = `found'
 end
