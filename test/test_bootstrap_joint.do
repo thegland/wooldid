@@ -423,5 +423,41 @@ if `et11n' != 1 {
   local ++fails
 }
 
+* ---- ET12 (bug sweep 2.4 residual, 2026-09-10): e(boot_sgjt_absent) says THAT an
+* across-subgroup equality test was withheld and never WHY. The per-item caution says why at
+* the time and is gone by the time anyone replays the estimate, so the reason is now carried
+* in e(boot_sgjt_reason). Fixture and seeds are the sweep's own: 12 units, a one-unit
+* subgroup so a cluster resample often loses it, reps(2) - on these seeds the fixed-metric
+* test IS attempted (both subgroups mapped) and returns missing, which is "nostatistic" and
+* NOT "unmapped". Pinning which reason matters: the two used to be indistinguishable. ----
+clear
+set obs 12
+gen unit = _n
+gen ttre = cond(unit <= 3, 4, cond(unit <= 8, 6, .))
+gen sgc = cond(unit == 1, 2, 1)
+expand 10
+bysort unit: gen t = _n
+set seed 4242
+gen y = 1.2*(t >= ttre & ttre < .) + 0.1*unit + 0.05*t + rnormal()
+tempfile et12d
+qui save `et12d'
+local et12bad 0
+local et12seen 0
+foreach S in 1 2 3 6 {
+  use `et12d', clear
+  cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(1) subgroups(sgc) jointtests bootstrap(standard) reps(2) rseed(`S') dots(0)
+  if _rc != 0 local ++et12bad
+  if "`e(boot_sgjt_absent)'" == "1" {
+    local ++et12seen
+    if "`e(boot_sgjt_reason)'" != "nostatistic" local ++et12bad
+  }
+  else if "`e(boot_sgjt_reason)'" != "" local ++et12bad
+}
+if `et12seen' < 1 | `et12bad' != 0 {
+  di as error "ET12 FAIL: withheld on `et12seen' of 4 seeds, `et12bad' bad (reason must be exactly nostatistic where the flag is set, and empty where it is not)"
+  local ++fails
+}
+else di as result "ET12 PASS: the withheld equality test carries its reason into e(boot_sgjt_reason) (nostatistic on `et12seen' of 4 seeds)"
+
 if `fails' == 0 di as result "BOOTJOINT_ALL_PASS"
 else di as error "BOOTJOINT_FAILS=`fails'"

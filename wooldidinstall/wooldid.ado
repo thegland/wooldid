@@ -6666,7 +6666,11 @@ version 16.0
             ereturn scalar joint_`pre'`it'_allsgssame = .
             local wdbsgjtblank 1
             * per-item caution carrying the real reason (bug sweep BS-19), mirroring the
-            * joint-test twin above; the lumped wording blaming a missing boottstat predated F034
+            * joint-test twin above; the lumped wording blaming a missing boottstat predated F034.
+            * The caution says why at run time; `wdbsgwhy' carries the same reason into e() so
+            * the WHY survives a replay, which the bare absent flag never did (bug sweep 2.4)
+            if `ok' local wdbsgwhy = trim("`wdbsgwhy' " + cond(strpos(" `wdbsgwhy' ", " nostatistic ") == 0, "nostatistic", ""))
+            else local wdbsgwhy = trim("`wdbsgwhy' " + cond(strpos(" `wdbsgwhy' ", " unmapped ") == 0, "unmapped", ""))
             local ++wdbncaut
             if `ok' local wdbc`wdbncaut' the bootstrap `pre'`it' subgroup-equality test is unavailable (fewer than 2 complete replications carry every subgroup level, or the bootstrap covariance of those levels is rank-deficient); it is reported as absent rather than as an analytic test
             else local wdbc`wdbncaut' the `pre'`it' subgroup-equality test could not be mapped to replication columns and is reported as absent
@@ -6703,6 +6707,7 @@ version 16.0
           else {
             ereturn scalar joint_`pre'`it'_allsgssame = .
             local wdbsgjtblank 1
+            if strpos(" `wdbsgwhy' ", " nostudentizedinputs ") == 0 local wdbsgwhy `wdbsgwhy' nostudentizedinputs
             local ++wdbncaut
             local wdbc`wdbncaut' the bootstrapped `pre'`it' subgroup-equality test is unavailable: forming its studentized statistic needs the observed and per-replication pairwise-contrast standard errors, and at least one of these is missing (the pairwise margins standard error is unavailable in this specification, e.g. under clustering at or above the i level)
           }
@@ -6712,6 +6717,7 @@ version 16.0
           * the analytic value standing
           ereturn scalar joint_`pre'`it'_allsgssame = .
           local wdbsgjtblank 1
+          if strpos(" `wdbsgwhy' ", " unmapped ") == 0 local wdbsgwhy `wdbsgwhy' unmapped
           local ++wdbncaut
           local wdbc`wdbncaut' the `pre'`it' subgroup-equality test could not be mapped to replication columns and is reported as absent
         }
@@ -6723,6 +6729,15 @@ version 16.0
     }
     if "`wdbsgjtblank'" != "" {
       ereturn local boot_sgjt_absent 1
+      * bug sweep 2.4: the bare flag says THAT an across-subgroup equality test was withheld and
+      * never WHY, and the per-item cautions that do say why are gone by the time anyone replays
+      * the estimate. One or more of: nostatistic (the test was attempted on the fixed metric and
+      * no statistic survived - fewer than 2 complete replications carry every subgroup level, or
+      * the bootstrap covariance of those levels is rank-deficient); nostudentizedinputs (under
+      * boottstat, the observed or per-replication pairwise standard errors the studentization
+      * needs were unavailable); unmapped (the tested columns could not be matched to replication
+      * columns). Absence of the flag means no test was withheld, not that none was attempted.
+      if "`wdbsgwhy'" != "" ereturn local boot_sgjt_reason `wdbsgwhy'
     }
   }
 
