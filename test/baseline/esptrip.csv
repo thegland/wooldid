@@ -26,6 +26,7 @@ scalar|wdid_sgdegen|+1.0000000000000X+001
 scalar|wdid_fcncell|+1.a100000000000X+008
 scalar|level|+1.7c00000000000X+006
 scalar|N_clust|+1.4000000000000X+006
+scalar|wdid_vblockn|+1.8000000000000X+001
 scalar|N_dropped|+0.0000000000000X-3ff
 macro|wdid_sgdegenact|blank
 macro|wdid_sgdegenr|0.9993
@@ -43,7 +44,8 @@ macro|wdid_vcespec|cluster(i)
 macro|vcetype|Robust
 macro|vce|cluster
 macro|clustvar|i
-macro|wdid_vcvstate|analytic-diagonal
+macro|wdid_vblocks|att att_s1 att_s2
+macro|wdid_vcvstate|analytic-blocks
 macro|estimate_type|pooled_reference_period
 macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, att cluster(i) subgroups(sg) esprelength(2) espostlength(-999)
@@ -90,7 +92,7 @@ mat|V|2|12|+0.0000000000000X-3ff
 mat|V|3|1|+0.0000000000000X-3ff
 mat|V|3|2|+0.0000000000000X-3ff
 mat|V|3|3|+1.7003f119f47d0X-008
-mat|V|3|4|+0.0000000000000X-3ff
+mat|V|3|4|+1.21d5ebf351d37X-00a
 mat|V|3|5|+0.0000000000000X-3ff
 mat|V|3|6|+0.0000000000000X-3ff
 mat|V|3|7|+0.0000000000000X-3ff
@@ -101,7 +103,7 @@ mat|V|3|11|+0.0000000000000X-3ff
 mat|V|3|12|+0.0000000000000X-3ff
 mat|V|4|1|+0.0000000000000X-3ff
 mat|V|4|2|+0.0000000000000X-3ff
-mat|V|4|3|+0.0000000000000X-3ff
+mat|V|4|3|+1.21d5ebf351d37X-00a
 mat|V|4|4|+1.bc3968970b865X-008
 mat|V|4|5|+0.0000000000000X-3ff
 mat|V|4|6|+0.0000000000000X-3ff
@@ -142,7 +144,7 @@ mat|V|7|4|+0.0000000000000X-3ff
 mat|V|7|5|+0.0000000000000X-3ff
 mat|V|7|6|+0.0000000000000X-3ff
 mat|V|7|7|+1.76dbb8871f02eX-008
-mat|V|7|8|+0.0000000000000X-3ff
+mat|V|7|8|+1.1b0b301ca4a54X-00a
 mat|V|7|9|+0.0000000000000X-3ff
 mat|V|7|10|+0.0000000000000X-3ff
 mat|V|7|11|+0.0000000000000X-3ff
@@ -153,7 +155,7 @@ mat|V|8|3|+0.0000000000000X-3ff
 mat|V|8|4|+0.0000000000000X-3ff
 mat|V|8|5|+0.0000000000000X-3ff
 mat|V|8|6|+0.0000000000000X-3ff
-mat|V|8|7|+0.0000000000000X-3ff
+mat|V|8|7|+1.1b0b301ca4a54X-00a
 mat|V|8|8|+1.bde56ab057144X-008
 mat|V|8|9|+0.0000000000000X-3ff
 mat|V|8|10|+0.0000000000000X-3ff
@@ -194,7 +196,7 @@ mat|V|11|8|+0.0000000000000X-3ff
 mat|V|11|9|+0.0000000000000X-3ff
 mat|V|11|10|+0.0000000000000X-3ff
 mat|V|11|11|+1.6ab7e815e0c18X-008
-mat|V|11|12|+0.0000000000000X-3ff
+mat|V|11|12|+1.28c477efdf54aX-00a
 mat|V|12|1|+0.0000000000000X-3ff
 mat|V|12|2|+0.0000000000000X-3ff
 mat|V|12|3|+0.0000000000000X-3ff
@@ -205,7 +207,7 @@ mat|V|12|7|+0.0000000000000X-3ff
 mat|V|12|8|+0.0000000000000X-3ff
 mat|V|12|9|+0.0000000000000X-3ff
 mat|V|12|10|+0.0000000000000X-3ff
-mat|V|12|11|+0.0000000000000X-3ff
+mat|V|12|11|+1.28c477efdf54aX-00a
 mat|V|12|12|+1.bbab1656d839eX-008
 matnames|pwsgs|2x6|att:2vs1.sg pre_att:2vs1.sg|estimate se t p lb_95ci ub_95ci
 mat|pwsgs|1|1|+1.202656c075100X-004

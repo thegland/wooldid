@@ -73,3 +73,32 @@ outside a subgroup run moved.
 
 The cut lives in one local, `wdsgdtol` in `wooldid_sgdeg`. **Ruling wanted only if the
 author wants it elsewhere**; the work does not wait on it.
+
+## PS-62 — "zero the sentinel row and column": the diagonal is kept, not zeroed
+
+**The ruling.** *"Zero the sentinel row and column. Where a row's variance is unidentified,
+zero its row and column rather than carrying the -1e100 sentinel into a matrix with
+off-diagonals, which the posting screen can zero wholesale."*
+
+**Built:** the off-diagonals of a sentinel row and column are left at zero, and the -1e100
+diagonal cell is left exactly as the partial-identification rescue posted it.
+
+**Why the literal reading was not taken.** The reason the ruling gives for zeroing is a real
+hazard — Stata's `ereturn post` screen does zero a nonsymmetric or highly singular VCE
+wholesale, which is what `wooldid_amescreen , mode(vzero)` exists to detect. It does not arise
+on this path. The splice reaches `e(V)` through `ereturn repost V=`, not `ereturn post`, and
+`repost` was measured (probe at `~/.claude/jobs/be9644d0/tmp/w1/probe_ps62.do`, 2026-09-10) to
+accept verbatim both an indefinite matrix and one carrying a -1e100 diagonal beside live
+off-diagonals: the posted matrix came back unchanged and `ereturn display` still rendered that
+row's standard error as missing. With the off-diagonals of such a row held at zero, the matrix
+the splice posts has exactly the block structure the run already ships today.
+
+**What the literal reading would cost.** Zeroing the diagonal turns a variance of -1e100 into
+0, and a standard error that prints as `.` today would print as `0` in `ereturn display`,
+`esttab` and `lincom` — a fabricated certainty in place of an honest absence, and a reported
+number moving on a fix that was not supposed to move any. That is the one thing the campaign's
+standing instruction rules out, so the diagonal was kept and the question is put here.
+
+**To reverse it** is a two-line change in `wooldid_vspl` (the Mata kernel): also write 0 into
+`V[a, a]` for every row whose diagonal is not positive-finite. The comment block above the
+function records this decision at the site.

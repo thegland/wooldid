@@ -26,6 +26,7 @@ scalar|joint_att_allsgssame|+1.409d4533725c9X-022
 scalar|joint_horiz_s1|+1.00ab01850231eX-001
 scalar|joint_horiz|+1.00ab01850231eX-001
 scalar|N_clust|+1.4000000000000X+006
+scalar|wdid_vblockn|+1.a000000000000X+003
 scalar|N_dropped|+0.0000000000000X-3ff
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
@@ -40,7 +41,8 @@ macro|wdid_vcespec|cluster(i)
 macro|vcetype|Robust
 macro|vce|cluster
 macro|clustvar|i
-macro|wdid_vcvstate|analytic-diagonal
+macro|wdid_vblocks|att att_s1 att_s2
+macro|wdid_vcvstate|analytic-blocks
 macro|estimate_type|pooled_reference_period
 macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sgd2) jointtests safety(off)
@@ -93,9 +95,9 @@ mat|V|2|14|+0.0000000000000X-3ff
 mat|V|3|1|+0.0000000000000X-3ff
 mat|V|3|2|+0.0000000000000X-3ff
 mat|V|3|3|+1.9220544d66f80X-008
-mat|V|3|4|+0.0000000000000X-3ff
-mat|V|3|5|+0.0000000000000X-3ff
-mat|V|3|6|+0.0000000000000X-3ff
+mat|V|3|4|+1.11013417018f7X-00a
+mat|V|3|5|+1.1ba5f74515784X-00b
+mat|V|3|6|+1.ab815cdf15fcaX-009
 mat|V|3|7|+0.0000000000000X-3ff
 mat|V|3|8|+0.0000000000000X-3ff
 mat|V|3|9|+0.0000000000000X-3ff
@@ -106,10 +108,10 @@ mat|V|3|13|+0.0000000000000X-3ff
 mat|V|3|14|+0.0000000000000X-3ff
 mat|V|4|1|+0.0000000000000X-3ff
 mat|V|4|2|+0.0000000000000X-3ff
-mat|V|4|3|+0.0000000000000X-3ff
+mat|V|4|3|+1.11013417018f7X-00a
 mat|V|4|4|+1.3fa7613f89e4dX-007
-mat|V|4|5|+0.0000000000000X-3ff
-mat|V|4|6|+0.0000000000000X-3ff
+mat|V|4|5|+1.2723760e83c1eX-009
+mat|V|4|6|+1.65b38c26c3e6bX-00b
 mat|V|4|7|+0.0000000000000X-3ff
 mat|V|4|8|+0.0000000000000X-3ff
 mat|V|4|9|+0.0000000000000X-3ff
@@ -120,10 +122,10 @@ mat|V|4|13|+0.0000000000000X-3ff
 mat|V|4|14|+0.0000000000000X-3ff
 mat|V|5|1|+0.0000000000000X-3ff
 mat|V|5|2|+0.0000000000000X-3ff
-mat|V|5|3|+0.0000000000000X-3ff
-mat|V|5|4|+0.0000000000000X-3ff
+mat|V|5|3|+1.1ba5f74515784X-00b
+mat|V|5|4|+1.2723760e83c1eX-009
 mat|V|5|5|+1.5444bca01bf85X-008
-mat|V|5|6|+0.0000000000000X-3ff
+mat|V|5|6|+1.2651a0aa64856X-00c
 mat|V|5|7|+0.0000000000000X-3ff
 mat|V|5|8|+0.0000000000000X-3ff
 mat|V|5|9|+0.0000000000000X-3ff
@@ -134,9 +136,9 @@ mat|V|5|13|+0.0000000000000X-3ff
 mat|V|5|14|+0.0000000000000X-3ff
 mat|V|6|1|+0.0000000000000X-3ff
 mat|V|6|2|+0.0000000000000X-3ff
-mat|V|6|3|+0.0000000000000X-3ff
-mat|V|6|4|+0.0000000000000X-3ff
-mat|V|6|5|+0.0000000000000X-3ff
+mat|V|6|3|+1.ab815cdf15fcaX-009
+mat|V|6|4|+1.65b38c26c3e6bX-00b
+mat|V|6|5|+1.2651a0aa64856X-00c
 mat|V|6|6|+1.5eb117c1b47e4X-008
 mat|V|6|7|+0.0000000000000X-3ff
 mat|V|6|8|+0.0000000000000X-3ff
@@ -168,9 +170,9 @@ mat|V|8|5|+0.0000000000000X-3ff
 mat|V|8|6|+0.0000000000000X-3ff
 mat|V|8|7|+0.0000000000000X-3ff
 mat|V|8|8|+1.9220544d66f80X-008
-mat|V|8|9|+0.0000000000000X-3ff
-mat|V|8|10|+0.0000000000000X-3ff
-mat|V|8|11|+0.0000000000000X-3ff
+mat|V|8|9|+1.11013417018f7X-00a
+mat|V|8|10|+1.5ff13884ffa18X-00b
+mat|V|8|11|+1.2803d5752b9dfX-008
 mat|V|8|12|+0.0000000000000X-3ff
 mat|V|8|13|+0.0000000000000X-3ff
 mat|V|8|14|+0.0000000000000X-3ff
@@ -181,10 +183,10 @@ mat|V|9|4|+0.0000000000000X-3ff
 mat|V|9|5|+0.0000000000000X-3ff
 mat|V|9|6|+0.0000000000000X-3ff
 mat|V|9|7|+0.0000000000000X-3ff
-mat|V|9|8|+0.0000000000000X-3ff
+mat|V|9|8|+1.11013417018f7X-00a
 mat|V|9|9|+1.3fa7613f89e4dX-007
-mat|V|9|10|+0.0000000000000X-3ff
-mat|V|9|11|+0.0000000000000X-3ff
+mat|V|9|10|+1.438824ac3fbdaX-009
+mat|V|9|11|+1.0ca5ed0a104c8X-00a
 mat|V|9|12|+0.0000000000000X-3ff
 mat|V|9|13|+0.0000000000000X-3ff
 mat|V|9|14|+0.0000000000000X-3ff
@@ -195,10 +197,10 @@ mat|V|10|4|+0.0000000000000X-3ff
 mat|V|10|5|+0.0000000000000X-3ff
 mat|V|10|6|+0.0000000000000X-3ff
 mat|V|10|7|+0.0000000000000X-3ff
-mat|V|10|8|+0.0000000000000X-3ff
-mat|V|10|9|+0.0000000000000X-3ff
+mat|V|10|8|+1.5ff13884ffa18X-00b
+mat|V|10|9|+1.438824ac3fbdaX-009
 mat|V|10|10|+1.055dc69abf164X-007
-mat|V|10|11|+0.0000000000000X-3ff
+mat|V|10|11|+1.9845326db7220X-00c
 mat|V|10|12|+0.0000000000000X-3ff
 mat|V|10|13|+0.0000000000000X-3ff
 mat|V|10|14|+0.0000000000000X-3ff
@@ -209,9 +211,9 @@ mat|V|11|4|+0.0000000000000X-3ff
 mat|V|11|5|+0.0000000000000X-3ff
 mat|V|11|6|+0.0000000000000X-3ff
 mat|V|11|7|+0.0000000000000X-3ff
-mat|V|11|8|+0.0000000000000X-3ff
-mat|V|11|9|+0.0000000000000X-3ff
-mat|V|11|10|+0.0000000000000X-3ff
+mat|V|11|8|+1.2803d5752b9dfX-008
+mat|V|11|9|+1.0ca5ed0a104c8X-00a
+mat|V|11|10|+1.9845326db7220X-00c
 mat|V|11|11|+1.10cacb35fb21eX-007
 mat|V|11|12|+0.0000000000000X-3ff
 mat|V|11|13|+0.0000000000000X-3ff
@@ -243,7 +245,7 @@ mat|V|13|10|+0.0000000000000X-3ff
 mat|V|13|11|+0.0000000000000X-3ff
 mat|V|13|12|+0.0000000000000X-3ff
 mat|V|13|13|+1.f4b1779ffb5e3X-007
-mat|V|13|14|+0.0000000000000X-3ff
+mat|V|13|14|+1.77b1db363ad3aX-008
 mat|V|14|1|+0.0000000000000X-3ff
 mat|V|14|2|+0.0000000000000X-3ff
 mat|V|14|3|+0.0000000000000X-3ff
@@ -256,7 +258,7 @@ mat|V|14|9|+0.0000000000000X-3ff
 mat|V|14|10|+0.0000000000000X-3ff
 mat|V|14|11|+0.0000000000000X-3ff
 mat|V|14|12|+0.0000000000000X-3ff
-mat|V|14|13|+0.0000000000000X-3ff
+mat|V|14|13|+1.77b1db363ad3aX-008
 mat|V|14|14|+1.92b060cd0c706X-007
 matnames|wdidmainresults|6x7|main:att pretreatment:att ES_att:pre2 ES_att:pre1 ES_att:post0 ES_att:post1|estimate se t p lb_95ci ub_95ci relyr
 mat|wdidmainresults|1|1|+1.556774b1853d4X-001

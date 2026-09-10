@@ -19,9 +19,10 @@ scalar|r2_withinadj|+1.13c024280bcf2X-001
 scalar|rmse|+1.2647f49e6d441X-002
 scalar|rss|+1.e649717ee319cX+000
 scalar|N_dropped|+0.0000000000000X-3ff
-scalar|N_clust|+1.0000000000000X+003
+scalar|wdid_vblockn|+1.0000000000000X+000
 scalar|wdid_fcncell|+1.4000000000000X+004
 scalar|level|+1.7c00000000000X+006
+scalar|N_clust|+1.0000000000000X+003
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|1
@@ -34,7 +35,8 @@ macro|wdid_vcespec|cluster(i)
 macro|vcetype|Robust
 macro|vce|cluster
 macro|clustvar|i
-macro|wdid_vcvstate|analytic-diagonal
+macro|wdid_vblocks|att
+macro|wdid_vcvstate|analytic-blocks
 macro|estimate_type|pooled_reference_period
 macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1)
@@ -57,10 +59,10 @@ mat|V|2|4|+0.0000000000000X-3ff
 mat|V|3|1|+0.0000000000000X-3ff
 mat|V|3|2|+0.0000000000000X-3ff
 mat|V|3|3|+1.440634427673fX-007
-mat|V|3|4|+0.0000000000000X-3ff
+mat|V|3|4|-1.beb854fb7dd88X-007
 mat|V|4|1|+0.0000000000000X-3ff
 mat|V|4|2|+0.0000000000000X-3ff
-mat|V|4|3|+0.0000000000000X-3ff
+mat|V|4|3|-1.beb854fb7dd88X-007
 mat|V|4|4|+1.2a8e3e5051ff2X-005
 matnames|wdidmainresults|4x7|main:att pretreatment:att ES_att:pre1 ES_att:post0|estimate se t p lb_95ci ub_95ci relyr
 mat|wdidmainresults|1|1|+1.328ecaee93e90X+000

@@ -23,6 +23,7 @@ scalar|N_dropped|+0.0000000000000X-3ff
 scalar|wdid_fcncell|+1.8c00000000000X+008
 scalar|level|+1.7c00000000000X+006
 scalar|N_clust|+1.4000000000000X+006
+scalar|wdid_vblockn|+1.8000000000000X+003
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
@@ -35,7 +36,8 @@ macro|wdid_vcespec|cluster(i)
 macro|vcetype|Robust
 macro|vce|cluster
 macro|clustvar|i
-macro|wdid_vcvstate|analytic-diagonal
+macro|wdid_vblocks|att att_it
+macro|wdid_vcvstate|analytic-blocks
 macro|estimate_type|pooled_reference_period
 macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre [aw=w], att att_it att_i att_itime cluster(i) esprelength(2) espostlength(2)
@@ -196,9 +198,9 @@ mat|V|9|6|+0.0000000000000X-3ff
 mat|V|9|7|+0.0000000000000X-3ff
 mat|V|9|8|+0.0000000000000X-3ff
 mat|V|9|9|+1.11e24d6baf73eX-007
-mat|V|9|10|+0.0000000000000X-3ff
-mat|V|9|11|+0.0000000000000X-3ff
-mat|V|9|12|+0.0000000000000X-3ff
+mat|V|9|10|+1.8f4ff725345c7X-009
+mat|V|9|11|+1.92fe239d909daX-00a
+mat|V|9|12|+1.7833eb033eba5X-008
 mat|V|9|13|+0.0000000000000X-3ff
 mat|V|9|14|+0.0000000000000X-3ff
 mat|V|9|15|+0.0000000000000X-3ff
@@ -211,10 +213,10 @@ mat|V|10|5|+0.0000000000000X-3ff
 mat|V|10|6|+0.0000000000000X-3ff
 mat|V|10|7|+0.0000000000000X-3ff
 mat|V|10|8|+0.0000000000000X-3ff
-mat|V|10|9|+0.0000000000000X-3ff
+mat|V|10|9|+1.8f4ff725345c7X-009
 mat|V|10|10|+1.2505267f0538aX-007
-mat|V|10|11|+0.0000000000000X-3ff
-mat|V|10|12|+0.0000000000000X-3ff
+mat|V|10|11|+1.2a12054f85b99X-009
+mat|V|10|12|+1.50788595da394X-009
 mat|V|10|13|+0.0000000000000X-3ff
 mat|V|10|14|+0.0000000000000X-3ff
 mat|V|10|15|+0.0000000000000X-3ff
@@ -227,10 +229,10 @@ mat|V|11|5|+0.0000000000000X-3ff
 mat|V|11|6|+0.0000000000000X-3ff
 mat|V|11|7|+0.0000000000000X-3ff
 mat|V|11|8|+0.0000000000000X-3ff
-mat|V|11|9|+0.0000000000000X-3ff
-mat|V|11|10|+0.0000000000000X-3ff
+mat|V|11|9|+1.92fe239d909daX-00a
+mat|V|11|10|+1.2a12054f85b99X-009
 mat|V|11|11|+1.1a0b295546838X-007
-mat|V|11|12|+0.0000000000000X-3ff
+mat|V|11|12|+1.97af1e5e5f6c9X-00a
 mat|V|11|13|+0.0000000000000X-3ff
 mat|V|11|14|+0.0000000000000X-3ff
 mat|V|11|15|+0.0000000000000X-3ff
@@ -243,9 +245,9 @@ mat|V|12|5|+0.0000000000000X-3ff
 mat|V|12|6|+0.0000000000000X-3ff
 mat|V|12|7|+0.0000000000000X-3ff
 mat|V|12|8|+0.0000000000000X-3ff
-mat|V|12|9|+0.0000000000000X-3ff
-mat|V|12|10|+0.0000000000000X-3ff
-mat|V|12|11|+0.0000000000000X-3ff
+mat|V|12|9|+1.7833eb033eba5X-008
+mat|V|12|10|+1.50788595da394X-009
+mat|V|12|11|+1.97af1e5e5f6c9X-00a
 mat|V|12|12|+1.902116855f901X-007
 mat|V|12|13|+0.0000000000000X-3ff
 mat|V|12|14|+0.0000000000000X-3ff
@@ -264,9 +266,9 @@ mat|V|13|10|+0.0000000000000X-3ff
 mat|V|13|11|+0.0000000000000X-3ff
 mat|V|13|12|+0.0000000000000X-3ff
 mat|V|13|13|+1.14275b4f19512X-007
-mat|V|13|14|+0.0000000000000X-3ff
-mat|V|13|15|+0.0000000000000X-3ff
-mat|V|13|16|+0.0000000000000X-3ff
+mat|V|13|14|+1.8de813fdd3054X-009
+mat|V|13|15|+1.60c90ab1b51d9X-00a
+mat|V|13|16|+1.44dcf52f55fa5X-008
 mat|V|14|1|+0.0000000000000X-3ff
 mat|V|14|2|+0.0000000000000X-3ff
 mat|V|14|3|+0.0000000000000X-3ff
@@ -279,10 +281,10 @@ mat|V|14|9|+0.0000000000000X-3ff
 mat|V|14|10|+0.0000000000000X-3ff
 mat|V|14|11|+0.0000000000000X-3ff
 mat|V|14|12|+0.0000000000000X-3ff
-mat|V|14|13|+0.0000000000000X-3ff
+mat|V|14|13|+1.8de813fdd3054X-009
 mat|V|14|14|+1.0e33dbb6dcb9aX-007
-mat|V|14|15|+0.0000000000000X-3ff
-mat|V|14|16|+0.0000000000000X-3ff
+mat|V|14|15|+1.21743e90c7724X-009
+mat|V|14|16|+1.46b68dc06267eX-009
 mat|V|15|1|+0.0000000000000X-3ff
 mat|V|15|2|+0.0000000000000X-3ff
 mat|V|15|3|+0.0000000000000X-3ff
@@ -295,10 +297,10 @@ mat|V|15|9|+0.0000000000000X-3ff
 mat|V|15|10|+0.0000000000000X-3ff
 mat|V|15|11|+0.0000000000000X-3ff
 mat|V|15|12|+0.0000000000000X-3ff
-mat|V|15|13|+0.0000000000000X-3ff
-mat|V|15|14|+0.0000000000000X-3ff
+mat|V|15|13|+1.60c90ab1b51d9X-00a
+mat|V|15|14|+1.21743e90c7724X-009
 mat|V|15|15|+1.206c51891ac2cX-007
-mat|V|15|16|+0.0000000000000X-3ff
+mat|V|15|16|+1.8282b846a308cX-00a
 mat|V|16|1|+0.0000000000000X-3ff
 mat|V|16|2|+0.0000000000000X-3ff
 mat|V|16|3|+0.0000000000000X-3ff
@@ -311,9 +313,9 @@ mat|V|16|9|+0.0000000000000X-3ff
 mat|V|16|10|+0.0000000000000X-3ff
 mat|V|16|11|+0.0000000000000X-3ff
 mat|V|16|12|+0.0000000000000X-3ff
-mat|V|16|13|+0.0000000000000X-3ff
-mat|V|16|14|+0.0000000000000X-3ff
-mat|V|16|15|+0.0000000000000X-3ff
+mat|V|16|13|+1.44dcf52f55fa5X-008
+mat|V|16|14|+1.46b68dc06267eX-009
+mat|V|16|15|+1.8282b846a308cX-00a
 mat|V|16|16|+1.8e68d98353f34X-007
 matnames|wdidmainresults|16x7|main:att main:att_it main:att_i main:att_itime pretreatment:att pretreatment:att_it pretreatment:att_i pretreatment:att_itime ES_att:pre2 ES_att:pre1 ES_att:post0 ES_att:post1 ES_att_it:pre2 ES_att_it:pre1 ES_att_it:post0 ES_att_it:post1|estimate se t p lb_95ci ub_95ci relyr
 mat|wdidmainresults|1|1|+1.73a2f01a5badcX-001

@@ -23,6 +23,7 @@ scalar|N_dropped|+0.0000000000000X-3ff
 scalar|wdid_fcncell|+1.bc00000000000X+008
 scalar|level|+1.7c00000000000X+006
 scalar|N_clust|+1.4000000000000X+006
+scalar|wdid_vblockn|+1.8000000000000X+002
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
@@ -35,7 +36,8 @@ macro|wdid_vcespec|cluster(i)
 macro|vcetype|Robust
 macro|vce|cluster
 macro|clustvar|i
-macro|wdid_vcvstate|analytic-diagonal
+macro|wdid_vblocks|att
+macro|wdid_vcvstate|analytic-blocks
 macro|estimate_type|pooled_reference_period
 macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) anticipation(1)
@@ -64,26 +66,26 @@ mat|V|2|6|+0.0000000000000X-3ff
 mat|V|3|1|+0.0000000000000X-3ff
 mat|V|3|2|+0.0000000000000X-3ff
 mat|V|3|3|+1.46d6d15b60761X-008
-mat|V|3|4|+0.0000000000000X-3ff
-mat|V|3|5|+0.0000000000000X-3ff
-mat|V|3|6|+0.0000000000000X-3ff
+mat|V|3|4|+1.56756478d1fdeX-00a
+mat|V|3|5|+1.b594cad847895X-00b
+mat|V|3|6|+1.2590a965cf9d7X-008
 mat|V|4|1|+0.0000000000000X-3ff
 mat|V|4|2|+0.0000000000000X-3ff
-mat|V|4|3|+0.0000000000000X-3ff
+mat|V|4|3|+1.56756478d1fdeX-00a
 mat|V|4|4|+1.98366abf2dfd8X-008
-mat|V|4|5|+0.0000000000000X-3ff
-mat|V|4|6|+0.0000000000000X-3ff
+mat|V|4|5|+1.46d5b88b95c1fX-00a
+mat|V|4|6|+1.5027057d040b5X-00a
 mat|V|5|1|+0.0000000000000X-3ff
 mat|V|5|2|+0.0000000000000X-3ff
-mat|V|5|3|+0.0000000000000X-3ff
-mat|V|5|4|+0.0000000000000X-3ff
+mat|V|5|3|+1.b594cad847895X-00b
+mat|V|5|4|+1.46d5b88b95c1fX-00a
 mat|V|5|5|+1.e652fe1a20888X-008
-mat|V|5|6|+0.0000000000000X-3ff
+mat|V|5|6|+1.205ddb385300cX-009
 mat|V|6|1|+0.0000000000000X-3ff
 mat|V|6|2|+0.0000000000000X-3ff
-mat|V|6|3|+0.0000000000000X-3ff
-mat|V|6|4|+0.0000000000000X-3ff
-mat|V|6|5|+0.0000000000000X-3ff
+mat|V|6|3|+1.2590a965cf9d7X-008
+mat|V|6|4|+1.5027057d040b5X-00a
+mat|V|6|5|+1.205ddb385300cX-009
 mat|V|6|6|+1.1977e78ebd8b5X-007
 matnames|wdidmainresults|6x7|main:att pretreatment:att ES_att:pre2 ES_att:pre1 ES_att:post0 ES_att:post1|estimate se t p lb_95ci ub_95ci relyr
 mat|wdidmainresults|1|1|+1.6e360ab42dbc0X-001

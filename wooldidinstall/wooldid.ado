@@ -4047,6 +4047,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   local wdhasv = (_rc == 0)
   ereturn hidden local wdid_vcvstate = cond(`wdhasv', "analytic-diagonal", "absent")
 
+  * PS-62 (author rulings 2026-09-07): splice the within-family event-study covariance
+  * blocks into e(V) - the one set of off-diagonals wooldid already has and never posted.
+  * Runs AFTER the F2 block above (which posts the e(V_es_*) it reads) and after the
+  * vcvstate line (which it overwrites with "analytic-blocks" when a block actually lands).
+  * Body in a subprogram: wooldid_worker is at the per-program compiled-size ceiling
+  if `wdhasv' wooldid_vsplice , sgl(`sglist')
+
   * PS-1 (author ruling 2026-09-07): post the conventional names alongside wooldid's own,
   * so estout, esttab and anything else keying on Stata's usual cluster and variance
   * entries finds them. Pure addition - e(Nclus) and e(wdid_vcespec) are unchanged, and
@@ -7525,7 +7532,11 @@ version 16.0
   * reference, and is not a permutation quantity.
   cap confirm matrix e(V)
   local wdphasv = (_rc == 0)
-  ereturn hidden local wdid_vcvstate = cond(`wdphasv', "analytic-diagonal", "absent")
+  * PS-62 (2026-09-07): under permute() the posted covariance is still the ANALYTIC one the
+  * worker built - this engine reposts none of its own - so if the worker's event-study
+  * splice landed, e(V) really does carry blocks and the label must keep saying so
+  local wdpvs0 "`e(wdid_vcvstate)'"
+  ereturn hidden local wdid_vcvstate = cond(`wdphasv', cond("`wdpvs0'" == "analytic-blocks", "analytic-blocks", "analytic-diagonal"), "absent")
   * PS-1: with no covariance posted the conventional variance-type names describe nothing,
   * so clear them rather than leave the analytic run's labels beside an absent e(V)
   if !`wdphasv' {
@@ -9644,6 +9655,74 @@ version 16.0
   ereturn scalar df_r = `wdimin'
   ereturn scalar imdf_min = `wdimin'
   ereturn scalar imdf_max = `wdimax'
+end
+
+* ============================================================================
+* PS-62 (six-lens feasibility review; author rulings 2026-09-07). e(V) has always been
+* diag(se^2): wooldid estimates no cross-estimate covariance, so a test or lincom spanning
+* two of its rows was never valid. The review found that for ONE family of rows that is an
+* accounting gap rather than a missing estimate. Every reported relative-period effect of an
+* event-study family comes from a SINGLE margins call, so that call's r(V) IS their complete
+* joint covariance; wooldid already captures it and posts it as e(V_es_*), where only
+* honestdid, pretrendpower() and the joint tests read it. This program copies those genuine
+* within-family covariances into the corresponding diagonal BLOCKS of e(V), so that a
+* cross-horizon test or lincom becomes valid on the posted matrix.
+* Scope is exactly the ruling's: the event-study blocks and nothing else. Every off-diagonal
+* between two families, or between a family and a pooled estimate, stays zero - those are the
+* cells the review found genuinely blocked (three modes have no delta-method object at all,
+* and the pooled effect is a linear combination of the horizons, so the general matrix would
+* be rank-deficient by construction rather than by accident). No new estimation happens here.
+* Labelling is the ruling's too: help text plus a stored marker - e(wdid_vcvstate) becomes
+* "analytic-blocks" and e(wdid_vblocks) names the families actually spliced - and
+* deliberately NO footer under the printed table.
+* eclass because its ereturns must survive the return, the way wooldid_imdf's do; kept out
+* of wooldid_worker for compiled-size headroom.
+cap prog drop wooldid_vsplice
+prog def wooldid_vsplice, eclass
+version 16.0
+  syntax , [sgl(string)]
+  cap confirm matrix e(V)
+  if _rc != 0 exit
+  * the family list is bootwire's, so the two engines agree on what a family is
+  local wdvfl att att_it ame ame_it
+  foreach wdvs of local sgl {
+    local wdvfl `wdvfl' att_s`wdvs' att_it_s`wdvs' ame_s`wdvs' ame_it_s`wdvs'
+  }
+  tempname WV
+  matrix `WV' = e(V)
+  local wdvdone
+  local wdvnp 0
+  foreach wdvk of local wdvfl {
+    cap confirm matrix e(V_es_`wdvk')
+    if _rc != 0 continue
+    * e(V) names an overall family's rows ES_<key>_<horizon> and a subgroup's
+    * ES_<base>_SG<sg>_<horizon> (worker: rownamespool, then the _SG injection)
+    local wdvb `wdvk'
+    local wdvg
+    if regexm("`wdvk'", "^(.+)_s([0-9]+)$") {
+      local wdvb = regexs(1)
+      local wdvg = regexs(2)
+    }
+    local wdvpx = cond("`wdvg'" == "", "ES_`wdvb'_", "ES_`wdvb'_SG`wdvg'_")
+    tempname WE
+    matrix `WE' = e(V_es_`wdvk')
+    local wdvn 0
+    mata: st_local("wdvn", strofreal(wooldid_vspl("`WV'", "`WE'", "`wdvpx'")))
+    if `wdvn' > 0 {
+      local wdvdone `wdvdone' `wdvk'
+      local wdvnp = `wdvnp' + `wdvn'
+    }
+  }
+  if "`wdvdone'" == "" exit
+  * repost, not post: `ereturn repost V=' replaces the matrix without re-running the
+  * screen that `ereturn post' applies (measured: repost accepts an indefinite matrix and
+  * a -1e100 diagonal verbatim), so the sentinel rows the partial-identification rescue
+  * wrote survive the splice exactly as they were posted
+  cap ereturn repost V = `WV'
+  if _rc != 0 exit
+  ereturn hidden local wdid_vcvstate analytic-blocks
+  ereturn hidden local wdid_vblocks `wdvdone'
+  ereturn hidden scalar wdid_vblockn = `wdvnp'
 end
 
 cap prog drop wooldid_sgdeg
@@ -12532,6 +12611,7 @@ cap mata: mata drop wooldid_permcellwire()
 cap mata: mata drop wooldid_permsaveasg()
 cap mata: mata drop wooldid_permcse()
 cap mata: mata drop wooldid_permadvline()
+cap mata: mata drop wooldid_vspl()
 mata:
 // draw matrix: per-rep (outer) per-cluster-ascending (inner) Gamma(alpha,1) draws -
 // the exact rwgen bayes stream-consumption order; alpha = n_c (size) or 1 (equal);
@@ -14729,6 +14809,89 @@ void wooldid_permadvline(string scalar cmpname, string scalar colslist, string s
   if (rank(X'X) < 2) return
   F = invsym(X'X) * X'b
   st_matrix(outname, (F[2], F[1]))
+}
+
+// PS-62 (six-lens feasibility review, author rulings 2026-09-07): splice ONE event-study
+// family's covariance block into the posted e(V). vn is the working copy of e(V) (a
+// Stata tempname, replaced in place so its stripes survive), en the family's e(V_es_*),
+// px the e(V) row-name prefix for the family ("ES_att_", "ES_ame_it_SG2_", ...).
+// Returns the number of off-diagonal PAIRS written, or 0 when the family was skipped.
+//
+// The whole safety argument is the per-family gate below. Every horizon that carries a
+// positive-finite variance in e(V) must (a) match a row by name and (b) agree with the
+// V_es diagonal to 1e-8 relative. The two are the same quantity computed twice - e(V)
+// squares the standard error column of margins' r(table), V_es is r(V) itself - so on
+// the ordinary analytic path they agree to about 1e-16 (measured), and ANY path where
+// the reported scale is not the margins scale, or the variance is not the margins
+// variance, fails the check and the family is left alone. That single test is what keeps
+// impvalues (per-cluster t-test standard errors), the AMESE-scrubbed rows, a rescaled
+// reporting scale and any future divergence out, without naming any of them.
+// Rows whose e(V) diagonal is NOT positive-finite - a structural zero, or the -1e100
+// sentinel the partial-identification rescue writes - keep a zero row and column: their
+// diagonal is left exactly as posted, so a standard error that displays as missing today
+// still does. (The ruling's wording is "zero its row and column"; the reason it gives is
+// that `ereturn post' can zero a nonsymmetric or highly singular VCE wholesale. That
+// hazard does not arise here - the splice reaches e(V) through `ereturn repost', which
+// was measured to accept an indefinite matrix and a -1e100 diagonal verbatim - so only
+// the off-diagonals are zeroed and the sentinel stands. See review_process/
+// held_for_ruling_2026-09-09.md.)
+real scalar wooldid_vspl(string scalar vn, string scalar en, string scalar px)
+{
+  real matrix V, E
+  string matrix vs, es
+  real colvector idx
+  real scalar n, m, i, j, a, b, nsp
+  string scalar want, want2
+  V = st_matrix(vn)
+  E = st_matrix(en)
+  if (rows(V) < 2 | rows(E) < 2) return(0)
+  vs = st_matrixcolstripe(vn)
+  es = st_matrixcolstripe(en)
+  n = rows(vs)
+  m = rows(es)
+  if (rows(E) != m | cols(E) != m) return(0)
+  idx = J(m, 1, 0)
+  for (j = 1; j <= m; j++) {
+    want = px + es[j, 2]
+    // under oldsyntax the e(V) row for relative period 0 is named "contemp" while the
+    // F2 label is always "post0"; without this alias the family half-splices in silence
+    want2 = (es[j, 2] == "post0" ? px + "contemp" : "")
+    for (i = 1; i <= n; i++) {
+      if (vs[i, 2] == want) idx[j] = i
+      else if (want2 != "" & vs[i, 2] == want2) idx[j] = i
+    }
+  }
+  for (j = 1; j <= m; j++) {
+    if (idx[j] == 0) {
+      // a horizon that HAS a variance but no row is a naming mismatch, not a dropped
+      // row: refuse the family rather than splice part of it
+      if (E[j, j] > 0 & E[j, j] < .) return(0)
+      continue
+    }
+    a = idx[j]
+    if (V[a, a] > 0 & V[a, a] < .) {
+      if (E[j, j] <= 0 | E[j, j] >= .) return(0)
+      if (abs(V[a, a] - E[j, j]) > 1e-8*abs(E[j, j])) return(0)
+    }
+  }
+  nsp = 0
+  for (j = 1; j <= m; j++) {
+    if (idx[j] == 0) continue
+    a = idx[j]
+    if (V[a, a] <= 0 | V[a, a] >= .) continue
+    for (i = j + 1; i <= m; i++) {
+      if (idx[i] == 0) continue
+      b = idx[i]
+      if (V[b, b] <= 0 | V[b, b] >= .) continue
+      if (E[j, i] >= .) continue
+      V[a, b] = E[j, i]
+      V[b, a] = E[j, i]
+      nsp++
+    }
+  }
+  if (nsp == 0) return(0)
+  st_replacematrix(vn, V)
+  return(nsp)
 }
 
 end

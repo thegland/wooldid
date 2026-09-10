@@ -13,7 +13,10 @@
 *     legacy e(boot_pctl_mainresults)
 * S6  CS-57: e(perm_bandlo_*)/e(perm_bandhi_*) exist for every permuted estimand and
 *     equal the deprecated e(perm_lb_*)/e(perm_ub_*)
-* S7  CS-4: e(wdid_vcvstate) reports what e(V) actually is - analytic-diagonal on the
+* S8  PS-62: the within-family event-study covariance blocks are spliced into e(V), every
+*     cross-family cell stays zero, and e(wdid_vblocks)/e(wdid_vblockn) name what landed
+* S7  CS-4: e(wdid_vcvstate) reports what e(V) actually is - analytic-blocks once an event
+*     study exists (PS-62), analytic-diagonal on the
 *     analytic path, bootstrap under bootstrap(), absent when no e(V) was posted
 clear all
 set more off
@@ -157,11 +160,24 @@ local hasv7b = _rc == 0
 * while e(clustvar) names the design and stands either way
 local lab7b = "`e(vce)'`e(vcetype)'"
 local cvar7b = "`e(clustvar)'"
-if "`st7'" != "analytic-diagonal" | `hasv7' != 1 | "`st7b'" != "absent" | `hasv7b' != 0 | "`lab7b'" != "" | "`cvar7b'" != "unit" {
+* RE-PINNED 2026-09-10 (PS-62): this run has an event study, so its e(V) carries the
+* family's genuine covariance blocks and the state reads analytic-blocks. The
+* analytic-DIAGONAL state is still exercised - it is what a run with no event study
+* leaves - so both words are checked rather than one replacing the other
+if "`st7'" != "analytic-blocks" | `hasv7' != 1 | "`st7b'" != "absent" | `hasv7b' != 0 | "`lab7b'" != "" | "`cvar7b'" != "unit" {
   dis as error "S7 FAIL: analytic state=`st7' hasV=`hasv7'; fastnose state=`st7b' hasV=`hasv7b' vce+vcetype=[`lab7b'] clustvar=`cvar7b'"
   local ++fails
 }
 else dis as result "S7 PASS: analytic=`st7' (V present), fastnose=`st7b' (no V, vce cleared, clustvar=`cvar7b')"
+use `panel', clear
+qui wooldid y unit t ttre, att cluster(unit)
+local st7c = "`e(wdid_vcvstate)'"
+local vb7c = "`e(wdid_vblocks)'"
+if "`st7c'" != "analytic-diagonal" | "`vb7c'" != "" {
+  dis as error "S7d FAIL: a run with no event study must stay analytic-diagonal: state=`st7c' blocks=[`vb7c']"
+  local ++fails
+}
+else dis as result "S7d PASS: no event study -> `st7c', no blocks"
 * the permute fast-mode default posts no analytic variance; permanalyticse restores it,
 * and the state has to follow e(V) in both directions or the wire is only half-checked
 use `panel', clear
@@ -170,11 +186,67 @@ local st6b = "`e(wdid_vcvstate)'"
 cap confirm matrix e(V)
 local hasv6b = _rc == 0
 local vce6 = "`e(vce)'"
-if "`st6'" != "absent" | "`vce6a'" != "" | "`st6b'" != "analytic-diagonal" | `hasv6b' != 1 | "`vce6'" != "cluster" {
+* RE-PINNED 2026-09-10 (PS-62): permute() reposts no covariance of its own, so the
+* matrix under permanalyticse is still the worker's spliced one and the label must keep
+* saying so rather than flattening back to analytic-diagonal
+if "`st6'" != "absent" | "`vce6a'" != "" | "`st6b'" != "analytic-blocks" | `hasv6b' != 1 | "`vce6'" != "cluster" {
   dis as error "S7c FAIL: fast-mode state=`st6' vce+vcetype=[`vce6a']; permanalyticse state=`st6b' hasV=`hasv6b' vce=`vce6'"
   local ++fails
 }
 else dis as result "S7c PASS: permute fast-mode=`st6' (no V, vce cleared), permanalyticse=`st6b' (V present, vce=`vce6')"
+
+* ---- S8 PS-62: the spliced blocks are the family covariance, and nothing else moved ----
+* Every off-diagonal wooldid writes must be the corresponding e(V_es_*) cell exactly; every
+* cell BETWEEN two families must still be zero, because those covariances are not estimated
+* and a zero there means "absent", not "independent".
+use `panel', clear
+qui wooldid y unit t ttre, att att_it cluster(unit) esprelength(2) espostlength(2)
+local s8st = "`e(wdid_vcvstate)'"
+local s8fam = "`e(wdid_vblocks)'"
+local s8n = e(wdid_vblockn)
+mata:
+  V = st_matrix("e(V)")
+  vs = st_matrixcolstripe("e(V)")
+  fams = tokens(st_local("s8fam"))
+  bad = 0
+  hit = 0
+  for (f = 1; f <= cols(fams); f++) {
+    E = st_matrix("e(V_es_" + fams[f] + ")")
+    es = st_matrixcolstripe("e(V_es_" + fams[f] + ")")
+    px = "ES_" + fams[f] + "_"
+    for (j = 1; j <= rows(es); j++) {
+      for (i = j + 1; i <= rows(es); i++) {
+        a = 0
+        b = 0
+        for (r = 1; r <= rows(vs); r++) {
+          if (vs[r, 2] == px + es[j, 2]) a = r
+          if (vs[r, 2] == px + es[i, 2]) b = r
+        }
+        if (a == 0 | b == 0) continue
+        if (V[a, a] <= 0 | V[a, a] >= . | V[b, b] <= 0 | V[b, b] >= .) continue
+        if (E[j, i] >= .) continue
+        hit = hit + 1
+        if (V[a, b] != E[j, i] | V[b, a] != E[j, i]) bad = bad + 1
+      }
+    }
+  }
+  ka = 0
+  kb = 0
+  for (r = 1; r <= rows(vs); r++) {
+    if (vs[r, 2] == "ES_att_post0") ka = r
+    if (vs[r, 2] == "ES_att_it_post0") kb = r
+  }
+  st_numscalar("s8hit", hit)
+  st_numscalar("s8bad", bad)
+  st_numscalar("s8cross", (ka > 0 & kb > 0 ? V[ka, kb] : .))
+  st_numscalar("s8found", (ka > 0 & kb > 0))
+end
+di "S8 state=`s8st' families=[`s8fam'] pairs=`s8n' checked=" s8hit " mismatched=" s8bad " cross-family cell=" s8cross
+if "`s8st'" != "analytic-blocks" | "`s8fam'" == "" | s8hit < 1 | s8bad != 0 | `s8n' != s8hit | s8found != 1 | s8cross != 0 {
+  dis as error "S8 FAIL: state=`s8st' families=[`s8fam'] posted pairs=`s8n' checked=" s8hit " mismatched=" s8bad " cross=" s8cross
+  local ++fails
+}
+else dis as result "S8 PASS: `s8n' off-diagonal pair(s) across [`s8fam'] equal e(V_es_*) exactly; the att-vs-att_it cell is still 0"
 
 if `fails' == 0 dis as result "STORED_ALL_PASS"
 else dis as error "STORED_FAILS=`fails'"

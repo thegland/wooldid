@@ -16,6 +16,7 @@ scalar|r2adj|+1.9ff7db435bcaaX-001
 scalar|rmse|+1.f447d1a2c45e0X-002
 scalar|rss|+1.d7a4d8b935943X+006
 scalar|N_dropped|+0.0000000000000X-3ff
+scalar|wdid_vblockn|+1.8000000000000X+002
 scalar|level|+1.7c00000000000X+006
 scalar|wdid_fcncell|+1.0000000000000X+3ff
 macro|wdid_replayv|2
@@ -30,7 +31,8 @@ macro|wdid_estimands|att
 macro|wdid_vcespec|vce(robust)
 macro|vcetype|Robust
 macro|vce|robust
-macro|wdid_vcvstate|analytic-diagonal
+macro|wdid_vblocks|att
+macro|wdid_vcvstate|analytic-blocks
 macro|estimate_type|pooled_reference_period
 macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre [aw=w], att robust unconditionalse esprelength(2) espostlength(2)
@@ -59,26 +61,26 @@ mat|V|2|6|+0.0000000000000X-3ff
 mat|V|3|1|+0.0000000000000X-3ff
 mat|V|3|2|+0.0000000000000X-3ff
 mat|V|3|3|+1.a2104558343d5X-007
-mat|V|3|4|+0.0000000000000X-3ff
-mat|V|3|5|+0.0000000000000X-3ff
-mat|V|3|6|+0.0000000000000X-3ff
+mat|V|3|4|+1.62ad78372a163X-009
+mat|V|3|5|+1.af28c95144556X-009
+mat|V|3|6|+1.18462a153fb4eX-007
 mat|V|4|1|+0.0000000000000X-3ff
 mat|V|4|2|+0.0000000000000X-3ff
-mat|V|4|3|+0.0000000000000X-3ff
+mat|V|4|3|+1.62ad78372a163X-009
 mat|V|4|4|+1.85b1a63e6fd56X-007
-mat|V|4|5|+0.0000000000000X-3ff
-mat|V|4|6|+0.0000000000000X-3ff
+mat|V|4|5|+1.90a577f1d1a1aX-009
+mat|V|4|6|+1.eac3219a431f2X-009
 mat|V|5|1|+0.0000000000000X-3ff
 mat|V|5|2|+0.0000000000000X-3ff
-mat|V|5|3|+0.0000000000000X-3ff
-mat|V|5|4|+0.0000000000000X-3ff
+mat|V|5|3|+1.af28c95144556X-009
+mat|V|5|4|+1.90a577f1d1a1aX-009
 mat|V|5|5|+1.aba10d827db5fX-007
-mat|V|5|6|+0.0000000000000X-3ff
+mat|V|5|6|+1.05dc409787c50X-008
 mat|V|6|1|+0.0000000000000X-3ff
 mat|V|6|2|+0.0000000000000X-3ff
-mat|V|6|3|+0.0000000000000X-3ff
-mat|V|6|4|+0.0000000000000X-3ff
-mat|V|6|5|+0.0000000000000X-3ff
+mat|V|6|3|+1.18462a153fb4eX-007
+mat|V|6|4|+1.eac3219a431f2X-009
+mat|V|6|5|+1.05dc409787c50X-008
 mat|V|6|6|+1.497df1d75ca50X-006
 matnames|wdidmainresults|6x7|main:att pretreatment:att ES_att:pre2 ES_att:pre1 ES_att:post0 ES_att:post1|estimate se t p lb_95ci ub_95ci relyr
 mat|wdidmainresults|1|1|+1.73a2f01a5bae8X-001
