@@ -634,6 +634,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 		qui gen `ifvar' = 1
   }
 
+	* BS-37 (bug sweep 2026-09-06, author ruling 2026-09-07 "keep equals-one, fix the
+	* reporting"): the exact-one rule STAYS. It is what keeps a bare flag variable's
+	* missing and out-of-range values out of the sample, and all six forwarded copies of
+	* the expression share it (dropcount below, wooldid_validate's ifassert, permctl's
+	* insmp, permrun's and bootrun's smp), so the estimation sample, the permutation
+	* design and the bootstrap frame agree. What was wrong was the silence: rows the rule
+	* alone removed drew no message and were counted nowhere - "if flag" with flag in
+	* {1,2} lost the flag == 2 rows under a header reading "0 obs dropped". Count off
+	* `ifvar' rather than off (`if') so the count is exactly what the rule did, and count
+	* BEFORE the markout replace below, which would zero these rows for an unrelated
+	* reason. wdvifexcl is initialised here so the fold at the dropped-observation site is
+	* well-formed on every path. Body in a subprogram: the worker is at the size ceiling
+	local wdvifexcl 0
+	if "`if'" != "" wooldid_ifrule , ifv(`ifvar')
+
 	* save this for counting to see if we drop observations
 	local dropcount ((`if') == 1)
 	if "`if'" == "" local dropcount (1 == 1)
@@ -1363,8 +1378,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`verbose'" == "verbose" dis as text "Wooldid has finished regression estimation and is preparing to begin margins calculations."
 
 	* check on dropped obs
+	* BS-37 (author ruling 2026-09-07): `dropcount' is the SAME exact-one expression the
+	* sample rule uses, so it cannot see the rows that rule alone removed - a user who
+	* typed "if flag" with flag in {1,2} specified 72 rows, got 60, and was told 0 were
+	* dropped, contradicting the e(N_dropped) definition in the help. Add those rows. No
+	* double count: a row with `ifvar' outside {0,1} has (`if') != 1 in double as well, so
+	* `dropcount' is false there. wdvifexcl is 0 whenever the if() expression is a
+	* comparison - i.e. on every ordinary if(), which is why no blessed baseline moves
 	qui count if `dropcount' & e(sample) == 0
-	local droppedobs = r(N)
+	local droppedobs = r(N) + `wdvifexcl'
 
   * grab some items from the model - sample indicator variable, residual degrees of freedom, etc
   tempvar esamp
@@ -2597,7 +2619,23 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           * subgroup the comparison pass does not run at all, so the call stays.
           if wordcount("`sglist'") > 1 local sgeff3_`item' 1
           else {
-            qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups') `poismarginstext' `marginsdof' `fcnoes'
+            * BS-28 (author-ruled 2026-09-07): this dedicated call writes the SAME displayed
+            * cells the screened pwcompare pass writes when more than one subgroup is realized,
+            * so it takes the same F-collapse screen (see wooldid_fcdeg): a flagged call is
+            * re-issued on the full data, and every later call runs there too (`fcsg' disarms,
+            * `fcnoes' clears). `levels' is right here - nothing contrasts these rows, since the
+            * pairwise and joint subgroup machinery lives on the pwcompare pass, which does not
+            * run at one realized subgroup - so at n = 1 the predicate reduces to the omission
+            * marker and a missing / non-positive level variance. The call is not posted, so no
+            * un-post step is needed.
+            forval fcpass = 1/2 {
+              qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre') noestimcheck over(`subgroups') `poismarginstext' `marginsdof' `fcnoes'
+              if `fcsg' wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') levels `verbose'
+              if `fcsg' == 0 | `fcrerun' == 0 continue, break
+              restore, preserve
+              local fcnoes
+              local fcsg 0
+            }
             local matrixstartgrab floor(`=colsof(r(b))'/2)+1
             matrix `f9tab' = r(table)
             if rowsof(`f9tab') < 6 {
@@ -2621,7 +2659,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             * fallback - the deferral must never be able to lose the level margins.
             if wordcount("`sglist'") > 1 local sgeff3pre_`item' 1
             else {
-              qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck over(`subgroups') `poismarginstext' `marginsdof' `fcnoes'
+              * BS-28 (author-ruled 2026-09-07): screened like the posttreatment twin above.
+              * `levels' additionally keeps the contrast test off a pre-period subpopulation
+              * that can realize MORE than one subgroup even where `sglist' (glevelsof on
+              * t >= ttre) holds one word - an unbalanced panel whose pre-period units have no
+              * post rows - and nothing contrasts these level rows either way.
+              forval fcpass = 1/2 {
+                qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck over(`subgroups') `poismarginstext' `marginsdof' `fcnoes'
+                if `fcsg' wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') levels `verbose'
+                if `fcsg' == 0 | `fcrerun' == 0 continue, break
+                restore, preserve
+                local fcnoes
+                local fcsg 0
+              }
               local matrixstartgrab floor(`=colsof(r(b))'/2)+1
               matrix `f9tab' = r(table)
               if rowsof(`f9tab') < 6 {
@@ -2895,7 +2945,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             * refused. the plain over(`subgroups') call does NOT refuse here (it merely
             * returns the single realized subgroup), so run it now, after the restore
             if "`sgeff3pre_`item''" != "" {
-              qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck over(`subgroups') `poismarginstext' `marginsdof' `fcnoes'
+              * BS-28 (author-ruled 2026-09-07): screened like the two twins above. This is a
+              * LIVE site, not a no-op: the pwcompare loop just above breaks on `fcprerc' != 0
+              * WITHOUT restoring, so `fcsg' can still be 1 here. `fcpass' is free to reuse -
+              * that enclosing forval has already exited. Not posted (no `sgpost'), and the
+              * estimates were restored on the line above, so no un-post step is needed.
+              forval fcpass = 1/2 {
+                qui margins [`weight'=`w_`item''] , `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0) noestimcheck over(`subgroups') `poismarginstext' `marginsdof' `fcnoes'
+                if `fcsg' wooldid_fcdeg , safety(`safetyinput') guard(`fcguard') levels `verbose'
+                if `fcsg' == 0 | `fcrerun' == 0 continue, break
+                restore, preserve
+                local fcnoes
+                local fcsg 0
+              }
               local matrixstartgrab floor(`=colsof(r(b))'/2)+1
               matrix `f9tab' = r(table)
               if rowsof(`f9tab') < 6 {
@@ -5108,6 +5170,29 @@ version 16.0
     qui drop `antictag'
   }
   qui drop `rawref' `rawrefobs'
+end
+
+* BS-37 (bug sweep 2026-09-06, author ruling 2026-09-07): wooldid keeps the rows where
+* the if() expression equals exactly 1; Stata's own if-qualifier keeps every nonzero
+* value, missing included. The rule is deliberate - it is the reason a bare flag
+* variable cannot drag its missing and out-of-range rows into the sample - and every
+* forwarded copy of the expression uses it, so the estimation sample, the permutation
+* design and the bootstrap frame agree. The defect was the silence: the rows the rule
+* alone removed drew no message and were counted nowhere. Name them, with the count,
+* and hand the count back so the dropped-observation total can include it. A
+* subprogram because wooldid_worker sits at Stata's per-program compiled-size ceiling.
+* `ifv' is the CALLER's tempvar, passed by name (a tempvar made here would die on
+* return); the count comes back by c_local into the caller's `wdvifexcl'
+cap prog drop wooldid_ifrule
+prog def wooldid_ifrule
+version 16.0
+  syntax , ifv(string)
+  * missing is excluded from the count on purpose: excluding missing-valued rows is the
+  * POINT of the rule, not an accident of it, and the help now states it under Syntax
+  qui count if `ifv' != 0 & `ifv' != 1 & `ifv' < .
+  local wdvifn = r(N)
+  if `wdvifn' > 0 dis as text "Caution: the if() expression is nonzero but not exactly 1 on `wdvifn' observation(s). wooldid keeps only the rows where it equals exactly 1, where Stata's own if-qualifier keeps any nonzero value (missing included), so those observations are excluded here and are counted in the dropped-observation total. Write the restriction as a comparison - for example, if <var> != 0 - for Stata's usual behaviour."
+  c_local wdvifexcl `wdvifn'
 end
 
 * ============================================================================
@@ -8982,6 +9067,16 @@ version 16.0
   }
   if `ptpdfok' local ptpcrit = invttail(`dfr', (100 - `level')/200)
   else local ptpcrit = invnormal(1 - (100 - `level')/200)
+  * BS-11 (bug sweep 2026-09-06, author ruling 2026-09-07, "pin the pre-test at five
+  * percent"): the NIS (any-pre-period-individually-significant) pre-test gets its own
+  * critical value, level()-independent. ptpcrit above is a CONFIDENCE level and belongs
+  * to the slope interval (F044); the NIS threshold is a TEST size, and the mdt_wald leg
+  * below is hard-coded at .95, so letting level() move one and not the other powered the
+  * two detectable-trend columns of one table at different sizes. Written as (100 - 95)/200
+  * rather than .025 so that at c(level) = 95 the expression is character-identical to
+  * ptpcrit's and the default-level baselines cannot shift by an ulp.
+  if `ptpdfok' local ptpniscrit = invttail(`dfr', (100 - 95)/200)
+  else local ptpniscrit = invnormal(1 - (100 - 95)/200)
 
   * hbar: estimand-weighted mean post-treatment relative period over the FULL post
   * support of the estimation sample - the pooled estimands aggregate over all post
@@ -9136,7 +9231,11 @@ version 16.0
     if "`ptpty'" == "att_it" | "`ptpty'" == "ame_it" local ptphbar `ptphbar_it'
 
     * NIS setup: the pre-test Roth's pretrends package powers - reject when ANY pre
-    * coefficient is individually significant (using wooldid's own critical value)
+    * coefficient is individually significant at the 5% level. BS-11 (author ruling
+    * 2026-09-07): that 5% is deliberate and level()-independent - it matches the .95
+    * hard-coded in the mdt_wald leg below and Roth's own pretrends convention, so the
+    * two detectable-trend columns power tests of the SAME size. level() reaches the
+    * slope interval (ptpcrit) and nothing here; the threshold below is ptpniscrit
     * exact quadrature cost explodes with dimension (~2.9s per evaluation at k=6, ~85
     * evaluations per power level per type); cap the NIS column at k <= 4 and point
     * larger designs at the pretrends package, which consumes e(b_es_*)/e(V_es_*)
@@ -9149,7 +9248,7 @@ version 16.0
         matrix `ptpsd'[1, `ptpr'] = sqrt(`ptpS'[`ptpr', `ptpr'])
       }
       matrix `ptpmrow' = `ptpm''
-      cap mata: st_local("ptpnissize", strofreal(1 - mvnormalcvqp(-`ptpcrit'*st_matrix("`ptpsd'"), `ptpcrit'*st_matrix("`ptpsd'"), J(1, `ptpk', 0), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
+      cap mata: st_local("ptpnissize", strofreal(1 - mvnormalcvqp(-`ptpniscrit'*st_matrix("`ptpsd'"), `ptpniscrit'*st_matrix("`ptpsd'"), J(1, `ptpk', 0), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
       if _rc != 0 local ptpnisok 0
       else if missing(real("`ptpnissize'")) local ptpnisok 0
     }
@@ -9190,7 +9289,7 @@ version 16.0
           local ptppw 0
           while `ptppw' < `ptplev'/100 & `ptpiter' < 60 {
             local ptpghi = 2*`ptpghi'
-            cap mata: st_local("ptppw2", strofreal(1 - mvnormalcvqp(-`ptpcrit'*st_matrix("`ptpsd'"), `ptpcrit'*st_matrix("`ptpsd'"), `ptpghi'*st_matrix("`ptpmrow'"), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
+            cap mata: st_local("ptppw2", strofreal(1 - mvnormalcvqp(-`ptpniscrit'*st_matrix("`ptpsd'"), `ptpniscrit'*st_matrix("`ptpsd'"), `ptpghi'*st_matrix("`ptpmrow'"), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
             if _rc != 0 local ptpiter 999
             else local ptppw = real("`ptppw2'")
             local ++ptpiter
@@ -9198,14 +9297,14 @@ version 16.0
           if `ptpiter' < 999 {
             forval ptpbi = 1/80 {
               local ptpgmid = (`ptpglo' + `ptpghi')/2
-              cap mata: st_local("ptppw2", strofreal(1 - mvnormalcvqp(-`ptpcrit'*st_matrix("`ptpsd'"), `ptpcrit'*st_matrix("`ptpsd'"), `ptpgmid'*st_matrix("`ptpmrow'"), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
+              cap mata: st_local("ptppw2", strofreal(1 - mvnormalcvqp(-`ptpniscrit'*st_matrix("`ptpsd'"), `ptpniscrit'*st_matrix("`ptpsd'"), `ptpgmid'*st_matrix("`ptpmrow'"), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
               if _rc == 0 {
                 if real("`ptppw2'") < `ptplev'/100 local ptpglo = `ptpgmid'
                 else local ptpghi = `ptpgmid'
               }
             }
             local ptpgn = (`ptpglo' + `ptpghi')/2
-            cap mata: st_local("ptppw2", strofreal(1 - mvnormalcvqp(-`ptpcrit'*st_matrix("`ptpsd'"), `ptpcrit'*st_matrix("`ptpsd'"), `ptpgn'*st_matrix("`ptpmrow'"), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
+            cap mata: st_local("ptppw2", strofreal(1 - mvnormalcvqp(-`ptpniscrit'*st_matrix("`ptpsd'"), `ptpniscrit'*st_matrix("`ptpsd'"), `ptpgn'*st_matrix("`ptpmrow'"), vech(st_matrix("`ptpS'"))', 1000), "%21.0g"))
             if _rc == 0 {
               if abs(real("`ptppw2'") - `ptplev'/100) < 1e-4 {
                 matrix `ptpmat'[`ptplr', 3] = `ptpgn'
@@ -9252,6 +9351,7 @@ version 16.0
     matlist `ptpmat', format(%12.4g)
     dis as text "    note: mdt_wald powers the joint pre-trend test above; mdt_nis powers the test that any"
     dis as text "    pre-period coefficient is individually significant (the convention of Roth's pretrends package)."
+    dis as text "    Both pre-tests are at the 5% level, whatever level() is in force; level() moves the slope CI only."
     if "`pois'" == "poisson" & "`poisexp'" == "" dis as text "    note: poisson event-study coefficients are on the linear-index (xb) scale, and so are these diagnostics."
 
     * ereturns (matrix uses copy so the object survives if this block is ever resited)
@@ -9596,6 +9696,7 @@ version 16.0
     matlist e(roth_power_`ptpty'), format(%12.4g)
     dis as text "    note: mdt_wald powers the joint pre-trend test above; mdt_nis powers the test that any"
     dis as text "    pre-period coefficient is individually significant (the convention of Roth's pretrends package)."
+    dis as text "    Both pre-tests are at the 5% level, whatever level() is in force; level() moves the slope CI only."
     if "`poisson'" == "poisson" & "`e(wdid_poisexp)'" == "" dis as text "    note: poisson event-study coefficients are on the linear-index (xb) scale, and so are these diagnostics."
   }
   }

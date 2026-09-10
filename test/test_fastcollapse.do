@@ -70,6 +70,11 @@
 *    variable is non-missing. Both halves are pinned - the caller's guarantee that no missing
 *    dose can reach the worker, and wooldid_fcol called DIRECTLY on a constructed fixture,
 *    which is the only way to exercise a defensive guard.
+* F13 (BS-28, 2026-09-07) THE ONE-REALIZED-SUBGROUP LEVEL MARGINS TAKE THE SCREEN. The
+* dedicated margins call that runs when only one subgroup is realized, and the pre-period
+* fallback after a deferred pwcompare, now sit inside the same two-pass wooldid_fcdeg
+* screen the pwcompare pass uses. All three legs assert the guard did NOT fire and the
+* numbers match fullprecisionslow: a spurious fire on a healthy run is the risk here.
 * Prints FASTCOLLAPSE_ALL_PASS iff all pass.
 clear all
 local REPO ..
@@ -1353,6 +1358,89 @@ local f16rcd = _rc
 di "F16 cfxlattice alone: rc=`f16rc' fcol=`f16col' fcskip=[`f16skip'] | +fastcollapse rc=`f16rcb' | makecfxplots+cfxlattice+fastcollapse rc=`f16rcc' | lattice+fastcollapse rc=`f16rcd'"
 if `f16rc' != 0 | `f16col' != 1 | "`f16skip'" != "" | `f16rcb' != 0 | `f16rcc' != 198 | `f16rcd' != 198 {
   di as error "F16 FAIL: cfxlattice() alone must not decide the collapse"
+  local ++fails
+}
+
+* ---- F13 (BS-28): the one-realized-subgroup level margins take the collapse screen ----
+* the dominant risk of BS-28 is a SPURIOUS fire on a healthy run, so all three legs assert
+* the guard stayed empty and the numbers did not move against fullprecisionslow
+
+* F13a SITE A/B inertness, no missing subgroup values
+use "`REPO'/test/data/dta_binary.dta", clear
+qui gen sg1 = 7
+qui wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sg1)
+local rc13a = _rc
+local fcol13a = e(wdid_fcol)
+local g13a = "`e(wdid_fcguard)'"
+matrix F13AD = e(wdidsgresults_7)
+use "`REPO'/test/data/dta_binary.dta", clear
+qui gen sg1 = 7
+qui wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sg1) fullprecisionslow
+local rc13as = _rc
+local g13as = "`e(wdid_fcguard)'"
+matrix F13AS = e(wdidsgresults_7)
+local d13a = mreldif(F13AD, F13AS)
+if `rc13a' != 0 | `rc13as' != 0 | `fcol13a' != 1 | "`g13a'" != "" | "`g13as'" != "" | `d13a' >= 1e-8 {
+  di as error "F13a FAIL: rc `rc13a'/`rc13as' fcol `fcol13a' guard [`g13a']/[`g13as'] mreldif `d13a'"
+  local ++fails
+}
+
+* F13b SITE A/B on the BS-28 exposure shape: one realized subgroup, treated rows with a
+* missing subgroup value, so the level margin is a strict subset of the main ATT
+use "`REPO'/test/data/dta_binary.dta", clear
+qui gen sgm1 = 1
+qui replace sgm1 = . if mod(i,5) == 0
+qui wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sgm1)
+local rc13b = _rc
+local nsg13b = wordcount("`e(wdid_sglist)'")
+local g13b = "`e(wdid_fcguard)'"
+matrix F13BD = e(wdidsgresults_1)
+use "`REPO'/test/data/dta_binary.dta", clear
+qui gen sgm1 = 1
+qui replace sgm1 = . if mod(i,5) == 0
+qui wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sgm1) fullprecisionslow
+local rc13bs = _rc
+local g13bs = "`e(wdid_fcguard)'"
+matrix F13BS = e(wdidsgresults_1)
+local d13b = 0
+if `rc13b' == 0 & `rc13bs' == 0 {
+  forval cc = 1/4 {
+    matrix F13BDC = F13BD[1..., `cc']
+    matrix F13BSC = F13BS[1..., `cc']
+    local dd = mreldif(F13BDC, F13BSC)
+    if `dd' > `d13b' local d13b = `dd'
+  }
+}
+if `rc13b' != 0 | `rc13bs' != 0 | `nsg13b' != 1 | "`g13b'" != "" | "`g13bs'" != "" | `d13b' >= 1e-8 {
+  di as error "F13b FAIL: rc `rc13b'/`rc13bs' sglist n=`nsg13b' guard [`g13b']/[`g13bs'] max col mreldif `d13b'"
+  local ++fails
+}
+
+* F13c SITE C: the pre-period fallback after a deferred multi-subgroup pwcompare
+use "`REPO'/test/data/dta_binary.dta", clear
+qui gen sg2 = 1
+qui replace sg2 = 2 if mod(i,7) == 0
+qui drop if sg2 == 2 & t < ttre - 1 & ttre != .
+qui wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(2) esfixedbaseperiod esrelativeto(-1) subgroups(sg2)
+local rc13c = _rc
+local nsg13c = wordcount("`e(wdid_sglist)'")
+local g13c = "`e(wdid_fcguard)'"
+matrix F13C1 = e(wdidsgresults_1)
+matrix F13C2 = e(wdidsgresults_2)
+use "`REPO'/test/data/dta_binary.dta", clear
+qui gen sg2 = 1
+qui replace sg2 = 2 if mod(i,7) == 0
+qui drop if sg2 == 2 & t < ttre - 1 & ttre != .
+qui wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(2) esfixedbaseperiod esrelativeto(-1) subgroups(sg2) fullprecisionslow
+local rc13cs = _rc
+local g13cs = "`e(wdid_fcguard)'"
+matrix F13C1S = e(wdidsgresults_1)
+matrix F13C2S = e(wdidsgresults_2)
+local d13c1 = mreldif(F13C1, F13C1S)
+local d13c2 = mreldif(F13C2, F13C2S)
+di "F13 BS-28: a rc=`rc13a'/`rc13as' fcol=`fcol13a' d=`d13a' | b rc=`rc13b'/`rc13bs' nsg=`nsg13b' d=`d13b' | c rc=`rc13c'/`rc13cs' nsg=`nsg13c' d=`d13c1'/`d13c2' guards [`g13a'][`g13b'][`g13c']"
+if `rc13c' != 0 | `rc13cs' != 0 | `nsg13c' != 2 | "`g13c'" != "" | "`g13cs'" != "" | `d13c1' >= 1e-8 | `d13c2' >= 1e-8 {
+  di as error "F13c FAIL: rc `rc13c'/`rc13cs' sglist n=`nsg13c' guard [`g13c']/[`g13cs'] mreldif `d13c1'/`d13c2'"
   local ++fails
 }
 

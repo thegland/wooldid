@@ -11,6 +11,10 @@
 * E4 panel A esprelength(1) espostlength(2): rc 0 (relative period -1 survives; 4 rows)
 * E5 regression pin: dta_binary att cluster(i) esprelength(2) espostlength(2) is unmoved
 *    (att .8235285, se .0629643, six rows: att, pre att, pre2 pre1 post0 post1; e(wdid_espre) 2)
+* E14 the if() qualifier's exact-one rule (bug sweep BS-37): "if flag" with flag in {1,2}
+*    keeps only the flag == 1 rows, now with a caution naming the count and those rows
+*    folded into e(N_dropped); "if flag != 0" and "if flag == 1" draw no caution; a
+*    missing-valued flag leaves the sample and is deliberately NOT counted
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -425,6 +429,110 @@ cap erase edges_e13.txt
 di "E13 ccc_absorb rc=`rc13' absorbed-message=`e13a' data-message=`e13b'"
 if `rc13' != 459 | `e13a' != 1 | `e13b' != 0 {
   di as error "E13 FAIL: an absorbed treatment term must not be reported as missing data"
+  local ++fails
+}
+
+* ---- E14 (BS-37): the exact-one if() rule is named and counted ----
+cap program drop scanEJ
+program define scanEJ, rclass
+  args lf needle
+  * Stata wraps a long display line in the log and continues it after "> "; rejoin
+  * continuations before searching (the test_si7 lesson)
+  tempname fh
+  local found 0
+  local acc
+  file open `fh' using "`lf'", read text
+  file read `fh' line
+  while r(eof) == 0 {
+    if substr(`"`macval(line)'"', 1, 2) == "> " {
+      local acc `"`macval(acc)'`=substr(`"`macval(line)'"', 3, .)'"'
+    }
+    else {
+      if strpos(`"`macval(acc)'"', `"`needle'"') != 0 local found 1
+      local acc `"`macval(line)'"'
+    }
+    file read `fh' line
+  }
+  if strpos(`"`macval(acc)'"', `"`needle'"') != 0 local found 1
+  file close `fh'
+  return scalar found = `found'
+end
+
+cap program drop mkbs37
+program define mkbs37
+  clear
+  set obs 12
+  qui gen i = _n
+  qui gen ttre = cond(i <= 6, 4, .)
+  qui expand 6
+  qui bysort i: gen t = _n
+  qui gen y = 1.5*(t >= ttre & ttre < .) + 0.3*i + 0.2*t
+  qui gen flag = 1
+  qui replace flag = 2 if inlist(i, 11, 12)
+end
+
+local needle37 nonzero but not exactly 1 on 12 observation(s)
+
+mkbs37
+qui log using edges_e14a.txt, text replace name(ed)
+cap noi wooldid y i t ttre if flag, att
+local rc14a = _rc
+qui log close ed
+local n14a = e(N)
+local d14a = e(N_dropped)
+scanEJ edges_e14a.txt "`needle37'"
+local c14a = r(found)
+cap erase edges_e14a.txt
+
+mkbs37
+qui log using edges_e14b.txt, text replace name(ed)
+cap noi wooldid y i t ttre if flag != 0, att
+local rc14b = _rc
+qui log close ed
+local n14b = e(N)
+local d14b = e(N_dropped)
+scanEJ edges_e14b.txt "`needle37'"
+local c14b = r(found)
+cap erase edges_e14b.txt
+
+mkbs37
+qui log using edges_e14c.txt, text replace name(ed)
+cap noi wooldid y i t ttre if flag == 1, att
+local rc14c = _rc
+qui log close ed
+local n14c = e(N)
+local d14c = e(N_dropped)
+scanEJ edges_e14c.txt "`needle37'"
+local c14c = r(found)
+cap erase edges_e14c.txt
+
+mkbs37
+qui replace flag = . if i == 10
+qui log using edges_e14d.txt, text replace name(ed)
+cap noi wooldid y i t ttre if flag, att
+local rc14d = _rc
+qui log close ed
+local n14d = e(N)
+local d14d = e(N_dropped)
+scanEJ edges_e14d.txt "`needle37'"
+local c14d = r(found)
+cap erase edges_e14d.txt
+
+di "E14 BS-37: bare rc=`rc14a' caution=`c14a' N=`n14a' drop=`d14a' | !=0 rc=`rc14b' caution=`c14b' N=`n14b' drop=`d14b' | ==1 rc=`rc14c' caution=`c14c' N=`n14c' drop=`d14c' | missing rc=`rc14d' caution=`c14d' N=`n14d' drop=`d14d'"
+if `rc14a' != 0 | `c14a' != 1 | `n14a' != 60 | `d14a' != 12 {
+  di as error "E14a FAIL: the bare-flag run does not name and count the rows the exact-one rule removed"
+  local ++fails
+}
+if `rc14b' != 0 | `c14b' != 0 | `n14b' != 72 | `d14b' != 0 {
+  di as error "E14b FAIL: a comparison if() must draw no caution and keep every row"
+  local ++fails
+}
+if `rc14c' != 0 | `c14c' != 0 | `n14c' != 60 | `d14c' != 0 {
+  di as error "E14c FAIL: an ordinary == comparison must contribute nothing to the fold"
+  local ++fails
+}
+if `rc14d' != 0 | `c14d' != 1 | `n14d' != 54 | `d14d' != 12 {
+  di as error "E14d FAIL: missing-valued rows must leave the sample and stay out of the count"
   local ++fails
 }
 

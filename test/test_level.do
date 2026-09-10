@@ -15,6 +15,10 @@
 *    range check still refuses level(5)
 * L11 impvalues at level(90): the Ibragimov-Muller interval follows level() (bug sweep BS-5);
 *    b/se/t/p bit-identical to the default run, the 95% interval pinned, columns lb_90ci
+* L12 pretrendpower: the NIS pre-test alpha is pinned at 5% and does NOT follow level()
+*    (bug sweep BS-11): e(roth_nissize_att) and every e(roth_power_att) cell identical at
+*    level(90), the default-level numbers pinned, the slope CI still level-dependent, and
+*    mdt_nis strictly positive at level(50) where it used to print an exact 0
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -209,6 +213,32 @@ if abs(L11A[`k',5] - .61519121) > 1e-7 | abs(L11A[`k',6] - .87494362) > 1e-7 | a
   di as error "L11 FAIL: the impvalues interval does not follow level()"
   local ++fails
 }
+
+* ---- L12 the Roth NIS pre-test alpha is pinned at 5% and ignores level() (BS-11)
+set level 95
+use data/dta_binary.dta, clear
+qui wooldid y i t ttre, att cluster(i) esfixedbaseperiod esprelength(2) espostlength(2) pretrendpower(80)
+matrix L12A = e(roth_power_att)
+local n12a = e(roth_nissize_att)
+local s12a = e(roth_slope_ll_att)
+use data/dta_binary.dta, clear
+qui wooldid y i t ttre, att cluster(i) esfixedbaseperiod esprelength(2) espostlength(2) pretrendpower(80) level(90)
+matrix L12B = e(roth_power_att)
+local n12b = e(roth_nissize_att)
+local s12b = e(roth_slope_ll_att)
+use data/dta_binary.dta, clear
+qui wooldid y i t ttre, att cluster(i) esfixedbaseperiod esprelength(2) espostlength(2) pretrendpower(50) level(50)
+matrix L12C = e(roth_power_att)
+local m12 = L12C[1,3]
+mata: st_local("d12", strofreal(max(abs(st_matrix("L12B") - st_matrix("L12A")))))
+di "L12 nissize " %12.8f `n12a' " vs " %12.8f `n12b' " | mdt_nis " %12.8f L12A[1,3] " vs " %12.8f L12B[1,3] " | mdt_wald " %12.8f L12A[1,2] " | max|roth_power diff|=`d12' | slope_ll " %12.8f `s12a' " vs " %12.8f `s12b' " | level(50) mdt_nis=" %12.8f `m12' " c(level)=" c(level)
+if abs(`n12a' - `n12b') > 1e-12 | `d12' > 1e-12 | abs(`n12a' - .07961397) > 1e-7 ///
+   | abs(L12A[1,3] - .20181734) > 1e-7 | abs(L12A[1,5] - .69718718) > 1e-7 | abs(L12A[1,2] - .22199476) > 1e-7 ///
+   | abs(`s12a' - `s12b') < 1e-8 | `m12' <= 0 | missing(`m12') {
+  di as error "L12 FAIL: the Roth NIS pre-test alpha is not pinned at 5% (or the default-level numbers moved)"
+  local ++fails
+}
+set level 95
 
 if `fails' == 0 di as result "LEVEL_ALL_PASS"
 else di as error "LEVEL_FAILS=`fails'"
