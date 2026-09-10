@@ -503,6 +503,13 @@ version 16.0
     dis as result " "
     global WOOLDID_LASTRC
   }
+  * P7 accident 2 (author ruling 2026-09-08): the analytic twin of the engine branches' own
+  * wooldid_cfxplots call. Runs only when the worker recorded a stem, which it does only on an
+  * analytic makecfxplots run with saveplots() - so neither engine reaches this, and a run that
+  * asked for no plot data is untouched. cap: a failure to write the data file must not lose an
+  * estimation that has already succeeded and printed, which is not true of the engine branches
+  * (there the same call also DRAWS the figures)
+  if "`e(wdid_cfxsave)'" != "" cap noi wooldid_cfxplots , saveplots(`e(wdid_cfxsave)') dataonly `e(wdid_cfxrepl)'
 end
 
 cap prog drop wooldid_worker
@@ -1244,7 +1251,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * count (distinct (_i,_t) pairs, x2 under contreat for the dose slopes), a lower
   * bound on the regression's variable demand, so an early refusal can only fire
   * when the late r(907) was certain anyway.
-  if "`safety'" != "off" {
+  * P6 (author ruling 2026-09-07): gate on the USER's safety() value, not the working copy.
+  * contreatwithin with contreat() rewrites the working copy to off (wooldid_validate), which
+  * silently disabled this preflight for a user who never asked for safety(off) - and the
+  * preflight is the difference between an early named error and a late r(907) mid-estimation.
+  * The relaxation contreatwithin needs is of the estimability screens, not of a variable count.
+  if "`safetyinput'" != "off" {
     tempvar si8tag
     qui gegen byte `si8tag' = tag(`i') if `ifstatement'
     qui count if `si8tag' == 1
@@ -4178,6 +4190,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * identifiers, breaking documented downstream row-name joins); rename to stable
   * lattice_# keys before posting
   ereturn hidden local wdid_cfxmats `cfxmatricestoreturn'
+  * P7 accident 2 (2026-09-08): on the ANALYTIC path the cfx figures come from marginsplot and
+  * saveplots() wrote only the .gph files - the <name>_cfx.dta of plotted points was produced
+  * under an engine and nowhere else. Record the stem here; the shell writes the file after
+  * e() is posted, since the writer reads e(). Posted only when there is something to write, so
+  * no existing run's e() surface changes
+  if "`saveplots'" != "" & "`makecfxplots'" != "" & "`wdrepmode'" == "" & "`bootstrap'`permute'" == "" & "`cfxmatricestoreturn'" != "" ereturn hidden local wdid_cfxsave "`saveplots'"
+  if "`e(wdid_cfxsave)'" != "" & "`replace'" != "" ereturn hidden local wdid_cfxrepl replace
   foreach matrix in `cfxmatricestoreturn' {
     wooldid_cfxstripe ``matrix''
     ereturn matrix `matrix' = ``matrix''
@@ -4620,9 +4639,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
   if "`subgroups'" != "" &   `esprelength' > 0  & `espostlength' == 0 & "`esposttrip'" == "" {
     local espostlength 1
-    if "`safety'" != "off" dis as text "Caution: espostlength set to 1 due to use of subgroups in conjunction with esprelength > 0."
+    * P6 (author ruling 2026-09-07): the line above RAISES the estimand window - the run reports
+    * a post-treatment horizon the user did not ask for - so the fact of the change is announced
+    * whatever safety() says. safety(off) suppresses the advice, never the disclosure: a silent
+    * change to WHAT IS BEING ESTIMATED is not a safety check, and the option has never meant
+    * "stop telling me what you did".
+    dis as text "Caution: espostlength set to 1 due to use of subgroups in conjunction with esprelength > 0."
     if "`safety'" != "off" dis as text "Without this modification, subgroups may crash if pre-treatment effects are not estimable for them."
-    if "`safety'" != "off" dis as text "Specify espostlength(-999) to override this issue. Specify safety(off) to avoid seeing this message."
+    if "`safety'" != "off" dis as text "Specify espostlength(-999) to override this issue. Specify safety(off) to suppress the explanation; the line above prints either way."
   }
 
 
@@ -5723,6 +5747,20 @@ version 16.0
   * 7 of 30 null datasets rejected at 5% with treated-cluster error sd 3 vs 1, against 6
   * of 30 for the raw coefficient). Say so; the run proceeds
   if "`ts'" != "" & "`clus'" == "`ivar'" dis as text "Caution: permtstat with cluster() at the i level. The studentized permutation statistic protects against treated clusters being atypical in variance only when the cluster-robust standard error is informative about them - many observations per treated cohort-period cell, with cluster() coarser than the cell. With one observation per i-period the treated cells are absorbed by their own cohort-period terms, the standard error cannot see their variance, and permtstat is not protected there either (MacKinnon and Webb 2020); the test presumes exchangeable clusters in both forms."
+  * P7 accident 1 (author ruling 2026-09-08; research_2026-09-08/engine_parity.md): permute()
+  * gets its OWN exchangeability caution rather than the bootstrap's few-cluster ones ported
+  * across. The failure modes differ in KIND. The pairs cluster bootstrap fails when clusters are
+  * not exchangeable as SAMPLING draws. A randomization test fails on two other axes: onset not
+  * being exchangeable in ASSIGNMENT, which is the design assumption and cannot be diagnosed
+  * here; and, diagnosably, too few ever-treated clusters, which makes the set of distinct
+  * assignments small - a limit no replication count can lift, because the draws repeat.
+  if "`ts'" == "" & "`clus'" == "`ivar'" dis as text "Caution: cluster() is at the i level and the permuted statistic is the coefficient itself. Randomization inference presumes clusters are exchangeable in ASSIGNMENT; it does not presume they are alike in variance, and the coefficient statistic carries no protection against a treated cluster whose errors are unusually dispersed. permtstat is MacKinnon and Webb's (2020) device for that, with the proviso that it protects only when the cluster-robust standard error can see the treated clusters' own variance - which at cluster() = i with one observation per i-period it cannot."
+  tempvar wdpttag
+  qui gegen byte `wdpttag' = tag(`clus') if `insmp' & `ntr' > 0
+  qui count if `wdpttag' == 1
+  local wdpntc = r(N)
+  cap drop `wdpttag'
+  if `wdpntc' > 0 & `wdpntc' < 6 dis as text "Caution: only `wdpntc' of the resampling clusters are ever treated, so the number of DISTINCT onset assignments is small. Sampled draws will repeat, and the reference set - hence the set of p-values the run can produce - is coarse however large permreps() is; the limit is the design, not the replication count. permexact enumerates the assignments and reports the exact floor instead of sampling them. This is the randomization-inference analogue of the bootstrap's few-treated-cluster caution, not the same condition: that one is about resampling variance, this one about how many assignments exist."
   if "`clus'" != "`ivar'" {
     tempvar cgrp cmin cmax
     qui gegen double `cgrp' = group(`clus') if `insmp'
@@ -11646,7 +11684,11 @@ version 16.0
   * margins results in an analytic run: same names, same titles, same saveplots() files,
   * plus one <saveplots>_cfx.dta holding every plotted point. Rows without both bounds
   * (cfxplotnose, fast mode, or a studentized cell with no analytic se) plot as points only
-  syntax [, SAVEplots(name) replace]
+  * P7 accident 2 (author ruling 2026-09-08): dataonly builds the plot dataset and writes
+  * <saveplots>_cfx.dta WITHOUT drawing or saving any graph. It exists for the ANALYTIC path,
+  * where marginsplot has already drawn the figures and saved the .gph files, and only the
+  * plot-data file was missing - an engine-only artifact for no reason anyone could state.
+  syntax [, SAVEplots(name) replace dataonly]
   if "`e(wdid_replayv)'" != "2" {
     dis as error "Error: wooldid_cfxplots is internal to wooldid and needs a stored wooldid estimation in e(); run wooldid first."
     error 301
@@ -11734,10 +11776,12 @@ version 16.0
     local band = r(N) > 0
     local ttl `"`e(wdid_cfxttl`k')'"'
     local ytx `"`e(wdid_cfxytx`k')'"'
-    if `band' twoway (rarea ll ul lattice, color(navy%50)) (connected b lattice, color(navy)), `xt' `xlab' ytitle(`"`ytx'"') title(`"`ttl'"') scale(.85) legend(off) name("`nm'", replace)
-    else twoway (connected b lattice, color(navy)), `xt' `xlab' ytitle(`"`ytx'"') title(`"`ttl'"') scale(.85) legend(off) name("`nm'", replace)
+    if "`dataonly'" == "" {
+      if `band' twoway (rarea ll ul lattice, color(navy%50)) (connected b lattice, color(navy)), `xt' `xlab' ytitle(`"`ytx'"') title(`"`ttl'"') scale(.85) legend(off) name("`nm'", replace)
+      else twoway (connected b lattice, color(navy)), `xt' `xlab' ytitle(`"`ytx'"') title(`"`ttl'"') scale(.85) legend(off) name("`nm'", replace)
+    }
     if "`saveplots'" != "" {
-      qui graph save "`saveplots'_`nm'.gph", `replace'
+      if "`dataonly'" == "" qui graph save "`saveplots'_`nm'.gph", `replace'
       tempfile part
       qui save `part'
       frame `af' {

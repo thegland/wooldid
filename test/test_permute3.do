@@ -1575,5 +1575,48 @@ if `q30hr' {
   }
 }
 
+* ---- Q31 P7 accident 1 (author ruling 2026-09-08): permute() has its OWN exchangeability
+* caution, not the bootstrap's few-cluster ones ported across. Two contracts. (a) With
+* cluster() at i and the DEFAULT statistic the run says the coefficient carries no protection
+* against a treated cluster of unusual variance and names permtstat; under permtstat that line
+* is replaced by the permtstat-specific one, never both. (b) The few-ever-treated-cluster line
+* is about how many DISTINCT assignments exist, so it must NOT fire on a fixture with many
+* treated clusters - a caution that always prints teaches users to ignore it.
+use "`DATA'/dta_binary", clear
+qui log using perm3_q31a.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20) rseed(31) dots(0)
+qui log close p3
+qui log using perm3_q31b.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20) rseed(31) permtstat dots(0)
+qui log close p3
+tempname fh
+local q31a_def 0
+local q31a_ts 0
+local q31a_few 0
+file open `fh' using perm3_q31a.txt, read text
+file read `fh' line
+while r(eof) == 0 {
+  if strpos(`"`line'"', "the permuted statistic is the coefficient itself") > 0 local q31a_def 1
+  if strpos(`"`line'"', "Caution: permtstat with cluster() at the i level") > 0 local q31a_ts 1
+  if strpos(`"`line'"', "of the resampling clusters are ever treated") > 0 local q31a_few 1
+  file read `fh' line
+}
+file close `fh'
+local q31b_def 0
+local q31b_ts 0
+file open `fh' using perm3_q31b.txt, read text
+file read `fh' line
+while r(eof) == 0 {
+  if strpos(`"`line'"', "the permuted statistic is the coefficient itself") > 0 local q31b_def 1
+  if strpos(`"`line'"', "Caution: permtstat with cluster() at the i level") > 0 local q31b_ts 1
+  file read `fh' line
+}
+file close `fh'
+if `q31a_def' != 1 | `q31a_ts' != 0 | `q31a_few' != 0 | `q31b_def' != 0 | `q31b_ts' != 1 {
+  dis as error "Q31 FAIL: default run (coef caution=`q31a_def' ts caution=`q31a_ts' few=`q31a_few'), permtstat run (coef=`q31b_def' ts=`q31b_ts')"
+  global pf = $pf + 1
+}
+else dis as result "Q31 PASS: the coefficient-statistic caution and the permtstat one are alternatives, and the few-treated-cluster line stays silent on an 80-cluster fixture"
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

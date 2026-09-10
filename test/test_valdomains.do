@@ -149,5 +149,31 @@ if _rc != 0 | e(b)[1,1] >= . {
   local ++fails
 }
 
+* ---- D8 P6 (author ruling 2026-09-07): a change to the ESTIMAND WINDOW is disclosed whatever
+* safety() says. subgroups() with a pre-treatment window and espostlength(0) silently raises
+* espostlength to 1, so the run reports a post-treatment horizon the user did not ask for. The
+* announcement used to be suppressed under safety(off). The fact of the change must now print
+* either way; safety(off) still suppresses the advice beneath it. ----
+use "`DATA'/dta_binary", clear
+qui log using vald_d8.txt, text replace name(vd8)
+cap noi wooldid y i t ttre, att cluster(i) subgroups(sg) esprelength(2) espostlength(0) safety(off)
+qui log close vd8
+local d8fact 0
+local d8advice 0
+tempname fh8
+file open `fh8' using vald_d8.txt, read text
+file read `fh8' line
+while r(eof) == 0 {
+  if strpos(`"`line'"', "espostlength set to 1 due to use of subgroups") > 0 local d8fact 1
+  if strpos(`"`line'"', "subgroups may crash if pre-treatment effects are not estimable") > 0 local d8advice 1
+  file read `fh8' line
+}
+file close `fh8'
+if `d8fact' != 1 | `d8advice' != 0 {
+  dis as error "D8 FAIL: under safety(off) the espostlength raise must be announced (fact=`d8fact') and the advice suppressed (advice=`d8advice')"
+  local ++fails
+}
+else dis as result "D8 PASS: safety(off) suppresses the advice, not the disclosure that the estimand window changed"
+
 if `fails' == 0 dis as result "VALDOMAINS_ALL_PASS"
 else dis as error "VALDOMAINS_FAILS=`fails'"
