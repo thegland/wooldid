@@ -10230,7 +10230,11 @@ version 16.0
      dis as result "  A percentile interval is not symmetric about the estimate, so the estimate plus or minus a critical value times the reported standard error will not in general reproduce the reported interval - this is the ordinary reading of a bootstrap table, not a wooldid peculiarity. Use bootdisplay(wald) for the normal/t package in which they do agree."
    }
    dis as result "  Every family is computed whichever is displayed: intervals in e(boot_ci_normal)/e(boot_ci_percentile)/e(boot_ci_bc), p-values in e(boot_p_percentile)/e(boot_p_bc), and the complete tables in the hidden e(boot_wald_mainresults)/e(boot_pctl_mainresults)/e(boot_bc_mainresults)."
-   if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  The rank-based coefficient p-values have resolution 2/" e(boot_completed) " = " %5.3f 2/e(boot_completed) ": a p printed as 0 means p below that (no completed replication on the far side of the null); it is stored as 0 in e(). The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
+   * F033 (author ruling 2026-09-07): the studentized family now uses the add-one rank, so
+   * its resolution and its floor are both 2/(completed + 1) and it never prints 0; the
+   * coefficient-draw families keep the plain share and can still print 0
+   if "`e(boot_tstat)'" == "1" dis as result "  The studentized coefficient p-values are add-one ranks over " e(boot_completed) " completed replications, so their resolution and their smallest attainable value are both 2/(n + 1) = " %5.3f 2/(e(boot_completed) + 1) ": a studentized p is never exactly 0. The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
+   else if "`wdbdsp'" != "wald" dis as result "  The rank-based coefficient p-values have resolution 2/" e(boot_completed) " = " %5.3f 2/e(boot_completed) ": a p printed as 0 means p below that (no completed replication on the far side of the null); it is stored as 0 in e(). The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
    if e(boot_v_posted) == 1 dis as result "  e(V) holds the bootstrap covariance (complete-replication listwise, e(boot_N_V) replications; the analytic covariance, when one existed, remains in the hidden e(V_analytic))."
    else dis as result "  The bootstrap covariance is stored in e(V_boot); no covariance is posted to e(V) for this run."
    * e(V) and e(df_r) carry the sd-family inference whichever family is displayed, so a
@@ -12518,8 +12522,9 @@ void wooldid_bootdw(string scalar fr, string scalar amode, real scalar R, string
 // error, and the observed statistic t_obs = b_obs/se_obs uses the observed run's
 // same-formula (analytic) standard error - the two have to be the same functional or the
 // statistic is not asymptotically pivotal and the refinement is lost. The tail count is
-// the rank of t_obs among the t_r WITHOUT add-one (see below: the p and the critical
-// value share one order-statistic rule, the one wooldid_bootci already uses).
+// the rank of t_obs among the t_r WITH the add-one Monte-Carlo-null adjustment (F033,
+// author ruling 2026-09-07); the critical value stays a plain order statistic, so the p
+// and the interval are no longer exact duals (see below).
 // Columns with fewer than 2 usable replications, or no usable observed standard error,
 // return missing and the caller leaves the Wald numbers in place.
 void wooldid_boottp(string scalar accname, string scalar seaccname, string scalar obsbname,
@@ -12530,12 +12535,18 @@ void wooldid_boottp(string scalar accname, string scalar seaccname, string scala
   // referred against t_obs = b_obs/se_obs (both analytic standard errors, so the two are
   // the same functional - the property the replication-clustering fix restores).
   // Author rulings 2026-09-03/04: the interval is EQUAL-TAILED from the signed quantiles,
-  // [b_obs - q_hi*se_obs, b_obs - q_lo*se_obs], NOT the earlier symmetric b +/- q(|t|)*se;
-  // the p is the rank of t_obs among the t_r, two-sided, with NO add-one and the SAME
-  // order-statistic rule wooldid_bootci uses for the coefficient families - so the p and
-  // the interval are exact duals up to the even-count averaging boundary measured there
-  // (this also retires the two defects where the p was add-one while the critical value
-  // was a plain order statistic, and where a third quantile rule coexisted). The former
+  // [b_obs - q_hi*se_obs, b_obs - q_lo*se_obs], NOT the earlier symmetric b +/- q(|t|)*se.
+  // The p is the two-sided rank of t_obs among the t_r under the ADD-ONE Monte-Carlo-null
+  // convention, 2*(1 + min(m0, m1))/(n + 1) (F033, author ruling 2026-09-07). Unlike the
+  // percentile family in wooldid_bootci, these draws ARE a null reference set: t_r is
+  // built from (b_r - b_obs), so it is recentred at the null and the observed statistic
+  // legitimately joins it - the same argument that already governs every bootstrapped
+  // joint statistic in the package. That makes one convention for every recentred
+  // rank-based p here, and removes the measured six-percent size at 99 replications.
+  // The price is that the p and the interval are no longer exact duals: the critical
+  // value stays a plain order statistic (wooldid_bootci's rule), so at the boundary an
+  // interval can exclude the null while the p sits just above the level. The p now has a
+  // floor of 2/(n + 1) and can no longer print as exactly 0. The former
   // BC-t twin (rows 6-9: z0 from the rank of 0 among the centred t-draws, then Efron's
   // shift on the reflected quantiles) is WITHDRAWN (quality review F003, author ruling
   // 2026-09-06): the shift moved the interval against the median bias, and percentile-t
@@ -12582,7 +12593,7 @@ void wooldid_boottp(string scalar accname, string scalar seaccname, string scala
     else out[5, k] = v[max((min((ceil(x), n)), 1))]
     m0 = sum(v :<= to)
     m1 = sum(v :>= to)
-    out[3, k] = min((1, (2*min((m0, m1)))/n))
+    out[3, k] = min((1, 2*(min((m0, m1)) + 1)/(n + 1)))
     out[6, k] = 1
   }
   st_matrix(outname, out)
@@ -13603,9 +13614,9 @@ void wooldid_bootsgw(string scalar accname, string scalar seaccname, string scal
 // studentized inference for ONE pairwise contrast: the contrast draws d_r = b_r[ka] -
 // b_r[kb] over the replication's own contrast se (harvested from its e(pwsgs) column 2),
 // referred against t_obs = d_obs/se_obs with the OBSERVED analytic pairwise se. Same
-// construction as wooldid_boottp - equal-tailed signed quantiles, rank p with no add-one,
-// wooldid_bootci's order-statistic rule - so a contrast row and a coefficient row are
-// studentized by one rule (no BC-t twin: F003). Output: a 6 x 1 column with the same row
+// construction as wooldid_boottp - equal-tailed signed quantiles from wooldid_bootci's
+// order-statistic rule, add-one Monte-Carlo-null rank p (F033) - so a contrast row and a
+// coefficient row are studentized by one rule (no BC-t twin: F003). Output: a 6 x 1 column with the same row
 // layout as wooldid_boottp (n, t_obs, p_pct, qlo_pct, qhi_pct, live)
 void wooldid_bootpwt(string scalar accname, real scalar ka, real scalar kb, string scalar pwseaccname,
                      real scalar jcol, real scalar dobs, real scalar seobs, real scalar lvl,
@@ -13645,7 +13656,7 @@ void wooldid_bootpwt(string scalar accname, real scalar ka, real scalar kb, stri
   else out[5] = v[max((min((ceil(x), n)), 1))]
   m0 = sum(v :<= to)
   m1 = sum(v :>= to)
-  out[3] = min((1, (2*min((m0, m1)))/n))
+  out[3] = min((1, 2*(min((m0, m1)) + 1)/(n + 1)))
   out[6] = 1
   st_matrix(outname, out)
 }

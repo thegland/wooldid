@@ -4,8 +4,9 @@
 * T2 boottstat posts its whole surface (t_pt label, e(boot_tstat)/tq/tn, e(bootdist_se),
 * the hidden Wald twins); T3 the p-value and critical value are reconstructable from
 * e() alone, exactly; T4 the interval inverts the critical value exactly and the reported
-* statistic is b/se_obs; T5 the se column is still the bootstrap SD; T6 the add-one p
-* floor is 1/(completed+1); T7 the quantities boottstat does NOT studentize - pairwise
+* statistic is b/se_obs; T5 the se column is still the bootstrap SD; T6 the studentized p
+* lives on the add-one 2/(completed+1) grid and can never print 0; T7 the quantities
+* boottstat does NOT studentize - pairwise
 * subgroup contrasts and the joint tests - are unchanged from the Wald run; T8 the gates;
 * T9 replay. Prints BOOTTS_ALL_PASS iff all pass.
 clear all
@@ -88,10 +89,13 @@ if rowsof(BD) != rowsof(BS) | colsof(BD) != colsof(BS) {
 }
 
 * ---------------------------------------------------------------- T3: reconstructable from e()
-* RE-DERIVED 2026-09-05 (not re-toleranced): the studentized p is the two-sided RANK of
-* t_obs among the signed t-draws with NO add-one, and the interval is EQUAL-TAILED from the
-* signed quantiles under wooldid_bootci's order-statistic rule - the author's rulings of
-* 2026-09-03/04 replaced the symmetric |t| construction with add-one that T3/T4 used to pin.
+* RE-DERIVED 2026-09-05, RE-PINNED 2026-09-10 (F033, author ruling 2026-09-07): the
+* studentized p is the two-sided rank of t_obs among the signed t-draws under the ADD-ONE
+* Monte-Carlo-null convention, 2*(1 + min(m0, m1))/(n + 1) - the studentized draws are
+* recentred at the observed estimate, so they are a null reference set the observed
+* statistic belongs to. The interval is still EQUAL-TAILED from the signed quantiles under
+* wooldid_bootci's plain order-statistic rule (2026-09-03/04 rulings), which is why the p
+* and the interval are near-duals rather than exact ones - see T4c.
 * e(bootdist) and e(bootdist_se) are compacted on ONE row mask, so pairing them row by row
 * studentizes the same replication (that misalignment was ledger item #2).
 matrix OB = e(b)
@@ -104,7 +108,7 @@ mata:
   x = n*al;     qlo = (x==floor(x) & x>=1 ? (v[x]+v[min((x+1,n))])/2 : v[max((min((ceil(x),n)),1))])
   x = n*(1-al); qhi = (x==floor(x) & x>=1 ? (v[x]+v[min((x+1,n))])/2 : v[max((min((ceil(x),n)),1))])
   st_numscalar("hn", n)
-  st_numscalar("hp", min((1, (2*min((sum(v:<=to), sum(v:>=to))))/n)))
+  st_numscalar("hp", min((1, 2*(min((sum(v:<=to), sum(v:>=to))) + 1)/(n + 1))))
   st_numscalar("hqlo", qlo); st_numscalar("hqhi", qhi); st_numscalar("hto", to)
   st_numscalar("rowsBD", rows(A)); st_numscalar("rowsBS", rows(S))
 end
@@ -133,10 +137,20 @@ if reldif(B2[1,6] - B2[1,1], B2[1,1] - B2[1,5]) < 1e-10 {
   di as error "T4b FAIL: the studentized interval is symmetric about b - the equal-tailed ruling did not take effect"
   local ++fails
 }
-* and p must be dual to the interval
+* T4c RE-PINNED 2026-09-10 (F033, author ruling 2026-09-07). The p moved to the add-one
+* Monte-Carlo-null convention while the critical value stayed a plain order statistic, so
+* the two are NEAR-duals, not exact ones: a p at or below the level still forces the
+* interval to exclude the null, but an interval can exclude it while the add-one p sits up
+* to one rank step - 2/(n + 1) - above the level. Both halves are asserted.
 local exc4 = (B2[1,5] > 0 | B2[1,6] < 0)
-if `exc4' != (B2[1,4] <= 0.05) {
-  di as error "T4c FAIL: studentized p and interval disagree about zero"
+local step4 = 2/(TS[1,1] + 1)
+di "T4c_dual excl=`exc4' p=" %14.10f B2[1,4] " one rank step=" %14.10f `step4'
+if B2[1,4] <= 0.05 & `exc4' == 0 {
+  di as error "T4c FAIL: the studentized p rejects at 5% but the interval covers zero"
+  local ++fails
+}
+if `exc4' == 1 & B2[1,4] > 0.05 + `step4' {
+  di as error "T4c FAIL: the interval excludes zero but the p is more than one rank step above 5%"
   local ++fails
 }
 
@@ -163,13 +177,21 @@ if strpos("`t5cn'", "se_analytic") == 0 {
   local ++fails
 }
 
-* ---------------------------------------------------------------- T6: the p lives on the 2/n grid
-* 2026-09-05: no add-one any more (author ruling, measured); the p lives on the 2/n grid
+* ----------------------------------------------------- T6: the add-one grid, and the floor
+* RE-PINNED 2026-09-10 (F033, author ruling 2026-09-07): the studentized p is the add-one
+* rank 2*(1 + k)/(n + 1), so it lives on the 2/(n + 1) grid AND has 2/(n + 1) as its
+* smallest attainable value - it can never print as exactly 0, which is the size defect
+* the ruling was about. Both the grid and the floor are asserted.
 local n6 = TS[1,1]
-local grid = round(B2[1,4] * `n6' / 2)
-di "T6_grid n=`n6' p=" %18.14f B2[1,4] " p*n/2=" %12.6f B2[1,4]*`n6'/2 " (must be an integer unless p == 1)"
-if B2[1,4] < 1 & reldif(B2[1,4]*`n6'/2, `grid') > 1e-9 {
-  di as error "T6 FAIL: the studentized p is not on the 2/n rank grid"
+local step6 = 2/(`n6' + 1)
+local grid = round(B2[1,4]/`step6')
+di "T6_grid n=`n6' p=" %18.14f B2[1,4] " p/step=" %12.6f B2[1,4]/`step6' " floor=" %18.14f `step6' " (p/step must be an integer unless p == 1)"
+if B2[1,4] < 1 & reldif(B2[1,4]/`step6', `grid') > 1e-9 {
+  di as error "T6 FAIL: the studentized p is not on the 2/(n + 1) add-one rank grid"
+  local ++fails
+}
+if B2[1,4] < `step6' - 1e-12 {
+  di as error "T6b FAIL: the studentized p is below its add-one floor 2/(n + 1)"
   local ++fails
 }
 
@@ -233,7 +255,7 @@ else {
     x=n*al;     qlo = (x==floor(x) & x>=1 ? (v[x]+v[min((x+1,n))])/2 : v[max((min((ceil(x),n)),1))])
     x=n*(1-al); qhi = (x==floor(x) & x>=1 ? (v[x]+v[min((x+1,n))])/2 : v[max((min((ceil(x),n)),1))])
     st_numscalar("h7n", n)
-    st_numscalar("h7p", min((1, (2*min((sum(v:<=to), sum(v:>=to))))/n)))
+    st_numscalar("h7p", min((1, 2*(min((sum(v:<=to), sum(v:>=to))) + 1)/(n + 1))))
     st_numscalar("h7lb", dobs - qhi*seobs); st_numscalar("h7ub", dobs - qlo*seobs)
     st_numscalar("h7t", to)
   end
