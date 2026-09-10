@@ -102,3 +102,35 @@ standing instruction rules out, so the diagonal was kept and the question is put
 **To reverse it** is a two-line change in `wooldid_vspl` (the Mata kernel): also write 0 into
 `V[a, a]` for every row whose diagonal is not positive-finite. The comment block above the
 function records this decision at the site.
+
+## PS-45 — the bootstrap simultaneous band studentizes by the coefficient-draw SD, even under `boottstat`
+
+**What was built.** With `bootstrap()`, `simultaneousbands` forms the band from the replication
+accumulator the joint test already uses: for each listwise-complete replication `r` it computes
+`M_r = max_h |A[r, h] - O[h]| / sd_h`, where `sd_h` is the standard deviation of the
+coefficient draws at horizon `h`, and the critical value is the `level()` quantile of `M_r`.
+The band is then `O[h] +/- c * sd_h`.
+
+**The question.** Under `boottstat` the run already carries each replication's own analytic
+standard error in `e(bootdist_se)`, and every other reported quantity on that run is
+studentized by it rather than by the draw SD. A percentile-t band would use `se_r[h]` in the
+denominator of `M_r` and `se_obs[h]` in the endpoints, matching the rest of the `boottstat`
+surface. What is shipped instead is one construction for both, so a `boottstat` user gets a
+band whose scale is the coefficient-draw SD while the pointwise intervals beside it are
+percentile-t.
+
+**Why it was built this way.** The ruling asked for the band to come from "one pass over the
+accumulator that already feeds the joint test", which is the coefficient accumulator; the
+`permstepdown` procedure shipped in the same batch studentizes the same way; and a single
+construction means the band does not change meaning between bootstrap displays. It is also the
+only form available without `boottstat`, so the alternative is two constructions rather than a
+replacement.
+
+**Cost of the alternative.** Small and contained: `wooldid_bootband` would take the replication
+standard-error matrix as a fourth argument, skip replications with a missing or non-positive
+`se_r`, and use the observed analytic standard errors for the endpoints — roughly the shape the
+studentized coefficient tail already has. The `esband_engine` marker would need a third value
+so the store says which construction produced the band.
+
+**No number moves unless the author rules for the change**: `simultaneousbands` is off by
+default, so this affects only runs that ask for it.

@@ -4051,8 +4051,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * blocks into e(V) - the one set of off-diagonals wooldid already has and never posted.
   * Runs AFTER the F2 block above (which posts the e(V_es_*) it reads) and after the
   * vcvstate line (which it overwrites with "analytic-blocks" when a block actually lands).
-  * Body in a subprogram: wooldid_worker is at the per-program compiled-size ceiling
-  if `wdhasv' wooldid_vsplice , sgl(`sglist')
+  * Body in a subprogram: wooldid_worker is at the per-program compiled-size ceiling.
+  * Skipped inside a replication (wdrepmode): a nested bootstrap/permute call is read for
+  * its coefficients, its e(V) DIAGONAL and its e(V_es_*) - never for e(V)'s off-diagonals -
+  * so splicing there is pure cost, one Mata call per family per replication (measured ~9%
+  * of a reps(150) boottstat fit, under concurrent load)
+  if `wdhasv' & "`wdrepmode'" == "" wooldid_vsplice , sgl(`sglist')
 
   * PS-45 (author ruling 2026-09-07): the simulated analytic simultaneous band, opt-in and
   * defaulted off. Skipped under bootstrap(), where wooldid_bootwire builds the band from
@@ -9124,7 +9128,11 @@ version 16.0
   ereturn hidden local wdid_vcespec "`wdbmodetext', `wdbcl', reps(`reps')"
   * CS-4: the bootstrap engine posts the full replication covariance, unless the repost
   * failed (the caution above), in which case whatever e(V) held before still stands
-  ereturn hidden local wdid_vcvstate = cond(`wdb_vposted', "bootstrap", cond(`wdb_hadv', "analytic-diagonal", "absent"))
+  * PS-62 follow-through (2026-09-10): on that fallback the matrix left standing may be the
+  * SPLICED one the worker built, so read the label back rather than demoting it to
+  * analytic-diagonal - the wooldid_permwire twin does exactly the same
+  local wdb_vs0 "`e(wdid_vcvstate)'"
+  ereturn hidden local wdid_vcvstate = cond(`wdb_vposted', "bootstrap", cond(`wdb_hadv', cond("`wdb_vs0'" == "analytic-blocks", "analytic-blocks", "analytic-diagonal"), "absent"))
   * PS-1: Stata's own bootstrap prefix labels the variance this way
   if `wdb_vposted' {
     ereturn local vce bootstrap
@@ -9748,7 +9756,12 @@ version 16.0
     local wdsn .
     local wdsm 0
     if "`mode'" == "bootstrap" {
-      mata: st_local("wdsm", strofreal(wooldid_bootband("`acc'", "`obsb'", "`wdspx'", `level', "`SB'", "wdscrit", "wdsn")))
+      * cap: see the note in wooldid_vsplice (cleanmatrices clears wooldid's own Mata
+      * kernels; SI-17/SI-18). CONTINUE and not exit - the c(rngstate) restore at the end of
+      * this loop must run, or a run that asked for a band would leak the fixed internal seed
+      * into the caller's stream. With every family skipped the named caution below fires.
+      cap mata: st_local("wdsm", strofreal(wooldid_bootband("`acc'", "`obsb'", "`wdspx'", `level', "`SB'", "wdscrit", "wdsn")))
+      if _rc != 0 continue
     }
     else {
       cap confirm matrix e(V_es_`wdsk')
@@ -9758,7 +9771,9 @@ version 16.0
       tempname BV BB
       matrix `BV' = e(V_es_`wdsk')
       matrix `BB' = e(b_es_`wdsk')
-      mata: st_local("wdsm", strofreal(wooldid_esbanda("`BV'", "`BB'", `level', `nd', "`SB'", "wdscrit")))
+      * cap + continue: see the bootstrap twin above
+      cap mata: st_local("wdsm", strofreal(wooldid_esbanda("`BV'", "`BB'", `level', `nd', "`SB'", "wdscrit")))
+      if _rc != 0 continue
     }
     if `wdsm' < 2 continue
     ereturn matrix esband_`wdsk' = `SB'
@@ -9835,7 +9850,16 @@ version 16.0
     tempname WE
     matrix `WE' = e(V_es_`wdvk')
     local wdvn 0
-    mata: st_local("wdvn", strofreal(wooldid_vspl("`WV'", "`WE'", "`wdvpx'")))
+    * cleanmatrices runs `clear mata' at the top of the worker, which drops wooldid's own
+    * Mata kernels for the rest of the session. SI-17/SI-18 measured that an adopath-resolved
+    * ado recovers (Stata re-reads the file when a function is missing) and only a
+    * `do <path>' load - this project's harness - does not, which is why the refusal that
+    * once guarded this was removed. So the missing kernel is caught rather than raised:
+    * the run keeps its analytic-diagonal e(V), exactly the surface it had before PS-62,
+    * instead of dying r(3499). Exiting is right, not continuing: if the kernel is gone it
+    * is gone for every family, and there is no state to restore here.
+    cap mata: st_local("wdvn", strofreal(wooldid_vspl("`WV'", "`WE'", "`wdvpx'")))
+    if _rc != 0 exit
     if `wdvn' > 0 {
       local wdvdone `wdvdone' `wdvk'
       local wdvnp = `wdvnp' + `wdvn'
