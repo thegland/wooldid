@@ -134,3 +134,66 @@ so the store says which construction produced the band.
 
 **No number moves unless the author rules for the change**: `simultaneousbands` is off by
 default, so this affects only runs that ask for it.
+
+## PS-46 — the measurement is in, and it points away from the instrument the ruling named
+
+**The ruling.** *"Conditional. First establish whether the permutation fast-mode default
+actually breaks esttab-class table tools. If it does, post an ARTIFICIAL covariance that lets
+those tools run and that is transparently false to anyone who inspects it (an all-zero matrix
+being the example the author gave), rather than leaving nothing posted. If it does not break
+them, leave as is."*
+
+**Answer to the condition: yes, it breaks them — silently.** Full report and the raw probe
+record at `review_process/research_2026-09-10/permute_fastmode_esttab.md`. `esttab` never
+refuses. It prints the coefficient, an **empty** standard-error row, and then a footer
+asserting *"Standard errors in parentheses"* with a full star legend — and writes that same
+assertion into `.tex` and `.csv` files that outlive the session. `estout`'s default
+`cells(b)` is clean; Stata's own `estimates table` and `estat vce` refuse honestly at r(321)
+/r(322) because `e(properties)` is `b`.
+
+**But the named instrument fails the ruling's own test.** The all-zero covariance is
+"transparently false" on exactly two surfaces — `matrix list e(V)` and `estat vce`, both
+commands a suspicious analyst runs deliberately. Everywhere else it is invisible or worse.
+Measured:
+
+- `esttab ., ci` goes from a blank bracket row to `[0.824,0.824]`, `[-0.0457,-0.0457]` — not
+  a transparently false number but a plausible, infinitely precise one, written to file.
+- `estimates table S, b se` goes from an honest r(321) refusal to a printed `0` in a
+  standard-error row.
+- `di _se[main_att]` goes from `_se not allowed when e(V) is not present` to `0` at rc 0.
+- `r(table)` goes from an honest 1x6 b-only matrix to a full 9x6 carrying `df 79` and
+  `crit 1.9904502` for statistics that do not exist — which downstream scripts read.
+- On the `esttab` surfaces the remedy was meant to protect, it converts a blank cell to `(.)`
+  and leaves the false footer and the star legend exactly as they were. No grade improves.
+
+**A route that was not available when the ruling was made.** `estout.ado` (3156-3172) checks
+for posted `e(se)`, `e(p)`, `e(ci_l)`, `e(ci_u)` matrices and uses them **ahead of** anything
+derived from `e(V)`. Posting those — and no covariance at all — makes `esttab` print the
+**real permutation numbers**, while `test`, `lincom`, `_se[]`, `estat vce` and
+`estimates table` go on refusing honestly, because `e(V)` is still absent. It fabricates
+nothing and it fixes exactly the tools that were lying. Measured working:
+`esttab ., se` → `(0.130)`, `(0.0767)`; `esttab ., p` → `(0.095)`, `(0.857)`.
+
+**Why this is put to you rather than built.** It moves a printed number, and one input has no
+designated source. `e(p)` is obvious — `e(perm_p)` is already posted and is what the tables
+print. `e(se)` is not: `wooldid_permwire`'s own header says the standard-error column is left
+blank under the fast-mode default **by design**, and the probe used `e(perm_se_shift)` as an
+arbitrary stand-in. So:
+
+| option | what `esttab` would then print |
+|---|---|
+| **A. the ruling as written** (all-zero `e(V)`) | `(.)` under the same false footer; fabricated zero-width CIs; honest refusals elsewhere become `0` |
+| **B1.** post `e(p)` only | `esttab ., p` correct; `esttab ., se` still blank under a false footer |
+| **B2.** post `e(p)` and `e(se)` from `e(perm_se_shift)` | both correct, but commits to calling the shift standard error *the* standard error of a fast-mode run |
+| **B3.** B2 plus `e(ci_l)`/`e(ci_u)` from `e(perm_ci)` | also fixes the CI path — the one place A actively fabricates |
+| **C. leave as is** | the silent misreport stands; only the help changes |
+
+**One thing is being fixed now regardless of the ruling, because it is simply false.**
+`wooldid.sthlp` says that under fast mode *"`lincom`, `esttab` standard errors, and anything
+else needing a variance-covariance matrix will refuse."* Measured, `esttab` does not refuse;
+it prints an empty standard-error row beneath a footer claiming standard errors are there.
+That sentence is corrected in the P8 documentation sweep whichever way PS-46 goes.
+
+**Untested, and it is the one thing worth testing before B ships:** every `e(perm_p)` in the
+fixture was above .095, so no star was ever due and the star path was never exercised.
+`coefplot` was also not probed, and under A it would draw zero-width whiskers.
