@@ -32,6 +32,60 @@ The one piece that moves regardless, because it is a false statement about curre
 behaviour rather than a judgment call: the help says `esttab` "will refuse" under fast
 mode. It does not. Corrected in the P8 sweep.
 
+### O-2. `contreatwithin` silently disables the whole collinearity-screen family, and one of them reports a structural zero as an estimate
+`contreatwithin` with `contreat()` rewrites the working `safety` macro to `off` (ado:4595).
+`wooldid_ccscreen` is gated only on that rewritten value (ado:1599), so a user who typed **no**
+`safety()` at all loses the entire family — including the SI-A4/R6 ame-void screen at
+ado:10703-10722, which exists to report an unidentified dose slope as **missing** rather than as
+the regression's structural zero. Measured on `dta_cont.dta` with a cohort-constant dose: without
+`contreatwithin` the table prints `ame | . . . . .` under the named caution; **with**
+`contreatwithin` the same run prints `ame | 0 . . . .` and says nothing. rc 0 both times.
+**Severity: this is a reported number that is wrong, printed in silence.** Narrow fix: gate
+ado:10703-10722 (and the ado:1599 family gate) on `safetyinput` rather than on `safety` — the
+same one-token change P6 ruled for the maxvar preflight at ado:1247, at a site the ruling did not
+name. It moves a printed cell from `0` to `.`, so it is the author's call rather than a silent
+correction, and it wants its own verified commit.
+
+### O-3. `e(df_r_analytic)` is kept only on the `bootdf(normal)` branch
+`wooldid_bootwire` (ado:9163-9179) reads the analytic residual df into a local and then posts the
+hidden twin **only** in the `else` branch — the `bootdf(normal)` case. Under `bootdf(clusters)`,
+which is the default whenever `cluster()` is given, the analytic value is dropped. Measured:
+`bootstrap(standard) cluster(i)` posts `e(V_analytic)` and `e(V_es_analytic_att)` but no
+`e(df_r_analytic)`; `bootstrap(bayes) cluster(i) reps(20)` gives `.` for it with `e(df_r)` = 79.
+Three help sites promise it unconditionally, and the phrase "alongside the analytic covariances"
+is exactly the promise that fails — the covariances are kept unconditionally, the df is not. Fix:
+hoist the post out of the `else`. Pure addition to `e()`; no printed number moves.
+
+### O-4. The `unconditionalse` prerequisite screen accepts any `customvce()`, robust or not
+ado:4442 tests only that `customvce()` is non-empty. The screen's own comment says it exists to
+catch a bare r(322) early, and `wooldid y i t ttre, att unconditionalse customvce(ols)` walks
+straight through it into that r(322) — `option vce(unconditional) is allowed only after
+estimation with robust, semirobust, or linearized standard errors`. Fix: test the `customvce()`
+text for a robust/cluster/semirobust/linearized form rather than for non-emptiness.
+
+### O-5. `makecfxplotsbysg` is a silent no-op in two situations
+Without `subgroups()` the subgroup list is never populated, so its loop runs zero times; without
+`makecfxplots` the whole block is unreachable. Both return rc 0 and produce nothing. This is
+against the package's own precedent: `makecfxplots` without `contreat()` (ado:5012-5017) and
+`lattice()` without `contreat()` (ado:4581-4586) were both turned from silent no-ops into errors,
+and P6's ruled policy is that no accepted option is a silent no-op.
+
+### O-6. A caution points at another caution that was never printed
+The all-zero-covariance disclosure at ado:1453 ends by referring the reader to "the
+cell-containment caution above", and prints unconditionally — but the caution it names is
+produced only when `contreat()` is given (screen gated at ado:1420). On a binary-outcome run the
+reader is sent to a message that does not exist. Fix: make the pointer conditional, or inline the
+one clause it is pointing at.
+
+### O-7. UNRESOLVED — does a studentized subgroup contrast disclose its own degeneracy?
+Under `bootstrap() boottstat cluster(i) subgroups()` the analytic pairwise-degeneracy screen never
+runs (ado:4256 gates it off the engine paths), and the bootstrap-side guard
+(`wooldid_bootsgw`, ado:13864) is a zero/missing test, not a rank test — the comment at
+ado:9905-9906 says as much. On a design with pairwise residue se .0018 and rho .9995 nothing
+should fire, which would leave the studentized contrast built silently on the residue. **Not
+confirmed by a run.** What would settle it: that exact call on that fixture, checking whether any
+caution prints and what the contrast's p-value is.
+
 ---
 
 ## HELD FOR THE AUTHOR (not defects — judgment calls)
