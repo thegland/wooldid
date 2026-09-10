@@ -243,7 +243,7 @@ version 16.0
     * scalars, on the e(perm_stat) scale (the full vector is e(perm_comparator_b))
     cap ereturn matrix perm_comparator = `wdpcomp'
     * joint tests, subgroup equality, adversarial and contrasts (eclass sub)
-    wooldid_permjnt , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') level(`level') m(`wdp_M') orow(`wdp_OR') ts(`wdp_ts') jt(`jointtests') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') esf(`esfixedbaseperiod') absp(`permabsp') side(`permside') rawp(`permrawp')
+    wooldid_permjnt , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') level(`level') m(`wdp_M') orow(`wdp_OR') ts(`wdp_ts') jt(`jointtests') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') esf(`esfixedbaseperiod') absp(`permabsp') side(`permside') rawp(`permrawp') sd(`permstepdown')
     * the continuous-treatment plot cells (eclass sub)
     if "`makecfxplots'" != "" & `wdp_ncfx' > 0 {
       local wdp_cfxnames
@@ -530,7 +530,7 @@ version 16.0
   set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -4318,7 +4318,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -4635,6 +4635,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`permabsp'" != "" local permstray `permstray' permabsp
     if "`permside'" != "" local permstray `permstray' permside()
     if "`permrawp'" != "" local permstray `permstray' permrawp
+    if "`permstepdown'" != "" local permstray `permstray' permstepdown
     if "`permstray'" != "" {
       dis as error "Error: `permstray' require(s) the permute() option."
       error 198
@@ -5225,7 +5226,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * literal 95, so `set level 90' produced lb_90ci columns holding 95% intervals under
   * bootstrap() / permute(). Resolve it once here; every consumer sees a number
   if `level' == 0 local level = c(level)
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw semielasraw cetyperaw {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp permstepdown y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw semielasraw cetyperaw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -7557,7 +7558,7 @@ version 16.0
 *** Contrasts are permuted as coefficient differences in both modes. Names mirror the
 *** analytic surface so the display prints them unchanged; an analytic value that the
 *** observed run posted (permtstat or permanalyticse) is always overwritten or blanked
-  syntax , acc(string) obsb(string) cmpb(string) [level(real 0) m(string) orow(integer 0) ts(integer 0) jt(string) adv(string) advalt(string) advesrel(string) advtt(string) esf(string) absp(string) side(string) rawp(string)]
+  syntax , acc(string) obsb(string) cmpb(string) [level(real 0) m(string) orow(integer 0) ts(integer 0) jt(string) adv(string) advalt(string) advesrel(string) advtt(string) esf(string) absp(string) side(string) rawp(string) sd(string)]
   if `level' == 0 local level = c(level)
   * p-value convention code (F052/F064, 2026-09-06): 0 equal-tailed (default), 1 absolute
   * add-one (permabsp), 2 raw |s| share c/n without add-one (permrawp: the ritest / Stata
@@ -7659,32 +7660,54 @@ version 16.0
   }
 
   * -------- F065 (quality review 2026-09-05, author ruling 2026-09-06): multiplicity across
-  * the POST-treatment event-study horizons - the max-|studentized| step-down (Westfall-Young
-  * / Romano-Wolf) from the same accumulator, exact under the sharp null: every horizon's
-  * draws are studentized on the fixed metric (the SD of its null draws, as the kernel's
-  * row 6), the horizons are ordered by |t_obs|, and the j-th adjusted p is the share of
-  * replications whose max |t_r| over the horizons not yet rejected reaches |t_obs(j)|,
-  * made monotone. Posted per family as e(perm_stepdown[_i][_s<sg>]) with rows t_obs,
-  * p_raw (the per-horizon absolute-value share), p_singlestep (max over all post
-  * horizons) and p_stepdown, one named column per horizon; computed whenever at least
-  * two post horizons exist (jointtests is not required)
-  foreach fam in att att_it ame ame_it {
-    local sname = cond(strpos("`fam'", "ame"), "perm_Cstepdown", "perm_stepdown")
-    if "`fam'" == "att_it" | "`fam'" == "ame_it" local sname `sname'_i
-    foreach sgtag in "" `sgl' {
-      local sgw = cond("`sgtag'" == "", ".", "`sgtag'")
-      local cols
-      forval k = 1/`K' {
-        if "`wdpeq`k''" == "ES_`fam'" & "`wdpsg`k''" == "`sgw'" & `wdprl`k'' >= 0 & `wdprl`k'' < . local cols `cols' `k'
+  * the event-study horizons - the max-|studentized| step-down (Westfall-Young / Romano-Wolf)
+  * from the same accumulator, exact under the sharp null: every horizon's draws are
+  * studentized on the fixed metric (the SD of its null draws, as the kernel's row 6), the
+  * horizons are ordered by |t_obs|, and the j-th adjusted p is the share of replications
+  * whose max |t_r| over the horizons not yet rejected reaches |t_obs(j)|, made monotone.
+  * Posted per family as e(perm_stepdown[_i][_pre][_s<sg>]) with rows t_obs, p_raw (the
+  * per-horizon absolute-value share), p_singlestep (max over all horizons of the family)
+  * and p_stepdown, one named column per horizon.
+  * PS-45 (author ruling 2026-09-07), two changes. (a) OPT-IN: the procedure used to run
+  * whenever at least two post horizons existed, so it shipped output on runs that never
+  * asked for it; it now runs only under permstepdown. Nothing else about it moved, so a
+  * permstepdown run reproduces the numbers this block printed before. (b) The PRE-treatment
+  * horizons are a SEPARATE family, run through the identical procedure and posted and
+  * reported apart from the post-treatment one rather than pooled with it - pooling would
+  * change the post-treatment adjusted p-values by enlarging their family, and the two ask
+  * different questions. The pre-period family inherits the pre-period caveat the footer
+  * already carries (e(perm_precaveat)): in staggered designs the reassigned onsets widen
+  * the null for pre-period statistics, so its adjusted p-values are conservative in a way
+  * the post-treatment family's are not.
+  * The engine stays permutation-only (same ruling): the bootstrap path gets simultaneous
+  * bands instead, which are a different object - a uniform confidence band rather than a
+  * family-wise-error-controlling test.
+  if "`sd'" != "" {
+    foreach fam in att att_it ame ame_it {
+      local sname = cond(strpos("`fam'", "ame"), "perm_Cstepdown", "perm_stepdown")
+      if "`fam'" == "att_it" | "`fam'" == "ame_it" local sname `sname'_i
+      foreach wdpsw in post pre {
+        local sname2 = cond("`wdpsw'" == "pre", "`sname'_pre", "`sname'")
+        foreach sgtag in "" `sgl' {
+          local sgw = cond("`sgtag'" == "", ".", "`sgtag'")
+          local cols
+          forval k = 1/`K' {
+            * relyr missing is +infinity in stata, so "< 0" already excludes it
+            if "`wdpeq`k''" == "ES_`fam'" & "`wdpsg`k''" == "`sgw'" {
+              if "`wdpsw'" == "post" & `wdprl`k'' >= 0 & `wdprl`k'' < . local cols `cols' `k'
+              if "`wdpsw'" == "pre"  & `wdprl`k'' < 0                  local cols `cols' `k'
+            }
+          }
+          if `: word count `cols'' < 2 continue
+          tempname SD
+          mata: wooldid_permstep("`acc'", "`cmpb'", "`cols'", `wdpM', `orow', "`SD'")
+          cap confirm matrix `SD'
+          if _rc != 0 continue
+          if rowsof(`SD') < 4 continue
+          local en = cond("`sgtag'" == "", "`sname2'", "`sname2'_s`sgtag'")
+          if strlen("`en'") <= 32 ereturn matrix `en' = `SD'
+        }
       }
-      if `: word count `cols'' < 2 continue
-      tempname SD
-      mata: wooldid_permstep("`acc'", "`cmpb'", "`cols'", `wdpM', `orow', "`SD'")
-      cap confirm matrix `SD'
-      if _rc != 0 continue
-      if rowsof(`SD') < 4 continue
-      local en = cond("`sgtag'" == "", "`sname'", "`sname'_s`sgtag'")
-      if strlen("`en'") <= 32 ereturn matrix `en' = `SD'
     }
   }
 
@@ -10176,12 +10199,16 @@ version 16.0
       cap confirm matrix e(perm_advW)
       if _rc == 0 local wdpqf 1
       if `wdpqf' dis as result "  The joint pre-trend tests, across-subgroup equality tests and adversarial line tests shown are one-sided permutation tests of a quadratic-form statistic in the permutation-covariance metric (the covariance of the replications' coefficients), so they need no per-replication covariance; the adversarial statistic is wooldid's line-fit statistic on that metric, and its p-value tests the sharp null of no effect at any horizon rather than the composite on-a-line null of the analytic test. Replication statistics: e(perm_jointW), e(perm_sgW), e(perm_advW)."
-      * F065: multiplicity-adjusted p-values across the post-treatment horizons
-      foreach wdpsdn in perm_stepdown perm_stepdown_i perm_Cstepdown perm_Cstepdown_i {
+      * F065: multiplicity-adjusted p-values across the horizons of a family. PS-45 (author
+      * ruling 2026-09-07): opt-in under permstepdown, and the pre-treatment horizons are a
+      * separate family reported apart from the post-treatment one
+      foreach wdpsdn in perm_stepdown perm_stepdown_i perm_Cstepdown perm_Cstepdown_i perm_stepdown_pre perm_stepdown_i_pre perm_Cstepdown_pre perm_Cstepdown_i_pre {
         cap confirm matrix e(`wdpsdn')
         if _rc != 0 continue
-        local wdpsdf = cond("`wdpsdn'" == "perm_stepdown", "att", cond("`wdpsdn'" == "perm_stepdown_i", "att_it", cond("`wdpsdn'" == "perm_Cstepdown", "ame", "ame_it")))
-        dis as result "  Multiplicity across the post-treatment `wdpsdf' horizons (max-|studentized| step-down, Romano-Wolf; the studentization is the SD of each horizon's null draws): horizon: p_raw -> step-down p, where p_raw is the two-sided |t| share (add-one) in the step-down's own metric, not the table's convention - compare the two columns with each other rather than with the table"
+        local wdpsdb = subinstr("`wdpsdn'", "_pre", "", 1)
+        local wdpsdw = cond(strpos("`wdpsdn'", "_pre") > 0, "pre-treatment", "post-treatment")
+        local wdpsdf = cond("`wdpsdb'" == "perm_stepdown", "att", cond("`wdpsdb'" == "perm_stepdown_i", "att_it", cond("`wdpsdb'" == "perm_Cstepdown", "ame", "ame_it")))
+        dis as result "  Multiplicity across the `wdpsdw' `wdpsdf' horizons (max-|studentized| step-down, Romano-Wolf; the studentization is the SD of each horizon's null draws): horizon: p_raw -> step-down p, where p_raw is the two-sided |t| share (add-one) in the step-down's own metric, not the table's convention - compare the two columns with each other rather than with the table`=cond("`wdpsdw'" == "pre-treatment", ". The pre-treatment horizons are their own family, adjusted among themselves and not pooled with the post-treatment ones; read them with the pre-treatment caveat below", "")'"
         tempname wdpsdm
         matrix `wdpsdm' = e(`wdpsdn')
         local wdpsdc : colnames `wdpsdm'

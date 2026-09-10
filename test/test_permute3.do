@@ -1192,9 +1192,12 @@ if reldif(Q22T[1,1], q22b_lo) > 1e-12 | reldif(Q22T[2,1], q22b_hi) > 1e-12 | rel
 * horizons reconstructs by name from e(permdist_b) and e(perm_comparator_b): fixed-metric
 * studentization (SD of draws + comparator), raw per-horizon |t| shares, single-step max
 * and the monotone step-down in decreasing |t_obs| order, all add-one; the footer names it
+* permstepdown added 2026-09-10 (PS-45, author ruling 2026-09-07): the procedure used to
+* run on every permute() run with two or more post horizons and is now opt-in. The numbers
+* it produces did not change, so this leg still pins them
 mkperm3 8 4 3
 qui log using perm3_q23.txt, text replace name(p3)
-cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(2) permute(shuffle) permreps(40) rseed(23)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(2) permute(shuffle) permreps(40) rseed(23) permstepdown
 local rc = _rc
 qui log close p3
 xrc Q23a 0 `rc'
@@ -1344,7 +1347,7 @@ if `q26miss' != 1 | `q26f' != 1 | `q26g' != 0 | Q26P[1,1] >= . | Q26S2[1,1] >= .
 * the documented p_raw
 use `q25', clear
 qui log using perm3_q27.txt, text replace name(p3)
-cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(2) permute(shuffle) permreps(40) rseed(23)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(2) permute(shuffle) permreps(40) rseed(23) permstepdown
 local rc = _rc
 qui log close p3
 xrc Q27a 0 `rc'
@@ -1498,6 +1501,78 @@ if `q29nj' >= `q29np' | abs(`q29jh' - `=`q29jp'') > 1e-12 {
 if `q29rc8' != 0 | `q29bad8' != 0 | `q29se8' != 0 {
   dis as error "Q29c FAIL: membership leaked into sampled mode (mismatches=`q29bad8', se all missing=`q29se8')"
   global pf = $pf + 1
+}
+
+* ================= Q30 (PS-45, author ruling 2026-09-07): the step-down is OPT-IN, and the
+* pre-treatment horizons are their own family - adjusted among themselves, reported and
+* stored apart, never pooled with the post-treatment ones (pooling would change every
+* post-treatment adjusted p by enlarging its family)
+mkperm3 8 4 3
+tempfile q30
+qui save `q30'
+qui log using perm3_q30a.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(40) rseed(30)
+local q30rc = _rc
+qui log close p3
+xrc Q30a 0 `q30rc'
+local q30off 0
+foreach m in perm_stepdown perm_stepdown_pre perm_stepdown_i perm_Cstepdown {
+  cap confirm matrix e(`m')
+  if _rc == 0 local ++q30off
+}
+scan3 perm3_q30a.txt "Multiplicity across the"
+local q30foot = r(found)
+cap erase perm3_q30a.txt
+if `q30off' != 0 | `q30foot' != 0 {
+  dis as error "Q30a FAIL: the step-down ran without permstepdown (matrices=`q30off', footer=`q30foot')"
+  global pf = $pf + 1
+}
+use `q30', clear
+qui log using perm3_q30b.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(40) rseed(30) permstepdown
+local q30rcb = _rc
+qui log close p3
+xrc Q30b 0 `q30rcb'
+cap confirm matrix e(perm_stepdown)
+local q30hp = _rc == 0
+cap confirm matrix e(perm_stepdown_pre)
+local q30hr = _rc == 0
+local q30pc
+local q30rcn
+if `q30hp' local q30pc : colnames e(perm_stepdown)
+if `q30hr' local q30rcn : colnames e(perm_stepdown_pre)
+* every post family column must be a post horizon and every pre family column a pre one,
+* and the two lists must not overlap - that is what "separate families" means here
+local q30bad 0
+foreach c of local q30pc {
+  if strpos("`c'", "post") == 0 local ++q30bad
+  if `: list posof "`c'" in q30rcn' local ++q30bad
+}
+foreach c of local q30rcn {
+  if strpos("`c'", "pre") == 0 local ++q30bad
+}
+scan3 perm3_q30b.txt "across the post-treatment att horizons"
+local q30fp = r(found)
+scan3 perm3_q30b.txt "across the pre-treatment att horizons"
+local q30fr = r(found)
+cap erase perm3_q30b.txt
+dis "Q30 post=[`q30pc'] pre=[`q30rcn'] footers post=`q30fp' pre=`q30fr' bad=`q30bad'"
+if `q30hp' != 1 | `q30hr' != 1 | `q30bad' != 0 | `: word count `q30pc'' < 2 | `: word count `q30rcn'' < 2 | `q30fp' != 1 | `q30fr' != 1 {
+  dis as error "Q30b FAIL: post matrix=`q30hp' pre matrix=`q30hr' mixed columns=`q30bad' footers=`q30fp'/`q30fr'"
+  global pf = $pf + 1
+}
+* the pre family is adjusted among ITS OWN members: with two pre horizons the largest
+* adjusted p equals the single-step p of that family, which cannot be read off the post one
+if `q30hr' {
+  matrix Q30R = e(perm_stepdown_pre)
+  local q30mono 1
+  forval c = 1/`=colsof(Q30R)' {
+    if Q30R[4, `c'] < Q30R[2, `c'] - 1e-12 local q30mono 0
+  }
+  if `q30mono' != 1 {
+    dis as error "Q30c FAIL: a pre-treatment adjusted p is below its own raw p"
+    global pf = $pf + 1
+  }
 }
 
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
