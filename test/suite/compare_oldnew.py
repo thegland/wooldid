@@ -35,6 +35,14 @@ Comparison semantics (differs from the bit-exact regression compare in test/comp
     matches NO compared config are reported UNSCOPED (fatal only when stale-checking).
 
 Ledger CSV columns: id,config,kind,pattern,rtol,reason.
+Kinds are the dump's own record types - scalar, macro, mat, matnames, esamp, varlist,
+files - plus one synthetic kind:
+  - mat_esblock: e(V) cells that are the PS-62 event-study covariance splice and nothing
+    else. The comparer peels a cell into this kind only when the two stripes are identical
+    AND the cell is off-diagonal AND it was exactly 0 on old AND it is finite and nonzero
+    on new AND its row and column are two horizons of the SAME event-study family. Every
+    other cell of the same matrix still goes through the ordinary 'mat' rows, so the
+    bounded storage-noise tiers keep guarding the diagonal.
 Exit 0 iff no UNEXPLAINED differences, no integrity/provenance failures, no STALE rows.
 """
 import sys, os, glob, csv, fnmatch, re, math
@@ -78,6 +86,17 @@ def hex2f(s):
         return -v if neg else v
     except Exception:
         return s
+
+ES_ROW = re.compile(r"^(ES_.+?)_(pre\d+|post\d+|contemp)$")
+
+def es_family(nm):
+    """The event-study family a V row/column name belongs to, or None.
+
+    ES_att_pre3 -> ES_att; ES_att_it_post0 -> ES_att_it; ES_ame_SG2_post1 -> ES_ame_SG2.
+    The non-greedy stem plus the anchored horizon suffix is what separates ES_att from
+    ES_att_it without a family list."""
+    m = ES_ROW.match(nm)
+    return m.group(1) if m else None
 
 def close(a, b, rtol):
     if isinstance(a, str) or isinstance(b, str):
@@ -305,6 +324,38 @@ def main():
             if k[0] in (omats & nmats):
                 bad.setdefault(k[0], []).append(k)  # shape change within a shared matrix
         for m, ks in sorted(bad.items()):
+            # PS-62 (a366c46): the within-family event-study covariance blocks are spliced
+            # into e(V), so hundreds of off-diagonals go 0 -> nonzero at reldiff 1. Peeled
+            # off into their own kind (mat_esblock) under a STRICT predicate - off-diagonal,
+            # exactly 0 on old, finite and nonzero on new, row and column two horizons of
+            # the SAME family, stripes identical - so one documented row explains them while
+            # every other e(V) cell still goes through the rows below and the bounded
+            # storage-noise tiers keep guarding the diagonal. A blanket V row would have
+            # masked all of e(V) on 360 configs.
+            splice = []
+            mn = O["matnames"].get(m)
+            if m == "V" and mn and mn == N["matnames"].get(m) and len(mn.split("|")) >= 3:
+                rn = mn.split("|")[1].split()
+                cn = mn.split("|")[2].split()
+                keep = []
+                for kk in ks:
+                    a, b = O["mat"].get(kk), N["mat"].get(kk)
+                    r, c = kk[1], kk[2]
+                    fr = es_family(rn[r - 1]) if 1 <= r <= len(rn) else None
+                    fc = es_family(cn[c - 1]) if 1 <= c <= len(cn) else None
+                    if (r != c and fr is not None and fr == fc
+                            and isinstance(a, float) and isinstance(b, float)
+                            and a == 0.0 and b == b and b != 0.0):
+                        splice.append(kk)
+                    else:
+                        keep.append(kk)
+                ks = keep
+            if splice:
+                classify("mat_esblock", m,
+                         f"matrix {m}: {len(splice)} event-study within-family "
+                         f"off-diagonal cell(s) 0 -> nonzero", None)
+            if not ks:
+                continue
             worst = 0.0
             has_str = False
             for kk in ks:

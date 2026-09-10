@@ -6,6 +6,13 @@ id,config,kind,pattern,rtol,reason
 # and are noise-vs-wrong-answer separators, NOT forward tolerance policy (the rtol-0
 # battery guards HEAD regressions). A scoped row that stops firing goes STALE and fails
 # the run. Narrative for every citation: wooldid_solved_issues.md.
+# ---------------- PS-62: the event-study covariance splice into e(V) ----------------
+# The comparer peels these cells into their own kind (mat_esblock) under a strict
+# predicate - off-diagonal, exactly 0 on old, finite and nonzero on new, row and
+# column two horizons of the SAME event-study family, stripes identical. Every other
+# e(V) cell still goes through the rows below, so the bounded tiers keep guarding the
+# diagonal; a blanket V row would have masked all of e(V) on 360 configs.
+PS62-esblock,*,mat_esblock,V,,PS-62 a366c46 (author ruling 2026-09-07): the within-family event-study covariance blocks are spliced into e(V) so a test or lincom across one family's horizons is valid; every other off-diagonal stays zero. 18554 cells over 360 configs on the 2026-09-10 dual-build run (main 301b706 vs 8ea5a25). e(wdid_vcvstate) and e(wdid_vblocks)/e(wdid_vblockn) record the state and are new-only additions
 # ---------------- documented LARGE fixes (unbounded, tightly scoped) ----------------
 A1-B1a,basic,mat,summarystats,,B1 015ae88 control-row + B2 0188b8f IQR fixes
 A1-B1b,pw_ss,mat,summarystats,,B1/B2: same
