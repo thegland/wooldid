@@ -506,10 +506,16 @@ version 16.0
   * P7 accident 2 (author ruling 2026-09-08): the analytic twin of the engine branches' own
   * wooldid_cfxplots call. Runs only when the worker recorded a stem, which it does only on an
   * analytic makecfxplots run with saveplots() - so neither engine reaches this, and a run that
-  * asked for no plot data is untouched. cap: a failure to write the data file must not lose an
-  * estimation that has already succeeded and printed, which is not true of the engine branches
-  * (there the same call also DRAWS the figures)
-  if "`e(wdid_cfxsave)'" != "" cap noi wooldid_cfxplots , saveplots(`e(wdid_cfxsave)') dataonly `e(wdid_cfxrepl)'
+  * asked for no plot data is untouched. cap, but NOT silent: a failure to write the data file
+  * must not lose an estimation that has already succeeded and printed - which is not true of
+  * the engine branches, where the same call also DRAWS the figures - and equally must not be
+  * swallowed. P6's own published policy is that no accepted option is a silent no-op, and a
+  * saveplots() that quietly produced the .gph files and not the .dta would be exactly that.
+  if "`e(wdid_cfxsave)'" != "" {
+    cap noi wooldid_cfxplots , saveplots(`e(wdid_cfxsave)') dataonly `e(wdid_cfxrepl)'
+    local wdsh_dc = _rc
+    if `wdsh_dc' != 0 dis as text "Caution: the continuous-treatment plot-data file `e(wdid_cfxsave)'_cfx.dta could not be written (r(`wdsh_dc')). The figures and their .gph files are unaffected, as is every estimate and every stored result; only that one machine-readable record of the plotted points is missing. The usual cause is an existing file of that name without the replace option."
+  }
 end
 
 cap prog drop wooldid_worker
