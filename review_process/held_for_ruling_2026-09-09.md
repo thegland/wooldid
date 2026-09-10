@@ -1,7 +1,19 @@
-# Held for the author, 2026-09-09
+# Held for the author, 2026-09-09 — ALL RULED 2026-09-10
 
 Items reached during the batch implementation of the 2026-09-07 rulings where carrying the
-ruling out as written would contradict another standing ruling. Nothing below is built.
+ruling out as written would contradict another standing ruling, or where the ruling left a
+number open. **Every item here was ruled on 2026-09-10.** The file is kept as the record of
+what was put to the author, on what evidence, and what was decided.
+
+| item | ruling 2026-09-10 | state |
+|---|---|---|
+| PS-2 | **Name the exporters only.** The footer now says that esttab, coefplot and honestdid read the stored standard-deviation family, not the printed columns. e(V) and e(df_r) unchanged. | built |
+| PS-62 sentinel | **Keep as built.** Off-diagonals zeroed, the -1e100 diagonal left alone, so an unidentified standard error goes on printing as missing rather than as a fabricated 0. | confirmed, no change |
+| BS-15 cut | **Keep 1 - 1e-2.** The measured pathology sits at rho .99940 and .99715 on the same fixture and 1 - 1e-3 caught only one of the two. | confirmed, no change |
+| PS-45 band | **Percentile-t under boottstat**, so the band is on the same scale as the pointwise intervals beside it. | built |
+| PS-46 | **Post e(p) and the interval, nothing else** - no e(se), no covariance. | built |
+
+The per-item sections below are the analysis as it was put to the author, unedited.
 
 ## PS-2 — "the stored covariance and degrees of freedom follow `bootdisplay()`"
 

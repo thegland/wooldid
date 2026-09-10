@@ -10619,7 +10619,13 @@ version 16.0
    else dis as result "  The bootstrap covariance is stored in e(V_boot); no covariance is posted to e(V) for this run."
    * e(V) and e(df_r) carry the sd-family inference whichever family is displayed, so a
    * hand-run test/lincom reproduces the sd package and NOT a displayed percentile p
-   if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  e(V) and e(df_r) carry the standard-deviation family referred to the `wdbrefd' distribution, so test and lincom run by hand reproduce the bootdisplay(wald) numbers rather than the columns printed above."
+   * PS-2 (author ruling 2026-09-10): name the EXPORTERS here too. test and lincom are the
+   * commands a user runs deliberately; esttab, coefplot and honestdid read the same e(V)
+   * without being asked to, so a table or a figure built from this run carries the
+   * standard-deviation family even though the printed table does not. That is the whole
+   * content of the ruling - the stored family itself is unchanged, per the 2026-09-03/04
+   * display rulings that an interval-implied standard error is not a standard error.
+   if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  e(V) and e(df_r) carry the standard-deviation family referred to the `wdbrefd' distribution, so test and lincom run by hand reproduce the bootdisplay(wald) numbers rather than the columns printed above - and so do the tools that read e(V) without being asked: esttab, coefplot and honestdid export the standard-deviation family, not the columns above."
    if "`e(boot_jt_family)'" == "fixedmetric" dis as result "  The joint pre-trend tests (and the across-subgroup equality tests, when subgroups are present) are rank tests of the replication draws recentred at the observed estimates on the fixed bootstrap-covariance metric, p = add-one share of replications at or beyond the observed statistic (e(boot_jt_family) = fixedmetric; the replication statistics are in e(boot_jointW) and e(boot_sgW)). Under boottstat they would instead be bootstrapped test statistics."
    if "`e(boot_jt_absent)'" != "" | "`e(boot_sgjt_absent)'" != "" | "`e(boot_adv_absent)'" != "" dis as result "  Some joint tests, across-subgroup equality tests and/or adversarial line tests are NOT reported for this run (no usable replication statistic - too few complete replications or a rank-deficient bootstrap covariance of the tested columns). They are absent rather than shown as analytic tests, which would not be bootstrap quantities."
    if "`e(boot_tstat)'" == "1" dis as result "  Subgroup contrasts, when requested, are studentized by their own analytic pairwise standard error in every replication (boottstat) and carry the same package as the coefficient rows."
