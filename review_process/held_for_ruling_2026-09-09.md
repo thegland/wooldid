@@ -47,3 +47,29 @@ and can ship immediately.
 
 **Ruling wanted:** (a) swap `e(V)` to analytic under `boottstat` and rewrite the footer; (b)
 name the exporters in the footer and leave the stored family alone; (c) both.
+
+## BS-15 — the degeneracy tolerance is a judgment call, not a ruled number
+
+The ruling says "when the subgroup pairwise covariance is numerically rank-deficient,
+blank the pairwise SEs and both equality tests with a named caution". It fixes no cut.
+Built and shipped at 1 - 1e-2 on the implied correlation between the two subgroups'
+estimates. The measurement, on `test/data/dta_binary.dta`, the fixture the bug sweep used:
+
+| run | main att row | pretreatment att row |
+|---|---|---|
+| `cluster(i)` | rho .99940 | rho .99715 |
+| `robust` | rho .51141 | rho .49779 |
+
+On the clustered run the contrast standard errors are 1/44 and 1/20 of their robust
+counterparts - the same pathology on both rows. A cut at 1 - 1e-3 was tried first and
+caught only the main row, leaving the pre-treatment row reporting a standard error twenty
+times too small, which is the defect the ruling names. 1 - 1e-2 catches both and still
+sits half the range away from a healthy design.
+
+Across the 34-configuration battery it fires on seven, all of them subgroup runs, at rho
+between .9990 and 1.0000. The equality p-values it withheld were 1.1e-12, 3.3e-88,
+9.2e-46 and 4.2e-25 - the residue-driven false certainty the ruling is about. Nothing
+outside a subgroup run moved.
+
+The cut lives in one local, `wdsgdtol` in `wooldid_sgdeg`. **Ruling wanted only if the
+author wants it elsewhere**; the work does not wait on it.

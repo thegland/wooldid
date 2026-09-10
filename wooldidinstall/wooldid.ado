@@ -4216,6 +4216,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * covariance first and then calls the (e()-driven) display itself - printing here
   * would show analytic inference that is about to be replaced. pretrendpower is
   * refused with bootstrap at parse (plan A13), so the ptp call needs no gate
+  * BS-15 (author ruling 2026-09-07): the realized-degeneracy screen on the subgroup pairwise
+  * covariance. It rewrites e(pwsgs) and the allsgssame scalars, so it must run AFTER they are
+  * posted and BEFORE anything displays them. Analytic path only: from here the bootstrap and
+  * permutation shells own those cells and read the analytic pairwise standard error as their
+  * own input (wooldid_bootjnt's `pw0', wooldid_permwire's se_analytic column). fastnose is
+  * named rather than left to the missing-standard-error test: F9's contract is "." cells
+  if "`bootstrap'`permute'" == "" & "`fastnose'" == "" & wordcount("`sglist'") > 1 wooldid_sgdeg , si(`safetyinput')
   if "`bootstrap'`permute'" == "" wooldid_display , part(1)
   * F7: Roth (2022) pre-trend power diagnostics (compute + display + ereturns live in a
   * subprogram; cap noi so a failure here cannot abort an otherwise-complete run)
@@ -9511,6 +9518,138 @@ version 16.0
   ereturn scalar imdf_max = `wdimax'
 end
 
+cap prog drop wooldid_sgdeg
+prog def wooldid_sgdeg, eclass
+version 16.0
+  * BS-15 (author ruling 2026-09-07): blank the subgroup pairwise standard errors and both
+  * across-subgroup equality tests, with a named caution, when the analytic covariance of the
+  * subgroup effects is numerically rank-deficient in the contrast direction. This is the
+  * fourth site of the policy the bootstrap, boottstat and permtstat paths already carry; it
+  * was the only one that computed and printed the residue in silence while jointtests on the
+  * identical call named the same degeneracy.
+  *
+  * ANALYTIC PATH ONLY (see the gate at the call site). Under bootstrap() wooldid_bootjnt takes
+  * `pw0' = e(pwsgs) and reads column 2 as boottstat's studentization denominator and as
+  * wooldid_bootsgw's observed comparator; under permute() wooldid_permwire keeps column 2 and
+  * renames it se_analytic. Blanking it here would delete THEIR inference, not wooldid's.
+  *
+  * DETECTION. The construction is the siblings' (wooldid_bootsgw's W_obs leg): rebuild the
+  * level covariance of the subgroup effects by polarisation from the two standard-error
+  * columns already in hand, C_ab = (V_a + V_b - V_ab)/2, and reject a numerically singular
+  * correlation matrix. Per pairwise row that is the implied correlation
+  *     rho = (V_a + V_b - V_ab) / (2*sqrt(V_a*V_b)) ,
+  * and at two subgroups it is the only form carrying information: the chain-contrast
+  * covariance is then 1x1 and its correlation matrix is [1], so the siblings' eigen guard
+  * cannot fire there. The eigen form on the m x m level correlation matrix is equivalent at
+  * m = 2 (min/max eigenvalue = (1-rho)/(1+rho)) and is the generalisation if a family-level
+  * test is ever wanted at m > 2.
+  * The TOLERANCE is deliberately NOT the siblings' 1e-8, which is a floating-point rank test
+  * and is inert on this failure. Measured on test/data/dta_binary.dta, the fixture the bug
+  * sweep used, with two disjoint sets of 25 treated units:
+  *              main att row     pretreatment att row
+  *   cluster(i)   rho .99940            rho .99715
+  *   robust       rho .51141            rho .49779
+  * and on the clustered run the contrast standard errors are 1/44 and 1/20 of their robust
+  * counterparts - the same pathology on both rows. The cut is 1 - 1e-2, which catches both
+  * and still sits half the range away from a healthy design. A cut at 1 - 1e-3, tried first,
+  * caught the main row and left the pretreatment row reporting a contrast standard error
+  * twenty times too small, which is the defect the ruling names. The cut is a judgment call
+  * on a number the ruling did not fix; it lives in ONE local below so it can be moved.
+  syntax , [si(string)]
+  cap confirm matrix e(pwsgs)
+  if _rc != 0 exit
+  local sgl `e(wdid_sglist)'
+  if wordcount("`sgl'") < 2 exit
+  * the ruled tolerance: a row is flagged when 1 - rho < this
+  local wdsgdtol 1e-2
+  tempname pw
+  matrix `pw' = e(pwsgs)
+  * the per-subgroup level tables, read once. their rows are "main:att", "pretreatment:ame",
+  * ... - the same (eq, item) keys wooldid_bootjnt's positional walk builds. ABSENT under
+  * suppresssgprimaryeffects, where the level margins are never computed at all: every row is
+  * then skipped and the screen is inert (documented in the help)
+  foreach sg of local sgl {
+    cap confirm matrix e(wdidsgresults_`sg')
+    if _rc != 0 continue
+    tempname wsg`sg'
+    matrix `wsg`sg'' = e(wdidsgresults_`sg')
+    local wsgn`sg' : rowfullnames `wsg`sg''
+  }
+  local wdsgdn 0
+  local wdsgdrows
+  local wdsgdfam
+  local wdsgdmax 0
+  local prn : rowfullnames `pw'
+  local rr 0
+  foreach rn of local prn {
+    local ++rr
+    * the eq/name split and the (eq, item) key, byte-for-byte the walk wooldid_bootjnt uses on
+    * the same matrix; with three or more subgroups stata marks the base level in the row name
+    gettoken eqn nmn : rn, parse(":")
+    local nmn = subinstr("`nmn'", ":", "", 1)
+    local ispre = strpos("`eqn'", "pre") > 0
+    local item = subinstr("`eqn'", "pre", "", 1)
+    local item = subinstr("`item'", "_", "", 1)
+    if !`ispre' local item `eqn'
+    local eqwant = cond(`ispre', "pretreatment", "main")
+    if !regexm("`nmn'", "^([0-9]+)(bn?)?vs([0-9]+)(bn?)?([.].*)?$") continue
+    local sga = regexs(1)
+    local sgb = regexs(3)
+    local sea .
+    local seb .
+    local kk 0
+    foreach wn of local wsgn`sga' {
+      local ++kk
+      if "`wn'" == "`eqwant':`item'" local sea = `wsg`sga''[`kk', 2]
+    }
+    local kk 0
+    foreach wn of local wsgn`sgb' {
+      local ++kk
+      if "`wn'" == "`eqwant':`item'" local seb = `wsg`sgb''[`kk', 2]
+    }
+    if `sea' >= . | `seb' >= . | `sea' <= 0 | `seb' <= 0 continue
+    local sed = `pw'[`rr', 2]
+    * a MISSING contrast standard error COUNTS AS rank-deficient, exactly as the sibling guard
+    * does (wooldid_bootsgw returns on missing(sc)): it is the extreme of the same failure - the
+    * boottstat disclosure names it "missing, or numerically zero with a p-value of 0" - and on
+    * the binary path `sgpost' is still set there, so the chain test or its overjoint fallback
+    * can still have posted an equality p that must be withheld. Blanking an already-blank row
+    * is idempotent; withholding the family's equality test is the point. Fast mode and the
+    * AMESE R1 scrub never reach this line: both blank columns 2-6 of the LEVEL matrices too, so
+    * the level-standard-error check above has already skipped those rows. A contrast standard
+    * error of exactly 0 gives rho >= 1 and is flagged.
+    local rho = cond(`sed' >= ., 2, (`sea'^2 + `seb'^2 - `sed'^2)/(2*`sea'*`seb'))
+    if `rho' <= 1 - `wdsgdtol' continue
+    local ++wdsgdn
+    local wdsgdrows `wdsgdrows' `rr'
+    if `rho' > `wdsgdmax' local wdsgdmax = `rho'
+    local wdsgds = cond(`ispre', "joint_pre_`item'_allsgssame", "joint_`item'_allsgssame")
+    if strpos(" `wdsgdfam' ", " `wdsgds' ") == 0 local wdsgdfam `wdsgdfam' `wdsgds'
+  }
+  if `wdsgdn' == 0 exit
+  * the disclosure state, read back by wooldid_display so replay reproduces the caution
+  ereturn hidden scalar wdid_sgdegen = `wdsgdn'
+  ereturn hidden local wdid_sgdegenr = strofreal(`wdsgdmax', "%6.4f")
+  * safety(off): caution and report, do not blank. gates on the USER's safety() value
+  * (safetyinput), never on `safety', which contreatwithin overwrites internally
+  if "`si'" == "off" {
+    ereturn hidden local wdid_sgdegenact report
+    exit
+  }
+  ereturn hidden local wdid_sgdegenact blank
+  foreach cc of local wdsgdrows {
+    forval jj = 2/6 {
+      matrix `pw'[`cc', `jj'] = .
+    }
+  }
+  ereturn matrix pwsgs = `pw'
+  * the equality tests are blanked to MISSING, not dropped - the convention the bootstrap and
+  * permutation paths already use for a withheld allsgssame scalar
+  foreach s of local wdsgdfam {
+    if "`e(`s')'" != "" ereturn scalar `s' = .
+  }
+end
+
 cap prog drop wooldid_display
 prog def wooldid_display
 version 16.0
@@ -9835,6 +9974,13 @@ version 16.0
       dis as result  "Pairwise Comparisons of Different Subgroups' Estimates: `elasinj'"
       matlist e(pwsgs)
       wooldid_pfloor e(pwsgs)
+      * BS-15 (author ruling 2026-09-07): the realized-degeneracy disclosure, posted by
+      * wooldid_sgdeg on the analytic path and read from e() so replay reproduces it. Written as
+      * the sibling of the jointtests caution: same mechanism, same remedies
+      if "`e(wdid_sgdegenact)'" != "" {
+        if "`e(wdid_sgdegenact)'" == "blank" dis as text "Caution: the analytic covariance of the subgroup effects is numerically rank-deficient in the contrast direction for `e(wdid_sgdegen)' pairwise row(s) (largest implied correlation between two subgroups' estimates `e(wdid_sgdegenr)'). The saturated cell dummies leave each cell's residuals with no within-cluster variation to identify, so the contrast's standard error is cancellation residue rather than an estimated variance - the same degeneracy named in the jointtests caution. The standard error, statistic, p-value and interval of those rows, and the across-subgroup equality test(s) covering them, are reported as absent rather than computed from that covariance; the point estimates are unaffected. wooldid's randomization inference (permute()) or bootstrap-based clustered SEs give subgroup contrasts and an equality test that are valid under this design - use bootstrap() WITHOUT boottstat, which studentizes each contrast by exactly this standard error - as does clustering strictly finer than the cohort-by-period cells."
+        else dis as text "Caution: the analytic covariance of the subgroup effects is numerically rank-deficient in the contrast direction for `e(wdid_sgdegen)' pairwise row(s) (largest implied correlation between two subgroups' estimates `e(wdid_sgdegenr)'), so those contrast standard errors are cancellation residue rather than estimated variances. safety(off) was specified, so they and the across-subgroup equality tests are reported rather than withheld; read them as the residue they are. permute(), bootstrap() without boottstat, or clustering strictly finer than the cohort-by-period cells gives inference that is valid under this design."
+      }
       dis as result " "
       foreach item in `estimandlist' {
         if "`e(joint_`item'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same `item': " %-6.4f e(joint_`item'_allsgssame)

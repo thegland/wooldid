@@ -20,6 +20,7 @@ scalar|Nclus|+1.4000000000000X+006
 scalar|ll|-1.90e8fddbf9e3aX+008
 scalar|ll_0|-1.831788764b276X+009
 scalar|r2|+1.cc3d43e955558X-001
+scalar|wdid_sgdegen|+1.8000000000000X+003
 scalar|wdid_fcncell|+1.cb00000000000X+008
 scalar|level|+1.7c00000000000X+006
 scalar|joint_pre_att_it_allsgssame|+1.48efb643fdd1dX-004
@@ -41,6 +42,8 @@ scalar|rmse|+1.06396227c9496X-001
 scalar|r2_withinadj|+1.88a42d1d88411X-003
 scalar|r2_within|+1.14bea906b3797X-001
 scalar|r2adj|+1.9b84685ee140fX-001
+macro|wdid_sgdegenact|report
+macro|wdid_sgdegenr|0.9996
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2

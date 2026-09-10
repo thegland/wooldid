@@ -20,12 +20,15 @@ scalar|r2_within|+1.14bea906b3797X-001
 scalar|r2_withinadj|+1.88a42d1d88411X-003
 scalar|rmse|+1.06396227c9496X-001
 scalar|rss|+1.03281c3652b60X+007
+scalar|joint_pre_att_allsgssame|+1.0000000000000X+3ff
+scalar|joint_att_allsgssame|+1.0000000000000X+3ff
+scalar|wdid_sgdegen|+1.0000000000000X+001
 scalar|wdid_fcncell|+1.a100000000000X+008
 scalar|level|+1.7c00000000000X+006
-scalar|joint_pre_att_allsgssame|+1.0268e3349a6feX-051
-scalar|joint_att_allsgssame|+1.4ebafc08239c3X-096
 scalar|N_clust|+1.4000000000000X+006
 scalar|N_dropped|+0.0000000000000X-3ff
+macro|wdid_sgdegenact|blank
+macro|wdid_sgdegenr|0.9993
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
@@ -204,6 +207,19 @@ mat|V|12|9|+0.0000000000000X-3ff
 mat|V|12|10|+0.0000000000000X-3ff
 mat|V|12|11|+0.0000000000000X-3ff
 mat|V|12|12|+1.bbab1656d839eX-008
+matnames|pwsgs|2x6|att:2vs1.sg pre_att:2vs1.sg|estimate se t p lb_95ci ub_95ci
+mat|pwsgs|1|1|+1.202656c075100X-004
+mat|pwsgs|1|2|+1.0000000000000X+3ff
+mat|pwsgs|1|3|+1.0000000000000X+3ff
+mat|pwsgs|1|4|+1.0000000000000X+3ff
+mat|pwsgs|1|5|+1.0000000000000X+3ff
+mat|pwsgs|1|6|+1.0000000000000X+3ff
+mat|pwsgs|2|1|-1.1b8cd52aa1760X-004
+mat|pwsgs|2|2|+1.0000000000000X+3ff
+mat|pwsgs|2|3|+1.0000000000000X+3ff
+mat|pwsgs|2|4|+1.0000000000000X+3ff
+mat|pwsgs|2|5|+1.0000000000000X+3ff
+mat|pwsgs|2|6|+1.0000000000000X+3ff
 matnames|wdidmainresults|4x7|main:att pretreatment:att ES_att:pre2 ES_att:pre1|estimate se t p lb_95ci ub_95ci relyr
 mat|wdidmainresults|1|1|+1.a5a586283fb6cX-001
 mat|wdidmainresults|1|2|+1.01e6e03a962d8X-004
@@ -291,19 +307,6 @@ mat|wdidsgresults_1|4|4|+1.52a9234bf7922X-001
 mat|wdidsgresults_1|4|5|-1.9a80fcbb9cc84X-003
 mat|wdidsgresults_1|4|6|+1.05fd60fb4c064X-003
 mat|wdidsgresults_1|4|7|-1.0000000000000X+000
-matnames|pwsgs|2x6|att:2vs1.sg pre_att:2vs1.sg|estimate se t p lb_95ci ub_95ci
-mat|pwsgs|1|1|+1.202656c075100X-004
-mat|pwsgs|1|2|+1.2b6bc8afe59f9X-009
-mat|pwsgs|1|3|+1.ecb9fc263f669X+004
-mat|pwsgs|1|4|+1.4ebafc082420fX-096
-mat|pwsgs|1|5|+1.0d867a46b64b2X-004
-mat|pwsgs|1|6|+1.32c6333a33d4eX-004
-mat|pwsgs|2|1|-1.1b8cd52aa1760X-004
-mat|pwsgs|2|2|+1.2b30dbb692570X-008
-mat|pwsgs|2|3|-1.e53bfb6763b2fX+003
-mat|pwsgs|2|4|+1.0268e3349abdfX-051
-mat|pwsgs|2|5|-1.40c5397fe381dX-004
-mat|pwsgs|2|6|-1.eca8e1aabed47X-005
 matnames|escomp_s2|2x8|pre2 pre1|ncohorts nunits nclusters nobs sumw_att wshare_att wshare_att_it relyr
 mat|escomp_s2|1|1|+1.0000000000000X+001
 mat|escomp_s2|1|2|+1.9000000000000X+004
