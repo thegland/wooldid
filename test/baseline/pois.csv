@@ -8,9 +8,9 @@ scalar|r2pseud|+1.a457ae68438aeX-005
 scalar|rmse|+1.ce7ede94055a7X-003
 scalar|rss|+1.e4aff78108b87X+004
 scalar|N_dropped|+0.0000000000000X-3ff
+scalar|N_clust|+1.4000000000000X+006
 scalar|level|+1.7c00000000000X+006
 scalar|wdid_fcncell|+1.2c00000000000X+008
-macro|cmd|wooldid
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|0
@@ -21,7 +21,12 @@ macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_poisson|poisson
 macro|wdid_vcespec|cluster(i)
+macro|vcetype|Robust
+macro|vce|cluster
+macro|clustvar|i
+macro|wdid_vcvstate|analytic-diagonal
 macro|estimate_type|pooled_reference_period
+macro|cmd|wooldid
 macro|cmdline|wooldid ycount i t ttre, att cluster(i) poisson
 macro|properties|b V
 macro|depvar|ycount

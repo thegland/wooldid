@@ -24,6 +24,7 @@ scalar|wdid_fcncell|+1.4500000000000X+009
 scalar|level|+1.7c00000000000X+006
 scalar|joint_pre_att_allsgssame|+1.1485d92503219X-01f
 scalar|joint_att_allsgssame|+1.4b805b4c1eae7X-123
+scalar|N_clust|+1.9000000000000X+005
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|rss|+1.3d44a27068e5bX+007
 scalar|rmse|+1.89e9d5a37a623X-001
@@ -39,6 +40,10 @@ macro|wdid_sglist|0 1 2
 macro|wdid_sgvar|sg
 macro|wdid_contreat|dose
 macro|wdid_vcespec|cluster(i)
+macro|vcetype|Robust
+macro|vce|cluster
+macro|clustvar|i
+macro|wdid_vcvstate|analytic-diagonal
 macro|estimate_type|pooled_reference_period
 macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, contreat(dose) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) subgroups(sg)

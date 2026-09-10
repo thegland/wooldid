@@ -26,15 +26,21 @@ scalar|joint_pre_att_it_allsgssame|+1.48efb643fdd1dX-004
 scalar|joint_att_it_allsgssame|+1.aa7bc3ca8e3ccX-033
 scalar|joint_pre_att_allsgssame|+1.48efb643fdd1dX-004
 scalar|joint_att_allsgssame|+1.aa7bc3ca8e3ccX-033
+scalar|joint_horiz_i_s2|+1.3ac407de3e71eX-001
+scalar|joint_horiz_s2|+1.3ac407de3e71eX-001
+scalar|joint_horiz_i_s1|+1.63d5d02026390X-005
+scalar|joint_horiz_s1|+1.63d5d02026390X-005
+scalar|joint_horiz_i_s0|+1.953fca303d40dX-003
+scalar|joint_horiz_s0|+1.953fca303d40dX-003
 scalar|joint_horiz_i|+1.45c838f32df50X-001
 scalar|joint_horiz|+1.45c838f32df50X-001
+scalar|N_clust|+1.4000000000000X+006
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|rss|+1.03281c3652b60X+007
 scalar|rmse|+1.06396227c9496X-001
 scalar|r2_withinadj|+1.88a42d1d88411X-003
 scalar|r2_within|+1.14bea906b3797X-001
 scalar|r2adj|+1.9b84685ee140fX-001
-macro|cmd|wooldid
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
@@ -46,13 +52,12 @@ macro|wdid_estimands|att att_it
 macro|wdid_sglist|0 1 2
 macro|wdid_sgvar|sgm
 macro|wdid_vcespec|cluster(i)
-macro|joint_horiz_i_s2|.6147768458169798
-macro|joint_horiz_s2|.6147768458169798
-macro|joint_horiz_i_s1|.0434369149163053
-macro|joint_horiz_s1|.0434369149163053
-macro|joint_horiz_i_s0|.1978755756350953
-macro|joint_horiz_s0|.1978755756350953
+macro|vcetype|Robust
+macro|vce|cluster
+macro|clustvar|i
+macro|wdid_vcvstate|analytic-diagonal
 macro|estimate_type|pooled_reference_period
+macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre if w > 0, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sgm) jointtests safety(off)
 macro|properties|b V
 macro|depvar|y

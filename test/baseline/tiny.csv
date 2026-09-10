@@ -19,9 +19,9 @@ scalar|r2_withinadj|+1.13c024280bcf2X-001
 scalar|rmse|+1.2647f49e6d441X-002
 scalar|rss|+1.e649717ee319cX+000
 scalar|N_dropped|+0.0000000000000X-3ff
-scalar|level|+1.7c00000000000X+006
+scalar|N_clust|+1.0000000000000X+003
 scalar|wdid_fcncell|+1.4000000000000X+004
-macro|cmd|wooldid
+scalar|level|+1.7c00000000000X+006
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|1
@@ -31,7 +31,12 @@ macro|wdid_fcol|1
 macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_vcespec|cluster(i)
+macro|vcetype|Robust
+macro|vce|cluster
+macro|clustvar|i
+macro|wdid_vcvstate|analytic-diagonal
 macro|estimate_type|pooled_reference_period
+macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1)
 macro|properties|b V
 macro|depvar|y

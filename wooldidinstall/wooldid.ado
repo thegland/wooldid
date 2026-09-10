@@ -202,6 +202,14 @@ version 16.0
       local wdpc = colnumb(`wdpk', "main_`wdpe'")
       if `wdpc' < . {
         ereturn scalar perm_p_`wdpe' = `wdpk'[3, `wdpc']
+        * CS-57 (author ruling 2026-09-08): rows 11-12 are the signed level() quantiles of
+        * the NULL DISTRIBUTION - the region the statistic occupies under the null - not an
+        * interval for the estimand. Naming them lb/ub made one word mean two things in a
+        * single run, since e(perm_ci) and every e(boot_ci_*) use ll/ul for a genuine
+        * interval. The band-specific names are canonical from here; the legacy pair stays
+        * for compatibility and is documented as deprecated.
+        ereturn scalar perm_bandlo_`wdpe' = `wdpk'[11, `wdpc']
+        ereturn scalar perm_bandhi_`wdpe' = `wdpk'[12, `wdpc']
         ereturn scalar perm_lb_`wdpe' = `wdpk'[11, `wdpc']
         ereturn scalar perm_ub_`wdpe' = `wdpk'[12, `wdpc']
         ereturn scalar perm_sd_`wdpe' = `wdpk'[6, `wdpc']
@@ -221,6 +229,11 @@ version 16.0
         }
       }
     }
+    * CS-58 (author ruling 2026-09-08): e(permdist) is NOT the twin of e(bootdist). It
+    * holds one column per requested estimand on the e(perm_stat) scale (the t-ratio under
+    * permtstat), where e(bootdist) is the full coefficient-draw matrix stripe-aligned to
+    * e(b). The true twin is e(permdist_b), posted by wooldid_permwire. e(permdist) is
+    * retained and documented as deprecated in favour of it.
     if `wdp_r_done' <= 10000 cap ereturn matrix permdist = `wdpdist'
     * NFPERM-12 (lean kernel): the estimand comparators actually used for the legacy
     * scalars, on the e(perm_stat) scale (the full vector is e(perm_comparator_b))
@@ -3911,6 +3924,45 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   }
   ereturn scalar N_dropped = `droppedobs'
 
+  * CS-4 (author ruling 2026-09-08): ONE disclosure contract for what e(V) is on this run.
+  * The four states the package can post are: "analytic-diagonal" (variances only, no
+  * covariance - a cross-estimate test on it is not valid), "analytic-blocks" (as
+  * diagonal, plus real within-family event-study blocks where they exist), "bootstrap"
+  * (the full replication covariance, with e(df_r) aligned so a hand test reproduces the
+  * Wald display), and "absent" (permute's fast-mode default posts none). The marker is
+  * machine-readable so downstream code can check rather than infer; the help states what
+  * each means and what survives a replay.
+  cap confirm matrix e(V)
+  local wdhasv = (_rc == 0)
+  ereturn hidden local wdid_vcvstate = cond(`wdhasv', "analytic-diagonal", "absent")
+
+  * PS-1 (author ruling 2026-09-07): post the conventional names alongside wooldid's own,
+  * so estout, esttab and anything else keying on Stata's usual cluster and variance
+  * entries finds them. Pure addition - e(Nclus) and e(wdid_vcespec) are unchanged, and
+  * nothing that already reads them moves.
+  if "`Nclus'" != "." & "`Nclus'" != "" ereturn scalar N_clust = `Nclus'
+  * e(clustvar) names the design and stands whether or not a variance was posted; e(vce)
+  * and e(vcetype) name what e(V) IS, so a run that posted none leaves them empty rather
+  * than labelling an absent matrix (the permutation wire does the same thing)
+  if "`cluster'" != "" ereturn local clustvar `cluster'
+  if `wdhasv' {
+    if "`cluster'" != "" {
+      ereturn local vce cluster
+      ereturn local vcetype Robust
+    }
+    else if "`robust'" != "" {
+      ereturn local vce robust
+      ereturn local vcetype Robust
+    }
+    else if `"`customvce'"' != "" {
+      local wdvce1 = word(`"`customvce'"', 1)
+      ereturn local vce `wdvce1'
+      if !inlist("`wdvce1'", "ols", "oim", "opg", "unadjusted") ereturn local vcetype Robust
+    }
+    else if "`unconditionalse'" != "" ereturn local vce unconditional
+    else ereturn local vce = cond("`poisson'" == "poisson", "oim", "ols")
+  }
+
   * return the joint  tests
   if "`suppressjointtests'" == "" {
     if "`joint_horiz'" != "" ereturn scalar joint_horiz = `joint_horiz'
@@ -3939,10 +3991,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`suppresssgprimaryeffects'" == "" {
       foreach sgcase in `sglist' {
         if "`suppressjointtests'" == "" {
-          if "`joint_horiz_s`sgcase''" != "" ereturn local joint_horiz_s`sgcase' = `joint_horiz_s`sgcase''
-          if "`joint_horiz_i_s`sgcase''" != "" ereturn local joint_horiz_i_s`sgcase' = `joint_horiz_i_s`sgcase''
-          if "`joint_Choriz_s`sgcase''" != "" ereturn local  joint_Choriz_s`sgcase' = `joint_Choriz_s`sgcase''
-          if "`joint_Choriz_i_s`sgcase''" != "" ereturn local  joint_Choriz_i_s`sgcase' =  `joint_Choriz_i_s`sgcase''
+          * CS-60 (author ruling 2026-09-08): post these as numeric SCALARS, matching the
+          * overall joint families. They were the only joint p-values stored as string
+          * macros, so a single loop over subgroups got numbers for one family and strings
+          * for the other. A p-value's conventional type is a scalar.
+          if "`joint_horiz_s`sgcase''" != "" ereturn scalar joint_horiz_s`sgcase' = `joint_horiz_s`sgcase''
+          if "`joint_horiz_i_s`sgcase''" != "" ereturn scalar joint_horiz_i_s`sgcase' = `joint_horiz_i_s`sgcase''
+          if "`joint_Choriz_s`sgcase''" != "" ereturn scalar joint_Choriz_s`sgcase' = `joint_Choriz_s`sgcase''
+          if "`joint_Choriz_i_s`sgcase''" != "" ereturn scalar joint_Choriz_i_s`sgcase' = `joint_Choriz_i_s`sgcase''
         }
         if "`adversarial'" != "" {
           foreach scenario in _ _C {
@@ -7228,6 +7284,18 @@ version 16.0
   else if "`ase'" != "" local wdphdr randomization inference (permute(`method'), `reps' replications); se_analytic = the analytic `wdpcl' standard error, shown for reference only
   else local wdphdr randomization inference (permute(`method'), `reps' replications); analytic standard errors not computed (permanalyticse restores them)
   ereturn hidden local wdid_vcespec "`wdphdr'"
+  * CS-4: the permutation engine's covariance state. Under the fast-mode default no e(V)
+  * is posted at all; under permanalyticse the posted matrix is the ANALYTIC one, shown for
+  * reference, and is not a permutation quantity.
+  cap confirm matrix e(V)
+  local wdphasv = (_rc == 0)
+  ereturn hidden local wdid_vcvstate = cond(`wdphasv', "analytic-diagonal", "absent")
+  * PS-1: with no covariance posted the conventional variance-type names describe nothing,
+  * so clear them rather than leave the analytic run's labels beside an absent e(V)
+  if !`wdphasv' {
+    ereturn local vce
+    ereturn local vcetype
+  }
   ereturn hidden local wdid_fastnose ""
 
   * -------- cautions (estimation-time; the footer carries the standing disclosures)
@@ -8455,7 +8523,14 @@ version 16.0
   else if "`bdisp'" == "bc"       matrix `wm' = `wmbc'
   else if "`bdisp'" == "bca"      matrix `wm' = `wmbca'
   ereturn hidden matrix boot_wald_mainresults = `wmsd'
-  ereturn hidden matrix boot_pctl_mainresults = `wmpct'
+  * CS-54 (author ruling 2026-09-08): every other display family's table name derives from
+  * e(boot_display) - bc, bca, wald - but the DEFAULT posts "percentile" against
+  * boot_pctl_mainresults, so the derivation fails on exactly the case a user hits first.
+  * Post the derivable name as an alias: pure addition, and the short name still works.
+  * NB the `, copy' - see the note above: `ereturn matrix' MOVES its source, so the first
+  * of the two posts has to copy or the second finds no matrix (r(111) on every bootstrap)
+  ereturn hidden matrix boot_pctl_mainresults = `wmpct', copy
+  ereturn hidden matrix boot_percentile_mainresults = `wmpct'
   ereturn hidden matrix boot_bc_mainresults = `wmbc'
   if `wdbbca' ereturn hidden matrix boot_bca_mainresults = `wmbca'
 
@@ -8754,6 +8829,14 @@ version 16.0
   if "`ties'" != "" ereturn local boot_ties ties
 
   ereturn hidden local wdid_vcespec "`wdbmodetext', `wdbcl', reps(`reps')"
+  * CS-4: the bootstrap engine posts the full replication covariance, unless the repost
+  * failed (the caution above), in which case whatever e(V) held before still stands
+  ereturn hidden local wdid_vcvstate = cond(`wdb_vposted', "bootstrap", cond(`wdb_hadv', "analytic-diagonal", "absent"))
+  * PS-1: Stata's own bootstrap prefix labels the variance this way
+  if `wdb_vposted' {
+    ereturn local vce bootstrap
+    ereturn local vcetype Bootstrap
+  }
   ereturn local boot_method `mode'
   ereturn scalar boot_reps = `reps'
   ereturn scalar boot_completed = `done'
@@ -9703,7 +9786,8 @@ version 16.0
    * F-boot summary block (existence-gated: replay of non-bootstrap stores prints
    * nothing). all content from e() only
    if "`e(boot_method)'" == "" exit
-   * keyed on e(wdid_vcespec) (wooldid posts no e(clustvar)); both modes take the
+   * keyed on e(wdid_vcespec), which names the resampling unit (e(clustvar), added by
+   * PS-1, names the analytic cluster variable and not this); both modes take the
    * observation-level test (bug sweep BS-31)
    local wdbobs = strpos("`e(wdid_vcespec)'", "observation-level") > 0
    local wdbmt = cond("`e(boot_method)'" == "bayes", cond(`wdbobs', "Bayesian bootstrap (Dirichlet reweighting over observations, alpha = `e(boot_alpha)')", "Bayesian cluster bootstrap (Dirichlet reweighting, alpha = `e(boot_alpha)')"), cond(`wdbobs', "observation-level bootstrap (resampling with replacement)", "cluster bootstrap (resampling with replacement)"))

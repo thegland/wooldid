@@ -24,8 +24,8 @@ scalar|wdid_fcncell|+1.0800000000000X+006
 scalar|level|+1.7c00000000000X+006
 scalar|joint_pre_att_allsgssame|+1.f2a31a70c516cX-001
 scalar|joint_att_allsgssame|+1.c1eeecb5232c9X-01f
+scalar|N_clust|+1.4000000000000X+003
 scalar|N_dropped|+0.0000000000000X-3ff
-macro|cmd|wooldid
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|4
@@ -37,7 +37,12 @@ macro|wdid_estimands|att
 macro|wdid_sglist|3 7
 macro|wdid_sgvar|ttre
 macro|wdid_vcespec|cluster(i)
+macro|vcetype|Robust
+macro|vce|cluster
+macro|clustvar|i
+macro|wdid_vcvstate|analytic-diagonal
 macro|estimate_type|fixed_reference_period
+macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, att cluster(i) subgroup(ttre) esprelength(3) espostlength(3) esfixedbaseperiod
 macro|properties|b V
 macro|depvar|y

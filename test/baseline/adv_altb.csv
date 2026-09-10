@@ -19,10 +19,10 @@ scalar|r2_withinadj|+1.96cd05071f3fdX-003
 scalar|rmse|+1.0519a995312caX-001
 scalar|rss|+1.4bd65e9d9a68eX+006
 scalar|N_dropped|+0.0000000000000X-3ff
-scalar|adversarial_pval_att|+1.ef121c2b6624eX-013
+scalar|N_clust|+1.4000000000000X+006
 scalar|wdid_fcncell|+1.1a00000000000X+009
 scalar|level|+1.7c00000000000X+006
-macro|cmd|wooldid
+scalar|adversarial_pval_att|+1.ef121c2b6624eX-013
 macro|wdid_replayv|2
 macro|wdid_esrel|-3
 macro|wdid_espre|2
@@ -33,7 +33,12 @@ macro|wdid_fcol|1
 macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_vcespec|cluster(i)
+macro|vcetype|Robust
+macro|vce|cluster
+macro|clustvar|i
+macro|wdid_vcvstate|analytic-diagonal
 macro|estimate_type|fixed_reference_period
+macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-3) esprelength(2) espostlength(2) adversarial altmethod_adversarial
 macro|properties|b V
 macro|depvar|y

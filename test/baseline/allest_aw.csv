@@ -22,7 +22,7 @@ scalar|rss|+1.d7a4d8b935943X+006
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|wdid_fcncell|+1.8c00000000000X+008
 scalar|level|+1.7c00000000000X+006
-macro|cmd|wooldid
+scalar|N_clust|+1.4000000000000X+006
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
@@ -32,7 +32,12 @@ macro|wdid_fcol|1
 macro|wdid_semielas|dydx
 macro|wdid_estimands|att att_it att_i att_itime
 macro|wdid_vcespec|cluster(i)
+macro|vcetype|Robust
+macro|vce|cluster
+macro|clustvar|i
+macro|wdid_vcvstate|analytic-diagonal
 macro|estimate_type|pooled_reference_period
+macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre [aw=w], att att_it att_i att_itime cluster(i) esprelength(2) espostlength(2)
 macro|properties|b V
 macro|depvar|y

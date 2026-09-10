@@ -22,7 +22,7 @@ scalar|rss|+1.62df3a165c5c3X-004
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|wdid_fcncell|+1.9000000000000X+006
 scalar|level|+1.7c00000000000X+006
-macro|cmd|wooldid
+scalar|N_clust|+1.4000000000000X+003
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|4
@@ -33,7 +33,12 @@ macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_contreat|intensity
 macro|wdid_vcespec|cluster(i)
+macro|vcetype|Robust
+macro|vce|cluster
+macro|clustvar|i
+macro|wdid_vcvstate|analytic-diagonal
 macro|estimate_type|fixed_reference_period
+macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) esfixedbaseperiod esprelength(3) espostlength(3) cluster(i)
 macro|properties|b V
 macro|depvar|y

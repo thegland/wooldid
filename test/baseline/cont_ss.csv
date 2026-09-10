@@ -22,6 +22,7 @@ scalar|contreatpost_sd|+1.dfadc7491e0b3X-002
 scalar|N|+1.f400000000000X+009
 scalar|wdid_fcncell|+1.9000000000000X+006
 scalar|level|+1.7c00000000000X+006
+scalar|N_clust|+1.4000000000000X+003
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|rss|+1.6a74b26b463bdX-004
 scalar|rmse|+1.44eb7c256df2eX-007
@@ -35,7 +36,6 @@ scalar|Nclus|+1.4000000000000X+003
 scalar|contreat_sd|+1.fb1ad24118d2bX-002
 scalar|contreat_med|+1.3fa9d00000000X+003
 scalar|contreat_mean|+1.3fc02af958106X+003
-macro|cmd|wooldid
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_wprat|50
@@ -50,7 +50,12 @@ macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_contreat|intensity
 macro|wdid_vcespec|cluster(i)
+macro|vcetype|Robust
+macro|vce|cluster
+macro|clustvar|i
+macro|wdid_vcvstate|analytic-diagonal
 macro|estimate_type|pooled_reference_period
+macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) summarystats
 macro|properties|b V
 macro|depvar|y

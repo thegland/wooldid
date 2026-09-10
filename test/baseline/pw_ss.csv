@@ -22,10 +22,10 @@ scalar|r2_within|+1.1b2b894798dd6X-001
 scalar|r2_withinadj|+1.b5da3e2fc19d5X-003
 scalar|wdid_fcncell|+1.8c00000000000X+008
 scalar|level|+1.7c00000000000X+006
+scalar|N_clust|+1.4000000000000X+006
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|rss|+1.d7a4d8b935943X+006
 scalar|rmse|+1.f447d1a2c45e0X-002
-macro|cmd|wooldid
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_wprat|68.28
@@ -39,7 +39,12 @@ macro|wdid_fcol|1
 macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_vcespec|cluster(i)
+macro|vcetype|Robust
+macro|vce|cluster
+macro|clustvar|i
+macro|wdid_vcvstate|analytic-diagonal
 macro|estimate_type|pooled_reference_period
+macro|cmd|wooldid
 macro|cmdline|wooldid y i t ttre [pw=w], att cluster(i) esprelength(2) espostlength(2) summarystats
 macro|properties|b V
 macro|depvar|y

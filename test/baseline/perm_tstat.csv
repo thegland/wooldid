@@ -9,6 +9,8 @@ scalar|perm_exact|+0.0000000000000X-3ff
 scalar|perm_blank|+0.0000000000000X-3ff
 scalar|perm_absp|+0.0000000000000X-3ff
 scalar|perm_p_att|+1.8618618618618X-004
+scalar|perm_bandlo_att|-1.aea0db88f0d9fX+000
+scalar|perm_bandhi_att|+1.240b2d5185a7aX+001
 scalar|perm_lb_att|-1.aea0db88f0d9fX+000
 scalar|perm_ub_att|+1.240b2d5185a7aX+001
 scalar|perm_sd_att|+1.1b0990cf0f6f4X+000
@@ -27,8 +29,10 @@ scalar|r2_withinadj|+1.bb68cc426b4e0X-003
 scalar|rmse|+1.022bf98b82f0cX-001
 scalar|rss|+1.2e0f81db3e6a0X+007
 scalar|N_dropped|+0.0000000000000X-3ff
+scalar|N_clust|+1.4000000000000X+006
 scalar|level|+1.7c00000000000X+006
 scalar|wdid_fcncell|+1.2c00000000000X+008
+macro|wdid_vcvstate|analytic-diagonal
 macro|wdid_vcespec|randomization inference on t-ratios (permtstat; permute(shuffle), 20 replications); se_analytic = the analytic cluster(i) standard error each t-ratio is formed with
 macro|perm_pconv|equaltailed
 macro|perm_stat|t
@@ -39,7 +43,11 @@ macro|perm_method|shuffle
 macro|depvar|y
 macro|properties|b V
 macro|cmdline|wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permtstat permtci
+macro|cmd|wooldid
 macro|estimate_type|pooled_reference_period
+macro|clustvar|i
+macro|vce|cluster
+macro|vcetype|Robust
 macro|wdid_estimands|att   
 macro|wdid_semielas|dydx
 macro|wdid_fcol|1
@@ -48,7 +56,6 @@ macro|wdid_suppressjt|suppressjointtests
 macro|wdid_espre|0
 macro|wdid_esrel|-1
 macro|wdid_replayv|2
-macro|cmd|wooldid
 matnames|b|1x1|y1|main_att
 mat|b|1|1|+1.b062b5c7a3858X-001
 matnames|V|1x1|main_att|main_att

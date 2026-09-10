@@ -9,10 +9,13 @@ scalar|perm_exact|+0.0000000000000X-3ff
 scalar|perm_blank|+0.0000000000000X-3ff
 scalar|perm_absp|+0.0000000000000X-3ff
 scalar|perm_p_att|+1.8618618618618X-004
+scalar|perm_bandlo_att|-1.4bddc902e1d00X-003
+scalar|perm_bandhi_att|+1.0b8de635e9fa8X-002
 scalar|perm_lb_att|-1.4bddc902e1d00X-003
 scalar|perm_ub_att|+1.0b8de635e9fa8X-002
 scalar|perm_sd_att|+1.0aa6e48c50a69X-003
 scalar|perm_precaveat|+1.0000000000000X+000
+scalar|wdid_fcncell|+1.8c00000000000X+008
 scalar|df_r|+1.3c00000000000X+006
 scalar|escomp_refN|+1.c200000000000X+007
 scalar|escomp_refnunits|+1.9000000000000X+005
@@ -31,8 +34,9 @@ scalar|r2_withinadj|+1.88a42d1d88411X-003
 scalar|rmse|+1.06396227c9496X-001
 scalar|rss|+1.03281c3652b60X+007
 scalar|N_dropped|+0.0000000000000X-3ff
+scalar|N_clust|+1.4000000000000X+006
 scalar|level|+1.7c00000000000X+006
-scalar|wdid_fcncell|+1.8c00000000000X+008
+macro|wdid_vcvstate|absent
 macro|wdid_vcespec|randomization inference (permute(shuffle), 20 replications); analytic standard errors not computed (permanalyticse restores them)
 macro|perm_pconv|equaltailed
 macro|perm_stat|b
@@ -43,7 +47,9 @@ macro|perm_method|shuffle
 macro|depvar|y
 macro|properties|b
 macro|cmdline|wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20)
+macro|cmd|wooldid
 macro|estimate_type|pooled_reference_period
+macro|clustvar|i
 macro|wdid_estimands|att   
 macro|wdid_semielas|dydx
 macro|wdid_fcol|1
@@ -52,7 +58,6 @@ macro|wdid_suppressjt|suppressjointtests
 macro|wdid_espre|2
 macro|wdid_esrel|-1
 macro|wdid_replayv|2
-macro|cmd|wooldid
 matnames|b|1x6|y1|main_att pretreatment_att ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1
 mat|b|1|1|+1.a5a586283fb6cX-001
 mat|b|1|2|-1.7680ee08327c0X-005
