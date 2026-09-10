@@ -9904,7 +9904,7 @@ version 16.0
  if "`adversarial'" != "" {
    foreach typetext in att att_it ame ame_it {
      if e(adversarial_pval_`typetext') < . {
-       if "`e(perm_method)'" == "" dis as result "p-value for joint test of null that all (non-reference) `typetext' coefficients are on a single line: " %-6.4f e(adversarial_pval_`typetext')
+       if "`e(perm_method)'" == "" dis as result "p-value for joint test of null that the `typetext' coefficients and the reference period are on a single line: " %-6.4f e(adversarial_pval_`typetext')
        else dis as result "permutation p-value (sharp null of no effect at any horizon) of the adversarial line-fit statistic on the `typetext' coefficients: " %-6.4f e(adversarial_pval_`typetext')
      }
    }
@@ -10047,7 +10047,7 @@ version 16.0
         if "`adversarial'" != "" {
           foreach typetext in att att_it ame ame_it {
             if e(adversarial_pval_`typetext'_s`sgcase') < . {
-              if "`e(perm_method)'" == "" dis as result "p-value for joint test of null that all (non-reference) `typetext' coefficients for sg=`sgcase' are on a single line: " %-6.4f e(adversarial_pval_`typetext'_s`sgcase')
+              if "`e(perm_method)'" == "" dis as result "p-value for joint test of null that the `typetext' coefficients for sg=`sgcase' and the reference period are on a single line: " %-6.4f e(adversarial_pval_`typetext'_s`sgcase')
               else dis as result "permutation p-value (sharp null of no effect at any horizon) of the adversarial line-fit statistic on the `typetext' coefficients for sg=`sgcase': " %-6.4f e(adversarial_pval_`typetext'_s`sgcase')
             }
           }
@@ -12328,7 +12328,22 @@ real scalar wooldid_advW(real colvector b, real matrix V, real colvector rel,
     qout = .
     if (hasmissing(V) | hasmissing(b) | hasmissing(rel)) return(.)
     if (alt == 0) {
-        X = J(rows(rel), 1, 1), rel
+        // BS-12 (author ruling 2026-09-08; research record
+        // review_process/research_2026-09-08/adversarial_null.md): the ONE-parameter null.
+        // Under esfixedbaseperiod b_h = theta_h - theta_r, so a linear underlying path
+        // implies b_h = c*(h - esrel): a line THROUGH the reference period, one free
+        // parameter, not the free-intercept pair X = [1, relyr] this used to fit. The
+        // constant vector lies in col([1, relyr]), so the old statistic was exactly
+        // invariant to b :+ c and its power against a reference-period level shift - the
+        // signature of an anomalous or anticipatory reference year - was exactly alpha at
+        // any magnitude. col(relyr - esrel) is nested in col([1, relyr]), so the new
+        // statistic's noncentrality is at least as large against EVERY alternative; the
+        // price is one degree of freedom, q rising from rank(V) - 2 to rank(V) - 1.
+        // timetrends normalises TWO periods (esrel and esrel - 1, both planted at 0), so
+        // the only line through both is the zero line and the null collapses to b = 0:
+        // no free parameter at all, W = z'z with q = k1. Branch on tt rather than build a
+        // 0-column design - svdsv() on a k1 x 0 matrix is not a shape to hand a
+        // replication loop.
         V = (V + V')/2
         U = .
         lam = .
@@ -12341,14 +12356,21 @@ real scalar wooldid_advW(real colvector b, real matrix V, real colvector rel,
         if (k1 == 0) return(.)
         T = diag(1:/sqrt(lam[sel]')) * U[., sel]'
         z = T*b
-        M = T*X
-        sv = svdsv(M)
-        rankM = sum(sv :> max(sv)*1e-12)
-        q = k1 - rankM
-        if (q <= 0) return(.)
-        g = svsolve(M, z)
-        r = z - M*g
-        W = r'r
+        if (tt) {
+            q = k1
+            W = z'z
+        }
+        else {
+            X = rel :- esrel
+            M = T*X
+            sv = svdsv(M)
+            rankM = sum(sv :> max(sv)*1e-12)
+            q = k1 - rankM
+            if (q <= 0) return(.)
+            g = svsolve(M, z)
+            r = z - M*g
+            W = r'r
+        }
     }
     else {
         idxP = selectindex(rel :<= -1)

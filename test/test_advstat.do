@@ -43,7 +43,7 @@ foreach pin in "pslope1 +1.5808d87098235X-003" "pcons1 -1.06362b4a54d8fX+000" "p
 * independent reconstructions (deliberately a different route than wooldid_advx:
 * pinv + GLS normal equations here vs whitened eigenspace least squares there)
 mata:
-void advt_primary(string scalar bn, string scalar vn, string scalar rn, real scalar dfr)
+void advt_primary(string scalar bn, string scalar vn, string scalar rn, real scalar esrel, real scalar dfr)
 {
     real colvector b, rel, g, d
     real matrix V, X, Vp
@@ -52,7 +52,11 @@ void advt_primary(string scalar bn, string scalar vn, string scalar rn, real sca
     b = st_matrix(bn)'
     V = st_matrix(vn)
     rel = st_matrix(rn)
-    X = J(rows(rel), 1, 1), rel
+    // BS-12 (author ruling 2026-09-08): the ONE-parameter null - the line THROUGH the
+    // reference period, X = rel - esrel, not the free-intercept pair [1, rel]. The route
+    // stays deliberately different from wooldid_advx's (pinv plus normal equations here,
+    // a whitened eigenspace there), so this is an independent reconstruction.
+    X = rel :- esrel
     V = (V + V')/2
     sv = svdsv(V)
     rV = sum(sv :> max(sv)*1e-12)
@@ -61,7 +65,7 @@ void advt_primary(string scalar bn, string scalar vn, string scalar rn, real sca
     g = invsym(X'Vp*X)*(X'Vp*b)
     d = b - X*g
     W = d'Vp*d
-    q = rV - 2
+    q = rV - 1
     st_local("advt_q", strofreal(q))
     if (q <= 0) {
         st_local("advt_p", "")
@@ -144,13 +148,13 @@ if _rc != 0 | "`e(adversarial_pval_att)'" == "" {
 }
 else {
   advt_pull ""
-  mata: advt_primary("advt_bb", "advt_vv", "advt_rr", `advt_dfr')
+  mata: advt_primary("advt_bb", "advt_vv", "advt_rr", `e(wdid_esrel)', `advt_dfr')
   if `advt_rankV' != colsof(advt_bb) {
     dis as error "T1 FAIL: event-study covariance not full rank (rank `advt_rankV' of `=colsof(advt_bb)') - reconstruction geometry ambiguous"
     local ++fails
   }
-  if `advt_q' != `=colsof(advt_bb)' - 2 {
-    dis as error "T1 FAIL: residual rank `advt_q' != k_real - 2"
+  if `advt_q' != `=colsof(advt_bb)' - 1 {
+    dis as error "T1 FAIL: residual rank `advt_q' != k_real - 1"
     local ++fails
   }
   if "`advt_p'" == "" {
@@ -310,7 +314,7 @@ else {
         continue
       }
       advt_pull "`sgsfx'"
-      mata: advt_primary("advt_bb", "advt_vv", "advt_rr", `advt_dfr')
+      mata: advt_primary("advt_bb", "advt_vv", "advt_rr", `e(wdid_esrel)', `advt_dfr')
       if "`advt_p'" == "" {
         dis as error "T6 FAIL: reconstruction refused for `s' but wooldid posted a p"
         local ++fails
@@ -331,7 +335,7 @@ else {
 * ---- T7: null Monte Carlo (outside wooldid, pure mata, known covariance) ----
 * geometry: real horizons (-3,-2,0) with planted reference (-1,0); heteroskedastic
 * V = diag(25, .01, .01); true effects all 0 (an exact line through the reference).
-* 200 draws at nominal 5%: the recalibrated primary statistic (q = 1) must reject at
+* 200 draws at nominal 5%: the recalibrated primary statistic (q = 2 since BS-12) must reject at
 * ~5% ([0.02, 0.09] Monte-Carlo band); the OLD frozen-line statistic (fitted values
 * frozen as constants, full V^-1 weighting, q = 3) must reject far outside the band
 * (reviewer-measured ~0.81 on this covariance) - documenting the cure.
@@ -341,7 +345,11 @@ rel = (-3 \ -2 \ 0)
 relf = rel \ -1                       // + planted reference row
 sd = (5 \ .1 \ .1)
 V = diag(sd:^2)
-X = J(3,1,1), rel
+// BS-12 (author ruling 2026-09-08): the one-parameter design, the line through the
+// reference period. This geometry's reference is -1, so X = rel + 1.
+X = rel :+ 1
+// the OLD frozen-line leg below keeps the free-intercept design it is documenting
+Xold = J(3,1,1), rel
 Xf = J(4,1,1), relf
 Vp = invsym(V)                        // full rank here; GLS weight for the new stat
 rejnew = 0
@@ -349,15 +357,15 @@ rejold = 0
 reps = 200
 for (s = 1; s <= reps; s++) {
     b = sd :* rnormal(3, 1, 0, 1)
-    // new: minimum-distance under V^{-1}, q = rank(V) - 2 = 1
+    // new: minimum-distance under V^{-1}, q = rank(V) - 1 = 2 (BS-12)
     g = invsym(X'Vp*X)*(X'Vp*b)
     d = b - X*g
     Wn = d'Vp*d
-    if (chi2tail(1, Wn) < .05) rejnew++
+    if (chi2tail(2, Wn) < .05) rejnew++
     // old: unweighted OLS on real + planted rows, fitted values frozen, full V^{-1}
     bf = b \ 0
     go = invsym(Xf'Xf)*(Xf'bf)
-    do_ = b - X*go
+    do_ = b - Xold*go
     Wo = do_'Vp*do_
     if (chi2tail(3, Wo) < .05) rejold++
 }
