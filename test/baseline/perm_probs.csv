@@ -87,6 +87,12 @@ mat|permdist|27|1|-1.f50e98ccccd00X-004
 mat|permdist|28|1|-1.80cadab8da190X-003
 mat|permdist|29|1|-1.27fbac1bed660X-004
 mat|permdist|30|1|+1.40a6143ccccc0X-003
+matnames|ci_u|1x1|ul|main_att
+mat|ci_u|1|1|+1.b42f809a4a072X+000
+matnames|ci_l|1x1|ll|main_att
+mat|ci_l|1|1|+1.1acfb841281e8X-002
+matnames|p|1x1|p|main_att
+mat|p|1|1|+1.0842108421084X-004
 matnames|permdist_b|30x1|r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 r16 r17 r18 r19 r20 r21 r22 r23 r24 r25 r26 r27 r28 r29 r30|main_att
 mat|permdist_b|1|1|-1.7dfd348fcbb80X-006
 mat|permdist_b|2|1|+1.5aab22f851e90X-003

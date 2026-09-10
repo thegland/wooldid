@@ -1618,5 +1618,54 @@ if `q31a_def' != 1 | `q31a_ts' != 0 | `q31a_few' != 0 | `q31b_def' != 0 | `q31b_
 }
 else dis as result "Q31 PASS: the coefficient-statistic caution and the permtstat one are alternatives, and the few-treated-cluster line stays silent on an 80-cluster fixture"
 
+* ---- Q32 PS-46 (author ruling 2026-09-10): under the fast-mode default the run posts its
+* permutation inference under the derivable names estout reads AHEAD of any covariance, so a
+* coefficient table built with the standard tools carries this run's real numbers. The
+* contract, both halves: e(p) and e(ci_l)/e(ci_u) are posted and EQUAL the perm_ matrices;
+* and nothing is invented - no e(V), no e(se), so test/lincom/_se[] still refuse. Under
+* permanalyticse an e(V) exists and the tools work from it, so the derivable names are not
+* posted there and the two routes cannot disagree. ----
+use "`DATA'/dta_binary", clear
+qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) rseed(32) dots(0)
+local q32bad 0
+foreach nm in p ci_l ci_u {
+  cap confirm matrix e(`nm')
+  if _rc != 0 local ++q32bad
+}
+foreach nm in V se {
+  cap confirm matrix e(`nm')
+  if _rc == 0 local ++q32bad
+}
+if `q32bad' == 0 {
+  tempname Q32P Q32L Q32U Q32PP Q32CI
+  matrix `Q32P' = e(p)
+  matrix `Q32L' = e(ci_l)
+  matrix `Q32U' = e(ci_u)
+  matrix `Q32PP' = e(perm_p)
+  matrix `Q32CI' = e(perm_ci)
+  if colsof(`Q32P') != colsof(`Q32PP') local ++q32bad
+  else {
+    forval c = 1/`=colsof(`Q32P')' {
+      if `Q32P'[1,`c'] != `Q32PP'[1,`c'] local ++q32bad
+      if `Q32L'[1,`c'] != `Q32CI'[1,`c'] local ++q32bad
+      if `Q32U'[1,`c'] != `Q32CI'[2,`c'] local ++q32bad
+    }
+  }
+}
+cap test main_att = 0
+local q32trc = _rc
+if `q32trc' == 0 local ++q32bad
+qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) rseed(32) permanalyticse dots(0)
+cap confirm matrix e(p)
+local q32ase = (_rc == 0)
+cap confirm matrix e(V)
+local q32asev = (_rc == 0)
+if `q32ase' != 0 | `q32asev' != 1 local ++q32bad
+if `q32bad' != 0 {
+  dis as error "Q32 FAIL: fast-mode posting bad=`q32bad' (test rc=`q32trc'; permanalyticse e(p)=`q32ase' e(V)=`q32asev')"
+  global pf = $pf + 1
+}
+else dis as result "Q32 PASS: fast mode posts e(p)/e(ci_l)/e(ci_u) equal to the perm_ matrices, posts no e(V) or e(se), and test still refuses (rc=`q32trc')"
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

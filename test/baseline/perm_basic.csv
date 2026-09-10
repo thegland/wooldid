@@ -88,6 +88,27 @@ mat|permdist|17|1|+1.8ffd047610cc0X-004
 mat|permdist|18|1|+1.22b260dccad90X-003
 mat|permdist|19|1|+1.28d3579f48240X-003
 mat|permdist|20|1|-1.4bddc902e1d00X-003
+matnames|ci_u|1x6|ul|main_att pretreatment_att ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1
+mat|ci_u|1|1|+1.f89cf868f82acX-001
+mat|ci_u|1|2|+1.f6bdf86877fc0X-005
+mat|ci_u|1|3|+1.36570d33ff970X-003
+mat|ci_u|1|4|+1.3cc2782bb0180X-005
+mat|ci_u|1|5|+1.04b737874d932X+000
+mat|ci_u|1|6|+1.014e94c05cad8X+000
+matnames|ci_l|1x6|ll|main_att pretreatment_att ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1
+mat|ci_l|1|1|+1.1fde930d4ab98X-001
+mat|ci_l|1|2|-1.fa162b85c1bc0X-003
+mat|ci_l|1|3|-1.3d46e9a0334f0X-003
+mat|ci_l|1|4|-1.7c8539cb19f78X-002
+mat|ci_l|1|5|+1.210cbb9a70538X-001
+mat|ci_l|1|6|+1.d2eae22cf1368X-002
+matnames|p|1x6|p|main_att pretreatment_att ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1
+mat|p|1|1|+1.8618618618618X-004
+mat|p|1|2|+1.8618618618618X-001
+mat|p|1|3|+1.b6db6db6db6dbX-001
+mat|p|1|4|+1.8618618618618X-002
+mat|p|1|5|+1.8618618618618X-004
+mat|p|1|6|+1.8618618618618X-004
 matnames|permdist_b|20x6|r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 r16 r17 r18 r19 r20|main_att pretreatment_att ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1
 mat|permdist_b|1|1|-1.f57e543d5dfc0X-004
 mat|permdist_b|1|2|-1.ab2b8f5aa2600X-006

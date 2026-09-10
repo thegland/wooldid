@@ -214,6 +214,44 @@ if `b8rc' != 0 {
   local ++fails
 }
 
+* ---- B9 PS-45 (author ruling 2026-09-10): under boottstat the band is a genuine
+* percentile-t - each replication's own standard error in the denominator, the observed
+* analytic ones in the endpoints - so it sits on the SAME scale as the pointwise intervals
+* printed beside it. The reason the ruling went this way: on the old coefficient-draw-SD
+* construction the two scales differ, so a SIMULTANEOUS band could come out NARROWER than
+* the pointwise interval it accompanies, which is visibly wrong. Two contracts: the engine
+* marker says which construction ran, and the band is at least as wide as the pointwise
+* interval at every horizon. ----
+mkb
+qui wooldid y unit t ttre, `SPEC' bootstrap(standard) reps(60) boottstat rseed(91) dots(0) simultaneousbands
+local b9eng "`e(esband_engine)'"
+tempname B9B B9M
+matrix `B9B' = e(esband_att)
+matrix `B9M' = e(wdidmainresults)
+local b9rn : rowfullnames `B9M'
+local b9narrow 0
+local b9seen 0
+forval c = 1/`=colsof(`B9B')' {
+  local b9ry = `B9B'[3, `c']
+  forval r = 1/`=rowsof(`B9M')' {
+    local b9nm : word `r' of `b9rn'
+    if strpos("`b9nm'", "ES_att") == 1 & `B9M'[`r', 7] == `b9ry' {
+      local b9pw = (`B9M'[`r', 6] - `B9M'[`r', 5])/2
+      local b9bw = (`B9B'[2, `c'] - `B9B'[1, `c'])/2
+      local ++b9seen
+      if `b9bw' < `b9pw' - 1e-12 local ++b9narrow
+    }
+  }
+}
+mkb
+qui wooldid y unit t ttre, `SPEC' bootstrap(standard) reps(60) rseed(91) dots(0) simultaneousbands
+local b9eng2 "`e(esband_engine)'"
+if "`b9eng'" != "bootstrap-studentized" | "`b9eng2'" != "bootstrap" | `b9seen' < 2 | `b9narrow' != 0 {
+  di as error "B9 FAIL: boottstat engine=[`b9eng'] (want bootstrap-studentized), plain engine=[`b9eng2'] (want bootstrap), horizons checked=`b9seen', narrower-than-pointwise=`b9narrow'"
+  local ++fails
+}
+else di as result "B9 PASS: boottstat gives a percentile-t band (`b9seen' horizons, none narrower than its pointwise interval); without boottstat the draw-SD construction stands"
+
 if `fails' == 0 di as result "ESBAND_ALL_PASS"
 else di as error "ESBAND_FAILS=`fails'"
 exit, clear

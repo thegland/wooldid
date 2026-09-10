@@ -1468,7 +1468,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`fastnose'" == "" {
     wooldid_amescreen , mode(vzero) r1fired(`amescrub') contreat(`contreat')
     if r(vzero) == 1 {
-      dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix, so no standard error in this run is identified. The reported estimates stand; every standard error, test statistic, p-value and interval is missing. This is a property of the specification, not a numerical accident: see the cell-containment caution above for the mechanism and for the alternatives (impvalues dispersion inference, a finer-than-cell clustering, or conditional robust standard errors)."
+      dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix, so no standard error in this run is identified. The reported estimates stand; every standard error, test statistic, p-value and interval is missing. This is a property of the specification, not a numerical accident: `=cond("`contreat'" != "", "see the cell-containment caution above for the mechanism and for the alternatives", "the alternatives are")' (impvalues dispersion inference, a finer-than-cell clustering, or conditional robust standard errors)."
     }
   }
 
@@ -7607,6 +7607,42 @@ version 16.0
     ereturn local vce
     ereturn local vcetype
   }
+  * PS-46 (author ruling 2026-09-10, on the measurement at
+  * review_process/research_2026-09-10/permute_fastmode_esttab.md). With no e(V) posted,
+  * esttab and estout do NOT refuse: they print an EMPTY inference row beneath a footer
+  * asserting the numbers are there, and write that assertion into .tex and .csv. estout
+  * reads posted e(p)/e(ci_l)/e(ci_u) AHEAD of anything derived from e(V) (its own bVs2
+  * list), so posting them under those derivable names makes a coefficient table carry THIS
+  * run's real permutation p-values and shift intervals - which is the point: a user should
+  * be able to table the coefficients with the standard tools even where there is no
+  * standard error to report.
+  * Nothing is invented. No covariance is posted, so test, lincom, _se[] and estat vce go on
+  * refusing exactly as before; and no e(se) is posted, because a permutation run HAS no
+  * standard error - the shift se is a different object and naming it se would be the
+  * fabrication this route exists to avoid.
+  * Fast mode only: under permanalyticse an e(V) exists and the tools already work from it.
+  * Read back from e() rather than reused: `pv' and `ci' were MOVED by their own posts.
+  if !`wdphasv' {
+    tempname psp psc psl psu
+    cap confirm matrix e(perm_p)
+    if _rc == 0 {
+      matrix `psp' = e(perm_p)
+      * e(perm_p) is row 3 of the kernel and carries its "r3" rowname; a 1 x K matrix posted
+      * under the name p should say p, since a user reads it with matrix list
+      matrix rownames `psp' = p
+      ereturn matrix p = `psp'
+    }
+    cap confirm matrix e(perm_ci)
+    if _rc == 0 {
+      matrix `psc' = e(perm_ci)
+      if rowsof(`psc') >= 2 {
+        matrix `psl' = `psc'[1, 1...]
+        matrix `psu' = `psc'[2, 1...]
+        ereturn matrix ci_l = `psl'
+        ereturn matrix ci_u = `psu'
+      }
+    }
+  }
   ereturn hidden local wdid_fastnose ""
 
   * -------- cautions (estimation-time; the footer carries the standing disclosures)
@@ -9167,7 +9203,6 @@ version 16.0
   * PS-45 (author ruling 2026-09-07): the bootstrap simultaneous band, opt-in. Built from
   * the same accumulator the joint test uses, after the tables are rewired, so the band and
   * the printed pointwise intervals come from one set of replications
-  if "`sb'" != "" wooldid_esband , mode(bootstrap) level(`level') sgl(`sgl') acc(`acc') obsb(`obsb')
 
   ereturn hidden local wdid_vcespec "`wdbmodetext', `wdbcl', reps(`reps')"
   * CS-4: the bootstrap engine posts the full replication covariance, unless the repost
@@ -9203,7 +9238,18 @@ version 16.0
     if `wdbtlow' > 0 dis as text "Caution: `wdbtlow' reported coefficient(s) used fewer than half of the completed replications in their studentized distribution, because the remaining replications produced no usable standard error for that coefficient. Replications are dropped by a rule that correlates with the resample being degenerate, so the studentized tail is trimmed in the anti-conservative direction there; inspect e(boot_tstud) row n."
     dis as text "Caution: boottstat reports studentized (percentile-t) inference: the statistic t_pt is b/se_analytic, and the p-value and interval come from the ranks of the replications' own t-statistics (b_r - b)/se_r, so the standard-error column is the ANALYTIC standard error (se_analytic), the studentization's denominator, not a bootstrap standard deviation; the interval is equal-tailed from the signed t-quantiles and is not symmetric about the estimate. Under boottstat the pairwise subgroup contrasts are studentized the same way from each replication's own pairwise standard error, and the joint pre-trend tests, the across-subgroup equality tests and the adversarial line tests are bootstrapped as test statistics. bootdisplay(bc) and bootdisplay(wald) are refused under boottstat: the studentized draws have no bias-corrected or Wald (normal or t approximation) family. The studentized kernel is in e(boot_tstud) and the coefficient and standard-error draws in e(bootdist) and e(bootdist_se)."
   }
+  * PS-45: the bootstrap simultaneous band. Placed HERE, after the studentized block above,
+  * because under boottstat the band is a percentile-t and needs the observed analytic
+  * standard errors that block builds - at its earlier position `wdbaseobs_out' did not yet
+  * exist and the band silently fell back to the coefficient-draw SD.
+  if "`sb'" != "" wooldid_esband , mode(bootstrap) level(`level') sgl(`sgl') acc(`acc') obsb(`obsb') seacc(`seacc') aseobs(`wdbaseobs_out')
   local wdbdfr0 = e(df_r)
+  * O-3 (2026-09-10): the analytic residual df is preserved WHATEVER bootdf() says. It used
+  * to be kept only on the branch below - the bootdf(normal) case that blanks e(df_r) - so
+  * the common clustered run silently lost it, while three help sites promised it
+  * unconditionally "alongside the analytic covariances". The covariances are kept
+  * unconditionally; now so is this. Pure addition to e(); no reported number moves.
+  if `wdbdfr0' < . ereturn hidden scalar df_r_analytic = `wdbdfr0'
   if `wdbdf' < . {
     ereturn scalar boot_df = `wdbdf'
     * align e(df_r) with the reference distribution actually used, so that test and
@@ -9218,7 +9264,6 @@ version 16.0
     * sends test and lincom to chi-squared/z, which reproduces the printed values; the
     * analytic value is kept as a hidden twin, the way e(V_analytic) preserves the
     * analytic covariance
-    if `wdbdfr0' < . ereturn hidden scalar df_r_analytic = `wdbdfr0'
     ereturn scalar df_r = .
   }
   ereturn scalar boot_N_V = `wdb_nlw'
@@ -9771,7 +9816,7 @@ end
 cap prog drop wooldid_esband
 prog def wooldid_esband, eclass
 version 16.0
-  syntax , mode(string) [level(real 95) sgl(string) acc(string) obsb(string) nd(integer 10000)]
+  syntax , mode(string) [level(real 95) sgl(string) acc(string) obsb(string) nd(integer 10000) seacc(string) aseobs(string)]
   if `level' <= 0 | `level' >= 100 local level = 95
   * bootwire's family list, so the two engines agree on what a family is
   local wdsfl att att_it ame ame_it
@@ -9799,12 +9844,13 @@ version 16.0
     local wdscrit .
     local wdsn .
     local wdsm 0
+    local wdsstud 0
     if "`mode'" == "bootstrap" {
       * cap: see the note in wooldid_vsplice (cleanmatrices clears wooldid's own Mata
       * kernels; SI-17/SI-18). CONTINUE and not exit - the c(rngstate) restore at the end of
       * this loop must run, or a run that asked for a band would leak the fixed internal seed
       * into the caller's stream. With every family skipped the named caution below fires.
-      cap mata: st_local("wdsm", strofreal(wooldid_bootband("`acc'", "`obsb'", "`wdspx'", `level', "`SB'", "wdscrit", "wdsn")))
+      cap mata: st_local("wdsm", strofreal(wooldid_bootband("`acc'", "`obsb'", "`wdspx'", `level', "`SB'", "wdscrit", "wdsn", "`seacc'", "`aseobs'", "wdsstud")))
       if _rc != 0 continue
     }
     else {
@@ -9824,13 +9870,20 @@ version 16.0
     if strlen("esband_crit_`wdsk'") <= 32 ereturn scalar esband_crit_`wdsk' = `wdscrit'
     if "`mode'" == "bootstrap" & strlen("esband_n_`wdsk'") <= 32 ereturn scalar esband_n_`wdsk' = `wdsn'
     local wdsdone `wdsdone' `wdsk'
+    if `wdsstud' local wdsanystud 1
   }
   if "`wdsrng'" != "" set rngstate `wdsrng'
   if "`wdsdone'" == "" {
     dis as text "Caution: simultaneousbands was requested but no simultaneous band could be built. A band needs at least two horizons of one event-study family with a usable variance - so it is unavailable under fastnose, on a run with no event study, and on a family whose covariance is entirely unidentified. The pointwise intervals in the table are unaffected."
     exit
   }
-  ereturn local esband_engine = cond("`mode'" == "bootstrap", "bootstrap", "analytic-simulated")
+  * PS-45 (author ruling 2026-09-10): under boottstat the band is a genuine percentile-t -
+  * each replication's own standard error in the denominator, the observed analytic ones in
+  * the endpoints - so it is on the SAME scale as the pointwise intervals printed beside it.
+  * It used to be scaled by the coefficient-draw standard deviation whatever the display,
+  * which meant a simultaneous band could come out NARROWER than the pointwise interval it
+  * accompanies. Three engine values now, so a store says which construction produced it.
+  ereturn local esband_engine = cond("`mode'" != "bootstrap", "analytic-simulated", cond("`wdsanystud'" == "1", "bootstrap-studentized", "bootstrap"))
   ereturn local esband_families `wdsdone'
   ereturn scalar esband_level = `level'
   if "`mode'" != "bootstrap" ereturn scalar esband_ndraw = `nd'
@@ -15123,18 +15176,30 @@ real scalar wooldid_esbanda(string scalar vn, string scalar bn, real scalar lev,
 // family prefix and keeping those whose remainder parses as a relative period.
 real scalar wooldid_bootband(string scalar accn, string scalar obsn, string scalar px,
                              real scalar lev, string scalar outn, string scalar critl,
-                             string scalar nl)
+                             string scalar nl, string scalar sen, string scalar aon,
+                             string scalar stl)
 {
-  real matrix A, O, out
+  real matrix A, O, out, S, AO
   string matrix cs, ocs
   real colvector sel, rel, idx, sd, M, p
-  real scalar K, R, m, j, r, n, c, d, mx, mu, lp
+  real scalar K, R, m, j, r, n, c, d, mx, mu, lp, stud
   A = st_matrix(accn)
   O = st_matrix(obsn)
   cs = st_matrixcolstripe(obsn)
   K = cols(O)
   R = rows(A)
   if (cols(A) != K | R < 2) return(0)
+  // PS-45 (2026-09-10): the studentized construction, taken whenever boottstat supplied the
+  // replications' own standard errors AND the observed analytic ones. Anything short of both,
+  // conformable, falls back to the coefficient-draw SD - which is the only form available
+  // without boottstat and stays the default there.
+  stud = 0
+  st_local(stl, "0")
+  if (sen != "" & aon != "") {
+    S = st_matrix(sen)
+    AO = st_matrix(aon)
+    if (rows(S) == R & cols(S) == K & cols(AO) == K & rows(AO) >= 1) stud = 1
+  }
   lp = strlen(px)
   sel = J(0, 1, .)
   rel = J(0, 1, .)
@@ -15153,12 +15218,54 @@ real scalar wooldid_bootband(string scalar accn, string scalar obsn, string scal
   idx = J(0, 1, .)
   for (r = 1; r <= R; r++) {
     mx = 1
-    for (j = 1; j <= m; j++) if (A[r, sel[j]] >= .) mx = 0
+    for (j = 1; j <= m; j++) {
+      if (A[r, sel[j]] >= .) mx = 0
+      // a studentized replication also needs a usable denominator at every horizon
+      if (stud) {
+        if (S[r, sel[j]] >= . | S[r, sel[j]] <= 0) mx = 0
+      }
+    }
     if (mx) idx = idx \ r
   }
   n = rows(idx)
   if (n < 2) return(0)
   sd = J(m, 1, .)
+  if (stud) {
+    // the endpoints are the OBSERVED analytic standard errors, as the printed percentile-t
+    // interval's are; the draws only supply the critical value
+    for (j = 1; j <= m; j++) {
+      if (O[1, sel[j]] >= .) return(0)
+      if (AO[1, sel[j]] >= . | AO[1, sel[j]] <= 0) return(0)
+      sd[j] = AO[1, sel[j]]
+    }
+    M = J(n, 1, .)
+    for (r = 1; r <= n; r++) {
+      mx = 0
+      for (j = 1; j <= m; j++) {
+        d = abs(A[idx[r], sel[j]] - O[1, sel[j]])/S[idx[r], sel[j]]
+        if (d > mx) mx = d
+      }
+      M[r] = mx
+    }
+    M = sort(M, 1)
+    c = wooldid_bootqs(M, lev/100)
+    if (c >= . | c <= 0) return(0)
+    out = J(3, m, .)
+    ocs = J(m, 2, "")
+    for (j = 1; j <= m; j++) {
+      out[1, j] = O[1, sel[j]] - c*sd[j]
+      out[2, j] = O[1, sel[j]] + c*sd[j]
+      out[3, j] = rel[j]
+      ocs[j, 2] = substr(cs[sel[j], 2], lp + 1, .)
+    }
+    st_matrix(outn, out)
+    st_matrixrowstripe(outn, (J(3, 1, ""), ("lb", "ub", "relyr")'))
+    st_matrixcolstripe(outn, ocs)
+    st_local(critl, strofreal(c, "%21x"))
+    st_local(nl, strofreal(n))
+    st_local(stl, "1")
+    return(m)
+  }
   for (j = 1; j <= m; j++) {
     if (O[1, sel[j]] >= .) return(0)
     mu = 0
