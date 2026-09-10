@@ -341,7 +341,6 @@ X-est-pw,ext_*,mat,pwsgs,1e-3,B21/svmat class; degenerate-SE cells amplify ULP n
 X-est-hist,ext_*,mat,histogramestimates,1e-7,same; ceiling 6.7e-9
 X-est-cfx,ext_*,mat,cfx*,1e-7,same; ceiling 9.3e-9
 X-joint-s,ext_*,scalar,joint_*,5e-5,tail-amplified joint-test p; ceiling 4.1e-6
-X-joint-m,ext_*,macro,joint_*,5e-5,same p stored as e() macros (numeric-compared)
 X-fit-F,ext_*,scalar,F,2e-6,B21 regressor-copy class; ceiling 2.1e-7
 X-fit-rss,ext_*,scalar,rss,2e-6,same; ceiling 5.9e-8
 X-fit-rmse,ext_*,scalar,rmse,2e-6,same; ceiling 3.0e-8
@@ -386,4 +385,23 @@ R4W-fitstats-plotcont2,plot_cont,scalar,rmse,,"author ruling 2026-09-08: as R4W-
 R4W-fitstats-si202,si20_lat_cfx_pw,scalar,rmse,,"author ruling 2026-09-08: as R4W-fitstats-lat."
 R4W-fitstats-trig,trig_cfx,scalar,r2adj,,"author ruling 2026-09-08: as R4W-fitstats-lat, on the big-codes cfx config."
 R4W-fitstats-trig2,trig_cfx,scalar,rmse,,"author ruling 2026-09-08: as R4W-fitstats-lat."
-BS12-gapa-p,adv_gapa,scalar,adversarial_pval_*,,BS-12 author ruling 2026-09-08: the adversarial null is now the one-parameter line through the reference period (q = rank(V) - 1), so this p moves where it did not in the earlier campaign
+CS60-jhm-ext,ext_*,macro,joint_horiz*,,"CS-60 (batch 3, 605d6d7): the per-subgroup joint pre-trend p-values were stored as e() MACROS while every other joint p was a scalar, so esttab, estout and any numeric read of e() saw a string. They are now scalars under the same names. Old-vs-new therefore shows each joint_horiz[_i]_s# macro REMOVED and the identically-named scalar ADDED with the same value; no p-value moved."
+CS60-jhm-adm,adm_base,macro,joint_horiz*,,"CS-60 (batch 3, 605d6d7): as CS60-jhm-ext, on the admin-panel config."
+CS60-jhm-sg,sg_*,macro,joint_horiz*,,"CS-60 (batch 3, 605d6d7): as CS60-jhm-ext, on the subgroup configs."
+CS60-jhm-trig,trig_tm2_sgjoint,macro,joint_horiz*,,"CS-60 (batch 3, 605d6d7): as CS60-jhm-ext, on the T-M2 subgroup-joint config."
+BS15-pw-adm_svpsg,adm_svpsg,mat,pwsgs,,"BS-15 (batch 4, cfac3f5): the analytic covariance of two subgroups' effects is numerically rank-deficient in the contrast direction on this design (the two level standard errors agree to several digits and the contrast standard error is the cancellation residue between them). wooldid now screens each pairwise row on the implied correlation and reports the standard error, statistic, p-value and interval of a flagged row as absent rather than computing them from that covariance. Point estimates (column 1) are unchanged; columns 2-6 go missing on the flagged rows."
+BS15-jt-adm_svpsg,adm_svpsg,scalar,joint_att_allsgssame,,"BS-15 (batch 4, cfac3f5): the across-subgroup equality test covering a flagged pairwise row is withheld with it - it is the same covariance - so the scalar goes missing. See BS15-pw-adm_svpsg."
+BS15-jt-cont_sg_gap,cont_sg_gap,scalar,joint_att_allsgssame,,"BS-15 (batch 4, cfac3f5): as BS15-jt-adm_svpsg."
+BS15-jtp-cont_sg_gap,cont_sg_gap,scalar,joint_pre_att_allsgssame,,"BS-15 (batch 4, cfac3f5): as BS15-jt-adm_svpsg, pre-treatment family."
+BS15-jt-cont_sg_tidose,cont_sg_tidose,scalar,joint_att_allsgssame,,"BS-15 (batch 4, cfac3f5): as BS15-jt-adm_svpsg."
+BS15-jtp-cont_sg_tidose,cont_sg_tidose,scalar,joint_pre_att_allsgssame,,"BS-15 (batch 4, cfac3f5): as BS15-jt-adm_svpsg, pre-treatment family."
+BS15-pw-esptrip,esptrip,mat,pwsgs,,"BS-15 (batch 4, cfac3f5): as BS15-pw-adm_svpsg, on the espostlength-trip config."
+BS15-jt-esptrip,esptrip,scalar,joint_att_allsgssame,,"BS-15 (batch 4, cfac3f5): as BS15-jt-adm_svpsg."
+BS15-jtp-esptrip,esptrip,scalar,joint_pre_att_allsgssame,,"BS-15 (batch 4, cfac3f5): as BS15-jt-adm_svpsg, pre-treatment family."
+BS15-pw-plot_sg,plot_sg,mat,pwsgs,,"BS-15 (batch 4, cfac3f5): as BS15-pw-adm_svpsg, on the subgroup plot config."
+BS15-jt-plot_sg,plot_sg,scalar,joint_att_allsgssame,,"BS-15 (batch 4, cfac3f5): as BS15-jt-adm_svpsg, on the subgroup plot config."
+BS15-jtp-plot_sg,plot_sg,scalar,joint_pre_att_allsgssame,,"BS-15 (batch 4, cfac3f5): as BS15-jt-adm_svpsg, pre-treatment family."
+BS10-dfr-impv,impv,scalar,df_r,,"BS-10 (batch 4, 92e083b): under impvalues every printed t, p and interval comes from an Ibragimov-Muller t-test on t(q-1), where q is the clusters contributing to that row - never the stage-1 regression's residual degrees of freedom that ereturn post's dof() used to leave in e(df_r). e(df_r) now carries the SMALLEST IM value across the reported rows, so a hand-run test, lincom or esttab is conservative against the printed table instead of narrower than it; the analytic value is kept as hidden e(df_r_analytic). No reported number moved."
+BS10-dfr-trig,trig_imdeg_part,scalar,df_r,,"BS-10 (batch 4, 92e083b): as BS10-dfr-impv, on the partially-degenerate IM config."
+BS10-dfr-extbin,ext_bin_ext_impvalues,scalar,df_r,,"BS-10 (batch 4, 92e083b): as BS10-dfr-impv, on the external binary impvalues config."
+BS10-dfr-extcont,ext_cov10_cont_impvalues,scalar,df_r,,"BS-10 (batch 4, 92e083b): as BS10-dfr-impv, on the external continuous-treatment impvalues config."
