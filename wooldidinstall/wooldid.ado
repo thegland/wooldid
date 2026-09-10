@@ -1314,7 +1314,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * own error text recommends), so the screen does not apply
   * permute() carve-out (2026-09-05): the same - under permute() the joint tests are
   * permutation tests built by the shell, the other remedy this screen's text recommends
-  if "`jointtests'" != "" & "`bootstrap'`permute'" == "" {
+  * PS-64 follow-through (audit 2026-09-10): pretrendpower() is the SECOND entry point to the
+  * same statistic - wooldid_ptp computes its joint pre-trend test from the identical analytic
+  * e(V_es_*) - and the ruling says one statistic, one rule, in BOTH. The screen fired only
+  * under jointtests, so a pretrendpower() run at cohort-level clustering printed the oversized
+  * test with nothing said. The gate now covers either entry point; the message names whichever
+  * one asked for it.
+  if ("`jointtests'" != "" | "`pretrendpower'" != "") & "`bootstrap'`permute'" == "" {
     local jtclusvars
     if "`cluster'" != "" local jtclusvars `cluster'
     local jtcvw = word(`"`customvce'"', 1)
@@ -1344,7 +1350,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       * The caution states what is wrong with the covariance; the number is the user's to
       * weigh. This supersedes the earlier ruling to suppress the same statistic under
       * pretrendpower(): one statistic, one rule, in both entry points.
-      dis as text "Caution: jointtests was combined with analytic clustered SEs clustered at the level of the cohort variable i or above (`i' is nested within the clustering variable `jtcoarse'). The saturated cell dummies leave each cell's residuals with no within-cluster variation to identify, so the joint test's covariance is degenerate and its p-value should not be read as a calibrated test. wooldid's randomization inference (permute()) or bootstrap-based clustered SEs give a joint test that is valid under this design, as does clustering strictly finer than the cohort-by-period cells."
+      dis as text "Caution: `=cond("`jointtests'" != "", "jointtests", "pretrendpower()")' was combined with analytic clustered SEs clustered at the level of the cohort variable i or above (`i' is nested within the clustering variable `jtcoarse'). The saturated cell dummies leave each cell's residuals with no within-cluster variation to identify, so the joint test's covariance is degenerate and its p-value should not be read as a calibrated test. wooldid's randomization inference (permute()) or bootstrap-based clustered SEs give a joint test that is valid under this design, as does clustering strictly finer than the cohort-by-period cells."
     }
   }
 
@@ -4223,7 +4229,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * hidden: internal plumbing, not part of the documented e() surface (they still appear
   * to "local m : e(macros)" and so to the test battery). an ereturn local with an empty
   * value creates no macro, so the unconditional lines below are self-gating.
-  ereturn hidden local wdid_vcespec `"`vcespecifier'"'
+  * PS-20 (author ruling 2026-09-07): the Ibragimov-Muller path names its method in the header
+  * the way bootstrap() and permute() name theirs. Under impvalues the reported p-values and
+  * intervals are IM quantities on G-1 degrees of freedom; the header used to print the analytic
+  * cluster specification, naming a variance the reported inference did not use. The cluster
+  * specification is kept in the string, because it is what defines the IM groups
+  ereturn hidden local wdid_vcespec `"`=cond("`impvalues'" != "", "Ibragimov-Muller p-values over " + cond("`cluster'" != "", "cluster(`cluster')", "the resampling groups") + " (t on G-1 df)", `"`vcespecifier'"')'"'
   ereturn hidden local wdid_poisson "`poisson'"
   ereturn hidden local wdid_poisexp "`poisexpresults'"
   ereturn hidden local wdid_contreat "`contreat'"
@@ -6441,8 +6452,8 @@ version 16.0
         mata: wooldid_bootqf("`acc'", "`obsb'", "`cols'", "`Cm'", "jp", "jn", "jw", "`Wr'")
         local en = cond("`sgtag'" == "", "`ename'", "`ename'_s`sgtag'")
         if `jp' < . {
-          if "`sgtag'" == "" ereturn scalar `en' = `jp'
-          else ereturn local `en' = `jp'
+          * CS-60 (author ruling 2026-09-07): a scalar at ALL posting sites, so a loop over subgroups gets one type
+          ereturn scalar `en' = `jp'
           matrix colnames `Wr' = `en'
           tempname Wo
           matrix `Wo' = J(1, 1, `jw')
@@ -6526,7 +6537,7 @@ version 16.0
             }
           }
         }
-        if `jp' < . ereturn local `ename'_s`sg' = `jp'
+        if `jp' < . ereturn scalar `ename'_s`sg' = `jp'   // CS-60: scalar, not macro
         else if `: list posof "`fk'" in wdb_jfk' > 0 {
           local ++wdbncaut
           local wdbc`wdbncaut' the bootstrapped `ename' joint test for subgroup `sg' is unavailable (no usable replication statistic)
@@ -7756,8 +7767,8 @@ version 16.0
         mata: wooldid_permqf("`acc'", "`cmpb'", "`cols'", "`Cm'", `wdpM', `orow', "jp", "jn", "jw", "`Wr'")
         local en = cond("`sgtag'" == "", "`ename'", "`ename'_s`sgtag'")
         if `jp' < . {
-          if "`sgtag'" == "" ereturn scalar `en' = `jp'
-          else ereturn local `en' = `jp'
+          * CS-60 (author ruling 2026-09-07): a scalar at ALL posting sites, so a loop over subgroups gets one type
+          ereturn scalar `en' = `jp'
           matrix colnames `Wr' = `en'
           tempname Wo
           matrix `Wo' = J(1, 1, `jw')

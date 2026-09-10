@@ -14,101 +14,32 @@ CLOSED with its commit, so this file is also the record of what the sweeps bough
 
 ## OPEN — to address at the end
 
-### O-8. Twelve ruled sweep items are not fully implemented (audit 2026-09-10)
-A seven-agent read-only audit checked all 42 ruled items from the practice (external-norms)
-and internal-consistency sweeps against the code: **19 implemented, 9 correctly left alone,
-2 superseded by the 2026-09-10 rulings, 6 PARTIAL, 6 NOT_DONE.** Full report with the
-evidence per item: `review_process/research_2026-09-10/sweep_audit.md`.
+### O-8. PS-3 (per-column table formats) — attempted 2026-09-10, reverted, still open
+The other eleven items the audit found are closed (see the BUILT section). This one is not.
 
-**Never started (6).**
-- **PS-3** per-column table formats. No column of any table has an explicit format; `cspec`
-  appears nowhere in the ado. `p 1.12e-35` and `t 13.33597` print exactly as filed.
-- **PS-20** the Ibragimov-Muller banner. The IM path never writes `e(wdid_vcespec)`, so an
-  `impvalues` run's header still reads `Standard Errors: cluster(i)` - naming a variance the
-  reported inference did not use.
-- **P8(i) CS-76/CS-115** the "every family is computed regardless" claim, still stale at
-  sthlp:532, ado:6049, ado:6023, ado:8806, plus ado:10612 and ado:10474.
-- **P8(i) CS-118** `bootdisplay(bca)` missing from the `e(boot_stat)` value list;
-  `e(boot_display)`'s legal values never enumerated.
-- **P8(i) CS-120** `e(wdid_fcncell)` and `e(wdid_fcskip)` undocumented; the Replay sentence's
-  exception list still contradicts them.
-- **P8(ii)** the four named synopsis edits (labelled sub-runs, "requires bootstrap()" on
-  `ties`, abbreviation markers on `permside`/`permrawp`, `regtol`'s argument).
+**Ruling.** *"Per-column formats. Keep the table structure, give each column an explicit
+format."*
 
-**Partial (6), of which three carry substance.**
-- **PS-64** the joint pre-trend caution fires under `jointtests` but NOT under
-  `pretrendpower()`. The ruling said both entry points, and section E of the rulings resolved
-  exactly this conflict once already.
-- **CS-98** two messages (ado:4408 error, ado:4414 caution) key on `safety` about 210 lines
-  before the effective value is resolved at ado:4620, so under `contreatwithin` they act on
-  the pre-relaxation value. Verified live: r(198) on a run whose effective safety() is off.
-  Note this is the OPPOSITE direction from the O-2 relaxation the author ruled fine - here a
-  user gets an error the relaxation was supposed to have downgraded.
-- **CS-60** two of the three ruled posting sites (ado:6444-6445, 6529 in `wooldid_bootjnt`;
-  ado:7744-7745 in `wooldid_permjnt`) still post the subgroup joint p as an `ereturn local`,
-  so under `bootstrap()` or `permute()` a loop over subgroups still gets a string where the
-  analytic path gives a scalar - the one-type-per-loop defect the ruling names.
-- CS-25/40 the inventory groups roughly 22-25 of the 58 sites rather than enumerating all of
-  them, and one safety-gated refusal (ado:927-931, the control-group screen) is in no class row.
-- P7 accident 3: the compatibility TABLE was added, but the two prose lists it was meant to
-  subsume were not reshaped - sthlp:509 still carries no reasons and sthlp:455 still omits
-  two refusals.
-- P8 rollup.
+**What was tried.** A `wooldid_mlfmt` helper building a `matlist cspec()` from each matrix's
+own column names - general format for estimates and interval bounds, two decimals for
+statistics, three for p-values, integer for `relyr` - so no site hard-codes a column count.
 
-**How the P8 items were missed, for the record.** The P8 sweep audited a larger claim set
-than the roadmap enumerated - 274 checkable claims across the whole help - and in covering
-the surface broadly it never checked off the four claims the roadmap named specifically.
-Breadth was substituted for the checklist. A sweep with a named target list must verify that
-list explicitly, whatever else it covers.
+**Why it was reverted.** `matlist` refuses `cspec()` without a matching `rspec()`, and these
+tables carry row-equation groups whose separator rows `matlist` inserts itself, so the row
+count is not `rowsof()` and not any simple function of it. Three row-spec forms
+(`rowsof+1`, `3*rowsof+8`, and a generous fixed pad) all failed with
+`too few specifications in rspec()` - on the summary-statistics table, before the main one
+was reached. The tables were left on their working renderer and re-verified rendering.
 
+**What would settle it.** Either determine `matlist`'s separator-row rule for
+equation-grouped matrices empirically (count the rules it emits for a known matrix and derive
+the formula), or take the sweep's other named route and build the tables through
+`_coef_table` instead of `matlist`, which formats by convention and needs no spec at all.
+The second is the larger change and the one that would actually make the output look like
+every comparator's, which is what the ruling is after.
 
-
-### BUILT 2026-09-10 on the author's rulings
-
-- **O-1 / PS-46 — ruled: post `e(p)` and the interval, nothing else.** `wooldid_permwire`
-  now posts `e(p)`, `e(ci_l)` and `e(ci_u)` under the fast-mode default, so `esttab` and
-  `estout` carry this run's real permutation p-values and shift intervals. No covariance and
-  no `e(se)`: `test`, `lincom`, `_se[]` and `estat vce` go on refusing, and nothing is
-  invented, because a permutation run has no standard error to report.
-- **O-3 — the analytic residual df is preserved on every `bootdf()` branch**, not only the
-  one that blanks `e(df_r)`.
-- **O-6 — the all-zero-covariance caution** no longer points at a caution that was never
-  printed; off the `contreat()` path it names the alternatives directly.
-- **PS-45 — ruled: percentile-t.** Under `boottstat` the simultaneous band now uses each
-  replication's own standard error in the denominator and the observed analytic ones in the
-  endpoints, so it sits on the same scale as the pointwise intervals printed beside it.
-  `e(esband_engine)` gains a third value, `bootstrap-studentized`.
-
-### CLOSED BY RULING 2026-09-10 — not defects, not to be reopened
-
-- **O-2 `contreatwithin` and the collinearity screens.** Put to the author with the two
-  console tables side by side (`ame | .` with the caution, versus `ame | 0` without it).
-  **Ruled: "Completely ignore this. It's fine. It's basically already documented. No
-  reasonable observer will look at a pile of all 0s with no SEs and mistake them as real
-  results."** The safety inventory now describes the relaxation as the named exception it is
-  rather than as a gap. Do not raise this again.
-- **O-4 the `unconditionalse` prerequisite screen** (accepts any `customvce()` text).
-  **Ruled unimportant; not to be considered again.**
-- **O-5 `makecfxplotsbysg` as a silent no-op** without `subgroups()` or `makecfxplots`.
-  **Ruled unimportant; not to be considered again.**
-
-### O-7 — RESOLVED 2026-09-10 by running it: the disclosure already exists
-
-The worry was that `bootstrap() boottstat cluster(i) subgroups()` might build a studentized
-contrast silently on a near-degenerate analytic pairwise standard error, because the analytic
-screen does not run on that path and the bootstrap-side guard is a zero/missing test rather
-than a rank test. Run: rc 0, contrasts studentized (p = .118 and .083 on the fixture), and a
-caution DOES print, on exactly this point:
-
-> Caution: under clustering at or above the i level the analytic pairwise-contrast standard
-> errors can be degenerate (the same limitation behind the refusal of jointtests with
-> analytic clustered SEs), and boottstat studentizes each contrast by that standard error in
-> every replication, so the studentized contrasts and the across-subgroup equality test can
-> be absent or numerically unstable here; the non-studentized bootstrap (bootstrap() without
-> boottstat) forms the contrasts from the coefficient draws instead.
-
-It names the mechanism, says the studentization consumes the degenerate quantity, and names
-the remedy. Nothing to fix. Closed.
+**Priority: cosmetic.** No number is wrong; a p prints as `1.12e-35` where `regress` would
+print `0.000`.
 
 ---
 
@@ -131,6 +62,42 @@ everything outstanding.
 ---
 
 ## CLOSED
+
+### The eleven audit items closed 2026-09-10
+From `review_process/research_2026-09-10/sweep_audit.md`. PS-3 is the twelfth and is above.
+
+- **PS-20** the Ibragimov-Muller banner: the header now names IM inference and its reference
+  distribution instead of the analytic cluster specification the run did not use.
+- **PS-64** the joint pre-trend caution now fires under `pretrendpower()` as well as
+  `jointtests`, and names whichever entry point asked for it - "one statistic, one rule, in
+  both entry points", as the ruling says.
+- **CS-98** resolved by NAMING rather than by moving: the two screens that run before the
+  `contreatwithin` resolution now read `safetyuser`, snapshotted once at the top of the
+  validator, so no reader has to know a line number to know which value a gate means. Hoisting
+  the resolution instead would have extended the relaxation into a screen it has no
+  relationship with, and those two screens terminate the run, so they were never in CS-98's
+  hazard class - a message overturned by a later rewrite. No behaviour moves.
+- **CS-60** the subgroup joint p is a scalar at all THREE posting sites (the audit found two;
+  the permutation engine had the same pair as the bootstrap one).
+- **CS-76/CS-115** the bootdisplay() entry no longer claims every family is computed on every
+  run - a claim it contradicted five sentences later.
+- **CS-118** `bootdisplay(bca)` added to the `e(boot_stat)` value list; `e(boot_display)`'s
+  legal values enumerated.
+- **CS-120** `e(wdid_fcncell)` and `e(wdid_fcskip)` documented, and the Replay paragraph no
+  longer disowns the two cell-collapse names the `fastcollapse` entry tells users to read.
+- **P8(ii)** the Standard Errors synopsis split into labelled sub-runs (analytic /
+  shared-by-both-engines / permutation-only / bootstrap-only); `ties` states that it requires
+  `bootstrap()`; `permside` and `permrawp` carry their abbreviation markers; `regtol` shows
+  its argument.
+- **P7 accident 3** both inline compatibility lists reshaped: reasons on every item, and the
+  two refusals `permute()`'s list omitted (multi-way `cluster()`, `customvce()`) added.
+- **CS-25/40** the control-group refusal added to the inventory's class rows, and the "gates
+  fifty-eight sites" claim replaced with what the section actually delivers.
+- **SI-A1** (author ruling 2026-09-10, a note and only a note): the `cluster()` entry states
+  that clustering below the level of `i` is the intended practice, what goes wrong at or above
+  it (pointwise standard errors understated to roughly 0.66-0.75, joint tests oversized), and
+  why there is no plug-in correction.
+
 
 ### C-1..C-4. The four defects the batch-5 shared assessment surfaced (8280a2e, 2026-09-10)
 1. `cleanmatrices` runs `clear mata` inside the worker, dropping wooldid's own Mata

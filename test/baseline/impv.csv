@@ -32,7 +32,7 @@ macro|wdid_cetype|dydx
 macro|wdid_fcol|1
 macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
-macro|wdid_vcespec|cluster(i)
+macro|wdid_vcespec|Ibragimov-Muller p-values over cluster(i) (t on G-1 df)
 macro|vcetype|Robust
 macro|vce|cluster
 macro|clustvar|i
