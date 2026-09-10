@@ -413,7 +413,7 @@ version 16.0
     * valid by construction)
     if "`bootdf'" == "" local bootdf = cond("`cluster'" != "", "clusters", "normal")
     * rewire the posted inference surfaces to the bootstrap covariance (eclass sub)
-    wooldid_bootwire , mode(`bootstrap') reps(`reps') level(`level') bootalpha(`bootalpha') clus(`cluster') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') `ties' done(`wdb_r_done') fail(`wdb_r_fail') blank(`wdb_r_blank') rseed(`rseed') bootdf(`bootdf') bdisp(`bootdisplay') nclus(`wdb_r_nclus') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseout(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")')
+    wooldid_bootwire , mode(`bootstrap') reps(`reps') level(`level') bootalpha(`bootalpha') clus(`cluster') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') `ties' done(`wdb_r_done') fail(`wdb_r_fail') blank(`wdb_r_blank') rseed(`rseed') bootdf(`bootdf') bdisp(`bootdisplay') nclus(`wdb_r_nclus') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseout(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")') sb(`simultaneousbands')
     * bootstrapped joint tests, subgroup contrasts and CI flavors (eclass sub)
     wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') bootdf(`bootdf') bts(`boottstat') bdisp(`bootdisplay') nclus(`wdb_r_nclus') clus(`cluster') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwacc(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")')
     * bootsave(): the replication draws as a .dta in the working directory (author request
@@ -530,7 +530,7 @@ version 16.0
   set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -4054,6 +4054,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * Body in a subprogram: wooldid_worker is at the per-program compiled-size ceiling
   if `wdhasv' wooldid_vsplice , sgl(`sglist')
 
+  * PS-45 (author ruling 2026-09-07): the simulated analytic simultaneous band, opt-in and
+  * defaulted off. Skipped under bootstrap(), where wooldid_bootwire builds the band from
+  * the replications instead and would otherwise overwrite this one; refused outright under
+  * permute() in wooldid_validate. Body in a subprogram (worker size ceiling)
+  if "`simultaneousbands'" != "" & "`bootstrap'" == "" wooldid_esband , mode(analytic) level(`wdlvl') sgl(`sglist')
+
   * PS-1 (author ruling 2026-09-07): post the conventional names alongside wooldid's own,
   * so estout, esttab and anything else keying on Stata's usual cluster and variance
   * entries finds them. Pure addition - e(Nclus) and e(wdid_vcespec) are unchanged, and
@@ -4325,7 +4331,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -4648,6 +4654,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       error 198
     }
   }
+  * PS-45 (author ruling 2026-09-07): a simultaneous band is a CONFIDENCE BAND, and the
+  * permutation engine's multiplicity object is the max-|studentized| step-down instead
+  * (same ruling: "stays permutation-only"). Posting an analytic band under a permutation
+  * header would also break the 2026-09-05 rule that only permutation quantities are shown
+  * under permute(), so this combination is refused rather than silently dropped
+  if "`permute'" != "" & "`simultaneousbands'" != "" {
+    dis as error "Error: simultaneousbands is not available under permute(). A simultaneous band is a confidence-band object; the permutation engine's multiplicity tool is the max-|studentized| step-down, permstepdown. Use bootstrap() for a bootstrap band, or drop permute() for the simulated analytic one."
+    error 198
+  }
+
   * permtci's critical value comes from the permuted |t| distribution, so it implies
   * permtstat. Resolved HERE (it used to live in the shell alone) so that the fast-mode
   * default further down sees the implied value: permtci alone must not send the observed
@@ -5233,7 +5249,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * literal 95, so `set level 90' produced lb_90ci columns holding 95% intervals under
   * bootstrap() / permute(). Resolve it once here; every consumer sees a number
   if `level' == 0 local level = c(level)
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp permstepdown y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw semielasraw cetyperaw {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp permstepdown simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw semielasraw cetyperaw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -8557,7 +8573,7 @@ version 16.0
 *** as e(V_es_analytic_*)), the VCE header text, and the e(boot_*) metadata.
 *** pwsgs/prepwsgs inference columns and the allsgssame scalars are BLANKED in this
 *** build (their bootstrap Wald versions land with the joint-test commit).
-  syntax , [mode(string) reps(integer 0) acc(string) obsb(string) done(string) fail(string) blank(string) level(real 0) bootalpha(string) clus(varlist) comp(string) TIES rseed(string) bootdf(string) bdisp(string) nclus(integer 0) seacc(string) aseout(string) jkacc(string)]
+  syntax , [mode(string) reps(integer 0) acc(string) obsb(string) done(string) fail(string) blank(string) level(real 0) bootalpha(string) clus(varlist) comp(string) TIES rseed(string) bootdf(string) bdisp(string) nclus(integer 0) seacc(string) aseout(string) jkacc(string) sb(string)]
   local wdbaseobs_out `aseout'
   if "`wdbaseobs_out'" == "" tempname wdbaseobs_out
   if `level' == 0 local level = c(level)
@@ -9099,6 +9115,11 @@ version 16.0
     if `wdbbcamiss' > 0 & "`bdisp'" == "bca" dis as text "Caution: `wdbbcamiss' reported coefficient(s) had no usable BCa family (no acceleration could be computed, or an acceleration-adjusted endpoint level fell outside (0,1)); their p-value and interval are left blank rather than filled from another family. The standard-error column is unaffected."
   }
   if "`ties'" != "" ereturn local boot_ties ties
+
+  * PS-45 (author ruling 2026-09-07): the bootstrap simultaneous band, opt-in. Built from
+  * the same accumulator the joint test uses, after the tables are rewired, so the band and
+  * the printed pointwise intervals come from one set of replications
+  if "`sb'" != "" wooldid_esband , mode(bootstrap) level(`level') sgl(`sgl') acc(`acc') obsb(`obsb')
 
   ereturn hidden local wdid_vcespec "`wdbmodetext', `wdbcl', reps(`reps')"
   * CS-4: the bootstrap engine posts the full replication covariance, unless the repost
@@ -9677,6 +9698,113 @@ end
 * deliberately NO footer under the printed table.
 * eclass because its ereturns must survive the return, the way wooldid_imdf's do; kept out
 * of wooldid_worker for compiled-size headroom.
+* ============================================================================
+* PS-45 (author ruling 2026-09-07): simultaneous (sup-t / uniform) confidence bands over
+* an event study's horizons, DEFAULTED OFF, behind simultaneousbands. The printed table
+* keeps its per-row pointwise intervals - a simultaneous band is a property of the family,
+* not of a row (same ruling) - so this posts the endpoints for export and the plot layer
+* draws them; no shipped figure changes until asked.
+* Both engines the ruling names are here, chosen by mode():
+*   bootstrap - the upper quantile over replications of the largest studentized deviation,
+*               one pass over the accumulator that already feeds the joint test. Called
+*               from wooldid_bootwire, after the coefficient tables are rewired.
+*   analytic  - simulated from the family's own covariance e(V_es_*). Called from
+*               wooldid_worker. Deliberately reads e(V_es_*) and NOT the e(V) blocks the
+*               PS-62 splice writes: the two hold the same numbers, but reading the family
+*               matrix directly means the band does not depend on whether the splice fired.
+* The analytic draw runs on a FIXED internal seed with the caller's RNG state saved and
+* restored around it, so the band is reproducible, does not depend on where the user's
+* stream happens to be, and does not disturb it.
+* Under permute() neither engine runs: validate refuses the combination.
+cap prog drop wooldid_esband
+prog def wooldid_esband, eclass
+version 16.0
+  syntax , mode(string) [level(real 95) sgl(string) acc(string) obsb(string) nd(integer 10000)]
+  if `level' <= 0 | `level' >= 100 local level = 95
+  * bootwire's family list, so the two engines agree on what a family is
+  local wdsfl att att_it ame ame_it
+  foreach wdss of local sgl {
+    local wdsfl `wdsfl' att_s`wdss' att_it_s`wdss' ame_s`wdss' ame_it_s`wdss'
+  }
+  local wdsrng
+  if "`mode'" != "bootstrap" {
+    local wdsrng `c(rngstate)'
+    set seed 20260907
+  }
+  local wdsdone
+  foreach wdsk of local wdsfl {
+    * the e(b)/e(V) row-name prefix for this family (worker: rownamespool, then the _SG
+    * injection) - the same rule wooldid_vsplice uses
+    local wdsb `wdsk'
+    local wdsg
+    if regexm("`wdsk'", "^(.+)_s([0-9]+)$") {
+      local wdsb = regexs(1)
+      local wdsg = regexs(2)
+    }
+    local wdspx = cond("`wdsg'" == "", "ES_`wdsb'_", "ES_`wdsb'_SG`wdsg'_")
+    if strlen("esband_`wdsk'") > 32 continue
+    tempname SB
+    local wdscrit .
+    local wdsn .
+    local wdsm 0
+    if "`mode'" == "bootstrap" {
+      mata: st_local("wdsm", strofreal(wooldid_bootband("`acc'", "`obsb'", "`wdspx'", `level', "`SB'", "wdscrit", "wdsn")))
+    }
+    else {
+      cap confirm matrix e(V_es_`wdsk')
+      local wdsrc1 = _rc
+      cap confirm matrix e(b_es_`wdsk')
+      if `wdsrc1' != 0 | _rc != 0 continue
+      tempname BV BB
+      matrix `BV' = e(V_es_`wdsk')
+      matrix `BB' = e(b_es_`wdsk')
+      mata: st_local("wdsm", strofreal(wooldid_esbanda("`BV'", "`BB'", `level', `nd', "`SB'", "wdscrit")))
+    }
+    if `wdsm' < 2 continue
+    ereturn matrix esband_`wdsk' = `SB'
+    if strlen("esband_crit_`wdsk'") <= 32 ereturn scalar esband_crit_`wdsk' = `wdscrit'
+    if "`mode'" == "bootstrap" & strlen("esband_n_`wdsk'") <= 32 ereturn scalar esband_n_`wdsk' = `wdsn'
+    local wdsdone `wdsdone' `wdsk'
+  }
+  if "`wdsrng'" != "" set rngstate `wdsrng'
+  if "`wdsdone'" == "" {
+    dis as text "Caution: simultaneousbands was requested but no simultaneous band could be built. A band needs at least two horizons of one event-study family with a usable variance - so it is unavailable under fastnose, on a run with no event study, and on a family whose covariance is entirely unidentified. The pointwise intervals in the table are unaffected."
+    exit
+  }
+  ereturn local esband_engine = cond("`mode'" == "bootstrap", "bootstrap", "analytic-simulated")
+  ereturn local esband_families `wdsdone'
+  ereturn scalar esband_level = `level'
+  if "`mode'" != "bootstrap" ereturn scalar esband_ndraw = `nd'
+end
+
+* ============================================================================
+* PS-45: the plot layer. Fills __wdsblo/__wdsbhi on the plot dataset from the stored
+* band of ONE family and hands back the twoway layer that draws them, empty when the
+* family has no band - so the figure is byte-identical to today's on every run that did
+* not ask for a band, and on replay of a store written before 2026-09-07. Reading the
+* endpoints from e() rather than recomputing them is what makes replay work.
+cap prog drop wooldid_esbandv
+prog def wooldid_esbandv
+version 16.0
+  syntax , fam(string) [sfx(string)]
+  cap drop __wdsblo
+  cap drop __wdsbhi
+  c_local wdsblayer
+  cap confirm matrix e(esband_`fam'`sfx')
+  if _rc != 0 exit
+  tempname WSB
+  matrix `WSB' = e(esband_`fam'`sfx')
+  if rowsof(`WSB') < 3 exit
+  qui gen double __wdsblo = .
+  qui gen double __wdsbhi = .
+  forval wsbc = 1/`=colsof(`WSB')' {
+    qui replace __wdsblo = `WSB'[1, `wsbc'] if rownamesvar == "ES_`fam'" & relyr == `WSB'[3, `wsbc']
+    qui replace __wdsbhi = `WSB'[2, `wsbc'] if rownamesvar == "ES_`fam'" & relyr == `WSB'[3, `wsbc']
+  }
+  qui count if __wdsblo < . & __wdsbhi < .
+  if r(N) > 0 c_local wdsblayer (rline __wdsblo __wdsbhi relyr, lpattern(dash) lcolor(navy))
+end
+
 cap prog drop wooldid_vsplice
 prog def wooldid_vsplice, eclass
 version 16.0
@@ -11748,9 +11876,18 @@ version 16.0
       local att_text ATT `elasinj'
       local ame_it_text AME_it `elasinj2'
       local ame_text AME `elasinj2'
-      twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_fullmodel, replace) `xlabelstarter'
+      * PS-45 (author ruling 2026-09-07): the simultaneous band, drawn as a dashed pair
+      * over the pointwise shading when simultaneousbands stored one for THIS family.
+      * `wdsblayer' is empty otherwise, so the command is unchanged on every other run
+      local wdsblayer
+      wooldid_esbandv , fam(`graphtext')
+      twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) `wdsblayer' if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_fullmodel, replace) `xlabelstarter'
       if "`saveplots'" != "" qui graph save "`saveplots'_`graph'.gph", `replace'
     }
+    * the band columns are working variables: the endpoints are exported through
+    * e(esband_*), and dropping them here keeps saveplots' saved data as it was
+    cap drop __wdsblo
+    cap drop __wdsbhi
 
 
     if "`saveplots'" != "" {
@@ -11851,9 +11988,14 @@ version 16.0
           local att_text ATT `elasinj'
           local ame_it_text AME_it `elasinj2'
           local ame_text AME `elasinj2'
-          twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_sg`sgcase', replace) `xlabelstarter'   title("`subgroups' == `sgcase'")
+          * PS-45 (author ruling 2026-09-07): the subgroup family's own simultaneous band
+          local wdsblayer
+          wooldid_esbandv , fam(`graphtext') sfx(_s`sgcase')
+          twoway (connected estimate relyr, color(navy)) (rarea lb_95ci ub_95ci relyr,color(navy%50)) `wdsblayer' if (rownamesvar =="reference" | rownamesvar=="`graph'")  , `xlineinserter' xtitle("Time Relative to Time of Initial Treatment") ytitle("``graphtext'_text' on `y' by Horizon") legend(off)   name(`graphtext'_sg`sgcase', replace) `xlabelstarter'   title("`subgroups' == `sgcase'")
           if "`saveplots'" != "" qui graph save "`saveplots'_`graph'_sg`sgcase'.gph", `replace'
         }
+        cap drop __wdsblo
+        cap drop __wdsbhi
 
         if "`saveplots'" != "" {
           if "`wdes_lbname'" != "" rename lb_95ci `wdes_lbname'
@@ -12612,6 +12754,9 @@ cap mata: mata drop wooldid_permsaveasg()
 cap mata: mata drop wooldid_permcse()
 cap mata: mata drop wooldid_permadvline()
 cap mata: mata drop wooldid_vspl()
+cap mata: mata drop wooldid_esrelx()
+cap mata: mata drop wooldid_esbanda()
+cap mata: mata drop wooldid_bootband()
 mata:
 // draw matrix: per-rep (outer) per-cluster-ascending (inner) Gamma(alpha,1) draws -
 // the exact rwgen bayes stream-consumption order; alpha = n_c (size) or 1 (equal);
@@ -14809,6 +14954,173 @@ void wooldid_permadvline(string scalar cmpname, string scalar colslist, string s
   if (rank(X'X) < 2) return
   F = invsym(X'X) * X'b
   st_matrix(outname, (F[2], F[1]))
+}
+
+// PS-45 (author ruling 2026-09-07): the relative period a horizon label names. The F2
+// labels are pre#/post#; e(V)'s own row for relative period 0 reads "contemp" under
+// oldsyntax. Anything else - including the "it_post0" tail a shorter family prefix picks
+// up from a longer family's row name - returns missing, which is what makes the
+// prefix-plus-parse column scan below self-disambiguating
+real scalar wooldid_esrelx(string scalar s)
+{
+  if (substr(s, 1, 4) == "post") return(strtoreal(substr(s, 5, .)))
+  if (substr(s, 1, 3) == "pre") return(-strtoreal(substr(s, 4, .)))
+  if (s == "contemp") return(0)
+  return(.)
+}
+
+// PS-45: the SIMULTANEOUS (sup-t / uniform) band for one event-study family, simulated
+// from the family's own analytic covariance. The pointwise intervals in the table cover
+// each horizon with probability level(); a simultaneous band covers EVERY horizon of the
+// family at once with that probability, which is what a reader who scans a whole event
+// study for "the effect is zero everywhere before onset" actually needs.
+// Construction: studentize the family's covariance to a correlation matrix R, draw
+// z ~ N(0, R), and take c = the level() quantile of max_h |z_h| (Montiel Olea and
+// Plagborg-Moller 2019). The band is b_h +/- c*se_h, so it is the pointwise interval
+// widened by one common factor c/z_{level} >= 1. R is eigen-decomposed with the
+// eigenvalues floored at zero rather than factored by cholesky, because a rank-deficient
+// family - a structurally collinear horizon set - is ordinary here, and cholesky would
+// simply fail on it.
+// Horizons with a non-positive or missing variance are dropped from the family before
+// the draw: they have no pointwise interval either.
+real scalar wooldid_esbanda(string scalar vn, string scalar bn, real scalar lev,
+                            real scalar nd, string scalar outn, string scalar critl)
+{
+  real matrix V0, V, U, L, Z, out
+  real rowvector b0, lam
+  string matrix cs, ocs
+  real colvector sel, sd, M
+  real scalar k, m, j, r, c
+  V0 = st_matrix(vn)
+  b0 = st_matrix(bn)
+  cs = st_matrixcolstripe(vn)
+  k = rows(V0)
+  if (k < 2 | cols(V0) != k | cols(b0) != k | nd < 100) return(0)
+  sel = J(0, 1, .)
+  for (j = 1; j <= k; j++) {
+    if (V0[j, j] > 0 & V0[j, j] < . & b0[j] < . & wooldid_esrelx(cs[j, 2]) < .) sel = sel \ j
+  }
+  m = rows(sel)
+  if (m < 2) return(0)
+  V = J(m, m, 0)
+  for (j = 1; j <= m; j++) for (r = 1; r <= m; r++) V[j, r] = V0[sel[j], sel[r]]
+  sd = J(m, 1, .)
+  for (j = 1; j <= m; j++) sd[j] = sqrt(V[j, j])
+  for (j = 1; j <= m; j++) for (r = 1; r <= m; r++) V[j, r] = V[j, r]/(sd[j]*sd[r])
+  V = (V + V')/2
+  U = .
+  lam = .
+  symeigensystem(V, U, lam)
+  for (j = 1; j <= m; j++) if (lam[j] < 0 | lam[j] >= .) lam[j] = 0
+  L = U * diag(sqrt(lam))
+  Z = L * rnormal(m, nd, 0, 1)
+  M = J(nd, 1, .)
+  for (r = 1; r <= nd; r++) M[r] = max(abs(Z[., r]))
+  M = sort(M, 1)
+  c = wooldid_bootqs(M, lev/100)
+  if (c >= . | c <= 0) return(0)
+  out = J(3, m, .)
+  ocs = J(m, 2, "")
+  for (j = 1; j <= m; j++) {
+    out[1, j] = b0[sel[j]] - c*sd[j]
+    out[2, j] = b0[sel[j]] + c*sd[j]
+    out[3, j] = wooldid_esrelx(cs[sel[j], 2])
+    ocs[j, 2] = cs[sel[j], 2]
+  }
+  st_matrix(outn, out)
+  st_matrixrowstripe(outn, (J(3, 1, ""), ("lb", "ub", "relyr")'))
+  st_matrixcolstripe(outn, ocs)
+  st_local(critl, strofreal(c, "%21x"))
+  return(m)
+}
+
+// PS-45: the same band from the BOOTSTRAP replications - one pass over the accumulator
+// that already feeds the joint test, and no distributional assumption. For each
+// listwise-complete replication take M_r = max_h |b_rh - b_obs_h| / sd_h, with sd_h the
+// standard deviation of that horizon's draws over the same rows (the fixed metric the
+// permutation step-down also uses); c is the level() quantile of the M_r under
+// wooldid_bootci's order-statistic rule, and the band is b_obs_h +/- c*sd_h.
+// LISTWISE is load-bearing: the maximum is a property of a whole replication, so a row
+// missing one horizon cannot contribute a maximum over all of them. The sd is computed
+// on the same rows, so the band's own scale and its critical value come from one sample -
+// which is why sd_h can differ very slightly from the table's per-column standard error
+// when some replications failed.
+// The family's columns are found by scanning the observed coefficient names for the
+// family prefix and keeping those whose remainder parses as a relative period.
+real scalar wooldid_bootband(string scalar accn, string scalar obsn, string scalar px,
+                             real scalar lev, string scalar outn, string scalar critl,
+                             string scalar nl)
+{
+  real matrix A, O, out
+  string matrix cs, ocs
+  real colvector sel, rel, idx, sd, M, p
+  real scalar K, R, m, j, r, n, c, d, mx, mu, lp
+  A = st_matrix(accn)
+  O = st_matrix(obsn)
+  cs = st_matrixcolstripe(obsn)
+  K = cols(O)
+  R = rows(A)
+  if (cols(A) != K | R < 2) return(0)
+  lp = strlen(px)
+  sel = J(0, 1, .)
+  rel = J(0, 1, .)
+  for (j = 1; j <= K; j++) {
+    if (substr(cs[j, 2], 1, lp) != px) continue
+    d = wooldid_esrelx(substr(cs[j, 2], lp + 1, .))
+    if (d >= .) continue
+    sel = sel \ j
+    rel = rel \ d
+  }
+  m = rows(sel)
+  if (m < 2) return(0)
+  p = order(rel, 1)
+  sel = sel[p]
+  rel = rel[p]
+  idx = J(0, 1, .)
+  for (r = 1; r <= R; r++) {
+    mx = 1
+    for (j = 1; j <= m; j++) if (A[r, sel[j]] >= .) mx = 0
+    if (mx) idx = idx \ r
+  }
+  n = rows(idx)
+  if (n < 2) return(0)
+  sd = J(m, 1, .)
+  for (j = 1; j <= m; j++) {
+    if (O[1, sel[j]] >= .) return(0)
+    mu = 0
+    for (r = 1; r <= n; r++) mu = mu + A[idx[r], sel[j]]
+    mu = mu/n
+    d = 0
+    for (r = 1; r <= n; r++) d = d + (A[idx[r], sel[j]] - mu)^2
+    sd[j] = sqrt(d/(n - 1))
+    if (sd[j] <= 0 | sd[j] >= .) return(0)
+  }
+  M = J(n, 1, .)
+  for (r = 1; r <= n; r++) {
+    mx = 0
+    for (j = 1; j <= m; j++) {
+      d = abs(A[idx[r], sel[j]] - O[1, sel[j]])/sd[j]
+      if (d > mx) mx = d
+    }
+    M[r] = mx
+  }
+  M = sort(M, 1)
+  c = wooldid_bootqs(M, lev/100)
+  if (c >= . | c <= 0) return(0)
+  out = J(3, m, .)
+  ocs = J(m, 2, "")
+  for (j = 1; j <= m; j++) {
+    out[1, j] = O[1, sel[j]] - c*sd[j]
+    out[2, j] = O[1, sel[j]] + c*sd[j]
+    out[3, j] = rel[j]
+    ocs[j, 2] = substr(cs[sel[j], 2], lp + 1, .)
+  }
+  st_matrix(outn, out)
+  st_matrixrowstripe(outn, (J(3, 1, ""), ("lb", "ub", "relyr")'))
+  st_matrixcolstripe(outn, ocs)
+  st_local(critl, strofreal(c, "%21x"))
+  st_local(nl, strofreal(n))
+  return(m)
 }
 
 // PS-62 (six-lens feasibility review, author rulings 2026-09-07): splice ONE event-study
