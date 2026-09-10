@@ -100,11 +100,18 @@ else {
   }
 }
 
-* ---- T2b: same gap panel, plain adversarial -> honest refusal with a retained line ----
-* the gap leaves only the two post-treatment coefficients: two points always lie on
-* some line, so the composite null has no testable residual dimension (q = 0). the
-* recalibrated primary test (NFADV-01) refuses with a Caution and keeps the display
-* line; the old plug-in `test' manufactured a p here by freezing the fitted line
+* ---- T2b: same gap panel, plain adversarial -> a genuine one-degree-of-freedom test ----
+* RE-PINNED 2026-09-10 (BS-12, author ruling 2026-09-07), and the expectation INVERTS.
+* The gap leaves only the two post-treatment coefficients. Under the OLD composite null -
+* a free slope AND a free intercept - two points always lie on some line, so the residual
+* dimension was q = rank(V) - 2 = 0 and the test refused with a degenerate-covariance
+* Caution. The ruled null is the ONE-parameter line THROUGH THE REFERENCE PERIOD, which
+* two points do NOT automatically satisfy: q = rank(V) - 1 = 1 and the hypothesis is
+* testable here. So this cell now posts a p-value beside its display line and fires no
+* degeneracy Caution. Measured on this fixture: post0 = 2.202 and post1 = 2.787 against a
+* line pinned through (-1, 0), which predicts a 1:2 ratio - p = .0238.
+* The honest-refusal path is still exercised elsewhere: T2 covers the gap-data backstop
+* and T7 the planted-row cancellation, neither of which depends on the null's dimension.
 qui log using advg_t2b.txt, text replace name(advg)
 use `hole2', clear
 cap noi wooldid y i t ttre, att cluster(i) esfixedbaseperiod esrelativeto(-1) esprelength(1) espostlength(2) adversarial
@@ -115,17 +122,21 @@ if `rc2b' != 0 {
   local ++fails
 }
 else {
-  if "`e(adversarial_pval_att)'" != "" {
-    dis as error "T2b FAIL: pval=[`e(adversarial_pval_att)'] posted with no testable residual dimension (q=0)"
+  if "`e(adversarial_pval_att)'" == "" {
+    dis as error "T2b FAIL: no adversarial p-value posted - two post coefficients leave q = 1 under the one-parameter null through the reference period, so the test is available"
+    local ++fails
+  }
+  else if `e(adversarial_pval_att)' <= 0 | `e(adversarial_pval_att)' > 1 {
+    dis as error "T2b FAIL: adversarial p outside (0,1]: [`e(adversarial_pval_att)']"
     local ++fails
   }
   cap confirm matrix e(adversarial_line_att)
   if _rc != 0 {
-    dis as error "T2b FAIL: the display line must survive the degenerate-covariance refusal"
+    dis as error "T2b FAIL: the display line must be posted beside the p-value"
     local ++fails
   }
-  if strpos(fileread("advg_t2b.txt"), "the composite-null covariance is degenerate") == 0 {
-    dis as error "T2b FAIL: no degenerate-covariance Caution in the console output"
+  if strpos(fileread("advg_t2b.txt"), "the composite-null covariance is degenerate") != 0 {
+    dis as error "T2b FAIL: a degenerate-covariance Caution fired on a design whose null has one testable dimension"
     local ++fails
   }
 }
