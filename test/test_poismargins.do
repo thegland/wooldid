@@ -12,10 +12,14 @@
 * P1 the xb reporting scale is unchanged (the documented purpose of the option)
 * P2 poisexpresults still selects the exponentiated scale and is untouched by the gate
 * P3 plain dydx poisson runs and produces finite inference
-* P4 semielasticity (eydx) keeps expression(): its rc must match whatever it was, and
-*    the branch must be REACHED (this is the coverage the gate exists to preserve)
-* P5 contreat elasticity operators keep expression()
+* P4 semielasticity under poisson runs to completion. Since BS-6 it is computed as dydx
+*    on the xb scale, so the ey* branch is no longer reached on this combination; the
+*    expression() lines stay as the guard for a future operator
+* P5 contreat elasticity operators run; as P4, eydx is computed as dydx since BS-6
 * P6 non-poisson runs are untouched by the gate entirely
+* P7 (BS-6) poisson without poisexpresults computes semielasticity as dydx on the xb
+*    scale, so the reported number is the plain poisson one; the header still says
+*    semi-elasticities, the caution says why, and poisexpresults is untouched
 * Prints POISMARGINS_ALL_PASS iff all pass.
 clear all
 local REPO ..
@@ -57,9 +61,11 @@ if `p3rc' != 0 | P3[1,2] >= . | P3[1,2] <= 0 {
   local ++fails
 }
 
-* ---- P4: semielasticity keeps expression(). The branch must be REACHED and must not
-* have become an abort where it previously ran. On this panel the linear index is
-* positive throughout, so ln() is in-domain and the run completes.
+* ---- P4: semielasticity under poisson still runs to completion. Since BS-6 (author
+* ruling 2026-09-07) the ey* branch is no longer REACHED on this combination - the
+* operator is remapped to dydx on the xb scale, where a plain marginal effect already IS
+* the semi-elasticity - so what this leg now pins is that the remap did not break the run.
+* The expression() lines are kept as the guard for a future operator; P7 pins the remap.
 use `b', clear
 cap qui wooldid ycount i t ttre, att cluster(i) poisson semielasticity
 di "P4_eydx_rc=" _rc
@@ -68,7 +74,8 @@ if _rc != 0 {
   local ++fails
 }
 
-* ---- P5: contreat elasticity operators keep expression() too
+* ---- P5: contreat elasticity operators still run. As P4: since BS-6 the eydx request is
+* computed as dydx on the xb scale, and the expression() line below it stands as the guard
 use "`REPO'/test/data/dta_cont.dta", clear
 cap qui wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) poisson contreatelasticitytype(eydx) safety(off)
 di "P5_contreat_eydx_rc=" _rc " (contract: whatever it was, preserved)"
@@ -80,6 +87,41 @@ scalar p6 = _b[main_att]
 di "P6_nonpois_att=" p6
 if p6 >= . {
   di as error "P6 FAIL: non-poisson run broken"
+  local ++fails
+}
+
+* ---- P7 (BS-6): under poisson WITHOUT poisexpresults, semielasticity reports the plain
+* poisson marginal effect - the semi-elasticity of E[y] on the xb scale - rather than
+* margins' eydx, which takes a further log of the linear index and reports a number that
+* depends on the units of y. The operator is remapped; the raw request is kept for the
+* header and posted in e(wdid_semielasraw). poisexpresults is untouched.
+use `b', clear
+qui log using pois_p7.txt, text replace name(pm)
+cap noi wooldid ycount i t ttre, att cluster(i) poisson semielasticity
+local p7rc = _rc
+qui log close pm
+matrix P7A = e(wdidmainresults)
+local p7op = "`e(wdid_semielas)'"
+local p7raw = "`e(wdid_semielasraw)'"
+local p7c 0
+qui file open p7h using pois_p7.txt, read text
+file read p7h p7l
+while r(eof) == 0 {
+  if strpos(`"`macval(p7l)'"', "Caution: under poisson without poisexpresults") != 0 local p7c 1
+  file read p7h p7l
+}
+file close p7h
+cap erase pois_p7.txt
+use `b', clear
+qui wooldid ycount i t ttre, att cluster(i) poisson
+matrix P7B = e(wdidmainresults)
+use `b', clear
+qui wooldid ycount i t ttre, att cluster(i) poisson poisexpresults semielasticity
+local p7op2 = "`e(wdid_semielas)'"
+local p7raw2 = "`e(wdid_semielasraw)'"
+di "P7 BS-6: rc=`p7rc' operator=`p7op' raw=`p7raw' caution=`p7c' | remapped b=" %10.7f P7A[1,1] " se=" %10.7f P7A[1,2] " vs plain poisson b=" %10.7f P7B[1,1] " se=" %10.7f P7B[1,2] " | poisexp operator=`p7op2' raw=[`p7raw2']"
+if `p7rc' != 0 | "`p7op'" != "dydx" | "`p7raw'" != "eydx" | `p7c' != 1 | reldif(P7A[1,1], P7B[1,1]) > 1e-12 | reldif(P7A[1,2], P7B[1,2]) > 1e-12 | "`p7op2'" != "eydx" | "`p7raw2'" != "" {
+  di as error "P7 FAIL: the poisson xb-scale remap did not fire, or moved poisexpresults with it"
   local ++fails
 }
 

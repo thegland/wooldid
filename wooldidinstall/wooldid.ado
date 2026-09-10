@@ -1792,10 +1792,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * since semielasticities are allowed, we need text for inserting that info into plots
   local effecttype Effects
   local Ceffecttype Effects
-  if "`semielasticity'" == "eydx" local effecttype Semi-elasticities
-  if "`contreatelasticitytype'" == "eyex" local Ceffecttype Elasticities
-  if "`contreatelasticitytype'" == "eydx" local Ceffecttype Semi-elasticities (eydx)
-  if "`contreatelasticitytype'" == "dyex" local Ceffecttype Semi-elasticities (dyex)
+  * BS-6 (author ruling 2026-09-07): label what the user ASKED for. Under the poisson
+  * xb-scale remap the operator locals hold dydx/dyex, but the quantity they produce IS the
+  * requested semi-elasticity/elasticity, so the raw request is the true label. Off the
+  * poisson path raw and operator are identical and nothing moves.
+  if "`semielasraw'" == "eydx" local effecttype Semi-elasticities
+  if "`cetyperaw'" == "eyex" local Ceffecttype Elasticities
+  if "`cetyperaw'" == "eydx" local Ceffecttype Semi-elasticities (eydx)
+  if "`cetyperaw'" == "dyex" local Ceffecttype Semi-elasticities (dyex)
 
   * for histograms of i-level effects, we do the following:
   * ask for a margins estimation to give us treated cohort specific effects without SEs
@@ -4182,6 +4186,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   ereturn hidden local wdid_estimands "`att' `att_it' `att_i' `att_itime'"
   ereturn hidden local wdid_cwm "`customweightmultiplier'"
   ereturn hidden local wdid_semielas "`semielasticity'"
+  * BS-6 (2026-09-07): the macro above holds the OPERATOR margins used; this one holds what
+  * the user asked for, and is posted ONLY when the remap moved it - so no existing run's
+  * e() surface changes and no baseline macro dump moves
+  if "`semielasraw'" != "`semielasticity'" ereturn hidden local wdid_semielasraw "`semielasraw'"
   ereturn scalar level = `wdlvl'
   ereturn hidden local wdid_fcol "`fcon'"
   * F061 (2026-09-06): the realised cell count (missing when the collapse did not run, so
@@ -4191,6 +4199,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   ereturn hidden local wdid_fcskip "`fcskip'"
   ereturn hidden local wdid_fcguard "`fcguard'"
   ereturn hidden local wdid_cetype "`contreatelasticitytype'"
+  * BS-6 (2026-09-07): the user's request, posted only when the xb-scale remap moved it
+  if "`cetyperaw'" != "`contreatelasticitytype'" ereturn hidden local wdid_cetyperaw "`cetyperaw'"
   ereturn hidden local wdid_suppressjt "`suppressjointtests'"
   ereturn hidden local wdid_suppresssgpe "`suppresssgprimaryeffects'"
   ereturn hidden local wdid_adversarial "`adversarial'"
@@ -4712,6 +4722,44 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     local semielasticity eydx
   }
 
+  * ---- BS-6 (author ruling 2026-09-07): the poisson xb-scale remap --------------------
+  * Under poisson WITHOUT poisexpresults the reporting scale is the linear index
+  * xb = ln E[y|x], on which margins' PLAIN operators are already the elasticity family:
+  *     dydx(xb) = d ln E[y] / dx      = the semi-elasticity  (what semielasticity promises)
+  *     dyex(xb) = d ln E[y] / d ln x  = the elasticity       (what eyex promises)
+  * The ey* operators instead take a FURTHER log of the prediction - margins computes
+  * d ln(xb)/dx, a log of a log - so the shipped number was scale-dependent in y and did
+  * not match its own "Semi-elasticities"/"Elasticities" header. Measured on
+  * test/data/dta_binary.dta (att, cluster(i)): semielasticity reported .1422311 (se .0494,
+  * p .00400) where the plain poisson run reports .1240047 (se .02527, p 9.23e-07), and
+  * multiplying ycount by 10 moved the reported "semi-elasticity" to .0399387 - a
+  * semi-elasticity of E[y] cannot depend on the units of y. Remap to the operator that
+  * DOES deliver the header's quantity; the raw request is carried for the labels.
+  * Consequences, all intended: the reported number becomes the plain poisson one, the
+  * reads become linear in the coefficients so the cell-collapse ban stops catching them,
+  * and no ey* operator reaches margins under poisson any more, so the data-dependent
+  * r(459)/missing-with-rc-0 behaviour frozen at the poismarginstext block cannot arise
+  * there. poisexpresults is deliberately untouched: its scale is predict(n) = E[y] > 0,
+  * where eydx/eyex are the genuinely correct operators.
+  * ORDERING (two traps): test eyex/eydx by EQUALITY, never "anything but dydx/dyex" - the
+  * contreatelasticitytype() domain screen at the end of this program must still see an
+  * unrecognized value. And gate the contreat side on contreat(): contreatelasticitytype()
+  * without contreat() has no requires-parent screen and is inert, so a caution there would
+  * name a dose that does not exist.
+  local semielasraw `semielasticity'
+  local cetyperaw `contreatelasticitytype'
+  if "`poisson'" == "poisson" & "`poisexpresults'" == "" {
+    if "`semielasticity'" == "eydx" local semielasticity dydx
+    if "`contreat'" != "" {
+      if "`contreatelasticitytype'" == "eydx" local contreatelasticitytype dydx
+      if "`contreatelasticitytype'" == "eyex" local contreatelasticitytype dyex
+    }
+    if "`semielasticity'" != "`semielasraw'" | "`contreatelasticitytype'" != "`cetyperaw'" {
+      dis as text "Caution: under poisson without poisexpresults, results are on the linear-index scale xb = ln E[y|x], where a plain marginal effect already IS the semi-elasticity of E[y] and dyex already IS the elasticity. wooldid therefore computes the requested quantity with the xb-scale operator (semielasticity and contreatelasticitytype(eydx) as dydx; contreatelasticitytype(eyex) as dyex) rather than with eydx/eyex, which would take a further log of the linear index and report a number that depends on the units of y."
+      dis as text "  The option changes the table header, not the estimate: these are the estimates a plain poisson run reports. Specify poisexpresults to obtain the same quantities from the exponentiated prediction instead."
+    }
+  }
+
   * ---- F-collapse gate ----------------------------------------------------------------
   * The collapse hands margins one row per (_i,_t,targetflag) cell. That is exact only
   * while the treatment derivative is constant within the cell, i.e. while no model term
@@ -4744,6 +4792,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * only makecfxplots reads the bins (from lattice() or cfxlattice()); cfxlattice() on its
     * own is announced as ignored and must not decide the collapse (bug sweep BS-27)
     if "`makecfxplots'" != ""                                                   local fcbad `fcbad' makecfxplots
+    * BS-6 (author ruling 2026-09-07): under poisson without poisexpresults these two were
+    * remapped to dyex|dydx above, so they never reach this line and the collapse ban lifts
+    * on exactly the F032 argument - the remapped reads are linear in the coefficients.
+    * Measured on test/suite/data/continuous_control_dense.dta: e(wdid_fcol) 0 -> 1, and the
+    * collapsed answer agrees with fullprecisionslow to 9.1e-14, the same figure a plain
+    * poisson contreat() run posts. Off the poisson path, and under poisexpresults, nothing
+    * was remapped and the ban stands (test_fastcollapse F11b/F11c legs 2, 3 and 5).
     if "`contreatelasticitytype'" == "eyex" | "`contreatelasticitytype'" == "eydx" local fcbad `fcbad' contreatelasticitytype(`contreatelasticitytype')
     * poisson + contreatelasticitytype(dyex) left this list on 2026-09-06 (F032): dyex now
     * takes the analytic predict(xb) form under poisson too, and the collapse reproduces the
@@ -4777,6 +4832,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   }
   if "`interactivecontrols'" != ""          local fcbad `fcbad' interactivecontrols()
   if "`unconditionalse'" != ""              local fcbad `fcbad' unconditionalse
+  * BS-6: as the contreat twin above - remapped to dydx under poisson without
+  * poisexpresults, so the ban lifts there and stands everywhere else
   if "`semielasticity'" != "dydx"           local fcbad `fcbad' semielasticity
   if "`poisexpresults'" != ""               local fcbad `fcbad' poisexpresults
   if `"`customvce'"' != ""                  local fcbad `fcbad' customvce()
@@ -5164,7 +5221,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * literal 95, so `set level 90' produced lb_90ci columns holding 95% intervals under
   * bootstrap() / permute(). Resolve it once here; every consumer sees a number
   if `level' == 0 local level = c(level)
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw semielasraw cetyperaw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -9689,6 +9746,12 @@ version 16.0
   local customweightmultiplier `e(wdid_cwm)'
   local semielasticity `e(wdid_semielas)'
   local contreatelasticitytype `e(wdid_cetype)'
+  * BS-6 (2026-09-07): the two macros above hold the OPERATOR margins used. The headers must
+  * name what the user asked for - which the remapped quantity now genuinely is - so prefer
+  * the raw request where it was recorded. Absent on every run where no remap fired and on
+  * pre-BS-6 stores, so replay of an older estimate is unchanged.
+  if "`e(wdid_semielasraw)'" != "" local semielasticity `e(wdid_semielasraw)'
+  if "`e(wdid_cetyperaw)'" != "" local contreatelasticitytype `e(wdid_cetyperaw)'
   local suppressjointtests `e(wdid_suppressjt)'
   local suppresssgprimaryeffects `e(wdid_suppresssgpe)'
   local adversarial `e(wdid_adversarial)'
@@ -11403,6 +11466,12 @@ version 16.0
   local timetrends `e(wdid_timetrends)'
   local semielasticity `e(wdid_semielas)'
   local contreatelasticitytype `e(wdid_cetype)'
+  * BS-6 (2026-09-07): the two macros above hold the OPERATOR margins used. The headers must
+  * name what the user asked for - which the remapped quantity now genuinely is - so prefer
+  * the raw request where it was recorded. Absent on every run where no remap fired and on
+  * pre-BS-6 stores, so replay of an older estimate is unchanged.
+  if "`e(wdid_semielasraw)'" != "" local semielasticity `e(wdid_semielasraw)'
+  if "`e(wdid_cetyperaw)'" != "" local contreatelasticitytype `e(wdid_cetyperaw)'
   local subgroups `e(wdid_sgvar)'
   local sglist `e(wdid_sglist)'
   local suppresssgprimaryeffects `e(wdid_suppresssgpe)'

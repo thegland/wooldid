@@ -230,7 +230,11 @@ cohort i is observed. If weights are not used, w is taken to have a value of 1 f
 
 {phang}{opt semi:elasticity}: Compute treatment effect estimates in terms of semi-elasticities (% change in y / unit change in x). This is achieved by adjusting the margins calculation
 to present the average percentage change, rather than the average level difference, between the two sets of predicted outcomes. This is implemented using the
-{it:eydx} option of the {help margins} command. Note that for estimation to succeed, this option tends to require large samples and a y-variable that is not sparsely distributed. {p_end}
+{it:eydx} option of the {help margins} command. Note that for estimation to succeed, this option tends to require large samples and a y-variable that is not sparsely distributed.
+{ul:Under {it:poisson} without {it:poisexpresults}} the reporting scale is already the linear index {it:xb} = ln E[y|x], on which a plain marginal effect {ul:is} the semi-elasticity of E[y];
+{it:margins}' {it:eydx} there would take a further log of the linear index and report a number that depends on the units of {it:y}. On that combination {it:wooldid} computes {it:dydx} on the
+{it:xb} scale instead and prints a caution saying so, so the option changes the table header rather than the estimates - which are exactly a plain {it:poisson} run's. Use {it:poisexpresults}
+if you want the semi-elasticity of the exponentiated prediction. {p_end}
 
 
 {marker standarderrors}{...}
@@ -347,7 +351,8 @@ not linear in the coefficients. ({it:poisson} with {it:contreatelasticitytype(dy
 
 {phang2}Everything else is eligible, including several combinations that are easy to assume are not. {it:contreat()} is eligible on the default {it:dydx} scale and under
 {it:contreatelasticitytype(dyex)}, with every flavour of {it:contreatcontrols()} and with {it:ccnoabsorb}. Poisson estimation on the default (log) reporting scale is eligible,
-including with {it:contreat()} and with {it:contreatelasticitytype(dyex)}. So are {it:fastnose}, {it:jointtests}, {it:adversarial} and {it:altmethod_adversarial}, {it:esfixedbaseperiod} and {it:esrelativeto()},
+including with {it:contreat()} and with {it:contreatelasticitytype(dyex)} - and, since 2026-09-07, with {it:semielasticity} and {it:contreatelasticitytype(eyex)}/{it:(eydx)}, which on the
+linear-index scale are computed as {it:dydx}/{it:dyex} and so are linear in the coefficients (they remain ineligible off the poisson path and under {it:poisexpresults}). So are {it:fastnose}, {it:jointtests}, {it:adversarial} and {it:altmethod_adversarial}, {it:esfixedbaseperiod} and {it:esrelativeto()},
 {it:pretrendpower()}, {it:histogramcohorteffects}, {it:summarystats}, {it:gteffects} (which {it:wooldid} refuses alongside {it:contreat()} for a separate reason), {it:makeplots}
 and {it:saveplots()}, and the replications of {cmd:permute()} and {cmd:bootstrap()}, which are evaluated collapsed like any other run. {p_end}
 
@@ -750,7 +755,10 @@ within each cohort - every treated-cell slope term is then dropped for multicoll
 {phang}{opt contreatelas:ticitytype(dydx/eyex/eydx/dyex)}: Specifies which type of treatment effect to compute. {it:eyex} corresponds with computing the elasticity
 (% change in y/% change in contreat), {it:eydx} corresponds with semi-elasticities comparable to what can be produced for the main effect of treatment
 (% change in y/unit change in continuous treatment), {it:dyex} gives the other semi-elasticity (change in y/% change in continuous treatment), and {it:dydx} is the default
-(not an elasticity). A supplied value outside this list is rejected with an error. Note that successful estimation of these elasticities tends to require a larger sample, as well as y and contreat variables that are not sparsely distributed. {p_end}
+(not an elasticity). A supplied value outside this list is rejected with an error.
+{ul:Under {it:poisson} without {it:poisexpresults}} results are on the linear index {it:xb} = ln E[y|x], where {it:dydx} already gives the semi-elasticity of E[y] and {it:dyex} already gives the
+elasticity. {it:wooldid} therefore computes {it:eydx} as {it:dydx} and {it:eyex} as {it:dyex} on that scale, with a caution: the option changes the table header rather than the estimates. Use
+{it:poisexpresults} to obtain the same quantities from the exponentiated prediction. Note that successful estimation of these elasticities tends to require a larger sample, as well as y and contreat variables that are not sparsely distributed. {p_end}
 
 {phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option disables some of {it:safety}'s features (the estimability-relaxation checks; the data-integrity screens, such as onset constancy within units, still run unless {it:safety(off)} is given explicitly), turns off
 estimability checks that would otherwise cause {it:wooldid} to stop estimation in the absence of any untreated cohorts, and causes {it:wooldid} to skip sample cleaning routines that drop time

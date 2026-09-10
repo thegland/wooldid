@@ -850,17 +850,32 @@ forval k = 1/6 {
   cap matrix V11bu = e(V)
   cap matrix M11bu = e(wdidmainresults)
   local bd`k' = max(mreldif(b11b, b11bu), mreldif(V11b, V11bu), mreldif(M11b, M11bu))
-  di "F11b`k' `BNM`k'' rc=" `bq`k'' "/" `bqu`k'' " fcol=" `bf`k'' " (want 0) worst mreldif b/V/table=" `bd`k'' " (want exactly 0)"
+  * BS-6 (author ruling 2026-09-07): leg 5, poisson + contreatelasticitytype(eydx), is no
+  * longer a gated read. Under poisson without poisexpresults the operator is remapped to
+  * dydx on the xb scale - where a plain marginal effect already IS the semi-elasticity -
+  * so the read became linear in the coefficients and the collapse ban lifted on exactly
+  * the F032 argument. Its contract flips: the collapse must now be ON, and the collapsed
+  * answer must agree with fullprecisionslow to the file's usual 1e-8, not bit-exactly
+  * (they are different code paths once the collapse engages). Measured 9.1e-14, which is
+  * the same figure a plain poisson + contreat() run posts, so it is the poisson path's
+  * ordinary reproducibility and not anything the remap introduced.
+  local wantfcol`k' 0
+  local wanttol`k' 0
+  if `k' == 5 {
+    local wantfcol`k' 1
+    local wanttol`k' 1e-8
+  }
+  di "F11b`k' `BNM`k'' rc=" `bq`k'' "/" `bqu`k'' " fcol=" `bf`k'' " (want `wantfcol`k'') worst mreldif b/V/table=" `bd`k'' " (want <= `wanttol`k'')"
   if `bq`k'' != 0 | `bqu`k'' != 0 {
-    di as error "F11b FAIL: gated read `BNM`k'' errored (rc `bq`k''/`bqu`k'') without an explicit fastcollapse - it must run normally and skip the collapse"
+    di as error "F11b FAIL: read `BNM`k'' errored (rc `bq`k''/`bqu`k'') without an explicit fastcollapse"
     local ++fails
   }
-  if `bf`k'' != 0 {
-    di as error "F11b FAIL: gated read `BNM`k'' reports e(wdid_fcol)=`bf`k'' - the gate must turn the collapse off"
+  if `bf`k'' != `wantfcol`k'' {
+    di as error "F11b FAIL: read `BNM`k'' reports e(wdid_fcol)=`bf`k'' (want `wantfcol`k'')"
     local ++fails
   }
-  if `bd`k'' != 0 {
-    di as error "F11b FAIL: gated read `BNM`k'' differs from fullprecisionslow by `bd`k'' - with the collapse off both are the same code path and must be bit-identical"
+  if `bd`k'' > `wanttol`k'' {
+    di as error "F11b FAIL: read `BNM`k'' differs from fullprecisionslow by `bd`k'' (want <= `wanttol`k'')"
     local ++fails
   }
 }
@@ -874,10 +889,13 @@ forval k = 1/6 {
   cap qui wooldid `BY`k'' cohort t ttre, `BOPT`k'' fastcollapse safety(off)
   local cx`k' = _rc
 }
-di "F11c_gate_rcs poly2=" `cx1' " eyex=" `cx2' " eydx=" `cx3' " lattice=" `cx4' " pois_eydx=" `cx5' " ctl=" `cx6' " (want 198 x6)"
+* BS-6: leg 5 is now ACCEPTED (rc 0), the other five stay refused
+di "F11c_gate_rcs poly2=" `cx1' " eyex=" `cx2' " eydx=" `cx3' " lattice=" `cx4' " pois_eydx=" `cx5' " (want 0 since BS-6) ctl=" `cx6' " (want 198 elsewhere)"
 forval k = 1/6 {
-  if `cx`k'' != 198 {
-    di as error "F11c FAIL: explicit fastcollapse with `BNM`k'' returned rc `cx`k'' (want 198)"
+  local wantrc`k' 198
+  if `k' == 5 local wantrc`k' 0
+  if `cx`k'' != `wantrc`k'' {
+    di as error "F11c FAIL: explicit fastcollapse with `BNM`k'' returned rc `cx`k'' (want `wantrc`k'')"
     local ++fails
   }
 }
