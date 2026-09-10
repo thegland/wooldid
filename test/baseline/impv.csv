@@ -1,6 +1,9 @@
 rc|0
 varlist|i ttre sg ife t w eff y ycount
-scalar|df_r|+1.3c00000000000X+006
+scalar|df_r_analytic|+1.3c00000000000X+006
+scalar|df_r|+1.8800000000000X+005
+scalar|imdf_min|+1.8800000000000X+005
+scalar|imdf_max|+1.8800000000000X+005
 scalar|escomp_refN|+1.c200000000000X+007
 scalar|escomp_refnunits|+1.9000000000000X+005
 scalar|escomp_refncoh|+1.0000000000000X+001
@@ -17,10 +20,10 @@ scalar|r2_within|+1.14bea906b3797X-001
 scalar|r2_withinadj|+1.88a42d1d88411X-003
 scalar|rmse|+1.06396227c9496X-001
 scalar|rss|+1.03281c3652b60X+007
-scalar|N_dropped|+0.0000000000000X-3ff
-scalar|N_clust|+1.4000000000000X+006
-scalar|level|+1.7c00000000000X+006
 scalar|wdid_fcncell|+1.e000000000000X+009
+scalar|level|+1.7c00000000000X+006
+scalar|N_clust|+1.4000000000000X+006
+scalar|N_dropped|+0.0000000000000X-3ff
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2

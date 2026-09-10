@@ -1859,6 +1859,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * detect on the reported SE relative to the estimate (ttest returns r(se)/r(sd_1), NOT r(sd)),
     * strict relative only -- an absolute floor would false-fire on structural-zero estimands
     local imdegtol_rel = 1e-10
+    * --- BS-10 (author ruling 2026-09-07): the IM reference distribution, for e(df_r) ---
+    * every printed t, p and interval on this path comes from ttest, i.e. t(q-1) where q is
+    * the number of clusters that contributed a non-missing per-cluster margin to THAT row,
+    * and q varies row by row. The df that ereturn post's dof() carries is the stage-1
+    * regression's residual df, which is always LARGER, so ereturn display / lincom / test /
+    * esttab / coefplot reported p-values too small and intervals too narrow against the
+    * table wooldid printed. Each surviving IM row appends its r(df_t) here; the MINIMUM is
+    * written over e(df_r) after the post (conservative where the rows disagree). Posting it
+    * missing was rejected in the ruling: the normal fallback is anti-conservative against
+    * every row's t.
+    local imdflist
     local imdegwarned
     local imdegmsg "Caution: for one or more Ibragimov-Muller estimates the per-cluster estimates were numerically identical, so the cross-cluster (IM) standard error is not identified; wooldid has set the standard error, test statistic, p-value, and 95% confidence interval to missing for the affected estimate(s) while retaining the point estimate. A collapsed IM standard error usually reflects deterministic or noiseless data - please verify your input if this was not expected."
   }
@@ -1902,6 +1913,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       local imp = r(p)
       local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
       local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
+      * BS-10 (ruling 2026-09-07): record this row's IM reference df. Only rows that SURVIVE
+      * the degeneracy scrub immediately below count - the predicate here is the exact
+      * negation of the scrub's, so the two can never disagree - and a row with a single
+      * contributing cluster is excluded by !missing(`se') (ttest leaves r(se) missing and
+      * r(df_t) = 0 there). r(df_t) is still live: the line above just read it, and nothing
+      * between the ttest and here is r-class.
+      if !missing(`se') & `se' >= `imdegtol_rel'*abs(`b') local imdflist `imdflist' `=r(df_t)'
       if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
         local se .
         local imt .
@@ -1951,6 +1969,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         local imp = r(p)
         local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
         local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
+        * BS-10 (2026-09-07): this row's IM df for e(df_r); guard explained at the first IM site
+        if !missing(`se') & `se' >= `imdegtol_rel'*abs(`b') local imdflist `imdflist' `=r(df_t)'
         if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
           local se .
           local imt .
@@ -2064,6 +2084,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             local imp = r(p)
             local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
             local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
+            * BS-10 (2026-09-07): this row's IM df for e(df_r); guard explained at the first IM site
+            if !missing(`se') & `se' >= `imdegtol_rel'*abs(`b') local imdflist `imdflist' `=r(df_t)'
             if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
               local se .
               local imt .
@@ -2162,6 +2184,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         local imp = r(p)
         local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
         local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
+        * BS-10 (2026-09-07): this row's IM df for e(df_r); guard explained at the first IM site
+        if !missing(`se') & `se' >= `imdegtol_rel'*abs(`b') local imdflist `imdflist' `=r(df_t)'
         if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
           local se .
           local imt .
@@ -2215,6 +2239,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           local imp = r(p)
           local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
           local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
+          * BS-10 (2026-09-07): this row's IM df for e(df_r); guard explained at the first IM site
+          if !missing(`se') & `se' >= `imdegtol_rel'*abs(`b') local imdflist `imdflist' `=r(df_t)'
           if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
             local se .
             local imt .
@@ -2542,6 +2568,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               local imp = r(p)
               local im_ll = `b' + invt(r(df_t), (100 - `wdlvl')/200)*`se'
               local im_ul = `b' - invt(r(df_t), (100 - `wdlvl')/200)*`se'
+              * BS-10 (2026-09-07): this row's IM df for e(df_r); guard explained at the first IM site
+              if !missing(`se') & `se' >= `imdegtol_rel'*abs(`b') local imdflist `imdflist' `=r(df_t)'
               if !missing(`se') & `se' < `imdegtol_rel'*abs(`b') {
                 local se .
                 local imt .
@@ -3846,6 +3874,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     }
   }
 
+
+  * BS-10 (author ruling 2026-09-07): under impvalues the reference distribution the table
+  * actually used is IM's row-specific t(q-1), not the stage-1 residual df that dof() just
+  * posted. Overwrite e(df_r) with the MINIMUM IM df across the reported rows so a hand-run
+  * ereturn display / lincom / test / esttab is conservative against the printed table
+  * instead of narrower than it, and keep the analytic value as the hidden twin - exactly
+  * the convention wooldid_bootwire uses for the bootstrap reference distribution. Never
+  * missing: the normal fallback is anti-conservative against every row's t. The reduction
+  * and the ereturns live in a subprogram (wooldid_worker is at the compiled-size ceiling);
+  * an eclass subprogram's ereturns persist into the caller's e(), the way wooldid_ptp's do.
+  * NOTE: the e(gteffects) cells are stage-1 regression coefficients, computed before this
+  * point on `df_r', so they remain on e(df_r_analytic) - see the help sentence added here.
+  if "`impvalues'" != "" & "`imdflist'" != "" wooldid_imdf , dfl(`imdflist') ana(`df_r')
 
   * return the command line input and estimate_type
   * F2: expose captured event-study b/V (honestdid/lincom/test compatible) [pure-add, after post]
@@ -9446,6 +9487,30 @@ prog def wooldid_pfloor
   if `wdp0' > 0 dis as text "  p = 0 above means p < " %5.3f `wdpres' " `wdpmsg'"
 end
 
+* ============================================================================
+* BS-10 (author ruling 2026-09-07): reduce the per-row Ibragimov-Muller degrees of
+* freedom collected at the six IM ttest sites and align e(df_r) with them. eclass so
+* the ereturns survive the return (same reason wooldid_ptp is eclass); called only
+* after wooldid_worker's ereturn post, so it adds to an existing e() rather than
+* replacing it. Kept out of wooldid_worker for compiled-size headroom.
+* ana() is a string, not an integer option, so a poisson fit with no e(df_r) can pass "."
+cap prog drop wooldid_imdf
+prog def wooldid_imdf, eclass
+version 16.0
+  syntax , dfl(string) [ana(string)]
+  local wdimin .
+  local wdimax .
+  mata: st_local("wdimin", strofreal(min(strtoreal(tokens(st_local("dfl"))))))
+  mata: st_local("wdimax", strofreal(max(strtoreal(tokens(st_local("dfl"))))))
+  * a degenerate reduction leaves e(df_r) exactly as posted - the ruling's "do not post
+  * missing" applies to the fallback as much as to the IM value
+  if `wdimin' <= 0 | `wdimin' >= . exit
+  if "`ana'" != "" & "`ana'" != "." ereturn hidden scalar df_r_analytic = `ana'
+  ereturn scalar df_r = `wdimin'
+  ereturn scalar imdf_min = `wdimin'
+  ereturn scalar imdf_max = `wdimax'
+end
+
 cap prog drop wooldid_display
 prog def wooldid_display
 version 16.0
@@ -9566,6 +9631,15 @@ version 16.0
   if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
   matlist e(wdidmainresults)
   wooldid_pfloor e(wdidmainresults)
+
+  * BS-10 (ruling 2026-09-07): the IM reference distribution is row-specific - t(q-1) with q
+  * the clusters contributing to that row - so when q is not common across the reported rows
+  * no single posted df reproduces every printed p. e(df_r) carries the MINIMUM; this line
+  * says so. Self-gating on a store written before BS-10: both scalars read missing and
+  * ". > ." is false, which is why this read alone takes no wdid_replayv bump.
+  if e(imdf_min) < . & e(imdf_max) > e(imdf_min) {
+    dis as text "  Ibragimov-Muller degrees of freedom are not common across the rows above: they run from `=e(imdf_min)' to `=e(imdf_max)', one less than the number of clusters contributing to each row. e(df_r) carries the minimum, `=e(imdf_min)', so a test or lincom run by hand is conservative for every row rather than matching the widest one; each row's own p-value and interval in the table above use that row's own degrees of freedom. The stage-1 regression's residual degrees of freedom are kept as hidden e(df_r_analytic), and the e(gteffects) cells - stage-1 regression coefficients, not IM quantities - use that value."
+  }
 
   * F8: composition table prints with the other descriptive material under summarystats
   cap confirm matrix e(escomp)
