@@ -1315,7 +1315,10 @@ matrix Q26S = e(perm_p_se)
 matrix Q26C = e(perm_p_ci)
 matrix Q26P = e(perm_p)
 mata: st_local("q26miss", strofreal(allof(st_matrix("Q26S"), .) & allof(st_matrix("Q26C"), .)))
-scan3 perm3_q26.txt "exhaustive, so the p-values are exact shares"
+* BS-23 (author ruling 2026-09-07) re-pinned the wording: the footer used to say the
+* enumeration was "exhaustive", which is false on an incomplete one, and now says the
+* assignments are enumerated rather than sampled - a claim that holds either way
+scan3 perm3_q26.txt "enumerated rather than sampled, so the p-values are exact shares"
 local q26f = r(found)
 scan3 perm3_q26.txt "Monte-Carlo precision of the p-values"
 local q26g = r(found)
@@ -1396,6 +1399,104 @@ cap erase perm3_q28.txt
 dis "Q28 permrawp sampled: p=`q28p' note=`q28n' | default/permabsp notes=`q28x' | exact permrawp: min p=`q28min' completed=`q28M' note=`q28e'"
 if `q28p' != 0 | `q28n' != 1 | "`q28x'" != "0 0" | `q28min' < 1/`q28M' - 1e-6 | `q28e' != 0 {
   dis as error "Q28 FAIL: the p = 0 resolution note under permrawp"
+  global pf = $pf + 1
+}
+
+* ---- Q29 (BS-23): an INCOMPLETE permexact enumeration keeps the exact share ----
+* Units 7-8 are observed only from t = 4, so any assignment that treats one of them loses
+* pre-horizons and that element's reference set shrinks. Before BS-23 those elements fell
+* back to the add-one form (1 + m)/(n + 1); the observed assignment is one of the
+* enumerated columns whether or not others failed, so the share stays exact over the
+* assignments that completed. What incompleteness costs is resolution, not the convention.
+mkperm3 8 2 3
+qui drop if inlist(i, 7, 8) & t < 4
+tempfile q29d
+qui save `q29d'
+use `q29d', clear
+cap qui wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(2) permute(shuffle) permexact jointtests
+local q29rc = _rc
+matrix Q29D = e(permdist_b)
+matrix Q29C = e(perm_comparator_b)
+matrix Q29P = e(perm_p)
+matrix Q29LO = e(perm_p_lo)
+matrix Q29HI = e(perm_p_hi)
+matrix Q29N = e(perm_n)
+matrix Q29SE = e(perm_p_se)
+matrix Q29CI = e(perm_p_ci)
+local q29inc = "`e(perm_incomplete)'"
+local q29add = "`e(perm_addone)'"
+local q29np = e(perm_npossible)
+local q29jh = e(joint_horiz)
+matrix Q29W = e(perm_jointW)
+matrix Q29WOBS = e(perm_jointWobs)
+* T1 membership: some replication row reproduces the comparator bitwise
+mata: st_local("q29t1", strofreal(sum(rowsum(st_matrix("Q29D") :== st_matrix("Q29C")) :== cols(st_matrix("Q29D"))) >= 1))
+* T2 the convention, recomputed from the posted draws
+mata {
+  D = st_matrix("Q29D"); C = st_matrix("Q29C")
+  bad = 0; minn = .; anyshort = 0
+  for (k = 1; k <= cols(D); k++) {
+    v = select(D[., k], D[., k] :< .)
+    nk = rows(v)
+    if (nk < 2 | C[1, k] >= .) continue
+    m1 = sum(v :>= C[1, k]); m0 = sum(v :<= C[1, k])
+    if (abs(st_matrix("Q29HI")[1, k] - m1/nk) > 1e-12) bad = bad + 1
+    if (abs(st_matrix("Q29LO")[1, k] - m0/nk) > 1e-12) bad = bad + 1
+    if (abs(st_matrix("Q29P")[1, k] - min((1, 2*min((m0, m1))/nk))) > 1e-12) bad = bad + 1
+    if (st_matrix("Q29N")[1, k] != nk) bad = bad + 1
+    if (nk < strtoreal(st_local("q29np"))) anyshort = anyshort + 1
+    if (m1 == 1 & abs(st_matrix("Q29HI")[1, k] - 1/nk) > 1e-12) bad = bad + 1
+    if (nk < minn) minn = nk
+  }
+  st_local("q29bad", strofreal(bad))
+  st_local("q29short", strofreal(anyshort))
+  st_local("q29minn", strofreal(minn))
+}
+* T5 the enumeration carries no Monte-Carlo error, incomplete columns included
+mata: st_local("q29t5", strofreal(allof(st_matrix("Q29SE"), .) & allof(st_matrix("Q29CI"), .)))
+* T7 the joint test is the plain share over the reduced set
+mata {
+  w = select(st_matrix("Q29W")[., 1], st_matrix("Q29W")[., 1] :< .)
+  nj = rows(w)
+  // read Wobs from the matrix, never through a Stata local: a local stringifies at the
+  // default precision, and the observed assignment's own row carries W == Wobs exactly,
+  // so a rounded comparator moves it across the >= boundary and costs the count one row
+  nex = sum(w :>= st_matrix("Q29WOBS")[1, 1])
+  st_local("q29nj", strofreal(nj))
+  st_local("q29jp", strofreal(nex/nj, "%21x"))
+}
+* T8 no leakage into sampled mode: M is missing there, so the add-one form must stand
+use `q29d', clear
+cap qui wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(2) permute(shuffle) permreps(200) rseed(29)
+local q29rc8 = _rc
+matrix Q29D8 = e(permdist_b)
+matrix Q29C8 = e(perm_comparator_b)
+matrix Q29P8 = e(perm_p)
+matrix Q29SE8 = e(perm_p_se)
+mata {
+  D = st_matrix("Q29D8"); C = st_matrix("Q29C8")
+  bad8 = 0
+  for (k = 1; k <= cols(D); k++) {
+    v = select(D[., k], D[., k] :< .)
+    nk = rows(v)
+    if (nk < 2 | C[1, k] >= .) continue
+    m1 = sum(v :>= C[1, k]); m0 = sum(v :<= C[1, k])
+    if (abs(st_matrix("Q29P8")[1, k] - min((1, 2*(min((m0, m1)) + 1)/(nk + 1)))) > 1e-12) bad8 = bad8 + 1
+  }
+  st_local("q29bad8", strofreal(bad8))
+  st_local("q29se8", strofreal(allof(st_matrix("Q29SE8"), .)))
+}
+dis "Q29 BS-23: rc=`q29rc' npossible=`q29np' shortest n=`q29minn' short cols=`q29short' recompute mismatches=`q29bad' | incomplete=[`q29inc'] addone=[`q29add'] member=`q29t1' no-MC-error=`q29t5' | joint n=`q29nj' p=" %10.8f `q29jh' " vs share " %10.8f `=`q29jp'' " | sampled rc=`q29rc8' add-one mismatches=`q29bad8' se all missing=`q29se8'"
+if `q29rc' != 0 | `q29t1' != 1 | `q29bad' != 0 | `q29short' == 0 | "`q29inc'" == "" | "`q29add'" != "" | `q29t5' != 1 {
+  dis as error "Q29 FAIL: an incomplete permexact enumeration did not keep the exact share"
+  global pf = $pf + 1
+}
+if `q29nj' >= `q29np' | abs(`q29jh' - `=`q29jp'') > 1e-12 {
+  dis as error "Q29b FAIL: the joint test is not the plain share over the reduced reference set (n=`q29nj', p=`q29jh')"
+  global pf = $pf + 1
+}
+if `q29rc8' != 0 | `q29bad8' != 0 | `q29se8' != 0 {
+  dis as error "Q29c FAIL: membership leaked into sampled mode (mismatches=`q29bad8', se all missing=`q29se8')"
   global pf = $pf + 1
 }
 

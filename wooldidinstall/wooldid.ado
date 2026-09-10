@@ -191,8 +191,12 @@ version 16.0
     ereturn local perm_npossible_str `wdp_r_nps'
     ereturn local perm_stat = cond(`wdp_ts', "t", "b")
     local wdp_M = cond("`permexact'" != "", "`wdp_r_reps'", ".")
+    * BS-23 (author ruling 2026-09-07): the kernels switch the share convention on
+    * MEMBERSHIP - is the observed statistic one of the reference values - rather than on
+    * completeness. 0 when there is no observed row to point at.
+    local wdp_OR = cond("`permexact'" != "" & "`wdp_r_obsrow'" != "", "`wdp_r_obsrow'", "0")
     * rewire the coefficient tables and post the stripe-aligned surfaces (eclass sub)
-    wooldid_permwire , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') seacc(`wdpsacc') cmpse(`wdpcmpse') level(`level') m(`wdp_M') done(`wdp_r_done') fail(`wdp_r_fail') blank(`wdp_r_blank') ts(`wdp_ts') method(`permute') reps(`wdp_r_reps') ase(`permanalyticse') clus(`cluster') gt(`gteffects') absp(`permabsp') side(`permside') rawp(`permrawp')
+    wooldid_permwire , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') seacc(`wdpsacc') cmpse(`wdpcmpse') level(`level') m(`wdp_M') orow(`wdp_OR') done(`wdp_r_done') fail(`wdp_r_fail') blank(`wdp_r_blank') ts(`wdp_ts') method(`permute') reps(`wdp_r_reps') ase(`permanalyticse') clus(`cluster') gt(`gteffects') absp(`permabsp') side(`permside') rawp(`permrawp')
     * the legacy per-estimand scalars, read from the posted kernel by name so they are
     * the SAME numbers the tables carry (one convention: equal-tailed p, 5th-95th null
     * band, permutation SD; on the t-ratio scale under permtstat)
@@ -239,14 +243,14 @@ version 16.0
     * scalars, on the e(perm_stat) scale (the full vector is e(perm_comparator_b))
     cap ereturn matrix perm_comparator = `wdpcomp'
     * joint tests, subgroup equality, adversarial and contrasts (eclass sub)
-    wooldid_permjnt , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') level(`level') m(`wdp_M') ts(`wdp_ts') jt(`jointtests') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') esf(`esfixedbaseperiod') absp(`permabsp') side(`permside') rawp(`permrawp')
+    wooldid_permjnt , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') level(`level') m(`wdp_M') orow(`wdp_OR') ts(`wdp_ts') jt(`jointtests') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') esf(`esfixedbaseperiod') absp(`permabsp') side(`permside') rawp(`permrawp')
     * the continuous-treatment plot cells (eclass sub)
     if "`makecfxplots'" != "" & `wdp_ncfx' > 0 {
       local wdp_cfxnames
       forval wdk = 1/`wdp_ncfx' {
         local wdp_cfxnames `wdp_cfxnames' `wdb_cfxname`wdk''
       }
-      wooldid_permcellsx , cell(`wdpcell') cell0(`wdpcell0') ncfx(`wdp_ncfx') names(`wdp_cfxnames') level(`level') m(`wdp_M') ts(`wdp_ts') lattype(`latticetype') cfxlat(`cfxlattice') absp(`permabsp') side(`permside') rawp(`permrawp')
+      wooldid_permcellsx , cell(`wdpcell') cell0(`wdpcell0') ncfx(`wdp_ncfx') names(`wdp_cfxnames') level(`level') m(`wdp_M') orow(`wdp_OR') ts(`wdp_ts') lattype(`latticetype') cfxlat(`cfxlattice') absp(`permabsp') side(`permside') rawp(`permrawp')
     }
     * permsave(): the replication draws as a .dta in the working directory
     if "`permsave'" != "" wooldid_permsave , file(`permsave') acc(`wdpacc') obsb(`wdpobsb') seacc(`=cond(`wdp_ts', "`wdpsacc'", "")') aseobs(`=cond(`wdp_ts', "e(perm_ase_obs)", "")') asg(`wdpasg') clusvals(`wdp_clusvals') obsons(`wdp_obsons') seed(`rseed') rng(`wdp_r_rng0') `replace'
@@ -7188,7 +7192,16 @@ version 16.0
   * NFPERM-01 (lean residue): under permexact ANY failure means the enumeration is
   * incomplete, so the caution fires at nfail > 0 with wording that states the
   * substance; sampled mode keeps the 10% threshold (adjudicated accounting design)
-  if `nfail' > 0 & "`permexact'" != "" dis as text "Caution: `nfail' of `wdp_R' enumerated assignments failed to estimate, so the exact enumeration is incomplete; the reported exact p-values are shares over completed assignments only (the observed-is-a-member and 2/M-floor readings no longer apply)."
+  * BS-23 (author ruling 2026-09-07): what incompleteness costs is RESOLUTION, not the
+  * convention. The observed assignment is one of the enumerated columns, so the shares stay
+  * exact - over the assignments that completed. The old wording ("shares over completed
+  * assignments only ... the observed-is-a-member and 2/M-floor readings no longer apply")
+  * contradicted the per-element caution wooldid_permwire prints, and described a rule the
+  * code did not use.
+  if `nfail' > 0 & "`permexact'" != "" dis as text "Caution: `nfail' of `wdp_R' enumerated assignments failed to estimate, so the enumeration is incomplete. The p-values stay exact shares - the observed assignment is still a member of its own reference set - but over the `=`wdp_R' - `nfail'' assignments that completed: the smallest attainable p is 2/n under the default convention (1/n under the absolute-value and one-sided conventions) rather than 2/`wdp_R', with each element's n in e(perm_n)."
+  * (a failed assignment blanks its WHOLE accumulator row, so every element loses it and
+  * n = M - nfail across the board; per-element loss on an assignment that DID estimate is
+  * what wooldid_permwire's e(perm_incomplete) caution covers.)
   else if `nfail' > 0 & `nfail' > 0.1*`wdp_R' dis as text "Caution: `nfail' of `wdp_R' permutation replications failed to estimate and were excluded."
 
   * dense legacy permdist matrix (completed rows only, keyed on the legacy estimands),
@@ -7215,6 +7228,9 @@ version 16.0
   c_local wdp_r_npd `wdp_npd'
   c_local wdp_r_nps `wdp_nps'
   c_local wdp_r_rng0 `wdp_rng0'
+  * BS-23 (author ruling 2026-09-07): the accumulator row carrying the observed
+  * assignment (0 outside an enumeration); wooldid_permx posts it
+  c_local wdp_r_obsrow `wdp_obsrow'
   if "`asgname'" != "" {
     c_local wdp_clusvals `wdp_clusvals'
     c_local wdp_obsons `wdp_obsons'
@@ -7233,7 +7249,7 @@ version 16.0
 *** standard error (labelled se_analytic) under permtstat or permanalyticse, blank
 *** under the fast-mode default. The per-element kernel and the stripe-aligned vectors
 *** are posted by name; the analytic tables are kept as hidden twins
-  syntax , acc(string) obsb(string) cmpb(string) [seacc(string) cmpse(string) level(real 0) m(string) done(integer 0) fail(integer 0) blank(integer 0) ts(integer 0) method(string) reps(integer 0) ase(string) clus(varlist) gt(string) absp(string) side(string) rawp(string)]
+  syntax , acc(string) obsb(string) cmpb(string) [seacc(string) cmpse(string) level(real 0) m(string) orow(integer 0) done(integer 0) fail(integer 0) blank(integer 0) ts(integer 0) method(string) reps(integer 0) ase(string) clus(varlist) gt(string) absp(string) side(string) rawp(string)]
   if `level' == 0 local level = c(level)
   * p-value convention code (F052/F064, 2026-09-06): 0 equal-tailed (default), 1 absolute
   * add-one (permabsp), 2 raw |s| share c/n without add-one (permrawp: the ritest / Stata
@@ -7283,7 +7299,8 @@ version 16.0
   * convention and the interval to its symmetric dual
   tempname kern
   local wdp_incomplete
-  mata: wooldid_permstat("`acc'", "`seacc'", "`obsb'", "`cmpb'", "`cmpse'", "`excl'", `level', `wdpM', `wdpabs', "`kern'")
+  local wdp_addone
+  mata: wooldid_permstat("`acc'", "`seacc'", "`obsb'", "`cmpb'", "`cmpse'", "`excl'", `level', `wdpM', `orow', `wdpabs', "`kern'")
   local obn : colfullnames `obsb'
 
   * -------- rewire the results matrices: col 3 = permuted t-ratio (permtstat) or blank,
@@ -7462,6 +7479,9 @@ version 16.0
   ereturn scalar perm_level = `level'
   ereturn scalar perm_exact = (`wdpM' < .)
   ereturn local perm_incomplete `wdp_incomplete'
+  * BS-23 (author ruling 2026-09-07): the elements that actually take the add-one form -
+  * their reference set does not contain the observed statistic
+  ereturn local perm_addone `wdp_addone'
   ereturn local perm_offcentre `wdpoff'
   ereturn scalar perm_blank = `blank'
   if "`ase'" != "" ereturn scalar perm_analyticse = 1
@@ -7494,7 +7514,10 @@ version 16.0
   if "`wdpdeg'" != "" dis as text "Caution: the permutation distribution is degenerate (every completed draw equal) for: `wdpdeg'; those permutation p-values are uninformative."
   if "`wdpoff'" != "" dis as text "Caution: the permutation distribution is not centred at zero (its central `level'% band excludes 0) for: `wdpoff'. The shift interval takes the estimate's sampling error to have that null distribution, so it is not interpretable there and is left blank; the permutation p-value stands. This happens when a quantity is non-zero under reassigned onsets - for example the ame rows under lattice() with contreatcontrols(basic), where the baseline dose slope is not partialled out (see the standing issue on the reference cell) - or under a permute(probabilities) design far from the observed assignment."
   if `blank' > 0 dis as text "Caution: `blank' replication cell(s) in ame-family columns returned exact structural zeros (reassignments without dose variation in some cells) and were excluded from those columns' permutation distributions."
-  if "`wdp_incomplete'" != "" dis as text "Caution: under permexact the following elements were not estimable in every enumerated assignment, so their p-values use the add-one form over the completed assignments rather than exact shares: `wdp_incomplete'"
+  * BS-23 (author ruling 2026-09-07): incompleteness costs resolution, not the convention;
+  * the add-one wording now sits on the case that actually uses the add-one form
+  if "`wdp_incomplete'" != "" dis as text "Caution: under permexact the following elements were not estimable in every enumerated assignment, so their exact shares are taken over the assignments that completed - a reduced reference set whose size is in e(perm_n): `wdp_incomplete'"
+  if "`wdp_addone'" != "" dis as text "Caution: under permexact the observed assignment's own replication did not carry the following elements, so their reference set does not contain the observed statistic and their p-values use the add-one form (1 + count)/(n + 1) rather than an exact share: `wdp_addone'"
 end
 
 cap prog drop wooldid_permjnt
@@ -7509,7 +7532,7 @@ version 16.0
 *** Contrasts are permuted as coefficient differences in both modes. Names mirror the
 *** analytic surface so the display prints them unchanged; an analytic value that the
 *** observed run posted (permtstat or permanalyticse) is always overwritten or blanked
-  syntax , acc(string) obsb(string) cmpb(string) [level(real 0) m(string) ts(integer 0) jt(string) adv(string) advalt(string) advesrel(string) advtt(string) esf(string) absp(string) side(string) rawp(string)]
+  syntax , acc(string) obsb(string) cmpb(string) [level(real 0) m(string) orow(integer 0) ts(integer 0) jt(string) adv(string) advalt(string) advesrel(string) advtt(string) esf(string) absp(string) side(string) rawp(string)]
   if `level' == 0 local level = c(level)
   * p-value convention code (F052/F064, 2026-09-06): 0 equal-tailed (default), 1 absolute
   * add-one (permabsp), 2 raw |s| share c/n without add-one (permrawp: the ritest / Stata
@@ -7578,7 +7601,7 @@ version 16.0
         local jp .
         local jn 0
         local jw .
-        mata: wooldid_permqf("`acc'", "`cmpb'", "`cols'", "`Cm'", `wdpM', "jp", "jn", "jw", "`Wr'")
+        mata: wooldid_permqf("`acc'", "`cmpb'", "`cols'", "`Cm'", `wdpM', `orow', "jp", "jn", "jw", "`Wr'")
         local en = cond("`sgtag'" == "", "`ename'", "`ename'_s`sgtag'")
         if `jp' < . {
           if "`sgtag'" == "" ereturn scalar `en' = `jp'
@@ -7631,7 +7654,7 @@ version 16.0
       }
       if `: word count `cols'' < 2 continue
       tempname SD
-      mata: wooldid_permstep("`acc'", "`cmpb'", "`cols'", `wdpM', "`SD'")
+      mata: wooldid_permstep("`acc'", "`cmpb'", "`cols'", `wdpM', `orow', "`SD'")
       cap confirm matrix `SD'
       if _rc != 0 continue
       if rowsof(`SD') < 4 continue
@@ -7668,7 +7691,7 @@ version 16.0
           }
           local jn 0
           local jw .
-          mata: wooldid_permqf("`acc'", "`cmpb'", "`cols'", "`Cm'", `wdpM', "jp", "jn", "jw", "`Wr'")
+          mata: wooldid_permqf("`acc'", "`cmpb'", "`cols'", "`Cm'", `wdpM', `orow', "jp", "jn", "jw", "`Wr'")
           if `jp' < . {
             ereturn scalar joint_`pre'`it'_allsgssame = `jp'
             matrix colnames `Wr' = joint_`pre'`it'_allsgssame
@@ -7725,7 +7748,7 @@ version 16.0
           local jp .
           local jn 0
           local jw .
-          mata: wooldid_permadv("`acc'", "`cmpb'", "`cols'", "`rels'", `advesrel', ("`advtt'" != ""), `alt', `wdpM', "jp", "jn", "jw", "`Wr'")
+          mata: wooldid_permadv("`acc'", "`cmpb'", "`cols'", "`rels'", `advesrel', ("`advtt'" != ""), `alt', `wdpM', `orow', "jp", "jn", "jw", "`Wr'")
           if `jp' < . {
             ereturn scalar `ename' = `jp'
             matrix colnames `Wr' = `ename'
@@ -7801,7 +7824,7 @@ version 16.0
           if "`wdpeq`k''" == "`eqwant'" & "`wdpnm`k''" == "`item'" & "`wdpsg`k''" == "`sgb'" local kb `k'
         }
         if "`ka'" != "" & "`kb'" != "" {
-          mata: wooldid_permpw("`acc'", "`cmpb'", `ka', `kb', st_matrix("`pw'")[`rr', 1], `level', `wdpM', `wdpabs', "`o1'")
+          mata: wooldid_permpw("`acc'", "`cmpb'", `ka', `kb', st_matrix("`pw'")[`rr', 1], `level', `wdpM', `orow', `wdpabs', "`o1'")
           matrix `pk'[1, `rr'] = `o1'
           local ok 1
         }
@@ -7861,7 +7884,7 @@ version 16.0
   * assignment (baseTreated*, byTreated*, byTtre*) are not permutation statistics -
   * lattice_k is a different dose range in every replication - so those matrices keep
   * their points and have their inference columns blanked, with a caution
-  syntax , cell(string) cell0(string) [ncfx(integer 0) names(string) level(real 0) m(string) ts(integer 0) lattype(string) cfxlat(string) absp(string) side(string) rawp(string)]
+  syntax , cell(string) cell0(string) [ncfx(integer 0) names(string) level(real 0) m(string) orow(integer 0) ts(integer 0) lattype(string) cfxlat(string) absp(string) side(string) rawp(string)]
   if `level' == 0 local level = c(level)
   * p-value convention code (F052/F064, 2026-09-06): 0 equal-tailed (default), 1 absolute
   * add-one (permabsp), 2 raw |s| share c/n without add-one (permrawp: the ritest / Stata
@@ -7884,7 +7907,7 @@ version 16.0
       mata: M = st_matrix("`cf'"); M[., 4..6] = J(rows(M), 3, .); if (!`ts') M[., 3] = J(rows(M), 1, .); st_matrix("`cf'", M)
     }
     else {
-      mata: wooldid_permcellwire("`cf'", "`cell'_cfx`c'", "`cell0'_cfx`c'", "`=cond(`ts', "`cell'_cfx`c'se", "")'", "`=cond(`ts', "`cell0'_cfx`c'se", "")'", 1, 2, 4, 5, 6, `level', `wdpM', `wdpabs')
+      mata: wooldid_permcellwire("`cf'", "`cell'_cfx`c'", "`cell0'_cfx`c'", "`=cond(`ts', "`cell'_cfx`c'se", "")'", "`=cond(`ts', "`cell0'_cfx`c'se", "")'", 1, 2, 4, 5, 6, `level', `wdpM', `orow', `wdpabs')
       mata: M = st_matrix("`cf'"); M[., 3] = (`ts' ? M[., 1] :/ M[., 2] : J(rows(M), 1, .)); st_matrix("`cf'", M)
     }
     matrix colnames `cf' = `: colnames e(`nm')'
@@ -10090,7 +10113,12 @@ version 16.0
     if "`e(perm_method)'" != "" {
       dis as result "Randomization Inference (permute(`e(perm_method)')): `e(perm_completed)' of `e(perm_reps)' replications completed; `e(perm_npossible_str)' possible assignments."
       local wdplv = cond("`e(perm_level)'" == "", "95", "`e(perm_level)'")
-      local wdpex = cond("`e(perm_exact)'" == "1", "exact shares over the enumerated assignments (the observed assignment is a member of its own reference set)", "the add-one Monte-Carlo form (1 + count)/(replications + 1)")
+      * BS-23 (author ruling 2026-09-07): e(perm_exact) is posted as (M < .), i.e. 1 on ANY
+      * permexact run, complete or not - so the phrase names the set the shares are actually
+      * taken over. The membership claim holds either way. (e(perm_failed) can be missing in
+      * an old store and . > 0 is TRUE in Stata, hence the explicit < . test.)
+      local wdpexs = cond((e(perm_failed) < . & e(perm_failed) > 0) | "`e(perm_incomplete)'" != "", "completed", "enumerated")
+      local wdpex = cond("`e(perm_exact)'" == "1", "exact shares over the `wdpexs' assignments (the observed assignment is a member of its own reference set)", "the add-one Monte-Carlo form (1 + count)/(replications + 1)")
       if "`e(perm_pconv)'" == "absolute" {
         local wdppc two-sided absolute-value permutation p-values (permabsp): the share of replications whose absolute statistic is at or above the observed absolute statistic, `wdpex'
         local wdpiv symmetric shift intervals dual to that p-value - the estimate plus or minus the `wdplv'th-percentile absolute
@@ -10113,7 +10141,7 @@ version 16.0
       if "`e(perm_stat)'" == "t" dis as result "  The standard-error column is the ANALYTIC standard error (se_analytic), the t-ratio's own denominator; e(V) and e(V_es_*) hold the analytic covariance, so test or lincom run by hand on them are analytic, not permutation, quantities."
       else if "`e(perm_analyticse)'" == "1" dis as result "  The standard-error column is the ANALYTIC standard error (se_analytic, permanalyticse), shown for reference only; the t_perm column is blank because the permuted statistic is the estimate itself. e(V) and e(V_es_*) hold the analytic covariance, so test or lincom run by hand on them are analytic, not permutation, quantities."
       else dis as result "  No analytic standard errors were computed (the permute() fast-mode default; permanalyticse restores them), so the se_analytic and t_perm columns are blank and no e(V) or e(V_es_*) is posted."
-      if "`e(perm_exact)'" == "1" dis as result "  The enumeration is exhaustive, so the p-values are exact shares with no Monte-Carlo error; e(perm_p_se) and e(perm_p_ci) are left missing. The one-sided shares are in e(perm_p_lo) and e(perm_p_hi)."
+      if "`e(perm_exact)'" == "1" dis as result "  The assignments are enumerated rather than sampled, so the p-values are exact shares with no Monte-Carlo error; e(perm_p_se) and e(perm_p_ci) are left missing (an element named below as taking the add-one form carries both). The one-sided shares are in e(perm_p_lo) and e(perm_p_hi)."
       else dis as result "  Monte-Carlo precision of the p-values: e(perm_p_se) holds the standard error of each p-value's underlying share and e(perm_p_ci) its `wdplv'% Clopper-Pearson interval (doubled under the equal-tailed rule); the one-sided shares are in e(perm_p_lo) and e(perm_p_hi)."
       local wdpqf 0
       cap confirm matrix e(perm_jointW)
@@ -10149,7 +10177,8 @@ version 16.0
   if "`e(perm_precaveat)'" == "1" dis as result "  Pre-treatment rows (pretreatment estimates, pre-onset event-study horizons, their contrasts, and the joint pre-trend and adversarial statistics) are tested against the sharp null of no effect at ANY horizon. In staggered designs the reassigned onsets move actual post-treatment outcomes into the draws' pre-treatment horizons, so the null distribution widens with the true post-treatment effect while the observed pre-period statistics do not: their permutation p-values rise toward 1 as the true effect grows, and a large pre-period p-value is not by itself evidence of no pre-trend (with a single onset date the reference distribution is unaffected)."
       if "`e(perm_gt_blank)'" == "1" dis as result "  The gteffects cells are keyed by cohort onset, which the replications reassign, so they have no permutation distribution: their inference columns are blank."
       if "`e(perm_cfx_blank)'" == "1" dis as result "  The continuous-treatment plot cells were not permuted (assignment-dependent lattice bins); their inference columns are blank."
-      if "`e(perm_incomplete)'" != "" dis as result "  Elements not estimable in every enumerated assignment (add-one p-values rather than exact shares): `e(perm_incomplete)'"
+      if "`e(perm_incomplete)'" != "" dis as result "  Elements not estimable in every enumerated assignment (exact shares over a reduced reference set; their n is in e(perm_n)): `e(perm_incomplete)'"
+      if "`e(perm_addone)'" != "" dis as result "  Elements whose reference set does not contain the observed statistic (add-one p-values rather than exact shares): `e(perm_addone)'"
       if "`e(perm_offcentre)'" != "" dis as result "  Shift intervals left blank because the permutation distribution is not centred at zero (the p-values stand): `e(perm_offcentre)'"
       dis as result "  Pooled estimand summaries (p, `wdplv'% null band and SD of the permutation distribution`=cond("`e(perm_stat)'" == "t", ", on the t-ratio scale", "")'):"
       local wdptcihedge 0
@@ -11880,11 +11909,15 @@ void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
 {
     real matrix A
     real colvector ons, str, idx, levels, v
-    real scalar C, si, lnM, M, R, r, k, capexact, capwarn
+    real scalar C, si, lnM, M, R, r, k, capexact, capwarn, oc
     string scalar nps
     st_local("wdp_err", "")
     st_local("wdp_caut1", "")
     st_local("wdp_caut2", "")
+    // BS-23 (author ruling 2026-09-07): the accumulator ROW that holds the observed
+    // assignment. 0 = "not an enumeration" - sampled draws, and the permute(probabilities)
+    // generator, which returns before the exact branch below.
+    st_local("wdp_obsrow", "0")
     string scalar curfr
     curfr = st_framecurrent()
     st_framecurrent(fr)
@@ -11931,6 +11964,18 @@ void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
     if (exact) {
         // enumerate per-stratum multiset permutations, then take the cartesian product
         A = wooldid_permx_enum(ons, str)
+        // BS-23 (author ruling 2026-09-07): locate the observed assignment among the
+        // enumerated columns. It is always one of them (the enumeration is every distinct
+        // multiset permutation), but NOT necessarily the first: each stratum is enumerated
+        // from its SORTED onset vector, so the identity column sits wherever the observed
+        // order falls. Missing onsets (never-treated) are one level here, exactly as in
+        // wooldid_permx_msp's own multiset test.
+        for (oc = 1; oc <= cols(A); oc++) {
+            if (all((A[., oc] :== ons) :| (A[., oc] :>= . :& ons :>= .))) {
+                st_local("wdp_obsrow", strofreal(oc))
+                oc = cols(A)
+            }
+        }
     }
     else {
         for (r = 1; r <= R; r++) {
@@ -12397,6 +12442,7 @@ cap mata: mata drop wooldid_bootppa()
 cap mata: mata drop wooldid_bootqs()
 cap mata: mata drop wooldid_bootveskey()
 cap mata: mata drop wooldid_permq()
+cap mata: mata drop wooldid_permmemb()
 cap mata: mata drop wooldid_permtail()
 cap mata: mata drop wooldid_bootptails()
 cap mata: mata drop wooldid_permstat()
@@ -13968,8 +14014,25 @@ real scalar wooldid_permq(real colvector v, real scalar pr)
   return(v[max((min((ceil(x), n)), 1))])
 }
 
+// BS-23 (author ruling 2026-09-07): is the OBSERVED assignment's own replication among
+// the rows that form this element's reference set, and does it carry the observed
+// statistic? Both halves matter: presence alone would let a present-but-unequal row
+// report m = 0, i.e. p = 0, where even the add-one form floors at 1/(n+1). M >= . means
+// "not an enumeration" (sampled draws keep the documented add-one convention even when a
+// shuffle happens to redraw the observed assignment); orow = 0 means the generator had no
+// identity column to point at. The bounds are tested in a separate statement ahead of any
+// subscript, so this does not depend on whether & evaluates its right operand.
+real scalar wooldid_permmemb(real matrix Am, real rowvector cm, real scalar M,
+                             real scalar orow)
+{
+  if (M >= . | orow < 1 | orow > rows(Am)) return(0)
+  if (hasmissing(cm) | hasmissing(Am[orow, .])) return(0)
+  return(Am[orow, .] == cm)
+}
+
 real rowvector wooldid_permtail(real colvector draws, real scalar sobs, real scalar exact,
-                                real scalar al, real scalar zc, real scalar absp)
+                                real scalar memb, real scalar al, real scalar zc,
+                                real scalar absp)
 {
   // absp is the CONVENTION CODE (F052/F064, 2026-09-06): 0 equal-tailed, 1 absolute add-one
   // (permabsp), 2 raw c/n |s| share with no add-one (permrawp), 3 left one-sided, 4 right
@@ -13997,7 +14060,14 @@ real rowvector wooldid_permtail(real colvector draws, real scalar sobs, real sca
   m0 = sum(v :<= sobs)
   m1 = sum(v :>= sobs)
   ma = sum(abs(v) :>= abs(sobs))
-  if (exact) {
+  // BS-23 (author ruling 2026-09-07): `exact' is COMPLETENESS and still governs the
+  // population-SD convention below. `memb' is MEMBERSHIP - the observed statistic is one
+  // of the n reference values - which is what the SHARE convention turns on. The add-one
+  // form exists to inject an observed statistic the reference set does not contain; where
+  // the set already contains it, adding it again counts it twice and doubles the floor.
+  // Callers set memb only under an enumeration, and only after checking the observed row's
+  // value equals sobs.
+  if (exact | memb) {
     plo = m0/n
     phi = m1/n
   }
@@ -14011,7 +14081,7 @@ real rowvector wooldid_permtail(real colvector draws, real scalar sobs, real sca
   if (absp == 1 | absp == 2) {
     // absolute-value conventions: the level/100 quantile of |s_r| on each side
     qa = wooldid_permq(sort(abs(v), 1), 1 - 2*al)
-    if (absp == 1) out[3] = (exact ? ma/n : (1 + ma)/(n + 1))
+    if (absp == 1) out[3] = (exact | memb ? ma/n : (1 + ma)/(n + 1))
     else out[3] = ma/n
     out[4] = -qa
     out[5] = qa
@@ -14038,9 +14108,13 @@ real rowvector wooldid_permtail(real colvector draws, real scalar sobs, real sca
   // Clopper-Pearson interval of the underlying share cc/n (Stata's permute and ritest
   // report both); under the equal-tailed 2*min rule both are doubled, the upper end
   // capped at 1
-  // under an exact enumeration the shares are exact, not Monte-Carlo estimates, so rows
-  // 16-18 keep the missing they were initialised to (bug sweep BS-22)
-  if (!exact) {
+  // under an enumeration the shares are exact, not Monte-Carlo estimates, so rows 16-18
+  // keep the missing they were initialised to (bug sweep BS-22, extended to the
+  // incomplete-but-member case by BS-23, author ruling 2026-09-07: an enumeration that
+  // lost assignments is still deterministic, so its shares carry no sampling error either.
+  // The only element under permexact that still gets a binomial SE is one whose observed
+  // row is genuinely absent - the same element that takes the add-one form.)
+  if (!exact & !memb) {
     qq = cc/n
     out[16] = mult*sqrt(qq*(1 - qq)/n)
     al2 = al
@@ -14074,13 +14148,14 @@ real rowvector wooldid_permtail(real colvector draws, real scalar sobs, real sca
 // n equals M
 void wooldid_permstat(string scalar accname, string scalar seaccname, string scalar obsbname,
                       string scalar cmpname, string scalar cmpsename, string scalar exclname,
-                      real scalar lvl, real scalar M, real scalar absp, string scalar outname)
+                      real scalar lvl, real scalar M, real scalar orow, real scalar absp,
+                      string scalar outname)
 {
   real matrix A, S, out
   real rowvector ob, cm, cs, ex, row
   real colvector s
-  real scalar K, k, r, al, zc, sobs, ts, exk
-  string scalar lowav, incom
+  real scalar K, k, r, al, zc, sobs, ts, exk, memb
+  string scalar lowav, incom, nonm
   A = st_matrix(accname)
   ob = st_matrix(obsbname)
   cm = st_matrix(cmpname)
@@ -14097,6 +14172,7 @@ void wooldid_permstat(string scalar accname, string scalar seaccname, string sca
   out[13, .] = J(1, K, 0)
   lowav = ""
   incom = ""
+  nonm = ""
   for (k = 1; k <= K; k++) {
     if (ex[1, k] != 0) continue
     if (!ts) {
@@ -14111,9 +14187,18 @@ void wooldid_permstat(string scalar accname, string scalar seaccname, string sca
       if (cs[1, k] >= . | cs[1, k] <= 0 | cm[1, k] >= .) sobs = .
       else sobs = cm[1, k]/cs[1, k]
     }
+    // BS-23 (author ruling 2026-09-07): exk is completeness, memb is membership - the
+    // observed assignment's own row survived for this element and carries sobs. An element
+    // that lost some assignments keeps the exact share over the ones that completed; the
+    // add-one form is for a reference set that does not contain the observed statistic.
+    // nonm names those (essentially unreachable: the identity replication is the same fit
+    // as the rep-0 comparator), so the add-one caution stays attached to the case that
+    // actually uses the add-one form.
     exk = (M < . & sum(s :< .) == M)
+    memb = wooldid_permmemb(s, sobs, M, orow)
     if (M < . & sum(s :< .) != M) incom = incom + " " + st_matrixcolstripe(accname)[k, 2]
-    row = wooldid_permtail(s, sobs, exk, al, zc, absp)
+    if (M < . & !memb & sobs < . & sum(s :< .) >= 2) nonm = nonm + " " + st_matrixcolstripe(accname)[k, 2]
+    row = wooldid_permtail(s, sobs, exk, memb, al, zc, absp)
     if (row[13] == 1 & row[10] != 1) {
       if (!ts) {
         row[7] = ob[1, k] - row[5]
@@ -14129,18 +14214,19 @@ void wooldid_permstat(string scalar accname, string scalar seaccname, string sca
   }
   st_matrix(outname, out)
   st_local("wdp_incomplete", strtrim(incom))
+  st_local("wdp_addone", strtrim(nonm))
 }
 
 // contrast kernel: d_r = b_r[ka] - b_r[kb] over listwise-complete rows, ranked against
 // the comparator's difference; the interval about the displayed difference dobs
 void wooldid_permpw(string scalar accname, string scalar cmpname, real scalar ka, real scalar kb,
-                    real scalar dobs, real scalar lvl, real scalar M, real scalar absp,
-                    string scalar outname)
+                    real scalar dobs, real scalar lvl, real scalar M, real scalar orow,
+                    real scalar absp, string scalar outname)
 {
   real matrix A
   real rowvector cm, row
   real colvector ok, d
-  real scalar al, zc, sobs, exk
+  real scalar al, zc, sobs, exk, memb
   A = st_matrix(accname)[., (ka, kb)]
   cm = st_matrix(cmpname)
   ok = rowmissing(A) :== 0
@@ -14148,8 +14234,12 @@ void wooldid_permpw(string scalar accname, string scalar cmpname, real scalar ka
   sobs = cm[1, ka] - cm[1, kb]
   al = (100 - lvl)/200
   zc = invnormal(1 - al)
+  // BS-23 (author ruling 2026-09-07): membership, not completeness. A is the R x 2 slice
+  // with every replication row kept, so the observed row indexes it directly; a row missing
+  // on either column gives a missing difference and fails the test.
   exk = (M < . & rows(d) == M)
-  row = wooldid_permtail(d, sobs, exk, al, zc, absp)
+  memb = wooldid_permmemb(A[., 1] :- A[., 2], sobs, M, orow)
+  row = wooldid_permtail(d, sobs, exk, memb, al, zc, absp)
   if (row[13] == 1 & row[10] != 1 & dobs < .) {
     row[7] = dobs - row[5]
     row[8] = dobs - row[4]
@@ -14171,13 +14261,13 @@ void wooldid_permpw(string scalar accname, string scalar cmpname, real scalar ka
 // same on the comparator; p is the upper tail, add-one unless every M assignments
 // contributed. Outputs: locals p, n, wobs; matrix outW = the W_r column (missing rows kept)
 void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar colslist,
-                    string scalar Cname, real scalar M, string scalar outp, string scalar outn,
-                    string scalar outwobs, string scalar outW)
+                    string scalar Cname, real scalar M, real scalar orow, string scalar outp,
+                    string scalar outn, string scalar outwobs, string scalar outW)
 {
   real matrix A, CC, Cm, R, Si, dev
   real rowvector idx, cm, sc, ev
   real colvector ok, Wr, d
-  real scalar n, r, Wobs, nex, exk
+  real scalar n, r, Wobs, nex, exk, memb
   st_local(outp, ".")
   st_local(outn, "0")
   st_local(outwobs, ".")
@@ -14192,11 +14282,15 @@ void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar 
   n = sum(ok)
   st_local(outn, strofreal(n))
   if (n < 2) return
-  // exact enumeration with every assignment complete: the observed assignment is one of
-  // the n rows already, so the comparator is NOT appended (it was counted twice until
-  // 2026-09-05, which shrank the metric and moved the exact-mode joint p-values)
+  // the observed assignment is already one of the rows whenever its own replication
+  // survived listwise on the tested columns - which is what the appending, and the share,
+  // must turn on. Appending it there counts it twice: it shrinks the metric and, since
+  // that row's W equals W_obs identically, guarantees nex >= 1. Fixed for the COMPLETE
+  // case on 2026-09-05 and extended to the incomplete one by BS-23 (author ruling
+  // 2026-09-07). exk stays the completeness flag.
   exk = (M < . & n == M)
-  CC = (exk ? select(A, ok) : select(A, ok) \ cm)
+  memb = wooldid_permmemb(A, cm, M, orow)
+  CC = (exk | memb ? select(A, ok) : select(A, ok) \ cm)
   dev = CC :- mean(CC)
   R = Cm * ((dev' * dev) / (rows(CC) - 1)) * Cm'
   R = (R + R')/2
@@ -14217,7 +14311,10 @@ void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar 
   st_matrix(outW, Wr)
   nex = sum(select(Wr, Wr :< .) :>= Wobs)
   st_local(outwobs, strofreal(Wobs, "%21x"))
-  if (exk) st_local(outp, strofreal(nex/n, "%21x"))
+  // BS-23 (author ruling 2026-09-07): the share turns on membership too - the comparator
+  // was not appended above whenever the observed assignment's own row survived, so adding
+  // it back into the tail count here would count it twice
+  if (exk | memb) st_local(outp, strofreal(nex/n, "%21x"))
   else st_local(outp, strofreal((1 + nex)/(n + 1), "%21x"))
 }
 
@@ -14231,12 +14328,12 @@ void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar 
 // the accumulator's names; the output is empty (0 x 0) when fewer than 2 complete
 // replications exist or a column has zero dispersion
 void wooldid_permstep(string scalar accname, string scalar cmpname, string scalar colslist,
-                      real scalar M, string scalar outname)
+                      real scalar M, real scalar orow, string scalar outname)
 {
   real matrix A, CC, T, out
   real rowvector idx, cm, sd, tobs, ord
   real colvector ok, mx
-  real scalar n, H, j, h, exk, nex, pprev, pj
+  real scalar n, H, j, h, exk, memb, nex, pprev, pj
   string matrix cs
   idx = strtoreal(tokens(colslist))
   A = st_matrix(accname)[., idx']
@@ -14247,8 +14344,13 @@ void wooldid_permstep(string scalar accname, string scalar cmpname, string scala
   ok = rowmissing(A) :== 0
   n = sum(ok)
   if (n < 2) return
+  // BS-23 (author ruling 2026-09-07): the comparator is appended only when the observed
+  // assignment's own row is NOT among the survivors. The population-SD rescale stays tied
+  // to completeness; it is a common scalar across columns, so it moves the reported t_obs
+  // row but cannot move a rank or a p.
   exk = (M < . & n == M)
-  CC = (exk ? select(A, ok) : select(A, ok) \ cm)
+  memb = wooldid_permmemb(A, cm, M, orow)
+  CC = (exk | memb ? select(A, ok) : select(A, ok) \ cm)
   sd = sqrt(diagonal(variance(CC)))'
   if (exk) sd = sd :* sqrt((rows(CC) - 1)/rows(CC))
   if (min(sd) <= 0 | missing(sd)) return
@@ -14259,12 +14361,12 @@ void wooldid_permstep(string scalar accname, string scalar cmpname, string scala
   out[1, .] = tobs
   for (h = 1; h <= H; h++) {
     nex = sum(T[., h] :>= tobs[h])
-    out[2, h] = (exk ? nex/n : (1 + nex)/(n + 1))
+    out[2, h] = (exk | memb ? nex/n : (1 + nex)/(n + 1))
   }
   mx = rowmax(T)
   for (h = 1; h <= H; h++) {
     nex = sum(mx :>= tobs[h])
-    out[3, h] = (exk ? nex/n : (1 + nex)/(n + 1))
+    out[3, h] = (exk | memb ? nex/n : (1 + nex)/(n + 1))
   }
   // step-down: order by |t_obs| descending; at step j the max runs over columns j..H
   // of that order; monotone in j
@@ -14273,7 +14375,7 @@ void wooldid_permstep(string scalar accname, string scalar cmpname, string scala
   for (j = 1; j <= H; j++) {
     mx = rowmax(T[., ord[j..H]])
     nex = sum(mx :>= tobs[ord[j]])
-    pj = (exk ? nex/n : (1 + nex)/(n + 1))
+    pj = (exk | memb ? nex/n : (1 + nex)/(n + 1))
     if (pj < pprev) pj = pprev
     out[4, ord[j]] = pj
     pprev = pj
@@ -14341,13 +14443,13 @@ void wooldid_bootqf(string scalar accname, string scalar obsbname, string scalar
 // aligned with cols. One-sided upper tail, same accounting as wooldid_permqf
 void wooldid_permadv(string scalar accname, string scalar cmpname, string scalar colslist,
                      string scalar rellist, real scalar esrel, real scalar tt, real scalar alt,
-                     real scalar M, string scalar outp, string scalar outn, string scalar outwobs,
-                     string scalar outW)
+                     real scalar M, real scalar orow, string scalar outp, string scalar outn,
+                     string scalar outwobs, string scalar outW)
 {
   real matrix A, CC, V, dev
   real rowvector idx, cm
   real colvector ok, Wr, rel
-  real scalar n, r, Wobs, nex, exk, q
+  real scalar n, r, Wobs, nex, exk, memb, mrow, q
   st_local(outp, ".")
   st_local(outn, "0")
   st_local(outwobs, ".")
@@ -14362,10 +14464,13 @@ void wooldid_permadv(string scalar accname, string scalar cmpname, string scalar
   n = sum(ok)
   st_local(outn, strofreal(n))
   if (n < 2) return
-  // same rule as wooldid_permqf: under complete exact enumeration the comparator is
-  // already one of the rows
+  // same rule as wooldid_permqf: the comparator is already one of the rows whenever the
+  // observed assignment's own row survived (BS-23, author ruling 2026-09-07). mrow is that
+  // row's validity on the COEFFICIENT columns; the tail below re-tests it on the W column,
+  // which is the statistic actually ranked.
   exk = (M < . & n == M)
-  CC = (exk ? select(A, ok) : select(A, ok) \ cm)
+  mrow = wooldid_permmemb(A, cm, M, orow)
+  CC = (exk | mrow ? select(A, ok) : select(A, ok) \ cm)
   dev = CC :- mean(CC)
   V = (dev' * dev) / (rows(CC) - 1)
   q = .
@@ -14382,9 +14487,11 @@ void wooldid_permadv(string scalar accname, string scalar cmpname, string scalar
   st_local(outn, strofreal(n))
   if (n < 2) return
   exk = (M < . & n == M)
+  memb = 0
+  if (mrow) memb = (Wr[orow] < .)
   nex = sum(select(Wr, ok) :>= Wobs)
   st_local(outwobs, strofreal(Wobs, "%21x"))
-  if (exk) st_local(outp, strofreal(nex/n, "%21x"))
+  if (exk | memb) st_local(outp, strofreal(nex/n, "%21x"))
   else st_local(outp, strofreal((1 + nex)/(n + 1), "%21x"))
 }
 
@@ -14396,14 +14503,14 @@ void wooldid_permadv(string scalar accname, string scalar cmpname, string scalar
 void wooldid_permcellwire(string scalar mname, string scalar accname, string scalar cmpname,
                           string scalar seaccname, string scalar cmpsename, real scalar obscol,
                           real scalar secol, real scalar pcol, real scalar lbcol, real scalar ubcol,
-                          real scalar lvl, real scalar M, real scalar absp)
+                          real scalar lvl, real scalar M, real scalar orow, real scalar absp)
 {
   real matrix Mx, A, S, C, CS
   string colvector mk
   string matrix cs
   real colvector s
   real rowvector row
-  real scalar i, k, r, al, zc, b, sobs, ts, exk, so
+  real scalar i, k, r, al, zc, b, sobs, ts, exk, memb, so
   transmorphic t
   Mx = st_matrix(mname)
   A = st_matrix(accname)
@@ -14441,8 +14548,11 @@ void wooldid_permcellwire(string scalar mname, string scalar accname, string sca
       if (so >= . | so <= 0 | C[1, k] >= .) continue
       sobs = C[1, k]/so
     }
+    // BS-23 (author ruling 2026-09-07): membership, not completeness (the cell accumulator
+    // carries one row per replication, so orow indexes it directly)
     exk = (M < . & sum(s :< .) == M)
-    row = wooldid_permtail(s, sobs, exk, al, zc, absp)
+    memb = wooldid_permmemb(s, sobs, M, orow)
+    row = wooldid_permtail(s, sobs, exk, memb, al, zc, absp)
     if (row[13] != 1) continue
     Mx[i, pcol] = row[3]
     if (row[10] == 1) continue
