@@ -960,5 +960,50 @@ if `g38a' | "`g38adv'" != "1" | `g38rc2' != 0 | `g38b' | !`g38c' {
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 
+* G39 (CS-20, author ruling 2026-09-07 "caution, no floor"): reps() gains permreps()'s
+* resolution caution and keeps its absence of a minimum. Which number binds depends on the
+* family the table carries, so all three branches are checked, together with the silence
+* above the threshold and the fact that a low-rep run still RUNS.
+use `panel', clear
+qui log using boot_gates_g39.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20) rseed(3)
+local g39rc = _rc
+qui log close bg
+chk 39 0 `g39rc'
+unwrap boot_gates_g39.txt
+local g39a = strpos(`"`lg'"', "the coefficient p-values fall on a grid of 0.100 (2/reps)") > 0
+local g39a2 = strpos(`"`lg'"', "the only value below .05 this run can produce is exactly 0") > 0
+use `panel', clear
+qui log using boot_gates_g39.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20) rseed(3) boottstat
+local g39rcb = _rc
+qui log close bg
+chk 39b 0 `g39rcb'
+unwrap boot_gates_g39.txt
+local g39b = strpos(`"`lg'"', "the smallest studentized coefficient p-value this run can produce is 0.095") > 0
+use `panel', clear
+qui log using boot_gates_g39.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(3) bootdisplay(wald)
+local g39rcc = _rc
+qui log close bg
+chk 39c 0 `g39rcc'
+unwrap boot_gates_g39.txt
+local g39c = strpos(`"`lg'"', "the joint, equality and adversarial p-values - one-sided add-one shares") > 0
+* above the threshold nothing is said: 2/60 = .033 for the coefficient grid
+use `panel', clear
+qui log using boot_gates_g39.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(60) rseed(3)
+local g39rcd = _rc
+qui log close bg
+chk 39d 0 `g39rcd'
+unwrap boot_gates_g39.txt
+local g39d = strpos(`"`lg'"', "Caution: with reps(") > 0
+cap erase boot_gates_g39.txt
+di "G39 grid=`g39a'/`g39a2' studentized=`g39b' wald-joint=`g39c' quiet-at-60=`g39d'"
+if !`g39a' | !`g39a2' | !`g39b' | !`g39c' | `g39d' {
+  di as error "G39e FAIL: the reps() resolution caution is wrong somewhere (grid=`g39a'/`g39a2' studentized=`g39b' wald=`g39c' fired-at-60=`g39d')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

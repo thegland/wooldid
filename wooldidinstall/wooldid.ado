@@ -5853,6 +5853,31 @@ version 16.0
     error 198
   }
 
+  * CS-20 (consistency sweep 2026-09-06, author ruling 2026-09-07: "caution, no floor").
+  * permreps() has carried a resolution caution since F036 and a hard floor of 20; reps()
+  * carried neither, so reps(20) printed percentile p-values on a .10 grid in silence.
+  * The footer that would have said so is conditional, not routine: wooldid_pfloor prints
+  * only when a displayed p is exactly 0, and exits under bootdisplay(wald) without
+  * boottstat - so a low-rep run whose p-values all happen to be non-zero was told nothing
+  * at all. The FLOOR deliberately stays absent: a handful of replications is a legitimate
+  * way to time a specification, which is the asymmetry the author ruled defensible (a
+  * permutation p has a hard combinatorial floor, a bootstrap p only a Monte-Carlo one).
+  * Which number binds depends on the family the table carries. boottstat's studentized p
+  * is the add-one rank with floor 2/(reps + 1) (F033, same ruling date). The
+  * percentile/bc/bca coefficient p is a plain two-sided share on the 2/reps grid, so it
+  * CAN still reject - but only by printing exactly 0, which means no completed
+  * replication reached the far side of the null. bootdisplay(wald) without boottstat
+  * prints analytic normal/t p-values with no Monte-Carlo grid at all, leaving only the
+  * one-sided add-one joint, equality and adversarial family, floor 1/(reps + 1).
+  * reps() is the REQUEST: failed replications are excluded from the completed count
+  * (e(boot_failed)), so the realized grid can be coarser than the one named here.
+  if `reps' > 0 {
+    local wdbgrid = cond("`bts'" != "", 2/(`reps' + 1), cond("`bdisp'" == "wald", 1/(`reps' + 1), 2/`reps'))
+    if `wdbgrid' > .05 & "`bts'" != "" dis as text "Caution: with reps(`reps') the smallest studentized coefficient p-value this run can produce is " %5.3f `wdbgrid' " (2/(reps + 1)), above .05, so no coefficient p-value can reject at the 5% level whatever the data say, and a p-value printed at that value is the resolution limit rather than evidence. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 39 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). Failed replications are excluded, so the realized resolution can be coarser than this."
+    else if `wdbgrid' > .05 & "`bdisp'" == "wald" dis as text "Caution: with reps(`reps') the joint, equality and adversarial p-values - one-sided add-one shares over their own completed replication counts - cannot fall below " %5.3f `wdbgrid' " (1/(reps + 1)), above .05, so none of them can reject at the 5% level whatever the data say. The coefficient p-values under bootdisplay(wald) are analytic and carry no such limit. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 19 replications for a 5% joint test (roughly 50 for .02, 100 for .01 and 500 for .002). Failed replications are excluded, so the realized resolution can be coarser than this."
+    else if `wdbgrid' > .05 dis as text "Caution: with reps(`reps') the coefficient p-values fall on a grid of " %5.3f `wdbgrid' " (2/reps), so the only value below .05 this run can produce is exactly 0 - which records that no completed replication reached the far side of the null, not that the evidence is that strong. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 40 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). Failed replications are excluded, so the realized grid can be coarser than this. The joint, equality and adversarial p-values are one-sided add-one shares with floor 1/(reps + 1)."
+  }
+
   * companion-value validation
   if `level' != 0 & (`level' < 10 | `level' > 99.99) {
     dis as error "Error: level() must be between 10 and 99.99."
