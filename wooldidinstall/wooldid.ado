@@ -1724,16 +1724,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * call and can be posted as e(summarystats) below
     tempname summarystats
     wooldid_sumstat , ss(`summarystats') y(`y') tvar(`t') ttrevar(`ttre') ct(`contreat') ctc(`contreatcontrols') ctw(`contreatwithin') wi(`weightinserter')
-    * INERT: `rownamessum' is built inside wooldid_sumstat and is NOT among the locals that
-    * program returns, so this expands to `matrix rownames X = ' - MEASURED a silent no-op
-    * in Stata 19 MP, neither an error nor a clearing of the existing names. The row labels
-    * that actually reach e(summarystats) are set by wooldid_sumstat itself. The line is
-    * harmless but reads like the site that labels the matrix: delete the internal one on
-    * that belief and e(summarystats) posts with r1..r8 instead of the y_*/c_* names that
-    * are the only thing identifying which sample each row describes, with no error anywhere.
-    * (Note also that the `tempname summarystats' above overwrites the OPTION macro of the
-    * same name, which is why the post gate below tests != "" rather than == "summarystats")
-    matrix rownames `summarystats' = `rownamessum'
+    * NOTE the row names of e(summarystats) are set INSIDE wooldid_sumstat, not here. A
+    * `matrix rownames `summarystats' = `rownamessum'' used to sit on this line and was
+    * DELETED as inert (D-5, author ruling 2026-09-11): `rownamessum' is built inside that
+    * program and is not among the locals it returns, so the line expanded to
+    * `matrix rownames X = ' - measured a silent no-op in Stata 19 MP, neither an error nor
+    * a clearing of the existing names. Do not delete wooldid_sumstat's own rownames call on
+    * the belief that the caller does it: e(summarystats) would post with r1..r8 instead of
+    * the y_*/c_* names that are the only thing identifying which sample each row describes.
+    * (The `tempname summarystats' above also overwrites the OPTION macro of the same name,
+    * which is why the post gate below tests != "" rather than == "summarystats")
   }
 
 
@@ -6426,13 +6426,13 @@ version 16.0
       else            mata: wooldid_bootcellwire("`cf`fam''", 0, "`cell'_cfx`c'", "", 1, 2, 4, 5, 6, "`fam'", `level', `zc', `wdbdf', ("`ties'" != ""))
       if "`fam'" == "percentile" local wdbcellmissall = `wdbcellmissall' + `wdbcellmiss'
       * the t column is b/se under the reported se, whichever family
-      * CAUTION: the bare `M =' at a `mata:' prompt creates a GLOBAL Mata object that
-      * outlives the statement - Mata has no statement-local scope here - so a user's own
-      * Mata matrix named M is silently overwritten, once per family per cfx matrix. Three
-      * sibling one-liners do the same (wooldid_permwire's gteffects blanking and both
-      * statements in wooldid_permcellsx). It costs wooldid's own results nothing and
-      * damages the user's interactive Mata state with no error raised
-      mata: M = st_matrix("`cf`fam''"); M[., 3] = M[., 1] :/ M[., 2]; st_matrix("`cf`fam''", M)
+      * NAMESPACED (author ruling 2026-09-11, documentation review D-3). A bare `M =' at a
+      * `mata:' prompt creates a GLOBAL Mata object that outlives the statement - Mata has no
+      * statement-local scope here - so the old `M' silently overwrote any Mata matrix the
+      * user held under that name, once per family per cfx matrix, with no error raised. The
+      * three sibling one-liners (wooldid_permwire's gteffects blanking and both statements
+      * in wooldid_permcellsx) were renamed with it
+      mata: wooldid_Mtmp = st_matrix("`cf`fam''"); wooldid_Mtmp[., 3] = wooldid_Mtmp[., 1] :/ wooldid_Mtmp[., 2]; st_matrix("`cf`fam''", wooldid_Mtmp)
       matrix colnames `cf`fam'' = `: colnames e(`nm')'
       matrix rownames `cf`fam'' = `: rowfullnames e(`nm')'
       if "`fam'" == "`bdisp'" matrix `cfsel' = `cf`fam''
@@ -7697,17 +7697,13 @@ version 16.0
   local wmc : subinstr local wmc "t" "t_perm", word
   local wmc : subinstr local wmc "z" "t_perm", word
   local wmc : subinstr local wmc "p" "p_perm", word
-  * these two renames are inert insurance and are kept as such: the worker names the
-  * interval columns lb_`wdlvltxt'ci from the run's own level, and wooldid_permctl hands
-  * this program that same level, so at level 95 the names are already lb_95ci (nothing
-  * to rename) and at any other level they already carry it (nothing matches). The
-  * renames on the lines ABOVE are not inert and must not be swept up with them: se ->
-  * se_analytic and t/z -> t_perm are the only signal to a downstream reader that column
-  * 2 is the analytic standard error and column 3 the permuted t-ratio
-  if `level' != 95 {
-    local wmc : subinstr local wmc "lb_95ci" "lb_`wdplvltxt'ci", word
-    local wmc : subinstr local wmc "ub_95ci" "ub_`wdplvltxt'ci", word
-  }
+  * NOTE the renames above are the load-bearing ones: se -> se_analytic and t/z -> t_perm
+  * are the only signal to a downstream reader that column 2 is the analytic standard error
+  * and column 3 the permuted t-ratio. A pair of lb_95ci/ub_95ci renames used to sit here
+  * and was DELETED as unreachable (D-5, author ruling 2026-09-11): the worker names the
+  * interval columns lb_<level>ci from the run's own level and wooldid_permctl hands this
+  * program that same level, so at 95 the names are already lb_95ci and at any other level
+  * they already carry it - the subinstr could never match
   matrix colnames `wm' = `wmc'
   ereturn hidden matrix perm_analytic_mainresults = `wma'
   ereturn matrix wdidmainresults = `wm'
@@ -7753,10 +7749,6 @@ version 16.0
     local wsc : subinstr local wsc "t" "t_perm", word
     local wsc : subinstr local wsc "z" "t_perm", word
     local wsc : subinstr local wsc "p" "p_perm", word
-    if `level' != 95 {
-      local wsc : subinstr local wsc "lb_95ci" "lb_`wdplvltxt'ci", word
-      local wsc : subinstr local wsc "ub_95ci" "ub_`wdplvltxt'ci", word
-    }
     matrix colnames `wsg`sg'' = `wsc'
     * the hidden twin is skipped when its name would exceed 32 characters (a 9+ digit
     * subgroup value); the visible table is unaffected
@@ -7782,9 +7774,9 @@ version 16.0
       * worse, leaves analytic se/p/ci standing under a permutation header - the exact
       * outcome the block comment above says must never happen. `gtcn'/`gtrn' are captured
       * and re-applied because st_matrix() writes a bare matrix with no stripes. NOTE this
-      * is the one statement in this program that uses Mata's global namespace: `M' is
-      * left behind in the session
-      mata: M = st_matrix("`gtm'"); M[., 6..9] = J(rows(M), 4, .); st_matrix("`gtm'", M)
+      * statement leaves a global Mata object behind in the session; it is named
+      * wooldid_Mtmp rather than `M' so it cannot collide with the user's own (D-3)
+      mata: wooldid_Mtmp = st_matrix("`gtm'"); wooldid_Mtmp[., 6..9] = J(rows(wooldid_Mtmp), 4, .); st_matrix("`gtm'", wooldid_Mtmp)
       matrix colnames `gtm' = `gtcn'
       matrix rownames `gtm' = `gtrn'
       ereturn matrix gteffects = `gtm'
@@ -7935,7 +7927,15 @@ version 16.0
   ereturn hidden local wdid_fastnose ""
 
   * -------- cautions (estimation-time; the footer carries the standing disclosures)
-  if `wdpmiss' > 0 dis as text "Caution: `wdpmiss' reported coefficient(s) have no usable permutation distribution (fewer than 2 completed replications carry them`=cond(`ts', ", or no usable observed standard error to form the t-ratio with", "")'); their p-value and interval are left blank rather than filled from any other source."
+  * D-6 (author ruling 2026-09-11): the two causes are SPLIT, because they are different
+  * fixes for the user - too few completed replications says raise permreps(), while no
+  * usable observed analytic standard error says that element has no identified SE to
+  * studentize by, and no number of replications will change it. `wdptsmiss' counts the
+  * second; it was incremented and never read before this
+  local wdpmissrep = `wdpmiss' - `wdptsmiss'
+  if `wdpmissrep' < 0 local wdpmissrep 0
+  if `wdpmissrep' > 0 dis as text "Caution: `wdpmissrep' reported coefficient(s) have no usable permutation distribution (fewer than 2 completed replications carry them); their p-value and interval are left blank rather than filled from any other source. More replications would raise this."
+  if `wdptsmiss' > 0 dis as text "Caution: `wdptsmiss' reported coefficient(s) could not be studentized under permtstat - their observed analytic standard error is missing or non-positive, so there is no t-ratio to permute; their p-value and interval are left blank rather than filled from any other source. This is a property of the specification, not of permreps(): more replications will not change it."
   if `wdplow' > 0 dis as text "Caution: `wdplow' reported coefficient(s) were present in fewer than half of the completed replications (a reassigned onset can make a horizon or a subgroup level inestimable in a replication); their permutation p-values rest on the counts in e(perm_n)."
   if "`wdpdeg'" != "" dis as text "Caution: the permutation distribution is degenerate (every completed draw equal) for: `wdpdeg'; those permutation p-values are uninformative."
   if "`wdpoff'" != "" dis as text "Caution: the permutation distribution is not centred at zero (its central `level'% band excludes 0) for: `wdpoff'. The shift interval takes the estimate's sampling error to have that null distribution, so it is not interpretable there and is left blank; the permutation p-value stands. This happens when a quantity is non-zero under reassigned onsets - for example the ame rows under lattice() with contreatcontrols(basic), where the baseline dose slope is not partialled out (see the standing issue on the reference cell) - or under a permute(probabilities) design far from the observed assignment."
@@ -8407,9 +8407,9 @@ version 16.0
   * cfxlat clause is not an exception to that test but an instance of it: a user-supplied
   * cfxlattice() variable replaces latticevar as the plot's over() variable, and a data
   * variable cannot move under reassignment
-  * CAUTION: both `mata: M = ...' one-liners in the loop below leave a GLOBAL Mata object
-  * named M behind, silently overwriting any Mata matrix the user holds under that name
-  * (see the same note in wooldid_bootcellsx)
+  * both `mata:' one-liners in the loop below leave a GLOBAL Mata object behind; it is named
+  * wooldid_Mtmp rather than `M' so it cannot collide with a user's own (D-3, ruling
+  * 2026-09-11) - see the same note in wooldid_bootcellsx
   local drift = (inlist("`lattype'", "baseTreated", "baseTreatedPost", "baseTreatedPre", "baseTreatedRef") | inlist("`lattype'", "byTreated", "byTreatedByTime", "byTtre", "byTtreByTime")) & "`cfxlat'" == ""
   local ndone 0
   forval c = 1/`ncfx' {
@@ -8434,13 +8434,14 @@ version 16.0
       * when the statistic is not the t-ratio. Column 2 keeps the ANALYTIC standard error,
       * as every permutation surface does, and under permtstat column 3 keeps the analytic
       * b/se. The caution printed at the foot of this program says "inference columns are
-      * blank (points only)", which means "no permutation inference here", not "no numbers
-      * here" - read it with this line in view
-      mata: M = st_matrix("`cf'"); M[., 4..6] = J(rows(M), 3, .); if (!`ts') M[., 3] = J(rows(M), 1, .); st_matrix("`cf'", M)
+      * blank" - which, since the D-2 ruling of 2026-09-11, says exactly this: the p-value
+      * and interval columns are blank, the se column is analytic, and the t is blank unless
+      * permtstat is in force
+      mata: wooldid_Mtmp = st_matrix("`cf'"); wooldid_Mtmp[., 4..6] = J(rows(wooldid_Mtmp), 3, .); if (!`ts') wooldid_Mtmp[., 3] = J(rows(wooldid_Mtmp), 1, .); st_matrix("`cf'", wooldid_Mtmp)
     }
     else {
       mata: wooldid_permcellwire("`cf'", "`cell'_cfx`c'", "`cell0'_cfx`c'", "`=cond(`ts', "`cell'_cfx`c'se", "")'", "`=cond(`ts', "`cell0'_cfx`c'se", "")'", 1, 2, 4, 5, 6, `level', `wdpM', `orow', `wdpabs')
-      mata: M = st_matrix("`cf'"); M[., 3] = (`ts' ? M[., 1] :/ M[., 2] : J(rows(M), 1, .)); st_matrix("`cf'", M)
+      mata: wooldid_Mtmp = st_matrix("`cf'"); wooldid_Mtmp[., 3] = (`ts' ? wooldid_Mtmp[., 1] :/ wooldid_Mtmp[., 2] : J(rows(wooldid_Mtmp), 1, .)); st_matrix("`cf'", wooldid_Mtmp)
     }
     * the worker's original column names are restored, so e(cfx*) column 2 ships under the
     * plain name "se" while holding the ANALYTIC standard error beside a permutation p and
@@ -8477,7 +8478,7 @@ version 16.0
   }
   if `drift' & `ndone' > 0 {
     ereturn scalar perm_cfx_blank = 1
-    dis as text "Caution: the lattice type `lattype' bins the dose on treated units' rows, so its bins are functions of the treatment assignment and differ from replication to replication; the continuous-treatment plot cells therefore have no permutation distribution and their inference columns are blank (points only). latticetype all, byCohort, byTime, byCohortByTime, or a user-supplied cfxlattice() variable, give assignment-invariant bins that are permuted."
+    dis as text "Caution: the lattice type `lattype' bins the dose on treated units' rows, so its bins are functions of the treatment assignment and differ from replication to replication; the continuous-treatment plot cells therefore have no permutation distribution and carry no permutation inference: their p-value and interval columns are blank, the standard error column keeps the analytic value the estimation posted (as it does on every permutation surface), and the t-ratio is blank unless permtstat is in force. latticetype all, byCohort, byTime, byCohortByTime, or a user-supplied cfxlattice() variable, give assignment-invariant bins that are permuted."
   }
 end
 
@@ -8505,6 +8506,8 @@ version 16.0
   frame create `psf'
   cap noi frame `psf' {
     mata: wooldid_bootsavemk("`acc'", "`obsb'", "`seacc'", "`aseobs'", "")
+    local wdpsasgerr
+    local wdpsasgdrop 0
     if "`asg'" != "" mata: wooldid_permsaveasg("`asg'", "`clusvals'", "`obsons'")
     char _dta[wooldid_engine] "permute"
     char _dta[wooldid_seed] "`seed'"
@@ -8520,6 +8523,10 @@ version 16.0
     error `wdpsrc'
   }
   dis as text "permsave(): the permutation draws were written to `fn'.dta (`=`wdpsn'-1' replication rows plus the _rep = 0 observed row`=cond("`asg'" != "", "; the onset_* columns hold the onset assigned to each cluster", "")')."
+  * D-10 (author ruling 2026-09-11): the assignment block's two failure modes are announced
+  * rather than left to be discovered in the saved file
+  if "`wdpsasgerr'" == "1" dis as text "Caution: permsave(`fn') could not write the per-cluster assignment block (the cluster-value and observed-onset lists do not conform to the assignment matrix), so `fn'.dta carries the replication draws but NO onset_* columns."
+  if `=cond("`wdpsasgdrop'" == "", "0", "`wdpsasgdrop'")' > 0 dis as text "Caution: permsave(`fn') omitted `wdpsasgdrop' cluster assignment column(s) from `fn'.dta because their onset_<id> names were already taken (a name collision with another column, or two cluster ids that map to the same Stata name). The file is that many clusters short and nothing in it marks the gap."
 end
 
 
@@ -8865,14 +8872,18 @@ version 16.0
       }
       else local ++nfail
       cap frame drop `wdbrf'
-      * this leg prints one dot per replication and never the 50-mark running count:
-      * dots(n) is NOT honoured here, unlike the count path, the re-identification leg and
-      * the jackknife loop. Whether that is deliberate - this leg is much the slowest per
-      * replication, so per-rep feedback has a case - is not recorded. Either way a test
-      * that counts marks on this leg must expect `reps' of them, not reps/dots
+      * D-4 (author ruling 2026-09-11): dots() is honoured here as it is on the count path,
+      * the re-identification leg and the jackknife loop. This leg used to print one dot per
+      * replication whatever dots() said, and never the 50-mark running count - so the option
+      * meant one thing on three legs and another on this one, and a test counting marks here
+      * had to expect `reps' of them rather than reps/dots
       if `dots' > 0 {
+        * the documented cadence, identical to the count path, the re-identification leg and
+        * wooldid_permrun: one mark every dots() replications, a failed replication ALWAYS
+        * prints its x, and the count after every 50 marks
         if `badrep' dis as error "x" _continue
-        else dis as text "." _continue
+        else if mod(`r', `dots') == 0 dis as text "." _continue
+        if mod(`r', 50*`dots') == 0 dis as text " " `r' _newline "  " _continue
       }
       * this leg is complete: without this, the count path's common tail below would run
       * the same replication a second time on frequency weights and overwrite row r
@@ -10383,6 +10394,13 @@ version 16.0
     set seed 20260907
   }
   local wdsdone
+  * D-7 (author ruling 2026-09-11): families that were ATTEMPTED and produced no band are
+  * collected here and named in a caution below. Before this, a family whose band could not
+  * be formed simply vanished from its figure whenever some other family got one - so a user
+  * could see a dashed band on the ATT figure, none on the AME_it figure, and be told
+  * nothing. An attempted family is one whose inputs are present: the kernels return an
+  * EMPTY reason for a family merely absent from this run, and those are not named.
+  local wdsnoband
   foreach wdsk of local wdsfl {
     * the e(b)/e(V) row-name prefix for this family (worker: rownamespool, then the _SG
     * injection) - the same rule wooldid_vsplice uses
@@ -10399,12 +10417,13 @@ version 16.0
     local wdsn .
     local wdsm 0
     local wdsstud 0
+    local wdsbwhy
     if "`mode'" == "bootstrap" {
       * cap: see the note in wooldid_vsplice (cleanmatrices clears wooldid's own Mata
       * kernels; SI-17/SI-18). CONTINUE and not exit - the c(rngstate) restore at the end of
       * this loop must run, or a run that asked for a band would leak the fixed internal seed
       * into the caller's stream. With every family skipped the named caution below fires.
-      cap mata: st_local("wdsm", strofreal(wooldid_bootband("`acc'", "`obsb'", "`wdspx'", `level', "`SB'", "wdscrit", "wdsn", "`seacc'", "`aseobs'", "wdsstud")))
+      cap mata: st_local("wdsm", strofreal(wooldid_bootband("`acc'", "`obsb'", "`wdspx'", `level', "`SB'", "wdscrit", "wdsn", "`seacc'", "`aseobs'", "wdsstud", "wdsbwhy")))
       if _rc != 0 continue
     }
     else {
@@ -10418,8 +10437,15 @@ version 16.0
       * cap + continue: see the bootstrap twin above
       cap mata: st_local("wdsm", strofreal(wooldid_esbanda("`BV'", "`BB'", `level', `nd', "`SB'", "wdscrit")))
       if _rc != 0 continue
+      * the analytic kernel DROPS a degenerate horizon and bands the rest, so it comes back
+      * short only when fewer than two bandable horizons are left. Its two input matrices
+      * were confirmed just above, so this family really was attempted
+      if `wdsm' < 2 local wdsbwhy fewer than two horizons of this family have a usable variance
     }
-    if `wdsm' < 2 continue
+    if `wdsm' < 2 {
+      if `"`wdsbwhy'"' != "" local wdsnoband `"`wdsnoband'`wdsk' (`wdsbwhy'); "'
+      continue
+    }
     ereturn matrix esband_`wdsk' = `SB'
     if strlen("esband_crit_`wdsk'") <= 32 ereturn scalar esband_crit_`wdsk' = `wdscrit'
     if "`mode'" == "bootstrap" & strlen("esband_n_`wdsk'") <= 32 ereturn scalar esband_n_`wdsk' = `wdsn'
@@ -10429,7 +10455,18 @@ version 16.0
   if "`wdsrng'" != "" set rngstate `wdsrng'
   if "`wdsdone'" == "" {
     dis as text "Caution: simultaneousbands was requested but no simultaneous band could be built. A band needs at least two horizons of one event-study family with a usable variance - so it is unavailable under fastnose, on a run with no event study, and on a family whose covariance is entirely unidentified. The pointwise intervals in the table are unaffected."
+    if `"`wdsnoband'"' != "" dis as text "  Families attempted and declined: `wdsnoband'"
     exit
+  }
+  * D-7/D-8: some families banded and some did not - say which, and why. The bootstrap
+  * kernel refuses a whole family for one unusable horizon (its critical value is a
+  * maximum taken replication by replication, so a horizon that cannot supply a
+  * denominator at every retained replication changes what the maximum is over), while
+  * the analytic kernel drops the horizon and bands the rest. That asymmetry is
+  * deliberate (author ruling 2026-09-11), which is why the reason names the HORIZON
+  * rather than only the family
+  if `"`wdsnoband'"' != "" {
+    dis as text "Caution: a simultaneous band was drawn for some event-study families and not others. No band for: `wdsnoband'The figures for those families show their pointwise intervals only, which are unaffected."
   }
   * PS-45 (author ruling 2026-09-10): under boottstat the band is a genuine percentile-t -
   * each replication's own standard error in the denominator, the observed analytic ones in
@@ -11161,7 +11198,7 @@ version 16.0
   * movement at all with a single onset date). The tests lose power against pre-trends
   if "`e(perm_precaveat)'" == "1" dis as result "  Pre-treatment rows (pretreatment estimates, pre-onset event-study horizons, their contrasts, and the joint pre-trend and adversarial statistics) are tested against the sharp null of no effect at ANY horizon. In staggered designs the reassigned onsets move actual post-treatment outcomes into the draws' pre-treatment horizons, so the null distribution widens with the true post-treatment effect while the observed pre-period statistics do not: their permutation p-values rise toward 1 as the true effect grows, and a large pre-period p-value is not by itself evidence of no pre-trend (with a single onset date the reference distribution is unaffected)."
       if "`e(perm_gt_blank)'" == "1" dis as result "  The gteffects cells are keyed by cohort onset, which the replications reassign, so they have no permutation distribution: their inference columns are blank."
-      if "`e(perm_cfx_blank)'" == "1" dis as result "  The continuous-treatment plot cells were not permuted (assignment-dependent lattice bins); their inference columns are blank."
+      if "`e(perm_cfx_blank)'" == "1" dis as result "  The continuous-treatment plot cells were not permuted (assignment-dependent lattice bins); their p-value and interval columns are blank, and the standard error column is analytic."
       if "`e(perm_incomplete)'" != "" dis as result "  Elements not estimable in every enumerated assignment (exact shares over a reduced reference set; their n is in e(perm_n)): `e(perm_incomplete)'"
       if "`e(perm_addone)'" != "" dis as result "  Elements whose reference set does not contain the observed statistic (add-one p-values rather than exact shares): `e(perm_addone)'"
       if "`e(perm_offcentre)'" != "" dis as result "  Shift intervals left blank because the permutation distribution is not centred at zero (the p-values stand): `e(perm_offcentre)'"
@@ -11732,17 +11769,13 @@ version 16.0
     dis as text "Caution: the subgroup variable takes values up to `sgmaxlen' digits long. wooldid embeds subgroup values in the names of stored results, matrices, and plots, and Stata caps such names at 31-32 characters, so values 8 or more digits long (7, with makecfxplotsbysg and 3-digit relative-year plot requests) can sometimes cause unexplained r(198) invalid-name crashes; att_itime results tables, adversarial, and makecfxplotsbysg are most exposed. Values above 2,147,483,647 will generally fail outright at Stata's factor-variable level cap."
     dis as text "If wooldid crashes, recode ID-style subgroup values to small integers first (e.g., egen newsg = group(oldsg))."
   }
-  * DELIBERATELY INERT, and left in place with this note rather than deleted: these two
-  * locals are scoped to this program and die at its `end' - the caller never receives them
-  * (the only thing it needs back is `sglist'). The loop was already a no-op before the
-  * 2026-09-07 move out of wooldid_worker, because the caller's guards test for the EMPTY
-  * string and an unset local reads as empty. Do not "repair" it by adding c_locals: those
-  * would overwrite values the caller sets for itself
-  * initialize these for later
-  foreach sgcase in `sglist' {
-    local joint_horiz_i_s`sgcase'
-    local joint_Choriz_i_s`sgcase'
-  }
+  * NOTE a loop initialising joint_horiz_i_s<sg> / joint_Choriz_i_s<sg> used to sit here and
+  * was DELETED as inert (D-5, author ruling 2026-09-11): those locals are scoped to this
+  * program and die at its `end', so the caller never received them, and it was already a
+  * no-op before the 2026-09-07 move out of wooldid_worker. The caller's guards test for the
+  * EMPTY string and an unset local reads as empty, which is what makes the absence correct.
+  * Do not "repair" this by adding c_locals - they would overwrite values the caller sets
+  * for itself
   c_local sglist `sglist'
 end
 
@@ -14693,18 +14726,10 @@ void wooldid_bootjwr(string scalar accname, real scalar r, string scalar obsn)
       d[m] = st_matrix("e(b_es_" + fk + ")")[1, asarray(t, on[j, 2])] - bo[1, j]
     }
     if (m < 0 | hasmissing(d)) continue
-    // V_r on the same names, same order
-    q = 0
-    for (j = 1; j <= rows(on); j++) {
-      if (on[j, 1] != fk) continue
-      q++
-      // NOTE this pre-fill is dead: the braced block below overwrites R wholesale with
-      // V[idx, idx] after walking the same names. If it was meant to leave R missing so a
-      // failed name lookup would be caught by the hasmissing() guard, that is already
-      // covered - the `m = -1; break' path above catches a missing name, and the guard now
-      // tests V's own entries
-      R[q, .] = J(1, np, .)
-    }
+    // V_r on the same names, same order. A pre-fill of R with missings used to walk these
+    // names first and was DELETED as dead (D-5, author ruling 2026-09-11): the block below
+    // overwrites R wholesale with V[idx, idx]. A missing name is caught by the
+    // `m = -1; break' path above, and the hasmissing() guard below tests V's own entries.
     // fill R by name lookups
     {
       real colvector idx
@@ -15940,27 +15965,36 @@ void wooldid_permsaveasg(string scalar assignname, string scalar clusvals, strin
 {
   real matrix Asg
   real rowvector cv, oo
-  real scalar c, idx
+  real scalar c, idx, nd
   string scalar nm
   Asg = st_matrix(assignname)
   cv = strtoreal(tokens(clusvals))
   oo = strtoreal(tokens(obsons))
-  // TWO SILENT DROPS, both in a kernel whose output is a file the user analyses elsewhere.
-  // (a) this return writes NO assignment block at all, so permsave() produces a dataset
-  // with _rep and the coefficient columns and nothing to distinguish it from a run that
-  // never asked for assignments. (b) the `_st_varindex' skip below drops one cluster's
+  // D-10 (author ruling 2026-09-11): both drops now report, because the output is a FILE
+  // the user analyses elsewhere and a silent gap in it is the worst case. (a) the return
+  // below writes NO assignment block at all, leaving a dataset indistinguishable from a run
+  // that never asked for one; (b) the `_st_varindex' skip further down drops one cluster's
   // column whenever its strtoname()d name is already taken - by a coefficient column laid
   // out by wooldid_bootsavemk, or by an earlier cluster whose id maps to the same string -
-  // and because the columns are named rather than positional, nothing in the file marks
-  // the gap: a user reconstructing the permutation distribution is silently one cluster
-  // short. Neither sets a local the shell could turn into a caution
-  if (cols(cv) != rows(Asg) | cols(oo) != rows(Asg)) return
+  // and because the columns are named rather than positional, nothing in the file marks the
+  // gap. wooldid_permsave turns these two locals into cautions.
+  st_local("wdpsasgerr", "")
+  st_local("wdpsasgdrop", "0")
+  if (cols(cv) != rows(Asg) | cols(oo) != rows(Asg)) {
+    st_local("wdpsasgerr", "1")
+    return
+  }
+  nd = 0
   for (c = 1; c <= rows(Asg); c++) {
     nm = strtoname("onset_" + strofreal(cv[c], "%20.0g"))
-    if (_st_varindex(nm) < .) continue
+    if (_st_varindex(nm) < .) {
+      nd++
+      continue
+    }
     idx = st_addvar("double", nm)
     st_store(., idx, oo[c] \ Asg[c, .]')
   }
+  st_local("wdpsasgdrop", strofreal(nd))
 }
 
 
@@ -16167,7 +16201,7 @@ real scalar wooldid_esbanda(string scalar vn, string scalar bn, real scalar lev,
 real scalar wooldid_bootband(string scalar accn, string scalar obsn, string scalar px,
                              real scalar lev, string scalar outn, string scalar critl,
                              string scalar nl, string scalar sen, string scalar aon,
-                             string scalar stl)
+                             string scalar stl, string scalar whyl)
 {
   real matrix A, O, out, S, AO
   string matrix cs, ocs
@@ -16185,6 +16219,12 @@ real scalar wooldid_bootband(string scalar accn, string scalar obsn, string scal
   // without boottstat and stays the default there.
   stud = 0
   st_local(stl, "0")
+  // D-8 (author ruling 2026-09-11): every refusal below says WHY, naming the horizon that
+  // caused it, so the caller's caution can name it too. An EMPTY reason means "this family
+  // is not present here" (fewer than two horizons carry the prefix, or there are no
+  // replications) rather than "this family was refused" - which is what lets the caller tell
+  // a genuinely absent family apart from one it declined to band.
+  st_local(whyl, "")
   if (sen != "" & aon != "") {
     S = st_matrix(sen)
     AO = st_matrix(aon)
@@ -16218,14 +16258,26 @@ real scalar wooldid_bootband(string scalar accn, string scalar obsn, string scal
     if (mx) idx = idx \ r
   }
   n = rows(idx)
-  if (n < 2) return(0)
+  if (n < 2) {
+    st_local(whyl, "fewer than two replications are complete over every horizon of the family")
+    return(0)
+  }
   sd = J(m, 1, .)
   if (stud) {
     // the endpoints are the OBSERVED analytic standard errors, as the printed percentile-t
     // interval's are; the draws only supply the critical value
     for (j = 1; j <= m; j++) {
-      if (O[1, sel[j]] >= .) return(0)
-      if (AO[1, sel[j]] >= . | AO[1, sel[j]] <= 0) return(0)
+      if (O[1, sel[j]] >= .) {
+        st_local(whyl, "the observed coefficient at horizon " +
+                       substr(cs[sel[j], 2], lp + 1, .) + " is missing")
+        return(0)
+      }
+      if (AO[1, sel[j]] >= . | AO[1, sel[j]] <= 0) {
+        st_local(whyl, "the observed analytic standard error at horizon " +
+                       substr(cs[sel[j], 2], lp + 1, .) +
+                       " is missing or non-positive, so it cannot studentize")
+        return(0)
+      }
       sd[j] = AO[1, sel[j]]
     }
     M = J(n, 1, .)
@@ -16239,7 +16291,10 @@ real scalar wooldid_bootband(string scalar accn, string scalar obsn, string scal
     }
     M = sort(M, 1)
     c = wooldid_bootqs(M, lev/100)
-    if (c >= . | c <= 0) return(0)
+    if (c >= . | c <= 0) {
+      st_local(whyl, "the simultaneous critical value could not be formed from the draws")
+      return(0)
+    }
     out = J(3, m, .)
     ocs = J(m, 2, "")
     for (j = 1; j <= m; j++) {
@@ -16257,14 +16312,22 @@ real scalar wooldid_bootband(string scalar accn, string scalar obsn, string scal
     return(m)
   }
   for (j = 1; j <= m; j++) {
-    if (O[1, sel[j]] >= .) return(0)
+    if (O[1, sel[j]] >= .) {
+      st_local(whyl, "the observed coefficient at horizon " +
+                     substr(cs[sel[j], 2], lp + 1, .) + " is missing")
+      return(0)
+    }
     mu = 0
     for (r = 1; r <= n; r++) mu = mu + A[idx[r], sel[j]]
     mu = mu/n
     d = 0
     for (r = 1; r <= n; r++) d = d + (A[idx[r], sel[j]] - mu)^2
     sd[j] = sqrt(d/(n - 1))
-    if (sd[j] <= 0 | sd[j] >= .) return(0)
+    if (sd[j] <= 0 | sd[j] >= .) {
+      st_local(whyl, "the bootstrap standard deviation at horizon " +
+                     substr(cs[sel[j], 2], lp + 1, .) + " is zero or missing")
+      return(0)
+    }
   }
   M = J(n, 1, .)
   for (r = 1; r <= n; r++) {
@@ -16277,7 +16340,10 @@ real scalar wooldid_bootband(string scalar accn, string scalar obsn, string scal
   }
   M = sort(M, 1)
   c = wooldid_bootqs(M, lev/100)
-  if (c >= . | c <= 0) return(0)
+  if (c >= . | c <= 0) {
+    st_local(whyl, "the simultaneous critical value could not be formed from the draws")
+    return(0)
+  }
   out = J(3, m, .)
   ocs = J(m, 2, "")
   for (j = 1; j <= m; j++) {
