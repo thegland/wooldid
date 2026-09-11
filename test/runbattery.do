@@ -1,10 +1,11 @@
 * wooldid regression battery. Run from a fresh subdirectory of test/ (see test/README.md):
 *   mkdir test/run1 && cd test/run1 && "<stata>" -e do ../runbattery.do
-* Loads the CURRENT repo wooldid.ado, runs 34 configs, dumps all e() content
+* Loads the CURRENT repo wooldid.ado, runs 37 configs, dumps all e() content
 * (exact %21x hex) + rc + post-run varlist to <cfg>.csv in cwd.
 clear all
 set more off
 set maxvar 20000
+set graphics off
 set seed 98765
 set sortseed 98765
 
@@ -280,6 +281,41 @@ set seed 975310
 cap noi wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(30) permprobs((ttre 2005 2008 .) (1 .3 .3 .4) (2 .3 .3 .4) (3 .3 .3 .4) (26 .3 .3 .4) (27 .3 .3 .4) (28 .3 .3 .4) (51 .3 .3 .4) (52 .3 .3 .4) (53 .3 .3 .4) (54 .3 .3 .4))
 local rc = _rc
 dumpres perm_probs `rc'
+
+* ---- 2026-09-11: bit-exact cover for the three paths the 504-config dual build cannot see.
+* Every option on these three lines is NEW-ONLY, so the dual build can only ever report their
+* e() objects as additions - additions are informational and are never compared, which is why
+* the three rulings built on 2026-09-11 (F033 on the studentized cell p, the cfxplotnose
+* carve-out under permute(), and the per-family band seed) moved nothing there. The battery is
+* the tool that pins them: it compares this build against a committed baseline cell by cell.
+
+* the ANALYTIC simultaneous band. Pins the sup-t critical value and both endpoints per family.
+* The seed is now derived per family from the family's NAME (D-9, author ruling 2026-09-11),
+* so these numbers are also the regression test for that derivation - and att_it is here
+* precisely because it is the family whose draws used to depend on att having drawn first.
+freshstart "`DATA'/dta_binary"
+cap noi wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) simultaneousbands
+local rc = _rc
+dumpres band_analytic `rc'
+
+* boottstat WITH gteffects: the studentized CELL p-values, which now carry F033's add-one
+* (2*(min+1)/(n+1)) like every other recentred rank-based p. Before that ruling this fixture's
+* cell p-values included exact zeros; the baseline pins that they no longer can.
+freshstart "`DATA'/dta_binary"
+set seed 246810
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) gteffects bootstrap(standard) boottstat reps(20) rseed(24680) dots(0)
+local rc = _rc
+dumpres boot_ts_gt `rc'
+
+* permute() + cfxplotnose + makecfxplots: the continuous-treatment plot cells. cfxplotnose used
+* to truncate the cfx matrices to one column unconditionally, so under permute() every one of
+* them was skipped by the cell rewiring and the cells stayed analytic under a permutation
+* header with no message. They are permuted now, and this pins their p and shift interval.
+freshstart "`DATA'/dta_cont"
+set seed 864209
+cap noi wooldid y i t ttre, att contreat(intensity) contreatcontrols(basic) lattice(all 3) cluster(i) esprelength(1) espostlength(1) makecfxplots cfxplotnose permute(shuffle) permreps(20) rseed(86420) dots(0)
+local rc = _rc
+dumpres perm_cfxnose `rc'
 
 di "BATTERY_DONE"
 exit, clear
