@@ -155,3 +155,72 @@ on the cert fixture it was that plus a long tail of exact zeros - nearly half th
 printing a p of 0 that the coefficient surface could not print.
 
 New cert legs: `test_esband.do` B10, `test_permute3.do` Q33, `test_bootstrap_tstat.do` T12.
+
+
+---
+
+# Phase 2 (2026-09-11): the help file
+
+Second half of the same instruction: *"review it to confirm that every new feature and option
+we've added to wooldid is documented there... and when writing documentation, please aim to
+maintain the original style of the help file (ie, the style it used 12mo ago)."*
+
+## What "12 months ago" is
+
+`wooldid.sthlp` stood unchanged between 2024-07-31 and 2026-07, so `2a2da17` **is** the
+12-months-ago file and is the style reference. Its measurable habits, against which the new
+prose was checked:
+
+| marker | 2024 (`2a2da17`) | the campaign-era file it joins | new text as first written | new text as shipped |
+|---|---|---|---|---|
+| all-caps words | acronyms only (ATT, AME, OLS, BJS, CFX, STATA) | some | 9 emphasis sites | 0 |
+| ` - ` dash parentheticals per 1000 words | 0.26 | 6.81 | 13.6 | 0 |
+| parentheses per 1000 words | 29.1 | - | 60.3 | (unchanged; dashes went to commas, colons and semicolons more often than to parentheses, to avoid pushing this higher) |
+| `{ul:}` for emphasis | 20 uses | - | - | the device the two surviving emphases use |
+| a directive nested inside link text (`{help x:{cmd:y}}`) | never | never | 1 | 0 |
+| authorial asides ("and deliberately so", "the case worth checking first") | never | - | 4 | 0 |
+
+## The audit
+
+14 agents, find then adversarially verify: 579 documentable items enumerated from the ado
+(options, `e()` objects, cautions, refusal conditions), each candidate gap put to an
+independent verifier that was asked to refute it. 55 confirmed gaps survived, written up in
+15 edit batches as `14c30d3`. The style pass above is the follow-up commit.
+
+## Claims spot-checked against the ado after writing
+
+A wrong sentence in user-facing help is worse than a missing one, so the load-bearing new
+claims were re-derived from the source rather than taken from the verifier agents:
+
+- `e(wdid_fcguard)` and its "see {opt fastcollapse}" pointer: the target text exists (sthlp
+  line 384, the `fastcollapse` entry). Not dangling.
+- `fe(state)` noticed but `fe(i.state)` not: `wooldid.ado:400-401` compares whitespace tokens
+  with `==`, so a factor-prefixed token cannot match. Confirmed.
+- `cfxplottypes()` strips a leading `+` and dedups: `wooldid.ado:5047` strips, `: list uniq`
+  at the end of the loop dedups. Confirmed.
+- `e(esband_ndraw)` on the simulated engine only: `wooldid.ado:10500` posts it under
+  `"\`mode'" != "bootstrap"`, the same condition that makes `e(esband_engine)` read
+  `analytic-simulated`. Confirmed.
+- the 22-character cfx-name threshold: `wooldid.ado:6455` guards `strlen("boot_\`ftag'_\`nm'") <= 32`
+  with `ftag` at most 4 characters (`pctl`, `wald`, `bc`), so the budget for `nm` is
+  32 - len("boot_") - 4 - 1 = 22. Confirmed.
+- "one digit tighter than reghdfe's own 1e-8": agrees with the claim the same entry has
+  carried since 2024 ("By default, reghdfe sets a value of 8").
+
+## What the render check actually proves
+
+`help wooldid` returning rc 0 in batch mode proves the file was found and parsed, not that
+every tag painted - batch `help` does not write the rendered page into the log. The real
+check is the per-line brace balance (4174/4174, zero unbalanced lines, no tag spanning a
+newline), and that is what is being asserted.
+
+## Item #57: the one audit finding that was not a help change
+
+The permutation off-centre caution in the ado cited, as its worked example, "the ame rows
+under lattice() with contreatcontrols(basic), where the baseline dose slope is not partialled
+out (see the standing issue on the reference cell)". **SI-20 fixed exactly that** on
+2026-09-05 (`1df8613`: `basic` now always absorbs `i.lattice##c.(ringer)`, and the measured
+reference margin went from 0.27..2.00 to exactly 0 on all 59 affected configs), and the
+ticket moved to `wooldid_solved_issues.md`. So the caution was pointing a user at a cause
+that no longer exists and at a "standing issue" section that no longer stands. Straight text
+defect, no number moves; fixed rather than held.
