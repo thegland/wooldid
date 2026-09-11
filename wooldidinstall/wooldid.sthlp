@@ -671,7 +671,7 @@ stated in the same shape, with the reason attached. {p_end}
 {marker supporting}{...}
 {dlgtab:Supporting Features}
 
-{phang}{opt hist:ogramcohorteffects}: Produce a histogram of the cohort-specific treatment effects behind the requested estimand and return those effects in {it:e(histogramestimates)} for the user to manipulate. Under {it:att} or {it:att_i} the effects are one per cohort {it:i}; under {it:att_it} or {it:att_itime} they are one per cohort-by-period cell, and a run requesting both gets both sets of columns. With {cmd:contreat()} a matching histogram of the average marginal effects is drawn as well and its column ({it:ame_i}, {it:ame_itime}) is appended to the returned matrix. {p_end}
+{phang}{opt hist:ogramcohorteffects}: Produce a histogram of the cohort-specific treatment effects behind the requested estimand and return those effects in {it:e(histogramestimates)} for the user to manipulate. The effects are one per treated cohort {it:i} under every estimand - both margins calls average over {it:i} - and a run requesting both gets both sets of columns: the {it:att_it}/{it:att_itime} column is the cohort-level average of that cohort's period-by-period cell effects, taken under the cell weights, not a distribution over cohort-by-period cells. With {cmd:contreat()} a matching histogram of the average marginal effects is drawn as well and its column ({it:ame_i}, {it:ame_itime}) is appended to the returned matrix. {p_end}
 
 {pmore}Under {cmd:bootstrap()} and {cmd:permute()} the histogram outputs are the one reported surface still taken from the stage-1 analytic covariance rather than from the replications; a caution saying so prints with the results. {p_end}
 

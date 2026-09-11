@@ -860,6 +860,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
     * grab information about range of _t
     qui gstats sum `_t' if `ifstatement', meanonly
+    * abs() here and `max(0, -r(min))' in wooldid_reltime's pooled twin are deliberately
+    * different, and this form is the safe one only under esfixedbaseperiod: the
+    * reference-period screen above zeroes ifvar for every unit that does not OBSERVE
+    * _t == esrelativeto, and esrelativeto is rejected above -1, so every treated unit
+    * reaching this line has a realized _t <= -1 and r(min) <= -1. The two expressions
+    * therefore agree here, and the BS-33 failure mode the twin guards against (an
+    * onset-period gap or an off-grid onset leaving r(min) POSITIVE, so abs() invents a
+    * pre-window nothing realizes) is unreachable. Do not "fix" this one, and do not read
+    * the difference as the BS-33 fix having been applied to only one of two sites
     local min_t = abs(r(min))
     local max_t = r(max) + 1
 
@@ -1715,6 +1724,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * call and can be posted as e(summarystats) below
     tempname summarystats
     wooldid_sumstat , ss(`summarystats') y(`y') tvar(`t') ttrevar(`ttre') ct(`contreat') ctc(`contreatcontrols') ctw(`contreatwithin') wi(`weightinserter')
+    * INERT: `rownamessum' is built inside wooldid_sumstat and is NOT among the locals that
+    * program returns, so this expands to `matrix rownames X = ' - MEASURED a silent no-op
+    * in Stata 19 MP, neither an error nor a clearing of the existing names. The row labels
+    * that actually reach e(summarystats) are set by wooldid_sumstat itself. The line is
+    * harmless but reads like the site that labels the matrix: delete the internal one on
+    * that belief and e(summarystats) posts with r1..r8 instead of the y_*/c_* names that
+    * are the only thing identifying which sample each row describes, with no error anywhere.
+    * (Note also that the `tempname summarystats' above overwrites the OPTION macro of the
+    * same name, which is why the post gate below tests != "" rather than == "summarystats")
     matrix rownames `summarystats' = `rownamessum'
   }
 
@@ -5383,22 +5401,6 @@ version 16.0
   c_local wdvifexcl `wdvifn'
 end
 
-* ============================================================================
-* E1 subprogram: build the "every subgroup margin is equal" constraint chain for
-* -test- out of the coefficient names Stata itself posted in e(b) after
-*   margins ..., over(<sg>) pwcompare(effects) <marginsdof> post
-* The names are READ BACK (colnames/coleq), never constructed from subgroup
-* values, so they are valid by construction whatever the level values, level
-* labels or variable name length; omitted (o.) columns are skipped. -half-
-* selects the binary layout, where the posted e(b) carries the base-outcome half
-* followed by the 1.<targetflag> half and only the second half is wanted;
-* without -half- (continuous treatment) every column is used.
-* Returns: sgchain (the chain, empty if fewer than 2 usable columns)
-*          sgchainn (number of usable columns; the caller must require > 1,
-*          since a one-term chain would test that margin against 0 instead)
-* A subprogram because wooldid_worker sits near Stata's per-program compiled-size
-* ceiling and this is used at four call sites.
-* ============================================================================
 * ---------------------------------------------------------------------------
 * F-collapse helper (on by default; fastcollapse / fullprecisionslow). Replaces the
 * estimation sample with ONE row per (_i, _t, targetflag [, subgroup]) cell, carrying that
@@ -5517,6 +5519,22 @@ prog def wooldid_fcol, rclass
   return scalar ncell = _N
 end
 
+* ============================================================================
+* E1 subprogram: build the "every subgroup margin is equal" constraint chain for
+* -test- out of the coefficient names Stata itself posted in e(b) after
+*   margins ..., over(<sg>) pwcompare(effects) <marginsdof> post
+* The names are READ BACK (colnames/coleq), never constructed from subgroup
+* values, so they are valid by construction whatever the level values, level
+* labels or variable name length; omitted (o.) columns are skipped. -half-
+* selects the binary layout, where the posted e(b) carries the base-outcome half
+* followed by the 1.<targetflag> half and only the second half is wanted;
+* without -half- (continuous treatment) every column is used.
+* Returns: sgchain (the chain, empty if fewer than 2 usable columns)
+*          sgchainn (number of usable columns; the caller must require > 1,
+*          since a one-term chain would test that margin against 0 instead)
+* A subprogram because wooldid_worker sits near Stata's per-program compiled-size
+* ceiling and this is used at four call sites.
+* ============================================================================
 cap prog drop wooldid_sgchain
 prog def wooldid_sgchain
 version 16.0
@@ -5572,6 +5590,16 @@ version 16.0
     cap confirm matrix r(p)
     if _rc exit
   }
+  * the tolerance and the `levels' switch are both argued in wooldid_fcdegx's own Mata
+  * header and only cited here. 1e-9: residue sits near 1e-16 and the smallest real subgroup
+  * contrast measured in the assessment was 3.5e-5, so there are about seven orders of
+  * headroom either side. `levels' suppresses the adjacent-difference contrast test, because
+  * event-study LEVELS are contrasted by the adversarial line test and by whatever consumes
+  * e(V_es_*), both of which make their own rank decision at 1e-12 of the largest eigenvalue
+  * - three orders tighter - and a 1e-9 contrast test there fires on every healthy run whose
+  * cluster count is below its horizon count (measured 2026-09-06 at 4, 5 and 6 clusters
+  * against 8 horizons; BS-29). Anyone moving the number must move it knowing it is paired
+  * with that other tolerance, not chosen alone
   mata: wooldid_fcdegx(1e-9, "`levels'" != "")
   if "`fcdeg'" != "1" exit
   if "`safety'" != "off" {
@@ -10167,13 +10195,6 @@ version 16.0
   matrix roweq `cfxm' = _
 end
 
-* F038 (quality review 2026-09-05, author ruling 2026-09-06): a rank-based bootstrap p of
-* exactly 0 means no completed replication fell on the far side of the null - the
-* resolution limit 2/n, not a probability of 0. matlist renders a numeric matrix, so the
-* cell keeps the 0 (e() keeps it too, by the ruling); this line under the table says what
-* the 0 means. Under permute() only the plain c/n share (permrawp) can print 0 from a
-* sampled enumeration - the add-one conventions never do, and an exact enumeration's 0
-* would be a true share (bug sweep BS-25); the Wald display's p is a tail probability
 * PS-3 (author ruling 2026-09-07, built 2026-09-10): "keep the table structure, give each
 * column an explicit format". matlist's default is ONE general format for the whole matrix,
 * which is why a p of 1.84e-21 used to sit beside a t of 13.07929 where every comparator
@@ -10193,6 +10214,18 @@ prog def wooldid_mlfmt
 version 16.0
   syntax , mat(string)
   local wdmrn : rowfullnames `mat'
+  * THE RESULTS COME BACK AS TWO FIXED CALLER LOCALS, wdmlfmt and wdmlfmtr, which the
+  * caller cannot rename - so every `matlist X, cspec(`wdmlfmt') rspec(`wdmlfmtr')' must be
+  * immediately preceded by this program's call FOR THAT MATRIX. Reusing a previous table's
+  * macros is not a cosmetic slip: MEASURED on Stata 19 MP, a cspec whose column count is
+  * short gives r(198) "& or | expected", too long gives "extraneous input in cspec()", and
+  * a short rspec gives "too few specifications in rspec()" - so a mispaired format string
+  * aborts a COMPLETED estimation mid-display, and the shell's WOOLDID_LASTRC marker then
+  * refuses the replay. The widths below: 12 is matlist's own default minimum row-label
+  * width, 26 the cap that keeps the label column from pushing the statistics off the line
+  * (matlist abbreviates a longer name with a tilde rather than truncating). Only the text
+  * after ":" is measured on equation-prefixed rownames, because matlist prints the equation
+  * name on a line of its own
   local wdmw 12
   foreach wdmn of local wdmrn {
     local wdmnm = cond(strpos("`wdmn'", ":") > 0, substr("`wdmn'", strpos("`wdmn'", ":") + 1, .), "`wdmn'")
@@ -10226,6 +10259,17 @@ version 16.0
   c_local wdmlfmtr `"`wdmr'"'
 end
 
+* F038 (quality review 2026-09-05, author ruling 2026-09-06): a rank-based bootstrap p of
+* exactly 0 means no completed replication fell on the far side of the null - the
+* resolution limit 2/n, not a probability of 0. matlist renders a numeric matrix, so the
+* cell keeps the 0 (e() keeps it too, by the ruling); this line under the table says what
+* the 0 means. Under permute() only the plain c/n share (permrawp) can print 0 from a
+* sampled enumeration - the add-one conventions never do, and an exact enumeration's 0
+* would be a true share (bug sweep BS-25); the Wald display's p is a tail probability of the t/normal
+* reference rather than a rank, so it has no floor and exits at the top of the program.
+* The boottstat pass-through in that same gate is vacuous by F033: the studentized family
+* is add-one with floor 2/(n+1) and can never print 0, so the 2/n message would be wrong
+* if it ever fired.
 cap prog drop wooldid_pfloor
 prog def wooldid_pfloor
   args mat
@@ -10247,6 +10291,14 @@ prog def wooldid_pfloor
   tempname pm
   matrix `pm' = `mat'
   local pc = colnumb(`pm', "p")
+  * the fallback to column 4 is the LAYOUT CONSTANT of the three tables that reach this
+  * program - estimate, se, t|z, p, lb_<lvl>ci, ub_<lvl>ci [, relyr] - in which p is column
+  * 4 and stays column 4 under the bootstrap and permute renames (those touch only
+  * se -> se_analytic and t|z -> t_pt / t_perm). It is kept for a store whose colnames were
+  * lost. Any NEW caller must carry that layout or pass a matrix with a real "p" colname:
+  * on a mislabelled matrix this counts zeros in whatever column 4 holds and prints the
+  * "p = 0 means p < ..." annotation under a table whose zeros are not p-values, with no
+  * error. The `pc' > colsof' exit below catches a short matrix, never a mislabelled one
   if `pc' >= . local pc 4
   if `pc' > colsof(`pm') exit
   mata: st_local("wdp0", strofreal(sum(st_matrix("`pm'")[., `pc'] :== 0)))
@@ -10408,10 +10460,26 @@ version 16.0
   if _rc != 0 exit
   tempname WSB
   matrix `WSB' = e(esband_`fam'`sfx')
+  * THE STORED BAND IS READ ENTIRELY BY ROW POSITION below: row 1 lower endpoint, row 2
+  * upper, row 3 the relative year to match on; the columns are the surviving horizons.
+  * That layout is produced by wooldid_esbanda and its bootstrap twin wooldid_bootband,
+  * which do attach a real rowstripe - this program never reads it, so inserting a row (a
+  * critical value, a count) ahead of those three draws a band from the wrong series with
+  * no error. This guard and the `cap confirm' above drop the band for THIS FAMILY with no
+  * message, while wooldid_esband's caution fires only when NO family got a band at all:
+  * under simultaneousbands a user can get a dashed band on the ATT figure, none on the
+  * AME_it figure, and be told nothing
   if rowsof(`WSB') < 3 exit
   qui gen double __wdsblo = .
   qui gen double __wdsbhi = .
   forval wsbc = 1/`=colsof(`WSB')' {
+  * `sfx' is in the e() KEY above and deliberately not in this row match, because the two
+  * namespaces really do differ: wooldid_esband stores bands keyed by family-plus-subgroup
+  * (att_s3, att_it_s3), while the plot frame's rownamesvar comes from the row equations of
+  * e(wdidsgresults_3), which are NOT suffixed (the _SG3_ injection touches only the stacked
+  * e(b)/e(V) names). "Harmonizing" this to ES_`fam'`sfx' matches nothing, leaves both
+  * variables all-missing, and makes every subgroup figure's band vanish with no error -
+  * the r(N) > 0 test below just returns an empty layer
     qui replace __wdsblo = `WSB'[1, `wsbc'] if rownamesvar == "ES_`fam'" & relyr == `WSB'[3, `wsbc']
     qui replace __wdsbhi = `WSB'[2, `wsbc'] if rownamesvar == "ES_`fam'" & relyr == `WSB'[3, `wsbc']
   }
@@ -10608,6 +10676,22 @@ version 16.0
   }
 end
 
+* THE PART MAP. This program's entire control flow is `part(string)', matched by string
+* equality with NO else - so an unknown or mistyped part prints nothing and returns 0, the
+* silent-option failure this codebase has been bitten by before. Five parts, and four
+* callers take different subsets:
+*   1     header, summary statistics, the main table, joint tests, adversarial
+*   roth   REPLAY ONLY - on a live run the Roth pre-trend-power block is printed by
+*          wooldid_ptp itself, called between part(1) and part(2) by the worker on a plain
+*          run and by the shell on the bootstrap path
+*   2     subgroup tables, pairwise contrasts, the gteffects block
+*   perm   permutation footer, existence-gated on e(perm_method)
+*   boot   bootstrap footer, existence-gated on e(boot_method)
+* The shell's replay calls all five in order; the permute path calls 1, 2, perm (no roth -
+* validate refuses pretrendpower under permute); the bootstrap path calls 1, wooldid_ptp,
+* 2, boot; the worker calls 1 and 2 only, and only when neither engine is active. The two
+* engine footers are mutually exclusive by their gates, so replaying the other kind prints
+* nothing rather than erroring.
 cap prog drop wooldid_display
 prog def wooldid_display
 version 16.0
@@ -10981,6 +11065,14 @@ version 16.0
     else dis as text "Note: standard errors are the stage-1 regression's coefficient-level VCE; rows outside the reported event-study window have inwindow = 0."
     if `gtrows' <= 200 {
       tempname gtds
+      * e(gteffects) is 15 columns (the stripe is set in Mata: i, onset, caltime, relyr,
+      * estimate, se, p, lb_ci, ub_ci, inwindow, nobs, w_att, w_att_it, w_att_i,
+      * w_att_itime). 9 is the boundary between the printed block and the export-only
+      * columns, not a count of anything, and it must move if that stripe does - the slice
+      * is positional, so a restripe prints the wrong columns silently. NOTE the notes above
+      * point at inwindow, which is column 10 and therefore NOT in this printed slice: they
+      * are directing the reader to e(gteffects). The 200-row cap keeps a cohort-by-period
+      * table on high-cardinality i from burying the rest of the output
       matrix `gtds' = `gtd'[1..., 1..9]
       matlist `gtds', format(%9.0g)
     }
@@ -11050,6 +11142,13 @@ version 16.0
         local wdpsdl
         foreach wdpsdh of local wdpsdc {
           local ++wdpsdk
+          * e(perm_stepdown*) is 4 x (one column per horizon) with rows in the order
+          * wooldid_permstep sets: 1 t_obs, 2 p_raw (the two-sided |t| add-one share in the
+          * step-down's OWN studentized metric, not the table's p), 3 p_singlestep, 4
+          * p_stepdown. This prints rows 2 and 4; row 3 is computed and stored but
+          * deliberately not displayed. The subscripts are positional - reorder or insert a
+          * row in that Mata stripe and this prints p_singlestep under the "step-down p"
+          * label, a materially larger number, with no error and no shape change
           local wdpsdl `wdpsdl' `=subinstr("`wdpsdh'", "ES_`wdpsdf':", "", 1)': `=string(`wdpsdm'[2, `wdpsdk'], "%5.3f")' -> `=string(`wdpsdm'[4, `wdpsdk'], "%5.3f")';
         }
         dis as result "    `wdpsdl'"
@@ -11140,40 +11239,6 @@ version 16.0
 
 end
 
-* NFADV-01/02/05: the adversarial pre-trend machinery. One caller replaces the four
-* near-identical frame/svmat/`test' blocks in wooldid_worker (per-program size ceiling).
-* Inputs are the F2 event-study capture of the SAME margins run (b 1xk, V kxk full
-* covariance), the aligned relative-time column relyr (kx1), min_t, esrelativeto, and
-* the reference-regime/timetrends/altmethod flags. It does two things:
-*  (1) fits the DISPLAY LINE by the same unweighted OLS `reg b t' the old in-worker
-*      frames ran - identical rows (real horizon coefficients in horizon order, then
-*      the planted zero-valued reference row(s)) and the identical internal regressor
-*      t = relyr + min_t + 1 (the worker's LOAD-BEARING identity), so the published
-*      slope is bit-identical to the old one - and re-expresses the intercept at
-*      relative time 0 (NFADV-05: the old _cons was the fitted value at relyr =
-*      -min_t-1), publishing columns [slope, intercept_rt0];
-*  (2) computes a CALIBRATED p-value on the event-study covariance, esfixedbaseperiod
-*      only (the pooled reference has no single omitted period; the worker prints one
-*      Caution per run and the line is returned without inference). Primary = a
-*      minimum-distance test of the composite null that all horizon effects lie on
-*      SOME line (NFADV-01: the old code froze the fitted line as text constants in
-*      `test', a weighted chi-square whose null size depends on the margins VCV).
-*      Altmethod = the post coefficients tested against the pre-period-line forecasts
-*      using the FULL forecast covariance S = V_QQ + A V_PP A' - A V_PQ - V_QP A'
-*      (NFADV-02: the old code used V_QQ alone, anti-conservative). The statistics
-*      live in mata (wooldid_advx, end of file); F vs chi-squared reference follows
-*      the wooldid_ptp df_r convention.
-* Returns r(status): "ok" (line + p), "nop" (line only), "gapskip" (nothing - the B16
-* gap backstop: the altmethod fit sample has no real pre-period coefficient).
-* BS-8 (2026-09-06): label a subgroup-by-horizon margins call from its OWN colnames.
-* positional omission scan (SI-7, author-ruled 2026-08-27): every column carrying margins'
-* o. marker is dropped from the six-row table (and from b/V when given), a caution names
-* the dropped horizons, and the relative periods of the kept columns come back as the
-* column matrix rel(), the rowname membership list lbl() and the strict per-column label
-* list f2l(). serves the binary call (first() = the 1.targetflag half, strip(1.targetflag))
-* and the continuous-treatment call (kind(continuous-treatment)). lives outside
-* wooldid_worker to conserve that program's compiled-size headroom. the caller consumes
-* r() first: the single-level fallback below is rclass and wipes it
 * ============================================================================
 * The post-estimation collinearity screens: the dropped treated cohort-period dummy
 * check (error 322, with the poisson separation branch of bug sweep BS-4), the
@@ -11205,6 +11270,15 @@ version 16.0
   local contreat `ct'
   local interlist `ics'
   local interactivecontrols `icn'
+  * THIS IS A HARD CEILING ON THE CELL COUNT wooldid can run at, and it binds here and at
+  * the worker's own earlier copy (which is reached first, so safety(off) does not avoid
+  * it). MEASURED (Stata 19 MP, set maxvar 5000): `local x : colnames M' on a 1 x 15,000
+  * matrix whose names total 543,895 characters returns rc 0; at 20,000 such names it fails
+  * r(1000) and leaves the local EMPTY rather than truncating. The binding cap is the macro
+  * length limit Stata reports as 645,200 characters (it grows 129 characters per unit of
+  * set maxvar). At roughly 33 characters per expanded i#t#targetflag name that is about
+  * 19,500 treated cell terms - reachable at, say, 1,000 cohorts x 20 periods. The failure
+  * is a bare r(1000) raised AFTER the expensive regression, naming no wooldid concept
   local bvars: colnames e(b)
   local catastrophe 0
   local bigcatastrophe 0
@@ -11257,6 +11331,14 @@ version 16.0
           * if we proceeded to this point, then the omitted object has associated observations, so this is an actual problem!
 
           if `wordcountproblem' <= 3 {
+            * UNIT CHANGE on this line: `problem_t' arrives in internal _t units (parsed
+            * out of a coefficient name; 1-based, 0 = reference/never-treated) and leaves in
+            * RELATIVE-HORIZON units, which is what the user-facing message prints. The
+            * conversion is the package's load-bearing identity relyr = _t - min_t - 1, set
+            * where _t is shifted positive so it can serve as a factor variable. The poisson
+            * separation count below writes `+ `min_t' + 1' to undo it, because that count
+            * runs against the _t variable still in memory. Getting the direction wrong
+            * flips the diagnosis without any error
             local problem_t = `problem_t' - `min_t' - 1
             * under poisson an omitted cell dummy whose rows ppmlhdfe dropped is perfect
             * separation, not multicollinearity (bug sweep BS-4)
@@ -11650,6 +11732,12 @@ version 16.0
     dis as text "Caution: the subgroup variable takes values up to `sgmaxlen' digits long. wooldid embeds subgroup values in the names of stored results, matrices, and plots, and Stata caps such names at 31-32 characters, so values 8 or more digits long (7, with makecfxplotsbysg and 3-digit relative-year plot requests) can sometimes cause unexplained r(198) invalid-name crashes; att_itime results tables, adversarial, and makecfxplotsbysg are most exposed. Values above 2,147,483,647 will generally fail outright at Stata's factor-variable level cap."
     dis as text "If wooldid crashes, recode ID-style subgroup values to small integers first (e.g., egen newsg = group(oldsg))."
   }
+  * DELIBERATELY INERT, and left in place with this note rather than deleted: these two
+  * locals are scoped to this program and die at its `end' - the caller never receives them
+  * (the only thing it needs back is `sglist'). The loop was already a no-op before the
+  * 2026-09-07 move out of wooldid_worker, because the caller's guards test for the EMPTY
+  * string and an unset local reads as empty. Do not "repair" it by adding c_locals: those
+  * would overwrite values the caller sets for itself
   * initialize these for later
   foreach sgcase in `sglist' {
     local joint_horiz_i_s`sgcase'
@@ -11698,9 +11786,28 @@ version 16.0
 
   * we pool att with att_i b/c they conceptually should match into the same histograms
   if "`att_i'" == "att_i" |  "`att'" == "att"  {
+    * WHY A DIFFERENT WEIGHT GIVES THE SAME PICTURE - this is exact, not approximate.
+    * w_per_i and t_per_i are totals by(posttreatment, i), and every margins call here
+    * carries subpop(... & `t' >= `ttre'), which pins posttreatment to 1 - so within each
+    * over(i) group the divisors are constant, making w_att_i proportional to w_att and
+    * w_att_itime proportional to w_att_it. margins' over() margin is a within-group
+    * weighted mean and is invariant to a positive within-group rescaling of the weights.
+    * The substitution exists only so a weight that may not have been generated is never
+    * referenced (w_att needs att; w_att_itime needs att_itime). THE TRAP: widen the subpop
+    * to include pre-periods and the divisors stop being constant within the group, and the
+    * two weights stop agreeing - silently, since nothing here checks
     local whichweight w_att
     if "`att'" == "" local whichweight w_att_i
     qui margins [`weight'=``whichweight''], `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstext' `fcnoes'
+    * the SECOND HALF of r(b): targetflag enters as a factor variable, so margins returns
+    * 2 x (number of over groups) columns - the 0.targetflag base first (always the omitted
+    * level), the 1.targetflag effects second. The contreat call below reads ALL of r(b)
+    * because contreat is continuous and there is no half to skip; "harmonizing" the two
+    * would silently fill the histogram, and e(histogramestimates), with base-level margins.
+    * The row names of the result are margins' column subnames and therefore carry wooldid's
+    * own tempvars - volatile every run. That is deliberate scope (the help says the
+    * histogram itself is the intended output); the cfx matrices get stable keys from
+    * wooldid_cfxstripe and this matrix pointedly does not
     local matrixstartgrab floor(`=colsof(r(b))'/2)+1
     matrix `___hist' = r(b)[1, `matrixstartgrab'..`=colsof(r(b))']'
     matrix colnames `___hist' = att_i
@@ -11730,6 +11837,12 @@ version 16.0
 
   * bundle these for conceptually both generating the same histograms
   if "`att_itime'" == "att_itime" |  "`att_it'" == "att_it"  {
+    * ONE ROW PER TREATED COHORT, under every estimand: this call is over(`_i') exactly as
+    * the att/att_i call above is, so the att_it/att_itime column is the COHORT-LEVEL
+    * average of that cohort's i-t cell effects taken under the cell weights - not a
+    * distribution over cohort-by-period cells, and there is no per-cell object anywhere in
+    * this program. The equal row count is load-bearing: it is the only reason the
+    * horizontal concatenation below is conformable rather than r(503)
     qui margins [`weight'=`w_att_it'], `semielasticity'(`targetflag') subpop(if `ifstatement' & `targetflag'==1 & `_i' != 0 & `t' >= `ttre') noestimcheck over(`_i') nose `poismarginstext' `fcnoes'
     local matrixstartgrab floor(`=colsof(r(b))'/2)+1
     tempname ___hist2
@@ -11796,6 +11909,14 @@ local rownamessum
 if "`contreat'" == "" local sumvarlist y
 if "`contreat'" != "" local sumvarlist y contreat
 * gstats sum accepts pweights directly, so the regression weights pass through to these descriptive computations unchanged
+* Two consequences worth knowing before quoting this table. Official summarize does NOT
+* accept pweights at all (measured: r(101) "pweights not allowed"), so a user cannot
+* reproduce e(summarystats) with summarize under pweights. And gstats' pweighted dispersion
+* is not its aweighted dispersion: measured on y = 1..10 with w = 1,1,1,1,1,100,...,100,
+* [pw=w] gives sd 1.4998428 and [aw=w] gives 1.5794071 - the ratio is sqrt(N/(N-1)), i.e.
+* pweights take the population divisor and aweights the N-1 one. Means and percentiles agree
+* between the two, so only the sd column depends on which weight keyword the USER typed
+* (the weight inserter carries their keyword through verbatim).
 foreach sumvar in `sumvarlist' {
   local sumvar2 c
   if "`sumvar'" == "y" local sumvar2 y
@@ -11882,6 +12003,15 @@ matrix rownames `summarystats' = `rownamessum'
   c_local contreatpost_sd `contreatpost_sd'
 end
 
+* BS-8 (2026-09-06): label a subgroup-by-horizon margins call from its OWN colnames.
+* positional omission scan (SI-7, author-ruled 2026-08-27): every column carrying margins'
+* o. marker is dropped from the six-row table (and from b/V when given), a caution names
+* the dropped horizons, and the relative periods of the kept columns come back as the
+* column matrix rel(), the rowname membership list lbl() and the strict per-column label
+* list f2l(). serves the binary call (first() = the 1.targetflag half, strip(1.targetflag))
+* and the continuous-treatment call (kind(continuous-treatment)). lives outside
+* wooldid_worker to conserve that program's compiled-size headroom. the caller consumes
+* r() first: the single-level fallback below is rclass and wipes it
 cap prog drop wooldid_sglbl
 prog def wooldid_sglbl
   syntax , names(string) tab(name) mint(real) old(integer) sg(string) tvar(name) fb(string asis) rel(name) lbl(name) [f2l(name) b(name) v(name) first(integer 1) strip(string) kind(string)]
@@ -11931,6 +12061,13 @@ prog def wooldid_sglbl
   foreach w of local kn {
     if !regexm("`w'", "^[0-9]+[.]?$") local ok 0
   }
+  * TWO THINGS THIS FALLBACK COSTS. (a) Alignment: the recovered levels are paired with
+  * `keep' BY POSITION in the loop below, so correctness needs glevelsof's ascending order
+  * and a subpop that realizes exactly this margins call's estimable levels. The wordcount
+  * check below errors 459 on a size mismatch and cannot see a same-size set mismatch -
+  * that case mislabels every horizon silently. (b) r() clobber: this program is NOT rclass,
+  * so glevelsof's r() overwrites the CALLER's r() whenever this branch fires. Callers must
+  * consume r() before calling wooldid_sglbl
   if `ok' == 0 | wordcount("`kn'") == 0 qui glevelsof(`tvar') if `fb', clean local(kn)
   if wordcount("`kn'") != wordcount("`keep'") {
     dis as error "Error: the `kk'event-study margins for subgroup `sg' returned `=wordcount("`keep'")' estimable columns but `=wordcount("`kn'")' relative-period labels could be recovered for them. This is unexpected - please report it."
@@ -11940,6 +12077,19 @@ prog def wooldid_sglbl
   local lbls
   local f2lbls
   foreach w of local kn {
+    * the package-wide internal-time identity, inverted: _t = relyr + min_t + 1, so
+    * relyr = level - min_t - 1. `mint' must be the SAME min_t the margins call was built
+    * on, and `w' is the factor-variable token margins put in the colname. An off-by-one
+    * here does not error - it relabels every horizon of this subgroup's event study (pre1
+    * printed as post0), and those labels then drive rowname membership and the f2l column
+    * labels. The drop caution's labels use the identical line, so the two must stay in step.
+    * NOTE the r == 0 case under oldsyntax appends TWO tokens to `lbls' (post0 AND contemp)
+    * on purpose: the ES row for relative period 0 is named contemp under oldsyntax, and
+    * lbl() is a MEMBERSHIP list consumed by a strpos() test, so both spellings must pass.
+    * Never index lbl() positionally and never take a column count from it - f2l() is the
+    * strict one-token-per-kept-column list. (The worker records what positional use costs:
+    * a namelist shorter than the matrix makes Stata pad by repeating the LAST name, r(0)
+    * and no warning, shifting every later row onto the next quantity's label)
     local r = `w' - `mint' - 1
     if `r' >= 0 local lbls `lbls' post`r'
     if `r' == 0 & `old' == 1 local lbls `lbls' contemp
@@ -11982,6 +12132,13 @@ prog def wooldid_icscreen
   syntax , bvars(string asis) iv(name) tv(name) tf(name) ics(string) names(string)
   local k 0
   foreach ic of local ics {
+    * `local ++k' MUST stay above the `cap confirm' / `continue' pair below. k indexes the
+    * per-plot metadata e(wdid_cfxttl`k')/e(wdid_cfxytx`k'), which the worker posted BY
+    * POSITION in e(wdid_cfxmats) (pairs laid down ame first, then att), so a matrix that
+    * fails the confirm must still consume its index. Move the increment below the continue
+    * - the obvious tidy-up - and every later figure inherits the previous entry's title and
+    * y-title: a plot of the average marginal effects titled as the ATT, on a figure the
+    * user will publish
     local ++k
     local live 0
     local drop 0
@@ -11998,6 +12155,39 @@ prog def wooldid_icscreen
   }
 end
 
+* NFADV-01/02/05: the adversarial pre-trend machinery. One caller replaces the four
+* near-identical frame/svmat/`test' blocks in wooldid_worker (per-program size ceiling).
+* Inputs are the F2 event-study capture of the SAME margins run (b 1xk, V kxk full
+* covariance), the aligned relative-time column relyr (kx1), min_t, esrelativeto, and
+* the reference-regime/timetrends/altmethod flags. It does two things:
+*  (1) fits the DISPLAY LINE by the same unweighted OLS `reg b t' the old in-worker
+*      frames ran - identical rows (real horizon coefficients in horizon order, then
+*      the planted zero-valued reference row(s)) and the identical internal regressor
+*      t = relyr + min_t + 1 (the worker's LOAD-BEARING identity), so the published
+*      slope is bit-identical to the old one - and re-expresses the intercept at
+*      relative time 0 (NFADV-05: the old _cons was the fitted value at relyr =
+*      -min_t-1), publishing columns [slope, intercept_rt0];
+*  (2) computes a CALIBRATED p-value on the event-study covariance, esfixedbaseperiod
+*      only (the pooled reference has no single omitted period; the worker prints one
+*      Caution per run and the line is returned without inference). Primary = a
+*      minimum-distance test of the composite null that all horizon effects lie on
+*      SOME line (NFADV-01: the old code froze the fitted line as text constants in
+*      `test', a weighted chi-square whose null size depends on the margins VCV).
+*      Altmethod = the post coefficients tested against the pre-period-line forecasts
+*      using the FULL forecast covariance S = V_QQ + A V_PP A' - A V_PQ - V_QP A'
+*      (NFADV-02: the old code used V_QQ alone, anti-conservative). The statistics
+*      live in mata (wooldid_advx, end of file); F vs chi-squared reference follows
+*      the wooldid_ptp df_r convention.
+* Returns r(status): "ok" (line + p), "nop" (line only), "gapskip" (nothing - the B16
+* gap backstop: the altmethod fit sample has no real pre-period coefficient).
+* The rest of the return contract, which the call sites branch on: r(p) exists only on
+* "ok"; r(line) exists on "ok" and "nop" but not on "gapskip". "nop" means no p-value was
+* computable because esfixedbaseperiod was not in force (a pooled reference has no single
+* omitted period), and only the display line comes back. "gapskip" obliges the caller to
+* CANCEL adversarial - at the overall call site that clears the option for the whole run,
+* at the per-subgroup call sites it skips that subgroup only. The display line is fit over
+* ALL horizons by default and over the pre-period horizons only under
+* altmethod_adversarial (the empty-vs-nonempty `advcut' inside the program).
 cap prog drop wooldid_advstat
 prog def wooldid_advstat, rclass
 version 16.0
@@ -12085,7 +12275,14 @@ end
 
 * AMESE (standing-issues family A, R1/R4): screens for cluster-robust variance
 * pathologies around the continuous-treatment (ame) machinery. Lives outside
-* wooldid_worker for per-program size headroom. Two modes:
+* wooldid_worker for per-program size headroom. FOUR modes, in the order the program
+* implements them - detect and vzero are described below; the other two are:
+*   bycoh: the per-treated-cohort POINT-identification screen for
+*     contreatcontrols(byCohort) (2026-08-25 Group B ruling). Returns r(fail); the
+*     caller raises error 459. It runs REGARDLESS of the fastnose/impvalues/unconditionalse
+*     gate below, because point identification rather than variance is at stake.
+*   sescan: the belt-and-braces duplicate-standard-error signature. Returns r(ndup);
+*     caution only. This is the mode the worker's ame-family call asks for.
 *   detect: the STRUCTURAL predicate — with a cluster-type VCE and contreat() active,
 *     if ANY treated cohort-by-period cell of the realized estimation sample lies
 *     wholly inside a single cluster, the plug-in CRVE cannot see within-cell dose
@@ -12335,6 +12532,13 @@ version 16.0
         qui replace lattice = `lv' in `r'
       }
       qui replace b = `M'[`r', 1] in `r'
+      * the cfx matrices are transposed margins r(table) blocks, so the columns are
+      * b(1) se(2) t(3) pvalue(4) ll(5) ul(6) - column 3 is skipped here because the plot
+      * has no use for the t. This is a WHOLE-MATRIX shape test, not a per-row condition:
+      * the worker sets cfxmatendpoint to 1 under cfxplotnose or fastnose, and then the
+      * matrix is one column wide and se/p/ll/ul are missing for every row. The header's
+      * "rows without both bounds plot as points only" describes the per-row path and does
+      * not cover this one
       if `nc' >= 6 {
         qui replace se = `M'[`r', 2] in `r'
         qui replace p = `M'[`r', 4] in `r'
@@ -12342,6 +12546,8 @@ version 16.0
         qui replace ul = `M'[`r', 6] in `r'
       }
     }
+    * LOAD-BEARING, not tidying: twoway's connected/line/rarea join points in DATASET
+    * ORDER, not in x order (see the same sort before each event-study twoway)
     sort lattice
     qui count if ll < . & ul < . & b < .
     local band = r(N) > 0
@@ -12356,6 +12562,13 @@ version 16.0
       tempfile part
       qui save `part'
       frame `af' {
+      * the `cap' here has no stated cause and no realistic one: every part file is built
+      * by the same seven gen statements above (str32 matname plus six doubles), so the
+      * parts are structurally identical. If an append ever did fail, this whole plot's rows
+      * would be missing from <saveplots>_cfx.dta with no message and no rc - which is the
+      * silent no-op the shell's analytic twin of this write explicitly refuses (it uses
+      * `cap noi' and prints a caution). Flagged rather than changed: bringing it under the
+      * same rule is a behaviour change
         cap append using `part'
       }
     }
@@ -12380,7 +12593,7 @@ version 16.0
   * this directly from a non-default frame in the default frame
   * exact-match on the replay contract version, mirroring the wooldid_display gate
   if "`e(wdid_replayv)'" != "2" {
-    dis as error "Error: wooldid_esplots is internal to wooldid and needs a stored wooldid estimation (replay contract '1') in e(); run wooldid first."
+    dis as error "Error: wooldid_esplots is internal to wooldid and needs a stored wooldid estimation in e() (e(wdid_replayv)='`e(wdid_replayv)'', this version requires '2'); run wooldid first."
     error 301
   }
   cap confirm matrix e(wdidmainresults)
@@ -12420,6 +12633,11 @@ version 16.0
     qui svmat double `wdidpooled', names(col)
     * the interval columns are read by NAME below; a bootstrap or permutation run at a
     * level other than 95 renames them lb_<level>ci/ub_<level>ci, so map them back
+    * NOTE the `if _rc != 0' test below is separated from this `confirm' by two `local'
+    * statements and is still correct: only `capture' sets _rc, and a plain local assignment
+    * leaves it untouched. The surrounding convention is to stash _rc into a named local the
+    * moment it is produced (wooldid_esband does), and a reader applying the codebase's own
+    * "_rc is reset by the very next command" rule will read this as a live bug - it is not
     cap confirm variable lb_95ci
     local wdes_lbname
     local wdes_ubname
@@ -12440,6 +12658,14 @@ version 16.0
     forvalues i=1/`: word count `names'' {
       qui replace rownamesvar=`"`: word `i' of `names''"' in `i'
     }
+    * THE FIGURE LIST IS DECIDED HERE, and it must be decided BEFORE the reference row is
+    * planted below. rownamesvar holds the row equations of e(wdidmainresults), whose ES_
+    * families are exactly ES_att, ES_att_it, ES_ame, ES_ame_it; non-event-study rows carry
+    * a missing relyr and are what this drop removes. The planted reference observation is
+    * given rownamesvar == "reference" precisely so the restriction inside each twoway puts
+    * the shared zero on every family's figure - plant it above this glevelsof and
+    * "reference" becomes a graph type in its own right, and wooldid draws a fifth
+    * one-point figure and saves it under the user's saveplots stem
     qui drop if relyr == .
     qui glevelsof(rownamesvar), clean local(graphtypes)
     qui gen postperiod =  relyr >= 0
@@ -12458,6 +12684,21 @@ version 16.0
       qui replace ub_95ci = 0 if _n == _N
       qui replace estimate = 0 if _n == _N
       qui replace rownamesvar = "reference" if _n == _N
+      * TWO IDENTIFICATION RESTRICTIONS ARE BEING DRAWN AS DATA. Under the pooled
+      * reference there is no single omitted period at all - the comparison period is a
+      * cohort-specific pool of pre-periods, which is why pretrendpower() is refused there -
+      * so this branch parks one zero at an invented position (min - 1) and labels it with a
+      * bare asterisk rather than a number. The esfixedbaseperiod branch below plants ONE
+      * zero normally and TWO under timetrends (at esrelativeto and esrelativeto - 1),
+      * because a linear trend costs a second normalization: those horizons are zero by
+      * construction, not by estimation. Without this, a reader takes the zeros for
+      * estimates that happened to come out at zero with zero width.
+      * SYNTAX NOTE: `xlabel(' is opened on this line and not closed until the `local
+      * xlabelstarter `xlabelstarter' )' several statements below - the indented forval
+      * between them is a sequential append to the same macro, not a nested block. Stata
+      * locals store raw text, so the unbalanced "(" is legal. Reindent, reorder or return
+      * early out of that stretch and the twoway call ships with an unterminated xlabel(
+      * and an r(198) that points nowhere near the edit
       local xlabelstarter xlabel(`initialflagt' "*"
         forval xlabeltick = `min'(1)`max' {
           local xlabelstarter `xlabelstarter' `xlabeltick' "`xlabeltick'"
@@ -12620,6 +12861,11 @@ version 16.0
             local xlabelstarter `xlabelstarter' )
         }
 
+        * LOAD-BEARING, not tidying: twoway's connected/line/rarea join points in DATASET
+        * ORDER, not in x order. The reference observation was appended as the LAST
+        * observation but sits at the far LEFT of the axis, so without this sort the line
+        * runs left to right across the estimates and then doubles back to the reference
+        * point, and the rarea shading self-intersects - a wrong-looking, error-free figure
         sort relyr
         foreach graph in `graphtypes' {
           local graphtext = subinstr("`graph'","ES_","",.)
