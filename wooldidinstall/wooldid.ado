@@ -4714,6 +4714,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * default further down sees the implied value: permtci alone must not send the observed
   * run down the no-SE path it is about to be studentized against
   if "`permtci'" != "" & "`permtstat'" == "" local permtstat permtstat
+  * NOTE which safety() value each screen gets, because the two calls differ. permctl is
+  * handed si(`safety') - the EFFECTIVE value, already rewritten to off at the CS-98 site
+  * above when contreatwithin is combined with contreat() - while bootctl below is handed
+  * si(`safetyinput'), the user's own. They coincide on every run that reaches permctl's
+  * subgroup screens only because permctl refuses contreatwithin outright at its top. If
+  * that refusal is ever lifted (the contreat() refusal beside it was already adjudicated
+  * the other way), a contreatwithin run would arrive here with si(off) and the subgroup
+  * cell-containment and unit-splitting screens would silently downgrade from error 459 to
+  * a caution - the exact failure the safetyinput split exists to prevent. Pass
+  * si(`safetyuser') at that point, as bootctl already does
   if "`permute'" != "" {
     cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safety') psave(`permsave') level(`level') `replace'
     if _rc != 0 error _rc
@@ -5676,6 +5686,15 @@ version 16.0
   * force, the five-way code wooldid_permwire builds), so below 39 replications a 5% rejection
   * is unreachable by construction and every row prints the floor as if it were evidence
   if `permreps' > 0 & "`permexact'" == "" {
+    * the p-value convention code, byte-identical to the `wdpabs' expression in
+    * wooldid_permwire and duplicated here only to pick the floor this caution prints:
+    * 0 equal-tailed (default), 1 absolute add-one (permabsp), 2 raw c/n share without
+    * add-one (permrawp), 3 permside(left), 4 permside(right). KEEP THE TWO IN SYNC - if
+    * they drift, this caution announces a smallest attainable p-value the engine does not
+    * use, i.e. a wrong number told to the user about their own resolution limit. The
+    * cond() ladder's precedence is never exercised: the mutual-exclusivity screen above
+    * guarantees at most one of permside()/permrawp/permabsp is set, so the order is an
+    * artefact of the nesting and not a ruling
     local wdpcv = cond("`rawp'" != "", 2, cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != ""))))
     local wdp_floor = cond(`wdpcv' == 0, 2/(`permreps' + 1), cond(`wdpcv' == 2, 0, 1/(`permreps' + 1)))
     if `wdp_floor' > .05 dis as text "Caution: with permreps(`permreps') the smallest attainable per-coefficient permutation p-value is " %5.3f `wdp_floor' " (" cond(`wdpcv' == 0, "2", "1") "/(permreps + 1)), above .05, so no coefficient p-value can reject at the 5% level whatever the data say, and a p-value printed at that floor is the resolution limit rather than evidence. Use at least " cond("`absp'" != "", "20", "40") " replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). The joint, equality and step-down tests are one-sided add-one shares with floor 1/(permreps + 1)."
@@ -5877,17 +5896,18 @@ version 16.0
 end
 
 
-*** F6: the permutation engine. builds the cluster->onset map, generates assignments
-*** (mata: wooldid_permx), runs the rep loop as nested quiet wooldid calls on a
-*** permuted onset column, and hands the summary statistics back to the shell via
-*** c_local (the shell restores the observed results and posts them to e())
 cap prog drop wooldid_bootctl
 prog def wooldid_bootctl
 version 16.0
-*** F-boot (plan: review_process/bootstrap_plan.md): bootstrap-SE option screens.
-*** commit-B state: the full gate set is live, but a passing call still exits r(198)
-*** loudly at the tail - the engine lands in a later commit and the option must never
-*** silently no-op before then (the F6 commit-A precedent).
+*** F-boot (plan: review_process/bootstrap_plan.md): the bootstrap option SCREEN. It runs
+*** no loop, calls no Mata and returns nothing - the engine is wooldid_bootrun and the
+*** rewiring is wooldid_bootwire. The deep checks live here rather than in wooldid_validate
+*** for compiled-size headroom (wooldid_validate is within ~1 KB of the per-program
+*** ceiling). jt() and ptp() are retained-but-UNREAD option slots: they are parsed and
+*** passed by wooldid_validate and are kept so the byte-identical-syntax contract between
+*** the two programs - checked by test/check_validate_sync.py - and the call site need not
+*** change. Do not wire a gate onto them expecting one to already exist, and do not delete
+*** them while the call site still passes them.
   syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ttrevar(varname) ifr(string asis) jt(string) ptp(string asis) replace]
 
   * rseed() is validated before the stray screen: it is shared with permute() (since
@@ -5966,6 +5986,12 @@ version 16.0
     dis as error "Error: level() must be between 10 and 99.99."
     error 198
   }
+  * the "not given" sentinels differ by program and are worth stating once: dots() uses -1
+  * because dots(0) is a legal user value meaning "suppress" (wooldid_permrun then remaps
+  * -1 back to 1), while permctl's permreps() uses 0, which cannot be a legal count.
+  * CAUTION: unlike rseed(), this range check was not hoisted above the permute() exit
+  * further up, so under permute() a negative dots() passes unvalidated, fails every
+  * `if `dots' > 0' test in the engine and silently behaves as dots(0)
   if `dots' != -1 & `dots' < 0 {
     dis as error "Error: dots() must be a nonnegative integer (0 suppresses the progress display)."
     error 198
@@ -6192,18 +6218,18 @@ version 16.0
     }
   }
 
-  * C-stage refusals. jointtests: the bootstrap Wald joint tests land in a later
-  * commit; a silent analytic/bootstrap mixed surface is worse than a loud refusal
-  * (they will be exempt from the SI-A1 screen when they land - its own text
-  * recommends bootstrap). pretrendpower: permanent v1 refusal (plan A13) - the ptp
-  * subprogram computes and posts from the ANALYTIC e(V_es_*) inside the worker,
-  * before any rewiring. (A cleanmatrices refusal was shipped here and in permctl and
-  * has been REMOVED: the r(3499) it guarded against only reproduces when wooldid is
-  * loaded with `do <path>`, as this project's harness does; an adopath-resolved ado
-  * recovers because Stata re-reads it when a mata function is missing, so the refusal
-  * was blocking a combination that works for installed users - see SI-17/SI-18.)
-  * standard mode: engine lands in the next
-  * commit; loud refusal until then (F6 precedent).
+  * RECORD OF TWO LIFTED REFUSALS. Nothing in this block describes a live gate - both
+  * refusals it records were removed, and the entries are kept so that neither is
+  * reinstated by someone who rediscovers the original reasoning. (The staged refusals this
+  * block once also carried - of jointtests and of bootstrap(standard) itself, each "until
+  * the engine lands in a later commit" - are gone with their commits: the engine is
+  * wooldid_bootrun and the bootstrapped joint tests are wooldid_bootjnt, which the shell
+  * calls with jt(`jointtests').)
+  * cleanmatrices: a refusal was shipped here and in wooldid_permctl and has been REMOVED.
+  * The r(3499) it guarded only reproduces when wooldid is loaded with `do <path>`, as this
+  * project's own harness does; an adopath-resolved ado recovers, because Stata re-reads it
+  * when a Mata function is missing. The refusal was therefore blocking a combination that
+  * works for every installed user - see SI-17/SI-18.
   * pretrendpower: the plan-A13 refusal was LIFTED 2026-09-04 on the author's ruling. The
   * diagnostic now runs from the shell AFTER wooldid_bootwire, so Roth's own formula is
   * fed the bootstrap event-study covariance instead of the analytic one. The refusal had
@@ -6242,8 +6268,17 @@ version 16.0
     char _dta[wooldid_rngstate] "`rng'"
     label var _rep "bootstrap replication (0 = observed estimates)"
     save "`fn'.dta", replace
+    * `_N' here is the NEW frame's row count and the local survives the closing brace,
+    * because `frame X { }' switches the current DATASET, not the macro scope - the local
+    * belongs to this program either way. Tidying this line out of the frame block would
+    * silently count the USER's observations instead and report them as replication rows
     local wdbsn = _N
   }
+  * `_rc' must be captured on the line immediately after the cap block and the `cap frame
+  * drop' must stay BELOW it: _rc is reset by the very next command, so swapping the two
+  * turns a failed save into rc 0 - the error below is skipped and the program prints "the
+  * replication draws were written to ..." for a file that was never created. wooldid_permsave
+  * has the identical shape and the same constraint
   local wdbsrc = _rc
   cap frame drop `bsf'
   if `wdbsrc' != 0 {
@@ -6299,14 +6334,40 @@ version 16.0
         local ftag = cond("`fam'" == "percentile", "pctl", "`fam'")
         tempname gt`fam'
         matrix `gt`fam'' = e(gteffects)
+        * NOT dead code: `wdbcellmiss' is an OUT parameter, written back by
+        * wooldid_bootcellwire through st_local, so the 0 here is a reset rather than a
+        * value and deleting these lines deletes the user-facing caution at the foot of
+        * this program. The `fam' guard on the accumulation below is there because
+        * bootcellwire is called once per family over the same accumulator, so counting
+        * every family would multiply the reported cell count by the family count;
+        * percentile is always in famlist, which is why it is the one counted. And the
+        * number is narrow: it counts ONLY studentized cells whose observed analytic se is
+        * missing or non-positive. Cells blanked because their key is absent from the rep-0
+        * accumulator, because the observed estimate is missing, because fewer than two
+        * usable draws survived, or because the bootstrap SD came back non-positive are
+        * blanked silently and are not in it
         local wdbcellmiss 0
         if "`bts'" != "" mata: wooldid_bootcellwire("`gt`fam''", 1, "`cell'_gt", "`cell'_gtse", 5, 6, 7, 8, 9, "`fam'", `level', `zc', `wdbdf', ("`ties'" != ""))
         else            mata: wooldid_bootcellwire("`gt`fam''", 1, "`cell'_gt", "", 5, 6, 7, 8, 9, "`fam'", `level', `zc', `wdbdf', ("`ties'" != ""))
         if "`fam'" == "percentile" local wdbcellmissall = `wdbcellmissall' + `wdbcellmiss'
         matrix colnames `gt`fam'' = `: colnames e(gteffects)'
         if "`fam'" == "`bdisp'" matrix `gtsel' = `gt`fam''
+        * `ereturn matrix name = mat' MOVES its source: `gt`fam'' does not exist after
+        * this line. That is why the colnames and the selected-family copy above must run
+        * first. The cfx loop below has the same ordering requirement with a nastier
+        * failure mode - see the note at its own move
         ereturn hidden matrix boot_`ftag'_gteffects = `gt`fam''
       }
+      * `gtsel' is set iff `bdisp' is a member of `famlist', which is an invariant
+      * assembled three places away: the empty->percentile default and the bca->bc remap
+      * above, plus wooldid_bootctl's refusals of bootdisplay(wald), bootdisplay(bc) and
+      * bootdisplay(bca) under boottstat (F003 rulings 2026-09-04/06), which is what makes
+      * the `famlist percentile' cut safe. The `cap confirm' is a belt, NOT a fallback: if
+      * the invariant ever breaks - a new bootdisplay() token, a new famlist branch, one of
+      * those refusals relaxed - e(gteffects) and the cfx matrices keep their ANALYTIC
+      * se/p/ll/ul while the family label posted on the next line announces a bootstrap
+      * family, i.e. analytic inference under a bootstrap header with no message. The two
+      * lines are meant to stand or fall together
       cap confirm matrix `gtsel'
       if _rc == 0 ereturn matrix gteffects = `gtsel'
       ereturn local boot_gteffects_family `bdisp'
@@ -6319,6 +6380,13 @@ version 16.0
     if _rc != 0 continue
     cap confirm matrix `cell'_cfx`c'
     if _rc != 0 continue
+    * a cfx matrix has exactly two legal shapes: 6 columns (rows 1..6 of r(table)
+    * transposed) or 1 column (b alone), the latter under cfxplotnose, where there are no
+    * inference columns to fill - nothing in between is ever produced, which is what makes
+    * the hard-coded 1, 2, 4, 5, 6 below safe. wooldid_bootrun still built an accumulator
+    * for the skipped matrices (it counts every e(wdid_cfxmats) entry), so this leaves an
+    * unused accumulator rather than a mismatch - which is why the ncfx/names pairing check
+    * above is done on the full list and not on the surviving one
     if colsof(e(`nm')) < 6 continue
     tempname cfsel
     foreach fam of local famlist {
@@ -6330,12 +6398,23 @@ version 16.0
       else            mata: wooldid_bootcellwire("`cf`fam''", 0, "`cell'_cfx`c'", "", 1, 2, 4, 5, 6, "`fam'", `level', `zc', `wdbdf', ("`ties'" != ""))
       if "`fam'" == "percentile" local wdbcellmissall = `wdbcellmissall' + `wdbcellmiss'
       * the t column is b/se under the reported se, whichever family
+      * CAUTION: the bare `M =' at a `mata:' prompt creates a GLOBAL Mata object that
+      * outlives the statement - Mata has no statement-local scope here - so a user's own
+      * Mata matrix named M is silently overwritten, once per family per cfx matrix. Three
+      * sibling one-liners do the same (wooldid_permwire's gteffects blanking and both
+      * statements in wooldid_permcellsx). It costs wooldid's own results nothing and
+      * damages the user's interactive Mata state with no error raised
       mata: M = st_matrix("`cf`fam''"); M[., 3] = M[., 1] :/ M[., 2]; st_matrix("`cf`fam''", M)
       matrix colnames `cf`fam'' = `: colnames e(`nm')'
       matrix rownames `cf`fam'' = `: rowfullnames e(`nm')'
       if "`fam'" == "`bdisp'" matrix `cfsel' = `cf`fam''
       * e() names are capped at 32 characters; a cfx matrix name too long for the twin
       * prefix keeps only its selected family in the live matrix
+      * this move (`ereturn matrix' erases its source) is CONDITIONAL on the 32-character
+      * e()-name cap, so an ordering mistake above - reading `cf`fam'' after this line -
+      * would abort r(111) only when the cfx matrix name happens to be short, and pass when
+      * it is long. That is a failure whose presence depends on the length of the user's
+      * continuous-treatment variable name and which reads as a data-dependent bug
       if strlen("boot_`ftag'_`nm'") <= 32 ereturn hidden matrix boot_`ftag'_`nm' = `cf`fam''
     }
     cap confirm matrix `cfsel'
@@ -6359,6 +6438,13 @@ version 16.0
   * which the polarisation route needs as its observed comparator. Taken before anything
   * below touches e(pwsgs)
   tempname pw0
+  * NOTE the deliberately missing guard: with e(pwsgs) absent this `cap matrix' leaves a
+  * FABRICATED 1x1 missing matrix (the F2-class trap the walk below guards against with
+  * `cap confirm'), so the failure would surface far away as a conformability error on
+  * `pw0'[1..., 2]' and only after joint-test scalars had already been posted - a
+  * half-rewired e(). What keeps that safe is a cross-program chain: the read runs only
+  * under `wdb_sgok', which requires `pwseacc', which wooldid_bootrun builds only when the
+  * observed run posted a pairwise table. Relaxing the `wdb_sgok' test removes it
   cap matrix `pw0' = e(pwsgs)
   local seacc0 `seacc'
   local bdisp = cond("`bdisp'" == "", "percentile", "`bdisp'")
@@ -6378,6 +6464,18 @@ version 16.0
   local wdbncaut 0
 
   * -------- per-column (eq, name, relyr, scope) metadata via the positional walk
+  * ALIGNMENT CONTRACT: k is a COLUMN INDEX into `acc' and `obsb', not merely a counter.
+  * `obsb' is e(b); `acc' is J(reps, colsof(obsb)) carrying obsb's colnames, and every
+  * replication is grabbed BY NAME into those columns (wooldid_bootrun). So "row k of the
+  * stacked results tables = column k of e(b)" is load-bearing, and it holds for exactly
+  * one reason: e(b), e(wdidmainresults) and every e(wdidsgresults_*) are cut from the
+  * single rownamespool the worker builds - main rows first, then each subgroup block in
+  * e(wdid_sglist) order, which is the order walked here. The `continue' below (subgroup
+  * table absent) would shift every later k while `acc', built from e(b), would not skip:
+  * silently mispairing every subsequent estimand. It cannot fire today because the only
+  * configuration that drops a subgroup table is suppresssgprimaryeffects, which
+  * bootstrap() refuses. If they ever do diverge the fix is a name check of
+  * `: colfullnames `acc'' against the walked row names, not a re-derivation
   local kk 0
   local rnames : rowfullnames `wm'
   foreach rn of local rnames {
@@ -6387,6 +6485,11 @@ version 16.0
     local wdbeq`kk' `eqn'
     local wdbnm`kk' `nmn'
     local wdbsg`kk' .
+    * column 7 of the results tables is the RELATIVE YEAR. `wdbrl' is that value, and the
+    * `< 0' test in the joint blocks below is the only thing that makes the fixed-metric
+    * test a PRE-trend test. Change the table layout and this silently selects a different
+    * quantity while still producing a well-formed p-value. wooldid_permjnt reads the same
+    * magic 7, so the two engines have to move together
     local wdbrl`kk' = `wm'[`kk', 7]
   }
   foreach sg of local sgl {
@@ -6440,6 +6543,13 @@ version 16.0
         local sgw = cond("`sgtag'" == "", ".", "`sgtag'")
         local cols
         forval k = 1/`K' {
+          * the event-study row pool gives a SINGLE equation name, ES_att_it, to att_it,
+          * att_i and att_itime alike (the worker builds one shared horizon block for the
+          * three) - which is why the family list above has four entries while the
+          * allsgssame loop below has eight: LEVEL rows do keep the estimands distinct
+          * (main:att_i, main:att_itime). Adding ES_att_i / ES_att_itime to the family
+          * list finds no columns and falls into the silent `continue' below; the walk is
+          * not broken, the two row-naming regimes simply differ
           if "`wdbeq`k''" == "ES_`fam'" & "`wdbsg`k''" == "`sgw'" & `wdbrl`k'' < 0 local cols `cols' `k'
         }
         local q : word count `cols'
@@ -6521,7 +6631,12 @@ version 16.0
         local ++wdbncaut
         local wdbc`wdbncaut' the bootstrapped `ename' joint test is unavailable (no usable replication statistic - rank-deficient replication covariances, or a horizon missing from the replications)
       }
-      * per subgroup (ereturn LOCALS - the analytic macro convention)
+      * per subgroup. CS-60 (consistency sweep 2026-09-06, author ruling 2026-09-07): this
+      * block used to post an e() MACRO while the no-subgroups case posted a scalar, so a
+      * loop over subgroups got a number for one family and a string for the other. All
+      * three posting sites - the worker's analytic one, this one and wooldid_permjnt's -
+      * are scalars now. Do not put the macro back, and do not write display code that
+      * dereferences these as macros (the sweep found such a block too)
       foreach sg of local sgl {
         local fk `fam'_s`sg'
         local jp .
@@ -6709,7 +6824,24 @@ version 16.0
             tempname pairidx pwobs0
             * the OBSERVED pairwise se by row, read from the pre-rewrite pw copy taken at the
             * top of this program (column 2 is still the analytic margins se there)
+            * ORDERING CONSTRAINT: wooldid_bootpairidx does NOT see `pw0'. It reads the
+            * row stripe of the LIVE e(pwsgs) and returns e(pwsgs) ROW NUMBERS, which are
+            * then used as column positions in this transposed SNAPSHOT. The two align
+            * only because nothing between the capture at the top of this program and here
+            * reposts e(pwsgs) - the pairwise rewiring block that does repost it starts
+            * below. Move that block above these tests, or repost e(pwsgs) with a changed
+            * row order, and every off-diagonal entry of W_obs is built from the wrong
+            * pair's standard error: a wrong subgroup-equality p-value, no error, no
+            * caution. If this ever has to move, key pwobs0 by name rather than position
             matrix `pwobs0' = `pw0'[1..., 2]'
+            * TWO EQUATION VOCABULARIES meet in this block three lines apart. `eqwant'
+            * (set above) is "main"/"pretreatment", the equation stripe of the level
+            * tables. `eqwant0' is "att"/"pre_att", the equation stripe of e(pwsgs), which
+            * wooldid_bootpairidx matches with a plain string compare. Collapsing one into
+            * the other raises no error: the index comes back all-missing, wooldid_bootsgw
+            * returns on its first off-diagonal pair, and the test is blanked with the
+            * caution below blaming an unavailable pairwise margins SE - a wholly
+            * misleading diagnosis for what is a name mismatch
             local eqwant0 = cond("`pre'" == "", "`it'", "pre_`it'")
             mata: wooldid_bootpairidx("`eqwant0'", "`sgl'", "`pairidx'")
             mata: wooldid_bootsgw("`acc'", "`seacc0'", "`pwseacc'", "`obsb'", "`aseobs'", "`pwobs0'", "`cols'", "`pairidx'", "wdbjp", "wdbjn")
@@ -6770,6 +6902,15 @@ version 16.0
     }
     if `wdbpwts' {
       matrix `pwtp' = `pw'
+      * DELIBERATELY TRANSPOSED relative to every other table here (statistics in rows,
+      * contrasts in columns), because it is posted as e(boot_tstud_pwsgs) with one named
+      * column per contrast, matching e(boot_tstud) for coefficients. wooldid_bootpwt
+      * returns a 6x1 column laid out (n, t_obs, p_pctl, qlo_pctl, qhi_pctl, live), so the
+      * `matrix `pwts'[1, `rr'] = `pwt1'' below drops a whole COLUMN in at (1, rr) rather
+      * than setting one cell. Row 6 is a three-state flag - missing = never called
+      * (`pwj' == 0), 0 = called and declined, 1 = usable - which is why the guard below
+      * tests `== 1' and why the never-called case is safe. The rownames that decode all
+      * of this are only set at the end of the block
       matrix `pwts' = J(6, rowsof(`pw'), .)
       local pwtmiss 0
     }
@@ -6807,6 +6948,13 @@ version 16.0
           local zc = cond(`wdbdf' < ., invt(`wdbdf', 1 - (100 - `level')/200), invnormal(1 - (100 - `level')/200))
           * the sd family for this contrast (the historical behaviour)
           local wdbse .
+          * the only Mata call here with no output-name argument: wooldid_bootpw writes
+          * the caller's local `wdbse' through a name HARDCODED inside the Mata function
+          * (st_local("wdbse", ...)), so the local's name is part of that contract.
+          * Renaming it here - the ordinary, safe-looking refactor - lands the Mata write
+          * in a local nobody reads: `wdbse' stays missing, every row fails the test
+          * below, and columns 2-6 of all four contrast families are blanked with no error
+          * and no caution (pwunmapped and pwtmiss never increment)
           mata: wooldid_bootpw("`acc'", `ka', `kb')
           if `wdbse' < . & `wdbse' > 0 {
             matrix `pwsd'[`rr', 2] = `wdbse'
@@ -6894,6 +7042,14 @@ version 16.0
               matrix `pwtp'[`rr', 2] = `pw'[`rr', 2]
               matrix `pwtp'[`rr', 3] = `pwts'[2, `rr']
               matrix `pwtp'[`rr', 4] = `pwts'[3, `rr']
+              * the endpoints are CROSSED on purpose and both subtract: the equal-tailed
+              * percentile-t interval is [b - q_hi*se, b - q_lo*se] on the signed
+              * quantiles of t(r) = (b_r - b)/se_r, and that inversion is what makes it
+              * second-order accurate and deliberately asymmetric about b (the same
+              * construction wooldid_boottp uses for coefficients; boottstat in the help).
+              * "Fixing" the apparent row swap ships every studentized contrast interval
+              * mirrored about the point estimate - the right width, the wrong interval,
+              * and nothing in the suite would flag it
               matrix `pwtp'[`rr', 5] = `pw'[`rr', 1] - `pwts'[5, `rr']*`pw'[`rr', 2]
               matrix `pwtp'[`rr', 6] = `pw'[`rr', 1] - `pwts'[4, `rr']*`pw'[`rr', 2]
             }
@@ -7016,6 +7172,10 @@ version 16.0
   }
 end
 
+*** F6: the permutation engine. builds the cluster->onset map, generates assignments
+*** (mata: wooldid_permx), runs the rep loop as nested quiet wooldid calls on a
+*** permuted onset column, and hands the summary statistics back to the shell via
+*** c_local (the shell restores the observed results and posts them to e())
 cap prog drop wooldid_permrun
 prog def wooldid_permrun
 version 16.0
@@ -7129,6 +7289,23 @@ version 16.0
   * unless permtstat or permanalyticse, and the comparator then equals it bitwise; the
   * run is kept unconditional (one extra fit) because under permanalyticse it is still
   * load-bearing
+  * ---- THE NESTED-REPLICATION IDIOM (this shape recurs at both sites here and at six in
+  * wooldid_bootrun; it is explained once, here). Three parts, each load-bearing:
+  *  (1) `nobreak' is what makes WOOLDID_REPMODE un-leakable. It is a GLOBAL, and an
+  *      interrupt landing between the set and the clear would carry it into the user's
+  *      session, where wooldid_worker consumes it read-once and would silently skip the
+  *      diagnostic e() returns of the user's NEXT run.
+  *  (2) `_rc' is stashed into a local on the very next line because any program called in
+  *      between resets it. MEASURED: with `prog def pp' whose body is `cap error 0',
+  *      `cap error 459' followed by `pp' leaves the caller at _rc == 0. (Clearing a
+  *      global does not reset it - also measured - so the stash is merely defensive here,
+  *      and genuinely load-bearing in wooldid_bootrun, where a `dis' and a frame block
+  *      sit between the capture and the read.) `cap error `wdrepdone'' re-raises it so
+  *      `if _rc == 1' can pass a user break through while other failures become `badrep'.
+  *  (3) What a missed rc costs: nothing in wooldid clears e() on failure, so a failed
+  *      replication leaves the PREVIOUS replication's e(b) in place. Without `badrep' the
+  *      grab would succeed and write that draw into row r a second time - a duplicated
+  *      point in the reference distribution, with no error and no `x' printed
   nobreak {
     global WOOLDID_REPMODE 1
   cap qui wooldid `repcall' `ttrevar' `wtif' , `repopts'
@@ -7308,6 +7485,14 @@ version 16.0
   cap drop `repons'
   frame drop `mpfr'
 
+  * the 20 is the same floor wooldid_permctl enforces on permreps() itself ("the engine
+  * refuses inference on fewer than 20 completed replications"), so the two numbers must
+  * move together; the second floor is half the replications the user asked for.
+  * permexact is exempt BY RULING, not by omission: under an enumeration the observed
+  * assignment is still a member of its own reference set, so the shares stay exact over
+  * whatever completed and what incompleteness costs is RESOLUTION, recorded per element
+  * in e(perm_n) - see the BS-23 note below. A sampled run that lost half its draws has
+  * no such guarantee, which is why it is refused instead
   if `ndone' < max(20, `wdp_R'/2) & "`permexact'" == "" {
     dis as error "Error: only `ndone' of `wdp_R' permutation replications estimated successfully; too few for inference. Check whether reassigned onset configurations are frequently inestimable on these data."
     error 459
@@ -7377,6 +7562,8 @@ version 16.0
   * p-value convention code (F052/F064, 2026-09-06): 0 equal-tailed (default), 1 absolute
   * add-one (permabsp), 2 raw |s| share c/n without add-one (permrawp: the ritest / Stata
   * permute number), 3 left one-sided, 4 right one-sided (permside())
+  * this expression is duplicated byte-for-byte in wooldid_permctl, where it picks the
+  * floor the resolution caution prints; the two must be kept in sync
   local wdpabs = cond("`rawp'" != "", 2, cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != ""))))
   local wdpM = cond("`m'" == "" | "`m'" == ".", ".", "`m'")
   if `ts' == 0 {
@@ -7432,11 +7619,28 @@ version 16.0
   local wdpmiss 0
   local wdplow 0
   local wdpdeg
+  * NOTE `wdptsmiss' is currently incremented (once per coefficient blanked under
+  * permtstat for want of a usable observed analytic se) and never read: the caution at
+  * the foot of this program states both causes in one sentence without being able to say
+  * which applies. The two are different fixes for the user - too few completed
+  * replications says raise permreps(), no usable observed se says the element has no
+  * identified standard error to studentize by - so the counter is kept for a caution
+  * split, not deleted
   local wdptsmiss 0
   local wdpoff
   tempname wma
   matrix `wma' = `wm'
   local kk 0
+  * KERNEL ROW MAP, used by both rewiring passes below (defined by wooldid_permstat and
+  * extended by wooldid_permtail): 1 n, 2 s_obs, 3 p, 4 qlo, 5 qhi, 6 sd, 7 lb, 8 ub,
+  * 9 se_shift, 10 offcentre flag, 11 bandlo, 12 bandhi, 13 live, 14-18 the tail block.
+  * Row 13 gates the whole rewrite (the element has a usable distribution at all); 2, 3
+  * and 7/8 fill the table; 1, 6 and 10 drive the cautions. These subscripts are a
+  * POSITIONAL contract with `out = J(18, K, .)' in wooldid_permtail: insert a row there
+  * and every subscript here shifts, and because rows 1-13 all hold finite numbers the
+  * result is a silently mislabelled table (the p column filled from qlo, say), not an
+  * error. The rownames that would decode it are only attached far below, at
+  * e(perm_kernel)
   forval rr = 1/`nmain' {
     local ++kk
     matrix `wm'[`rr', 3] = .
@@ -7465,6 +7669,13 @@ version 16.0
   local wmc : subinstr local wmc "t" "t_perm", word
   local wmc : subinstr local wmc "z" "t_perm", word
   local wmc : subinstr local wmc "p" "p_perm", word
+  * these two renames are inert insurance and are kept as such: the worker names the
+  * interval columns lb_`wdlvltxt'ci from the run's own level, and wooldid_permctl hands
+  * this program that same level, so at level 95 the names are already lb_95ci (nothing
+  * to rename) and at any other level they already carry it (nothing matches). The
+  * renames on the lines ABOVE are not inert and must not be swept up with them: se ->
+  * se_analytic and t/z -> t_perm are the only signal to a downstream reader that column
+  * 2 is the analytic standard error and column 3 the permuted t-ratio
   if `level' != 95 {
     local wmc : subinstr local wmc "lb_95ci" "lb_`wdplvltxt'ci", word
     local wmc : subinstr local wmc "ub_95ci" "ub_`wdplvltxt'ci", word
@@ -7473,6 +7684,16 @@ version 16.0
   ereturn hidden matrix perm_analytic_mainresults = `wma'
   ereturn matrix wdidmainresults = `wm'
   foreach sg of local sgl {
+    * PASS 2 of the e(b) stripe walk. `kk' is deliberately NOT reset here: it indexes
+    * e(b)'s columns in the order they were stacked (the pooled block, then one block per
+    * value of e(wdid_sglist)), so it must run monotonically across the main-table loop
+    * and this one in BOTH passes. This pass skips a subgroup on the tempname matrix
+    * existing, which is a PROXY for pass 1's test on e(wdidsgresults_`sg') - the two
+    * agree by construction, not by contract, and the `kk' != `K'' guard that would catch
+    * a mis-walk runs after pass 1 only. If they ever desync, every element from the first
+    * skipped subgroup onwards takes another element's kernel column: the p-value, shift
+    * interval and t-ratio are attached to the wrong coefficient, with no error and no
+    * caution
     cap confirm matrix `wsg`sg''
     if _rc != 0 continue
     tempname wsa`sg'
@@ -7526,6 +7747,15 @@ version 16.0
       matrix `gtm' = e(gteffects)
       local gtcn : colnames `gtm'
       local gtrn : rowfullnames `gtm'
+      * columns 6-9 are se, p, lb, ub; column 5 is the estimate and is deliberately kept
+      * (point estimates do not change under permute()). The layout is defined in
+      * wooldid_bootcellsx ("gteffects: cols estimate(5) se(6) p(7) lb(8) ub(9)") and the
+      * two must move together: a layout change silently blanks the estimate column or,
+      * worse, leaves analytic se/p/ci standing under a permutation header - the exact
+      * outcome the block comment above says must never happen. `gtcn'/`gtrn' are captured
+      * and re-applied because st_matrix() writes a bare matrix with no stripes. NOTE this
+      * is the one statement in this program that uses Mata's global namespace: `M' is
+      * left behind in the session
       mata: M = st_matrix("`gtm'"); M[., 6..9] = J(rows(M), 4, .); st_matrix("`gtm'", M)
       matrix colnames `gtm' = `gtcn'
       matrix rownames `gtm' = `gtrn'
@@ -7588,6 +7818,11 @@ version 16.0
   matrix `ase2' = `aseobs'
   matrix colnames `ase2' = `obn'
   ereturn hidden matrix perm_ase_obs = `ase2'
+  * above 10,000 completed replications the draw matrices are not posted AT ALL (not
+  * truncated) - the same cap wooldid_bootwire applies to e(bootdist), and documented in
+  * the help. permsave() writes from the accumulators and is NOT subject to it, so a user
+  * who needs the draws from a 50,000-replication run has that route. The `cap's below
+  * mean a post that fails for any other reason also passes without a message
   if `done' <= 10000 {
     tempname pd pds
     if `ts' {
@@ -7695,6 +7930,19 @@ version 16.0
 *** Contrasts are permuted as coefficient differences in both modes. Names mirror the
 *** analytic surface so the display prints them unchanged; an analytic value that the
 *** observed run posted (permtstat or permanalyticse) is always overwritten or blanked
+*** obsb() is accepted for signature symmetry with wooldid_permwire and is deliberately
+*** NOT read: every statistic on this surface (W_obs in permqf, t_obs in permstep, W_obs
+*** in permadv, s_obs in permpw) comes from cmpb(), the rep-0 comparator run of the TRUE
+*** assignment taken down the same fastnose path as the replications (wooldid_permrun,
+*** see its header), so the exact test's "the observed value is a member of the reference
+*** set" property holds BITWISE rather than to within a numerical tolerance. Two
+*** deliberate consequences, invisible at the sites below: e(adversarial_line_*) is
+*** fitted on the comparator's coefficients, not on the ones the event-study table
+*** prints, so under permtstat/permanalyticse it differs from them in the last digits;
+*** and the pairwise block MIXES the two on purpose - p ranks the comparator difference
+*** while the shift interval is anchored on the displayed analytic difference read out of
+*** e(pwsgs), which is still analytic here because wooldid_permwire does not touch it
+*** (wooldid_bootjnt states the same for its own read of e(pwsgs))
   syntax , acc(string) obsb(string) cmpb(string) [level(real 0) m(string) orow(integer 0) ts(integer 0) jt(string) adv(string) advalt(string) advesrel(string) advtt(string) esf(string) absp(string) side(string) rawp(string) sd(string)]
   if `level' == 0 local level = c(level)
   * p-value convention code (F052/F064, 2026-09-06): 0 equal-tailed (default), 1 absolute
@@ -7711,6 +7959,15 @@ version 16.0
   local wdpprec 0
 
   * -------- per-column (eq, name, sg, relyr) metadata via the positional walk
+  * ALIGNMENT CONTRACT: slot k of this walk IS column k of `acc'. That holds because the
+  * accumulator is built with colnames = colfullnames of e(b) (wooldid_permrun) and e(b)
+  * stacks wdidpooled then the subgroup blocks in e(wdid_sglist) order - the order walked
+  * here. Every Mata call below (permqf, permstep, permadv, permadvline, permpw) indexes
+  * `acc' BY POSITION with these k's, so a walk that slips by one is a wrong number, not
+  * an error. This program carries no check of its own on purpose: wooldid_permwire runs
+  * the identical walk first from the same caller (the shell calls permwire, then permjnt)
+  * and hard-aborts with error 459 on any mismatch. Never call permjnt without permwire
+  * ahead of it, and never reorder those two calls in the shell
   local kk 0
   local rnames : rowfullnames `wm'
   foreach rn of local rnames {
@@ -7725,6 +7982,11 @@ version 16.0
   }
   foreach sg of local sgl {
     tempname wsg
+    * the `cap confirm' guards the trap wooldid_bootjnt documents at its own walk: a bare
+    * `matrix X = e(namethatdoesnotexist)' fabricates a 1x1 missing matrix instead of
+    * failing. The `continue' below is NOT a benign skip - the accumulator still carries
+    * that subgroup's columns, so every later k would be shifted onto the wrong ones - it
+    * is unreachable in practice only because of permwire's error 459 (see above)
     cap confirm matrix e(wdidsgresults_`sg')
     if _rc != 0 continue
     matrix `wsg' = e(wdidsgresults_`sg')
@@ -7786,6 +8048,14 @@ version 16.0
         }
         else {
           local ++ncaut
+          * no blanking step here, unlike the equality and adversarial blocks below. The
+          * worker computes the analytic joint pre-trend tests only when
+          * "`suppressjointtests'`bootstrap'`permute'" == "", so under permute() these
+          * names were never posted and "absent rather than analytic" is literally true.
+          * The allsgssame scalars and the adversarial p-values are NOT gated on permute()
+          * and therefore do survive, which is why those two blocks blank explicitly.
+          * Dropping the `permute' term from that worker guard would silently put analytic
+          * joint p-values back under a permutation header here
           local wdpc`ncaut' the permutation joint pre-trend test `en' is unavailable (fewer than 2 complete replications carry every pre-treatment horizon, or the permutation-covariance metric is degenerate); it is absent rather than analytic
         }
       }
@@ -7838,6 +8108,13 @@ version 16.0
           if `: word count `cols'' < 2 continue
           tempname SD
           mata: wooldid_permstep("`acc'", "`cmpb'", "`cols'", `wdpM', `orow', "`SD'")
+          * wooldid_permstep signals "no usable step-down" with st_matrix(out, J(0,0,.)).
+          * MEASURED (Stata 19): st_matrix() with a 0x0 argument DROPS the Stata matrix
+          * rather than creating an empty one, so `confirm' and `rowsof' both give r(111).
+          * The `cap confirm' is load-bearing, not defensive. Keep `tempname SD' INSIDE
+          * this loop: hoisting it (which the surrounding style invites) would let a
+          * failed family inherit the previous family's SD, pass both guards, and be
+          * posted under this family's e() name
           cap confirm matrix `SD'
           if _rc != 0 continue
           if rowsof(`SD') < 4 continue
@@ -7883,6 +8160,14 @@ version 16.0
             tempname Wo
             matrix `Wo' = J(1, 1, `jw')
             matrix colnames `Wo' = joint_`pre'`it'_allsgssame
+            * CAUTION: `wdpsw' carries two unrelated meanings in this program - the
+            * foreach loop macro over post/pre in the step-down block above, and from
+            * here the "accumulator already started" flag. The test is correct only
+            * because Stata clears a foreach macro when its loop exits (measured). The
+            * sibling flags wdpjw and wdpaw are initialised explicitly just above their
+            * blocks; this one is not, so rewriting that loop as a forvalues, or setting
+            * `wdpsw' anywhere above, sends the first post down the else branch into
+            * `matrix  = , <tmp>' - r(198) after a full permutation run has been paid for
             if "`wdpsw'" == "" {
               tempname swall swobs
               matrix `swall' = `Wr'
@@ -8014,7 +8299,16 @@ version 16.0
           local ok 1
         }
       }
+      * column 3 (t/z) is blanked unconditionally and renamed t_perm below: contrasts are
+      * permuted as COEFFICIENT DIFFERENCES in both modes (see the program header), so
+      * there is no permuted t to report even under permtstat - unlike the main table,
+      * whose column 3 does carry one (wooldid_permwire). The name is kept so the display
+      * prints the analytic header layout unchanged
       matrix `pw'[`rr', 3] = .
+      * `pk' is read by RAW ROW INDEX: 13 is the liveness flag, 3 is p, 7 and 8 are the
+      * interval endpoints. The layout is defined by wooldid_permtail (rows 1-13 in its
+      * header, rows 14-18 where they are appended); the J(18, ...) allocation above and
+      * the eighteen-name `matrix rownames `pk'' below must track that kernel
       if `ok' & `pk'[13, `rr'] == 1 {
         matrix `pw'[`rr', 4] = `pk'[3, `rr']
         matrix `pw'[`rr', 5] = `pk'[7, `rr']
@@ -8076,12 +8370,31 @@ version 16.0
   * permute number), 3 left one-sided, 4 right one-sided (permside())
   local wdpabs = cond("`rawp'" != "", 2, cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != ""))))
   local wdpM = cond("`m'" == "" | "`m'" == ".", ".", "`m'")
+  * this whitelist is the exact COMPLEMENT of the latticetype list the validator accepts:
+  * the four assignment-invariant types (all, byCohort, byTime, byCohortByTime) are the
+  * ones left out. The test is "do this type's bins depend on which units are treated, or
+  * on ttre" - a new latticetype that bins the dose on treated units' rows must be added
+  * here, or its cells get a permutation p and interval computed across replications whose
+  * bins are different objects: a wrong statistic, silently, with no caution. The
+  * cfxlat clause is not an exception to that test but an instance of it: a user-supplied
+  * cfxlattice() variable replaces latticevar as the plot's over() variable, and a data
+  * variable cannot move under reassignment
+  * CAUTION: both `mata: M = ...' one-liners in the loop below leave a GLOBAL Mata object
+  * named M behind, silently overwriting any Mata matrix the user holds under that name
+  * (see the same note in wooldid_bootcellsx)
   local drift = (inlist("`lattype'", "baseTreated", "baseTreatedPost", "baseTreatedPre", "baseTreatedRef") | inlist("`lattype'", "byTreated", "byTreatedByTime", "byTtre", "byTtreByTime")) & "`cfxlat'" == ""
   local ndone 0
   forval c = 1/`ncfx' {
     local nm : word `c' of `names'
     cap confirm matrix e(`nm')
     if _rc != 0 continue
+    * six columns is the transposed r(table) layout (1 b, 2 se, 3 t, 4 pvalue, 5 ll,
+    * 6 ul) that the 1, 2, 4, 5, 6 arguments to wooldid_permcellwire below index. Fewer
+    * than six means cfxmatendpoint was 1, which under permute() means cfxplotnose -
+    * fastnose is carved out of that truncation precisely so this rewiring has columns to
+    * fill. CAUTION: this skip is silent. permute() + cfxplotnose leaves ndone at 0, so
+    * the caution at the foot of this program never prints and e(perm_cfx_blank) is never
+    * posted, and the cfx cells stay analytic under a permutation header with nothing said
     if colsof(e(`nm')) < 6 continue
     cap confirm matrix `cell'_cfx`c'
     if _rc != 0 continue
@@ -8089,12 +8402,26 @@ version 16.0
     matrix `cf' = e(`nm')
     matrix `cfa' = `cf'
     if `drift' {
+      * what is actually blanked: columns 4-6 (p, ll, ul) always, and column 3 (t) only
+      * when the statistic is not the t-ratio. Column 2 keeps the ANALYTIC standard error,
+      * as every permutation surface does, and under permtstat column 3 keeps the analytic
+      * b/se. The caution printed at the foot of this program says "inference columns are
+      * blank (points only)", which means "no permutation inference here", not "no numbers
+      * here" - read it with this line in view
       mata: M = st_matrix("`cf'"); M[., 4..6] = J(rows(M), 3, .); if (!`ts') M[., 3] = J(rows(M), 1, .); st_matrix("`cf'", M)
     }
     else {
       mata: wooldid_permcellwire("`cf'", "`cell'_cfx`c'", "`cell0'_cfx`c'", "`=cond(`ts', "`cell'_cfx`c'se", "")'", "`=cond(`ts', "`cell0'_cfx`c'se", "")'", 1, 2, 4, 5, 6, `level', `wdpM', `orow', `wdpabs')
       mata: M = st_matrix("`cf'"); M[., 3] = (`ts' ? M[., 1] :/ M[., 2] : J(rows(M), 1, .)); st_matrix("`cf'", M)
     }
+    * the worker's original column names are restored, so e(cfx*) column 2 ships under the
+    * plain name "se" while holding the ANALYTIC standard error beside a permutation p and
+    * a permutation shift interval (wooldid_permcellwire leaves that column as posted).
+    * This is the one permutation surface that does not rename it to se_analytic - the
+    * pairwise block above and wooldid_permwire both do - because these column names are
+    * consumed by wooldid_cfxplots and by marginsplot-shaped downstream code that expects
+    * the r(table) names b/se/t/pvalue/ll/ul. The provenance is disclosed in the footer
+    * instead of in the name
     matrix colnames `cf' = `: colnames e(`nm')'
     matrix rownames `cf' = `: rowfullnames e(`nm')'
     ereturn matrix `nm' = `cf'
@@ -8273,6 +8600,14 @@ version 16.0
   * consumes a replication's own standard error; `clus' empty is the unclustered state, the
   * clustered defect being a different one that no weight type repairs; and mode standard
   * excludes bayes, whose Dirichlet mass is continuous and cannot be an fweight
+  * the fifth condition, `pois' == "", is a belt rather than a gate: wooldid_bootctl
+  * already refuses boottstat with poisson at parse, and `seaccname' non-empty IS
+  * boottstat, so it can never bind. And note why an fweight is legal at all here - the
+  * shell refuses fweights from users and accepts one only while ${WOOLDID_REPMODE} is
+  * set, then demotes it back to an aweight immediately, so the fweight reaches the
+  * REGRESSION and nothing else (margins, gstats and gquantiles keep aweight semantics).
+  * The companion case, an unclustered boottstat run WITH a user weight, is handled by the
+  * physical-expansion leg below; together the two cover the partition
   if "`wtype'" == "" & "`pois'" == "" & "`seaccname'" != "" & "`clus'" == "" & "`mode'" == "standard" local wtype2 fweight
   local repcall `y' `i' `t' `ttrevar'
   tempvar repw lnk drawv
@@ -8283,6 +8618,12 @@ version 16.0
   local wtif0
   if "`wtype'" != "" local wtif0 [`wtype'=`wexp']
   if `"`ifr'"' != "" local wtif0 `wtif0' if (`ifr')
+  * the nested-replication idiom (nobreak / stash _rc / re-raise) recurs six times in this
+  * program and is explained in full at its first occurrence, in wooldid_permrun. The two
+  * parts that matter most here: the nobreak is what guarantees WOOLDID_REPMODE is cleared
+  * even on a user Break, and the `if _rc == 1' re-raise is what stops a Ctrl-Break being
+  * tallied as just another failed replication and the loop running on to completion,
+  * producing inference the user believed they had cancelled
   nobreak {
     global WOOLDID_REPMODE 1
   cap qui wooldid `repcall' `wtif0' , `repopts'
@@ -8323,9 +8664,18 @@ version 16.0
   * contrast se exists. Absent when the observed run posted no pairwise table
   * under boottstat, the recentred ES joint statistic W_r per family key, computed INSIDE
   * each replication (wooldid_bootjwr) from that replication's own e(V_es_*), against the
-  * observed pre-horizon coefficients stacked here while the observed e() is still live.
+  * observed pre-horizon coefficients stacked here from the LIVE e() - which at this point
+  * belongs to the rep-0 COMPARATOR, not to the observed run (see the F018 note below).
   * Keys mirror wooldid_bootwire's family walk: att att_it ame ame_it and their _s<sg>
   * twins. A key with no observed e(b_es_*) simply contributes no column
+  * WHOSE e() IS LIVE HERE: from the rep-0 comparator fit above down to the frlink that
+  * opens the replication loop, the live e() is the COMPARATOR's, not the observed run's.
+  * Every key, name list and observed statistic harvested in this accumulator block is
+  * therefore the comparator's. That is safe because the comparator is the observed data
+  * at the observed weights and its column set is checked against the observed run's
+  * above - F018 measured the two key sets to coincide on every configuration tested - but
+  * anyone adding an accumulator here must not assume that e() entries which only the
+  * observed run posts are available
   if "`jwaccname'" != "" {
     local wdb_jkeys att att_it ame ame_it
     foreach sg in `e(wdid_sglist)' {
@@ -8487,6 +8837,11 @@ version 16.0
       }
       else local ++nfail
       cap frame drop `wdbrf'
+      * this leg prints one dot per replication and never the 50-mark running count:
+      * dots(n) is NOT honoured here, unlike the count path, the re-identification leg and
+      * the jackknife loop. Whether that is deliberate - this leg is much the slowest per
+      * replication, so per-rep feedback has a case - is not recorded. Either way a test
+      * that counts marks on this leg must expect `reps' of them, not reps/dots
       if `dots' > 0 {
         if `badrep' dis as error "x" _continue
         else dis as text "." _continue
@@ -8541,6 +8896,14 @@ version 16.0
         * remove. Without boottstat the replication runs under fastnose and has no VCE,
         * so the substitution is inert there and is skipped to keep those runs bitwise
         local wdb_ropts `repopts'
+        * the mechanism is a literal STRING substitution into an option string built far
+        * upstream, so it can silently do nothing. It hits only because that string is
+        * rebuilt canonically as `cluster(`cluster')' - no spaces, no abbreviation, never
+        * the user's own typing. Change that emission (a space, an abbreviation, a
+        * vce(cluster ...) form, a reordered cluster list) and subinstr no-ops, the
+        * replication clusters on the ORIGINAL ids again, and the per-replication standard
+        * error silently returns to the E[m^2]/E[m] = 2 - 1/G (about sqrt(2)) inflation
+        * this entire leg exists to remove. Nothing checks it and there is no r()
         if "`seaccname'" != "" & "`clus'" != "" local wdb_ropts : subinstr local wdb_ropts "cluster(`clus')" "cluster(__wdbns)"
         nobreak {
           global WOOLDID_REPMODE 1
@@ -8684,6 +9047,15 @@ version 16.0
 *** pwsgs/prepwsgs inference columns and the allsgssame scalars are BLANKED in this
 *** build (their bootstrap Wald versions land with the joint-test commit).
   syntax , [mode(string) reps(integer 0) acc(string) obsb(string) done(string) fail(string) blank(string) level(real 0) bootalpha(string) clus(varlist) comp(string) TIES rseed(string) bootdf(string) bdisp(string) nclus(integer 0) seacc(string) aseout(string) jkacc(string) sb(string)]
+  * OUTPUT CHANNEL to sibling programs, not a local: the caller declares the tempname and
+  * passes it in as aseout(); this program fills it near the end with the OBSERVED analytic
+  * standard errors, and it survives this program's exit because a tempname matrix is
+  * dropped when the program that DECLARED it ends, not when the program that filled it
+  * ends. wooldid_bootjnt and the simultaneous band read it from there. Outside boottstat
+  * nothing is ever written into the name, so both consumers must treat a nonexistent
+  * matrix as "no studentized inputs" and fall back - the same silent contract governs the
+  * else-branches that blank jwacc/jobs and awacc/aobs locally while the caller still
+  * passes those tempnames on
   local wdbaseobs_out `aseout'
   if "`wdbaseobs_out'" == "" tempname wdbaseobs_out
   if `level' == 0 local level = c(level)
@@ -8716,6 +9088,17 @@ version 16.0
   tempname aseobs
   matrix `aseobs' = J(1, `K', .)
   local sgl `e(wdid_sglist)'
+  * THE e(b) COLUMN CURSOR. e(b) is built by stacking wdidpooled then the subgroup blocks
+  * in e(wdid_sglist) order, so column k of e(b) is row k of the concatenated results
+  * matrices. `kk' walks that concatenation and is deliberately NOT reset at the subgroup
+  * boundary. Four separate main-table walks in this program each restart it and run to
+  * `nmain', and the subgroup loop then continues from whichever ran last - only THIS
+  * first walk is validated (the `kk' != `K'' check below). The later walks, and the
+  * `kk0`sg''/`kkP'/`kkS' re-walks inside the subgroup loop, are unguarded: a new walk
+  * that resets `kk' and does not end at exactly `nmain', or a stray `local kk 0' between
+  * the last main-table walk and the subgroup loop, shifts every subgroup standard error
+  * one column with no error and no caution - the coefficients stay right and the
+  * inference belongs to the neighbouring estimate
   local kk 0
   forval rr = 1/`nmain' {
     local ++kk
@@ -8749,6 +9132,19 @@ version 16.0
   tempname bse bmean bV bcnt
   local wdb_nlist 0
   local wdb_lowav
+  * CONSEQUENCE of the two different denominators, which a user will hit: se[k] is computed
+  * over the reps available for column k, while V uses only the rows complete over ALL
+  * non-excluded columns. So on any run with missing replication cells
+  * sqrt(diag(e(V_boot))) does NOT equal the printed se column, and a hand-run test or
+  * lincom on e(V) will not reproduce the table's Wald numbers exactly. e(boot_N_V) is the
+  * listwise count behind V; e(boot_navail) the per-column counts behind the se.
+  * SIDE CHANNEL: this helper also returns through st_local, setting `wdb_nlw' (the
+  * listwise row count posted as e(boot_N_V)), `wdb_exclnames' and `wdb_lowav'. Several
+  * other Mata helpers in this program do the same (wdb_vesok, wdb_gblank, wdb_cellkeydup,
+  * wdb_jobsn), which is why locals appear below with no assignment anywhere in the ado. A
+  * helper that returns early without setting its local leaves the ado reading an empty
+  * macro: `ereturn scalar boot_N_V = ' is r(198), and `if "`wdb_vesok'" == "1"' silently
+  * takes the failure branch
   mata: wooldid_bootfin("`acc'", "`excl'", "`bse'", "`bmean'", "`bV'", "`bcnt'")
 
   * -------- the critical value for the reported level. HOISTED to here (it used to be
@@ -8959,6 +9355,13 @@ version 16.0
     local kk 0
     forval rr = 1/`nmain' {
       local ++kk
+      * `bts' ROW MAP (rownames are only attached far below): 1 n, 2 t_obs, 3 p_pctl,
+      * 4 qlo_pctl, 5 qhi_pctl, 6 live. Row 6 is the liveness flag and `aseobs' must be
+      * non-missing independently, which is why both are tested here. The interval lines
+      * below look transposed - the LOWER bound uses row 5 (qhi) and the UPPER row 4
+      * (qlo) - and are not: that is the percentile-t reflection, [b - q_hi*se_obs,
+      * b - q_lo*se_obs], which is equal-tailed rather than symmetric about b (author
+      * rulings 2026-09-03/04, recorded in wooldid_boottp)
       local tlive = (`excl'[1, `kk'] == 0 & `bts'[6, `kk'] == 1 & `aseobs'[1, `kk'] < .)
       if `tlive' {
         matrix `wmtp'[`rr', 2] = `aseobs'[1, `kk']
@@ -9136,9 +9539,23 @@ version 16.0
   local obn : colfullnames `obsb'
   matrix rownames `vnew' = `obn'
   matrix colnames `vnew' = `obn'
+  * repost, not post, ON PURPOSE: `ereturn repost V=' does NOT re-run `ereturn post''s
+  * positive-definiteness screen - MEASURED, a 2x2 with V[1,1] = -1e100 reposts rc 0 and
+  * comes back verbatim - and the -1e100 sentinel rows wooldid_bootfin manufactures for
+  * excluded or under-available columns would otherwise trip it. That is the PS-62 ruling:
+  * an unidentified variance prints as missing rather than as a fabricated 0. The cost is
+  * that e(V) can leave this program INDEFINITE, so any downstream consumer that inverts
+  * it or takes the square root of its diagonal (test, lincom, honestdid, the
+  * pretrendpower path) must screen for a non-positive-finite diagonal first
   cap ereturn repost V = `vnew'
   local wdb_vposted = _rc == 0
   if !`wdb_vposted' dis as text "Caution: the bootstrap covariance could not be posted to e(V) (rc `=_rc'); it remains available as e(V_boot). Reported tables carry the bootstrap standard errors either way."
+  * NOT redundant: `ereturn repost V = `vnew'' MOVES its source exactly as `ereturn matrix
+  * name = mat' does - measured, `confirm matrix' on the source gives rc 0 before and
+  * r(111) after - so `vnew' no longer exists here and has to be rebuilt from `bV' (the
+  * retained master copy, kept for precisely this reason) with its stripes re-applied
+  * before e(V_boot) can be posted. Delete these three lines and every bootstrap run dies
+  * r(111) on the ereturn below
   cap matrix `vnew' = `bV'
   matrix rownames `vnew' = `obn'
   matrix colnames `vnew' = `obn'
@@ -9315,6 +9732,13 @@ version 16.0
     matrix `bcm' = `comp'
     cap ereturn hidden matrix boot_comparator = `bcm'
   }
+  * above 10,000 COMPLETED replications e(bootdist) is not posted at all (not truncated),
+  * so reps(10005) with six failures still posts while reps(20000) leaves it absent. The
+  * constant is a policy cap on the size of e(), not a Stata ceiling - J(12000, 3, .) is
+  * legal under Stata 19 MP - so if it is ever revisited, revisit it on a measurement of
+  * e() size rather than on an assumed matrix limit. bootsave() writes from the
+  * accumulators and is NOT subject to the cap, which is the route for a user who needs
+  * the draws from a very large run
   if `done' <= 10000 {
     tempname bdist
     if `wdbts' {
