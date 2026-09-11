@@ -12861,6 +12861,14 @@ void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
     else nps = strofreal(exp(lnM - floor(lnM/ln(10))*ln(10)), "%9.4f") + "e+" + strofreal(floor(lnM/ln(10)), "%3.0f")
     st_local("wdp_npd", strofreal(M, "%20.0f"))
     st_local("wdp_nps", strtrim(nps))
+    // TWO OF THESE FIVE NUMBERS ARE ARITHMETIC, THREE ARE POLICY. Arithmetic: 700 is the
+    // double-overflow guard (ln of the largest double is about 709.78), which is what makes
+    // the count deliberately MISSING rather than +inf; 34 is the exact-integer boundary
+    // (exp(34) is about 5.8e14, under 2^53), so below it round() and the %20.0f print are
+    // lossless and above it the code must switch to the mantissa/exponent string. Policy,
+    // and tunable: capexact is the permexact ceiling - it bounds the C x M enumeration
+    // matrix and the length of the rep loop, not just the user's patience - capwarn the
+    // slow-run warning, and the 0.1*M below the sampling-overlap caution
     capexact = 10000
     capwarn = 1000
     if (exact) {
@@ -12876,6 +12884,19 @@ void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
         if (M < . & reps > 0.1*M) st_local("wdp_caut2", "permreps(" + strofreal(reps) + ") exceeds 10% of the " + strtrim(nps) + " possible assignments; consider permexact.")
     }
     st_local("wdp_R", strofreal(R))
+    // NOTE the possible-assignment count and the enumeration are produced by two
+    // INDEPENDENT algorithms: R comes from the log-factorial formula above, the columns of
+    // A from the recursive enumerator below (this J() allocation is thrown away in the
+    // exact branch). Only their AGREEMENT makes the rep loop correct, and nothing
+    // reconciles them. The loop is driven by wdp_R and reads the matrix with el(), which
+    // returns MISSING out of range rather than erroring (measured, Stata 19), and a missing
+    // onset is wooldid's never-treated code - so R > cols(A) yields replications in which
+    // every cluster is silently a control, and R < cols(A) yields a non-exhaustive
+    // enumeration whose completeness flag still claims exact shares. The two routines agree
+    // because both bucket every missing onset as ONE never-treated level (the
+    // `:| (v :>= . :& levels[k] :>= .)' clause in the counter, the same test in
+    // wooldid_permx_msp): exact for `.', wrong for extended missings (.a, .b), which
+    // uniqrows() keeps as distinct levels
     A = J(C, R, .)
     if (exact) {
         // enumerate per-stratum multiset permutations, then take the cartesian product
@@ -12991,6 +13012,13 @@ void wooldid_permxp(real colvector ons, real matrix P, real rowvector lvl,
     A = J(C, reps, .)
     for (r = 1; r <= reps; r++) {
         for (c = 1; c <= C; c++) {
+            // this loop can leave A[c, r] MISSING if u exceeds the last cumulative bin,
+            // and a missing onset means never-treated downstream - so the cluster silently
+            // becomes a control in that replication, rc 0, no message. It cannot happen
+            // because wooldid_permp (NFPERM-06) rescales every row so its cumulative sum
+            // ends at 1 to within about K*eps, which the 1e-12 cushion below covers; a P
+            // matrix arriving by any other route must be normalized first. `k = K + 1' is
+            // the deliberate loop break, written as a counter assignment
             cum = runningsum(P[c, .])'
             u = runiform(1, 1)
             for (k = 1; k <= K; k++) {
@@ -13169,6 +13197,19 @@ void wooldid_permp(string scalar spec, string scalar onsname, string scalar lvls
     }
     if (pname != "") {
         // rows in ascending cluster order = the engine's map-frame order
+        // THAT EQUALITY IS NOT SELF-EVIDENT and is enforced 7,000 lines away:
+        // wooldid_permrun sorts the map frame by (permstrata, clus), and wooldid_permctl
+        // REFUSES permstrata() with permute(probabilities) - so under probabilities the
+        // stratum key is constant and the frame order collapses to ascending cluster.
+        // wooldid_permxp then pairs P's row c with ons's row c positionally, with no key.
+        // If stratified probability designs are ever allowed (the caution text beside that
+        // refusal actively recommends permstrata() for the shuffle case), every cluster
+        // silently receives another cluster's probability row wherever cluster order
+        // crosses stratum order - a wrong randomization design with rc 0. Key P to the
+        // frame by cluster value at that point, the way NFPERM-02's __wdprow keys the
+        // assignment matrix; that hazard was caught there by measurement (crossing-strata
+        // exact designs reported p = 0 with the observed assignment absent from its own
+        // enumeration) and the probability matrix has the same exposure
         ord = order(cval, 1)
         st_matrix(pname, P[ord, .])
         st_matrix(lname, lvl)
@@ -13184,23 +13225,33 @@ end
 *** reference rows carry b = 0 with zero variance. Sets st_local advpstat = "ok" and
 *** the scalar `pn' on success, advpstat = "degen" otherwise (never errors).
 ***
-*** alt == 0, primary (NFADV-01): minimum-distance test of the composite null that
-*** all horizon effects lie on SOME line, E[b] = X gamma with X = [1, relyr] and
-*** gamma unknown. gamma is estimated by GLS under a generalized inverse of V; the
-*** minimized distance W = min_g (b - Xg)' V^+ (b - Xg) is computed in the whitened
-*** eigenspace of V (z = L^-1/2 U' b, M = L^-1/2 U' X, W = ||z - M ghat||^2), which
-*** is exactly chi-squared with q = rank(V) - rank(M) degrees of freedom under the
-*** null. NOTE ON THE REFERENCE PERIOD (comment corrected 2026-09-08; the previous text
-*** claimed the planted zero-variance reference rows receive zero weight under V^+ and are
-*** mathematically inert, so that omitting them is identical to including them - both
-*** halves of that were wrong). The reference row is not in b/V at all: relyrcolumn is
-*** built only from relative periods carrying an estimable coefficient, so under
-*** esfixedbaseperiod the omitted base level never enters. wooldid_advstat plants the
-*** reference rows into the DISPLAY frame only, and passes the unplanted b/V here. Nor
-*** would including them be inert: with X = [1, relyr] the fitted line has a free
-*** intercept, so a reference-period level shift is absorbed rather than detected, which
-*** is precisely the power gap the 2026-09-08 study measured (research record
-*** review_process/research_2026-09-08/adversarial_null.md).
+*** alt == 0, primary (NFADV-01), REWRITTEN under BS-12 (author ruling 2026-09-08; research
+*** record review_process/research_2026-09-08/adversarial_null.md). Minimum-distance test of
+*** the ONE-parameter null that the horizon effects lie on a line THROUGH THE REFERENCE
+*** PERIOD. Under esfixedbaseperiod b_h = theta_h - theta_r, so a linear underlying path
+*** implies b_h = c*(h - esrel): the design is X = relyr :- esrel, one free parameter, and
+*** NOT the free-intercept pair X = [1, relyr] this test used to fit. c is estimated by GLS
+*** under a generalized inverse of V; the minimized distance W = min_c (b - Xc)' V^+ (b - Xc)
+*** is computed in the whitened eigenspace of V (z = L^-1/2 U' b, M = L^-1/2 U' X,
+*** W = ||z - M chat||^2), chi-squared with q = rank(V) - 1 under the null.
+*** Under timetrends TWO periods are normalised (esrel and esrel - 1, both planted at 0), so
+*** the only line through both is the zero line: the null collapses to b = 0, W = z'z and
+*** q = k1. That branch is written out rather than handed a 0-column design because svdsv()
+*** on a k1 x 0 matrix is not a shape to put inside a replication loop.
+*** WHY THE FREE INTERCEPT WENT, since the old form is the one a reader will expect: the
+*** constant vector lies in col([1, relyr]), so the old statistic was exactly invariant to
+*** b :+ c and its power against a reference-period level shift - the signature of an
+*** anomalous or anticipatory reference year - was exactly alpha at any magnitude.
+*** col(relyr - esrel) is nested in col([1, relyr]), so the new statistic's noncentrality is
+*** at least as large against EVERY alternative; the price is one degree of freedom, q rising
+*** from rank(V) - 2 to rank(V) - 1.
+*** NOTE ON THE REFERENCE PERIOD (comment corrected 2026-09-08; the previous text claimed
+*** the planted zero-variance reference rows receive zero weight under V^+ and are
+*** mathematically inert, so that omitting them is identical to including them - both halves
+*** of that were wrong). The reference row is not in b/V at all: relyrcolumn is built only
+*** from relative periods carrying an estimable coefficient, so under esfixedbaseperiod the
+*** omitted base level never enters. wooldid_advstat plants the reference rows into the
+*** DISPLAY frame only, and passes the unplanted b/V here.
 ***
 *** alt == 1, altmethod (NFADV-02): the forecast test. P = the altmethod fit set
 *** (real relyr <= -1 plus the planted reference row(s)), Q = the real post horizons.
@@ -13234,6 +13285,16 @@ mata:
 // evaluate the SAME construction on a replication's recentred coefficients and its own
 // covariance. Returns W, or missing when the covariance is degenerate / untestable; sets
 // the second output to the residual degrees of freedom q
+// "PURE" ABOVE IS NOT LITERAL: Mata passes by ADDRESS, so the `V = (V + V')/2'
+// symmetrization below MUTATES THE CALLER'S MATRIX (verified, Stata 19 MP: a caller's
+// X = (1,2\3,4) comes back as (1,2\2.5,4)). That is safe only because (V+V')/2 is bitwise
+// idempotent on an already-symmetric V - transpose is exact, x+x is exact, /2 is exact - and
+// wooldid_permadv leans on it: it builds ONE covariance, computes W_obs before the first
+// call and every W_r after, and its membership shortcut `memb = (Wr[orow] < .)' is sound
+// only because W_r at the observed row equals W_obs bitwise, which needs one identical
+// metric across all those calls. Never add a non-idempotent in-place touch of V here; copy
+// first. The same by-address rule is what makes qout an output argument - callers must pass
+// an initialised variable, not an expression.
 real scalar wooldid_advW(real colvector b, real matrix V, real colvector rel,
                          real scalar esrel, real scalar tt, real scalar alt, real scalar qout)
 {
@@ -13532,6 +13593,17 @@ void wooldid_bootgrab(string scalar accname, real scalar r, string scalar obsbna
   // missing, and the studentization drops those replications for that column
   dose = (args() >= 4 && seaccname != "")
   if (dose) {
+    // ORDERING CONSTRAINT: this read must stay AHEAD of the conformability test below that
+    // clears `dose'. The writeback near the end of this function is guarded on
+    // `seaccname != ""', NOT on `dose', so it pushes S back unconditionally - and it is
+    // only safe because S was already populated by the time dose flipped. Restructure this
+    // the natural way (test conformability first, skip the read when the rep's e(V) does
+    // not conform) and S stays Mata's default 0 x 0 matrix, which then overwrites the
+    // accumulator and wipes every replication's standard errors gathered so far. The
+    // failure is silent in the way that matters: later replications refill into whatever
+    // the accumulator became and the studentized columns merely report fewer usable draws.
+    // The pairwise path below is structured the safe way (its read and its writeback sit
+    // inside the same test); this one is not
     S = st_matrix(seaccname)
     rV = st_matrix("e(V)")
     if (rows(rV) != rows(rn)) dose = 0
@@ -13543,6 +13615,16 @@ void wooldid_bootgrab(string scalar accname, real scalar r, string scalar obsbna
     if (asarray_contains(t, an[k,1] + ":" + an[k,2])) {
       j = asarray(t, an[k,1] + ":" + an[k,2])
       A[r, k] = rb[1, j]
+      // A12b, mechanism (review_process/bootstrap_plan.md): in ame-family columns a
+      // replication can come back at exact 0.0 not because the effect is zero but because
+      // the resample lost dose variation and fastnose skips the amescreen that would have
+      // caught it - MEASURED. So the rep is treated as UNAVAILABLE for that column rather
+      // than as a draw at zero. Two things to know: the family test is an unanchored
+      // SUBSTRING search on the coefficient name, so any future coefficient whose name
+      // merely contains "ame" inherits the rule; and a genuinely-zero ame draw is
+      // discarded with the structural ones, so the retained distribution is conditional on
+      // being away from zero - narrowing that column's interval and shrinking its
+      // percentile p. wdb_gblank counts the blanks but cannot separate the two
       if (strpos(an[k,2], "ame") & rb[1, j] == 0 & ob[1, k] != 0 & ob[1, k] < .) {
         A[r, k] = .
         nb++
@@ -13590,6 +13672,13 @@ void wooldid_bootgrab(string scalar accname, real scalar r, string scalar obsbna
 // mean); LISTWISE complete-case covariance over non-excluded columns (A11);
 // sentinel -1e100 diagonals + zero off-diagonals for excluded/<2-available columns;
 // low-availability disclosure via locals
+// THE TWO MOMENT PASSES RUN ON DIFFERENT ROW SETS, and both are shipped to the user under
+// names that imply they agree. se[k] is computed over rows where column k alone is
+// available; V[k,k] over rows complete across every non-excluded column (that count is
+// reported as e(boot_N_V)). Whenever any column loses a replication - a failed fit, or an
+// A12b ame blank from wooldid_bootgrab - the two disagree, so sqrt(diag(e(V_boot))) is not
+// the printed se column and a hand-run test or lincom does not exactly reproduce the
+// table's Wald numbers. A11 ruled this a documented consequence rather than a defect.
 void wooldid_bootfin(string scalar accname, string scalar exclname, string scalar sename, string scalar meanname, string scalar vname, string scalar cntname)
 {
   real matrix A, V, CC, dev
@@ -13637,6 +13726,16 @@ void wooldid_bootfin(string scalar accname, string scalar exclname, string scala
     }
   }
   for (k = 1; k <= K; k++) {
+    // -1e100 IS THE PACKAGE'S "this variance does not exist; display missing" SENTINEL -
+    // the same one the partial-identification rescue writes - and not a number to be read.
+    // It survives the trip into e(V) because `ereturn repost V=' does not re-run the
+    // positive-definiteness screen that `ereturn post' applies (measured; see the notes at
+    // the repost site and in wooldid_vspl). So the matrix leaving this function is
+    // deliberately NON-PSD, and a user's hand test or lincom touching a sentinel column
+    // builds a quadratic form on a -1e100 variance with no error raised. NOTE the branch
+    // also fires on V[k,k] == 0, i.e. when the LISTWISE pass found no variance for column
+    // k - the per-column se[k] above may still be finite and displayed, so a column can
+    // show a standard error in the table and carry the sentinel in e(V)
     if (excl[k] == 1 | cnt[k] < 2 | V[k,k] == 0) {
       V[k, .] = J(1, K, 0)
       V[., k] = J(K, 1, 0)
@@ -14153,6 +14252,16 @@ void wooldid_bootcellwire(string scalar mname, real scalar isgt, string scalar a
       hi = (x == floor(x) & x >= 1 ? (v[x] + v[min((x+1, n))])/2 : v[max((min((ceil(x), n)), 1))])
       m0 = sum(v :<= to)
       m1 = sum(v :>= to)
+      // OPEN QUESTION, recorded rather than resolved (see review_process/open_defects.md):
+      // these draws ARE recentred - tr = (b_r - b)/se_r ranked against to = b/se_obs -
+      // which is the property F033 (author ruling 2026-09-07) said earns the add-one
+      // Monte-Carlo-null form 2*(min(m0,m1)+1)/(n+1). wooldid_boottp and wooldid_bootpwt
+      // both use it; this cell branch does not. As written, under boottstat a cell p and
+      // the coefficient p for the same quantity differ by roughly 2/(n+1) - about 0.02 at
+      // reps(99), the size defect F033 was measured to remove - and the cell p can still
+      // print as exactly 0 where the coefficient p cannot. Changing it moves reported
+      // numbers, so it is held for the author. (The non-studentized cell branch above
+      // correctly has no add-one: those draws are not recentred)
       p = min((1, (2*min((m0, m1)))/n))
       M[i, pcol] = p
       M[i, lbcol] = b - hi*so
@@ -14343,6 +14452,11 @@ void wooldid_bootjwr(string scalar accname, real scalar r, string scalar obsn)
     for (j = 1; j <= rows(on); j++) {
       if (on[j, 1] != fk) continue
       q++
+      // NOTE this pre-fill is dead: the braced block below overwrites R wholesale with
+      // V[idx, idx] after walking the same names. If it was meant to leave R missing so a
+      // failed name lookup would be caught by the hasmissing() guard, that is already
+      // covered - the `m = -1; break' path above catches a missing name, and the guard now
+      // tests V's own entries
       R[q, .] = J(1, np, .)
     }
     // fill R by name lookups
@@ -14435,6 +14549,17 @@ void wooldid_bootjwobs(string scalar fk, string scalar obsn, string scalar outlo
 // chain-contrast Wald of (b_r - b_obs); W_obs the same from the OBSERVED analytic level se
 // (aseobs) and observed pairwise se (pwobs). pairidx: m x m matrix of pwseacc/pwobs column
 // indices for the (a,b) pair (0 on the diagonal); symmetric.
+// THE INDEX INVARIANT, which the two headers describe in incompatible vocabularies
+// (wooldid_bootpairidx says it returns "e(pwsgs) row indices", this one calls its argument
+// "pwseacc/pwobs column indices"). Both are true only because those are the same integer by
+// construction: column j of pwseacc == column j of pwobs0 == row j of the OBSERVED
+// e(pwsgs). Three separate places keep it so - wooldid_bootrun creates the accumulator as
+// J(reps, npw, .) with colnames taken from e(pwsgs)'s row names; wooldid_bootjnt snapshots
+// e(pwsgs) before anything rewrites it and transposes column 2 into pwobs0; and
+// wooldid_bootpairidx re-reads the LIVE e(pwsgs) row stripe. Reorder, append to, or repost
+// e(pwsgs) between accumulator creation and this call and the wrong pairwise standard error
+// is paired into Cab = (Va + Vb - Var(a-b))/2, returning a plausible and silently wrong p
+// for joint_<item>_allsgssame. No guard can catch it: every index stays in range.
 void wooldid_bootsgw(string scalar accname, string scalar seaccname, string scalar pwseaccname,
                      string scalar obsbname, string scalar aseobsname, string scalar pwobsname,
                      string scalar colslist, string scalar pairname, string scalar outloc,
@@ -14954,6 +15079,15 @@ void wooldid_bootppa(string scalar accname, real scalar ka, real scalar kb, real
 // Row layout of the 13-row per-element kernel: 1 n, 2 s_obs, 3 p, 4 qlo, 5 qhi, 6 sd,
 // 7 lb, 8 ub, 9 se_shift, 10 offcentre flag, 11 bandlo, 12 bandhi (the signed level()
 // quantiles of the null draws), 13 live
+// PRECONDITION, unstated until now: v must be SORTED ASCENDING and free of missing. This
+// function never sorts and never checks, so an unsorted v returns a different element of
+// the vector - silently, with no missing and no error. wooldid_permtail's select()+sort is
+// what establishes the precondition; it is not a tidiness step. The rule is x = n*pr; if x
+// is a positive integer, the average of order statistics x and x+1, else order statistic
+// ceil(x), clamped to [1, n] - deliberately the SAME rule wooldid_bootci uses and that
+// wooldid_boottp re-implements inline, so the permutation shift interval and the bootstrap
+// percentile interval estimate the same quantile the same way. Three copies of one rule:
+// they must move together or they decouple silently at small n.
 real scalar wooldid_permq(real colvector v, real scalar pr)
 {
   real scalar n, x
@@ -14971,6 +15105,18 @@ real scalar wooldid_permq(real colvector v, real scalar pr)
 // shuffle happens to redraw the observed assignment); orow = 0 means the generator had no
 // identity column to point at. The bounds are tested in a separate statement ahead of any
 // subscript, so this does not depend on whether & evaluates its right operand.
+// Three ways this returns 0 for a reason other than non-membership, all deliberately
+// fail-SAFE rather than fail-loud, and none signalled except through wdp_addone: (a) the
+// `Am[orow, .] == cm' is a whole-matrix comparison, and Mata returns 0 for non-conformable
+// operands rather than raising (measured, Stata 19), so a mis-shaped comparator silently
+// falls back to the add-one convention; (b) the test is exact floating-point equality
+// between numbers produced by two SEPARATE wooldid fits, so one ulp demotes the element -
+// which is why wooldid_permrun holds the comparison statistics in tempname SCALARS rather
+// than locals; (c) Am is overloaded, and the declared signature hides it: a column vector
+// of statistics from wooldid_permstat/permcellwire, an R x 2 difference column from
+// wooldid_permpw, or an R x m matrix from wooldid_permqf/permstep - cm is always one row of
+// the same width. Every one of these degrades toward add-one, i.e. conservative, never
+// anti-conservative.
 real scalar wooldid_permmemb(real matrix Am, real rowvector cm, real scalar M,
                              real scalar orow)
 {
@@ -15082,6 +15228,15 @@ real rowvector wooldid_permtail(real colvector draws, real scalar sobs, real sca
   else {
     out[7] = sobs - out[5]
     out[8] = sobs - out[4]
+    // row 9 is the standard error IMPLIED BY INVERTING the reported shift interval,
+    // (q_hi - q_lo)/(2*z(level)), on the statistic's scale. It is NOT the dispersion of the
+    // null draws (that is row 6, e(perm_sd)) and not an analytic SE. It is published under
+    // its own name, e(perm_se_shift), and deliberately not posted into e(V) or e(se)
+    // (author rulings 2026-09-03/04, revisited under PS-2 2026-09-10; the bootstrap side
+    // publishes no interval-implied SE at all). It inherits the off-centre guard: when row
+    // 10 fires, rows 7, 8 and 9 stay missing together, because an SE implied by an interval
+    // that was refused is meaningless - the SE column vanishing there is the design, not a
+    // bug
     if (zc < . & zc > 0) out[9] = (out[5] - out[4])/(2*zc)
   }
   out[13] = 1
@@ -15129,6 +15284,15 @@ void wooldid_permstat(string scalar accname, string scalar seaccname, string sca
       sobs = cm[1, k]
     }
     else {
+      // s is kept at FULL replication length on purpose, with holes for replications whose
+      // SE is unusable, rather than compressed to the usable draws: orow is a positional
+      // index into wooldid_permx's assignment columns, so s, A and the accumulator rows
+      // must stay in 1:1 replication order all the way to wooldid_permmemb below.
+      // wooldid_permtail does its own select() internally, so compressing here - the
+      // obvious tidy-up, and exactly what permtail itself does - is not an optimisation but
+      // a silent change of WHICH replication membership is tested against, and hence of the
+      // share convention (BS-23). The sibling call sites in wooldid_permpw and
+      // wooldid_permcellwire carry the same note
       s = J(rows(A), 1, .)
       for (r = 1; r <= rows(A); r++) {
         if (A[r, k] < . & S[r, k] < . & S[r, k] > 0) s[r] = A[r, k]/S[r, k]
@@ -15274,8 +15438,20 @@ void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar 
 // Rows of the output: 1 |t_obs|, 2 p_raw (the absolute-value share per column, add-one
 // or exact), 3 p_singlestep (max |t_r| over ALL columns), 4 p_stepdown (max over the
 // columns not yet rejected, in decreasing |t_obs| order, made monotone). Columns keep
-// the accumulator's names; the output is empty (0 x 0) when fewer than 2 complete
-// replications exist or a column has zero dispersion
+// the accumulator's names.
+// ON FAILURE (fewer than 2 complete replications, or a column with zero dispersion) the
+// kernel writes J(0,0,.). Stata has no 0 x 0 matrix: MEASURED (2026-09-10, Stata 19 MP)
+// st_matrix(name, J(0,0,.)) leaves NO matrix of that name - `confirm matrix' returns
+// r(111) - and DROPS any matrix the name already held. So a caller must test with
+// `cap confirm matrix' before any rowsof() or matlist, never with rowsof() alone; the
+// drop-on-write is also what makes it safe to reuse one tempname across loop iterations.
+// NOT absp-AWARE, deliberately, unlike every sibling permutation kernel: the max-|t|
+// step-down (Westfall-Young / Romano-Wolf) is a statement about the two-sided |t| maximum
+// over a family, so a one-sided permside() or an add-one-free permrawp share has no meaning
+// for it. p_raw is reported in the step-down's own studentized metric so it is comparable
+// with p_singlestep and p_stepdown beside it, NOT with the table's p. Do not thread absp
+// through here: giving this kernel an absp argument "for consistency" would silently move
+// every published step-down p-value.
 void wooldid_permstep(string scalar accname, string scalar cmpname, string scalar colslist,
                       real scalar M, real scalar orow, string scalar outname)
 {
@@ -15523,6 +15699,15 @@ void wooldid_permsaveasg(string scalar assignname, string scalar clusvals, strin
   Asg = st_matrix(assignname)
   cv = strtoreal(tokens(clusvals))
   oo = strtoreal(tokens(obsons))
+  // TWO SILENT DROPS, both in a kernel whose output is a file the user analyses elsewhere.
+  // (a) this return writes NO assignment block at all, so permsave() produces a dataset
+  // with _rep and the coefficient columns and nothing to distinguish it from a run that
+  // never asked for assignments. (b) the `_st_varindex' skip below drops one cluster's
+  // column whenever its strtoname()d name is already taken - by a coefficient column laid
+  // out by wooldid_bootsavemk, or by an earlier cluster whose id maps to the same string -
+  // and because the columns are named rather than positional, nothing in the file marks
+  // the gap: a user reconstructing the permutation distribution is silently one cluster
+  // short. Neither sets a local the shell could turn into a caution
   if (cols(cv) != rows(Asg) | cols(oo) != rows(Asg)) return
   for (c = 1; c <= rows(Asg); c++) {
     nm = strtoname("onset_" + strofreal(cv[c], "%20.0g"))
@@ -15542,6 +15727,14 @@ void wooldid_permcse(string scalar outname, real scalar K)
   real scalar k, v
   out = J(1, K, .)
   V = st_matrix("e(V)")
+  // POSITIONAL is admissible here and would not be in wooldid_bootgrab, whose header is
+  // emphatic that the same harvest must be name-aligned: this reads the REP-0 COMPARATOR's
+  // e(V), and wooldid_permrun has just proven the comparator's colfullnames equal the
+  // observed run's (error 459 otherwise), so no resample-shortened table can reach this
+  // function. The guard below is therefore not a fallback: rows(V) != K leaves cmpse
+  // entirely missing, wooldid_permstat then sets sobs = . for every column, and the whole
+  // studentized permutation surface returns live = 0 and blanks - silently, rc 0, no
+  // caution. If it is ever reachable, that is a bug rather than a degradation
   if (rows(V) == K) {
     for (k = 1; k <= K; k++) {
       v = V[k, k]
@@ -15568,6 +15761,12 @@ void wooldid_permadvline(string scalar cmpname, string scalar colslist, string s
   rel = strtoreal(tokens(rellist))'
   cm = st_matrix(cmpname)[1, idx']
   b = cm'
+  // CONSEQUENCE of the missing -> 0 substitution, which the note above states but does not
+  // price: a horizon with no estimable coefficient enters the OLS fit below as a real
+  // observation at exactly zero, so a family that lost horizons reports a slope pulled
+  // toward the reference line in proportion to how many dropped out, and nothing in
+  // e(adv_line) marks it. Dropping those rows instead would be equally defensible; the
+  // zero is chosen for bitwise agreement with the display frame wooldid_advstat plants
   for (k = 1; k <= rows(b); k++) if (b[k] >= .) b[k] = 0
   r = rel
   if (esf) {
@@ -15622,6 +15821,22 @@ real scalar wooldid_esrelx(string scalar s)
 // simply fail on it.
 // Horizons with a non-positive or missing variance are dropped from the family before
 // the draw: they have no pointwise interval either.
+// WHICH COVARIANCE, and why no check: the half-width is c*sqrt(e(V_es_*)[j,j]), while the
+// pointwise interval this band is drawn over comes from e(V)/r(table). Those are the same
+// quantity computed twice and agree to about 1e-16 only on the ordinary analytic path -
+// wooldid_vspl records the measurement and gates every splice on a 1e-8 relative diagonal
+// check for exactly that reason. This kernel applies no such gate, and needs none only
+// because every divergent path also WITHHOLDS e(V_es_*): the F2 capture that creates it is
+// gated on impvalues being empty and on marginsdof not being nose, and e(V_es_ame*) is
+// withheld under AMESE containment. PS-45 shows the cost if that invariant ever breaks - on
+// the bootstrap side the band came out NARROWER than the pointwise interval beside it.
+// RNG: this kernel draws with rnormal() on the CALLER's stream. Reproducibility is entirely
+// wooldid_esband's doing (it saves c(rngstate), sets the fixed internal seed, and restores),
+// and because that seed is set once for the whole family loop each family consumes
+// successive draws - so a family's critical value depends on how many families preceded it,
+// and adding subgroups() or an estimand moves an unrelated family's band in its low-order
+// digits (simulation noise at nd = 10000). The nd >= 100 floor below is a defensive guard on
+// a parameter no user sets.
 real scalar wooldid_esbanda(string scalar vn, string scalar bn, real scalar lev,
                             real scalar nd, string scalar outn, string scalar critl)
 {
@@ -15686,6 +15901,23 @@ real scalar wooldid_esbanda(string scalar vn, string scalar bn, real scalar lev,
 // when some replications failed.
 // The family's columns are found by scanning the observed coefficient names for the
 // family prefix and keeping those whose remainder parses as a relative period.
+// DEGENERATE-HORIZON POLICY, and it is the OPPOSITE of its matched pair wooldid_esbanda's.
+// esbanda DROPS a horizon with non-positive/missing variance and bands the rest; this
+// kernel REFUSES THE WHOLE FAMILY for one bad horizon (each `return(0)' below: a missing
+// observed coefficient, a missing or non-positive observed analytic SE in the studentized
+// branch, a zero or missing draw SD). So a run that yields an 8-horizon analytic band can
+// yield no bootstrap band at all when horizon 9 is structurally unidentified, and the only
+// user-visible trace is the caller's generic "no simultaneous band could be formed"
+// caution. The case for it: the critical value is a maximum over the family's horizons
+// taken replication by replication, so a horizon that cannot supply a denominator at every
+// retained replication changes what the maximum is over. Dropping it would be defensible
+// too - this asymmetry is recorded, not ruled.
+// LOCALS THAT CHANGE MEANING in the body below, in a 155-line function with two
+// near-duplicate construction branches: `mx' is a row-completeness FLAG in the selection
+// loop and a running max|t| in the band loops; `d' is a parsed relative year in the column
+// scan, then a standardized deviation in the band loops, then a running sum of squares in
+// the SD loop. The two branches differ only in the denominator (the replication's own SE
+// versus the draw SD) and in which SE sets the endpoints.
 real scalar wooldid_bootband(string scalar accn, string scalar obsn, string scalar px,
                              real scalar lev, string scalar outn, string scalar critl,
                              string scalar nl, string scalar sen, string scalar aon,
