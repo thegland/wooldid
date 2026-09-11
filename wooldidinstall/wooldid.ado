@@ -7947,7 +7947,16 @@ version 16.0
   if `wdptsmiss' > 0 dis as text "Caution: `wdptsmiss' reported coefficient(s) could not be studentized under permtstat - their observed analytic standard error is missing or non-positive, so there is no t-ratio to permute; their p-value and interval are left blank rather than filled from any other source. This is a property of the specification, not of permreps(): more replications will not change it."
   if `wdplow' > 0 dis as text "Caution: `wdplow' reported coefficient(s) were present in fewer than half of the completed replications (a reassigned onset can make a horizon or a subgroup level inestimable in a replication); their permutation p-values rest on the counts in e(perm_n)."
   if "`wdpdeg'" != "" dis as text "Caution: the permutation distribution is degenerate (every completed draw equal) for: `wdpdeg'; those permutation p-values are uninformative."
-  if "`wdpoff'" != "" dis as text "Caution: the permutation distribution is not centred at zero (its central `level'% band excludes 0) for: `wdpoff'. The shift interval takes the estimate's sampling error to have that null distribution, so it is not interpretable there and is left blank; the permutation p-value stands. This happens when a quantity is non-zero under reassigned onsets - for example the ame rows under lattice() with contreatcontrols(basic), where the baseline dose slope is not partialled out (see the standing issue on the reference cell) - or under a permute(probabilities) design far from the observed assignment."
+  * The worked example this caution used to carry - the ame rows under lattice() with
+  * contreatcontrols(basic), "where the baseline dose slope is not partialled out", plus a
+  * pointer to "the standing issue on the reference cell" - was removed on 2026-09-11. SI-20
+  * FIXED that condition on 2026-09-05 (1df8613: basic now always absorbs i.lattice##c.(ringer),
+  * and the measured reference margin went from 0.27..2.00 to exactly 0 on all 59 affected
+  * configs), and the ticket moved to wooldid_solved_issues.md, so the caution was sending a
+  * user after a cause that no longer exists and a section that no longer stands. The mechanism
+  * is what matters here and is kept; resist re-attaching a worked example unless it is one you
+  * have just measured, since an example in a caution outlives the defect that motivated it
+  if "`wdpoff'" != "" dis as text "Caution: the permutation distribution is not centred at zero (its central `level'% band excludes 0) for: `wdpoff'. The shift interval takes the estimate's sampling error to have that null distribution, so it is not interpretable there and is left blank; the permutation p-value stands. This happens when a quantity is not zero under reassigned onsets, or under a permute(probabilities) design far from the observed assignment."
   if `blank' > 0 dis as text "Caution: `blank' replication cell(s) in ame-family columns returned exact structural zeros (reassignments without dose variation in some cells) and were excluded from those columns' permutation distributions."
   * BS-23 (author ruling 2026-09-07): incompleteness costs resolution, not the convention;
   * the add-one wording now sits on the case that actually uses the add-one form

@@ -175,7 +175,7 @@ prose was checked:
 |---|---|---|---|---|
 | all-caps words | acronyms only (ATT, AME, OLS, BJS, CFX, STATA) | some | 9 emphasis sites | 0 |
 | ` - ` dash parentheticals per 1000 words | 0.26 | 6.81 | 13.6 | 0 |
-| parentheses per 1000 words | 29.1 | - | 60.3 | (unchanged; dashes went to commas, colons and semicolons more often than to parentheses, to avoid pushing this higher) |
+| parentheses per 1000 words | 29.1 | - | 60.3 | 62.2 (16 pairs added; dashes went to commas, colons, semicolons and full stops more often than to parentheses, precisely because this rate was already double the 2024 one) |
 | `{ul:}` for emphasis | 20 uses | - | - | the device the two surviving emphases use |
 | a directive nested inside link text (`{help x:{cmd:y}}`) | never | never | 1 | 0 |
 | authorial asides ("and deliberately so", "the case worth checking first") | never | - | 4 | 0 |
@@ -186,6 +186,15 @@ prose was checked:
 (options, `e()` objects, cautions, refusal conditions), each candidate gap put to an
 independent verifier that was asked to refute it. 55 confirmed gaps survived, written up in
 15 edit batches as `14c30d3`. The style pass above is the follow-up commit.
+
+## Two substantive additions made while re-reading
+
+The stray-companion screen at `wooldid.ado:5965` refuses `reps()`, `ties`, `dots()`,
+`rseed()`, `bootalpha()`, `bootdf()`, `bootdisplay()`, `boottstat` and `bootsave()` with an
+error on a run without the master option. Only `ties`, `dots()` and `bootalpha()` said so;
+`reps()`, `rseed()`, `boottstat`, `bootdf()`, `bootdisplay()` and `bootsave()` now do too.
+`rseed()`'s clause says "a run with neither", matching the screen's
+`& "\`permute'" == ""` guard rather than overstating it as bootstrap-only.
 
 ## Claims spot-checked against the ado after writing
 

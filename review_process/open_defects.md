@@ -59,6 +59,40 @@ was ruled on 2026-09-11 and built the same day (see CLOSED).
 
 ## CLOSED
 
+### The help-file audit — 55 gaps written, 1 ado defect fixed, 2026-09-11
+Second half of the documentation instruction. 14 agents worked FROM THE ADO (options off the
+syntax line, `e()` names harvested from every `ereturn` site, behaviours read out of the
+engines) and checked each against the help: 579 items, 59 claimed gaps, 55 confirmed after
+adversarial re-verification, 3 downgraded, 1 refuted.
+
+- **`14c30d3`** — the 55 confirmed gaps written up across the option entries, the inference
+  sections and Stored Results.
+- **`69641f0`** — the same prose rewritten in the file's own style. The gaps were documented
+  correctly but in the register three days of code-comment writing had left behind; a
+  coverage audit checks coverage, not voice. Measured against `2a2da17` (the sthlp stood
+  unchanged 2024-07-31 to 2026-07, so that commit IS the "12 months ago" reference): all-caps
+  emphasis at 9 sites where 2024 uses caps only for acronyms; ` - ` dash parentheticals at
+  13.6 per 1000 words against 2024's 0.26; four authorial asides; and one
+  `{help x:{cmd:y}}` nesting neither version of the file had ever used. All four now zero in
+  the new text, the pre-existing campaign-era text untouched. Also in that commit: the
+  stray-companion screen at `wooldid.ado:5965` refuses nine boot/perm companions with an
+  error and only three said so, so `reps()`, `rseed()`, `boottstat`, `bootdf()`,
+  `bootdisplay()` and `bootsave()` gained the clause.
+- **the ado commit below** — audit item #57, the one finding that was not a help change.
+
+**#57, the permutation off-centre caution (`wooldid.ado:7950`).** It cited, as its worked
+example, "the ame rows under lattice() with contreatcontrols(basic), where the baseline dose
+slope is not partialled out (see the standing issue on the reference cell)". SI-20 FIXED that
+condition on 2026-09-05 (`1df8613`: `basic` now always absorbs `i.lattice##c.(ringer)`; the
+measured reference margin went from 0.27..2.00 to exactly 0 on all 59 affected configs) and
+the ticket moved to `wooldid_solved_issues.md`. So the caution was sending a user after a
+cause that no longer exists and a section that no longer stands. The mechanism is kept, the
+stale example and the dangling pointer are gone, and a comment above the line records why
+and warns against re-attaching an unmeasured example. Straight text defect; no number moves.
+It had been named only in `14c30d3`'s commit message, which made it a standing item nothing
+in this file recorded — that is the reason it is written up here rather than only fixed.
+
+
 ### The documentation review's fifteen items — ALL BUILT 2026-09-11
 Ruled by the author on 2026-09-11 (multiple choice, all fifteen answered; the ruling table is
 above). Built in three risk-ordered commits, each gated.
