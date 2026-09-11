@@ -2315,12 +2315,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       if "`makecfxplots'" != "" & ("`item'" == "att" | "`safety'" == "off") {
 
         local cfxmatendpoint 6
-        if "`cfxplotnose'" != "" local cfxmatendpoint 1
+        * D-1 (author ruling 2026-09-11): the permute() carve-out below applies to
+        * cfxplotnose too. It used to truncate unconditionally, so under permute() every cfx
+        * matrix came back one column wide, wooldid_permcellsx skipped all of them on its
+        * six-column test, ndone stayed 0 - and so the drift caution never printed and
+        * e(perm_cfx_blank) was never posted. The user got analytic plot cells under a
+        * permutation header with nothing said. The 6-column shape is missing-padded here
+        * (r(table) is short under nose and the padding below fills it), which is exactly
+        * what the cell rewiring needs to fill p/ll/ul from the replications
+        if "`cfxplotnose'" != "" & "`permute'" == "" local cfxmatendpoint 1
         * F9: fast mode keeps the cfx matrices in the established 1-column (point
         * estimates only) shape that cfxplotnose already produces, rather than minting
         * a new 6-column-with-missings shape
         * under permute() the 6-column shape is kept (missing-padded) so the shell's cell
-        * rewiring can fill p/ll/ul from the replications
+        * rewiring can fill p/ll/ul from the replications - the same carve-out cfxplotnose
+        * now takes above (D-1)
         if "`fastnose'" != "" & "`permute'" == "" local cfxmatendpoint 1
         * build the margins se/df option in a per-iteration copy rather than overwriting the user's
         * cfxplotnose flag: the overwrite leaked across the estimand loop, so every estimand after
@@ -10388,11 +10397,11 @@ version 16.0
   foreach wdss of local sgl {
     local wdsfl `wdsfl' att_s`wdss' att_it_s`wdss' ame_s`wdss' ame_it_s`wdss'
   }
+  * the caller's RNG state is saved here and restored after the loop, so the simulated
+  * analytic band never disturbs the user's stream. The SEED itself is set per family inside
+  * the loop - see the D-9 note there
   local wdsrng
-  if "`mode'" != "bootstrap" {
-    local wdsrng `c(rngstate)'
-    set seed 20260907
-  }
+  if "`mode'" != "bootstrap" local wdsrng `c(rngstate)'
   local wdsdone
   * D-7 (author ruling 2026-09-11): families that were ATTEMPTED and produced no band are
   * collected here and named in a caution below. Before this, a family whose band could not
@@ -10427,6 +10436,17 @@ version 16.0
       if _rc != 0 continue
     }
     else {
+      * D-9 (author ruling 2026-09-11): the seed is set PER FAMILY, derived from the fixed
+      * internal seed and the family's own name. It used to be set once before the loop, so
+      * each family consumed successive draws and a family's critical value depended on how
+      * many families had been banded before it - adding subgroups() or an estimand moved an
+      * unrelated family's band in its low-order digits. Deriving the offset from the NAME
+      * rather than the loop position is what makes a family's band independent of which
+      * other families this run happens to band. Reproducibility is unchanged: the seed is
+      * still fixed, and the caller's stream is still saved and restored around the loop
+      local wdsseed 20260907
+      cap mata: st_local("wdsseed", strtrim(strofreal(20260907 + mod(sum(ascii(st_local("wdsk")) :* (1..strlen(st_local("wdsk")))), 1000000), "%12.0f")))
+      set seed `wdsseed'
       cap confirm matrix e(V_es_`wdsk')
       local wdsrc1 = _rc
       cap confirm matrix e(b_es_`wdsk')
@@ -14531,17 +14551,17 @@ void wooldid_bootcellwire(string scalar mname, real scalar isgt, string scalar a
       hi = (x == floor(x) & x >= 1 ? (v[x] + v[min((x+1, n))])/2 : v[max((min((ceil(x), n)), 1))])
       m0 = sum(v :<= to)
       m1 = sum(v :>= to)
-      // OPEN QUESTION, recorded rather than resolved (see review_process/open_defects.md):
-      // these draws ARE recentred - tr = (b_r - b)/se_r ranked against to = b/se_obs -
-      // which is the property F033 (author ruling 2026-09-07) said earns the add-one
-      // Monte-Carlo-null form 2*(min(m0,m1)+1)/(n+1). wooldid_boottp and wooldid_bootpwt
-      // both use it; this cell branch does not. As written, under boottstat a cell p and
-      // the coefficient p for the same quantity differ by roughly 2/(n+1) - about 0.02 at
-      // reps(99), the size defect F033 was measured to remove - and the cell p can still
-      // print as exactly 0 where the coefficient p cannot. Changing it moves reported
-      // numbers, so it is held for the author. (The non-studentized cell branch above
-      // correctly has no add-one: those draws are not recentred)
-      p = min((1, (2*min((m0, m1)))/n))
+      // F033 (author ruling 2026-09-07, propagated here on the 2026-09-11 ruling): these
+      // draws ARE recentred - tr = (b_r - b)/se_r ranked against to = b/se_obs - which is
+      // the property F033 said earns the add-one Monte-Carlo-null form, so the studentized
+      // CELL p-value uses it like wooldid_boottp and wooldid_bootpwt. One convention for
+      // every recentred rank-based p in the package. It used to be the plain 2*min/n share,
+      // which put a cell p and the coefficient p for the same quantity roughly 2/(n+1)
+      // apart - about 0.02 at reps(99), the size defect F033 was measured to remove - and
+      // let a cell p print as exactly 0 where the coefficient p could not. The floor is now
+      // 2/(n+1). (The non-studentized cell branch above correctly has NO add-one: those
+      // draws are not recentred.)
+      p = min((1, 2*(min((m0, m1)) + 1)/(n + 1)))
       M[i, pcol] = p
       M[i, lbcol] = b - hi*so
       M[i, ubcol] = b - lo*so
