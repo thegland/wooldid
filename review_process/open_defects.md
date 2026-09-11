@@ -12,6 +12,32 @@ CLOSED with its commit, so this file is also the record of what the sweeps bough
 
 ---
 
+## RULINGS ON THE DOCUMENTATION REVIEW'S ITEMS (author, 2026-09-11)
+
+All fifteen were put to the author as multiple choice and all fifteen were ruled. Build
+order below is by risk, not by item number: the harness first (so everything after it is
+judged by the stricter gates), then the changes that move no number, then the three that do.
+
+| id | ruling |
+|---|---|
+| F033 cells | **Apply the add-one.** `2*(min+1)/(n+1)` in the studentized cell branch, matching `wooldid_boottp` and `wooldid_bootpwt`. One convention for every recentred rank-based p. Moves reported cell p-values; needs a re-bless. |
+| D-1 | **Carve-out like `fastnose`.** Keep the 6-column cfx shape under `permute()` even with `cfxplotnose`, so the cells get real permutation inference. |
+| D-2 | **Fix the wording.** "no permutation inference", naming which columns survive; the analytic SE stays, as on every other permutation surface. |
+| D-8 | **Keep the refusal, say why in the caution.** The bootstrap critical value is a maximum over the family taken replication by replication; the caution must name the horizon that caused the refusal. |
+| D-7 | **Caution naming the families** that got no band, replacing the all-or-nothing one. |
+| D-10 | **Caution on both paths** in `wooldid_permsaveasg` (no assignment block written / N cluster columns omitted). |
+| D-6 | **Split the caution** so `wdptsmiss` is spent: too few completed replications versus no usable observed analytic SE. |
+| D-3 | **Rename to a `wooldid_` name** at all four `mata: M = ...` sites. |
+| D-5 | **Delete all four inert sites.** All behaviour-neutral; the explanatory comments go with them. |
+| D-4 | **Honour `dots()`** on the physical-expansion leg, so the option means one thing everywhere. |
+| D-9 | **Reseed per family** in the band loop, so a family's band depends only on that family. Moves band endpoints; needs a re-bless. |
+| D-11 | **Widen the regex and add both savers** to `mkrun.py`'s file pin. |
+| D-12 | **Remove `compare.py`'s absolute floor at all rtols**, matching `compare_oldnew.py`. |
+| D-13 | **Make UNRECOGNIZED fatal and add the `fw` bucket** in `coverage_check.py`. |
+| D-14 | **Tighten `check_validate_sync.py`** to a real assignment. |
+
+---
+
 ## OPEN — to address at the end
 
 Every item from the ruled slates has been built, ruled closed, or resolved by measurement;
