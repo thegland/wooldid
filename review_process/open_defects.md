@@ -14,8 +14,102 @@ CLOSED with its commit, so this file is also the record of what the sweeps bough
 
 ## OPEN — to address at the end
 
-Nothing. Every item recorded in this file has been built, ruled closed, or resolved by
-measurement. PS-3, the last one, was built on 2026-09-10 (see CLOSED below).
+Every item from the ruled slates has been built, ruled closed, or resolved by measurement;
+PS-3, the last of those, was built on 2026-09-10 (see CLOSED below). The items below are
+new, and all come from one source: the **documentation review of 2026-09-10** (a 12-agent
+read of the thin regions of the ado, the Mata block and the Python harness). Each is
+recorded as a comment at the site where it bites, so nothing here is invisible to the next
+reader; they are listed here because each is a real deviation rather than a gap in the
+prose. None was fixed inline — the review's own commits are comment-only apart from two
+text corrections named in them.
+
+**D-1. `permute()` + `cfxplotnose` silently leaves the plot cells analytic.**
+`wooldid_permcellsx` skips any cfx matrix with fewer than six columns, and `cfxplotnose`
+sets `cfxmatendpoint` to 1 unconditionally (`fastnose` has an explicit `permute()` carve-out;
+`cfxplotnose` does not). So every cfx matrix is skipped, `ndone` stays 0, the drift caution
+never prints, `e(perm_cfx_blank)` is never posted, and the user gets analytic plot cells
+under a permutation header with no message at all. This is the "no silent no-op" policy's
+own failure mode. Fix is either a carve-out matching `fastnose`'s or a caution on the skip.
+
+**D-2. The drift caution's wording does not match what the code blanks.**
+`wooldid_permcellsx`'s drift branch blanks columns 4-6 always and column 3 only when the
+statistic is not the t-ratio. Column 2 keeps the ANALYTIC standard error, and under
+`permtstat` column 3 keeps the analytic b/se. The caution says the cells' "inference columns
+are blank (points only)", and the replay line repeats it. Either the wording should say
+"no permutation inference" (which is what is true), or the blanking should extend to the se
+and the `permtstat` t. Number-moving in the second form, so it is the author's call.
+
+**D-3. Four `mata: M = ...` one-liners leave a global Mata `M` in the user's session.**
+`wooldid_bootcellsx` (one), `wooldid_permwire`'s gteffects blanking (one) and
+`wooldid_permcellsx` (two). Mata has no statement-local scope at the `mata:` prompt, so a
+user's own matrix named `M` is silently overwritten, once per family per cfx matrix. Costs
+wooldid's results nothing; damages interactive state with no error. Fix is a `wooldid_`
+prefix or a `mata drop` tail — decide once for all four.
+
+**D-4. `dots()` is not honoured on the physical-expansion leg of `wooldid_bootrun`.**
+That leg prints one dot per replication and never the 50-mark running count, while the
+count path, the re-identification leg and the jackknife loop all gate on `mod(r, dots)`.
+Cosmetic, but a test that counts marks on this leg must expect `reps` of them.
+
+**D-5. Inert code, now documented as inert rather than deleted.** Four sites, none harmful,
+each of which reads as a bug or invites a wrong "repair": the two `if level != 95` interval
+renames in `wooldid_permwire` (they can never fire — the worker already names the columns
+from the run's own level); the pre-fill loop in `wooldid_bootjwr` (overwritten wholesale
+five lines later); `matrix rownames `summarystats' = `rownamessum'` in the worker (expands
+to an empty namelist, a measured silent no-op — the real labelling is inside
+`wooldid_sumstat`); and the initialisation loop in `wooldid_sgdom` (locals that die at its
+`end`). Deletion is safe for all four; it is not a documentation matter and was left alone.
+
+**D-6. `wdptsmiss` is counted and never read.** `wooldid_permwire` increments it once per
+coefficient blanked under `permtstat` for want of a usable observed analytic se, but the
+caution states both causes in one sentence without being able to say which applies. The two
+are different fixes for the user (raise `permreps()` versus "this element has no identified
+standard error to studentize by"), so the counter is worth spending on a caution split.
+
+**D-7. Per-family simultaneous-band drops are silent.** `wooldid_esbandv` exits without a
+message when a family has no stored band, while `wooldid_esband`'s caution fires only when
+NO family got one. Under `simultaneousbands` a user can get a dashed band on the ATT figure,
+none on the AME_it figure, and be told nothing.
+
+**D-8. The two band kernels take opposite policies on a degenerate horizon.**
+`wooldid_esbanda` drops the horizon and bands the rest; `wooldid_bootband` refuses the whole
+family. So an 8-horizon analytic band can come with no bootstrap band at all when horizon 9
+is structurally unidentified. Both are defensible; the asymmetry is undecided rather than
+ruled.
+
+**D-9. `wooldid_esbanda` consumes the caller's RNG stream, seeded once for the family loop.**
+A family's critical value therefore depends on how many families were banded before it, so
+adding `subgroups()` or an estimand moves an unrelated family's band in its low-order digits
+(simulation noise at nd = 10000). Reproducible within a run; not reproducible across runs
+that differ in family count.
+
+**D-10. `wooldid_permsaveasg` has two silent drops** — a conformability return that writes no
+assignment block at all (indistinguishable from a run that never asked for one), and a skip
+of any cluster whose `strtoname()`d column name is already taken, which leaves the saved file
+one cluster short with nothing marking the gap.
+
+**Harness items** (same review, `test/` files):
+
+**D-11. `mkrun.py`'s saveplots pin matches one spelling.** The option's legal minimum
+abbreviation is `save`, which resolves uniquely, so `save(svp_x)` is valid Stata the regex
+misses — re-opening the hole SI-21 closed. `permsave()` and `bootsave()` are outside the pin
+altogether.
+
+**D-12. `test/compare.py`'s 1e-12 absolute floor is live at every nonzero rtol**, including
+the 1e-9 default the README's own invocation uses; the B21 fix exempted `--rtol 0` only.
+`compare_oldnew.py` deliberately has no absolute floor, so the two comparers disagree on
+near-zero quantities.
+
+**D-13. `coverage_check.py` can overstate coverage without failing.** An UNRECOGNIZED option
+token never sets `fail`, and the abbreviation matcher resolves an ambiguity to whichever
+option comes first in the syntax line where Stata would refuse it (measured: no ambiguous
+pair exists today, so this is right by luck of naming). Separately the weight classifier
+files `fweight` — which the syntax line accepts — as unweighted.
+
+**D-14. `check_validate_sync.py`'s assignment regex counts a READ as an assignment.** Any
+`local X = `nsg'` line registers as assigning `nsg` and suppresses the finding, in the script
+whose whole job is to catch stranded syntax-parsed values. Benign today (only `item` is
+affected, via `tempvar `item'`), and the mechanism is ordinary.
 
 ---
 
@@ -34,6 +128,16 @@ everything outstanding.
 - **PS-45 bootstrap band studentization** — the band scales by the coefficient-draw
   standard deviation even under `boottstat`, where every other reported quantity uses each
   replication's own standard error. Cost of the alternative is written up.
+- **F033 propagation to the studentized CELL p-value** (found by the documentation review,
+  2026-09-10; recorded as an OPEN QUESTION at the site in `wooldid_bootcellwire`). The cell
+  branch ranks recentred draws — `tr = (b_r - b)/se_r` against `to = b/se_obs` — with the
+  plain `2*min(m0,m1)/n` rule, while `wooldid_boottp` and `wooldid_bootpwt` use the add-one
+  form `2*(min(m0,m1)+1)/(n+1)` that F033 mandates for exactly that construction. As written,
+  under `boottstat` a cell p and the coefficient p for the same quantity differ by roughly
+  `2/(n+1)` — about 0.02 at `reps(99)`, the size defect F033 was measured to remove — and the
+  cell p can still print as exactly 0 where the coefficient p cannot. The non-studentized
+  cell branch correctly has no add-one (its draws are not recentred). Moving reported numbers,
+  so held.
 
 ---
 

@@ -1,0 +1,131 @@
+# Documentation review of the code files — 2026-09-10
+
+**Ask.** *"Review the codebase and check for sections that are low on explanatory/descriptive
+comments... robustly commented enough to ensure that users freshly encountering the project
+for the first time always had excellent context about the code. Ideally, the comments would
+also caution about common or particularly tricky to spot pitfalls and subtleties of the code
+(or of the behavior of called upon features) that normally might complicate either coding or
+results assessment."*
+
+**Method.** Three measurement passes (ado programs, Mata functions, Python harness) to find
+the thin regions, then a 12-agent read-only *find* pass — one agent per region, each asked
+two questions: where would a competent Stata programmer meeting this code for the first time
+be unable to tell what a block does or why; and where does a trap sit uncommented. Agents
+returned structured findings and wrote nothing. The comments themselves were written by
+hand, in one voice, from those findings plus the traps this campaign has measured. 127
+findings came back; all were acted on, folded into a neighbouring comment, or recorded in
+`open_defects.md`.
+
+## What the measurement said
+
+| region | code lines | comment density |
+|---|---|---|
+| ado programs, all | 10,812 | 26.4% |
+| Mata block, all | 2,476 | 24.1% |
+| `wooldid_permjnt` | 320 | 13.0% |
+| `wooldid_esplots` | 2,810 | 18.6% |
+| `wooldid_display` | 408 | 19.0% |
+| `wooldid_permwire` | 253 | 19.7% |
+| `wooldid_bootjnt` | 529 | 20.3% |
+| `wooldid_sgchain`, `wooldid_pfloor` | 25, 26 | 0% |
+| Mata `bootcellkey`, `bootwrowx`, `bootadvr` | 15, 20, 53 | 0% |
+| `test/suite/coverage_check.py` | 190 | 0.5% |
+| `test/compare.py` | 122 | 0.8% |
+| `test/suite/mkrun.py` | 215 | 2.3% |
+| `test/suite/compare_oldnew.py` | 386 | 3.0% |
+
+Density turned out to be the wrong ranking and was not used as one. `esplots` is the largest
+thin region but a misreading there produces an ugly figure; `permjnt` and `bootjnt` compute
+p-values from quadratic forms under three metric conventions, and a misreading there ships a
+wrong test. The work was ordered by consequence. The 0%-density programs were mostly not
+undocumented at all — their headers had been *separated from them* (below).
+
+## Commits
+
+| commit | scope |
+|---|---|
+| `45d1a0a` | the inference engines: permjnt/permcellsx, bootjnt, permrun/permwire, bootrun/bootwire, the engine screens and savers |
+| `fdc35bf` | the Mata kernels: permutation conventions, bootstrap moments, the bands, the adversarial statistic |
+| `3e0ea38` | presentation, plots, screens; five headers reunited with their programs |
+| `a16b6b1` | the Python test harness |
+
+All four are comment-only apart from three text corrections, each a case of documentation
+contradicting the code: `wooldid_esplots`' replay gate said it required contract `'1'` while
+testing for `'2'`; the help said `histogramcohorteffects` returns one row per cohort-by-period
+cell under `att_it`/`att_itime` when both margins calls are `over(i)`; and the F038 block's
+last sentence had been truncated mid-clause.
+
+## The structural finding
+
+Five documentation blocks had been separated from the programs they describe by the
+compiled-size extractions out of `wooldid_worker`. The effect was worse than a missing
+comment: several programs looked undocumented at their definitions while others carried two
+paragraphs about their neighbours, and the blocks' own "below" references pointed across an
+intervening program.
+
+- the F6 permutation-engine block sat above `wooldid_bootctl`, which it never described →
+  moved to `wooldid_permrun`, which had no header at all
+- the F038 p-value-floor block was pushed off `wooldid_pfloor` by the PS-3 insertion of
+  2026-09-10 and left above `wooldid_mlfmt` → restored, completed, and its three rulings named
+- the NFADV adversarial block and the BS-8/SI-7 subgroup-labelling block were stacked above
+  `wooldid_ccscreen` → each moved to its own program
+- the E1 constraint-chain block sat above `wooldid_fcol` → moved to `wooldid_sgchain`, the
+  file's only zero-comment program
+
+Two headers had also drifted from their code and were rewritten rather than appended to: the
+adversarial block still documented the free-intercept `alt==0` statistic with
+`q = rank(V) - rank(M)` that BS-12 replaced on 2026-09-08, and `wooldid_bootctl`'s header plus
+its "C-stage refusals" block described two refusals that no longer exist and recorded the
+`pretrendpower` refusal as both permanent and lifted.
+
+## The pitfalls now recorded in the code
+
+Written at the site where each bites, not in a document:
+
+- `ereturn matrix name = mat` and `ereturn repost V=` MOVE their source (measured: rc 0
+  before, r(111) after) — at the three sites that manufacture it
+- `ereturn repost V=` does not re-run `ereturn post`'s screen, so `e(V)` leaves the bootstrap
+  wiring deliberately indefinite with a `-1e100` sentinel diagonal
+- `_rc` is reset by the very next command — and, separately, plain `local` assignments do
+  *not* touch it, which is why one `cap confirm` ... `if _rc` pair separated by two locals is
+  correct and reads like a bug
+- `st_matrix(name, J(0,0,.))` deletes the Stata matrix rather than creating an empty one
+- Mata passes by address, so `wooldid_advW`'s symmetrization mutates its caller's `V`; it is
+  safe only because `(V+V')/2` is bitwise idempotent
+- a bare `mata: M = ...` leaves a global `M` in the user's session
+- `matlist`'s `rspec()` is one character per rule, count rows + 2, and a mispaired format
+  string aborts a *completed* estimation
+- `twoway` joins points in dataset order, not x order
+- the positional alignment contract shared by four e(b) walks, and which of them is guarded
+- the four-way p-value convention integer, and the two places the expression is duplicated
+- `do <path>` is the one load style under which wooldid cannot recover its Mata kernels —
+  now stated on the harness side as well as the ado side
+
+## What came out of it that is not documentation
+
+Fourteen items are recorded in `review_process/open_defects.md` under OPEN, and one — the
+F033 add-one missing from the studentized **cell** p-value — is in
+`held_for_ruling_2026-09-09.md`, because fixing it moves reported numbers. Each is also
+marked at its code site, so none of them is invisible to the next reader.
+
+## Gate
+
+Comments are free against Stata's per-program compiled-size ceiling, so the size headroom is
+unchanged. The ado was reloaded after every group, and the full gate was run at the end:
+
+- `verify.sh`: ado loads, 20-leg branch fingerprint identical, battery `TOTAL_DIFF_GROUPS=0`
+- 504-config dual build: `unexplained=0 explained=5118 additions=16024 stale_ledger=0
+  unscoped=0 prov_fail=0`, 504 of 504 compared
+- cert 43/43, newfeat 7/7, battery IDENTICAL vs baseline, `COVERAGE_OK`
+- every Python harness file compiles; `check_validate_sync.py` passes all three of its checks
+
+## One landing error, found and fixed
+
+The comment blocks were inserted by an anchored script whose line hints came from the finder
+agents' PRE-EDIT line numbers. After ~400 lines of insertions, one anchor (`local ++k`) had
+its intended duplicate outside the search window, so the block resolved to the only match
+nearby — in `wooldid_icscreen` — and shipped there in `3e0ea38`. Found by an audit that took
+every inserted block's first line, located it, and printed its ENCLOSING PROGRAM against the
+intended one; 102 blocks checked, one wrong. Moved to `wooldid_cfxplots` in the follow-up
+commit. **The lesson for the next pass of this shape: verify the landing PROGRAM, not the
+landing line — a stale hint plus a duplicated anchor resolves silently to the wrong site.**

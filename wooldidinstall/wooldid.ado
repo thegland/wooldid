@@ -12132,13 +12132,6 @@ prog def wooldid_icscreen
   syntax , bvars(string asis) iv(name) tv(name) tf(name) ics(string) names(string)
   local k 0
   foreach ic of local ics {
-    * `local ++k' MUST stay above the `cap confirm' / `continue' pair below. k indexes the
-    * per-plot metadata e(wdid_cfxttl`k')/e(wdid_cfxytx`k'), which the worker posted BY
-    * POSITION in e(wdid_cfxmats) (pairs laid down ame first, then att), so a matrix that
-    * fails the confirm must still consume its index. Move the increment below the continue
-    * - the obvious tidy-up - and every later figure inherits the previous entry's title and
-    * y-title: a plot of the average marginal effects titled as the ATT, on a figure the
-    * user will publish
     local ++k
     local live 0
     local drop 0
@@ -12508,6 +12501,13 @@ version 16.0
   frame change `pf'
   local k 0
   foreach nm of local mats {
+    * `local ++k' MUST stay above the `cap confirm' / `continue' pair below. k indexes the
+    * per-plot metadata e(wdid_cfxttl`k')/e(wdid_cfxytx`k'), which the worker posted BY
+    * POSITION in e(wdid_cfxmats) (pairs laid down ame first, then att), so a matrix that
+    * fails the confirm must still consume its index. Move the increment below the continue
+    * - the obvious tidy-up - and every later figure inherits the previous entry's title and
+    * y-title: a plot of the average marginal effects titled as the ATT, on a figure the
+    * user will publish
     local ++k
     cap confirm matrix e(`nm')
     if _rc != 0 continue
