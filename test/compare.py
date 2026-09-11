@@ -41,6 +41,10 @@ def _selftest():
     assert hex2f(".") == "." and hex2f(".a") == ".a"
     assert not close(1.0, 1.0 + 1e-13, 0), "rtol 0 must reject sub-1e-12 diffs (bit-exactness)"
     assert close(1.0, 1.0 + 1e-13, 1e-9) and close(0.0, 0.0, 0)
+    # no absolute floor at any tolerance (ruling 2026-09-11, D-12) - the same property
+    # compare_oldnew.py asserts, so the two comparers agree on near-zero quantities
+    assert not close(0.0, 1e-300, 1e-9), "no absolute floor"
+    assert not close(1e-13, 5e-13, 1e-9), "no absolute floor: a 5x move at 1e-13 is a diff"
 
 def load(path):
     d = {"scalar": {}, "macro": {}, "mat": {}, "matnames": {}, "rc": None, "varlist": None}
@@ -70,14 +74,14 @@ def close(a, b, rtol):
         return True
     if rtol == 0:
         return False  # --rtol 0 means bit-exact: no absolute-difference floor either
-    # NOTE this absolute floor is live at EVERY nonzero rtol, including the default 1e-9
-    # that test/README.md's documented invocation uses - the rtol==0 exemption beside it was
-    # the whole of the B21 fix, not a removal of the floor. So under the default any two
-    # values within 1e-12 absolute compare equal however large the relative gap: a p-value
-    # moving 1e-13 -> 5e-13 passes as IDENTICAL. The suite's other comparer took the
-    # opposite decision deliberately (compare_oldnew.py: "NO absolute floor", asserted twice
-    # in its selftest), so the two are not interchangeable on near-zero quantities.
-    return abs(a - b) <= rtol * max(abs(a), abs(b), 1e-300) or abs(a - b) < 1e-12
+    # NO ABSOLUTE FLOOR (author ruling 2026-09-11, documentation review D-12). There used to
+    # be an `or abs(a - b) < 1e-12' here, live at every nonzero rtol including the 1e-9
+    # default that test/README.md's documented invocation uses - so a p-value moving
+    # 1e-13 -> 5e-13 compared as IDENTICAL. The B21 fix had exempted `--rtol 0' only. The
+    # comparison is now purely relative at every tolerance, which is what compare_oldnew.py
+    # has always done (its selftest asserts "no absolute floor" twice), so the two comparers
+    # agree on near-zero quantities.
+    return abs(a - b) <= rtol * max(abs(a), abs(b), 1e-300)
 
 def main():
     _selftest()

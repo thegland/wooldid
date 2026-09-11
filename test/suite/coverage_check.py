@@ -52,9 +52,9 @@ def match_option(token, opts):
     #     option that is a prefix-relative of an existing one - the boot*/perm* families
     #     already share stems - and every matching config's credit silently transfers to
     #     whichever appears first, reporting an uncovered option as covered.
-    # (2) An unmatched token is only printed as UNRECOGNIZED by the caller and never sets
-    #     `fail`, so a mistyped option token loses its credit while the run still ends
-    #     COVERAGE_OK.
+    # (2) An unmatched token is reported as UNRECOGNIZED and FAILS the run (ruling
+    #     2026-09-11); it used to print and pass, so a mistyped token lost its coverage
+    #     credit while the run still ended COVERAGE_OK.
     t = token.lower()
     for full, ab in opts.items():
         if t.startswith(ab) and full.startswith(t):
@@ -107,7 +107,7 @@ def main():
     clean = {k: 0 for k in opts}        # configs expected to run rc 0 on the NEW build
     goodclean = {k: 0 for k in opts}    # clean-rc configs on wellbehaved/stress data
     pathoexp = {k: 0 for k in opts}     # configs on pathological-class data (any rc)
-    wclasses = {"aw": 0, "pw": 0, "none": 0}
+    wclasses = {"aw": 0, "pw": 0, "fw": 0, "none": 0}
     class_hist = {"wellbehaved": 0, "stress": 0, "pathological": 0}
     if_count = 0
     nconfigs = 0
@@ -147,14 +147,14 @@ def main():
                 else:
                     unknown.add(tok)
             w = (r.get("weight") or "").strip()
-            # THREE-WAY SPLIT ONLY: wooldid's syntax line declares [aw fw pw / ], so an
-            # fw= config is a supported weight class that this files under "unweighted" -
-            # understating fweight coverage as zero and inflating the unweighted count. No
-            # config uses fw today, which is why it has never surfaced, and unlike the
-            # option axis there is no zero-coverage failure on the weight axis at all, so
-            # the miscount could never fail a run. Widen the buckets when the first fw
-            # config lands.
-            wclasses["aw" if w.startswith("aw") else "pw" if w.startswith("pw") else "none"] += 1
+            # FOUR-WAY SPLIT (author ruling 2026-09-11, documentation review D-13). wooldid's
+            # syntax line declares [aw fw pw / ], so fweight is a supported weight class; it
+            # used to be filed under "unweighted", understating fweight coverage as zero and
+            # inflating the unweighted count. No config uses fw today. There is still no
+            # zero-coverage failure on the weight axis, so this is a reporting fix only.
+            wclasses["aw" if w.startswith("aw") else
+                     "pw" if w.startswith("pw") else
+                     "fw" if w.startswith("fw") else "none"] += 1
             if (r.get("ifcond") or "").strip():
                 if_count += 1
     zero = sorted(k for k, v in counts.items() if v == 0 and k not in allow)
@@ -165,8 +165,8 @@ def main():
                         if clean[k] > 0 and goodclean[k] == 0
                         and classes is not None and k not in allow)
     print(f"configs scanned: {nconfigs}")
-    print(f"weights: aw={wclasses['aw']} pw={wclasses['pw']} unweighted={wclasses['none']}; "
-          f"if-restricted configs: {if_count}")
+    print(f"weights: aw={wclasses['aw']} pw={wclasses['pw']} fw={wclasses['fw']} "
+          f"unweighted={wclasses['none']}; if-restricted configs: {if_count}")
     if classes is not None:
         print(f"data classes: wellbehaved={class_hist['wellbehaved']} "
               f"stress={class_hist['stress']} pathological={class_hist['pathological']}")
@@ -180,9 +180,14 @@ def main():
                 else "")
         gc = f" /{goodclean[k]:4d}" if classes is not None else ""
         print(f"  {k:28s} {counts[k]:4d} /{clean[k]:4d}{gc}{mark}")
-    if unknown:
-        print("UNRECOGNIZED option tokens (check spelling/abbreviation): " + ", ".join(sorted(unknown)))
     fail = False
+    if unknown:
+        # FATAL (author ruling 2026-09-11, documentation review D-13). A token the matcher
+        # cannot resolve is either a typo or a new option; either way its coverage credit is
+        # lost silently, which is the outcome this component exists to prevent. This used to
+        # print and pass.
+        print("UNRECOGNIZED option tokens (check spelling/abbreviation): " + ", ".join(sorted(unknown)))
+        fail = True
     if zero:
         print(f"COVERAGE_FAIL: {len(zero)} option(s) with zero configs: " + ", ".join(zero))
         fail = True

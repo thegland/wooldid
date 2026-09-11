@@ -23,10 +23,22 @@ together where the comparer expects them.
 import sys, os, csv, json
 import re as _re2
 
+# the file-writing options and their legal abbreviations: SAVEplots() -> save..saveplots,
+# PERMSAve() -> permsa..permsave, BOOTSAve() -> bootsa..bootsave. Used to pin every file a
+# config can write (documentation review D-11).
+_SAVEOPT = _re2.compile(
+    r"\b(?:save(?:p(?:l(?:o(?:t(?:s)?)?)?)?)?"
+    r"|(?:perm|boot)sa(?:v(?:e)?)?)"
+    r"\s*\(([^)]*)\)"
+)
+
 DUMPRES = r'''
 cap program drop dumpres
 program define dumpres
-  args cfg rc svpre
+  gettoken cfg 0 : 0
+  gettoken rc  0 : 0
+  * every remaining token is a file prefix to pin (see the files| note below)
+  local svpre `0'
   tempname fh
   file open `fh' using `"{DUMPDIR}`cfg'.csv"', write replace
   file write `fh' "rc|`rc'" _n
@@ -82,8 +94,17 @@ program define dumpres
   * "svp" as a catch-all for strays. The old hardcoded "svp*" was simultaneously too
   * broad (it swept other shards' files) and too narrow (a config saving under any other
   * prefix - e.g. saveplots(wdbt_saved) - was never checked at all).
+  * D-11 (author ruling 2026-09-11): `svpre' is now a LIST of prefixes, not one. It used to
+  * be the single saveplots() argument matched on that option's literal spelling, so the
+  * legal abbreviation save(...) slipped the pin entirely, and permsave()/bootsave() - which
+  * also write files - were never pinned at all.
   if "`svpre'" == "" local svpre svp
-  local svfiles : dir . files "`svpre'*"
+  local svfiles
+  foreach sp of local svpre {
+    local sp1 : dir . files "`sp'*"
+    local svfiles `svfiles' `sp1'
+  }
+  local svfiles : list uniq svfiles
   local svfiles : list sort svfiles
   file write `fh' `"files|`svfiles'"' _n
   foreach svf of local svfiles {
@@ -205,16 +226,16 @@ def main():
         call += ", " + r["options"].strip()
         lines.append(call)
         lines.append("local rc = _rc")
-        # LITERAL MATCH ON ONE SPELLING. The option is declared SAVEplots(), so its
-        # minimum abbreviation is `save' - and `save' resolves uniquely across all 85
-        # options, so `save(svp_x)' is fully legal Stata that this regex misses. The miss is
-        # silent: svpre falls back to the default prefix and the files| line then pins only
-        # svp*, which is precisely the pre-SI-21 state the note above says was fixed. Two
-        # further file-writing options, permsave() and bootsave(), are outside the pin
-        # altogether - their filenames are not recorded in the dump at all.
-        m = _re2.search(r"saveplots\(([^)]*)\)", r["options"])
-        svpre = m.group(1).strip() if m else ""
-        lines.append(f"dumpres {r['config']} `rc' {svpre}".rstrip())
+        # EVERY FILE-WRITING OPTION, AT EVERY LEGAL ABBREVIATION (author ruling 2026-09-11,
+        # documentation review D-11). This used to be a literal match on `saveplots(', so
+        # save(...) - the option's declared minimum abbreviation, which resolves uniquely -
+        # slipped the pin silently and left the run pinning only the "svp" fallback, the
+        # pre-SI-21 state. permsave() and bootsave() also write files and were outside the
+        # pin altogether. The three declarations are SAVEplots(), PERMSAve() and BOOTSAve(),
+        # which fixes the minimum abbreviations below; keep this in step with them.
+        svpres = [m.group(1).strip() for m in _re2.finditer(_SAVEOPT, r["options"])]
+        svpres = [p for p in dict.fromkeys(svpres) if p]
+        lines.append(f"dumpres {r['config']} `rc' {' '.join(svpres)}".rstrip())
         lines.append("")
         return "\n".join(lines)
 

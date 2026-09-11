@@ -104,17 +104,28 @@ missing = []
 for name in sorted(assigned - clist):
     first_read = first_assign = None
     pat_read = re.compile(r"`" + re.escape(name) + r"'")
-    # CAUTION: this matches any local/tempvar/tempname line that merely CONTAINS the name
-    # anywhere, so a line that only READS the local counts as assigning it and suppresses
-    # the finding - in the script whose whole job is to catch that class of defect. Live
-    # today in a benign form: `item' is suppressed by `tempvar `item'', which declares a
-    # tempvar NAMED BY item and assigns nothing. The harmful form is ordinary - any worker
-    # line like `local N = `nsg'' registers as an assignment of nsg - and it would leave
-    # this script printing OK while the worker reads a stale syntax-parsed value. Note the
-    # sibling regex above was deliberately widened for mid-line assignment (verifier s5_v1,
-    # 2026-07-26) and this one was left line-anchored; the asymmetry is intentional only in
-    # the sense that nobody has revisited it.
-    pat_assign = re.compile(r"^\s*(?:qui\s+|cap\s+)*(?:local|tempvar|tempname)\s.*\b" + re.escape(name) + r"\b")
+    # THE NAME MUST BE THE THING BEING ASSIGNED, not merely present on the line (author
+    # ruling 2026-09-11, documentation review D-14). This used to be
+    # `^...(?:local|tempvar|tempname)\s.*\bNAME\b', which counted a line that only READS
+    # the local as assigning it - so an ordinary `local N = `nsg'' registered as an
+    # assignment of nsg and suppressed the finding, in the script whose whole job is to
+    # catch that class. Two forms are recognized now: `local NAME ...' (the macro is the
+    # first token, optionally ++-prefixed) and `tempvar/tempname ... NAME ...' (any token
+    # in the declaration list, but only a BARE one - a `NAME' dereference does not count,
+    # which is what used to suppress `item' via `tempvar `item''.)
+    # foreach/forvalues are recognized too, and had to be: tightening the regex immediately
+    # surfaced `item', which the worker assigns fourteen times as a `foreach item in ...'
+    # loop variable and the old pattern had been suppressing for the wrong reason. A loop
+    # variable is a real assignment of the macro, so it belongs here; anything the worker
+    # sets by some OTHER idiom (gettoken, mata st_local, c_local) is still invisible to this
+    # check and would show up as a false positive here rather than passing silently.
+    pat_assign = re.compile(
+        r"^\s*(?:qui(?:etly)?\s+|cap(?:ture)?\s+|noi(?:sily)?\s+)*"
+        r"(?:local\s+(?:\+\+)?" + re.escape(name) + r"(?![A-Za-z0-9_`])"
+        r"|(?:tempvar|tempname)\s+(?:[A-Za-z_][A-Za-z0-9_]*\s+)*"
+        + re.escape(name) + r"(?![A-Za-z0-9_`])"
+        r"|(?:foreach|forv(?:al(?:ues)?)?)\s+" + re.escape(name) + r"(?![A-Za-z0-9_`]))"
+    )
     for j, l in enumerate(worker_after):
         if first_read is None and pat_read.search(l):
             first_read = j
