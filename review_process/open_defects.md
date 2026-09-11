@@ -14,32 +14,8 @@ CLOSED with its commit, so this file is also the record of what the sweeps bough
 
 ## OPEN — to address at the end
 
-### O-8. PS-3 (per-column table formats) — attempted 2026-09-10, reverted, still open
-The other eleven items the audit found are closed (see the BUILT section). This one is not.
-
-**Ruling.** *"Per-column formats. Keep the table structure, give each column an explicit
-format."*
-
-**What was tried.** A `wooldid_mlfmt` helper building a `matlist cspec()` from each matrix's
-own column names - general format for estimates and interval bounds, two decimals for
-statistics, three for p-values, integer for `relyr` - so no site hard-codes a column count.
-
-**Why it was reverted.** `matlist` refuses `cspec()` without a matching `rspec()`, and these
-tables carry row-equation groups whose separator rows `matlist` inserts itself, so the row
-count is not `rowsof()` and not any simple function of it. Three row-spec forms
-(`rowsof+1`, `3*rowsof+8`, and a generous fixed pad) all failed with
-`too few specifications in rspec()` - on the summary-statistics table, before the main one
-was reached. The tables were left on their working renderer and re-verified rendering.
-
-**What would settle it.** Either determine `matlist`'s separator-row rule for
-equation-grouped matrices empirically (count the rules it emits for a known matrix and derive
-the formula), or take the sweep's other named route and build the tables through
-`_coef_table` instead of `matlist`, which formats by convention and needs no spec at all.
-The second is the larger change and the one that would actually make the output look like
-every comparator's, which is what the ruling is after.
-
-**Priority: cosmetic.** No number is wrong; a p prints as `1.12e-35` where `regress` would
-print `0.000`.
+Nothing. Every item recorded in this file has been built, ruled closed, or resolved by
+measurement. PS-3, the last one, was built on 2026-09-10 (see CLOSED below).
 
 ---
 
@@ -62,6 +38,28 @@ everything outstanding.
 ---
 
 ## CLOSED
+
+### PS-3 — built 2026-09-10, after a wrong diagnosis
+**Ruling.** *"Per-column formats. Keep the table structure, give each column an explicit
+format."* **Author ruling 2026-09-10 on the four options put to him: the conventional
+formats, as ruled** - accepting that a p of 1.84e-21 prints as 0.000, which is what every
+comparator does. The magnitude is not lost from the data, only from the printed cell;
+`e(wdidmainresults)` still carries the full value.
+
+**Built.** `wooldid_mlfmt` builds matlist's `cspec()` and `rspec()` from each matrix's own
+names, so no call site hard-codes a column count: statistics two decimals, p-values three,
+`relyr` an integer, everything else a general format so no estimate loses precision. The
+p-value rule is EXACT-match, because the summary-statistics table has `p25` and `p75`
+columns that are percentiles. The rules are placed where the default put them - none above
+the header, one under it, one at each equation-group boundary, none at the foot - so the
+structure is unchanged and only the number formatting moves.
+
+**The earlier failure was mine, not matlist's.** The first attempt was abandoned on a probe
+that passed a `nooutput` option matlist does not have, so every row-spec length errored
+regardless, and this file recorded "matlist's contract fights these tables" as a finding. It
+does not. `rspec()` takes one character per horizontal rule and the count is rows + 2,
+independent of equation groups - measured on all three tables. **A single failing probe is
+not a property of the tool.**
 
 ### The eleven audit items closed 2026-09-10
 From `review_process/research_2026-09-10/sweep_audit.md`. PS-3 is the twelfth and is above.

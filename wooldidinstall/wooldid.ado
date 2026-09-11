@@ -9750,6 +9750,58 @@ end
 * the 0 means. Under permute() only the plain c/n share (permrawp) can print 0 from a
 * sampled enumeration - the add-one conventions never do, and an exact enumeration's 0
 * would be a true share (bug sweep BS-25); the Wald display's p is a tail probability
+* PS-3 (author ruling 2026-09-07, built 2026-09-10): "keep the table structure, give each
+* column an explicit format". matlist's default is ONE general format for the whole matrix,
+* which is why a p of 1.84e-21 used to sit beside a t of 13.07929 where every comparator
+* prints 0.000 and 13.08. This builds matlist's cspec() and rspec() from the matrix's OWN
+* names, so no call site hard-codes a column count and a table that gains a column cannot
+* break: statistics get two decimals, p-values three, the relative-year column prints as the
+* integer it is, and everything else keeps a general format so no estimate loses precision.
+* Note the exact-match rule on p-values - the summary-statistics table has columns p25 and
+* p75, which are percentiles and must stay on the general format.
+* rspec() is required with cspec() and takes one character per horizontal rule: a "-" draws
+* one, a "&" does not, and the count is rows + 2 (measured on all three tables, and
+* independent of how many row-equation groups they carry). The rules are placed where the
+* default put them - under the header, at every equation-group boundary, and at the foot -
+* so the structure is unchanged and only the number formatting moves.
+cap prog drop wooldid_mlfmt
+prog def wooldid_mlfmt
+version 16.0
+  syntax , mat(string)
+  local wdmrn : rowfullnames `mat'
+  local wdmw 12
+  foreach wdmn of local wdmrn {
+    local wdmnm = cond(strpos("`wdmn'", ":") > 0, substr("`wdmn'", strpos("`wdmn'", ":") + 1, .), "`wdmn'")
+    if strlen("`wdmnm'") > `wdmw' local wdmw = strlen("`wdmnm'")
+    if strlen("`wdmn'") > `wdmw' & strpos("`wdmn'", ":") == 0 local wdmw = strlen("`wdmn'")
+  }
+  if `wdmw' > 26 local wdmw 26
+  local wdmf "& %-`wdmw's |"
+  foreach wdmc in `: colnames `mat'' {
+    local wdmc1 = lower("`wdmc'")
+    if "`wdmc1'" == "relyr" | substr("`wdmc1'", 1, 6) == "numpre" local wdmf `wdmf' %7.0f &
+    else if "`wdmc1'" == "p" | "`wdmc1'" == "pvalue" | substr("`wdmc1'", 1, 2) == "p_" local wdmf `wdmf' %8.3f &
+    else if "`wdmc1'" == "t" | "`wdmc1'" == "z" | substr("`wdmc1'", 1, 2) == "t_" | substr("`wdmc1'", 1, 2) == "z_" local wdmf `wdmf' %8.2f &
+    else local wdmf `wdmf' %10.0g &
+  }
+  * character 1 governs the rule ABOVE the header, which the default does not draw; the next
+  * one sits under the header, which it does; then one per row, ruled at each equation-group
+  * boundary; and the last is the foot, which the default leaves open
+  local wdmr "&-"
+  local wdmprev "~~none~~"
+  local wdmfirst 1
+  foreach wdmn of local wdmrn {
+    local wdmeq = cond(strpos("`wdmn'", ":") > 0, substr("`wdmn'", 1, strpos("`wdmn'", ":") - 1), "")
+    if `wdmfirst' local wdmfirst 0
+    else if "`wdmeq'" != "`wdmprev'" local wdmr "`wdmr'-"
+    else local wdmr "`wdmr'&"
+    local wdmprev "`wdmeq'"
+  }
+  local wdmr "`wdmr'&"
+  c_local wdmlfmt `"`wdmf'"'
+  c_local wdmlfmtr `"`wdmr'"'
+end
+
 cap prog drop wooldid_pfloor
 prog def wooldid_pfloor
   args mat
@@ -10246,7 +10298,8 @@ version 16.0
     local contreatsummaryinjector
     if "`contreat'" != "" local contreatsummaryinjector " and Continuous Treatment Variable (c)"
     dis as result  "Summary Stats on Outcome Variable (y)`contreatsummaryinjector':"
-    matlist e(summarystats)
+    wooldid_mlfmt , mat(e(summarystats))
+    matlist e(summarystats), cspec(`wdmlfmt') rspec(`wdmlfmtr')
 
     if "`poisson'" == "poisson" dis as result  "Note: summary stats above are for untransformed Y, while coefficients are from Y=exp(regression equation) and have a log-linear type interpretation."
   }
@@ -10256,7 +10309,8 @@ version 16.0
   dis as result  " "
   dis as result  "Main`poistext' Results (Full Estimation Sample): `elasinj'"
   if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
-  matlist e(wdidmainresults)
+  wooldid_mlfmt , mat(e(wdidmainresults))
+  matlist e(wdidmainresults), cspec(`wdmlfmt') rspec(`wdmlfmtr')
   wooldid_pfloor e(wdidmainresults)
 
   * BS-10 (ruling 2026-09-07): the IM reference distribution is row-specific - t(q-1) with q
@@ -10415,7 +10469,8 @@ version 16.0
         if "`poisson'" == "poisson" local poistext "Poisson Regression "
         dis as result  "`poistext'Results for Subgroup `subgroups' == `sgcase': `elasinj'"
         if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
-        matlist e(wdidsgresults_`sgcase')
+        wooldid_mlfmt , mat(e(wdidsgresults_`sgcase'))
+        matlist e(wdidsgresults_`sgcase'), cspec(`wdmlfmt') rspec(`wdmlfmtr')
         wooldid_pfloor e(wdidsgresults_`sgcase')
         dis as result  " "
         * F8: per-subgroup composition table under summarystats
@@ -10460,7 +10515,8 @@ version 16.0
     * having shown the main sg materials, show the pairwise comparisons
     if wordcount("`sglist'") > 1 {
       dis as result  "Pairwise Comparisons of Different Subgroups' Estimates: `elasinj'"
-      matlist e(pwsgs)
+      wooldid_mlfmt , mat(e(pwsgs))
+      matlist e(pwsgs), cspec(`wdmlfmt') rspec(`wdmlfmtr')
       wooldid_pfloor e(pwsgs)
       * BS-15 (author ruling 2026-09-07): the realized-degeneracy disclosure, posted by
       * wooldid_sgdeg on the analytic path and read from e() so replay reproduces it. Written as
