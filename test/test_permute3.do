@@ -1667,5 +1667,38 @@ if `q32bad' != 0 {
 }
 else dis as result "Q32 PASS: fast mode posts e(p)/e(ci_l)/e(ci_u) equal to the perm_ matrices, posts no e(V) or e(se), and test still refuses (rc=`q32trc')"
 
+* ------------------------------------------- Q33: D-1, cfxplotnose under permute() (2026-09-11)
+* cfxplotnose used to truncate the cfx matrices to one column unconditionally, while
+* fastnose carved permute() out. So under permute() every cfx matrix came back one column
+* wide, wooldid_permcellsx skipped all of them on its six-column test, ndone stayed 0 - and
+* therefore the drift caution never printed and e(perm_cfx_blank) was never posted: analytic
+* plot cells under a permutation header with nothing said. cfxplotnose now takes the same
+* carve-out, so the cells carry permutation inference.
+clear
+set obs 20
+gen i = _n
+gen ttre = cond(i <= 8, 5, cond(i <= 15, 7, .))
+expand 10
+bysort i: gen t = _n
+set seed 4411
+gen dose = runiform() + 0.5
+gen y = 1.1*(t >= ttre & ttre < .)*dose + 0.08*i + 0.04*t + rnormal()
+qui wooldid y i t ttre, att cluster(i) contreat(dose) contreatcontrols(basic) ///
+  makecfxplots lattice(all 3) cfxplotnose permute(shuffle) permreps(20) rseed(77) ///
+  esprelength(1) espostlength(1) dots(0)
+local q33nm : word 1 of `e(wdid_cfxmats)'
+local q33c = .
+cap local q33c = colsof(e(`q33nm'))
+cap confirm matrix e(permdist_`q33nm')
+local q33pd = (_rc == 0)
+* the rewiring must have filled the inference columns from the replications
+local q33p = .
+cap local q33p = e(`q33nm')[1, 4]
+if "`q33nm'" == "" | `q33c' != 6 | `q33pd' != 1 | `q33p' >= . {
+  dis as error "Q33 FAIL: permute() + cfxplotnose must keep the 6-column cfx shape and permute it - matrix=[`q33nm'], colsof=`q33c', permdist posted=`q33pd', first cell p=`q33p'"
+  global pf = $pf + 1
+}
+else dis as result "Q33 PASS: cfxplotnose no longer truncates under permute() - `q33nm' has `q33c' columns, a permutation p (`q33p') and its own permdist_"
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

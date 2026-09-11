@@ -129,3 +129,29 @@ every inserted block's first line, located it, and printed its ENCLOSING PROGRAM
 intended one; 102 blocks checked, one wrong. Moved to `wooldid_cfxplots` in the follow-up
 commit. **The lesson for the next pass of this shape: verify the landing PROGRAM, not the
 landing line — a stale hint plus a duplicated anchor resolves silently to the wrong site.**
+
+
+## Outcome, 2026-09-11: all fifteen ruled and built
+
+The fifteen items above were put to the author as multiple choice and all fifteen were ruled.
+They were built in three risk-ordered commits - `ed95674` (the harness, first, so the rest is
+judged more strictly), `9bb24c6` (the seven that move no number), `82934b3` (the three that
+do) - and the ruling table and the closure record live in `open_defects.md`, which now has
+nothing under OPEN and nothing under HELD.
+
+Three of the fifteen change reported values, and none of the 504 dual-build configs reaches
+those paths - so they would have been invisible to the suite. Each was therefore verified with
+a before/after probe and pinned with a cert leg that was checked to FAIL on the pre-change
+build:
+
+| item | before | after |
+|---|---|---|
+| F033 on the studentized CELL p | 22 of 50 cell p-values exactly 0, minimum 0 | none zero, none below 2/(completed+1) |
+| D-1 `permute()` + `cfxplotnose` | first cfx matrix `colsof = 1`, no `e(permdist_*)`, cell p missing | `colsof = 6`, `permdist_` posted, a real permutation p |
+| D-9 per-family band seed | `crit_att_it` = 2.474072413106145 or 2.492870068598342, depending on what drew first | 2.47972450315949 either way |
+
+The F033 number is the one worth noticing: the finding estimated the gap at about 2/(n+1), and
+on the cert fixture it was that plus a long tail of exact zeros - nearly half the cells were
+printing a p of 0 that the coefficient surface could not print.
+
+New cert legs: `test_esband.do` B10, `test_permute3.do` Q33, `test_bootstrap_tstat.do` T12.

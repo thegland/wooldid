@@ -40,134 +40,79 @@ judged by the stricter gates), then the changes that move no number, then the th
 
 ## OPEN — to address at the end
 
-Every item from the ruled slates has been built, ruled closed, or resolved by measurement;
-PS-3, the last of those, was built on 2026-09-10 (see CLOSED below). The items below are
-new, and all come from one source: the **documentation review of 2026-09-10** (a 12-agent
-read of the thin regions of the ado, the Mata block and the Python harness). Each is
-recorded as a comment at the site where it bites, so nothing here is invisible to the next
-reader; they are listed here because each is a real deviation rather than a gap in the
-prose. None was fixed inline — the review's own commits are comment-only apart from two
-text corrections named in them.
-
-**D-1. `permute()` + `cfxplotnose` silently leaves the plot cells analytic.**
-`wooldid_permcellsx` skips any cfx matrix with fewer than six columns, and `cfxplotnose`
-sets `cfxmatendpoint` to 1 unconditionally (`fastnose` has an explicit `permute()` carve-out;
-`cfxplotnose` does not). So every cfx matrix is skipped, `ndone` stays 0, the drift caution
-never prints, `e(perm_cfx_blank)` is never posted, and the user gets analytic plot cells
-under a permutation header with no message at all. This is the "no silent no-op" policy's
-own failure mode. Fix is either a carve-out matching `fastnose`'s or a caution on the skip.
-
-**D-2. The drift caution's wording does not match what the code blanks.**
-`wooldid_permcellsx`'s drift branch blanks columns 4-6 always and column 3 only when the
-statistic is not the t-ratio. Column 2 keeps the ANALYTIC standard error, and under
-`permtstat` column 3 keeps the analytic b/se. The caution says the cells' "inference columns
-are blank (points only)", and the replay line repeats it. Either the wording should say
-"no permutation inference" (which is what is true), or the blanking should extend to the se
-and the `permtstat` t. Number-moving in the second form, so it is the author's call.
-
-**D-3. Four `mata: M = ...` one-liners leave a global Mata `M` in the user's session.**
-`wooldid_bootcellsx` (one), `wooldid_permwire`'s gteffects blanking (one) and
-`wooldid_permcellsx` (two). Mata has no statement-local scope at the `mata:` prompt, so a
-user's own matrix named `M` is silently overwritten, once per family per cfx matrix. Costs
-wooldid's results nothing; damages interactive state with no error. Fix is a `wooldid_`
-prefix or a `mata drop` tail — decide once for all four.
-
-**D-4. `dots()` is not honoured on the physical-expansion leg of `wooldid_bootrun`.**
-That leg prints one dot per replication and never the 50-mark running count, while the
-count path, the re-identification leg and the jackknife loop all gate on `mod(r, dots)`.
-Cosmetic, but a test that counts marks on this leg must expect `reps` of them.
-
-**D-5. Inert code, now documented as inert rather than deleted.** Four sites, none harmful,
-each of which reads as a bug or invites a wrong "repair": the two `if level != 95` interval
-renames in `wooldid_permwire` (they can never fire — the worker already names the columns
-from the run's own level); the pre-fill loop in `wooldid_bootjwr` (overwritten wholesale
-five lines later); `matrix rownames `summarystats' = `rownamessum'` in the worker (expands
-to an empty namelist, a measured silent no-op — the real labelling is inside
-`wooldid_sumstat`); and the initialisation loop in `wooldid_sgdom` (locals that die at its
-`end`). Deletion is safe for all four; it is not a documentation matter and was left alone.
-
-**D-6. `wdptsmiss` is counted and never read.** `wooldid_permwire` increments it once per
-coefficient blanked under `permtstat` for want of a usable observed analytic se, but the
-caution states both causes in one sentence without being able to say which applies. The two
-are different fixes for the user (raise `permreps()` versus "this element has no identified
-standard error to studentize by"), so the counter is worth spending on a caution split.
-
-**D-7. Per-family simultaneous-band drops are silent.** `wooldid_esbandv` exits without a
-message when a family has no stored band, while `wooldid_esband`'s caution fires only when
-NO family got one. Under `simultaneousbands` a user can get a dashed band on the ATT figure,
-none on the AME_it figure, and be told nothing.
-
-**D-8. The two band kernels take opposite policies on a degenerate horizon.**
-`wooldid_esbanda` drops the horizon and bands the rest; `wooldid_bootband` refuses the whole
-family. So an 8-horizon analytic band can come with no bootstrap band at all when horizon 9
-is structurally unidentified. Both are defensible; the asymmetry is undecided rather than
-ruled.
-
-**D-9. `wooldid_esbanda` consumes the caller's RNG stream, seeded once for the family loop.**
-A family's critical value therefore depends on how many families were banded before it, so
-adding `subgroups()` or an estimand moves an unrelated family's band in its low-order digits
-(simulation noise at nd = 10000). Reproducible within a run; not reproducible across runs
-that differ in family count.
-
-**D-10. `wooldid_permsaveasg` has two silent drops** — a conformability return that writes no
-assignment block at all (indistinguishable from a run that never asked for one), and a skip
-of any cluster whose `strtoname()`d column name is already taken, which leaves the saved file
-one cluster short with nothing marking the gap.
-
-**Harness items** (same review, `test/` files):
-
-**D-11. `mkrun.py`'s saveplots pin matches one spelling.** The option's legal minimum
-abbreviation is `save`, which resolves uniquely, so `save(svp_x)` is valid Stata the regex
-misses — re-opening the hole SI-21 closed. `permsave()` and `bootsave()` are outside the pin
-altogether.
-
-**D-12. `test/compare.py`'s 1e-12 absolute floor is live at every nonzero rtol**, including
-the 1e-9 default the README's own invocation uses; the B21 fix exempted `--rtol 0` only.
-`compare_oldnew.py` deliberately has no absolute floor, so the two comparers disagree on
-near-zero quantities.
-
-**D-13. `coverage_check.py` can overstate coverage without failing.** An UNRECOGNIZED option
-token never sets `fail`, and the abbreviation matcher resolves an ambiguity to whichever
-option comes first in the syntax line where Stata would refuse it (measured: no ambiguous
-pair exists today, so this is right by luck of naming). Separately the weight classifier
-files `fweight` — which the syntax line accepts — as unweighted.
-
-**D-14. `check_validate_sync.py`'s assignment regex counts a READ as an assignment.** Any
-`local X = `nsg'` line registers as assigning `nsg` and suppresses the finding, in the script
-whose whole job is to catch stranded syntax-parsed values. Benign today (only `item` is
-affected, via `tempvar `item'`), and the mechanism is ordinary.
+Nothing. Every item recorded in this file has been built, ruled closed, or resolved by
+measurement. The fifteen items the documentation review of 2026-09-10 turned up were ruled
+on 2026-09-11 and all fifteen are built - see CLOSED below.
 
 ---
 
 ## HELD FOR THE AUTHOR (not defects — judgment calls)
 
-These live in full in `held_for_ruling_2026-09-09.md`; listed here only so one file shows
-everything outstanding.
-
-- **PS-2** — ruled but not built.
-- **PS-62 sentinel diagonal** — the ruling said zero the sentinel row and column; the
-  off-diagonals are zeroed and the `-1e100` diagonal is KEPT, because zeroing it would
-  print a fabricated `0` standard error where an honest `.` prints today. Two-line
-  reversal recipe recorded.
-- **BS-15 degeneracy cut** — moved from the spec's `1-1e-3` to `1-1e-2` on measured
-  evidence.
-- **PS-45 bootstrap band studentization** — the band scales by the coefficient-draw
-  standard deviation even under `boottstat`, where every other reported quantity uses each
-  replication's own standard error. Cost of the alternative is written up.
-- **F033 propagation to the studentized CELL p-value** (found by the documentation review,
-  2026-09-10; recorded as an OPEN QUESTION at the site in `wooldid_bootcellwire`). The cell
-  branch ranks recentred draws — `tr = (b_r - b)/se_r` against `to = b/se_obs` — with the
-  plain `2*min(m0,m1)/n` rule, while `wooldid_boottp` and `wooldid_bootpwt` use the add-one
-  form `2*(min(m0,m1)+1)/(n+1)` that F033 mandates for exactly that construction. As written,
-  under `boottstat` a cell p and the coefficient p for the same quantity differ by roughly
-  `2/(n+1)` — about 0.02 at `reps(99)`, the size defect F033 was measured to remove — and the
-  cell p can still print as exactly 0 where the coefficient p cannot. The non-studentized
-  cell branch correctly has no add-one (its draws are not recentred). Moving reported numbers,
-  so held.
+Nothing. This list was stale: all five items it carried were ruled on 2026-09-10 and are
+recorded as built or confirmed in the table at the head of
+`held_for_ruling_2026-09-09.md` — PS-2 (name the exporters only) built, PS-62's sentinel
+diagonal confirmed as built, BS-15's cut confirmed at 1 - 1e-2, PS-45's band built as a
+percentile-t under boottstat, PS-46 built. The F033 cell p-value entry added on 2026-09-10
+was ruled on 2026-09-11 and built the same day (see CLOSED).
 
 ---
 
 ## CLOSED
+
+### The documentation review's fifteen items — ALL BUILT 2026-09-11
+Ruled by the author on 2026-09-11 (multiple choice, all fifteen answered; the ruling table is
+above). Built in three risk-ordered commits, each gated.
+
+**`ed95674` — the harness (D-11..D-14), first, so everything after it is judged more strictly.**
+- D-12 `test/compare.py`: the 1e-12 absolute floor is gone at every tolerance, matching
+  `compare_oldnew.py`. The selftest now pins the property with the two cases that used to
+  pass: `close(0.0, 1e-300)` and `close(1e-13, 5e-13)`.
+- D-13 `coverage_check.py`: an UNRECOGNIZED option token FAILS the run; `fweight` has its own
+  bucket.
+- D-14 `check_validate_sync.py`: the assignment regex requires the name to BE the thing
+  assigned. Tightening it immediately surfaced `item`, which the worker sets fourteen times
+  as a `foreach` loop variable and the old pattern had been suppressing for the wrong reason;
+  `foreach`/`forvalues` are recognized now, so the script is OK on its own terms rather than
+  by accident.
+- D-11 `mkrun.py`: the file pin covers every file-writing option at every legal abbreviation,
+  and `dumpres` takes a list of prefixes. `save(...)` used to slip it silently; `permsave()`
+  and `bootsave()` were outside it altogether.
+
+**`9bb24c6` — the seven that move no number (D-2..D-8, D-10).**
+- D-7/D-8: `wooldid_bootband` reports WHY it refused, naming the horizon; `wooldid_esband`
+  collects the declined families and names them. The refuse-the-whole-family policy stays, as
+  ruled, and the caution now carries its reason.
+- D-2: the drift caution says what is true — no permutation inference, p and interval blank,
+  the se column analytic, the t blank unless `permtstat`. The replay line matches.
+- D-6: the permutation blanking caution is split, so `wdptsmiss` is finally read: too few
+  completed replications (raise `permreps()`) versus no usable observed analytic SE (a
+  property of the specification).
+- D-10: both silent exits in `wooldid_permsaveasg` now report.
+- D-3: the four one-liner Mata temporaries are `wooldid_Mtmp`.
+- D-4: `dots()` is honoured on the physical-expansion leg, using the documented cadence.
+- D-5: the four inert sites are deleted, each leaving a note saying what went and why it
+  could not fire.
+
+**`82934b3` — the three that move numbers, each with before/after evidence.**
+- **F033 on the studentized CELL p-value.** Now `2*(min+1)/(n+1)`, one convention for every
+  recentred rank-based p. The effect was larger than the estimate in the finding: on the cert
+  fixture at `reps(40)`, the OLD build produced **22 of 50 cell p-values at exactly 0** with a
+  minimum of 0; the new build produces none at zero and none below `2/(completed+1)`.
+- **D-1, `permute()` + `cfxplotnose`.** `cfxplotnose` now takes the same `permute()` carve-out
+  `fastnose` has. Old build: the first cfx matrix had `colsof = 1`, no `e(permdist_*)`, and a
+  missing cell p. New: `colsof = 6`, `permdist_` posted, a real permutation p.
+- **D-9, the band's seed.** Derived per family from the family's NAME rather than set once
+  before the loop. Same fixture and spec, `e(esband_crit_att_it)` with `att` banded before it
+  versus `att_it` drawing first: before `2.474072413106145` vs `2.492870068598342`; after
+  `2.47972450315949` in both.
+
+**Pinned.** None of the 504 dual-build configs reaches these three paths, so the changes would
+have been invisible to the suite. Three cert legs were added and each was verified to FAIL on
+the pre-change build: `test_esband.do` B10 (the band's critical value is keyed to the family,
+not the draw order), `test_permute3.do` Q33 (`cfxplotnose` no longer truncates under
+`permute()`), `test_bootstrap_tstat.do` T12 (no studentized cell p is zero or below the
+add-one floor).
+
 
 ### PS-3 — built 2026-09-10, after a wrong diagnosis
 **Ruling.** *"Per-column formats. Keep the table structure, give each column an explicit

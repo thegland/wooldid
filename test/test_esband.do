@@ -252,6 +252,29 @@ if "`b9eng'" != "bootstrap-studentized" | "`b9eng2'" != "bootstrap" | `b9seen' <
 }
 else di as result "B9 PASS: boottstat gives a percentile-t band (`b9seen' horizons, none narrower than its pointwise interval); without boottstat the draw-SD construction stands"
 
+* ------------------------------------------------- B10: D-9, per-family seed (2026-09-11)
+* the analytic band's critical value must not depend on which OTHER families this run
+* happens to band. The seed used to be set once before the family loop, so each family
+* consumed successive draws and adding an estimand or subgroups() moved an unrelated
+* family's band in its low-order digits. Measured before the fix on this fixture:
+* crit_att_it was 2.474072413106145 with att banded first and 2.492870068598342 when
+* att_it drew first.
+mkb
+qui wooldid y unit t ttre, att att_it cluster(unit) esprelength(2) espostlength(2) simultaneousbands
+local b10x = e(esband_crit_att_it)
+mkb
+qui wooldid y unit t ttre, att_it cluster(unit) esprelength(2) espostlength(2) simultaneousbands
+local b10y = e(esband_crit_att_it)
+* and still reproducible run to run
+mkb
+qui wooldid y unit t ttre, att att_it cluster(unit) esprelength(2) espostlength(2) simultaneousbands
+local b10x2 = e(esband_crit_att_it)
+if `b10x' >= . | `b10y' >= . | `b10x' != `b10y' | `b10x' != `b10x2' {
+  di as error "B10 FAIL: crit_att_it must not depend on whether att drew before it - with att=`b10x', first=`b10y', repeat=`b10x2'"
+  local ++fails
+}
+else di as result "B10 PASS: the band's critical value is keyed to the family, not to the draw order (crit_att_it=`b10x' either way, and reproducible)"
+
 if `fails' == 0 di as result "ESBAND_ALL_PASS"
 else di as error "ESBAND_FAILS=`fails'"
 exit, clear

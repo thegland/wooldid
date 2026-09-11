@@ -383,5 +383,40 @@ if `rc_bc' != 198 | `ts_rows' != 6 | "`ts_rn'" != "n t_obs p_pctl qlo_pctl qhi_p
   di as error "T11 FAIL: bootdisplay(bc) with boottstat must be refused (198), e(boot_tstud) must have the 6 percentile-t rows, and no e(boot_tbc_*) twin may be posted"
   local ++fails
 }
+* --------------------------------------- T12: F033 reaches the CELL p-values (2026-09-11)
+* T6 pins the add-one grid for the coefficient p. The studentized gteffects/cfx CELL p was
+* built from the same recentred object - tr = (b_r - b)/se_r ranked against to = b/se_obs -
+* but used the plain 2*min/n share, so a cell p and the coefficient p for the same quantity
+* sat roughly 2/(n+1) apart and a cell p could print as exactly 0 where the coefficient p
+* could not. It now uses 2*(min+1)/(n+1) like every other recentred rank-based p here, so no
+* cell p can fall below 2/(completed+1) and none can be exactly 0.
+mkp
+qui wooldid y unit t ttre, `SPEC' gteffects bootstrap(standard) boottstat reps(40) rseed(23) dots(0)
+local t12done = e(boot_completed)
+local t12floor = 2/(`t12done' + 1)
+local t12min = .
+local t12zero 0
+local t12n 0
+cap confirm matrix e(gteffects)
+local t12rc = _rc
+if `t12rc' == 0 {
+  tempname T12
+  matrix `T12' = e(gteffects)
+  forval r = 1/`=rowsof(`T12')' {
+    local t12p = `T12'[`r', 7]
+    if `t12p' < . {
+      local ++t12n
+      if `t12p' < `t12min' local t12min = `t12p'
+      if `t12p' == 0 local ++t12zero
+    }
+  }
+}
+di "T12 cells=`t12n' min_p=`t12min' zeros=`t12zero' floor=`t12floor' (completed=`t12done')"
+if `t12rc' != 0 | `t12n' < 2 | `t12zero' != 0 | `t12min' < `t12floor' - 1e-12 {
+  di as error "T12 FAIL: the studentized cell p must be on the add-one grid - rc=`t12rc', cells=`t12n', exact zeros=`t12zero', min p=`t12min' against floor `t12floor'"
+  local ++fails
+}
+else di as result "T12 PASS: F033 reaches the cells - `t12n' studentized cell p-values, none zero, none below 2/(completed+1)=`t12floor'"
+
 if `fails' == 0 di as result "BOOTTS_ALL_PASS"
 else di as error "BOOTTS_FAILS=`fails'"
