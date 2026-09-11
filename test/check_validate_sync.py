@@ -43,6 +43,16 @@ else:
     print("OK: worker and validate syntax lines are byte-identical")
 
 # ---- check 2: c_local closure ------------------------------------------------
+# TWO PRECONDITIONS OF THIS CHECK, both properties of today's ado rather than of the
+# checker, so they need re-verifying whenever the validator changes:
+#  (1) span() ends a program at the FIRST line whose strip() is "end", so a nested end - a
+#      mata: block, an inner program define - would silently truncate the body and shrink
+#      the set of locals checked. (It resolves correctly today, including the worker's
+#      INDENTED "  end", which only the .strip() makes findable.)
+#  (2) the `assigned' scan below recognizes ONLY the `local' keyword, so a local created by
+#      gettoken, by Mata's st_local(), or by c_local is invisible to the closure check. The
+#      current wooldid_validate body contains none of those three; add one and this script
+#      still prints "OK: c_local closure holds" while checking nothing about it.
 def span(name):
     s = e = None
     for i, l in enumerate(src):
@@ -94,6 +104,16 @@ missing = []
 for name in sorted(assigned - clist):
     first_read = first_assign = None
     pat_read = re.compile(r"`" + re.escape(name) + r"'")
+    # CAUTION: this matches any local/tempvar/tempname line that merely CONTAINS the name
+    # anywhere, so a line that only READS the local counts as assigning it and suppresses
+    # the finding - in the script whose whole job is to catch that class of defect. Live
+    # today in a benign form: `item' is suppressed by `tempvar `item'', which declares a
+    # tempvar NAMED BY item and assigns nothing. The harmful form is ordinary - any worker
+    # line like `local N = `nsg'' registers as an assignment of nsg - and it would leave
+    # this script printing OK while the worker reads a stale syntax-parsed value. Note the
+    # sibling regex above was deliberately widened for mid-line assignment (verifier s5_v1,
+    # 2026-07-26) and this one was left line-anchored; the asymmetry is intentional only in
+    # the sense that nobody has revisited it.
     pat_assign = re.compile(r"^\s*(?:qui\s+|cap\s+)*(?:local|tempvar|tempname)\s.*\b" + re.escape(name) + r"\b")
     for j, l in enumerate(worker_after):
         if first_read is None and pat_read.search(l):

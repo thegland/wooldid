@@ -36,7 +36,13 @@ Comparison semantics (differs from the bit-exact regression compare in test/comp
 
 Ledger CSV columns: id,config,kind,pattern,rtol,reason.
 Kinds are the dump's own record types - scalar, macro, mat, matnames, esamp, varlist,
-files - plus one synthetic kind:
+files - plus two synthetic kinds:
+  - rc: the two ledgerable failures that correspond to no dump record at all - "rc 0/0 but
+    expectations say X/Y (stale configs.csv expectation?)" and "rc 0 but the old dump has
+    ZERO e() objects". No ledger row has ever used this kind, so this docstring is the only
+    place it can be learned. (EXPLAINED[rc-by-design] in the output is NOT a ledger kind: it
+    is an inline id for an rc pair matching configs.csv, and has no ledger row to find.)
+  - mat_esblock, below:
   - mat_esblock: e(V) cells that are the PS-62 event-study covariance splice and nothing
     else. The comparer peels a cell into this kind only when the two stripes are identical
     AND the cell is off-diagonal AND it was exactly 0 on old AND it is finite and nonzero
@@ -195,6 +201,17 @@ def main():
             if r["kind"] != kind: continue
             if not fnmatch.fnmatch(name, r["pattern"]): continue
             if r["_rtol"] is not None:
+                # NOT first-match-wins, despite ledger.csv's header: a bounded row that
+                # matched config+kind+pattern but whose diff EXCEEDED its bound falls
+                # through to later rows, and because it never sets _fired it is reported at
+                # the end as STALE - "never fired on any matching config". When such a row
+                # is the only match for its cells, that STALE line means the opposite of
+                # what it says: the divergence is still there and has grown past the bound.
+                # The same cells also print as UNEXPLAINED in the per-config block hundreds
+                # of lines earlier, which is where the real diagnosis is. Never repair a
+                # STALE line by widening the bound until it fires - that is exactly how a
+                # genuine numeric regression gets blessed by a row whose reason column
+                # documents a different, smaller effect.
                 if reldiff is None or math.isnan(reldiff) or reldiff > r["_rtol"]:
                     continue  # bounded rows only explain finite numeric diffs in-bound
             r["_fired"] = True
@@ -221,6 +238,14 @@ def main():
         comp, exp_old, exp_new = universe[cfg]
         for r in ledger:
             if fnmatch.fnmatch(cfg, r["config"]):
+                # _scoped is set from the CONFIG GLOB ALONE - kind and pattern are not
+                # consulted - which is what draws the STALE/UNSCOPED distinction. A row with
+                # a typo in its kind or pattern column can therefore never report UNSCOPED:
+                # its config glob still matches, so it reports STALE and points the reader
+                # at the config axis while the fault is on one of the other two. And because
+                # this runs BEFORE the MISSING continue below, a config whose shard crashed
+                # still scopes its rows - one dead shard manufactures a block of STALE
+                # failures on top of the real MISSING ones.
                 r["_scoped"] = True
         if cfg not in ocfg or cfg not in ncfg:
             side = "BOTH" if (cfg not in ocfg and cfg not in ncfg) else \
@@ -274,6 +299,14 @@ def main():
         if not rc_ok:
             classify("rc", "rc", f"rc 0/0 but expectations say {exp_old}/{exp_new} "
                                  f"(stale configs.csv expectation?)")
+            # ONE-SIDED ON PURPOSE, and load-bearing rather than a redundant sanity check.
+            # New-only objects are informational ADDITIONS and never enter `lines`, and the
+            # verdict is MATCH iff `lines` is empty - so an OLD dump with no e() objects at
+            # all (old build ran, rc 0, produced no estimation output) would classify every
+            # new object as an addition, emit zero lines, and pass as
+            # "MATCH (+N new-only objects)". This guard is the only thing standing between
+            # that and a green run. The mirror case needs no guard because it is already
+            # loud: an empty NEW dump turns every old object into a REMOVAL, which fails.
         if not O["scalar"] and not O["mat"] and not O["macro"]:
             classify("rc", "rc", "rc 0 but the old dump has ZERO e() objects — "
                                  "estimation output lost?")
@@ -357,6 +390,14 @@ def main():
             if not ks:
                 continue
             worst = 0.0
+            # has_str is TRUE FOR ABSENT CELLS as well as string cells - the name and the
+            # printed "n/a(str)" both undersell it - and that is the mechanism that makes a
+            # matrix SHAPE CHANGE impossible for any bounded ledger row to absorb: an absent
+            # cell yields reldiff None, and ledger_find refuses None for every row carrying a
+            # numeric rtol, so only an unbounded row (reserved for documented large fixes)
+            # can ever explain it. Deliberate safety property. It also means that
+            # "matrix V: 12 differing cell(s), worst reldiff n/a(str)" on a matrix containing
+            # no strings is the shape-change message.
             has_str = False
             for kk in ks:
                 a, b = O["mat"].get(kk), N["mat"].get(kk)

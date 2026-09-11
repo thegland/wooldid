@@ -99,6 +99,16 @@ clear all
 set more off
 set maxvar 20000
 set graphics off
+* CAUTION (harness-side half of a trap the ado documents from its own side): loading with
+* `do <path>' is the ONE load style under which wooldid cannot recover its own Mata kernels.
+* A config using cleanmatrices runs `clear mata' inside the worker; an adopath-resolved ado
+* recovers because Stata re-reads the file when a function is missing, and a do-loaded one
+* does not (SI-17/SI-18). The recovery path in the ado is a `cap mata:' that EXITS on
+* failure, so the kernel loss is swallowed rather than raised - the run keeps the older
+* analytic-diagonal e(V). Because this header runs once per SHARD and each shard then runs
+* up to --shard-size configs in the same Stata process, one cleanmatrices config can leave
+* every later config in that shard silently on the fallback path, and the per-config scrub
+* block below cannot undo it. Keep cleanmatrices configs isolated, or load by adopath.
 do "{ADO}"
 {DUMPRES}
 '''
@@ -155,6 +165,15 @@ def main():
 
     def block(r):
         lines = [f"* ---- {r['config']} ({r['component']}) ----"]
+        # BOTH SEEDS ARE RESET PER CONFIG, not once per shard, and that is the point:
+        # `set seed' pins the stream bootstrap()/permute() draw from, `set sortseed' pins
+        # the separate seed Stata uses to break ties in `sort'. The ado never touches
+        # sortseed - this is a harness decision, so that two builds executing different
+        # numbers of internal sorts still agree. Resetting per config decouples a config's
+        # draws and tie order from its POSITION in the shard, which is what makes
+        # --shard-size and CSV row order safe to change. The project has measured that
+        # session-order effects are real (see test/README.md on cont_lat / cont_uz moving
+        # at 1e-16..1e-10 in a shared session but bit-identical when run alone).
         lines.append("set seed 98765")
         lines.append("set sortseed 98765")
         lines.append("ereturn clear")
@@ -186,6 +205,13 @@ def main():
         call += ", " + r["options"].strip()
         lines.append(call)
         lines.append("local rc = _rc")
+        # LITERAL MATCH ON ONE SPELLING. The option is declared SAVEplots(), so its
+        # minimum abbreviation is `save' - and `save' resolves uniquely across all 85
+        # options, so `save(svp_x)' is fully legal Stata that this regex misses. The miss is
+        # silent: svpre falls back to the default prefix and the files| line then pins only
+        # svp*, which is precisely the pre-SI-21 state the note above says was fixed. Two
+        # further file-writing options, permsave() and bootsave(), are outside the pin
+        # altogether - their filenames are not recorded in the dump at all.
         m = _re2.search(r"saveplots\(([^)]*)\)", r["options"])
         svpre = m.group(1).strip() if m else ""
         lines.append(f"dumpres {r['config']} `rc' {svpre}".rstrip())

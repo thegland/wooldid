@@ -70,6 +70,13 @@ def close(a, b, rtol):
         return True
     if rtol == 0:
         return False  # --rtol 0 means bit-exact: no absolute-difference floor either
+    # NOTE this absolute floor is live at EVERY nonzero rtol, including the default 1e-9
+    # that test/README.md's documented invocation uses - the rtol==0 exemption beside it was
+    # the whole of the B21 fix, not a removal of the floor. So under the default any two
+    # values within 1e-12 absolute compare equal however large the relative gap: a p-value
+    # moving 1e-13 -> 5e-13 passes as IDENTICAL. The suite's other comparer took the
+    # opposite decision deliberately (compare_oldnew.py: "NO absolute floor", asserted twice
+    # in its selftest), so the two are not interchangeable on near-zero quantities.
     return abs(a - b) <= rtol * max(abs(a), abs(b), 1e-300) or abs(a - b) < 1e-12
 
 def main():

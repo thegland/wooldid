@@ -44,6 +44,17 @@ def parse_syntax_options(ado_path):
 
 def match_option(token, opts):
     """Stata abbreviation rule: token must extend the min abbrev and prefix the full name."""
+    # TWO PROPERTIES THAT CAN OVERSTATE COVERAGE, neither of them fatal at runtime.
+    # (1) This returns the FIRST full name the token satisfies, in syntax-line order, where
+    #     Stata would reject an ambiguous abbreviation outright. Measured on the current
+    #     syntax line: 85 options and no token that legally abbreviates two of them, so
+    #     first-wins is correct today by luck of naming rather than by construction. Add an
+    #     option that is a prefix-relative of an existing one - the boot*/perm* families
+    #     already share stems - and every matching config's credit silently transfers to
+    #     whichever appears first, reporting an uncovered option as covered.
+    # (2) An unmatched token is only printed as UNRECOGNIZED by the caller and never sets
+    #     `fail`, so a mistyped option token loses its credit while the run still ends
+    #     COVERAGE_OK.
     t = token.lower()
     for full, ab in opts.items():
         if t.startswith(ab) and full.startswith(t):
@@ -136,6 +147,13 @@ def main():
                 else:
                     unknown.add(tok)
             w = (r.get("weight") or "").strip()
+            # THREE-WAY SPLIT ONLY: wooldid's syntax line declares [aw fw pw / ], so an
+            # fw= config is a supported weight class that this files under "unweighted" -
+            # understating fweight coverage as zero and inflating the unweighted count. No
+            # config uses fw today, which is why it has never surfaced, and unlike the
+            # option axis there is no zero-coverage failure on the weight axis at all, so
+            # the miscount could never fail a run. Widen the buckets when the first fw
+            # config lands.
             wclasses["aw" if w.startswith("aw") else "pw" if w.startswith("pw") else "none"] += 1
             if (r.get("ifcond") or "").strip():
                 if_count += 1
