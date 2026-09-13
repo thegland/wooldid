@@ -1785,5 +1785,91 @@ if `rc' == 0 {
   else dis "Q35d info: smaller tail " __q35tail " of 30 (p=" e(perm_p_att) ")"
 }
 
+* ================= Q36: the hidden analytic twin e(perm_analytic_pwsgs) ===============
+* The pairwise block snapshots e(pwsgs) BEFORE the permutation rewrites its inference
+* columns and posts the snapshot as the hidden matrix e(perm_analytic_pwsgs) - the only
+* place a user can still read the analytic contrast inference the displayed table replaced.
+* Until 2026-09-13 nothing under test/ read it except the battery's own %21x dump of
+* perm_sgjt_adv, and on that fixture every inference cell of it is missing, so a regression
+* that stopped filling the live columns would have diffed nothing at all.
+* This leg runs it where the columns ARE live. permanalyticse is required: the permute()
+* default is fast mode (the shell sets fastnose itself unless permtstat or permanalyticse),
+* and fast mode computes no analytic standard error, so the default run's twin is all
+* missing by construction. What is asserted: the twin carries the ANALYTIC column names
+* while the displayed table carries the permutation ones; the estimate and the analytic SE
+* are shared bit for bit; column 3 is live in the twin and BLANK in the displayed table
+* (contrasts are permuted as coefficient differences in both modes, so there is no permuted
+* statistic to report); the twin's own columns are internally consistent as an analytic
+* table (t = estimate/se, the interval symmetric about the estimate, its half width the
+* t critical value at e(df_r) and e(level) times the SE); and the analytic p does NOT
+* appear in the displayed p column, which is the leak the hidden twin exists to make
+* checkable. The fixture is dta_binary, where both contrast rows carry a live analytic SE.
+* Note what is NOT claimed: the subgroup is nested in cluster(i), and the BS-15 screen that
+* would blank these rows on the analytic path does not run under permute(), so the raw
+* analytic cells are what the twin carries - the leg asserts the snapshot identity and the
+* analytic algebra, not the statistical quality of that standard error.
+use "`DATA'/dta_binary", clear
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) permute(shuffle) permreps(20) permanalyticse rseed(4242) dots(0)
+local rc36 = _rc
+xrc Q36a 0 `rc36'
+if `rc36' == 0 {
+  local bad 0
+  cap confirm matrix e(perm_analytic_pwsgs)
+  if _rc != 0 {
+    dis as error "Q36b FAIL: e(perm_analytic_pwsgs) is not posted under permute + subgroups + permanalyticse"
+    global pf = $pf + 1
+  }
+  else {
+    tempname PA36 PW36
+    matrix `PA36' = e(perm_analytic_pwsgs)
+    matrix `PW36' = e(pwsgs)
+    local ca36 : colnames `PA36'
+    local cw36 : colnames `PW36'
+    local ra36 : rowfullnames `PA36'
+    local rw36 : rowfullnames `PW36'
+    local df36 = e(df_r)
+    local lv36 = e(level)
+    local tc36 = invttail(`df36', (100 - `lv36')/200)
+    dis "Q36 twin cols=[`ca36'] display cols=[`cw36'] rows=" rowsof(`PA36') " df_r=`df36' tcrit=" %12.9f `tc36' " analyticse=[`e(perm_analyticse)']"
+    if rowsof(`PA36') != rowsof(`PW36') | colsof(`PA36') != 6 | "`ra36'" != "`rw36'" local ++bad
+    if "`e(perm_analyticse)'" != "1" local ++bad
+    * the twin keeps the ANALYTIC header, the display carries the permutation header
+    if "`ca36'" != "estimate se t p lb_95ci ub_95ci" local ++bad
+    if "`cw36'" != "estimate se_analytic t_perm p_perm lb_95ci ub_95ci" local ++bad
+    local live36 0
+    forval r = 1/`=rowsof(`PA36')' {
+      * estimate and analytic SE are the same object in both tables
+      forval c = 1/2 {
+        if (`PA36'[`r',`c'] < . | `PW36'[`r',`c'] < .) & reldif(`PA36'[`r',`c'], `PW36'[`r',`c']) > 0 local ++bad
+      }
+      if `PA36'[`r',2] < . & `PA36'[`r',2] > 0 {
+        local ++live36
+        * the analytic statistic survives only in the twin; the display blanks it
+        if `PA36'[`r',3] >= . local ++bad
+        if `PW36'[`r',3] < . local ++bad
+        * and the twin's columns are an analytic table, not leftovers
+        if reldif(`PA36'[`r',3], `PA36'[`r',1]/`PA36'[`r',2]) > 1e-12 local ++bad
+        if `PA36'[`r',5] >= . | `PA36'[`r',6] >= . local ++bad
+        else {
+          if reldif((`PA36'[`r',5] + `PA36'[`r',6])/2, `PA36'[`r',1]) > 1e-12 local ++bad
+          if reldif((`PA36'[`r',6] - `PA36'[`r',5])/(2*`PA36'[`r',2]), `tc36') > 1e-6 local ++bad
+        }
+        * the leak the twin exists to make checkable: the analytic p is not the reported p
+        if `PA36'[`r',4] < . & `PW36'[`r',4] < . & `PA36'[`r',4] == `PW36'[`r',4] local ++bad
+      }
+    }
+    dis "Q36 live analytic rows=`live36' of " rowsof(`PA36') " bad=`bad'"
+    if `live36' == 0 {
+      dis as error "Q36c FAIL (VACUOUS): every analytic SE in the twin is missing on this fixture, so nothing was asserted - change the fixture"
+      global pf = $pf + 1
+    }
+    else if `bad' {
+      dis as error "Q36d FAIL: `bad' check(s) on the analytic pairwise twin"
+      global pf = $pf + 1
+    }
+    else dis as result "Q36 PASS: e(perm_analytic_pwsgs) is the pre-permutation analytic snapshot of e(pwsgs)"
+  }
+}
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

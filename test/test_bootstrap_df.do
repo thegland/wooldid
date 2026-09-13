@@ -261,6 +261,93 @@ else {
   }
 }
 
+* T6d (2026-09-13): the BCa pairwise-contrast twin e(boot_bca_pwsgs). Nothing under test/
+* read this matrix before this leg - the dataset-coverage audit of 2026-09-13 found zero
+* references to it anywhere in the tree, baselines included - so the one contrast-family
+* twin with no reader could have stopped being posted and no test would have noticed.
+* wooldid posts it only when the jackknife accumulator is non-empty, which means
+* bootdisplay(bca) with subgroups; bca is refused with boottstat (G32c), so that is the
+* only route to it. The assertions are the family relations that make it the BCa twin
+* rather than a copy of a neighbour: the shape and row stripe of e(pwsgs); estimate, SD
+* and statistic shared with the wald twin (every family reads the same point and
+* standard-deviation columns); p and interval IDENTICAL to the displayed row, because bca
+* IS the selected family here; and at least one of those cells differing from BOTH the bc
+* and the percentile twins, which is what proves the acceleration reaches the contrast
+* rows instead of the table quietly falling back to another family.
+mkp
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) subgroups(sg) bootstrap(standard) reps(25) rseed(6) bootdisplay(bca)
+local t6drc = _rc
+di "T6d_rc=`t6drc' jk_completed=" e(boot_jk_completed)
+if `t6drc' != 0 {
+  di as error "T6d FAIL: the bootdisplay(bca) + subgroups run errored"
+  local ++fails
+}
+else {
+  cap confirm matrix e(boot_bca_pwsgs)
+  if _rc != 0 {
+    di as error "T6d FAIL: e(boot_bca_pwsgs) is not posted under bootdisplay(bca) with subgroups"
+    local ++fails
+  }
+  else {
+    matrix BCA6 = e(boot_bca_pwsgs)
+    matrix PDD6 = e(pwsgs)
+    matrix PWW6 = e(boot_wald_pwsgs)
+    matrix PCC6 = e(boot_pctl_pwsgs)
+    matrix PBC6 = e(boot_bc_pwsgs)
+    local rn6 : rowfullnames BCA6
+    local rd6 : rowfullnames PDD6
+    local bad6d 0
+    local live6d 0
+    local movd6 0
+    if rowsof(BCA6) != rowsof(PDD6) | colsof(BCA6) != 6 | "`rn6'" != "`rd6'" local ++bad6d
+    forvalues r = 1/`=rowsof(BCA6)' {
+      * shared across every display family: the point estimate, the bootstrap SD, the statistic
+      forvalues c = 1/3 {
+        if (BCA6[`r',`c'] < . | PWW6[`r',`c'] < .) & reldif(BCA6[`r',`c'], PWW6[`r',`c']) > 0 local ++bad6d
+      }
+      * the SELECTED family: p and interval must be the displayed contrast row, bit for bit
+      forvalues c = 4/6 {
+        if (BCA6[`r',`c'] < . | PDD6[`r',`c'] < .) & reldif(BCA6[`r',`c'], PDD6[`r',`c']) > 0 local ++bad6d
+        if BCA6[`r',`c'] < . {
+          local ++live6d
+          if PBC6[`r',`c'] < . & reldif(BCA6[`r',`c'], PBC6[`r',`c']) > 0 local ++movd6
+          if PCC6[`r',`c'] < . & reldif(BCA6[`r',`c'], PCC6[`r',`c']) > 0 local ++movd6
+        }
+      }
+    }
+    di "T6d_bca_twin rows=" rowsof(BCA6) " cols=" colsof(BCA6) " bad=`bad6d' live_cells=`live6d' differing_from_bc_or_pctl=`movd6'"
+    if `live6d' == 0 {
+      di as error "T6d FAIL: every BCa contrast cell is blank, so the comparisons were vacuous"
+      local ++fails
+    }
+    if `bad6d' > 0 {
+      di as error "T6d FAIL: e(boot_bca_pwsgs) is not the BCa twin of the displayed contrast table"
+      local ++fails
+    }
+    if `movd6' == 0 {
+      di as error "T6d FAIL: the BCa contrast family is bit-identical to the bc AND the percentile families - the acceleration is not reaching the contrast rows"
+      local ++fails
+    }
+  }
+}
+
+* T6e: and the twin is ABSENT when no jackknife ran, which is what makes T6d's presence
+* check informative rather than a tautology about a matrix wooldid always posts.
+mkp
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) subgroups(sg) bootstrap(standard) reps(25) rseed(6)
+local t6erun = _rc
+cap confirm matrix e(boot_bca_pwsgs)
+local t6erc = _rc
+di "T6e_absent_without_bca run_rc=`t6erun' confirm_rc=`t6erc' (want 0 and nonzero)"
+if `t6erun' != 0 {
+  di as error "T6e FAIL (VACUOUS): the no-bca run errored, so the absence proves nothing"
+  local ++fails
+}
+else if `t6erc' == 0 {
+  di as error "T6e FAIL: e(boot_bca_pwsgs) is posted without bootdisplay(bca), so no jackknife backs it"
+  local ++fails
+}
+
 * T7: replay reprints under bootdf
 cap qui wooldid
 di "T7_replay_rc=" _rc

@@ -9,7 +9,8 @@
 * plus dataset-specific probe columns documented per block.
 * Ledger references (divergence_ledger_draft.md): A6-B9, A14, A12, A10+A11,
 * A16, A15/B-F13, A8(b), B-clus, A7-B10.
-* Datasets-audit fixtures (2026-09-13): dta_s_stateyear (P1), dta_s_biennial (P2).
+* Datasets-audit fixtures (2026-09-13): dta_s_stateyear (P1), dta_s_biennial (P2),
+* dta_s_contcell (P3: the live-ame / live-lattice continuous bed).
 
 version 19
 clear all
@@ -269,6 +270,27 @@ gen y = 2 + 0.05*i + 0.1*t + 0.5*x1 - 0.3*x2 + 0.2*icvar + cond(ttre == 5, 1.5, 
 gen ycount = max(1, round(exp(0.15*y)))
 replace x1 = . if mod(i + t, 29) == 0
 replace x2 = . if mod(2*i + t, 31) == 0
+* --- 2026-09-13 datasets audit, item 4: two columns APPENDED after every
+* existing draw, so every column above stays bit-identical to the shipped
+* file (verified: cf i ttre sg icvar cccvar t x1 x2 fecat cwmvar icbad w y
+* ycount using the repo dta_s_covars.dta returns rc 0). Existing configs
+* name their variables explicitly and summarystats reads only model
+* variables, so the extra columns are inert for every pinned config.
+*   ycount_od - gamma-mixed Poisson count with REAL zeros (1028 of 1800,
+*               57.1%), variance/mean 3.42 and 16 support points, against
+*               ycount's zero-free 1..10 at variance/mean .55. Hosted at
+*               i = coh (prep covars_coh): 50 units per cohort-period cell,
+*               so no cell is all-zero and the separation screen is silent
+*               (at unit-level i every zero row is its own all-zero cell -
+*               the twin column on dta_s_ttyear was r(322), measured).
+*   wdisp     - lognormal analytic weight, cv 1.86 and max/min 2494 against
+*               w's cv .288 / 3.0. Measured detectability on the same att
+*               spec: aw=w moves the att 6.5e-03 relative to unweighted and
+*               its se 0.4%; aw=wdisp moves it 1.79e-02 and the se 17.8%.
+gen double __odcv = rgamma(0.5, 2)
+gen ycount_od = rpoisson(__odcv*exp(-0.2 + 0.5*(t >= ttre & ttre < .) + 0.2*(sg == 2)))
+gen double wdisp = exp(1.1*rnormal())
+drop __odcv
 save `"`OUT'/dta_s_covars.dta"', replace
 
 * =====================================================================
@@ -457,6 +479,76 @@ drop post alpha
 save `"`OUT'/dta_s_biennial.dta"', replace
 
 * =====================================================================
+* dta_s_contcell - P3 of the datasets audit (2026-09-13): the continuous-
+* treatment bed on which the ame, lattice and cfx surfaces are actually
+* LIVE. dta_cont cannot be that bed: there i is simultaneously the panel
+* unit, the cohort AND the cluster, so every treated i-t cell lies wholly
+* inside one cluster and wooldid_amescreen mode(detect) scrubs every ame
+* se/t/p/ci ("40 treated i-t cell(s) lie completely within a single
+* cluster"), and lattice(all 3) on its 10-observation cells returns an
+* all-zero e(V) even under robust (probe diag1/probe1, 2026-09-13).
+* This block fixes both by making i a GROUP and the cluster a finer unit:
+*   grp   - the panel/cohort id passed as i (9 groups);
+*   unit  - grp*1000 + within-group index, the cluster variable: 40 units
+*           per group for grp 1-8 and 3 for grp 9, so every treated grp-t
+*           cell holds 40 (or 3) distinct clusters and the containment
+*           screen cannot fire;
+*   dose_it - drawn per row (unit-level component ud plus an idiosyncratic
+*           draw), so dose varies inside every grp-t cell: the SI-A4/R6
+*           within-cell dose-slope terms are all identified, and 40 rows
+*           per cell keep lattice(all 3) bins populated.
+* Onsets 5 (grp 1-2), 7 (grp 3-4), 9 (grp 5-6), never (grp 7-8) plus
+* onset 6 on grp 9 - a TINY 3-unit cohort sitting among 323 units (the
+* 2026-09-13 audit's uncovered small-cohort regime; a unit-level-i host
+* for it is impossible here, 323 x 12 cells is r(907) maxvar).
+* Errors are AR(1) .6 within unit with unit-level heteroskedastic sig
+* (measured lag-1 residual autocorrelation .41 after unit and period FE;
+* unit residual sd .155 to 2.559, ratio 16.5), so the fit is not the
+* near-noiseless one that saturates dta_cont.
+* Two item-4 columns, both first of their kind in the suite:
+*   ycount - gamma-mixed Poisson: 2132 zeros (55.0%), variance/mean 2.87,
+*            15 support points, and no all-zero grp-t cell, so poisson at
+*            i = grp runs under default safety (every other suite count is
+*            zero-free or under-dispersed);
+*   w      - lognormal analytic weight, cv 1.21 and max/min 250 (the
+*            external analytic_weight is cv .079, max/min 1.25).
+* T = 12, N = 3876. Measured on HEAD and on v1.3: all seven dose_* configs
+* return rc 0 on both builds; on HEAD every reported row of
+* e(wdidmainresults) is live (12/12 with an se) and e(V_es_ame),
+* e(cfxame_relyr2), e(cfxame_cfxpost) all post live rows.
+* =====================================================================
+clear
+set type double
+set seed 20260914
+set sortseed 20260914
+set obs 9
+gen grp   = _n
+gen nunit = cond(grp == 9, 3, 40)
+gen ttre  = cond(grp <= 2, 5, cond(grp == 9, 6, cond(grp <= 4, 7, cond(grp <= 6, 9, .))))
+gen sg    = 1 + mod(grp, 2)
+expand nunit
+bysort grp: gen u = _n
+gen unit = grp*1000 + u
+sort unit
+gen alpha = rnormal()
+gen sig   = 0.5*exp(0.4*rnormal())
+gen ud    = 0.3*rnormal()
+gen w     = exp(1.1*rnormal())
+gen odisp = rgamma(0.6, 1/0.6)
+expand 12
+bysort unit: gen t = _n
+bysort unit (t): gen e = sig*rnormal()/sqrt(1 - .36) if _n == 1
+bysort unit (t): replace e = .6*e[_n-1] + sig*rnormal() if _n > 1
+gen dose_it = exp(ud + 0.55*rnormal())
+gen post    = (ttre < . & t >= ttre)
+gen y       = 3 + alpha + 0.04*t + 0.45*dose_it*post + 0.15*dose_it + e
+gen ycount  = rpoisson(odisp*exp(-0.2 + 0.35*post + 0.25*(sg == 2)))
+drop nunit u alpha sig ud odisp e post
+order grp unit t ttre y dose_it ycount w sg
+sort unit t
+save `"`OUT'/dta_s_contcell.dta"', replace
+
+* =====================================================================
 * SELF-TEST — hard deterministic asserts (no tolerances). Reloads every
 * dataset and checks N, unit counts, and the trigger-relevant properties.
 * =====================================================================
@@ -632,6 +724,23 @@ assert icbad == 1000000 + 137*i + t
 assert icbad > 1e6
 assert cwmvar > 0
 assert inlist(cccvar, 1, 2)
+* item-4 columns (2026-09-13): over-dispersed count with real zeros, and a
+* genuinely dispersed weight; every constant measured on this block
+assert ycount_od >= 0 & ycount_od == round(ycount_od)
+qui count if ycount_od == 0
+assert r(N) == 1028
+qui sum ycount_od
+assert reldif(r(Var)/r(mean), 3.418478374) < 1e-6
+gen __coh = cond(ttre == 5, 1, cond(ttre == 9, 2, 3))
+bys __coh t: egen double __mx = max(ycount_od)
+assert __mx > 0
+bys __coh t: gen long __nc = _N
+assert __nc == 50
+drop __coh __mx __nc
+qui sum wdisp
+assert wdisp > 0
+assert r(sd)/r(mean) > 1.5
+assert r(max)/r(min) > 1000
 di as result "covars OK"
 
 * ---- dta_s_strclus
@@ -776,6 +885,77 @@ assert w > .5 & !missing(y)
 * treated cell = separation refusal on HEAD; see the generator comment)
 assert ycount >= 1 & ycount == round(ycount)
 di as result "biennial OK"
+
+* ---- dta_s_contcell (P3, datasets audit 2026-09-13; every constant below
+* was measured on this exact block)
+use `"`OUT'/dta_s_contcell.dta"', clear
+assert _N == 3876
+bys unit: gen byte __f = _n == 1
+qui count if __f
+assert r(N) == 323
+bys grp: gen byte __g = _n == 1
+qui count if __g
+assert r(N) == 9
+drop __g
+* group sizes: 40 units in grp 1-8, the tiny 3-unit cohort in grp 9
+bys grp: egen long __nu = total(__f)
+assert __nu == 40 if grp != 9
+assert __nu == 3  if grp == 9
+* onset is a group attribute: four onsets (5, 6, 7, 9) plus a never pool, and
+* the onset-6 cohort is the 3-unit one
+bys grp (ttre): gen byte __same = ttre[1] == ttre[_N]
+assert __same
+assert ttre == 5 if inlist(grp, 1, 2)
+assert ttre == 7 if inlist(grp, 3, 4)
+assert ttre == 9 if inlist(grp, 5, 6)
+assert ttre >= . if inlist(grp, 7, 8)
+assert ttre == 6 if grp == 9
+foreach c in 5 7 9 {
+  qui count if __f & ttre == `c'
+  assert r(N) == 80
+}
+qui count if __f & ttre == 6
+assert r(N) == 3
+qui count if __f & ttre >= .
+assert r(N) == 80
+drop __same __nu
+* balanced 12-period grid, one row per unit-period, unit nested in grp
+qui sum t
+assert r(min) == 1 & r(max) == 12
+bys unit t: gen long __c = _N
+assert __c == 1
+assert unit == grp*1000 + mod(unit, 1000)
+drop __c
+* THE POINT OF THIS FIXTURE (1): every treated grp-t cell holds many
+* distinct clusters, so wooldid_amescreen mode(detect) cannot fire
+bys grp t unit: gen byte __u1 = _n == 1
+bys grp t: egen long __nclus = total(__u1)
+assert __nclus == 40 if grp != 9
+assert __nclus == 3  if grp == 9
+drop __u1 __nclus
+* THE POINT OF THIS FIXTURE (2): dose varies inside every grp-t cell, so
+* no treated cell dose-slope term is collinear-dropped (the SI-A4/R6 class)
+bys grp t: egen double __dsd = sd(dose_it)
+assert __dsd > 0 & __dsd < .
+drop __dsd
+assert dose_it > 0 & !missing(dose_it) & !missing(y)
+* item-4 count: real zeros, over-dispersed, no all-zero grp-t cell
+assert ycount >= 0 & ycount == round(ycount)
+qui count if ycount == 0
+assert r(N) == 2132
+qui sum ycount
+assert reldif(r(Var)/r(mean), 2.868419744) < 1e-6
+bys grp t: egen double __mx = max(ycount)
+assert __mx > 0
+drop __mx
+* item-4 weight: genuinely dispersed (cv 1.21, max/min 250)
+qui sum w
+assert w > 0
+assert r(sd)/r(mean) > 1
+assert r(max)/r(min) > 100
+assert inlist(sg, 1, 2)
+drop __f
+di as result "contcell OK"
 
 di as result "MKDATA_SUITE_SELFTEST_PASS"
 exit, clear

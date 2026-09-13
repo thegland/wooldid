@@ -1142,6 +1142,30 @@ def main():
                 stale.append(f"{cfg}: expectation on a config outside the assertion universe (class={S['cls']}, rc_new={S['rc_expected']})")
     n_unruled = sum(1 for e in exp.values() if "UNRULED" in e["citation"])
     if n_unruled: warns.append(f"{n_unruled} degeneracy_expected.csv rows carry UNRULED citations (pending an author ruling)")
+    # RF-13 (2026-09-13): DEGENERACY.md states a census of this CSV in prose, and prose goes
+    # stale in silence - it said 165 rows and 10 UNRULED within an hour of nine rows being
+    # added, and nothing in the suite noticed because no component checks a document's
+    # arithmetic against the data it documents. The census sentence is machine-read here and
+    # a disagreement is a FAILURE, on the same footing as a stale expectation row.
+    docpath = os.path.join(os.path.dirname(os.path.abspath(expect)), "DEGENERACY.md")
+    if not os.path.exists(docpath):
+        warns.append(f"DEGENERACY.md not found beside {os.path.basename(expect)}: its census is unchecked")
+    else:
+        with open(docpath, encoding="utf-8") as fh: doc = " ".join(fh.read().split())
+        mdoc = re.search(r"holds\s+(\d+)\s+rows:\s*([^.]*)\.", doc)
+        if not mdoc:
+            warns.append("DEGENERACY.md has no 'holds N rows: ...' census sentence, so its arithmetic is unchecked")
+        else:
+            cur = collections.Counter(e["class"] for e in exp.values())
+            said = {k: int(n) for n, k in re.findall(r"(\d+)\s+(PART_RULED|BY_CONSTRUCTION|DATASET_DESIGN|DATA_EDGE|HIDDEN|RULED)\b", mdoc.group(2))}
+            munr = re.search(r"(\d+)\s+of those rows carry an", doc)
+            docbad = []
+            if int(mdoc.group(1)) != len(exp): docbad.append(f"total says {mdoc.group(1)}, file has {len(exp)}")
+            for k in sorted(set(said) | set(cur)):
+                if said.get(k, 0) != cur.get(k, 0): docbad.append(f"{k} says {said.get(k, 0)}, file has {cur.get(k, 0)}")
+            if munr and int(munr.group(1)) != n_unruled: docbad.append(f"UNRULED says {munr.group(1)}, file has {n_unruled}")
+            if docbad:
+                fails.append("DEGENERACY.md: its census disagrees with " + os.path.basename(expect) + " (" + "; ".join(docbad) + ") - recompute the note from the CSV")
     do = [k for k in counts if counts[k][2] > 0 and counts[k][3] == 0]
     if do: warns.append("degen-only options (clean good-data coverage is degenerate on their own surface): " + ", ".join(sorted(do)))
     if dead_pairs: warns.append("degen-only option PAIRS (never live on both surfaces at once): " + ", ".join(f"{a}x{b}" for a, b in dead_pairs))

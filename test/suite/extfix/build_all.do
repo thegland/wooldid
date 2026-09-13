@@ -107,12 +107,6 @@ char _dta[wdbt_formula_version] "wdbt-fixture-v2"
 save `"`generated'/continuous_within_compact.dta"', replace
 restore
 
-preserve
-keep `master_keep'
-char _dta[wdbt_fixture_id] "continuous_untreated_zero_compact"
-char _dta[wdbt_formula_version] "wdbt-fixture-v2"
-save `"`generated'/continuous_untreated_zero_compact.dta"', replace
-restore
 
 wdbt_make_master_fixture, reps(12)
 preserve

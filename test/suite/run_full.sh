@@ -93,9 +93,11 @@ suite_log_pass() { # $1=logfile $2=epoch-floor
 
 # ---------- components ----------
 do_data() {
-  # 25 = 12 mkdata_suite + 12 extfix/build_all + 1 mkdata_admin. The two 2026-09-13
-  # realistic fixtures (dta_s_stateyear, dta_s_biennial) are inside the mkdata_suite 12,
-  # self-tests included, so a regeneration from an empty data/ still produces all 25.
+  # 25 = 13 mkdata_suite + 11 extfix/build_all + 1 mkdata_admin. The three 2026-09-13
+  # realistic fixtures (dta_s_stateyear, dta_s_biennial, dta_s_contcell) are inside the
+  # mkdata_suite 13, self-tests included, and continuous_untreated_zero_compact was dropped
+  # from extfix/build_all.do as a cf-identical duplicate of continuous_control_compact, so a
+  # regeneration from an empty data/ still produces all 25.
   # Raise this WITH every new fixture: a stale threshold makes do_data skip regeneration
   # and every config on a new dataset dies r(601) on BOTH builds, which reads as a
   # parity pass.

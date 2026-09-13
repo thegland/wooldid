@@ -155,6 +155,49 @@ calibration data inside their own scripts, and the `screens` deck's subject is
 option-pathology (bad option combinations, usually on fine data) — the config
 `component` column already carries that purpose.
 
+## Fixture concentration (the shape axis)
+
+The doctrine above governs the **class** axis — `wellbehaved` / `stress` / `pathological`.
+It says nothing about the **shape** axis, and the two are independent: an option can be
+fully covered, clean-rc and on well-behaved data, and still have its entire feature-quality
+evidence resting on ONE dataset shape. Measured 2026-09-13, after that day's
+dataset-coverage wave: of 556 configs `binary_balanced.dta` carries 225 (40.5%) and the top
+five fixtures carry 422 (75.9%), and **29 options** have clean-rc wellbehaved/stress coverage
+on exactly one fixture — 14 of them on `dta_binary` alone. (Those four numbers are a dated
+snapshot and this file has no guard on them; the `info:` line below is recomputed every run
+and is the authority.)
+
+Config concentration on the two workhorses is deliberate and is recorded in
+`data_classes.csv` (`dta_binary` "the main core battery workhorse", `binary_balanced.dta`
+"Workhorse for the 221-config ext grid"). **Single-fixture OPTION exposure is not a
+doctrine, it is an accumulation**: each new option lands as one config on a workhorse at the
+moment its fix ships (`configs.csv` notes read "new-only option `permside` (F064
+2026-09-06)"), and the concentration is only ever noticed when an audit happens to look
+("today every `boottstat` config is `dta_binary cluster(i)`", `real_boot_t`).
+
+The working rule, therefore, is **report it, do not police it**. The `coverage` component
+prints an `info:` line naming every option in that position together with its one fixture.
+That line is not a failure and several of its entries are correct by design —
+`permexact`/`permtci`/`permtstat` are on `dta_tiny` *because* tiny N makes permutation
+enumeration exact, and the display/compat switches (`verbose`, `oldsyntax`, `regtol`,
+`cleanmatrices`, `emptycellsoverride`, `suppresssgprimaryeffects`) have no shape-dependent
+behaviour to expose. It exists so that the concentration is a quantity a reader can see and
+judge rather than something a future audit has to rediscover, and so that a second fixture
+landing for an option shows up as the line getting shorter.
+
+Two cautions when reading it, both measurable and both real today:
+
+- **A second fixture is not evidence until the surface is LIVE there.** `bootstrap` and
+  `boottstat` each have a second fixture (`real_boot`, `real_boot_t` on `dta_s_stateyear`),
+  and `out/degeneracy/summary.txt` nevertheless listed them under
+  `dta_s_stateyear: never-live=['bootstrap','boottstat','reps']`, because at `reps(10)` the
+  bias-corrected family cannot form. Read the `degeneracy` component's per-dataset view
+  alongside this line.
+- **For an `rc_old != 0` option a second fixture buys an rc pair and a degeneracy
+  assertion, not a number.** The `COVERAGE_WARN rc-only` line names those options; their
+  numerical trackers are `test/runbattery.do` and the `test_*.do` cert legs, and the useful
+  second-shape work for them usually belongs in a cert leg rather than in a config.
+
 ## Which subpart should I run? (sub-agents)
 
 - Touched estimation/weights/margins code → `battery` + the nearest `cert` suites; add

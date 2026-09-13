@@ -112,6 +112,7 @@ def main():
     judged = {k: 0 for k in opts}       # clean configs whose CONTENT the comparer judges (rc_old 0 too)
     goodclean = {k: 0 for k in opts}    # clean-rc configs on wellbehaved/stress data
     pathoexp = {k: 0 for k in opts}     # configs on pathological-class data (any rc)
+    goodfix = {k: set() for k in opts}  # DISTINCT wellbehaved/stress fixtures per option
     wclasses = {"aw": 0, "pw": 0, "fw": 0, "none": 0}
     class_hist = {"wellbehaved": 0, "stress": 0, "pathological": 0}
     if_count = 0
@@ -155,6 +156,7 @@ def main():
                             judged[full] += 1
                         if cls in ("wellbehaved", "stress"):
                             goodclean[full] += 1
+                            goodfix[full].add(key)
                     if cls == "pathological":
                         pathoexp[full] += 1
                 else:
@@ -231,6 +233,20 @@ def main():
         nopatho = sorted(k for k in counts if counts[k] > 0 and pathoexp[k] == 0)
         print("info: options with no pathological-data exposure (not a defect; see the "
               "effort-allocation principle): " + (", ".join(nopatho) if nopatho else "none"))
+    if classes is not None:
+        # FIXTURE CONCENTRATION (structural review 2026-09-13). An option can be fully
+        # covered on the OPTION axis and still rest, for its entire feature-quality
+        # evidence, on ONE dataset shape. That is not by itself a defect - dta_tiny's
+        # permexact/permtci/permtstat trio is a deliberate single-fixture choice
+        # (data_classes.csv: "smallness is functional") - but until this line it was
+        # invisible: every earlier reading of this file showed counts and never shapes.
+        # Naming the fixture lets a reader judge the concentration, and makes a second
+        # fixture landing for an option visible as this line getting shorter.
+        onefix = sorted(k for k in counts if len(goodfix[k]) == 1 and k not in allow)
+        print("info: options whose clean-rc wellbehaved/stress coverage sits on exactly ONE "
+              "fixture (not a defect; see \"Fixture concentration\" in README.md): "
+              + (", ".join(f"{k} [{next(iter(goodfix[k]))}]" for k in onefix)
+                 if onefix else "none"))
     if rc_only:
         # WARN, not FAIL: the honest trackers for these options are the battery and the
         # cert suites, which this static gate cannot see; a FAIL would need an allow list

@@ -8,8 +8,8 @@ and compares the set of degeneracies it finds against the curated `degeneracy_ex
 Why it exists: `oldnew` compares HEAD against v1.3 cell by cell, so a surface that is dead on
 **both** builds compares equal and passes, and `coverage_check.py` (static) still credits the
 option. That is the "looks covered, is degenerate" class the Stage A audit (2026-09-13) set out to
-find, and this component makes it mechanical. As shipped, `degeneracy_expected.csv` holds 174
-rows: 131 BY_CONSTRUCTION, 13 PART_RULED, 11 HIDDEN, 10 DATASET_DESIGN, 9 RULED.
+find, and this component makes it mechanical. As shipped, `degeneracy_expected.csv` holds 175
+rows: 131 BY_CONSTRUCTION, 13 PART_RULED, 11 HIDDEN, 11 DATASET_DESIGN, 9 RULED.
 12 of those rows carry an `UNRULED` citation and are waiting on the author. Count the UNRULED
 citations, not the HIDDEN class, when you want to know what is still open.
 
@@ -108,3 +108,8 @@ FAIL / 41 STALE against `out/run_old`).
 - The old-vs-new caution diff is a permanent block while `oldnew` stages `main` = v1.3 (237 configs
   up on 2026-09-11); it is reported as one NOTE line and a CSV, not per-config WARNs. The
   regression signal for cautions is the optional `ncaution` pin.
+- The census sentence above ("holds N rows: ...", and the UNRULED count) is MACHINE-READ by
+  `degeneracy_scan.py` and a disagreement with `degeneracy_expected.csv` is a `DEGEN_FAIL`.
+  Keep its shape: `holds <N> rows: <n> <CLASS>, ...` on one sentence, and
+  `<n> of those rows carry an ...UNRULED...`. Rewording freely is fine; dropping the sentence
+  downgrades the check to a WARN.
