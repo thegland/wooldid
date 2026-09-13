@@ -4078,8 +4078,19 @@ difference alone**: pre-period coefficients on random draws pass through zero (c
    rerun with `esprelength(4)` and assert `max_h |b_w4 − b_bjs| > 1e-3`, recording the shift.
    **Third leg:** `anticipation(1)` vs `did_imputation … shift(1)` at the same 1e-6 gate, and vs
    wooldid on `ttre−1` at **exact 0, SEs included**.
-5. **[I] `newfeat/xtevent_identity.do`.** `cohom` **first, then `costag`** — the staggered panel
-   is the gap (§C.7 iii). `gen byte z = (ttre<. & t>=ttre)` then `xtevent y, policyvar(z)
+5. **[I] `newfeat/xtevent_identity.do`. BUILT 2026-09-13, and this entry's advice about the
+   staggered panel is STRUCK — it was wrong.** The file ships the common-onset panel only.
+   Following the original advice would have produced a permanently red leg: on the staggered
+   fixture wooldid against `xtevent, impute(stag)` is **mreldif 6.2e-02** at `window(-4 5)` and
+   6.3e-02 at `window(-3 4)`, worst absolute gap 1.19e-01 on post3. And the cause is NOT
+   treatment-effect heterogeneity — a two-cohort panel whose cohorts share a CONSTANT HOMOGENEOUS
+   effect still diverges by 6.0e-02 absolute. It is estimator structure: xtevent's OLS pools
+   cells under its own weights, not wooldid's. There is no identity there to test.
+   A second correction to this entry: the endpoint exclusion below must be UNCONDITIONAL. The
+   original probe matched every horizon INCLUDING the endpoints, but that was an accident of its
+   panel's support — at `window(-4 5)` each bin happens to hold exactly one relative period, so
+   the excluded lead agrees to 2.1e-17, while at `window(-3 4)` the bins pool two periods and the
+   same lead diverges by 7.0e-02. The rest of this entry stands and is what was built. `gen byte z = (ttre<. & t>=ttre)` then `xtevent y, policyvar(z)
    panelvar(i) timevar(t) window(-P Q) impute(stag) vce(cluster i)` against the same
    `esfixedbaseperiod` wooldid fit; map `_k_eq_m<h>`→`pre<h>`, `_k_eq_p<h>`→`post<h>`, and
    **exclude the outermost lead/lag on each side** — the window endpoints are binned and are not
