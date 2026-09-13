@@ -862,7 +862,7 @@ def main():
     logs_old = one("--logs-old")
     outdir = one("--out", "."); os.makedirs(outdir, exist_ok=True)
     expect = one("--expect")
-    notes, warns = [], []
+    notes, warns, classmoved = [], [], []
     classes = load_classes(one("--data-classes"))
     opts = parse_syntax_options(one("--ado"))
     if os.path.isfile(ledger_path):
@@ -1116,12 +1116,20 @@ def main():
         if gone: stale.append(f"{cfg}: STALE expectation {sorted(gone)} (now shows {sorted(got) or 'nothing'})")
         if e:
             if not class_compatible(e["class"], S["class"]):
+                # RF-12 (2026-09-13): a curated class moving is a FAILURE, not a warning. It
+                # was a warning until a real one fired on real_sg during the Stage B triage and
+                # the component still exited 0 - the contract this file asserts is that a
+                # curated expectation still describes the run, and a class that has moved does
+                # not. Kept in `warns` too so the DEGEN_WARN line still names it.
                 warns.append(f"class moved: {cfg} expected={e['class']} got={S['class']} (update degeneracy_expected.csv)")
+                classmoved.append(cfg)
             if e["class"] in ("RULED", "PART_RULED"):
                 for cid in e["citation"].split(";"):
                     cid = cid.strip()
                     if cid and not cid.startswith("UNRULED") and cid not in ledger_ids:
+                        # RF-12: a citation that resolves to nothing is a broken contract, same tier.
                         warns.append(f"dangling ledger citation: {cfg} cites '{cid}' which is not a ledger.csv id")
+                        classmoved.append(cfg)
             if e["ncaution"] is not None and S.get("ncaution") is not None and e["ncaution"] != S["ncaution"]:
                 warns.append(f"caution count moved: {cfg} expected={e['ncaution']} got={S['ncaution']}")
     # A3: rows whose config is gone, or which can never be asserted, are STALE (ledger discipline)
@@ -1143,9 +1151,14 @@ def main():
     for x in notes: print("DEGEN_NOTE " + x)
     for x in warns: print("DEGEN_WARN " + x)
     print(wrote)
-    print(summary_line(f" expected_rows={len(exp)} fail={len(fails)} stale={len(stale)} badrow={len(bad)} warn={len(warns)}"))
-    if fails or stale or bad:
-        print(f"DEGEN_CHECK_FAIL: {len(fails)} fail, {len(stale)} stale, {len(bad)} bad rows"); sys.exit(1)
+    # RF-11 (2026-09-13): the class bracket above prints SCANNER classes only, so curated
+    # DATASET_DESIGN rows are counted under HIDDEN and the line cannot be reconciled
+    # against degeneracy_expected.csv. curated_* below reports the file's own tally.
+    print(summary_line(f" expected_rows={len(exp)}"
+        f" curated=[" + " ".join(f"{k}={v}" for k,v in sorted(__import__("collections").Counter(e['class'] for e in exp.values()).items())) + "]"
+        f" fail={len(fails)} stale={len(stale)} badrow={len(bad)} classmoved={len(classmoved)} warn={len(warns)}"))
+    if fails or stale or bad or classmoved:
+        print(f"DEGEN_CHECK_FAIL: {len(fails)} fail, {len(stale)} stale, {len(bad)} bad rows, {len(classmoved)} class-moved/dangling"); sys.exit(1)
     print("DEGEN_CHECK_OK")
 
 if __name__ == "__main__":
