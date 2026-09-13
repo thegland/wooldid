@@ -4753,7 +4753,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * si(`safetyuser') at that point, as bootctl already does
   if "`permute'" != "" {
     cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safety') psave(`permsave') level(`level') `replace'
-    if _rc != 0 error _rc
+    if _rc != 0 exit _rc   // RF-1: exit, not error - the cap noi above already printed it (rule at :61)
   }
 
   * capture the user's own safety() input, unaffected by the contreatwithin relaxation that
@@ -4767,7 +4767,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * the safetyinput capture above deliberately - the bayes cell-weighted gate keys on
   * the user's own safety() value (contreatwithin rewrites the working copy later)
   cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') ttrevar(`ttre_asgiven') `replace'
-  if _rc != 0 error _rc
+  if _rc != 0 exit _rc   // RF-1: exit, not error - the cap noi above already printed it (rule at :61)
 
   * register verbose retention with the shell's error-path cleanup epilogue (top of this
   * file): under verbose, ___wooldidfullmodel (and _ppmlhdfe_d under poisson) are
@@ -6011,12 +6011,6 @@ version 16.0
   * one-sided add-one joint, equality and adversarial family, floor 1/(reps + 1).
   * reps() is the REQUEST: failed replications are excluded from the completed count
   * (e(boot_failed)), so the realized grid can be coarser than the one named here.
-  if `reps' > 0 {
-    local wdbgrid = cond("`bts'" != "", 2/(`reps' + 1), cond("`bdisp'" == "wald", 1/(`reps' + 1), 2/`reps'))
-    if `wdbgrid' > .05 & "`bts'" != "" dis as text "Caution: with reps(`reps') the smallest studentized coefficient p-value this run can produce is " %5.3f `wdbgrid' " (2/(reps + 1)), above .05, so no coefficient p-value can reject at the 5% level whatever the data say, and a p-value printed at that value is the resolution limit rather than evidence. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 39 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). Failed replications are excluded, so the realized resolution can be coarser than this."
-    else if `wdbgrid' > .05 & "`bdisp'" == "wald" dis as text "Caution: with reps(`reps') the joint, equality and adversarial p-values - one-sided add-one shares over their own completed replication counts - cannot fall below " %5.3f `wdbgrid' " (1/(reps + 1)), above .05, so none of them can reject at the 5% level whatever the data say. The coefficient p-values under bootdisplay(wald) are analytic and carry no such limit. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 19 replications for a 5% joint test (roughly 50 for .02, 100 for .01 and 500 for .002). Failed replications are excluded, so the realized resolution can be coarser than this."
-    else if `wdbgrid' > .05 dis as text "Caution: with reps(`reps') the coefficient p-values fall on a grid of " %5.3f `wdbgrid' " (2/reps), so the only value below .05 this run can produce is exactly 0 - which records that no completed replication reached the far side of the null, not that the evidence is that strong. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 40 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). Failed replications are excluded, so the realized grid can be coarser than this. The joint, equality and adversarial p-values are one-sided add-one shares with floor 1/(reps + 1)."
-  }
 
   * companion-value validation
   if `level' != 0 & (`level' < 10 | `level' > 99.99) {
@@ -6039,6 +6033,14 @@ version 16.0
   if "`bsave'" != "" {
     local wdbfn `bsave'
     if lower(substr("`wdbfn'", -4, 4)) == ".dta" local wdbfn = substr("`wdbfn'", 1, strlen("`wdbfn'") - 4)
+    if strpos("`wdbfn'", ",") {
+      * RF-6 (2026-09-13): the check below rejected only a directory part, so
+      * bootsave(name, replace) - the obvious analogy to Stata's own saving(f, replace),
+      * which this option deliberately does NOT follow - was swallowed whole and wrote a
+      * file literally called "name, replace.dta" at rc 0.
+      dis as error "Error: bootsave() takes a plain file name and no comma; replace is a separate option of wooldid, so write bootsave(`=subinstr("`wdbfn'", ",", " ", .)') replace."
+      error 198
+    }
     if strpos("`wdbfn'", "/") | strpos("`wdbfn'", "\") | "`wdbfn'" == "" {
       dis as error "Error: bootsave() takes a plain file name (no directory part); the file is written to the current working directory."
       error 198
@@ -6231,6 +6233,16 @@ version 16.0
       dis as error "Error: bootstrap() requires at least 2 clusters in the estimation sample."
       error 459
     }
+  // RF-2 (2026-09-13): this caution was printed BEFORE the boottstat nesting check and the
+  // two-cluster check, both of which abort with error 459 - so a user whose run never
+  // executed was advised about its p-value resolution. Moved below every aborting
+  // validation, above the other bootstrap cautions.
+  if `reps' > 0 {
+    local wdbgrid = cond("`bts'" != "", 2/(`reps' + 1), cond("`bdisp'" == "wald", 1/(`reps' + 1), 2/`reps'))
+    if `wdbgrid' > .05 & "`bts'" != "" dis as text "Caution: with reps(`reps') the smallest studentized coefficient p-value this run can produce is " %5.3f `wdbgrid' " (2/(reps + 1)), above .05, so no coefficient p-value can reject at the 5% level whatever the data say, and a p-value printed at that value is the resolution limit rather than evidence. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 39 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). Failed replications are excluded, so the realized resolution can be coarser than this."
+    else if `wdbgrid' > .05 & "`bdisp'" == "wald" dis as text "Caution: with reps(`reps') the joint, equality and adversarial p-values - one-sided add-one shares over their own completed replication counts - cannot fall below " %5.3f `wdbgrid' " (1/(reps + 1)), above .05, so none of them can reject at the 5% level whatever the data say. The coefficient p-values under bootdisplay(wald) are analytic and carry no such limit. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 19 replications for a 5% joint test (roughly 50 for .02, 100 for .01 and 500 for .002). Failed replications are excluded, so the realized resolution can be coarser than this."
+    else if `wdbgrid' > .05 dis as text "Caution: with reps(`reps') the coefficient p-values fall on a grid of " %5.3f `wdbgrid' " (2/reps), so the only value below .05 this run can produce is exactly 0 - which records that no completed replication reached the far side of the null, not that the evidence is that strong. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 40 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). Failed replications are excluded, so the realized grid can be coarser than this. The joint, equality and adversarial p-values are one-sided add-one shares with floor 1/(reps + 1)."
+  }
     if r(max) < 10 dis as text "Caution: only " r(max) " clusters are available for the bootstrap; bootstrap inference is unreliable with very few clusters."
     * F050 (quality review 2026-09-05, author ruling 2026-09-06): the total-cluster caution
     * above cannot see the case the few-cluster literature is about - few TREATED clusters.
