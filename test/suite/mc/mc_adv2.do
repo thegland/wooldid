@@ -2,6 +2,12 @@
 * (PREREG_NEWFEAT_2026-08-24 §M2 AMENDMENT A4). Cohort-level cluster(i) is excluded by
 * the INV-1 finding (rank-1 V_es_ame: CRVE scores of cell dose slopes identically
 * zero); robust on iid errors is a probe-verified full-rank configuration.
+* WARNING (Stage A audit 2026-09-13, critic C1): the ame arm at 6 obs per cohort-by-period cell
+* (`qui expand 6`) sits BELOW the ADVBOUND cell-size gate for the continuous adversarial test
+* (REPORT_ADVBOUND_2026-08-26.md: 31.55% at 6 obs/cell -> 9.92% at 20 -> 5.95% PASS at 50, AB22;
+* ruling GATE ON CELL SIZE), so the A4 ame band FAILs on HEAD by ruling (08-24: 159/504 =
+* 31.55%). The att side (robust, 6 units/cell) is AB2's PASS regime and remains a valid size
+* test. NOT rewritten pending an author ruling; see PREREG_NEWFEAT_2026-08-24.md NOTE (M2, M3b).
 * args: 1=adopath  2=config (A4)  3=shard  4=nreps  5=baseseed  6=outdir
 clear all
 set more off

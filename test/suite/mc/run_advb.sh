@@ -8,12 +8,16 @@
 #   ./run_advb.sh AB1 AB2      run only these configs, then analyze
 #   ./run_advb.sh analyze      re-judge existing CSVs without running
 #   STATA_JOBS=8               pool size (default 8 = the project hard cap)
+#   ADVB_OUT=/some/dir         output tree (default out/ = the 2026-08-26 record; see below)
 set -u
 MC="$(cd "$(dirname "$0")" && pwd)"
 SUITE="$(cd "$MC/.." && pwd)"
 REPO="$(cd "$SUITE/../.." && pwd)"
 ADO="$REPO/wooldidinstall/wooldid.ado"
-OUT="$MC/out"
+# 2026-09-13 (audit F6): ADVB_OUT=<dir> re-runs into a fresh tree. mc_advb.do REPLACES
+# <outdir>/<cfg>_s<n>.csv and the analyzer writes <outdir>/advb_report.md, so a re-run into
+# the default out/ overwrites the 2026-08-26 record it should be compared against.
+OUT="${ADVB_OUT:-$MC/out}"
 GRID="$MC/advb_grid.json"
 STATA_BIN="/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp"
 JOBS="${STATA_JOBS:-8}"

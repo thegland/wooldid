@@ -248,6 +248,23 @@ if "`s8st'" != "analytic-blocks" | "`s8fam'" == "" | s8hit < 1 | s8bad != 0 | `s
 }
 else dis as result "S8 PASS: `s8n' off-diagonal pair(s) across [`s8fam'] equal e(V_es_*) exactly; the att-vs-att_it cell is still 0"
 
+* ---- S8b PS-62 consumer side: what the splice is FOR - a cross-horizon lincom on e(V) ----
+* the se of post0 - post1 from lincom (which reads e(V) and e(df_r)) must equal the family
+* covariance's own sqrt(v00 + v11 - 2 v01); before PS-62 lincom silently used the zero
+* off-diagonal and reported sqrt(v00 + v11)
+use `panel', clear
+qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(2)
+cap noi lincom ES_att_post0 - ES_att_post1
+local s8brc = _rc
+local s8bse = r(se)
+local s8best = r(estimate)
+mata: VE = st_matrix("e(V_es_att)"); nm = st_matrixcolstripe("e(V_es_att)")[., 2]; a = selectindex(nm :== "post0"); b = selectindex(nm :== "post1"); BE = st_matrix("e(b_es_att)"); st_numscalar("s8b_se", sqrt(VE[a,a] + VE[b,b] - 2*VE[a,b])); st_numscalar("s8b_est", BE[1,a] - BE[1,b]); st_numscalar("s8b_diag", sqrt(VE[a,a] + VE[b,b]))
+if `s8brc' != 0 | reldif(`s8bse', s8b_se) > 1e-12 | reldif(`s8best', s8b_est) > 1e-12 | reldif(s8b_se, s8b_diag) < 1e-6 {
+  dis as error "S8b FAIL: lincom rc=`s8brc' se=`s8bse' vs family sqrt(v00+v11-2v01)=" s8b_se " (diagonal-only would give " s8b_diag ")"
+  local ++fails
+}
+else dis as result "S8b PASS: lincom post0 - post1 on the spliced e(V) reproduces the family covariance (se " %10.8f `s8bse' ", diagonal-only would be " %10.8f s8b_diag ")"
+
 * ---- S9 PS-62 follow-through: cleanmatrices must not take the splice down with it ----
 * cleanmatrices runs `clear mata' inside the worker, which drops wooldid's OWN Mata kernels
 * for the rest of the session whenever the ado was loaded with `do <path>' - which is how

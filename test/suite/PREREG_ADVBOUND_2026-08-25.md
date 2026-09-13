@@ -357,3 +357,26 @@ least one regime where its paired standard twin FAILED.** If it only reduces the
 magnitude without certifying anywhere new, the two methods stand or fall together and altmethod
 is at most a documented mild improvement. The converse case (CERTIFIED(AB11) with NOT
 CERTIFIED(AB1)) promotes altmethod to the documented default, per §4's ALT sub-ruling.
+
+---
+
+## NOTE 2026-09-13 (Stage A suite audit, F6) — no band, prediction or rule changed
+
+The locked predictions (§2) and the V1 negative-control gate (§4, `rate(AB12) < 25`) were
+derived for the statistic as it stood on 2026-08-25: free intercept + slope projected out,
+q = 6 on the 8-horizon window (F-2). Since BS-12 (2026-09-10) the adversarial null is the
+one-parameter line THROUGH the reference period, q = 7; `altmethod_adversarial`'s q = 4 is
+untouched. Recorded so that a re-run is not misread:
+
+- The certification bands (binomial size bands + the chi2 co-primary) remain valid size tests
+  of whatever statistic HEAD computes. A re-run at HEAD is a REFERENCE COMPARISON against the
+  2026-08-26 record (`REPORT_ADVBOUND_2026-08-26.md`), not a scored re-test of the locked
+  predictions.
+- The prediction scorecard and V1's 25% threshold are pinned to the old statistic's AB12 rate
+  (56.35%). Whether to re-derive them for q = 7 (pilot AB12 at HEAD, >= 100 reps) or drop them
+  is an author ruling; neither was done here.
+- Re-runs must write to a fresh output tree (`ADVB_OUT=<dir> ./run_advb.sh`, or
+  `analyze_advb.py <outdir> <grid> --out <report.md>`): `mc_advb.do` REPLACES
+  `<outdir>/<cfg>_s<n>.csv` and the analyzer writes `<outdir>/advb_report.md`, so a re-run into
+  `mc/out` overwrites the record it should be compared against.
+- `mc_advb.do`'s L58 comment now reads q = 7 (audit F9); the driver itself is unchanged.

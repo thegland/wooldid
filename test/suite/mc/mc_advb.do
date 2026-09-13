@@ -55,7 +55,7 @@ local CONTOPT
 if "`MODE'" == "contreat" local CONTOPT contreat(dose) contreatcontrols(basic)
 
 * the reported horizon set is fixed by the geometry (verified: espre=5, espl=4, the
-* relyr -1 reference is remapped out), so 8 att coefficients and q=6
+* relyr -1 reference is remapped out), so 8 att coefficients and q=7 (BS-12: one-parameter line through the reference period)
 local ROWS "ES_att:pre5 ES_att:pre4 ES_att:pre3 ES_att:pre2 ES_att:post0 ES_att:post1 ES_att:post2 ES_att:post3"
 local AROWS "ES_ame:pre5 ES_ame:pre4 ES_ame:pre3 ES_ame:pre2 ES_ame:post0 ES_ame:post1 ES_ame:post2 ES_ame:post3"
 

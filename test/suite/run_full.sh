@@ -2,15 +2,16 @@
 # wooldid comprehensive testing & assessment suite — orchestrator.
 #
 # Usage: ./run_full.sh [component ...]
-#   components: data oldnew compare cert newfeat battery coverage all   (default: all)
+#   components: data oldnew compare cert newfeat battery coverage degeneracy all   (default: all)
 #   env: STATA_BIN (default: the direct StataMP binary path — the PATH symlink is broken)
 #        STATA_JOBS (default 6; hard project cap is 8 concurrent Stata instances)
 #        ONLY=<comma-list of oldnew components, e.g. core,trig> to subset the dual-build
 #        run (subset runs judge ONLY those components' configs and skip stale checks)
 #
-# Cost calibration (measured on this machine, 2026-08-18): the full `all` run is ~20-30
-# minutes at pool=6 — cheap enough to run at every campaign checkpoint. Subset components
-# run in seconds-to-minutes and are the per-fix tools. See README.md.
+# Cost calibration (measured on this machine, 2026-09-11): the full `all` run is ~60
+# minutes at pool=6 (oldnew ~25, cert ~23 — test_refmargin alone is 22 — newfeat ~7,
+# battery ~5-8) — run it at every campaign checkpoint. Subset components run in
+# seconds-to-minutes and are the per-fix tools. See README.md.
 #
 # EXIT STATUS: nonzero if ANY component failed. The cumulative record is out/SUITE_REPORT.md.
 set -u
@@ -34,15 +35,22 @@ pool_wait_slot() {
     sleep 5
   done
 }
-run_stata_job() { # $1=workdir $2=dofile-abs $3=timeout-s $4=tag $5=sentinel-regex ('' = none)
+run_stata_job() { # $1=workdir $2=dofile-abs $3=timeout-s $4=tag $5=sentinel-regex ('' = none) [$6.. = do-file arguments]
   local dir="$1" dofile="$2" tmo="$3" tag="$4" sentinel="$5"
+  shift 5
+  # Stata names the batch log after the LAST cmdline token with its extension replaced
+  # by .log: the do-file when it takes no arguments, else the last argument (the newfeat
+  # scripts and the data builders end in .../data, so their log is data.log).
+  local logtok="$dofile"
+  [ $# -gt 0 ] && logtok="${@: -1}"
   pool_wait_slot
   local marker="$OUT/.running.$tag"
   : > "$marker"
   (
     started=$(date +%s)
+    timedout=0
     cd "$dir" || { echo "FAIL $tag (cd $dir)" >> "$OUT/pool.log"; rm -f "$marker"; exit 1; }
-    ( exec "$STATA_BIN" -e do "$dofile" ) >/dev/null 2>&1 &
+    ( exec "$STATA_BIN" -e do "$dofile" "$@" ) >/dev/null 2>&1 &
     pid=$!
     while kill -0 "$pid" 2>/dev/null; do
       sleep 10
@@ -51,13 +59,16 @@ run_stata_job() { # $1=workdir $2=dofile-abs $3=timeout-s $4=tag $5=sentinel-reg
         sleep 10
         kill -9 "$pid" 2>/dev/null
         echo "TIMEOUT $tag ($dofile after ${tmo}s)" >> "$OUT/pool.log"
+        timedout=1
         break
       fi
     done
     wait "$pid" 2>/dev/null
     dur=$(( $(date +%s) - started ))
-    log="$(basename "${dofile%.do}").log"
-    if [ -z "$sentinel" ] || grep -qE "$sentinel" "$log" 2>/dev/null; then
+    log="$(basename "$logtok")"; log="${log%.*}.log"
+    if [ "$timedout" -eq 1 ]; then
+      :   # one problem line per job: TIMEOUT is already recorded, no INCOMPLETE on top
+    elif [ -z "$sentinel" ] || grep -qE "$sentinel" "$log" 2>/dev/null; then
       echo "OK $tag (${dur}s)" >> "$OUT/pool.log"
     else
       echo "INCOMPLETE $tag (no /$sentinel/ in $log, ${dur}s)" >> "$OUT/pool.log"
@@ -82,22 +93,41 @@ suite_log_pass() { # $1=logfile $2=epoch-floor
 
 # ---------- components ----------
 do_data() {
-  if [ "$(ls "$SUITE/data"/*.dta 2>/dev/null | wc -l | tr -d ' ')" -ge 23 ]; then
+  # 25 = 12 mkdata_suite + 12 extfix/build_all + 1 mkdata_admin. The two 2026-09-13
+  # realistic fixtures (dta_s_stateyear, dta_s_biennial) are inside the mkdata_suite 12,
+  # self-tests included, so a regeneration from an empty data/ still produces all 25.
+  # Raise this WITH every new fixture: a stale threshold makes do_data skip regeneration
+  # and every config on a new dataset dies r(601) on BOTH builds, which reads as a
+  # parity pass.
+  if [ "$(ls "$SUITE/data"/*.dta 2>/dev/null | wc -l | tr -d ' ')" -ge 25 ]; then
     note "data: frozen datasets present — skipping regeneration"
     return 0
   fi
   note "data: building suite datasets into $SUITE/data"
-  mkdir -p "$SUITE/data" "$OUT/datagen"
+  mkdir -p "$SUITE/data"
   local ok=0
-  ( cd "$OUT/datagen" && "$STATA_BIN" -e do "$SUITE/mkdata_suite.do" "$SUITE/data" ) \
-    && grep -q "MKDATA_SUITE_SELFTEST_PASS" "$OUT/datagen/mkdata_suite.log" \
-    && note "data: mkdata_suite OK" || { note "data: mkdata_suite FAILED"; ok=1; }
-  ( cd "$OUT/datagen" && "$STATA_BIN" -e do "$SUITE/extfix/build_all.do" "$SUITE/data" ) \
-    && grep -q "WDBT_FIXTURES_BUILT" "$OUT/datagen/build_all.log" \
-    && note "data: extfix OK" || { note "data: extfix FAILED"; ok=1; }
-  ( cd "$OUT/datagen" && "$STATA_BIN" -e do "$SUITE/mkdata_admin.do" "$SUITE/data" ) \
-    && grep -q "MKDATA_ADMIN_SELFTEST_PASS" "$OUT/datagen/data.log" \
-    && note "data: mkdata_admin OK" || { note "data: mkdata_admin FAILED"; ok=1; }
+  # Stata names the batch log after the LAST cmdline token, so all three builders write
+  # data.log (their argument is $SUITE/data). The graders used to look for
+  # mkdata_suite.log / build_all.log, which Stata never writes (harness audit H-3), so
+  # every regeneration reported those two steps FAILED. Each step now runs in its own
+  # subdirectory (all three logs survive for triage), through the pool so it gets a
+  # timeout (H-7), and is graded on its column-1 sentinel in that subdirectory's
+  # data.log. Stata's shell exit status is 0 even when the do-file errors: the grep is
+  # the gate. Steps stay sequential (the builders share $SUITE/data).
+  local step sub dofile sentinel label
+  for step in "suite|$SUITE/mkdata_suite.do|MKDATA_SUITE_SELFTEST_PASS|mkdata_suite" \
+              "extfix|$SUITE/extfix/build_all.do|WDBT_FIXTURES_BUILT|extfix" \
+              "admin|$SUITE/mkdata_admin.do|MKDATA_ADMIN_SELFTEST_PASS|mkdata_admin"; do
+    IFS='|' read -r sub dofile sentinel label <<< "$step"
+    rm -rf "$OUT/datagen/$sub"; mkdir -p "$OUT/datagen/$sub"
+    run_stata_job "$OUT/datagen/$sub" "$dofile" 1800 "data_$sub" "^$sentinel" "$SUITE/data"
+    pool_drain
+    if grep -q "^$sentinel" "$OUT/datagen/$sub/data.log" 2>/dev/null; then
+      note "data: $label OK"
+    else
+      note "data: $label FAILED — see $OUT/datagen/$sub/data.log"; ok=1
+    fi
+  done
   return $ok
 }
 
@@ -116,6 +146,12 @@ do_compare() {
   [ -n "${ONLY:-}" ] && flags=(--only "$ONLY" --no-stale-check)
   _compare_cmd "$OUT/oldnew_compare.txt" "${flags[@]+"${flags[@]}"}"
   local rc=$?
+  # the comparer checks that the new-side stamps are uniform, not that they are HEAD: a
+  # re-judge after new commits would otherwise print PASS for an older build (H-11).
+  # -xF on purpose: BSD grep treats `$' as an anchor even mid-pattern.
+  local headsha; headsha=$(git -C "$REPO" rev-parse --short HEAD)
+  grep -qxF "prov[new] = new|$headsha" "$OUT/oldnew_compare.txt" \
+    || note "compare: WARNING — new-side dumps are not from HEAD ($headsha); this re-judges an older build"
   tail -4 "$OUT/oldnew_compare.txt" | tee -a "$REPORT"
   [ $rc -eq 0 ] && note "compare: PASS" || note "compare: FAILURES — see $OUT/oldnew_compare.txt"
   return $rc
@@ -157,7 +193,7 @@ do_oldnew() {
   for side in old new; do
     while IFS='|' read -r dofile n speed; do
       [ -z "$dofile" ] && continue
-      tmo=600; [ "$speed" = "slow" ] && tmo=1800
+      tmo=600; [ "$speed" = "slow" ] && tmo=1800; [ "$speed" = "vslow" ] && tmo=3600
       # SI-21: every shard gets its OWN, FRESH working directory. dumpres globs the whole
       # cwd for saveplots output and then erases what it listed, so shards sharing a cwd
       # could record each other's files AND delete them before the owner dumped - a race
@@ -191,7 +227,7 @@ do_oldnew() {
 }
 
 do_cert() {
-  note "cert: HEAD certification suites (test/test_*.do + check_validate_sync.py)"
+  note "cert: working-tree certification suites (test/test_*.do + check_validate_sync.py; only oldnew stages HEAD)"
   : > "$OUT/cert.log"
   local floor
   floor=$(date +%s)
@@ -220,7 +256,7 @@ do_cert() {
 }
 
 do_newfeat() {
-  note "newfeat: cross-check components (HEAD only)"
+  note "newfeat: cross-check components (working tree; only oldnew stages HEAD)"
   : > "$OUT/newfeat.log"
   local floor
   floor=$(date +%s)
@@ -229,27 +265,26 @@ do_newfeat() {
     b=$(basename "$f" .do)
     rm -rf "$OUT/newfeat/$b"
     mkdir -p "$OUT/newfeat/$b"
-    pool_wait_slot
-    marker="$OUT/.running.nf_$b"
-    : > "$marker"
-    (
-      cd "$OUT/newfeat/$b" && \
-        "$STATA_BIN" -e do "$f" "$REPO/wooldidinstall/wooldid.ado" "$REPO/test/data" \
-        >/dev/null 2>&1
-      # Stata names the batch log after the LAST cmdline token — check every log here
-      pass=1
-      for lg in ./*.log; do
-        [ -e "$lg" ] && suite_log_pass "$lg" "$floor" && pass=0
-      done
-      if [ $pass -eq 0 ]; then
-        echo "PASS $b" >> "$OUT/newfeat.log"
-      else
-        echo "FAIL $b (see $OUT/newfeat/$b/)" >> "$OUT/newfeat.log"
-      fi
-      rm -f "$marker"
-    ) &
+    # through the pool so a hung script cannot hang the suite (H-7). The pool's own
+    # sentinel check reads data.log (the last cmdline token); the grade below reads
+    # every log in the directory, as before.
+    run_stata_job "$OUT/newfeat/$b" "$f" 1800 "nf_$b" '^[A-Z0-9_]+_ALL_PASS' \
+      "$REPO/wooldidinstall/wooldid.ado" "$REPO/test/data"
   done
   pool_drain
+  for f in "$SUITE"/newfeat/*.do; do
+    [ -e "$f" ] || continue
+    b=$(basename "$f" .do)
+    pass=1
+    for lg in "$OUT/newfeat/$b"/*.log; do
+      [ -e "$lg" ] && suite_log_pass "$lg" "$floor" && pass=0
+    done
+    if [ $pass -eq 0 ]; then
+      echo "PASS $b" >> "$OUT/newfeat.log"
+    else
+      echo "FAIL $b (see $OUT/newfeat/$b/)" >> "$OUT/newfeat.log"
+    fi
+  done
   local nfail
   nfail=$(grep -c '^FAIL' "$OUT/newfeat.log" 2>/dev/null || true)
   note "newfeat: $(grep -c '^PASS' "$OUT/newfeat.log" 2>/dev/null || echo 0) passing, $nfail failing"
@@ -258,10 +293,21 @@ do_newfeat() {
 }
 
 do_battery() {
-  note "battery: HEAD bit-exact regression vs committed baseline"
+  note "battery: working-tree bit-exact regression vs committed baseline"
   rm -rf "$REPO/test/run_suitebatt"
   mkdir -p "$REPO/test/run_suitebatt"
-  ( cd "$REPO/test/run_suitebatt" && "$STATA_BIN" -e do ../runbattery.do ) >/dev/null 2>&1
+  # through the pool for the timeout and the BATTERY_DONE sentinel (H-7; the battery has
+  # no kill loop of its own and a hung cell hung the suite). pool.log is truncated only
+  # by do_oldnew, so a battery-only run would otherwise read the previous run's lines:
+  # the tag carries this invocation's PID (pool.log lines are `STATUS tag (...)`).
+  # runbattery.do resolves ../.. and ../data from the cwd, which the pool preserves.
+  local btag="battery_$$"
+  run_stata_job "$REPO/test/run_suitebatt" "$REPO/test/runbattery.do" 3600 "$btag" '^BATTERY_DONE'
+  pool_drain
+  if grep -qE "^(TIMEOUT|INCOMPLETE|FAIL) $btag " "$OUT/pool.log"; then
+    note "battery: run did not complete — see $OUT/pool.log"
+    return 1
+  fi
   if python3 "$REPO/test/compare.py" "$REPO/test/baseline" "$REPO/test/run_suitebatt" --rtol 0 \
        > "$OUT/battery_compare.txt" 2>&1; then
     note "battery: IDENTICAL vs baseline"
@@ -279,14 +325,52 @@ do_coverage() {
   [ -f "$SUITE/data_classes.csv" ] && dclass=(--data-classes "$SUITE/data_classes.csv")
   if python3 "$SUITE/coverage_check.py" --ado "$REPO/wooldidinstall/wooldid.ado" \
       --configs "$SUITE/configs.csv" "${extcfg[@]+"${extcfg[@]}"}" \
-      --allow-zero update,permprobs "${dclass[@]+"${dclass[@]}"}" \
+      --allow-zero update "${dclass[@]+"${dclass[@]}"}" \
       > "$OUT/coverage.txt" 2>&1; then
     note "coverage: OK"
-    tail -2 "$OUT/coverage.txt" | tee -a "$REPORT"
+    # every WARN class reaches SUITE_REPORT.md, not just the last two lines (rc-only, A-5)
+    grep -E '^(COVERAGE_WARN|info:|COVERAGE_OK)' "$OUT/coverage.txt" | tee -a "$REPORT"
     return 0
   fi
   note "coverage: GAPS — see $OUT/coverage.txt"
   tail -4 "$OUT/coverage.txt" | tee -a "$REPORT"
+  return 1
+}
+
+do_degeneracy() {
+  note "degeneracy: hidden-coverage assertion (degenerate results on the surface a config targets)"
+  # CONTRACT (harness audit F12 + critique A2): degeneracy_scan.py --expect asserts every
+  # clean-rc wellbehaved/stress config's degeneracy-flag stems against
+  # degeneracy_expected.csv (NEW stem = fail, STALE expectation = fail), and a config
+  # whose dump is MISSING must be a DEGEN_FAIL, never a skipped row: after a shard
+  # timeout run_component continues into this component, and DEGEN_CHECK_OK over absent
+  # dumps would be vacuous. Belt on the harness side: refuse when the last oldnew left a
+  # shard unfinished or the comparer reported a missing dump. Runs on run_new only
+  # (v1.3 dumps trip era flags); --dumps-old only annotates the old side's rc/properties.
+  [ -f "$SUITE/degeneracy_scan.py" ] || { note "degeneracy: FAIL — $SUITE/degeneracy_scan.py is not present"; return 1; }
+  [ -f "$SUITE/degeneracy_expected.csv" ] || { note "degeneracy: FAIL — $SUITE/degeneracy_expected.csv is not present"; return 1; }
+  [ -d "$OUT/run_new" ] || { note "degeneracy: FAIL — no new-side dumps in $OUT/run_new (run oldnew first)"; return 1; }
+  if grep -qE '^(TIMEOUT|INCOMPLETE|FAIL) (old|new)_shard_' "$OUT/pool.log" 2>/dev/null \
+     || grep -qE '^\[[^]]+\] MISSING dump' "$OUT/oldnew_compare.txt" 2>/dev/null; then
+    note "degeneracy: FAIL — the last oldnew run left dumps missing (see $OUT/pool.log and $OUT/oldnew_compare.txt); re-run oldnew first"
+    return 1
+  fi
+  local extcfg=() logs=() old=()
+  [ -f "$SUITE/configs_ext.csv" ] && extcfg=(--configs "$SUITE/configs_ext.csv")
+  [ -d "$OUT/wd_new" ] && logs=(--logs "$OUT/wd_new")        # shard logs -> console-caution digest
+  [ -d "$OUT/run_old" ] && old=(--dumps-old "$OUT/run_old")   # old-side rc/properties annotation
+  if python3 "$SUITE/degeneracy_scan.py" --ado "$REPO/wooldidinstall/wooldid.ado" \
+      --configs "$SUITE/configs.csv" "${extcfg[@]+"${extcfg[@]}"}" \
+      --data-classes "$SUITE/data_classes.csv" --ledger "$SUITE/ledger.csv" \
+      --dumps "$OUT/run_new" "${old[@]+"${old[@]}"}" "${logs[@]+"${logs[@]}"}" \
+      --out "$OUT/degeneracy" --expect "$SUITE/degeneracy_expected.csv" \
+      > "$OUT/degeneracy.txt" 2>&1; then
+    note "degeneracy: OK"
+    grep -E '^(DEGEN_WARN|DEGEN_CHECK_OK)' "$OUT/degeneracy.txt" | tee -a "$REPORT"
+    return 0
+  fi
+  note "degeneracy: FAIL — see $OUT/degeneracy.txt"
+  tail -8 "$OUT/degeneracy.txt" | tee -a "$REPORT"
   return 1
 }
 
@@ -298,8 +382,8 @@ run_component() {
 }
 for c in "$@"; do
   case "$c" in
-    data|oldnew|compare|cert|newfeat|battery|coverage) run_component "$c" ;;
-    all) for cc in data oldnew cert newfeat battery coverage; do run_component "$cc"; done ;;
+    data|oldnew|compare|cert|newfeat|battery|coverage|degeneracy) run_component "$c" ;;
+    all) for cc in data oldnew cert newfeat battery coverage degeneracy; do run_component "$cc"; done ;;
     *) echo "unknown component: $c"; exit 2 ;;
   esac
 done

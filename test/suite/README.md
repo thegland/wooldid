@@ -13,7 +13,8 @@ The campaign-level assessment harness. It answers two questions:
    inference), and internal identities?
 
 **Cost calibration (measured on this machine):** the full `./run_full.sh all` run is
-**~20–30 minutes** at pool=6 — run it at every campaign checkpoint. Individual
+**~60 minutes** at pool=6 (2026-09-11: oldnew 25 min, cert 23 min — `test_refmargin`
+alone is 22 min — newfeat 7, battery 5-8) — run it at every campaign checkpoint. Individual
 components and `ONLY=` subsets run in seconds-to-minutes and are the per-fix tools.
 The orchestrator **exits nonzero if any component fails** and appends every verdict to
 `out/SUITE_REPORT.md`.
@@ -23,38 +24,42 @@ The orchestrator **exits nonzero if any component fails** and appends every verd
 | component | what it does | builds | cost (measured) |
 |---|---|---|---|
 | `data` | builds the frozen datasets in `suite/data/` if absent: ours (`mkdata_suite.do`), the realistic admin panel (`mkdata_admin.do`), the colleagues' portable fixtures (`extfix/`) | — | ~3 min (skipped when present) |
-| `oldnew` | THE dual-build comparison: stages old (git `main`) and new (**git `HEAD`** — never the working tree), runs every config on both in separate Stata processes, dumps e() + e(sample) digests in %21x, compares with `compare_oldnew.py` | both | ~15 min pooled |
+| `oldnew` | THE dual-build comparison: stages old (git `main`) and new (**git `HEAD`** — never the working tree), runs every config on both in separate Stata processes, dumps e() + e(sample) digests in %21x, compares with `compare_oldnew.py` | both | ~25 min pooled |
 | `compare` | re-judges EXISTING dumps against the current ledger/configs (no Stata) — the triage loop tool | — | seconds |
-| `cert` | the targeted `test/test_*.do` suites + `check_validate_sync.py` — HEAD certification (fresh logs enforced; column-1 `*_ALL_PASS` + no `*_FAILS=` grading) | new | ~2 min pooled |
-| `newfeat` | cross-checks in `suite/newfeat/` (7 scripts): external randomization-inference re-implementation (exact, sampled, unequal-count, t-stat, probabilities), HonestDiD integration + the 11-case honestdid grid, the Roth `pretrends`-package crosscheck, the reghdfe common-onset oracle (b_es/V_es at machine precision), the 22-config fastnose parity grid, feature identities incl. the V_es total-variance check | new | ~8 min |
-| `battery` | the standing bit-exact regression vs `test/baseline` (`--rtol 0`) | new | ~3 min |
-| `coverage` | static assertion: every syntax-line option exercised by ≥1 config, with **clean-rc gating** (an option covered only by erroring configs is flagged ERR-ONLY) and dead allow-zero detection; allow-zero = `update,permprobs` only. Also joins configs to `data_classes.csv` (warns PATHO-ONLY, fails on table drift — see "Role of pathological data") | — | seconds |
+| `cert` | the targeted `test/test_*.do` suites + `check_validate_sync.py` — WORKING-TREE certification (the suites `do ../wooldidinstall/wooldid.ado`; only `oldnew` stages HEAD) (fresh logs enforced; column-1 `*_ALL_PASS` + no `*_FAILS=` grading) | working tree | ~23 min pooled (test_refmargin 22 min; the other 41 finish within 9 min) |
+| `newfeat` | cross-checks in `suite/newfeat/` (7 scripts): external randomization-inference re-implementation (exact, sampled, unequal-count, t-stat, probabilities), HonestDiD integration + the 11-case honestdid grid, the Roth `pretrends`-package crosscheck, the reghdfe common-onset oracle (b_es/V_es at machine precision), the 22-config fastnose parity grid, feature identities incl. the V_es total-variance check | working tree | ~7 min |
+| `battery` | the standing bit-exact regression vs `test/baseline` (`--rtol 0`; the 48 configs of `test/runbattery.do` in ONE Stata session (37 pre-2026-09-13 plus the 11-config permute/bootstrap block appended 2026-09-13)) | working tree | ~5-8 min (292-450 s measured 2026-09-12, load-dependent) |
+| `coverage` | static assertion: every syntax-line option exercised by ≥1 config, with **clean-rc gating** (an option covered only by erroring configs is flagged ERR-ONLY) and dead allow-zero detection; allow-zero = `update` only. Warns RC-ONLY when an option's clean coverage sits only on rc_old≠0 configs (oldnew judges those on the rc pair and never compares their e() — the battery and the cert suites are their bit-exact trackers). Also joins configs to `data_classes.csv` (warns PATHO-ONLY, fails on table drift — see "Role of pathological data"). Every WARN line reaches `SUITE_REPORT.md` | — | seconds |
+| `degeneracy` | dumps-driven assertion (after `oldnew`; `degeneracy_scan.py`, no Stata): per config, whether every result row on the surface the config targets is LIVE / INFDEG / VOID, the ado's degeneracy flags, realized-vs-requested ES windows and the per-config console-caution digest from the shard logs; asserts the flag set of every clean-rc good-data config against `degeneracy_expected.csv` (NEW stem = fail, STALE expectation = fail, MISSING dump = fail — see the contract in `run_full.sh`), warns DEGEN-ONLY options and option PAIRS never live on both surfaces. Writes `out/degeneracy.txt` and `out/degeneracy/` | — | seconds |
 
-`oldnew` subcomponents (subset with `ONLY=core,trig,...`): `core` (the 29 battery
+`oldnew` subcomponents (subset with `ONLY=core,trig,...`): `core` (33 configs: 29 of the 48 battery configs plus level_analytic/perm_absp/perm_ase/perm_save; the other 19 battery configs live in `boot`/`ps45`/`perm` or are battery-only
 configs), `trig` (divergence-trigger configs), `covars`, `adm` (the realistic
 administrative panel: FIPS-style counties, calendar years, unequal cohorts, unbalanced
 entry/exit, lognormal population weights — carries the only coverage anywhere of
 `customvce(cluster)`, poisson+pweight, clean factor-variable `fe()`, subgroups×summarystats,
 unconditionalse+pweight, and the saveplots×subgroups filename pin), `plots`, `screens`
 (rc-contract deck), `patho` (the pathological shapes), `boot` (the bootstrap-SE deck:
-both engines, the re-id leg, weighted, subgroups, joint tests, observation-level), and the mined
+both engines, the re-id leg, weighted, subgroups, joint tests, observation-level), `perm` (permute() completeness: perm_cfxnose, perm_rawp, perm_side_left), `ps45` (simultaneousbands: band_analytic, band_boot, band_multi, perm_stepdown), and the mined
 `extgrid`/`extlattice`/`extcase`/`extval`.
 
 A separate DEEP-VALIDATION component lives in `mc/` (own orchestrator `mc/run_mc.sh`,
 own README): preregistered Monte-Carlo size/power calibration of the statistical
-claims — RI p-value exactness, adversarial line-test size, pretrendpower power, and
-bootstrap standard-error calibration (`mc/mc_bootse.do`).
-Deliberately NOT part of `all` (~1.5 h); run it when inference machinery changes.
+claims — RI p-value exactness, adversarial line-test size, pretrendpower power, the
+F058 permutation extension (`mc/mc_ri2.do` + `analyze_mcri2.py`) and the bootstrap
+CI-family / p-value / joint-test calibration (`mc/mc_bootse2.do` + `run_bootse2.sh` +
+`analyze_bootse2.py`; `mc/mc_bootse.do` is a self-checking consistency harness with no
+analyzer, not the calibration guard). See `mc/README.md` for the full inventory.
+Deliberately NOT part of `all` (~1.5 h per campaign); run it when inference machinery changes.
 
 ## Usage
 
 ```bash
 cd test/suite
-./run_full.sh all                 # the full campaign run (~20-30 min)
+./run_full.sh all                 # the full campaign run (~60 min)
 ./run_full.sh data oldnew         # dual-build comparison only
 ONLY=screens ./run_full.sh oldnew # one oldnew subcomponent (judges only those configs)
 ./run_full.sh compare             # re-judge existing dumps after a ledger/config edit
-./run_full.sh cert newfeat        # HEAD certification only
+./run_full.sh cert newfeat        # working-tree certification only
 STATA_JOBS=4 ./run_full.sh all    # throttle the pool (hard project cap: 8 instances)
 ```
 
@@ -79,6 +84,10 @@ mixed-vintage dumps cannot be compared.
   sample-composition changes even when b/V coincidentally agree. `files|` lines pin
   saveplots output names. New-only objects are informational ADDITIONS; old-only
   objects are REMOVALS = failures unless ledgered.
+- **PS-62 event-study covariance splice:** e(V) cells that are off-diagonal, exactly 0
+  on old, finite and nonzero on new, and whose row and column are two horizons of the
+  same ES family are peeled into the synthetic kind `mat_esblock` (one `*`-scoped row,
+  `PS62-esblock`); every other e(V) cell still goes through the bounded tiers.
 - **Ledger (`ledger.csv`):** every row cites the fix that explains the difference.
   LARGE rows (empty bound) come first and are scoped to named configs or narrow globs;
   bounded rows are set at **~10× the measured ceiling of their class** and only absorb
@@ -155,7 +164,7 @@ option-pathology (bad option combinations, usually on fine data) — the config
   matching cert suite.
 - Touched a new feature → its cert suite + `newfeat`.
 - Touched the bootstrap feature → `ONLY=boot ./run_full.sh oldnew` + the four
-  `test/test_bootstrap_*.do` cert suites (and `mc/mc_bootse.do` if the inference math
+  `test/test_bootstrap_*.do` cert suites (and `mc/mc_bootse2.do` via `mc/run_bootse2.sh` + `analyze_bootse2.py` if the inference math
   changed).
 - Added an option → `coverage` (and add a config for it).
 - Edited the ledger or configs → `./run_full.sh compare` (seconds, no Stata).
@@ -164,8 +173,15 @@ option-pathology (bad option combinations, usually on fine data) — the config
 ## Maintenance
 
 - **Adding a config:** one row in `configs.csv` (inline prep → `preps.json`). Set
-  `rc_old`/`rc_new` when either build is expected to error; `slow=1` for poisson-family
-  or wide-ES-subgroup configs.
+  `rc_old`/`rc_new` when either build is expected to error. The `slow` column routes
+  the config to a shard tier: empty → fast shards (600 s timeout), `1` → `*_slow` shards
+  (1800 s; poisson-family, wide-ES-subgroup and the heavy bootstrap configs), `2` →
+  `*_vslow` shards of ONE config each (3600 s; the v1.3-side outliers such as
+  `si20_lat_pois` at ~950 s). A config whose options include `cleanmatrices` is sharded
+  alone automatically (`*_cm`): it runs `clear mata` inside the worker and a do-loaded
+  ado cannot recover its kernels, so every later config in the same Stata process would
+  silently lose the PS-62 e(V) splice and the simultaneous bands (SI-17/SI-18; the
+  mkrun.py header has the full caution).
 - **Adding a ledger row:** only with a citation and the tightest bound that fires,
   ordered into the correct section (LARGE before bounded).
 - **Regenerating mined configs:** `mine_external.py` writes `configs_ext.gen.csv` /
@@ -185,7 +201,13 @@ option-pathology (bad option combinations, usually on fine data) — the config
 - The colleagues' oracle/metamorphic library is not ported (future component).
 - `.gph` files are compared by NAME only (`files|`), never by content (embedded
   timestamps).
-- `ccc_absorb()` is exercised but errs identically on both builds (defect ticket in the
-  certification report); `cov_icbad` under-triggers the B21(b) collinearity class
+- `ccc_absorb()` is pinned rc 198 -> 459 on `cov_ccc_absorb` and runs rc 0/0 on
+  `ext_bin_ext_ccc_absorb`; `cov_icbad` under-triggers the B21(b) collinearity class
   (levels ~1e6 are float-representable — a ~1e8 variant would pin it old-side).
 - Performance is not compared beyond shard durations in `pool.log`.
+- TODO (degeneracy audit F9): the `degeneracy` component digests console cautions per
+  config (`out/degeneracy/cautions.csv`) but nothing asserts their COUNT. An old-vs-new
+  caution diff is NOT a regression signal (oldnew always stages v1.3, so it would be a
+  permanent ~237-config block). The proposed signal is an `ncaution` column in
+  `degeneracy_expected.csv` with a DEGEN_WARN on movement (the stems' NEW/STALE
+  discipline) — pending scanner support.

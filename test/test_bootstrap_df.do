@@ -556,5 +556,37 @@ if _rc == 0 {
   }
 }
 
+* ---- T13 (audit 2026-09-13): under bootstrap() e(V_es_att) is REPLACED by the listwise
+* covariance of the event-study draws (the analytic one survives as hidden
+* e(V_es_analytic_att)); nothing pinned that. A failed swap leaves e(V_es_att) analytic and
+* never creates the hidden matrix, so that case is a FAIL here, not a Mata abort.
+mkp
+cap noi wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(2) bootstrap(standard) reps(40) rseed(7)
+local t13rc = _rc
+cap confirm matrix e(V_es_analytic_att)
+if `t13rc' != 0 | _rc != 0 | "`e(boot_ves_failed)'" != "" {
+  di as error "T13 FAIL: rc=`t13rc', or the bootstrap event-study covariance swap did not happen (boot_ves_failed=[`e(boot_ves_failed)'])"
+  local ++fails
+}
+else {
+  * columns matched by NAME: e(V_es_att) horizon h <-> e(bootdist) column ES_att_h
+  mata:
+    BD = st_matrix("e(bootdist)"); nm = st_matrixcolstripe("e(bootdist)")[., 2]
+    vn = st_matrixcolstripe("e(V_es_att)")[., 2]
+    idx = J(rows(vn), 1, .)
+    for (j = 1; j <= rows(vn); j++) idx[j] = selectindex(nm :== ("ES_att_" + vn[j]))
+    A = select(BD[., idx], rowmissing(BD[., idx]) :== 0)
+    st_numscalar("t13d", mreldif(variance(A), st_matrix("e(V_es_att)")))
+    st_numscalar("t13n", rows(A))
+    st_numscalar("t13an", mreldif(st_matrix("e(V_es_analytic_att)"), st_matrix("e(V_es_att)")))
+  end
+  di "T13 V_es_att vs cov(ES draws) mreldif=" t13d " n=" t13n " analytic-vs-boot mreldif=" t13an
+  if t13n < 2 | t13d > 1e-10 | t13an < 1e-6 {
+    di as error "T13 FAIL: bootstrap e(V_es_att) is not the listwise covariance of the ES draws (or equals the analytic one)"
+    local ++fails
+  }
+  else di as result "T13 PASS: bootstrap e(V_es_att) is the covariance of the " t13n " complete ES draws (mreldif " t13d "), and differs from the analytic one (" t13an ")"
+}
+
 if `fails' == 0 di as result "BOOTDF_ALL_PASS"
 else di as error "BOOTDF_FAILS=`fails'"

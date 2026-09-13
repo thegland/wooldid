@@ -26,6 +26,11 @@ Comparison semantics (differs from the bit-exact regression compare in test/comp
     STRINGS ('.', '.a', ...) so a missing-code flip can never be explained by a bounded
     ledger row. New-only objects are informational ADDITIONS; old-only objects are
     REMOVALS = failures unless ledgered (old e() surface is a strict subset by audit).
+  - Two canonicalisations happen before comparing: e(cmdline) has its uniform CORE-10
+    `wooldid ` prefix stripped on load (so the REST of the command line is compared,
+    not blanket-blessed), and an old MACRO whose name is posted as a SCALAR on new
+    (batch 3, 605d6d7: joint_horiz*/joint_Choriz*) is float()ed and value-compared
+    under kind `scalar' instead of being counted as a removal plus an addition.
   - Ledger rows explain differences: match by config glob + kind + object-name glob; a
     row with a numeric rtol only BOUNDS a finite numeric difference (never strings,
     removals, or NaN); empty rtol explains any difference (reserved for documented LARGE
@@ -36,7 +41,9 @@ Comparison semantics (differs from the bit-exact regression compare in test/comp
 
 Ledger CSV columns: id,config,kind,pattern,rtol,reason.
 Kinds are the dump's own record types - scalar, macro, mat, matnames, esamp, varlist,
-files - plus two synthetic kinds:
+files (a `files` row's pattern is fnmatch'ed against the WHOLE new-side files| record,
+so it can carry the expected file list; a bare `*` keeps the blanket) - plus two
+synthetic kinds:
   - rc: the two ledgerable failures that correspond to no dump record at all - "rc 0/0 but
     expectations say X/Y (stale configs.csv expectation?)" and "rc 0 but the old dump has
     ZERO e() objects". No ledger row has ever used this kind, so this docstring is the only
@@ -142,7 +149,14 @@ def load(path):
         elif p[0] == "esamp": d["esamp"][p[1]] = hex2f(p[2])
         elif p[0] == "files": d["files"] = "|".join(p[1:])
         elif p[0] == "scalar": d["scalar"][p[1]] = hex2f(p[2])
-        elif p[0] == "macro": d["macro"][p[1]] = "|".join(p[2:])
+        elif p[0] == "macro":
+            v = "|".join(p[2:])
+            # CORE-10: new e(cmdline) = "wooldid " + the v1.3 text (equal on all 399 rc-0/0
+            # configs, 2026-09-12). Strip the uniform prefix so the REST of e(cmdline) is
+            # compared instead of blanket-blessed by an all-config unbounded row.
+            if p[1] == "cmdline" and v.startswith("wooldid "):
+                v = v[len("wooldid "):]
+            d["macro"][p[1]] = v
         elif p[0] == "matnames": d["matnames"][p[1]] = canon_tempvars("|".join(p[2:]))
         elif p[0] == "mat": d["mat"][(p[1], int(p[2]), int(p[3]))] = hex2f(p[4])
     return d
@@ -314,8 +328,33 @@ def main():
         for kind in ("scalar", "esamp", "macro", "matnames"):
             for k in sorted(set(O[kind]) | set(N[kind])):
                 if k not in O[kind]:
-                    adds.append(f"{kind} {k}")
+                    if not (kind == "scalar" and k in O["macro"]):
+                        adds.append(f"{kind} {k}")
                 elif k not in N[kind]:
+                    if kind == "macro" and k in N["scalar"]:
+                        # batch 3 (605d6d7): joint_horiz*/joint_Choriz* were re-posted as
+                        # SCALARS under their old MACRO names. Kinds are keyed separately,
+                        # so this used to be a ledgerable REMOVAL plus an informational
+                        # ADDITION and the VALUE was never compared. Compare the pair
+                        # numerically under kind `scalar' so the scalar rows govern it; an
+                        # old macro that is not a number ('.', text) stays a string, which
+                        # only an unbounded row can explain. Old macros carry the 12-15
+                        # digits Stata printed, so rtol 1e-10 is safe; a macro printed at
+                        # 10 digits or fewer would false-fire here and needs a floor of its
+                        # own printing precision.
+                        try:
+                            a = float(O[kind][k])
+                        except ValueError:
+                            a = O[kind][k].strip()
+                        b = N["scalar"][k]
+                        if not close(a, b, rtol):
+                            rd = (abs(a - b) / max(abs(a), abs(b))
+                                  if not isinstance(a, str) and not isinstance(b, str)
+                                  and math.isfinite(a) and math.isfinite(b)
+                                  and max(abs(a), abs(b)) > 0 else None)
+                            classify("scalar", k,
+                                     f"macro->scalar {k}: [{O[kind][k]}] -> {b}", rd)
+                        continue
                     classify(kind, k, f"{kind} {k}: REMOVED in new (was {O[kind][k]})")
                 elif kind in ("scalar", "esamp"):
                     a, b = O[kind][k], N[kind][k]
@@ -336,7 +375,7 @@ def main():
                             pass
                     classify(kind, k, f"{kind} {k}: [{O[kind][k]}] -> [{N[kind][k]}]", rd)
         if O["files"] != N["files"]:
-            classify("files", "*", f"saveplots files: [{O['files']}] -> [{N['files']}]")
+            classify("files", N["files"] or "*", f"saveplots files: [{O['files']}] -> [{N['files']}]")
         if (O["varlist"] or "") != (N["varlist"] or ""):
             bs, ns = set((O["varlist"] or "").split()), set((N["varlist"] or "").split())
             for v in sorted(ns - bs):

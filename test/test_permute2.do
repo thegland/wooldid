@@ -292,7 +292,7 @@ local nposA = e(perm_npossible)
 mkflag
 set seed 555
 cap wooldid y i t ttre if flag == 1, att cluster(c) permute(shuffle) permexact esprelength(1) espostlength(1)
-if `rcA' != _rc | `nposA' != e(perm_npossible) | `pA' != e(perm_p_att) {
+if `rcA' != 0 | `rcA' != _rc | `nposA' != e(perm_npossible) | `pA' != e(perm_p_att) {
   dis as error "P7 FAIL: bare-flag vs ==1 diverge: rc " `rcA' "/" _rc " npos " `nposA' "/" e(perm_npossible) " p " `pA' "/" e(perm_p_att)
   local ++fails
 }

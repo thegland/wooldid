@@ -231,13 +231,19 @@ matrix PB = e(pwsgs)
 local nr = rowsof(PB)
 local et8leak 0
 local et8halfblank 0
+local et8live 0
 forval r = 1/`nr' {
   if PA[`r',2] < . & PB[`r',2] < . {
     if reldif(PA[`r',2], PB[`r',2]) == 0 local ++et8leak
   }
   if PB[`r',2] >= . & PB[`r',4] < . local ++et8halfblank
+  if PA[`r',2] < . & PB[`r',2] < . local ++et8live
 }
-di "ET8_rows=" `nr' " analytic_leaks=" `et8leak' " half_blank=" `et8halfblank'
+di "ET8_rows=" `nr' " analytic_leaks=" `et8leak' " half_blank=" `et8halfblank' " live_both=" `et8live'
+if `et8live' == 0 {
+  di as error "ET8 FAIL (VACUOUS): no contrast row is live on both the analytic and bootstrap side"
+  local ++fails
+}
 if `et8leak' > 0 | `et8halfblank' > 0 {
   di as error "ET8 FAIL: analytic inference survived into e(pwsgs)"
   local ++fails

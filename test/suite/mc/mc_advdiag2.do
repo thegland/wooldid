@@ -1,5 +1,8 @@
 * mc_advdiag2.do — direct V-understatement verification for the adversarial oversize
-* finding. Records per-rep e(b_es_att) entries, diag(e(V_es_att)), and the eigenvalue
+* finding.
+* ARCHIVED (inventory note 2026-09-13, critic C2): 2026-08-24 diagnostic of the PRE-BS-12
+* statistic on containment designs; no runner, no analyzer, not in any README; runs on HEAD
+* (SI-A1 error is now the PS-64 caution) but diagnoses the old statistic. Record, not component. Records per-rep e(b_es_att) entries, diag(e(V_es_att)), and the eigenvalue
 * range of V_es_att, so the analyzer can compare MC-truth Var(b_h) and contrast
 * variances against the reported V, per design.
 *   V1: A1 shape (G=40, singleton cohorts, 4/4)

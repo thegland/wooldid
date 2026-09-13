@@ -12,7 +12,17 @@ Writes out/advb_report.md. Exit 1 iff any config fails its own MEASUREMENT integ
 checks (rc!=0, missing p-values, wrong n) — a size FAIL is a finding, not a harness
 error, so oversizing does NOT exit nonzero.
 
-usage: analyze_advb.py [outdir] [gridjson]
+NOTE (Stage A audit 2026-09-13, F6): the locked predictions and the V1 negative-control gate
+in advb_grid.json were derived for the statistic as of 2026-08-25 (free intercept + slope
+projected out, q = 6). Since BS-12 (2026-09-10) HEAD's adversarial null is the one-parameter
+line THROUGH the reference period (q = 7). A re-run at HEAD is therefore a REFERENCE
+COMPARISON against the 2026-08-26 record (REPORT_ADVBOUND_2026-08-26.md), not a scored
+re-test of the locked predictions; the binomial certification bands remain valid size tests.
+Re-derive-or-drop the predictions and the V1 threshold is an author ruling. Re-runs must not
+overwrite the record: pass --out <file> here and ADVB_OUT=<dir> to run_advb.sh.
+
+usage: analyze_advb.py [outdir] [gridjson] [--out <report.md>]
+  --out   write the report to this path instead of <outdir>/advb_report.md
 """
 import csv
 import glob
@@ -22,8 +32,29 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "out")
-GRID = sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, "advb_grid.json")
+
+
+def _parse_args(argv):
+    """positional [outdir] [gridjson] plus --out <path> / --out=<path> (report file)."""
+    pos, out, i = [], None, 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--out":
+            out = argv[i + 1] if i + 1 < len(argv) else None
+            i += 2
+            continue
+        if a.startswith("--out="):
+            out = a[len("--out="):]
+            i += 1
+            continue
+        pos.append(a)
+        i += 1
+    return pos, out
+
+
+_POS, REPORT_OUT = _parse_args(sys.argv[1:])
+OUT = _POS[0] if len(_POS) > 0 else os.path.join(HERE, "out")
+GRID = _POS[1] if len(_POS) > 1 else os.path.join(HERE, "advb_grid.json")
 EPS = 1e-9
 CHI2_9_CRIT = 21.666  # df=9, p=.01 (house convention)
 
@@ -88,7 +119,12 @@ def main():
          "predictions and the keep-vs-abandon decision rule were committed before any rep fired).\n",
          "Bands are the house M2 convention: central ~95% binomial region, normal approx "
          "rounded outward; uniformity is a 10-bin chi2 (df=9, crit 21.666 at p=.01); the "
-         "MARGINAL corridor is rate@.05 in [.025,.085] and rate@.10 in [.070,.135].\n"]
+         "MARGINAL corridor is rate@.05 in [.025,.085] and rate@.10 in [.070,.135].\n",
+         "NOTE (2026-09-13): the locked predictions and the V1 gate were derived for the pre-BS-12 "
+         "statistic (free intercept, q=6). At HEAD (BS-12, 2026-09-10) the null is the one-parameter "
+         "line through the reference period (q=7), so a run at HEAD is a REFERENCE COMPARISON against "
+         "the 2026-08-26 record, not a scored re-test of the predictions; the certification bands "
+         "remain valid size tests of the statistic HEAD computes.\n"]
 
     integrity_fail = []
     results = {}
@@ -170,7 +206,9 @@ def main():
     else:
         L.append("- all configs complete, no nonzero rcs, no missing p-values")
 
-    report = os.path.join(OUT, "advb_report.md")
+    report = REPORT_OUT if REPORT_OUT else os.path.join(OUT, "advb_report.md")
+    if os.path.dirname(report):
+        os.makedirs(os.path.dirname(report), exist_ok=True)
     with open(report, "w") as fh:
         fh.write("\n".join(L) + "\n")
     print("\n".join(L[-14:]))

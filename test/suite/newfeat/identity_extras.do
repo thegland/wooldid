@@ -778,7 +778,7 @@ else {
     }
     matrix b = `GB'
     matrix V = `GV'
-    cap noi honestdid, numpre(`gnp') b(b) vcov(V) delta(rm) mvec(1)
+    cap noi honestdid, numpre(`gnp') b(b) vcov(V) delta(rm) mvec(1) parallel(0)
     if _rc != 0 {
       dis as error "G3 FAIL: honestdid on the subgroup-1 matrices rc=" _rc
       global pf = $pf + 1

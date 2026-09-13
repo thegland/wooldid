@@ -80,8 +80,8 @@ mkpan
 qui wooldid y unit t ttre, att_it cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(12) rseed(777)
 scalar itse_s = el(e(wdidmainresults),1,2)
 di "DO3_ATTIT_SE_bayes=" itse_b " standard_reid=" itse_s
-if itse_s >= . | itse_s <= 0 {
-  di as error "DO3 FAIL: re-id att_it se missing"
+if itse_s >= . | itse_s <= 0 | itse_b >= . | reldif(itse_s, itse_b) < 1e-8 | !(itse_s > itse_b) {
+  di as error "DO3 FAIL: re-id att_it se missing, or the estimand fork is not real (bayes " itse_b " vs re-id " itse_s ")"
   local ++fails
 }
 

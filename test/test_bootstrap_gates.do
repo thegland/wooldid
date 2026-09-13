@@ -1005,5 +1005,24 @@ if !`g39a' | !`g39a2' | !`g39b' | !`g39c' | `g39d' {
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 
+* G40 (permboot_tracking audit 2026-09-13): the three boottstat refusals that test_bootstrap_joint
+* :140-148 relies on but nothing pins - poisson (its replications are estimated on sampling
+* weights, so a replication's own standard error is not the same functional as the observed
+* one), bootstrap(bayes) (continuous Dirichlet mass is not a duplication count to studentize
+* over), bootdisplay(wald) (a studentized run reports the analytic se; no bootstrap sd).
+use `panel', clear
+set seed 40
+qui gen ycount = rpoisson(1.5 + (t>=ttre & ttre<.))
+cap qui wooldid ycount unit t ttre, att cluster(unit) poisson bootstrap(standard) reps(50) boottstat
+chk 40a 198 _rc
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(50) boottstat
+chk 40b 198 _rc
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) boottstat bootdisplay(wald)
+chk 40c 198 _rc
+* and the neighbour that must STAY open: bc/bca are refused with boottstat too (T11/G32c
+* already pin them); percentile is the studentized display and must run
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20) boottstat bootdisplay(percentile) rseed(7) dots(0)
+chk 40d 0 _rc
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

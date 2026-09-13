@@ -187,7 +187,8 @@ for k in order:
 
 L.append("\n## Interval coverage of the true att, nominal 90 (percent, MCSE in brackets)\n")
 L.append("(percentile / BC / BCa taken from the level-independent dual p-values, so this row "
-         "exists only where the DGP is the null the p tests; Wald recomputed as b +/- z*se.)\n")
+         "exists only where the DGP is the null the p tests; Wald recomputed as b +/- z*se. "
+         "On bts arms these three are the undisplayed coefficient-draw families - F3, 2026-09-13.)\n")
 L.append("| cfg | arm | percentile | bias-corrected | BCa | Wald |")
 L.append("|---|---|---|---|---|---|")
 for k in order:
@@ -267,16 +268,21 @@ for k in order:
     L.append(f"| {k[0]} | {k[1]} | {len(rr)} | {m:.3f} ({sd/math.sqrt(len(rr)):.3f}){note} | {min(rr):.3f} | {max(rr):.3f} |")
 
 L.append("\n## p-value size under the null DGP (rejection percent, MCSE in brackets)\n")
-L.append("| cfg | arm | p_percentile @5 | @10 | p_bc @5 | @10 | p_bca @5 | @10 |")
-L.append("|---|---|---|---|---|---|---|---|")
+L.append("(F3, 2026-09-13: on bts arms p_percentile / p_bc / p_bca are the UNDISPLAYED coefficient-draw "
+         "families, posted regardless of boottstat; the DISPLAYED studentized (percentile-t, add-one) p "
+         "is the p_bts column, read from e(boot_tstud) row p_pctl. Rows written before 2026-09-13 have "
+         "no p_bts column and show '-'.)\n")
+L.append("| cfg | arm | p_percentile @5 | @10 | p_bc @5 | @10 | p_bca @5 | @10 | p_bts (studentized, displayed on bts) @5 | @10 |")
+L.append("|---|---|---|---|---|---|---|---|---|---|")
 for k in order:
     g = [r for r in groups[k] if r["rc"] == "0" and r["dgp"] == "null"]
     if not g:
         continue
     cells = []
     any_p = False
-    for pk in ("p_pct", "p_bc", "p_bca"):
-        ps = [num(r[pk]) for r in g if num(r[pk]) is not None]
+    for pk in ("p_pct", "p_bc", "p_bca", "p_bts"):
+        ps = [num(r.get(pk)) for r in g if num(r.get(pk)) is not None]
+        lab = pk + (" (coefficient-draw, undisplayed)" if (k[1] == "bts" and pk != "p_bts") else "")
         for a in (0.05, 0.10):
             if not ps:
                 cells.append("-")
@@ -285,7 +291,7 @@ for k in order:
             h = sum(1 for p in ps if p <= a + 1e-12)
             txt, fl = fmtrate(h, len(ps), a)
             if fl:
-                FLAGS.append(f"{k[0]}/{k[1]} {pk} size@{a:.2f} = {100*h/len(ps):.1f} (n={len(ps)}, MCSE {100*mcse(h/len(ps),len(ps)):.1f})")
+                FLAGS.append(f"{k[0]}/{k[1]} {lab} size@{a:.2f} = {100*h/len(ps):.1f} (n={len(ps)}, MCSE {100*mcse(h/len(ps),len(ps)):.1f})")
             cells.append(("**" + txt + "**") if fl else txt)
     if any_p:
         L.append(f"| {k[0]} | {k[1]} | " + " | ".join(cells) + " |")

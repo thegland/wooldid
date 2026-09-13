@@ -8,8 +8,11 @@ Usage:
            --outdir /abs/rundir [--dumpdir /abs/dumpdir]
            [--components core,trig,...] [--shard-size 15]
 
-Emits outdir/shard_<component>_<n>.do (slow configs isolated into *_slow shards) plus
-outdir/shards.manifest (one line per shard: dofile|nconfigs|slow). Each shard dumps one
+Emits outdir/shard_<component>[_slow|_vslow][_cm]_<n>.do plus outdir/shards.manifest (one
+line per shard: dofile|nconfigs|tier, tier = fast|slow|vslow). The configs' `slow' column
+routes: '' -> fast shards (600 s), '1' -> *_slow shards (1800 s), '2' -> *_vslow shards of
+ONE config each (3600 s); a config whose options include cleanmatrices is also sharded
+alone (*_cm, see the shard-grouping comment below). Each shard dumps one
 <config>.csv per config, in the battery %21x format plus a "prov|<label>|<sha>"
 provenance line.
 
@@ -73,7 +76,14 @@ program define dumpres
   foreach m of local emats {
     tempname M
     cap matrix `M' = e(`m')
-    if _rc != 0 continue
+    local mrc = _rc
+    if `mrc' != 0 {
+      * an e() matrix the dump cannot read used to vanish silently (harness audit H-11,
+      * 2026-09-12); record it so a one-sided unreadable matrix is a matnames diff. Two
+      * fields after the name on purpose - never the RxC|rn|cn shape the comparer parses.
+      file write `fh' `"matnames|`m'|UNREADABLE|rc=`mrc'"' _n
+      continue
+    }
     local R = rowsof(`M')
     local C = colsof(`M')
     local rn : rowfullnames `M'
@@ -102,7 +112,13 @@ program define dumpres
   local svfiles
   foreach sp of local svpre {
     local sp1 : dir . files "`sp'*"
-    local svfiles `svfiles' `sp1'
+    * `: dir' returns a QUOTED list; concatenating it with a plain `local x `x' `list''
+    * re-parses the line and strips the outer quotes, so one name keeps a stray quote,
+    * its erase fails (rc 198) and the files| record is mangled (D-11 defect, 2026-09-12).
+    * foreach unquotes each element, so append them one at a time.
+    foreach svf of local sp1 {
+      local svfiles `svfiles' `svf'
+    }
   }
   local svfiles : list uniq svfiles
   local svfiles : list sort svfiles
@@ -201,7 +217,7 @@ def main():
         # scrub session state a previous config in this shard may have left:
         # wooldid's own globals (new build only — build-asymmetric by construction),
         # user matrices/scalars from preps, and stored estimates
-        lines.append("cap macro drop WOOLDID_LASTRC WOOLDID_CLEANUP")
+        lines.append("cap macro drop WOOLDID_LASTRC WOOLDID_CLEANUP WOOLDID_LEVEL0")
         lines.append("cap matrix drop _all")
         lines.append("cap scalar drop _all")
         lines.append("cap estimates drop _all")
@@ -239,10 +255,21 @@ def main():
         lines.append("")
         return "\n".join(lines)
 
-    # shard: group by (component, slow), chunk by shard_size
+    # shard: group by (component, tier, isolated), chunk by shard_size.
+    # tier: slow column '' -> fast (600 s), '1' -> slow (1800 s), '2' -> vslow (3600 s,
+    # one config per shard - for the v1.3-side outliers such as si20_lat_pois at ~950 s).
+    # isolated: also one config per shard for cleanmatrices configs - SI-17/SI-18: a
+    # cleanmatrices config runs `clear mata' inside the worker and a do-loaded ado cannot
+    # recover its kernels, so every LATER config in the same Stata process silently runs
+    # on the analytic-diagonal e(V) fallback (see the HEADER caution), which the dual
+    # build cannot see because v1.3's off-diagonals are zero too. Today the only such
+    # config is last in its shard by accident of CSV row order.
     groups = {}
     for r in rows:
-        key = (r["component"], r.get("slow", "").strip() == "1")
+        sl = r.get("slow", "").strip()
+        tier = "vslow" if sl == "2" else "slow" if sl == "1" else "fast"
+        iso = sl == "2" or "cleanmatrices" in r["options"]
+        key = (r["component"], tier, iso)
         groups.setdefault(key, []).append(r)
     manifest = []
     dumpdir = optval("--dumpdir")
@@ -258,20 +285,22 @@ def main():
                     .replace("{DUMPRES}", DUMPRES.replace("{LABEL}", label)
                                                  .replace("{SHA}", sha)
                                                  .replace("{DUMPDIR}", dumpdir)))
-    for (comp, slow), rs in sorted(groups.items()):
-        for i in range(0, len(rs), shard_size):
-            chunk = rs[i:i + shard_size]
+    for (comp, tier, iso), rs in sorted(groups.items()):
+        csize = 1 if iso else shard_size
+        sfx = {"fast": "", "slow": "_slow", "vslow": "_vslow"}[tier] + ("_cm" if iso and tier != "vslow" else "")
+        for i in range(0, len(rs), csize):
+            chunk = rs[i:i + csize]
             blocks = [b for b in (block(r) for r in chunk) if b is not None]
             if not blocks:
                 continue
-            name = f"shard_{comp}{'_slow' if slow else ''}_{i // shard_size:02d}.do"
+            name = f"shard_{comp}{sfx}_{i // csize:02d}.do"
             with open(os.path.join(outdir, name), "w") as f:
                 f.write(header)
                 for b in blocks:
                     f.write(b + "\n")
                 f.write('di "SHARD_DONE"\n')
                 f.write("exit, clear\n")
-            manifest.append(f"{name}|{len(blocks)}|{'slow' if slow else 'fast'}")
+            manifest.append(f"{name}|{len(blocks)}|{tier}")
     with open(os.path.join(outdir, "shards.manifest"), "w") as f:
         f.write("\n".join(manifest) + "\n")
     print(f"wrote {len(manifest)} shards for {len(rows)} configs to {outdir}")

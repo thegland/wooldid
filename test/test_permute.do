@@ -233,8 +233,9 @@ else {
 qui log using perm_p8.txt, text replace name(pm)
 mkperm 6 3 3
 cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(50)
+local rc8 = _rc
 qui log close pm
-if strpos(fileread("perm_p8.txt"), "exceeds 10% of the") == 0 {
+if `rc8' != 0 | strpos(fileread("perm_p8.txt"), "exceeds 10% of the") == 0 {
   dis as error "P8 FAIL: reps>10%-of-possible caution missing"
   global pf = $pf + 1
 }
@@ -284,6 +285,45 @@ else {
     dis as error "P12 FAIL: exact t-stat p=" e(perm_p_att)
     global pf = $pf + 1
   }
+}
+
+* ---- P12b (audit 2026-09-13): the exact permtstat p RECONSTRUCTED from the posted draws on a
+* placebo, where the observed t sits inside its 20-member reference set (P12 above only
+* pins the 2/20 floor; no other leg reconstructs a permtstat p in exact mode) ----
+mkperm 6 3 0
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact permtstat
+if _rc != 0 {
+  dis as error "P12b FAIL: rc=" _rc
+  global pf = $pf + 1
+}
+else {
+  mata:
+    A_ = st_matrix("e(permdist_b)"); S_ = st_matrix("e(permdist_se)")
+    k_ = selectindex(st_matrixcolstripe("e(permdist_b)")[., 2] :== "main_att")
+    cb_ = st_matrix("e(perm_comparator_b)")[1, k_]; cs_ = st_matrix("e(perm_comparator_se)")[1, k_]
+    ok_ = (A_[., k_] :< .) :& (S_[., k_] :< .) :& (S_[., k_] :> 0)
+    tt_ = select(A_[., k_] :/ S_[., k_], ok_)
+    n_ = rows(tt_)
+    to_ = cb_/cs_
+    lo_ = sum(tt_ :<= to_); hi_ = sum(tt_ :>= to_)
+    // exact mode: plain shares (the observed assignment is a member of its own reference
+    // set), equal-tailed - the same operation order as the engine (test_permute3 wdp3_reconx)
+    p_ = min((1, 2*min((lo_/n_, hi_/n_))))
+    st_numscalar("__p12bn", n_); st_numscalar("__p12btail", min((lo_, hi_))); st_numscalar("__p12bp", p_)
+  end
+  if "`e(perm_stat)'" != "t" | e(perm_exact) != 1 | __p12bn != 20 | e(perm_npossible) != 20 | e(perm_completed) != 20 {
+    dis as error "P12b FAIL: stat=[`e(perm_stat)'] exact=" e(perm_exact) " complete t draws=" __p12bn " npossible=" e(perm_npossible) " completed=" e(perm_completed) " (want t/1/20/20/20)"
+    global pf = $pf + 1
+  }
+  else if __p12btail < 2 {
+    dis as error "P12b FAIL (VACUOUS): smaller tail = " __p12btail " of 20 - the placebo's observed t is at the extreme, so this leg would only re-derive the floor"
+    global pf = $pf + 1
+  }
+  else if __p12bp != e(perm_p_att) {
+    dis as error "P12b FAIL: exact permtstat p reconstructed from e(permdist_b)/e(permdist_se) = " %21x __p12bp " vs e(perm_p_att) = " %21x e(perm_p_att)
+    global pf = $pf + 1
+  }
+  else dis as result "P12b PASS: exact permtstat p " e(perm_p_att) " reconstructs bitwise (smaller tail " __p12btail " of 20)"
 }
 
 * ---- P13: permtci implies permtstat; the inverted-t CI exists and covers the estimate ----

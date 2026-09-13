@@ -2,13 +2,17 @@
 # run_mc.sh — MC statistical-calibration orchestrator (PREREG_NEWFEAT_2026-08-24).
 # A DEEP-VALIDATION component, deliberately NOT part of run_full.sh all (cost: ~1.5h).
 # usage: ./run_mc.sh [pretest] [ri] [adv] [pilot] [arms] [analyze]     or: ./run_mc.sh all
-# STATA_JOBS caps the Stata pool (default 8 = the project hard cap).
+# STATA_JOBS caps the Stata pool (default 8 = the project hard cap). MC_OUT=<dir> sets the
+# output tree (default out/ = the 2026-08-24 record).
 set -u
 MC="$(cd "$(dirname "$0")" && pwd)"
 SUITE="$(cd "$MC/.." && pwd)"
 REPO="$(cd "$SUITE/../.." && pwd)"
 ADO="$REPO/wooldidinstall/wooldid.ado"
-OUT="$MC/out"
+# 2026-09-13 (audit): MC_OUT=<dir> re-runs into a fresh tree. The drivers REPLACE
+# <outdir>/<cfg>_s<n>.csv and analyze_mc.py writes <outdir>/mc_report.md, so a re-run into the
+# default out/ overwrites the 2026-08-24 record (MC_REPORT_2026-08-24.md) it is compared against.
+OUT="${MC_OUT:-$MC/out}"
 STATA_BIN="/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp"
 JOBS="${STATA_JOBS:-8}"
 mkdir -p "$OUT/logs"

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """analyze_mc.py — judge the MC calibration CSVs against the PREREGISTERED bands
 (test/suite/PREREG_NEWFEAT_2026-08-24.md; the integer count bands there are
-authoritative and hardcoded here). Writes out/mc_report.md. Exit 1 iff any FAIL
+authoritative and hardcoded here, as amended by the dated DEVIATIONS at the end of
+that file - 2026-09-13: M1 .05 band and R6, null band). Writes out/mc_report.md. Exit 1 iff any FAIL
 verdict (MARGINAL and secondary flags do not fail the component)."""
 import csv
 import glob
@@ -57,14 +58,20 @@ def verdict(name, ok, marginal=None, detail=""):
     return v
 
 # ---------------- M1: RI size ----------------
-RI_BAND_05 = (11, 29)     # prereg counts, M=400
-RI_BAND_10 = (28, 52)
-BAND_COV = (371, 389)     # comparator in [lb,ub], Binomial(400,.95): the null band follows level() (default 95) since 310fa61
+# DEVIATION 2026-09-13 (PREREG_NEWFEAT_2026-08-24.md, DEVIATIONS D1/D2): the package default is
+# the equal-tailed add-one p (1561386), which at B=99 attains P(p <= .05) = 4/100 = .04 exactly, so
+# the .05 count band is Binomial(400, .04) -> (8, 24), not the prereg's Binomial(400, .05) = (11, 29)
+# that assumed the |s| convention (permabsp). The .10 band is unchanged (P(p <= .10) = 10/100).
+# R6 (permexact, M=20 enumeration) cannot attain p <= .05 at all and is judged at .10 only.
+RI_BAND_05 = (8, 24)      # Binomial(400, .04): equal-tailed add-one at B=99 attains .04
+RI_BAND_10 = (28, 52)     # prereg counts, M=400
+BAND_COV = (371, 389)     # comparator in [lb,ub], Binomial(400,.95): the null band follows level() (default 95) since 310fa61 - DEVIATION D3 from the prereg's [348,372], recorded 2026-09-13
 TCI_COV = (371, 389)      # 0 in [tlb,tub], Binomial(400,.95)
 
 L.append("# MC calibration report\n")
-L.append("## M1 — RI size calibration (M=400 per config; preregistered count bands: "
-         f"alpha=.05 -> {RI_BAND_05}, alpha=.10 -> {RI_BAND_10})\n")
+L.append("## M1 — RI size calibration (M=400 per config; count bands: "
+         f"alpha=.05 -> {RI_BAND_05} [DEVIATION 2026-09-13: Binomial(400,.04), the equal-tailed "
+         f"default at B=99; R6 judged at .10 only], alpha=.10 -> {RI_BAND_10} [prereg])\n")
 L.append("| check | verdict | detail |")
 L.append("|---|---|---|")
 
@@ -85,6 +92,9 @@ for cfg in ["R1", "R2", "R3", "R4", "R5", "R6", "R7"]:
     ok = (RI_BAND_05[0] <= r05 <= RI_BAND_05[1]) and (RI_BAND_10[0] <= r10 <= RI_BAND_10[1]) and n == 400 and bad_rc == 0
     if cfg == "R5":  # redraw conditioning is expected; bad_rc==0 still required post-redraw
         ok = (RI_BAND_05[0] <= r05 <= RI_BAND_05[1]) and (RI_BAND_10[0] <= r10 <= RI_BAND_10[1]) and n == 400 and bad_rc == 0
+    if cfg == "R6":  # DEVIATION 2026-09-13 (D2): M=20 exact enumeration, equal-tailed lattice
+        # {.1, .2, ..., 1}: p <= .05 is unattainable (min p = 2/20), so R6 is judged at .10 only
+        ok = (RI_BAND_10[0] <= r10 <= RI_BAND_10[1]) and n == 400 and bad_rc == 0
     verdict(f"{cfg} size", ok, detail=det)
     if cfg != "R5" and nfail_pos:
         L.append(f"| {cfg} perm_failed | INVESTIGATE | {nfail_pos} reps with perm_failed>0 |")

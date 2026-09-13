@@ -1,6 +1,10 @@
 * mc_amese_att.do — att-side supplement to the AME-SE grid: same designs, records the
 * ATT quantities (main:att, pretreatment:att, ES_att pre5..post3) so the att-side SE
 * correctness under each VCE is measured rather than assumed.
+* INVENTORY NOTE (2026-09-13, critic C2): run_amese.sh runs mc_amese.do only, and no analyzer
+* reads this driver's att_<case>_s*.csv (analyze_amese.py's `{case}_s*.csv` glob does not
+* match it). Archived 2026-08-25 twin; reads only att rows of e(wdidmainresults), so it is
+* unaffected by amescrub.
 * args: 1=adopath 2=case 3=shard 4=nreps 5=baseseed 6=outdir
 clear all
 set more off

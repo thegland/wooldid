@@ -2,7 +2,9 @@
 """analyze_mcri2.py - F058 PERMUTATION part: read the mc_ri2 shard CSVs and print the
 size / FWER / coverage tables with Monte-Carlo standard errors and n per cell.
 
-Usage: analyze_mcri2.py <outdir>
+Usage: analyze_mcri2.py <outdir> [permreps]
+  permreps = the run's permreps() (default 199, the production value); pass the smoke's value to
+  judge a smaller run - the integrity and lattice checks are exact in it (F12, 2026-09-13).
 Every table cell is a binomial share; the MC se printed is sqrt(phat(1-phat)/n) and the
 DEVIATION test is |phat - nominal| > 2*sqrt(nominal(1-nominal)/n) (the se under the null,
 which is the right yardstick for a calibration verdict)."""
@@ -10,6 +12,16 @@ import csv, glob, math, os, sys
 from collections import defaultdict
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "out2/permutation"
+NDRAW = int(sys.argv[2]) if len(sys.argv) > 2 else 199   # permreps() of the run (production 199)
+HALF = (NDRAW + 1) / 2.0                                  # equal-tailed p lattice step is 2/(NDRAW+1)
+# theory of the p-value on the (NDRAW+1)-rank lattice, by enumeration of the observed rank R:
+# equal-tailed p = min(1, 2 min(R, NDRAW+2-R)/(NDRAW+1)); one-sided share = R/(NDRAW+1)
+_R = range(1, NDRAW + 2)
+_peq = [min(1.0, 2.0 * min(R, NDRAW + 2 - R) / (NDRAW + 1)) for R in _R]
+_plo = [R / (NDRAW + 1) for R in _R]
+MEAN_EQ = sum(_peq) / len(_peq)
+SD_EQ = math.sqrt(sum(p * p for p in _peq) / len(_peq) - MEAN_EQ ** 2)
+MEAN_LO = sum(_plo) / len(_plo)
 EPS = 1e-9
 FLAGS = []
 
@@ -62,7 +74,7 @@ for r in rows:
     by[(r["phase"], r["arm"])].append(r)
 
 print("# F058 - permutation calibration (mc_ri2)\n")
-print(f"rows read: {len(rows)}  from {len(glob.glob(os.path.join(OUT,'mc_ri2_s*.csv')))} shard files\n")
+print(f"rows read: {len(rows)}  from {len(glob.glob(os.path.join(OUT,'mc_ri2_s*.csv')))} shard files; judged at permreps = {NDRAW}\n")
 for k in sorted(by):
     ok = sum(1 for r in by[k] if r["rc"] == "0")
     print(f"- phase {k[0]} arm {k[1]}: {len(by[k])} rows, {ok} with rc=0")
@@ -73,14 +85,18 @@ D1 = [r for r in by[("D1", "main")] if r["rc"] == "0"]
 # ------------------------------------------------------------------ integrity
 print("## 0. Integrity of the run\n")
 bad_names = sum(1 for r in D1 if num(r, "namesok") != 1)
-incomplete = sum(1 for r in D1 if (num(r, "ncomp") or 0) != 199)
+incomplete = sum(1 for r in D1 if (num(r, "ncomp") or 0) != NDRAW)
 nfailpos = sum(1 for r in D1 if (num(r, "nfail") or 0) > 0)
 ndr = [num(r, "ndraw") for r in D1 if num(r, "ndraw") is not None]
 print(f"- D1 reps with rc=0: {len(D1)}")
 print(f"- column-name lookups that fell back to position: {bad_names}")
-print(f"- reps with e(perm_completed) != 199: {incomplete}; with e(perm_failed)>0: {nfailpos}")
+print(f"- reps with e(perm_completed) != {NDRAW}: {incomplete}; with e(perm_failed)>0: {nfailpos}")
 if ndr:
     print(f"- usable draws per rep for main_att: min {min(ndr):.0f} max {max(ndr):.0f}")
+    if max(ndr) != NDRAW:
+        print(f"- WARNING: the CSV's ndraw column peaks at {max(ndr):.0f} but this run is being judged "
+              f"at permreps = {NDRAW}; pass the run's permreps as the second argument")
+        FLAGS.append(f"ndraw column max {max(ndr):.0f} != judged permreps {NDRAW}")
 # self-consistency: the driver's recomputed equal-tailed p must equal e(perm_p)
 mism = [(r["shard"], r["rep"], num(r, "p_main"), num(r, "cpeq")) for r in D1
         if num(r, "p_main") is not None and num(r, "cpeq") is not None
@@ -93,8 +109,8 @@ mism2 = [1 for r in D1 if num(r, "plo_main") is not None and num(r, "cpleft") is
          and abs(num(r, "plo_main") - num(r, "cpleft")) > 1e-12]
 print(f"- recomputed left-tail p vs e(perm_p_lo) main_att: {len(mism2)} mismatches of {len(D1)}")
 
-# lattice check: with all 199 draws complete for a column, the equal-tailed p must be an
-# exact multiple of 2/200 = .01 and the one-sided shares multiples of 1/200 = .005. A column
+# lattice check: with all NDRAW draws complete for a column, the equal-tailed p must be an
+# exact multiple of 2/(NDRAW+1) (.01 at 199; or exactly 1, the cap) and the one-sided shares multiples of 1/(NDRAW+1). A column
 # whose accumulator lost draws (an unidentified horizon in some reassignment) lands off that
 # lattice, which is exactly the selection that would break the exactness argument in s4.
 print("\n### lattice check (a p off the 1/200 lattice means that column lost draws)\n")
@@ -102,20 +118,21 @@ hdr(["element", "reps on lattice", "n", "off-lattice examples"])
 for nm, col in [("main_att", "p_main"), ("pretreatment_att", "p_pre"), ("ES_att_pre2", "p_pre2"),
                 ("ES_att_pre1", "p_pre1"), ("ES_att_post0", "p_post0"), ("ES_att_post1", "p_post1")]:
     vals = [num(r, col) for r in D1 if num(r, col) is not None]
-    off = [v for v in vals if abs(v*100 - round(v*100)) > 1e-6]
+    # p = 1 is the min(1, .) cap of the equal-tailed rule and is attainable at an even NDRAW
+    off = [v for v in vals if v < 1 - EPS and abs(v*HALF - round(v*HALF)) > 1e-6]
     print(f"| {nm} | {len(vals)-len(off)} | {len(vals)} | {sorted(set(off))[:3]} |")
     if off:
-        FLAGS.append(f"{nm}: {len(off)} of {len(vals)} reps have a p off the 199-draw lattice "
+        FLAGS.append(f"{nm}: {len(off)} of {len(vals)} reps have a p off the {NDRAW}-draw lattice "
                      f"(that column lost replications; the exactness argument is conditional)")
-# e(joint_horiz) is the one-sided add-one p = Q/200, so it must be a multiple of 1/200 = .005.
-# Off-lattice would mean the metric saw fewer than 199 complete draws - or that the ANALYTIC
+# e(joint_horiz) is the one-sided add-one p = Q/(NDRAW+1), so it must be a multiple of 1/(NDRAW+1).
+# Off-lattice would mean the metric saw fewer than NDRAW complete draws - or that the ANALYTIC
 # joint p survived under the permutation header.
 _jv = [num(r, "jointp") for r in D1 if num(r, "jointp") is not None]
-_jo = [v for v in _jv if abs(v*200 - round(v*200)) > 1e-6]
+_jo = [v for v in _jv if abs(v*(NDRAW+1) - round(v*(NDRAW+1))) > 1e-6]
 print(f"| e(joint_horiz) | {len(_jv)-len(_jo)} | {len(_jv)} | {sorted(set(_jo))[:3]} |")
 if _jo:
-    FLAGS.append(f"e(joint_horiz): {len(_jo)} of {len(_jv)} reps off the 1/200 lattice "
-                 f"(fewer than 199 complete draws in the metric, or an analytic value survived)")
+    FLAGS.append(f"e(joint_horiz): {len(_jo)} of {len(_jv)} reps off the 1/{NDRAW+1} lattice "
+                 f"(fewer than {NDRAW} complete draws in the metric, or an analytic value survived)")
 
 # ------------------------------------------------------------------ package verification
 print("\n## 1. Package verification of the alternative p-value conventions\n")
@@ -145,9 +162,10 @@ for arm, comp in (("absp", "cpabs"), ("rawp", "cpraw"), ("left", "cpleft")):
 
 # ------------------------------------------------------------------ D1 sizes
 print("\n## 2. D1 - size under the sharp null (tau = 0)\n")
-print("Nominal size is attained EXACTLY on the 199-replication grid: with the observed")
-print("statistic ranked R uniform on 1..200, the equal-tailed p is 2*min(R,201-R)/200, so")
-print("P(p<=.05)=10/200=.05 and P(p<=.10)=20/200=.10; the same holds for permabsp,")
+print(f"Nominal size is attained EXACTLY on the {NDRAW}-replication grid: with the observed")
+print(f"statistic ranked R uniform on 1..{NDRAW+1}, the equal-tailed p is 2*min(R,{NDRAW+2}-R)/{NDRAW+1}, so")
+print(f"P(p<=.05)={sum(1 for p in _peq if p <= .05 + EPS)}/{NDRAW+1}={sum(1 for p in _peq if p <= .05 + EPS)/(NDRAW+1):.4f} "
+      f"and P(p<=.10)={sum(1 for p in _peq if p <= .10 + EPS)}/{NDRAW+1}={sum(1 for p in _peq if p <= .10 + EPS)/(NDRAW+1):.4f}; the same holds for permabsp,")
 print("permrawp and permside(). Any departure below is a real calibration finding.\n")
 ELEMS = [("main_att", "p_main"), ("pretreatment_att", "p_pre"), ("ES_att_pre2", "p_pre2"),
          ("ES_att_pre1", "p_pre1"), ("ES_att_post0", "p_post0"), ("ES_att_post1", "p_post1")]
@@ -177,10 +195,10 @@ for alpha in (0.05, 0.10):
         ps = [p for p in ps if p is not None]
         line(f"{nm} @{alpha:.2f}", sum(1 for p in ps if p <= alpha + EPS), len(ps), alpha)
 
-# mean of the p-value: on the 199-draw lattice the equal-tailed p has mean exactly .505
-# and SD .2887, the one-sided share mean .5025 and SD .2887 - a global calibration check
-# that uses the whole distribution rather than only the 5% tail.
-print("\n### mean p-value (global check; theory: equal-tailed .5050, one-sided .5025, SD .2887)\n")
+# mean of the p-value: on the NDRAW-draw lattice the equal-tailed p has mean (NDRAW+3)/(2(NDRAW+1))
+# (.505 at 199) and SD SD_EQ (.2887 at 199), the one-sided share mean (NDRAW+2)/(2(NDRAW+1)) - a
+# global calibration check that uses the whole distribution rather than only the 5% tail.
+print(f"\n### mean p-value (global check; theory at permreps {NDRAW}: equal-tailed {MEAN_EQ:.4f}, one-sided {MEAN_LO:.4f}, SD {SD_EQ:.4f})\n")
 hdr(["element", "mean equal-tailed p", "MC se", "dev (MC se)", "mean p_lo", "n"])
 for nm, col, lo in [("main_att", "p_main", "plo_main"), ("pretreatment_att", "p_pre", "plo_pre"),
                     ("ES_att_pre2", "p_pre2", "plo_pre2"), ("ES_att_pre1", "p_pre1", "plo_pre1"),
@@ -190,12 +208,12 @@ for nm, col, lo in [("main_att", "p_main", "plo_main"), ("pretreatment_att", "p_
     if not v:
         continue
     m = sum(v)/len(v)
-    se0 = 0.2887/math.sqrt(len(v))
-    z = (m - 0.505)/se0
+    se0 = SD_EQ/math.sqrt(len(v))
+    z = (m - MEAN_EQ)/se0
     mw = sum(w)/len(w) if w else float("nan")
     print(f"| {nm} | {m:.4f} | {se0:.4f} | {z:+.2f} | {mw:.4f} | {len(v)} |")
     if abs(z) > 2:
-        FLAGS.append(f"{nm}: mean equal-tailed p {m:.4f} vs theory .5050 ({z:+.2f} MC se, n={len(v)})")
+        FLAGS.append(f"{nm}: mean equal-tailed p {m:.4f} vs theory {MEAN_EQ:.4f} ({z:+.2f} MC se, n={len(v)})")
 
 print("\n### fixed-metric joint pre-trend test e(joint_horiz) (jointtests)\n")
 hdr(["test", "size", "MC se", "n", "dev (MC se)", ""])
@@ -208,6 +226,9 @@ for alpha in (0.05, 0.10):
 print("\n## 3. D1 - multiplicity over the post-treatment horizons (e(perm_stepdown))\n")
 print("Two post horizons (post0, post1). FWER = share of reps rejecting ANY horizon.\n")
 have = [r for r in D1 if num(r, "psd0") is not None and num(r, "psd1") is not None]
+if not have:
+    print("FAIL: no step-down rows in D1 - was permstepdown passed to mc_ri2.do?")
+    sys.exit(1)
 for alpha in (0.05, 0.10):
     hdr(["quantity", "share", "MC se", "n", "dev (MC se)", ""])
     line(f"FWER step-down min(p_stepdown)<={alpha:.2f}",

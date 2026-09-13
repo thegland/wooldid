@@ -1,6 +1,6 @@
 * fastnose_grid.do — M4 fastnose parity grid (preregistered: test/suite/PREREG_NEWFEAT_2026-08-24.md §M4)
 *
-* For each of 22 grid configs, wooldid runs FULL and with `fastnose` added, and every
+* For each of 23 grid configs, wooldid runs FULL and with `fastnose` added, and every
 * shared e(b) entry is compared MATCHED BY COLUMN NAME (never position) — plus
 * e(gteffects) cell-by-cell when the config includes gteffects. PASS iff for every
 * entry |diff| <= 1e-12 OR reldif <= 1e-10. Any missing-vs-nonmissing flip or
@@ -295,7 +295,14 @@ local nm22 b_gt_aw
 local ds22 dta_binary
 local gt22 1
 local cm22 `"y i t ttre [aw=w], att att_it cluster(i) esprelength(2) espostlength(2) gteffects"'
-local NC 22
+* c_lattice_robust (research_2026-09-08/fastnose_precision.md step 3): the c_lattice call with
+* robust in place of cluster(i), so no containment screen and no all-zero-VCE refit can fire -
+* lattice + contreat + aweight + fastnose end to end at the unrelaxed tolerance
+local nm23 c_lattice_robust
+local ds23 dta_cont
+local gt23 0
+local cm23 `"y i t ttre [aw=w], contreat(intensity) contreatcontrols(basic) lattice(all 3) robust esprelength(2) espostlength(2)"'
+local NC 23
 
 **************************** parity grid ****************************
 forvalues k = 1/`NC' {

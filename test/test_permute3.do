@@ -456,7 +456,11 @@ if `rc' == 0 {
 }
 
 * ================= Q6: permtstat: se_analytic is the analytic se, t_perm = b/se, the
-* t-kernel reconstructs from e(permdist_b)/e(permdist_se) =============================
+* t-kernel reconstructs from e(permdist_b)/e(permdist_se). NOTE (audit 2026-09-13): on
+* this fixture every column's signed tail counts are identical under the t and the b
+* ranking, so the reconstruction here has NO power against a b-ranked engine; Q12i
+* (permtstat + permabsp, seed 1213) is the sampled-mode leg that discriminates, and it
+* carries the guard. ================================================================
 mkperm3 8 4 3
 set seed 106
 cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(30) permtstat
@@ -753,6 +757,26 @@ if _rc == 0 {
   if "`e(perm_stat)'" != "t" | "`e(perm_pconv)'" != "absolute" local ++bad
   mata: st_numscalar("__bad", wdp3_reconx(0, 95, 1))
   if __bad != 0 local ++bad
+  * non-vacuity (audit 2026-09-13): this is the sampled-mode leg with power against a b-ranked
+  * engine - on at least one column the |t| tail count must differ from the |b| tail count
+  * (2026-09-13: pretreatment_att and ES_att_pre1 give 8 vs 10); a re-seed that loses it fails here
+  mata:
+    A_ = st_matrix("e(permdist_b)"); S_ = st_matrix("e(permdist_se)")
+    cb_ = st_matrix("e(perm_comparator_b)"); cs_ = st_matrix("e(perm_comparator_se)")
+    nd_ = 0
+    for (k_ = 1; k_ <= cols(A_); k_++) {
+      if (cs_[k_] >= . | cs_[k_] <= 0 | cb_[k_] >= .) continue
+      ok_ = (A_[., k_] :< .) :& (S_[., k_] :< .) :& (S_[., k_] :> 0)
+      tt_ = select(A_[., k_] :/ S_[., k_], ok_)
+      bb_ = select(A_[., k_], ok_)
+      if (sum(abs(tt_) :>= abs(cb_[k_]/cs_[k_])) != sum(abs(bb_) :>= abs(cb_[k_]))) nd_++
+    }
+    st_numscalar("__q12idisc", nd_)
+  end
+  if __q12idisc == 0 {
+    dis as error "Q12i FAIL (VACUOUS): the |t| and |b| tail counts agree on every column, so this leg could not tell a b-ranked engine from the t-ranked one; re-seed"
+    local ++bad
+  }
   if e(perm_tlb_att) >= . local ++bad
   else if reldif(e(perm_tlb_att), e(wdidmainresults)[1, 5]) > 1e-12 | reldif(e(perm_tub_att), e(wdidmainresults)[1, 6]) > 1e-12 local ++bad
   if `bad' {
@@ -1585,9 +1609,11 @@ if `q30hr' {
 use "`DATA'/dta_binary", clear
 qui log using perm3_q31a.txt, text replace name(p3)
 cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20) rseed(31) dots(0)
+local q31rca = _rc
 qui log close p3
 qui log using perm3_q31b.txt, text replace name(p3)
 cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20) rseed(31) permtstat dots(0)
+local q31rcb = _rc
 qui log close p3
 tempname fh
 local q31a_def 0
@@ -1612,7 +1638,7 @@ while r(eof) == 0 {
   file read `fh' line
 }
 file close `fh'
-if `q31a_def' != 1 | `q31a_ts' != 0 | `q31a_few' != 0 | `q31b_def' != 0 | `q31b_ts' != 1 {
+if `q31rca' != 0 | `q31rcb' != 0 | `q31a_def' != 1 | `q31a_ts' != 0 | `q31a_few' != 0 | `q31b_def' != 0 | `q31b_ts' != 1 {
   dis as error "Q31 FAIL: default run (coef caution=`q31a_def' ts caution=`q31a_ts' few=`q31a_few'), permtstat run (coef=`q31b_def' ts=`q31b_ts')"
   global pf = $pf + 1
 }
@@ -1699,6 +1725,65 @@ if "`q33nm'" == "" | `q33c' != 6 | `q33pd' != 1 | `q33p' >= . {
   global pf = $pf + 1
 }
 else dis as result "Q33 PASS: cfxplotnose no longer truncates under permute() - `q33nm' has `q33c' columns, a permutation p (`q33p') and its own permdist_"
+
+* ================= Q34: aweights under permute() - the recon identity on a weighted
+* replication fit (nothing in the tree runs this pair; mc_ri R7 last did on 2026-08-24).
+* Placebo fixture + rseed(1342) so the observed statistic sits INSIDE the sampled
+* distribution (2026-09-13: tails 26/5, p .387); with a planted effect it was the extreme
+* draw and the p check only saw the floor ====
+mkperm3 8 4 0
+qui gen double w = 0.5 + runiform()
+set seed 134
+cap noi wooldid y i t ttre [aw=w], att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(30) rseed(1342) dots(0)
+local rc = _rc
+xrc Q34a 0 `rc'
+if `rc' == 0 {
+  mata: st_numscalar("__bad", wdp3_recon(0, 95))
+  if __bad != 0 {
+    dis as error "Q34b FAIL: " __bad " element(s) whose p/interval is not the convention applied to the posted draws under [aw=w]"
+    global pf = $pf + 1
+  }
+  else dis as result "Q34b PASS: weighted permutation p/intervals reconstruct bitwise"
+  local q34m = e(perm_completed)
+  if `q34m' != 30 {
+    dis as error "Q34c FAIL: perm_completed=`q34m' (weighted replications failed)"
+    global pf = $pf + 1
+  }
+  * the observed att is interior: its smaller tail among the 30 draws holds at least two
+  mata: A_ = st_matrix("e(permdist_b)"); k_ = selectindex(st_matrixcolstripe("e(permdist_b)")[., 2] :== "main_att"); v_ = select(A_[., k_], A_[., k_] :< .); c_ = st_matrix("e(perm_comparator_b)")[1, k_]; st_numscalar("__q34tail", min((sum(v_ :<= c_), sum(v_ :>= c_))))
+  if __q34tail < 2 {
+    dis as error "Q34d FAIL: smaller tail = " __q34tail " of 30 - the observed statistic is the extreme draw, so the p identity only saw the floor; change the fixture or rseed"
+    global pf = $pf + 1
+  }
+  else dis "Q34d info: smaller tail " __q34tail " of 30 (p=" e(perm_p_att) ")"
+}
+
+* ================= Q35: poisson under permute() - the same identity on ppmlhdfe replications
+* (att only; the fixture is interior as it stands: 2026-09-13 tails 24/8, p .581) ====
+mkperm3 8 4 3
+qui gen ycount = round(exp(0.3*(t >= ttre & ttre < .) + 0.05*i))
+set seed 135
+cap noi wooldid ycount i t ttre, att cluster(i) poisson permute(shuffle) permreps(30) rseed(1350) dots(0)
+local rc = _rc
+xrc Q35a 0 `rc'
+if `rc' == 0 {
+  mata: st_numscalar("__bad", wdp3_recon(0, 95))
+  if __bad != 0 {
+    dis as error "Q35b FAIL: " __bad " element(s) whose p/interval is not the convention applied to the posted draws under poisson"
+    global pf = $pf + 1
+  }
+  else dis as result "Q35b PASS: poisson permutation p/intervals reconstruct bitwise"
+  if e(perm_completed) != 30 {
+    dis as error "Q35c FAIL: perm_completed=" e(perm_completed) " (ppmlhdfe replications failed)"
+    global pf = $pf + 1
+  }
+  mata: A_ = st_matrix("e(permdist_b)"); k_ = selectindex(st_matrixcolstripe("e(permdist_b)")[., 2] :== "main_att"); v_ = select(A_[., k_], A_[., k_] :< .); c_ = st_matrix("e(perm_comparator_b)")[1, k_]; st_numscalar("__q35tail", min((sum(v_ :<= c_), sum(v_ :>= c_))))
+  if __q35tail < 2 {
+    dis as error "Q35d FAIL: smaller tail = " __q35tail " of 30 - the observed statistic is the extreme draw, so the p identity only saw the floor; change the fixture or rseed"
+    global pf = $pf + 1
+  }
+  else dis "Q35d info: smaller tail " __q35tail " of 30 (p=" e(perm_p_att) ")"
+}
 
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

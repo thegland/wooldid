@@ -25,4 +25,16 @@ vald_*.txt
 w3f_*.txt
 # Plot outputs from test_fastnose.do:
 fnplot_ES*
+# Stata SMCL transcripts and graph files written by the targeted test_*.do suites
+# (nothing tracked in this repo is .smcl or .gph, so these are always run artifacts):
+*.smcl
+*.gph
+# Scratch datasets/transcripts test_permute3.do and the L6 probe write into test/:
+perm3_*
+l6probe_*
+# Shard scheduling and log scratch under the TRACKED suite/mc/out2 result tree
+# (the .csv/.md results there are tracked on purpose; these are not):
+suite/mc/out2/*/logs/
+suite/mc/out2/*/*.sched
+suite/mc/out2/*/START.txt
 .DS_Store

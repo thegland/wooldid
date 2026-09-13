@@ -2,6 +2,17 @@
 * (PREREG_NEWFEAT_2026-08-24 §M2). One shard of one config; one CSV row per rep.
 * Null DGPs: the true ES profile lies on a line (flat zero, or a planted line through
 * the reference period), so the composite null of the adversarial test is TRUE.
+* WARNING (Stage A audit 2026-09-13, critic C1): G=40 SINGLETON cohorts under cluster(i) is the
+* CONTAINMENT class - each treated cohort-by-period cell is one observation in one cluster, the
+* saturated cell dummies zero its residual and the CRVE of the horizon vector is degenerate
+* (SI-A1). HEAD's PS-64 caution fires on every rep ("jointtests was combined with analytic
+* clustered SEs clustered at the level of the cohort variable i or above ... its p-value should
+* not be read as a calibrated test", wooldid.ado L1362; hidden here by `cap qui`), and the
+* ADVBOUND ruling (REPORT_ADVBOUND_2026-08-26.md: KEEP GATED at m* = 6 clusters per cell) gates
+* this design out. A1-A6 therefore FAIL their prereg bands on HEAD by ruling (08-24: 11-23% at
+* .05); BS-12 (2026-09-10) changed the null form, not the covariance. NOT rewritten pending an
+* author ruling (report-only negative control vs redesign into the certified region - see
+* PREREG_NEWFEAT_2026-08-24.md NOTE (M2, M3b) and mc_adv_bs12.do).
 * args: 1=adopath  2=config (A1 A2 A3a A3b A5 A6)  3=shard  4=nreps  5=baseseed  6=outdir
 clear all
 set more off

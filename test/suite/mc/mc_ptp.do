@@ -3,6 +3,14 @@
 * Arms: pilot/Z (gamma=0), W (gamma = pilot-median mdt_wald), N (gamma = pilot-median
 * mdt_nis). The planted trend is linear through the reference period: gamma*(relyr+1),
 * applied to treated units in ALL periods.
+* WARNING (Stage A audit 2026-09-13, critic C1 / KF-3): G=40 singleton cohorts under cluster(i)
+* is the containment class. HEAD's PS-64 caution fires on every rep ("pretrendpower() was
+* combined with analytic clustered SEs clustered at the level of the cohort variable i or above
+* ... its p-value should not be read as a calibrated test", wooldid.ado L1362; hidden by `cap
+* qui`). The 08-24 ptp Z nissize FAIL (.2132 empirical vs .1325 reported) was measured on this
+* geometry, and NIS size has never been measured on a certified geometry (cluster strictly
+* finer than the cell, AB1's shape). NOT rewritten pending an author ruling; see
+* PREREG_NEWFEAT_2026-08-24.md NOTE (M2, M3b).
 * args: 1=adopath  2=arm (pilot W N Z)  3=shard  4=nreps  5=baseseed  6=outdir  7=gamma
 clear all
 set more off

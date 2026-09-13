@@ -1,4 +1,9 @@
 * mc_advdiag.do — adversarial oversize diagnostics (post-A1 finding, 2026-08-24).
+* ARCHIVED (inventory note 2026-09-13, critic C2): a diagnostic of the PRE-BS-12 (free-intercept,
+* q=6) adversarial statistic on cluster(i) containment designs. No runner, no analyzer, not in
+* any README. It runs on HEAD (the SI-A1 error is now the PS-64 caution, so the
+* wooldid_solved_issues.md note that it "needs safety(off)" is stale) but its diagnosis is of the
+* old statistic. Kept as a record, not a component.
 * A1 measured ~20.5% rejection at nominal .05 (G=40, singleton cohorts, 4/4 window);
 * joint_horiz ~11.3%. These arms separate the candidate mechanisms:
 *   D1: G=200, singleton cohorts, 4/4  — finite-G? (big G, V structure unchanged)

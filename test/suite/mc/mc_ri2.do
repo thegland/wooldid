@@ -3,7 +3,9 @@
 * appending ONE CSV ROW PER (rep, arm) with open/write/close so a shard killed at the
 * deadline still leaves every completed rep on disk.
 *
-*   D1  tau = 0  sharp null, default (equal-tailed) p; jointtests; the step-down record.
+*   D1  tau = 0  sharp null, default (equal-tailed) p; jointtests; the step-down record
+*                (permstepdown is passed on the main arm: opt-in since PS-45/7a158ea, without
+*                it e(perm_stepdown) is not posted and tobs/praw/pss/psd are all '.').
 *                Every VERIFY-th rep also runs the package's permabsp / permrawp /
 *                permside(left) arms on the SAME rseed (identical draws), so the
 *                conventions computed in-driver from e(permdist_b) can be checked
@@ -18,6 +20,10 @@
 *
 * args: 1=ado 2=shard 3=outdir 4=bD1 5=bD2 6=bD3 7=bD4 8=baseseed 9=maxreps 10=verifyevery
 *       11=permreps (production: 199; the smoke pass uses a smaller value to check plumbing)
+* Column note (audit 2026-09-13): off_main/off_post0/off_post1 are e(perm_kernel) row 10
+*   ("offcentre"), which HEAD sets to 1 only when the level() null band excludes 0 (the shift
+*   interval is then blank) and leaves MISSING on a centred cell - so '.' in these columns means
+*   "not off-centre", not "unread". analyze_mcri2.py scores blank ll/ul directly, never off_*.
 clear all
 set more off
 set maxvar 20000
@@ -277,7 +283,7 @@ forval rep = 1/`MAXREPS' {
   timer on 91
   mkdgp `dgpseed' 0
   cap qui wooldid y i t ttre, att cluster(i) `ESOPT' jointtests ///
-      permute(shuffle) permreps(`PR') rseed(`rseed') dots(0)
+      permute(shuffle) permreps(`PR') rseed(`rseed') dots(0) permstepdown
   local rc = _rc
   timer off 91
   qui timer list 91

@@ -5,6 +5,10 @@
 * percentile, bias-corrected, BCa, percentile-t - plus the p-value sizes, the two
 * joint-test families and the att_it re-identification leg, on mc_bootse.do's design A
 * and on a NEW unequal-cluster design B (12 states of 1..12 units).
+* p_bts (added 2026-09-13, audit F3): the displayed studentized p on the boottstat arms,
+* read from e(boot_tstud) row p_pctl; p_pct/p_bc/p_bca on those arms are the undisplayed
+* coefficient-draw families. Rows written before 2026-09-13 lack the column (the analyzer
+* reads it with .get and reports '-').
 *
 * usage: <stata> -e do mc_bootse2.do <ado> <cfg> <first> <last> <outdir> [reps]
 *   cfg in: AN AA AT BA BN BI BJ BT   (see the config table below)
@@ -108,7 +112,7 @@ else {
 if "`DGP'" == "null" local SEEDBASE = `SEEDBASE' + 100000
 
 local OUTFILE `"`OUTDIR'/mcb2_`CFG'.csv"'
-local VARS cfg,design,dgp,draw,dgpseed,estimand,truth,arm,rc,secs,nobs,b,se,analse,df,nv,ncomp,nfail,main_lb,main_ub,pct_lb,pct_ub,bc_lb,bc_ub,bca_lb,bca_ub,wald_lb,wald_ub,p_pct,p_bc,p_bca,jt_p,jt_fam
+local VARS cfg,design,dgp,draw,dgpseed,estimand,truth,arm,rc,secs,nobs,b,se,analse,df,nv,ncomp,nfail,main_lb,main_ub,pct_lb,pct_ub,bc_lb,bc_ub,bca_lb,bca_ub,wald_lb,wald_ub,p_pct,p_bc,p_bca,p_bts,jt_p,jt_fam
 di "MCB2_CONFIG cfg=`CFG' design=`DESIGN' dgp=`DGP' arms=`ARMS' es=`ESOPT' reps=`REPS' truth=`TRUTH' draws=`FIRST'..`LAST'"
 di "MCB2_OUTFILE `OUTFILE'"
 
@@ -122,7 +126,7 @@ prog def mcb2row
   local dgpseed `=subinstr("`seed'", "seed(", "", 1)'
   local dgpseed = subinstr("`dgpseed'", ")", "", .)
   foreach v in b se analse df nv ncomp nfail main_lb main_ub pct_lb pct_ub bc_lb bc_ub ///
-               bca_lb bca_ub wald_lb wald_ub p_pct p_bc p_bca jt_p {
+               bca_lb bca_ub wald_lb wald_ub p_pct p_bc p_bca p_bts jt_p {
     local `v' = .
   }
   local jt_fam
@@ -170,13 +174,24 @@ prog def mcb2row
         local tgt = cond("`nm'"=="PP", "p_pct", cond("`nm'"=="PB", "p_bc", "p_bca"))
         local `tgt' = el(``nm'',1,`k')
       }
+      * F3 (audit 2026-09-13): under boottstat the DISPLAYED p is the studentized
+      * (percentile-t, F033 add-one) p in e(boot_tstud) row p_pctl, column = estimand;
+      * boot_p_percentile/bc/bca are the undisplayed coefficient-draw families, posted
+      * regardless of boottstat, so p_pct/p_bc/p_bca on a bts arm are NOT the displayed p
+      tempname BTS
+      cap matrix `BTS' = e(boot_tstud)
+      if _rc == 0 {
+        local k  = colnumb(`BTS', "`estimand'")
+        local rp = rownumb(`BTS', "p_pctl")
+        if `k' < . & `rp' < . local p_bts = el(`BTS', `rp', `k')
+      }
       if "`e(joint_horiz)'" != "" local jt_p = e(joint_horiz)
       local jt_fam `e(boot_jt_family)'
     }
   }
   local row "`cfg',`design',`dgp',`draw',`dgpseed',`estimand',`truth',`arm',`rc',`secs',`nobs'"
   foreach v in b se analse df nv ncomp nfail main_lb main_ub pct_lb pct_ub bc_lb bc_ub ///
-               bca_lb bca_ub wald_lb wald_ub p_pct p_bc p_bca jt_p {
+               bca_lb bca_ub wald_lb wald_ub p_pct p_bc p_bca p_bts jt_p {
     local x = strtrim(string(``v'', "%18.12g"))
     if "`x'" == "" | "`x'" == "." local x .
     local row "`row',`x'"

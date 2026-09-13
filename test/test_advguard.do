@@ -135,6 +135,31 @@ else {
     dis as error "T2b FAIL: the display line must be posted beside the p-value"
     local ++fails
   }
+  * the VALUE, not just the range (audit 2026-09-13): the one-parameter null through the
+  * reference period, reconstructed the way test_advstat T1 does it (pinv + GLS normal
+  * equations; q = rank(V) - 1). e(wdid_esrel) is a hidden MACRO, so it is read with
+  * st_global + strtoreal (st_numscalar returns 0x0 and the subtraction aborts r(3200)).
+  cap confirm matrix e(b_es_att)
+  if _rc == 0 & "`e(adversarial_pval_att)'" != "" {
+    tempname T2B T2V T2R
+    matrix `T2B' = e(b_es_att)
+    matrix `T2V' = e(V_es_att)
+    local t2lbl : colnames `T2B'
+    local t2dfr = e(df_r)
+    matrix `T2R' = J(colsof(`T2B'), 1, 0)
+    local t2i 0
+    foreach l of local t2lbl {
+      local ++t2i
+      if substr("`l'", 1, 3) == "pre" matrix `T2R'[`t2i', 1] = -real(substr("`l'", 4, .))
+      else matrix `T2R'[`t2i', 1] = real(substr("`l'", 5, .))
+    }
+    mata: b = st_matrix(st_local("T2B"))'; V = st_matrix(st_local("T2V")); V = (V + V')/2; X = st_matrix(st_local("T2R")) :- strtoreal(st_global("e(wdid_esrel)")); dfr = strtoreal(st_local("t2dfr")); sv = svdsv(V); rV = sum(sv :> max(sv)*1e-12); Vp = pinv(V); g = invsym(X'Vp*X)*(X'Vp*b); d = b - X*g; W = d'Vp*d; q = rV - 1; st_numscalar("__t2bq", q); st_numscalar("__t2bp", (q > 0 ? (dfr < . ? Ftail(q, dfr, W/q) : chi2tail(q, W)) : .))
+    if __t2bq != 1 | reldif(__t2bp, e(adversarial_pval_att)) > 1e-10 {
+      dis as error "T2b FAIL: hand one-parameter-null p " %21x __t2bp " (q=" __t2bq ") vs e(adversarial_pval_att) " %21x e(adversarial_pval_att)
+      local ++fails
+    }
+    else dis as result "T2b: p reconstructed under the one-parameter null at reldif " %8.2e reldif(__t2bp, e(adversarial_pval_att)) " (q=1, p=" %10.6f e(adversarial_pval_att) ")"
+  }
   if strpos(fileread("advg_t2b.txt"), "the composite-null covariance is degenerate") != 0 {
     dis as error "T2b FAIL: a degenerate-covariance Caution fired on a design whose null has one testable dimension"
     local ++fails

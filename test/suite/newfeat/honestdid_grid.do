@@ -123,7 +123,7 @@ program define gridcase
   matrix V = GRID_V
   local rmok 0
   foreach dl in rm sd {
-    cap noi honestdid, numpre(`np') b(b) vcov(V) delta(`dl') mvec(0.5(0.5)2)
+    cap noi honestdid, numpre(`np') b(b) vcov(V) delta(`dl') mvec(0.5(0.5)2) parallel(0)
     local hrc = _rc
     if `hrc' != 0 {
       if "`dl'" == "rm" {

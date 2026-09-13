@@ -21,14 +21,18 @@ deterministic data and dumps **every** e() scalar, macro, and matrix cell in Sta
 runs therefore detects *any* change in returned results, down to the last bit.
 
 ## Layout
-- `runbattery.do` — runs the 34 configurations against the repo's `wooldidinstall/wooldid.ado`.
+- `runbattery.do` — runs the 48 configurations against the repo's `wooldidinstall/wooldid.ado`.
 - `data/` — frozen input datasets (binary, continuous, tiny, simple; deterministic seeds).
 - `mkdata.do` — regenerates `data/` from scratch (run from `test/`). Only needed if the
   datasets are ever deliberately changed — doing so invalidates `baseline/`.
 - `compare.py` — compares two output directories (`python3 compare.py BASE NEW [--rtol 1e-9]`).
   Parses `%21x` (hex mantissa **and hex exponent**) and compares numerically with a relative
-  tolerance; missing-value sentinels and unparseable strings compare exactly. Self-tests on
-  startup. Use `--rtol 0` for strict bit-exactness.
+  tolerance; missing-value sentinels and unparseable strings compare exactly (a Stata missing
+  is dumped as `+1.0000000000000X+3ff`, `.a` as `+1.0010000000000X+3ff`, ...; since 2026-09-13
+  those decode to the `.`/`.a` sentinels, as in `suite/compare_oldnew.py`). A dump's `files|`
+  line - the files a config saved, pinned by name - compares as a string; dumps written before
+  2026-09-13 have no such line and read as "no files". Self-tests on startup. Use `--rtol 0`
+  for strict bit-exactness.
 - `baseline/` — the committed reference outputs (as of commit `3cb0c41` — the B21
   gen-double re-bless, 2026-07-21; gtools active, Stata 19.0 MP). Re-blessed 2026-09-01
   when the cell collapse became the default (`fastcollapse` / `fullprecisionslow`): every
@@ -36,7 +40,9 @@ runs therefore detects *any* change in returned results, down to the last bit.
   bit-identical to the previous baseline; `cont_lat`, `cont_uz`, `cont_uz_ss` moved at
   1e-16..1e-10 in the shared session but were bit-identical to the pristine build when
   each was run alone (session-order contamination from the earlier configs' collapse,
-  not a change to the contreat path, which does not collapse).
+  not a change to the contreat path, which does not collapse). Extended 2026-09-13 with the 11
+  permute()/bootstrap() configs of the suite audit (perm_sgjt_adv .. level_analytic), blessed
+  additively: the 37 earlier files are byte-unchanged and carry no `files|` line.
 - `mkpathological.do` — builds `data/dta_path_*.dta`, the pathological data shapes used by
   the coverage grid (`review_process/assessment_grid.md`, dimension D12): no never-treated
   units, no controls, cohorts lacking pre-/post-periods, missing relative years, single-obs
@@ -54,13 +60,22 @@ cd test && mkdir run1 && cd run1
 "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp" -e do ../runbattery.do
 python3 ../compare.py ../baseline .
 ```
-Expected: `34/34 IDENTICAL, TOTAL_DIFF_GROUPS=0` for a change that should not alter results.
+Expected: `48/48 IDENTICAL, TOTAL_DIFF_GROUPS=0` for a change that should not alter results.
 When a fix intentionally changes output, the diff must match the predicted signature exactly
 (e.g. B12's only signature was one variable leaving the poisson config's varlist) — then the
 new outputs become the baseline: `cp run1/*.csv baseline/` and commit with the fix.
+When configs are ADDED (appended at the END of `runbattery.do`, so no earlier dump can move),
+bless additively: require exactly `N IDENTICAL` for every pre-existing config plus the new names
+as `NEW config (no baseline)` - compare.py exits 1 until they are blessed, which is the expected
+pre-bless state - then copy ONLY the new files (`cp run1/<new>.csv baseline/`). `cp run1/*.csv`
+re-blesses every config and hides an unintended move. Run the battery a second time and compare
+the new files run to run at `--rtol 0` before committing them, in one commit with `runbattery.do`.
 
 Notes:
-- Run one battery at a time; each takes a few minutes.
+- Run one battery at a time; the 48 configs take 6-7 minutes in a fresh process (measured on
+  two fresh processes 2026-09-13: 275-292 s for the first 37 plus 90-108 s for the
+  permute()/bootstrap() block, 366-400 s in all; a loaded machine took 450 s for the first 37
+  alone).
 - The battery is bit-reproducible. (gtools is a hard requirement since `40414c7`; the
   non-gtools code path — which had inherent ~1-ulp bysort tie-break noise — no longer
   exists. Comparisons against pre-refactor builds' non-gtools legs need a tolerance.)

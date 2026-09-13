@@ -11,6 +11,9 @@
 # is what the cap means.
 #
 # Usage: run_mcri2.sh <outdir> <bD1> <bD2> <bD3> <bD4> <maxreps> <verify> <permreps> <shards...>
+# bD1 NOTE (2026-09-13): mc_ri2.do's D1 main arm now passes permstepdown (opt-in since PS-45; the
+# step-down record is empty without it), measured at +23% per D1 rep - budget bD1 about 25% above
+# the 2026-09-06 production value (1900 s per shard then -> ~2400 s) for the same rep count.
 set -u
 STATA=/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp
 REPO=/Users/hegland/Documents/Research/wooldid_dev

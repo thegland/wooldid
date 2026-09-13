@@ -1,7 +1,7 @@
 * wooldid regression battery. Run from a fresh subdirectory of test/ (see test/README.md):
 *   mkdir test/run1 && cd test/run1 && "<stata>" -e do ../runbattery.do
-* Loads the CURRENT repo wooldid.ado, runs 37 configs, dumps all e() content
-* (exact %21x hex) + rc + post-run varlist to <cfg>.csv in cwd.
+* Loads the CURRENT repo wooldid.ado, runs 48 configs, dumps all e() content
+* (exact %21x hex) + rc + post-run varlist + saved-file names to <cfg>.csv in cwd.
 clear all
 set more off
 set maxvar 20000
@@ -16,7 +16,10 @@ do "`REPO'/wooldidinstall/wooldid.ado"
 
 cap program drop dumpres
 program define dumpres
-  args cfg rc
+  gettoken cfg 0 : 0
+  gettoken rc  0 : 0
+  * every remaining token is a file prefix to pin (see the files| note below)
+  local svpre `0'
   tempname fh
   file open `fh' using "`cfg'.csv", write replace
   file write `fh' "rc|`rc'" _n
@@ -48,6 +51,24 @@ program define dumpres
       }
     }
     cap matrix drop `M'
+  }
+  * files| (2026-09-13, suite audit F-8; mirrors mkrun.py's line): every file in cwd whose name
+  * starts with one of the prefixes given after cfg and rc. A config that writes files -
+  * permsave(pfx), bootsave(pfx), saveplots(pfx) - names its prefixes on its dumpres line
+  * (`dumpres perm_save `rc' pfx'); the sorted names are pinned and the files are erased so the
+  * next config's glob is clean. Default prefix svp (mkrun's). compare.py reads a dump without
+  * this line as an empty list, so the pre-2026-09-13 baseline files stay comparable as they are.
+  if "`svpre'" == "" local svpre svp
+  local svfiles
+  foreach sp of local svpre {
+    local sp1 : dir . files "`sp'*"
+    local svfiles `svfiles' `sp1'
+  }
+  local svfiles : list uniq svfiles
+  local svfiles : list sort svfiles
+  file write `fh' `"files|`svfiles'"' _n
+  foreach svf of local svfiles {
+    cap erase `svf'
   }
   file close `fh'
 end
@@ -316,6 +337,140 @@ set seed 864209
 cap noi wooldid y i t ttre, att contreat(intensity) contreatcontrols(basic) lattice(all 3) cluster(i) esprelength(1) espostlength(1) makecfxplots cfxplotnose permute(shuffle) permreps(20) rseed(86420) dots(0)
 local rc = _rc
 dumpres perm_cfxnose `rc'
+
+* ---- 2026-09-13 (suite audit, permboot_tracking): bit-exact cover for the permute()/bootstrap()
+* surfaces that no battery config, and no content-judged oldnew config, pins. Every option here is
+* NEW-ONLY, so the dual build reports its e() objects as additions and never compares them; the cert
+* suites either reconstruct these numbers from the posted draws (identities) or, on a few att-only
+* unweighted fixtures, match the draw generators to an external oracle (DO1, O1/O2, G32,
+* ri_crosscheck Sd); neither sees the weighted, poisson, stratified, re-identified, observation-level
+* or subgroup/joint-wired paths bit-exactly. The battery pins those. RULES for this block: (1) every
+* replication engine call sets its seed INSIDE the config AND passes rseed() - without rseed() the
+* engine leaves the session stream alone and dumps c(rngstate) as e(perm_rngstate)/e(boot_rngstate),
+* so the dump would pass a full battery run and fail any single-config rerun; (2) dots(0); (3) most
+* configs run on an 18-cluster subset of dta_binary (6 units from each onset block, both subgroups
+* in every block - the perm_probs precedent) so a replication costs ~1/5 of a full-panel one. These
+* are regression pins of the code paths, NOT realistic-data evidence; the full-panel behaviour is
+* the cert suites' business. Blessed additively (the 37 earlier baseline files are untouched).
+
+* permute() + subgroups + jointtests + adversarial: the fixed-metric permutation joint tests and the
+* permuted pairwise contrasts - e(perm_jointW/perm_sgW/perm_advW) and their *Wobs, e(pwsgs) with its
+* perm_pwsgs_kernel, the per-subgroup tables and the joint_*_s* scalars. The largest permute surface
+* with no bit pin anywhere (test_permute3 Q5 reconstructs it from the draws; nothing pins the draws).
+freshstart "`DATA'/dta_binary"
+qui keep if inrange(i, 1, 6) | inrange(i, 27, 32) | inrange(i, 51, 56)
+set seed 112358
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) esfixedbaseperiod esrelativeto(-1) subgroups(sg) jointtests adversarial permute(shuffle) permreps(20) rseed(11235) dots(0)
+local rc = _rc
+dumpres perm_sgjt_adv `rc'
+
+* permexact + permabsp + permstepdown + level(90) on the tiny panel (C(8,3) = 56 assignments): the
+* exact plain-share convention (no add-one, e(perm_p_se)/e(perm_p_ci) missing), the absolute-value
+* p with its symmetric dual interval, the opt-in max-|studentized| step-down (post AND pre families:
+* the pre family needs two non-reference pre horizons, hence esprelength(3)), and lb_90ci columns
+* under permute(). No draws are sampled, but e(perm_rngstate) is still posted, so the seed is set.
+freshstart "`DATA'/dta_tiny"
+set seed 314159
+cap noi wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(2) permute(shuffle) permexact permabsp permstepdown level(90) rseed(31415) dots(0)
+local rc = _rc
+dumpres perm_exact_absp `rc'
+
+* weights + permstrata + permside + two estimands under permute(): the weighted replication fits
+* (the only other weighted permute run anywhere is mc_ri R7, last run 2026-08-24; this is [aw] only -
+* permute() under [pw] has no coverage anywhere, and a user [fw] is refused at the shell), the
+* within-strata shuffle, the one-sided add-one share, and the multi-column kernel (att and att_it
+* side by side).
+freshstart "`DATA'/dta_binary"
+qui keep if inrange(i, 1, 6) | inrange(i, 27, 32) | inrange(i, 51, 56)
+set seed 271828
+cap noi wooldid y i t ttre [aw=w], att att_it cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20) permstrata(sg) permside(right) rseed(27182) dots(0)
+local rc = _rc
+dumpres perm_strata_aw `rc'
+
+* poisson under permute(): fast-mode ppmlhdfe replications, att-only (this pins the replication
+* KERNEL, not poisson event-study or subgroup wiring under permute()). Nothing in the tree has ever
+* run this combination (permctl does not refuse it).
+freshstart "`DATA'/dta_binary"
+qui keep if inrange(i, 1, 6) | inrange(i, 27, 32) | inrange(i, 51, 56)
+set seed 161803
+cap noi wooldid ycount i t ttre, att cluster(i) poisson permute(shuffle) permreps(20) rseed(16180) dots(0)
+local rc = _rc
+dumpres perm_pois `rc'
+
+* bootstrap(bayes) + subgroups + jointtests + ties + bootdf(5) + level(90) + simultaneousbands: the
+* Dirichlet reweighting path (no battery config runs bayes), the subgroup rewiring (per-sg tables,
+* their family twins, e(pwsgs) from the contrast draws), the fixed-metric joint family
+* (e(boot_jointW), e(boot_jt_family)), an integer reference df, the ties z0 convention and the
+* non-studentized bootstrap band engine including the per-subgroup families.
+freshstart "`DATA'/dta_binary"
+qui keep if inrange(i, 1, 6) | inrange(i, 27, 32) | inrange(i, 51, 56)
+set seed 141421
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests bootstrap(bayes) reps(10) ties bootdf(5) level(90) simultaneousbands rseed(14142) dots(0)
+local rc = _rc
+dumpres boot_bayes_sgjt `rc'
+
+* boottstat + subgroups + adversarial + jointtests + esfixedbaseperiod + simultaneousbands: the
+* studentized joint statistic e(boot_jointW), the studentized subgroup family (e(boot_sgW),
+* e(boot_tstud_pwsgs), e(bootdist_pwse), e(boot_tpctl_pwsgs) - posted ONLY under boottstat with
+* subgroups), the studentized adversarial test e(boot_advW) (exists only under boottstat,
+* test_bootstrap_gates G38) and the percentile-t band engine (e(esband_engine) =
+* bootstrap-studentized, test_esband B9). Every replication carries a full analytic VCE. On this
+* fixture the across-subgroup equality tests are WITHHELD (joint_att_allsgssame posted as missing,
+* e(boot_sgjt_reason) = nostudentizedinputs - the pairwise-se degeneracy under cluster(i) that
+* test_bootstrap_joint documents); the dump pins that withheld state and its reason, not a live test.
+freshstart "`DATA'/dta_binary"
+qui keep if inrange(i, 1, 6) | inrange(i, 27, 32) | inrange(i, 51, 56)
+set seed 173205
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) esfixedbaseperiod esrelativeto(-1) subgroups(sg) adversarial jointtests bootstrap(standard) boottstat reps(10) simultaneousbands rseed(17320) dots(0)
+local rc = _rc
+dumpres boot_ts_sgadv `rc'
+
+* bootdisplay(bca) on a coarse cluster that nests i in pairs inside one onset block (9 clusters, so
+* 9 jackknife fits): e(boot_accel), e(boot_z0), e(boot_ci_bca)/e(boot_p_bca), the bca mainresults
+* twin and e(boot_jk_completed). Also the first battery run of the bootstrap with cluster() above i.
+freshstart "`DATA'/dta_binary"
+qui keep if inrange(i, 1, 6) | inrange(i, 27, 32) | inrange(i, 51, 56)
+qui gen c2 = ceil(i/2)
+set seed 223607
+cap noi wooldid y i t ttre, att cluster(c2) esprelength(1) espostlength(1) bootstrap(standard) reps(10) bootdisplay(bca) rseed(22360) dots(0)
+local rc = _rc
+dumpres boot_bca_c2 `rc'
+
+* weights + att_it + bootdf(normal) under bootstrap(standard): the physical re-identification leg
+* (a cell-weighted estimand duplicates resampled clusters as whole units) under aweights, with the
+* normal reference distribution overriding the clustered t(G-1) default. [aw] only: the [pw] twin,
+* where the re-identified clusters carry their weights, has an rc pin (test_bootstrap_tstat T10)
+* and a collapse-vs-full identity (test_fastcollapse F10c) but no bit pin.
+freshstart "`DATA'/dta_binary"
+qui keep if inrange(i, 1, 6) | inrange(i, 27, 32) | inrange(i, 51, 56)
+set seed 244949
+cap noi wooldid y i t ttre [aw=w], att att_it cluster(i) esprelength(1) espostlength(1) bootstrap(standard) reps(10) bootdf(normal) rseed(24494) dots(0)
+local rc = _rc
+dumpres boot_aw_reid `rc'
+
+* poisson under bootstrap(standard) on the full panel: ppmlhdfe replications on the count path,
+* att-only (the replication kernel, not poisson event-study or subgroup wiring under bootstrap).
+* bootstrap + poisson has no content-judged coverage anywhere (test_bootstrap_bayes O5 is rc-only).
+freshstart "`DATA'/dta_binary"
+set seed 264575
+cap noi wooldid ycount i t ttre, att cluster(i) poisson bootstrap(standard) reps(10) rseed(26457) dots(0)
+local rc = _rc
+dumpres boot_pois `rc'
+
+* the observation-level bootstrap (no cluster()) on the full panel: the resampling unit is the row,
+* and bootdf defaults to normal (z_wald). The only engine path with no cluster().
+freshstart "`DATA'/dta_binary"
+set seed 282842
+cap noi wooldid y i t ttre, att robust esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(28284) dots(0)
+local rc = _rc
+dumpres boot_obs `rc'
+
+* level(90) on the analytic path: lb_90ci/ub_90ci columns, e(level) = 90 and the t critical value
+* at .05 (test_level L1 hand-checks the formula; nothing pins the numbers). No RNG is consumed.
+freshstart "`DATA'/dta_binary"
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) level(90)
+local rc = _rc
+dumpres level_analytic `rc'
 
 di "BATTERY_DONE"
 exit, clear

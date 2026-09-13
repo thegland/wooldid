@@ -21,6 +21,10 @@ pathological data"): joins each config to its dataset's class and additionally r
   - sync failures: a config whose dataset (or inline-prep config name) is missing from
     the table, or a table row no config references, both fail the run so the marking
     cannot silently go stale.
+Always: RC-ONLY options (warn) - every clean-rc config carrying the option is pinned
+rc_old != 0, so compare_oldnew.py judges those configs on the rc pair alone and never
+compares their e(); the option's bit-exact tracking must come from test/runbattery.do
+or a test_*.do leg. Printed last so it sits next to COVERAGE_OK in SUITE_REPORT.md.
 Exit 0 iff every option not in --allow-zero has at least one config and (when given)
 the data-class table is in sync.
 """
@@ -105,6 +109,7 @@ def main():
     opts = parse_syntax_options(ado)
     counts = {k: 0 for k in opts}       # any config
     clean = {k: 0 for k in opts}        # configs expected to run rc 0 on the NEW build
+    judged = {k: 0 for k in opts}       # clean configs whose CONTENT the comparer judges (rc_old 0 too)
     goodclean = {k: 0 for k in opts}    # clean-rc configs on wellbehaved/stress data
     pathoexp = {k: 0 for k in opts}     # configs on pathological-class data (any rc)
     wclasses = {"aw": 0, "pw": 0, "fw": 0, "none": 0}
@@ -120,6 +125,12 @@ def main():
                 continue
             nconfigs += 1
             is_clean = (r.get("rc_new", "").strip() or "0") == "0"
+            # CONTENT IS JUDGED ONLY WHEN BOTH BUILDS RUN CLEAN: compare_oldnew.py judges an
+            # rc_old != 0 config on its rc pair alone (RC_EXPLAINED) and never opens its e(), so
+            # a new-only option (rc_old 198 -> rc_new 0) earns "clean" credit here from a run
+            # nothing compares. Those options are bit-pinned only by the battery and the cert
+            # suites; the RC-ONLY warning below names them so that gap is visible.
+            is_judged = is_clean and (r.get("rc_old", "").strip() or "0") == "0"
             cls = None
             if classes is not None:
                 over = "config:" + r["config"].strip()
@@ -140,6 +151,8 @@ def main():
                     counts[full] += 1
                     if is_clean:
                         clean[full] += 1
+                        if is_judged:
+                            judged[full] += 1
                         if cls in ("wellbehaved", "stress"):
                             goodclean[full] += 1
                     if cls == "pathological":
@@ -161,6 +174,8 @@ def main():
     dead_allow = sorted(k for k in allow if k in counts and counts[k] > 0)
     err_only = sorted(k for k in counts
                       if counts[k] > 0 and clean[k] == 0 and k not in allow)
+    rc_only = sorted(k for k in counts
+                     if clean[k] > 0 and judged[k] == 0 and k not in allow)
     patho_only = sorted(k for k in counts
                         if clean[k] > 0 and goodclean[k] == 0
                         and classes is not None and k not in allow)
@@ -216,6 +231,14 @@ def main():
         nopatho = sorted(k for k in counts if counts[k] > 0 and pathoexp[k] == 0)
         print("info: options with no pathological-data exposure (not a defect; see the "
               "effort-allocation principle): " + (", ".join(nopatho) if nopatho else "none"))
+    if rc_only:
+        # WARN, not FAIL: the honest trackers for these options are the battery and the
+        # cert suites, which this static gate cannot see; a FAIL would need an allow list
+        # naming the options they pin (author policy call). One line, printed after the
+        # info line, so run_full.sh's report filter carries it into SUITE_REPORT.md (A-5).
+        print("COVERAGE_WARN rc-only options (clean only on rc_old != 0 configs, so the dual "
+              "build judges the rc pair and never compares their e(); bit-exact tracking must "
+              "come from test/runbattery.do or a test_*.do leg): " + ", ".join(rc_only))
     if fail:
         sys.exit(1)
     print("COVERAGE_OK")

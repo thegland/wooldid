@@ -4,13 +4,25 @@
 Battery dumps store every e() value in Stata %21x format (exact hexadecimal doubles,
 e.g. +1.921fb54442d18X+001 meaning 0x1.921fb54442d18 * 2^0x001). NOTE: the exponent
 after X is HEXADECIMAL. Values are compared numerically with a relative tolerance;
-strings that fail to parse fall back to exact string comparison.
+Stata missings (the X+3ff spellings) are decoded to "."/".a" sentinels first, and sentinels
+and strings that fail to parse fall back to exact string comparison. A dump's files| line
+(the files a config saved; absent in dumps written before 2026-09-13 = none) compares as a
+string.
 """
 import sys, os, glob
 
 def hex2f(s):
     """Parse Stata %21x output to a float. Returns the raw string for missing values
-    (., .a, ...) and anything unparseable, so those compare by string equality."""
+    (., .a, ...) and anything unparseable, so those compare by string equality.
+
+    `di %21x` of a Stata MISSING is +1.<k in the top 3 hex digits>X+3ff (system missing
+    +1.0000000000000X+3ff, .a = +1.0010000000000X+3ff, ...), never a literal ".": the
+    battery dumps hold thousands of those cells. They are decoded to the "."/".a" sentinel
+    strings here (ported from compare_oldnew.py's hex2f, 2026-09-13, suite audit F-10) so
+    a missing compares by identity and never numerically. Before the port a missing was the
+    float 2^1023: every verdict at --rtol 0 was still right (. == ., . != any number,
+    . != .a), and the mis-decode was inert at every tolerance in use - "." vs ".a" sit 2^-12
+    apart, so they compared equal only from rtol >= 2.44e-4 - but the two comparers now agree."""
     s = s.strip()
     if s.startswith(".") and len(s) <= 2:
         return s  # missing value sentinel (., .a, ...)
@@ -21,6 +33,12 @@ def hex2f(s):
             t = t[1:]
         mant, exp = t.split("X")
         e = int(exp, 16)  # exponent is hex in %21x
+        if e == 0x3ff and not neg and mant.startswith("1."):
+            frac = int(mant[2:], 16)
+            width = len(mant) - 2  # hex digits after the point (13 in %21x)
+            top3, rest = divmod(frac, 16 ** (width - 3))
+            if rest == 0 and top3 <= 26:
+                return "." if top3 == 0 else "." + chr(ord("a") + top3 - 1)
         v = float.fromhex("0x" + mant + "p" + str(e))
         return -v if neg else v
     except Exception:
@@ -39,6 +57,14 @@ def _selftest():
         got = hex2f(s)
         assert isinstance(got, float) and abs(got - want) <= 1e-300 + 1e-15 * abs(want), (s, got, want)
     assert hex2f(".") == "." and hex2f(".a") == ".a"
+    # the %21x spellings of Stata missings decode to the sentinels (F-10, 2026-09-13); the
+    # same asserts compare_oldnew.py's _selftest carries
+    assert hex2f("+1.0000000000000X+3ff") == "."          # system missing decodes
+    assert hex2f("+1.0010000000000X+3ff") == ".a"         # extended missing decodes
+    assert hex2f("+1.01a0000000000X+3ff") == ".z"
+    assert isinstance(hex2f("+1.fffffffffffffX+3fe"), float)  # true maxdouble stays numeric
+    assert isinstance(hex2f("+1.0010000000001X+3ff"), float)  # non-pattern 3ff stays numeric
+    assert not close(".", ".a", 1e-3) and close(".", ".", 0)
     assert not close(1.0, 1.0 + 1e-13, 0), "rtol 0 must reject sub-1e-12 diffs (bit-exactness)"
     assert close(1.0, 1.0 + 1e-13, 1e-9) and close(0.0, 0.0, 0)
     # no absolute floor at any tolerance (ruling 2026-09-11, D-12) - the same property
@@ -47,7 +73,8 @@ def _selftest():
     assert not close(1e-13, 5e-13, 1e-9), "no absolute floor: a 5x move at 1e-13 is a diff"
 
 def load(path):
-    d = {"scalar": {}, "macro": {}, "mat": {}, "matnames": {}, "rc": None, "varlist": None}
+    d = {"scalar": {}, "macro": {}, "mat": {}, "matnames": {}, "rc": None, "varlist": None,
+         "files": ""}  # files| absent (pre-2026-09-13 dumps) reads as no files saved
     for line in open(path, encoding="utf-8", errors="replace"):
         line = line.rstrip("\n")
         if not line:
@@ -57,6 +84,8 @@ def load(path):
             d["rc"] = p[1] if len(p) > 1 else ""
         elif p[0] == "varlist":
             d["varlist"] = p[1] if len(p) > 1 else ""
+        elif p[0] == "files":
+            d["files"] = "|".join(p[1:])
         elif p[0] == "scalar":
             d["scalar"][p[1]] = hex2f(p[2])
         elif p[0] == "macro":
@@ -105,6 +134,8 @@ def main():
         if B["varlist"] != N["varlist"]:
             bs, ns = set((B["varlist"] or "").split()), set((N["varlist"] or "").split())
             diffs.append(f"varlist: removed={sorted(bs-ns)} added={sorted(ns-bs)}")
+        if B["files"] != N["files"]:
+            diffs.append(f"files: [{B['files']}] -> [{N['files']}]")
         for kind in ("scalar", "macro", "matnames"):
             keys = set(B[kind]) | set(N[kind])
             for k in sorted(keys):

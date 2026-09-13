@@ -179,3 +179,43 @@ FAIL->FIX (real defect; fix via the established protocol: targeted cert + batter
 affected oldnew subsets rerun) | FAIL->DOCUMENT (real issue, no in-scope fix; recorded
 in wooldid_old_bug_report.md per the chunk directive). The MC record (seeds, CSVs,
 analyzer report) is preserved under test/suite/mc/ with the summary committed.
+
+## DEVIATIONS recorded 2026-09-13 (Stage A suite audit; post-hoc, documented per the Global protocol)
+
+D1 (M1, alpha = .05 band; analyze_mc.py). The package's default permutation p became the
+equal-tailed add-one convention (1561386, 2026-09-05; `permabsp` restores the |s| rule pinned
+above). At B = 99 the equal-tailed p takes the values 2k/100 with P(p <= .05) = 4/100 = .04
+exactly, so the .05 count band is Binomial(400, .04) -> [8, 24], not [11, 29]; the .10 band
+[28, 52] is unchanged (P(p <= .10) = 10/100 under either convention). Exact Binomial(400, .04)
+misses [11, 29] with probability .074 per config, i.e. a .37 chance of at least one spurious size
+FAIL over R1-R5/R7 per production run. R3's p is equal-tailed on the t scale (its permtci |t| CI
+is convention-invariant, so the R3 secondary is unchanged). The alternative - appending
+`permabsp` to every mc_ri.do call to restore the |s| convention - was NOT taken: the suite
+certifies the default users get (mc_ri2 guards the same default at 199 draws), and that edit
+would move R3 onto the absolute convention. Author may still choose it.
+
+D2 (M1, R6). R6 enumerates M = 20 assignments and the observed assignment is in the reference
+set, so the equal-tailed p is 2 min(R, 21-R)/20 >= .10 and p <= .05 is unattainable: R6 FAILed
+the .05 band structurally on every run since the convention change. R6 is judged at alpha = .10
+only (its .05 count is still reported).
+
+D3 (M1 SECONDARY, null band). The null-band count band [348, 372] (Binomial(400, .90)) became
+[371, 389] (Binomial(400, .95)) when the package's null band began following level() (default
+95) at 310fa61; analyze_mc.py has carried the new band since 2026-09-05 with only a code comment.
+
+D4 (M1 collected names). `e(perm_lb_att)` / `e(perm_ub_att)` are the deprecated twins of
+`e(perm_bandlo_att)` / `e(perm_bandhi_att)` (CS-57; identical values, kernel rows 11/12);
+mc_ri.do reads the canonical pair from 2026-09-13.
+
+NOTE (M2, M3b; no band changed - author ruling pending). mc_adv.do A1-A6, mc_adv2.do's A4 ame
+(6 obs/cell) and mc_ptp.do sit in the design class HEAD's PS-64 caution declares degenerate
+(jointtests / pretrendpower() with analytic clustered SEs at or above i: "the joint test's
+covariance is degenerate and its p-value should not be read as a calibrated test", hidden by the
+drivers' `cap qui`) and that the ADVBOUND ruling of 2026-08-26 gates out (binary: KEEP GATED at
+m* = 6 clusters per cell, A1-A6 have m = 1 singleton cohorts; ame: gate on cell size, A4 is the
+6-obs/cell case). BS-12 moved the null form, not the covariance, so their prereg size bands FAIL
+on HEAD by ruling and `run_mc.sh all` exits 1 on every run. analyze_mc.py still scores them
+pending the author's ruling between (i) re-classing them as report-only negative controls and
+(ii) redesigning them into the certified region (multi-unit cohorts with a cluster strictly finer
+than the cell - AB1's shape - or the bootstrap()/permute() engines the caution recommends).
+mc_adv_bs12.do is the new paired size ladder for route (ii).

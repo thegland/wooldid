@@ -22,6 +22,9 @@
 *   b/se multiset, not the b multiset, and the exact p must use the t ranking.
 * Block P (review F6): permute(probabilities) draw-frequency check against the
 *   specified asymmetric design (per-cluster marginal bands, membership, accounting).
+* Block Z (audit 2026-09-13): block R's exact enumeration repeated with NO planted effect,
+*   so the observed statistic sits INSIDE its reference set (R, U and T all put it at the
+*   extreme, where their p checks only ever see the 2/M floor).
 * Args: 1 = path to wooldid.ado (file or its directory). No data dir needed (synthetic).
 * Run:  "<stata>" -e do ri_crosscheck.do <adopath>     -> expect RI_CROSSCHECK_ALL_PASS
 
@@ -67,6 +70,9 @@ scalar `npos'   = e(perm_npossible)
 scalar `ncomp'  = e(perm_completed)
 local pmethod `e(perm_method)'
 local pstat `e(perm_stat)'
+* RCMP: the engine's rep-0 statistic must be the external fastnose estimate (no block read it before 2026-09-12)
+tempname RCMP
+scalar `RCMP' = e(perm_comparator_b)[1, colnumb(e(perm_comparator_b), "main_att")]
 
 * ---- R1: counts and surface ----
 if `npos' != 20 | `ncomp' != 20 | rowsof(`PD') != 20 | colsof(`PD') != 1 {
@@ -88,6 +94,10 @@ if _rc != 0 {
 }
 tempname OBS
 scalar `OBS' = _b[main_att]
+if `RCMP' != `OBS' {
+  dis as error "RCMP FAIL: e(perm_comparator_b)[main_att] = " %21x `RCMP' " is not the external fastnose statistic " %21x `OBS'
+  global pf = $pf + 1
+}
 
 * ---- external enumeration: every way to place the 3 onset-4 labels on 6 clusters ----
 * (TRI additionally records each assignment's treated triple, for block S's draw map)
@@ -278,6 +288,106 @@ if `extfail' == 0 {
 }
 else dis as error "S block skipped: `extfail' external run(s) failed (already counted)"
 
+**************************** Z: placebo exact design, observed statistic interior (audit 2026-09-13) ****************************
+* Blocks R, U and T all have the observed assignment at the extreme of its enumeration, so
+* their p checks (RB, UB, TD) only ever exercise the 2/M floor: a comparator or ranking error
+* that keeps the observed statistic extreme is invisible to them (the multiset checks still
+* bind). This block repeats R's exact enumeration on the same 6-cluster geometry with no
+* planted effect (seed 3: smaller tail 4 of 20, p = .4 on 2026-09-13) and asserts the
+* smaller tail holds at least two assignments before trusting the p comparison.
+clear
+qui set obs 6
+qui gen i = _n
+qui gen ttre = cond(_n <= 3, 4, .)
+qui expand 8
+qui bysort i: gen t = _n
+set seed 3
+qui gen y = 0.1*i + rnormal()
+sort i t
+
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact
+if _rc != 0 {
+  dis as error "Z0 FAIL: placebo engine run rc=" _rc
+  global pf = $pf + 1
+}
+else {
+  tempname ZPD zpeng znpos zncomp ZCMP ZOBS ZEXT
+  matrix `ZPD' = e(permdist)
+  scalar `zpeng' = e(perm_p_att)
+  scalar `znpos' = e(perm_npossible)
+  scalar `zncomp' = e(perm_completed)
+  scalar `ZCMP' = e(perm_comparator_b)[1, colnumb(e(perm_comparator_b), "main_att")]
+  if `znpos' != 20 | `zncomp' != 20 | rowsof(`ZPD') != 20 | colsof(`ZPD') != 1 | "`e(perm_stat)'" != "b" {
+    dis as error "Z1 FAIL: npossible=" `znpos' " completed=" `zncomp' " permdist is " rowsof(`ZPD') "x" colsof(`ZPD') " stat=[`e(perm_stat)'] (want 20/20/20x1/b)"
+    global pf = $pf + 1
+  }
+  * observed statistic: fastnose on the true assignment; the engine's comparator must be it
+  sort i t
+  cap noi wooldid y i t ttre, att cluster(i) fastnose
+  if _rc != 0 {
+    dis as error "Z2 FAIL: observed fastnose run rc=" _rc
+    global pf = $pf + 1
+  }
+  scalar `ZOBS' = _b[main_att]
+  if `ZCMP' != `ZOBS' {
+    dis as error "ZCMP FAIL: e(perm_comparator_b)[main_att] = " %21x `ZCMP' " is not the external fastnose statistic " %21x `ZOBS'
+    global pf = $pf + 1
+  }
+  * external enumeration of the same 20 assignments
+  matrix `ZEXT' = J(20, 1, .)
+  local zk 0
+  local zextfail 0
+  forval a = 1/4 {
+    forval b = `=`a'+1'/5 {
+      forval c = `=`b'+1'/6 {
+        local ++zk
+        cap drop ttre2
+        qui gen double ttre2 = cond(inlist(i, `a', `b', `c'), 4, .)
+        sort i t
+        cap qui wooldid y i t ttre2, att cluster(i) fastnose
+        if _rc != 0 {
+          dis as error "Z3 FAIL: external assignment `zk' (treated `a' `b' `c') rc=" _rc
+          local ++zextfail
+          global pf = $pf + 1
+        }
+        else matrix `ZEXT'[`zk', 1] = _b[main_att]
+      }
+    }
+  }
+  cap drop ttre2
+  if `zk' != 20 | `znpos' != `zk' {
+    dis as error "Z3b FAIL: enumerated `zk' assignments (want 20; e(perm_npossible)=" `znpos' ")"
+    global pf = $pf + 1
+  }
+  if `zextfail' == 0 {
+    * (a) multiset: sorted external coefficients vs sorted e(permdist)
+    mata: zpd = sort(st_matrix(st_local("ZPD")), 1); zex = sort(st_matrix(st_local("ZEXT")), 1)
+    mata: st_numscalar("__zmaxrd", max(reldif(zpd, zex))); st_numscalar("__znbit", sum(zpd :== zex))
+    if __zmaxrd > 1e-10 {
+      dis as error "ZA FAIL: sorted external vs e(permdist) max reldif = " %12.4e __zmaxrd " (> 1e-10)"
+      global pf = $pf + 1
+    }
+    dis "ZA info: max reldif (sorted) = " %12.4e __zmaxrd "; bitwise-equal entries = " __znbit " of 20"
+    * (b) the observed statistic is INTERIOR: the smaller signed tail (which counts the observed
+    *     assignment itself) holds at least two assignments, so the p check below is not the floor
+    mata: st_numscalar("__znex", min((sum(st_matrix(st_local("ZEXT")) :<= st_numscalar(st_local("ZOBS"))), sum(st_matrix(st_local("ZEXT")) :>= st_numscalar(st_local("ZOBS"))))))
+    if __znex < 2 {
+      dis as error "ZI FAIL: smaller tail = " __znex " of 20 - the observed statistic is at the extreme, so this block is not testing an interior p; re-seed the placebo"
+      global pf = $pf + 1
+    }
+    * (c) exact equal-tailed p (plain share) recomputed from the external distribution
+    tempname ZPEXT
+    scalar `ZPEXT' = min(1, 2*__znex/20)
+    if reldif(`ZPEXT', `zpeng') > 1e-12 {
+      dis as error "ZB FAIL: external exact p = " `ZPEXT' " (nex=" __znex "/20) vs e(perm_p_att) = " `zpeng'
+      dis as error "         obs = " %21x `ZOBS'
+      global pf = $pf + 1
+    }
+    dis "ZB info: exact p = " `ZPEXT' " (engine " `zpeng' "; smaller tail " __znex " of 20)"
+  }
+  else dis as error "ZA/ZB skipped: `zextfail' external run(s) failed"
+}
+
 **************************** U: unequal-level-counts exact design (review F5) ****************************
 * onsets {3, 3, 5, ., ., .} across 6 clusters: 6!/(2! 1! 3!) = 60 distinct assignments.
 * The equal-counts 20-assignment design cannot distinguish wooldid's level-counts-fixed
@@ -307,6 +417,8 @@ else {
   scalar `upeng' = e(perm_p_att)
   scalar `unpos' = e(perm_npossible)
   scalar `uncomp' = e(perm_completed)
+  tempname UCMP
+  scalar `UCMP' = e(perm_comparator_b)[1, colnumb(e(perm_comparator_b), "main_att")]
   if `unpos' != 60 | `uncomp' != 60 | rowsof(`UPD') != 60 | colsof(`UPD') != 1 {
     dis as error "U1 FAIL: npossible=" `unpos' " completed=" `uncomp' " permdist is " rowsof(`UPD') "x" colsof(`UPD') " (want 60x1)"
     global pf = $pf + 1
@@ -321,6 +433,10 @@ else {
   }
   tempname UOBS
   scalar `UOBS' = _b[main_att]
+  if `UCMP' != `UOBS' {
+    dis as error "UCMP FAIL: e(perm_comparator_b)[main_att] = " %21x `UCMP' " is not the external fastnose statistic " %21x `UOBS'
+    global pf = $pf + 1
+  }
 
   * external enumeration of the level-counts-fixed set: pick {a<b} for onset 3 and
   * c (distinct from a,b) for onset 5; the remaining three clusters stay never-treated
@@ -401,14 +517,15 @@ qui gen i = _n
 qui gen ttre = cond(_n <= 3, 4, .)
 qui expand 8
 qui bysort i: gen t = _n
-set seed 31415
+set seed 9
 qui gen y = 1.5*(t >= ttre & ttre < .) + 0.2*i + rnormal()*cond(i <= 3, 0.3, 3)
 sort i t
 
 * external enumeration first (full runs; observed = assignment {1,2,3} = entry 1)
-tempname TB TT
+tempname TB TT TS
 matrix `TB' = J(20, 1, .)
 matrix `TT' = J(20, 1, .)
+matrix `TS' = J(20, 1, .)
 local tk 0
 local textfail 0
 forval a = 1/4 {
@@ -427,6 +544,7 @@ forval a = 1/4 {
       else {
         matrix `TB'[`tk', 1] = _b[main_att]
         matrix `TT'[`tk', 1] = _b[main_att]/_se[main_att]
+        matrix `TS'[`tk', 1] = _se[main_att]
       }
     }
   }
@@ -443,6 +561,16 @@ else if `textfail' == 0 {
   tempname TPD tpeng
   matrix `TPD' = e(permdist)
   scalar `tpeng' = e(perm_p_att)
+  * TCMP: the engine's rep-0 (b, se) must be the external FULL run's (entry 1 = the observed
+  * assignment); b bitwise, se at 1e-12 (first-run tolerance - tighten to != if the log shows 0)
+  tempname TCMPB TCMPS
+  scalar `TCMPB' = e(perm_comparator_b)[1, colnumb(e(perm_comparator_b), "main_att")]
+  scalar `TCMPS' = e(perm_comparator_se)[1, colnumb(e(perm_comparator_se), "main_att")]
+  if `TCMPB' != `TB'[1, 1] | reldif(`TCMPS', `TS'[1, 1]) > 1e-12 {
+    dis as error "TCMP FAIL: comparator (b, se) = (" %21x `TCMPB' ", " %21x `TCMPS' ") vs external full run (" %21x `TB'[1,1] ", " %21x `TS'[1,1] ")"
+    global pf = $pf + 1
+  }
+  dis "TCMP info: comparator se vs external _se reldif = " %12.4e reldif(`TCMPS', `TS'[1, 1])
   if "`e(perm_stat)'" != "t" | e(perm_completed) != 20 | e(perm_npossible) != 20 | rowsof(`TPD') != 20 {
     dis as error "T2 FAIL: perm_stat=[`e(perm_stat)'] completed=" e(perm_completed) " npossible=" e(perm_npossible) " permdist rows=" rowsof(`TPD') " (want t/20/20/20)"
     global pf = $pf + 1
@@ -451,9 +579,12 @@ else if `textfail' == 0 {
   mata: st_numscalar("__tmaxrd", max(reldif(tpd, tt))); st_numscalar("__tnbit", sum(tpd :== tt))
   mata: st_numscalar("__tbrd", max(reldif(tpd, tb)))
   mata: ttf = st_matrix(st_local("TT")); tbf = st_matrix(st_local("TB"))
-  mata: st_numscalar("__tnext", sum(abs(ttf) :>= abs(ttf[1,1]))); st_numscalar("__tnexb", sum(abs(tbf) :>= abs(tbf[1,1])))
+  * equal-tailed signed smaller-tail counts under BOTH rankings: TC must show they differ, or TD
+  * cannot tell a signed-b ranking from the signed-t one (2026-09-12 smoke: on seed 31415 both
+  * are 1 and both p's are .1; the |.| counts this line used to take were the OLD convention's guard)
+  mata: st_numscalar("__tnext", min((sum(ttf :<= ttf[1,1]), sum(ttf :>= ttf[1,1])))); st_numscalar("__tnexb", min((sum(tbf :<= tbf[1,1]), sum(tbf :>= tbf[1,1]))))
   * equal-tailed convention (2026-09-05): the engine's exact p is min(1, 2 min(#{t <= obs}, #{t >= obs})/M) on
-  * the SIGNED t-ratios; the |t| counts above stay as the ranking-flip design guard (TC)
+  * the SIGNED t-ratios; TC above compares that same signed smaller-tail count under the t and b rankings
   mata: st_numscalar("__tnexeq", min((sum(ttf :<= ttf[1,1]), sum(ttf :>= ttf[1,1]))))
   * (i) the value check: e(permdist) is the t multiset ...
   if __tmaxrd > 1e-10 {
@@ -472,12 +603,12 @@ else if `textfail' == 0 {
     dis as error "TC FAIL: nex_t = nex_b = " __tnext "; the design no longer flips the ranking"
     global pf = $pf + 1
   }
-  dis "TC info: nex_t = " __tnext ", nex_b = " __tnexb " of 20"
+  dis "TC info: smaller signed tail: t " __tnext ", b " __tnexb " of 20 (must differ)"
   * (iii) the engine's exact p uses the t ranking (plain share)
   tempname TP
   scalar `TP' = min(1, 2*__tnexeq/20)
   if reldif(`TP', `tpeng') > 1e-12 {
-    dis as error "TD FAIL: external exact equal-tailed t-p = " `TP' " (smaller tail " __tnexeq "/20) vs e(perm_p_att) = " `tpeng' " (|t| ranking would give " __tnext "/20, |b| " __tnexb "/20)"
+    dis as error "TD FAIL: external exact equal-tailed t-p = " `TP' " (smaller tail " __tnexeq "/20) vs e(perm_p_att) = " `tpeng' " (signed smaller tail under b would be " __tnexb "/20)"
     global pf = $pf + 1
   }
   dis "TD info: exact t-p = " `TP' " (engine " `tpeng' ")"

@@ -92,9 +92,13 @@ else {
     st_numscalar("b2asym", asym)
     st_numscalar("b2narrow", narrow)
   end
+  * independent sup-t: 200k draws from the family correlation; the engine's 10k-draw quantile
+  * has MC sd ~0.007, so 0.02 is a ~3-sd band (2026-09-12 smoke: |diff| = 0.0028)
+  mata: V = st_matrix("e(V_es_att)"); sd = sqrt(diagonal(V)); R = (V :/ (sd*sd')); R = (R + R')/2; rseed(20260912); Z = rnormal(200000, rows(R), 0, 1) * cholesky(R)'; ms = sort(rowmax(abs(Z)), 1); st_numscalar("b2hand", ms[ceil((1 - (100 - st_numscalar("e(esband_level)"))/100)*rows(ms))])
+  di "B2 hand sup-t crit=" %8.5f b2hand " Bonferroni bound=" %8.5f invnormal(1 - (100 - `b2l')/(200*colsof(B2)))
   di "B2 engine=`b2e' families=[`b2f'] level=`b2l' draws=`b2d' crit=" %8.5f `b2c' " z=" %8.5f invnormal(1 - (100 - `b2l')/200) " rows=[`b2rn'] cols=[`b2cn']"
   if "`b2e'" != "analytic-simulated" | "`b2f'" == "" | `b2l' != 95 | `b2d' != 10000 ///
-     | "`b2rn'" != "lb ub relyr" | b2bad != 0 | b2asym != 0 | b2narrow != 0 | `b2c' <= invnormal(.975) {
+     | "`b2rn'" != "lb ub relyr" | b2bad != 0 | b2asym != 0 | b2narrow != 0 | `b2c' <= invnormal(.975) | `b2c' > invnormal(1 - (100 - `b2l')/(200*colsof(B2))) | abs(`b2c' - b2hand) > 0.02 {
     di as error "B2 FAIL: engine=`b2e' rows=[`b2rn'] mismatched=" b2bad " asymmetric=" b2asym " narrower-than-pointwise=" b2narrow " crit=`b2c'"
     local ++fails
   }
@@ -153,6 +157,11 @@ if `b4has' {
     st_numscalar("b4m", bb)
   end
   local b4bad = b4m
+  * the critical value itself: max_h |b_rh - b_h| / sd_h over the listwise-complete draws,
+  * at the band level on the averaging order-statistic rule (2026-09-12 smoke: exact on HEAD)
+  mata: BD = st_matrix("e(bootdist)"); nm = st_matrixcolstripe("e(bootdist)")[., 2]; idx = selectindex(strpos(nm, "ES_att_") :== 1); A = select(BD[., idx], rowmissing(BD[., idx]) :== 0); bn = st_matrixcolstripe("e(b)")[., 2]; b0 = J(1, rows(idx), .); for (j = 1; j <= rows(idx); j++) b0[j] = st_matrix("e(b)")[1, selectindex(bn :== nm[idx[j]])]; sd = sqrt(diagonal(variance(A)))'; v = sort(rowmax(abs(A :- b0) :/ sd), 1); n = rows(v); x = n*(st_numscalar("e(esband_level)")/100); st_numscalar("b4hand", (x == floor(x) & x >= 1 ? (v[x] + v[min((x+1, n))])/2 : v[max((min((ceil(x), n)), 1))])); st_numscalar("b4n_hand", n)
+  di "B4 hand crit=" %21x b4hand " engine=" %21x `b4c' " n_hand=" b4n_hand
+  if reldif(b4hand, `b4c') > 1e-12 | b4n_hand != `b4n' local ++b4bad
 }
 di "B4 engine=`b4e' n=`b4n'/`b4done' crit=" %8.5f `b4c' " problems=`b4bad'"
 if !`b4has' | "`b4e'" != "bootstrap" | `b4n' > `b4done' | `b4n' < 2 | `b4c' <= 0 | `b4bad' != 0 {
@@ -228,6 +237,46 @@ local b9eng "`e(esband_engine)'"
 tempname B9B B9M
 matrix `B9B' = e(esband_att)
 matrix `B9M' = e(wdidmainresults)
+* the studentized critical value itself (audit 2026-09-13; kernel = wooldid_bootband): over the
+* replications complete in BOTH e(bootdist) and e(bootdist_se) at every horizon, max_h |b_rh - b_h| / se_rh,
+* at the band level on the averaging order-statistic rule; the endpoints are b_h -/+ crit * the
+* OBSERVED analytic se (hidden e(boot_ase_obs)) - probe 2026-09-13: reldif 0 on HEAD
+mata:
+  BD = st_matrix("e(bootdist)"); SD = st_matrix("e(bootdist_se)")
+  nm = st_matrixcolstripe("e(bootdist)")[., 2]
+  idx = selectindex(strpos(nm, "ES_att_") :== 1)
+  bn = st_matrixcolstripe("e(b)")[., 2]
+  b0 = J(1, rows(idx), .)
+  for (j = 1; j <= rows(idx); j++) b0[j] = st_matrix("e(b)")[1, selectindex(bn :== nm[idx[j]])]
+  A = BD[., idx]; S = SD[., idx]
+  ok = (rowmissing(A) :== 0) :& (rowmissing(S) :== 0) :& (rowmin(S) :> 0)
+  A = select(A, ok); S = select(S, ok)
+  v = sort(rowmax(abs(A :- b0) :/ S), 1)
+  n = rows(v)
+  x = n*(st_numscalar("e(esband_level)")/100)
+  c = (x == floor(x) & x >= 1 ? (v[x] + v[min((x+1, n))])/2 : v[max((min((ceil(x), n)), 1))])
+  // endpoints against the observed analytic se, matched by name
+  AO = st_matrix("e(boot_ase_obs)"); an = st_matrixcolstripe("e(boot_ase_obs)")[., 2]
+  EB_ = st_matrix("e(esband_att)"); es = st_matrixcolstripe("e(esband_att)")[., 2]
+  ebad = 0
+  for (j = 1; j <= cols(EB_); j++) {
+    ja = selectindex(an :== ("ES_att_" + es[j]))
+    jb = selectindex(nm[idx] :== ("ES_att_" + es[j]))
+    // Mata rejects `if (c) { x++; continue }` on ONE line ("'}' found where nothing
+    // expected"); the block has to span several lines.
+    if (rows(ja) != 1 | rows(jb) != 1) {
+      ebad++
+      continue
+    }
+    if (reldif(EB_[1, j], b0[jb] - c*AO[1, ja]) > 1e-12 | reldif(EB_[2, j], b0[jb] + c*AO[1, ja]) > 1e-12) ebad++
+  }
+  st_numscalar("b9hand", c); st_numscalar("b9n_hand", n); st_numscalar("b9ebad", ebad)
+end
+local b9n = e(esband_n_att)
+local b9c = e(esband_crit_att)
+di "B9 hand crit=" %21x b9hand " engine=" %21x `b9c' " n=`b9n'/" b9n_hand " endpoint mismatches=" b9ebad
+local b9bad 0
+if reldif(b9hand, `b9c') > 1e-12 | b9n_hand != `b9n' | b9ebad != 0 local b9bad 1
 local b9rn : rowfullnames `B9M'
 local b9narrow 0
 local b9seen 0
@@ -246,8 +295,8 @@ forval c = 1/`=colsof(`B9B')' {
 mkb
 qui wooldid y unit t ttre, `SPEC' bootstrap(standard) reps(60) rseed(91) dots(0) simultaneousbands
 local b9eng2 "`e(esband_engine)'"
-if "`b9eng'" != "bootstrap-studentized" | "`b9eng2'" != "bootstrap" | `b9seen' < 2 | `b9narrow' != 0 {
-  di as error "B9 FAIL: boottstat engine=[`b9eng'] (want bootstrap-studentized), plain engine=[`b9eng2'] (want bootstrap), horizons checked=`b9seen', narrower-than-pointwise=`b9narrow'"
+if "`b9eng'" != "bootstrap-studentized" | "`b9eng2'" != "bootstrap" | `b9seen' < 2 | `b9narrow' != 0 | `b9bad' != 0 {
+  di as error "B9 FAIL: boottstat engine=[`b9eng'] (want bootstrap-studentized), plain engine=[`b9eng2'] (want bootstrap), horizons checked=`b9seen', narrower-than-pointwise=`b9narrow', crit/endpoint reconstruction failed=`b9bad'"
   local ++fails
 }
 else di as result "B9 PASS: boottstat gives a percentile-t band (`b9seen' horizons, none narrower than its pointwise interval); without boottstat the draw-SD construction stands"

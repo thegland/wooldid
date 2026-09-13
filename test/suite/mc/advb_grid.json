@@ -1,6 +1,7 @@
 {
  "campaign": "AB - adversarial line-test size boundary",
  "prereg": "test/suite/PREREG_ADVBOUND_2026-08-25.md",
+ "note_2026-09-13": "Stage A audit (F6): the locked predictions and decision_rule V1 (rate(AB12) < 25) were derived for the pre-BS-12 statistic (free intercept + slope projected out, q=6 on the 8-horizon window). Since BS-12 (2026-09-10) the adversarial null is the one-parameter line through the reference period (q=7). Nothing in this grid was changed. A re-run at HEAD is a reference comparison against REPORT_ADVBOUND_2026-08-26.md, not a scored re-test of the predictions; the certification bands remain valid size tests. Re-derive-or-drop the predictions and V1 is an author ruling. Re-run into a fresh tree (ADVB_OUT=<dir> ./run_advb.sh; analyze_advb.py ... --out <file>) - mc_advb.do REPLACES <outdir>/<cfg>_s<n>.csv and the analyzer writes <outdir>/advb_report.md.",
  "configs": [
   {
    "config": "AB1",

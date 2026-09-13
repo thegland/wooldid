@@ -186,5 +186,12 @@
  ],
  "covars_coh": [
   "qui gen coh = cond(ttre==5,1,cond(ttre==9,2,3))"
+ ],
+ "perm_probs10": [
+  "qui keep if inlist(i, 1, 2, 3, 26, 27, 28, 51, 52, 53, 54)",
+  "set seed 975310"
+ ],
+ "gen_wint": [
+  "qui gen wint = 1 + round(w)"
  ]
 }

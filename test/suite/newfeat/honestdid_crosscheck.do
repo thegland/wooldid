@@ -70,7 +70,7 @@ forval j = 1/`kes' {
 * ---- H2: honestdid consumes the matrices the way the sthlp documents (example 10) ----
 matrix b = `BES'
 matrix V = `VES'
-cap noi honestdid, numpre(`npre') b(b) vcov(V) delta(rm) mvec(0.5(0.5)2)
+cap noi honestdid, numpre(`npre') b(b) vcov(V) delta(rm) mvec(0.5(0.5)2) parallel(0)
 if _rc != 0 {
   dis as error "H2 FAIL: honestdid rc=" _rc
   global pf = $pf + 1
