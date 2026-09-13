@@ -8,10 +8,9 @@ and compares the set of degeneracies it finds against the curated `degeneracy_ex
 Why it exists: `oldnew` compares HEAD against v1.3 cell by cell, so a surface that is dead on
 **both** builds compares equal and passes, and `coverage_check.py` (static) still credits the
 option. That is the "looks covered, is degenerate" class the Stage A audit (2026-09-13) set out to
-find, and this component makes it mechanical. As shipped, `degeneracy_expected.csv` holds 165
-rows: 131 BY_CONSTRUCTION, 13 PART_RULED, 9 HIDDEN, 8 RULED, 4 DATASET_DESIGN. Ten of those rows
-carry an `UNRULED` citation and are waiting on the author - the 9 HIDDEN ones plus `ext_b4_h55_p`,
-whose ADV_POOLED_NOP stem is ruled but whose WINDOW_SHORT stem is not. Count the UNRULED
+find, and this component makes it mechanical. As shipped, `degeneracy_expected.csv` holds 174
+rows: 131 BY_CONSTRUCTION, 13 PART_RULED, 11 HIDDEN, 10 DATASET_DESIGN, 9 RULED.
+12 of those rows carry an `UNRULED` citation and are waiting on the author. Count the UNRULED
 citations, not the HIDDEN class, when you want to know what is still open.
 
 Files: `degeneracy_scan.py` (the scanner), `degeneracy_expected.csv` (the contract), this note.
