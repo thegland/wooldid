@@ -706,9 +706,23 @@ def class_compatible(expected, computed):
 # ---------------------------------------------------------------------------------------
 # ledger join
 # ---------------------------------------------------------------------------------------
-def ledger_known(cfgname, S, ledger):
+def ledger_known(cfgname, S, ledger, candidates=None):
     """ledger row ids whose (config glob, kind, pattern) covers one of this config's dead
     objects; returns (ids, uncovered_objects).
+    CANDIDATES (author ruling 2026-09-14): when not None, only ledger ids in this set may
+    credit coverage. It is the CITATION column of this config's degeneracy_expected.csv row -
+    i.e. the ids a human has actually tied to this config's surfaces. Before this, ANY ledger
+    row matching the same MATRIX credited coverage, so a row written to explain one thing was
+    credited with ruling another: `sg_degpre`'s WINDOW_SHORT(att_s2:pre0/2) was promoted to
+    RULED by F1SG-degpre-m-b, a row about a positional insertion in `b`, and
+    `ext_cov10_rcs_pweight_ddd_c1` by DDG-pw-1 on the same shape. Nothing in `kind`, `pattern`
+    or the matrix name separates those from the honest cases (BS15-pw-esptrip really is about
+    esptrip's pwsgs deadness) - the difference lives only in the prose, so the join cannot
+    recover it and a human has to assert it. The citation column already IS that assertion.
+    NOT implemented by qualifying `pattern` with the dead stem, which was the first design:
+    `pattern` is also compare_oldnew.py's cell-match key (compare_oldnew.py:216), so narrowing
+    it there would have stopped those rows explaining the cells they exist to explain and
+    turned the comparison red.
     A4 (critique 2026-09-13): flags that name no e() matrix of their own - WINDOW_SHORT, B_ZERO,
     ES_NDEGEN, VES_ABSENT, BES_ABSENT - are a degeneracy of the estimate vector, so a LARGE
     ledger row on `mat b` is required to rule them. Before this they contributed no object, and
@@ -728,12 +742,15 @@ def ledger_known(cfgname, S, ledger):
         if f.startswith(("WINDOW_SHORT", "B_ZERO", "ES_NDEGEN", "VES_ABSENT", "BES_ABSENT")): objs.add(("mat", "b"))
     ids, covered = [], set()
     for r in ledger:
+        if candidates is not None and r["id"] not in candidates: continue
         if (r.get("rtol") or "").strip(): continue  # bounded rows explain noise, never a removal/missing
         if not fnmatch.fnmatch(cfgname, r["config"]): continue
         for kind, name in objs:
             if r["kind"] == kind and (fnmatch.fnmatch(name, r["pattern"]) or fnmatch.fnmatch(r["pattern"], name)):
                 ids.append(r["id"]); covered.add((kind, name))
     return sorted(set(ids)), sorted(o for o in objs if o not in covered)
+
+CLASS_RANK = {"HIDDEN": 0, "PART_RULED": 1, "RULED": 2}
 
 def classify(S):
     """CLASS of a clean-rc config from its flags and ledger join (see module docstring)."""
@@ -869,6 +886,9 @@ def main():
         ledger = load_ledger(ledger_path)
     else:
         ledger = []; notes.append(f"no ledger at {ledger_path}: RULED/PART_RULED cannot be derived (all substantive flags read HIDDEN)")
+    # --expect is read HERE, not only at the assertion below: from 2026-09-14 the citation
+    # column gates which ledger rows may credit degeneracy coverage (see ledger_known).
+    exp, bad = (load_expected(expect) if expect else ({}, []))
     rows = load_configs(cfgs)
     if not rows: usage_error("no config rows read from " + " ".join(cfgs))
     if not os.path.isdir(dumps):
@@ -902,7 +922,17 @@ def main():
         d = load_dump(p)
         S = analyze(r, d, opts)
         S["mats"] = list(d["matnames"]); S["macros"] = d["macro"]; S["scalars_seen"] = list(d["scalar"])
-        S["ids"], S["uncovered"] = ledger_known(r["config"], S, ledger)
+        # all-ledger pass: DISCOVERY only. It no longer classifies (it is what promoted
+        # sg_degpre on a row about something else); it is reported as a DEGEN_NOTE so
+        # "the ledger now covers this, consider citing it" is still visible.
+        S["ids_all"], S["uncovered_all"] = ledger_known(r["config"], S, ledger)
+        if expect:
+            _e = exp.get(r["config"])
+            _cand = {c.strip() for c in ((_e["citation"] or "").split(";") if _e else []) if c.strip()}
+            S["ids"], S["uncovered"] = ledger_known(r["config"], S, ledger, _cand)
+        else:
+            # scan-only mode seeds expectations.csv and has no citations to gate on
+            S["ids"], S["uncovered"] = S["ids_all"], S["uncovered_all"]
         cl = digest_new.get(r["config"], []) if digest_new is not None else []
         S["ncaution"] = n_caution(cl) if digest_new is not None else None
         S["cautions"] = cl
@@ -914,8 +944,19 @@ def main():
                 do = load_dump(po)
                 S["old"] = f"rc{do['rc']}:{do['macro'].get('properties', '-').replace(' ', '')}"
         S["class"] = classify(S) if S["rc"] == "0" else ""
+        S["class_all"] = classify(dict(S, ids=S["ids_all"], uncovered=S["uncovered_all"])) \
+            if S["rc"] == "0" else ""
         table.append(S)
     names = [S["config"] for S in table]
+    # DISCOVERY signal, deliberately not a classification: configs the whole ledger would
+    # cover further than their cited ids do. Each is a candidate for citing the row in
+    # degeneracy_expected.csv - after a human checks the row is really about that surface.
+    promo = [S["config"] for S in table
+             if CLASS_RANK.get(S.get("class_all"), -1) > CLASS_RANK.get(S.get("class"), -1)]
+    if promo:
+        notes.append(f"{len(promo)} config(s) where the whole ledger would credit more coverage than the "
+                     f"cited ids do - NOT applied, cite the row in degeneracy_expected.csv if it really "
+                     f"rules that surface: " + " ".join(sorted(promo)[:12]) + (" ..." if len(promo) > 12 else ""))
     # ---- per-config table
     cols = ["config", "component", "dataset", "cls", "rc_expected", "rc", "vcvstate", "properties",
             "N", "N_clust", "nsg", "main_live", "main_infdeg", "main_void", "sg_live", "sg_dead",
@@ -1094,7 +1135,7 @@ def main():
         print("DEGEN_SCAN_ONLY: no --expect given; nothing asserted (expectations.csv written as a seed)")
         sys.exit(3)
     # ---- assertion --------------------------------------------------------------------
-    exp, bad = load_expected(expect)
+    # exp/bad were loaded before the per-config loop (the citations gate the ledger join)
     ledger_ids = {r["id"] for r in ledger}
     fails, stale = [], []
     by_name = {S["config"]: S for S in table}

@@ -346,15 +346,25 @@ do_degeneracy() {
   # degeneracy_expected.csv (NEW stem = fail, STALE expectation = fail), and a config
   # whose dump is MISSING must be a DEGEN_FAIL, never a skipped row: after a shard
   # timeout run_component continues into this component, and DEGEN_CHECK_OK over absent
-  # dumps would be vacuous. Belt on the harness side: refuse when the last oldnew left a
-  # shard unfinished or the comparer reported a missing dump. Runs on run_new only
+  # dumps would be vacuous. Belt on the harness side: refuse when the comparer reported a
+  # missing dump.
+  #   2026-09-14 (author ruling): this guard USED to also refuse on a TIMEOUT/INCOMPLETE/FAIL
+  #   line in pool.log. That condition was wrong, not merely redundant. pool.log is
+  #   APPEND-ONLY, so once a shard has timed out the line is there forever - including after
+  #   the shard is re-run by hand to its own SHARD_DONE sentinel and every dump is recovered.
+  #   The guard then refused a scan that the scanner itself passes at nodump=0, and the only
+  #   way to close a run was to invoke degeneracy_scan.py directly, which is exactly the
+  #   bypass a guard is supposed to make unnecessary. The comparer's MISSING report is the
+  #   right condition on its own: it is recomputed from the dumps that are on disk NOW, so it
+  #   clears when a repair actually lands and stays tripped when one does not. The stale-dump
+  #   case the pool.log condition was guarding against is also ruled out by that re-judge.
+  # Runs on run_new only
   # (v1.3 dumps trip era flags); --dumps-old only annotates the old side's rc/properties.
   [ -f "$SUITE/degeneracy_scan.py" ] || { note "degeneracy: FAIL — $SUITE/degeneracy_scan.py is not present"; return 1; }
   [ -f "$SUITE/degeneracy_expected.csv" ] || { note "degeneracy: FAIL — $SUITE/degeneracy_expected.csv is not present"; return 1; }
   [ -d "$OUT/run_new" ] || { note "degeneracy: FAIL — no new-side dumps in $OUT/run_new (run oldnew first)"; return 1; }
-  if grep -qE '^(TIMEOUT|INCOMPLETE|FAIL) (old|new)_shard_' "$OUT/pool.log" 2>/dev/null \
-     || grep -qE '^\[[^]]+\] MISSING dump' "$OUT/oldnew_compare.txt" 2>/dev/null; then
-    note "degeneracy: FAIL — the last oldnew run left dumps missing (see $OUT/pool.log and $OUT/oldnew_compare.txt); re-run oldnew first"
+  if grep -qE '^\[[^]]+\] MISSING dump' "$OUT/oldnew_compare.txt" 2>/dev/null; then
+    note "degeneracy: FAIL — the last oldnew comparison reported a missing dump (see $OUT/oldnew_compare.txt); re-run oldnew first"
     return 1
   fi
   local extcfg=() logs=() old=()

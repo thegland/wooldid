@@ -9,7 +9,7 @@ Why it exists: `oldnew` compares HEAD against v1.3 cell by cell, so a surface th
 **both** builds compares equal and passes, and `coverage_check.py` (static) still credits the
 option. That is the "looks covered, is degenerate" class the Stage A audit (2026-09-13) set out to
 find, and this component makes it mechanical. As shipped, `degeneracy_expected.csv` holds 175
-rows: 131 BY_CONSTRUCTION, 13 PART_RULED, 11 HIDDEN, 10 DATASET_DESIGN, 10 RULED.
+rows: 131 BY_CONSTRUCTION, 13 PART_RULED, 11 HIDDEN, 11 DATASET_DESIGN, 9 RULED.
 0 of those rows carry an `UNRULED` citation and are waiting on the author. A further
 12 are `PINNED_DEGENERATE`: ruled 2026-09-13 to be KEPT as pins of their degenerate
 surface rather than re-hosted or silently accepted. Those still WARN on every run, on purpose -
@@ -41,7 +41,7 @@ writes `out/degeneracy.txt` and `out/degeneracy/`.
 | CLEAN | no flag |
 | BY_CONSTRUCTION | only `ADV_IMPOSSIBLE_WINDOW` / `ADV_POOLED_NOP` / `JT_WINDOW_SHORT` / `SG_ONE_LEVEL`: the config's own options make the surface impossible |
 | INFO | only `NOSE_BY_DESIGN` / `NCLUST_TINY` / `BES_ABSENT(impvalues\|permute)` / `SGDEGEN(:report)`: values present, or no variance by design; never a stem |
-| RULED | every substantive flag's e() object is named by a LARGE ledger row for the config (first match wins, as `compare_oldnew.py`) |
+| RULED | every substantive flag's e() object is named by a LARGE ledger row THIS FILE CITES for the config (see the citation gate below) |
 | PART_RULED | the ledger names some of the dead objects |
 | HIDDEN | nothing rules it |
 | DATASET_DESIGN, DATA_EDGE | curated only (the CSV): the data was built to lack the cells; the scanner sees HIDDEN or PART_RULED |
@@ -67,6 +67,20 @@ parentheses). The discipline mirrors the ledger's:
 - never failing: `DEGEN_WARN` (class moved vs the CSV; a cited ledger id that no longer exists;
   a pinned `ncaution` that moved; degen-only options and option PAIRS over the current dumps; the
   count of `UNRULED` rows) and `DEGEN_NOTE` (old-vs-new caution diff; skipped digest).
+
+**The citation gate (author ruling 2026-09-14).** For RULED/PART_RULED the `citation` column is
+not documentation - it is the INPUT to the classifier. `degeneracy_scan.py`'s `ledger_known`
+credits coverage only from the ids cited here (`candidates`). Before this it credited ANY ledger
+row matching the same e() MATRIX, which promoted `sg_degpre` to RULED on the strength of
+`F1SG-degpre-m-b`, a row about a positional insertion in `b` that says nothing about the
+surface in question, and `ext_cov10_rcs_pweight_ddd_c1` on the same shape. Nothing in `kind`,
+`pattern` or the matrix name separates those from the honest cases - the difference lives only
+in the prose - so a human has to assert the tie, and this column is where. It was NOT done by
+qualifying the ledger's `pattern` with the dead stem: `pattern` is also `compare_oldnew.py`'s
+cell-match key (`compare_oldnew.py:216`), so narrowing it there would have stopped those rows
+explaining the cells they exist to explain. Consequence to expect: adding a flag to a config no
+longer silently self-rules because some unrelated row touches the same matrix - you must cite
+the row, and a `DEGEN_NOTE` lists configs where the whole ledger WOULD have credited more.
 
 `citation` is free text by convention: ledger ids separated by `;` for RULED/PART_RULED,
 `BY_CONSTRUCTION`, `DATASET_DESIGN: <why>`, or `UNRULED[: <what>]` for a degeneracy that still

@@ -17,22 +17,26 @@ cont_lat,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_ABSENT,AMESE-
 cont_ss,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_DIAG_DEAD,AMESE-R1-v;AMESE-R1-w
 simple_esf,HIDDEN,WINDOW_SHORT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
 cont_sg,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG PWSGS_DEAD SG_DEAD VES_ABSENT V_DIAG_DEAD,AMESE-R1-sgp;AMESE-R1-sgr;AMESE-R1-v;AMESE-R1-w
-# sg_degpre moved DATASET_DESIGN -> RULED on 2026-09-14 and the reason is worth stating, because
-# the citation field can only hold ledger ids and so cannot hold it. The SURFACE did not change:
-# prep sgd2_degpre puts the sgd2==2 onset in the second sample year so that subgroup has 0 pre
-# periods (data_classes.csv config:sg_degpre) and the stem is still WINDOW_SHORT(att_s2:pre0/2).
-# What changed is that the F1 fix 1a52a8e made this config differ old-vs-new - v1.3 dropped every
-# subgroup's pre-treatment row where HEAD keeps the realizing one - so F1SG-degpre-* ledger rows
-# were written for that INSERTION, and degeneracy_scan.py:744 promotes any config whose dead
-# objects are all covered by ledger ids to RULED. READ THE CITATION PRECISELY: nobody has ruled
-# that subgroup 2 should have no pre-treatment row. It has none because the fixture was built
-# that way. The promotion is a side effect of the ledger join matching a row written about a
-# different question that happens to cover the same matrix.
-sg_degpre,RULED,WINDOW_SHORT,F1SG-degpre-m-b
+# sg_degpre was briefly RULED (2026-09-14) and is back to DATASET_DESIGN the same day. Worth
+# recording, because the round trip is what motivated the scanner change of that date.
+# The SURFACE has never changed: prep sgd2_degpre puts the sgd2==2 onset in the second sample
+# year so that subgroup has 0 pre periods (data_classes.csv config:sg_degpre), and the stem is
+# still WINDOW_SHORT(att_s2:pre0/2). Subgroup 2 has no pre-treatment row because the FIXTURE WAS
+# BUILT THAT WAY - that is the definition of DATASET_DESIGN, and F1SG-degpre-n-sg says the same
+# thing in the ledger ("Subgroup 2 genuinely has no pre cells and is still withheld").
+# What happened in between: the F1 fix 1a52a8e made this config differ old-vs-new, F1SG-degpre-*
+# rows were written for that INSERTION, and the OLD ledger join credited any row touching the
+# same matrix - so `mat b` row F1SG-degpre-m-b, which is about a positional shift and says
+# nothing about subgroup 2's window, promoted the config to RULED. class_compatible() rejects
+# DATASET_DESIGN against a computed RULED, so the curated row had to be moved to match a
+# promotion nobody had made. The join now credits only the ids this file CITES
+# (degeneracy_scan.py ledger_known, `candidates`), the promotion no longer happens, and the
+# honest curated class holds.
+sg_degpre,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: prep sgd2_degpre gives subgroup 2 a second-year onset so it has 0 pre periods by construction (data_classes.csv config:sg_degpre); see also ledger F1SG-degpre-n-sg
 adv_gapa,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: dta_path_relyrgap has two surgically removed relative-year cells incl. cohort A reference relyr -1 (data_classes.csv); the gap IS the test subject (B16)
 adv_gapb,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: dta_path_relyrgap has two surgically removed relative-year cells incl. cohort A reference relyr -1 (data_classes.csv); the gap IS the test subject (B16)
-cont_sg_tidose,RULED,AME_NO_LIVE_INFERENCE B_ZERO MAIN_VOID PWSGS_DEAD SGDEGEN SG_DEAD V_DIAG_DEAD,A17-sgv-1;AMESE-R1-v;AMESE-R1-w;SIA4-td-p;SIA4-td-s
-cont_sg_gap,RULED,AME_NO_LIVE_INFERENCE B_ZERO MAIN_VOID PWSGS_DEAD SGDEGEN SG_DEAD V_DIAG_DEAD,A17-sgv-2;AMESE-R1-v;AMESE-R1-w;SIA4-gp-p;SIA4-gp-s
+cont_sg_tidose,RULED,AME_NO_LIVE_INFERENCE B_ZERO MAIN_VOID PWSGS_DEAD SGDEGEN SG_DEAD V_DIAG_DEAD,A17-sgv-1;AMESE-R1-v;AMESE-R1-w;SIA4-td-p;SIA4-td-s;BS8-cont-sg-tidose-b
+cont_sg_gap,RULED,AME_NO_LIVE_INFERENCE B_ZERO MAIN_VOID PWSGS_DEAD SGDEGEN SG_DEAD V_DIAG_DEAD,A17-sgv-2;AMESE-R1-v;AMESE-R1-w;SIA4-gp-p;SIA4-gp-s;BS8-cont-sg-gap-b
 trig_cfx,PART_RULED,AME_NO_LIVE_INFERENCE CFX_DEAD MAIN_INFDEG VES_ABSENT V_ABSENT,A5-cfx-m;AMESE-R1-w3
 trig_sgadv_deeppre,HIDDEN,PWSGS_DEAD SGDEGEN,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
 trig_tt_year,HIDDEN,MAIN_INFDEG VES_ABSENT V_ABSENT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
@@ -180,7 +184,7 @@ ext_c2_h22_p,BY_CONSTRUCTION,ADV_POOLED_NOP,NFADV-ext-p
 ext_c2_h33_p,BY_CONSTRUCTION,ADV_POOLED_NOP,NFADV-ext-p
 ext_c2_h55_p,BY_CONSTRUCTION,ADV_POOLED_NOP,NFADV-ext-p
 ext_cont_ext_untreatedzero,PART_RULED,B_ZERO ES_NDEGEN MAIN_INFDEG V_DIAG_DEAD V_es_ame_DIAG_DEAD,A17-uz
-ext_san_input_missing,RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_ABSENT,SI20-L-ext_san_input_missing-macr-properties;SI20-L-ext_san_input_missing-mat-V;SI20-L-ext_san_input_missing-mat-wdidmainresults
+ext_san_input_missing,RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_ABSENT,SI20-L-ext_san_input_missing-macr-properties;SI20-L-ext_san_input_missing-mat-V;SI20-L-ext_san_input_missing-mat-wdidmainresults;SI20-L-ext_san_input_missing-mat-b
 ext_cov10_rcs_pweight_ddd_c1,RULED,PWSGS_DEAD,DDG-pw-1
 ext_cov10_rcs_twoway_cluster_c2,HIDDEN,MAIN_INFDEG PWSGS_DEAD SG_DEAD VES_ABSENT V_ABSENT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
 ext_path10_sparse_subgroup,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: prep drops sg_three==1 & t<5 leaving sg1 one pre period while esprelength(2) (data_classes.csv config:ext_path10_sparse_subgroup)
