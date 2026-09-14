@@ -1,6 +1,6 @@
-# Old-wooldid bug attribution report - full assessment run, 2026-09-13
+# Old-wooldid bug attribution report - full assessment run, 2026-09-14
 
-**Claim this report makes:** every old-vs-new difference observed in the 2026-09-13
+**Claim this report makes:** every old-vs-new difference observed in the 2026-09-14
 full assessment run traces to a documented, verified bugfix in old wooldid, or to a documented
 intended change ruled by the author. Each part below gives, per family: what old wooldid did
 wrong and whom it affected; the mechanism located in the v1.3 source; the fix commit with its
@@ -13,10 +13,10 @@ as soon as any fix lands after the run, and a reader who checks out HEAD gets th
 
 Run verdicts, read from the comparison this report documents:
 
-    prov[new] = new|6a05127
-    VERDICTS EXPLAINED=396 MATCH=26 RC_EXPLAINED=116
-    COMPARED 538 of 538 configured
-    SUMMARY unexplained=0 explained=4653 additions=16517 stale_ledger=0 unscoped=0 prov_fail=0
+    prov[new] = new|04cc333
+    VERDICTS EXPLAINED=411 MATCH=26 RC_EXPLAINED=122
+    COMPARED 559 of 559 configured
+    SUMMARY unexplained=0 explained=4626 additions=17069 stale_ledger=0 unscoped=0 prov_fail=0
 
 Every part was drafted by an independent agent working from the ledger, the dumps, the v1.3
 source and `wooldid_solved_issues.md`, and each ran its own two-build reproduction. Where a
@@ -31,6 +31,16 @@ over; those are collected in the final part.
 
 
 > ## Headline of record and evidence provenance (added 2026-09-13; identical in all six sections)
+>
+> **Superseding note added 2026-09-14.** Two things below have since moved and are corrected
+> here rather than rewritten in place, because the block is accurate about the run it describes.
+> (i) `4280f3b` is no longer `HEAD`; the report's own header names the run of record by its
+> `prov[new]` sha, and **that** is the build the report's claims attach to. (ii) The closing run
+> of this assessment is the **2026-09-14** one over a **559-config** universe against the same
+> v1.3 old side, reported in Part 7.5: **559 of 559 compared, zero DIFFERS, unexplained 0,
+> stale_ledger 0**. The 2026-09-11 run described below is where this section's EVIDENCE was
+> gathered and its magnitudes measured; the 2026-09-14 run is what verifies that nothing still
+> differs. Neither supersedes the other - they answer different questions.
 >
 > **Run of record.** The 2026-09-11 dual-build run: **old = `301b706`** (published v1.3),
 > **new = `14c30d3`**, whose `wooldid.ado` is byte-identical to this section's pin `08ec0b4`
@@ -262,8 +272,20 @@ so the reproductions are the run, not a look-alike of it.
   is a `cfxame*`-scoped SI-20 row for `trig_cfx` placed ahead of `A5-cfx-m`, or an
   amendment of `A5-cfx-m`'s reason naming both classes. The B7 part is unaffected.
 - **Reproduction:** not re-run this pass (the task's two reproductions are L.1 and
-  L.5); the evidence is the 2026-09-11 dumps (`run_old/trig_cfx.csv` has
-  `matnames|cfxatt_it_cfxpost|3x1|...|b`, `run_new` has `3x6`).
+L.5). **No two-build do-file for this family** (see L.9.3 for the full coverage statement). What
+  stands in its place is a **re-tie of the decisive cells to a dump that exists today**: the
+  2026-09-13 dual-build run in `test/suite/out/run_old|run_new` is on the *same pinned pair* this
+  section is about — `prov|old|301b706` and `prov|new|6a05127`, whose `wooldid.ado` is
+  byte-identical to the pin `08ec0b4` (md5 `382c1e0ee3e1be37fa2e9b677a65fdcc`). Read 2026-09-14;
+  artifact `critleft/retie_0914.txt`. On `trig_cfx`:
+  ```
+  matnames cfxatt_it_cfxpost  old 3x1|…|b                         new 3x6|lattice_1 lattice_2 lattice_3|b se t pvalue ll ul
+  matnames cfxame_cfxpost     old 3x6|intensity:1bn.__000009 …|…  new 3x6|lattice_1 lattice_2 lattice_3|…
+  e(b) main_ame               old 3.002574284                     new 0.9980211786
+  cfxame_cfxpost[1,1]         old 3.009137279                     new 1.007105902
+  ```
+  The B7 width signature (`3x1|b` → `3x6|b se t pvalue ll ul` on the `_it_` matrices) and the
+  SI-20 ame movement (3.0026 → 0.9980, 3.0091 → 1.0071) both reproduce to the digits quoted above.
 - **Classification: old-bug-fixed** (the width-1 truncation). The co-fired ame value
   cells are a different, later, old-bug-fixed family (SI-20) misattributed by row order.
 
@@ -287,7 +309,18 @@ so the reproductions are the run, not a look-alike of it.
   `wdidmainresults` 12 cells 1.36e-01. Identical to 2026-08-23. Old's weights were
   diluted by the phantom rows; new matches the cleaned-data answer. Co-firing
   `PS62-esblock` (24 cells) is the PS-62 family.
-- **Reproduction:** not re-run this pass; the run's dumps are the evidence.
+- **Reproduction:** not re-run this pass. **No two-build do-file for this family** (see L.9.3
+  for the full coverage statement). What stands in its place is a **re-tie of the decisive cells
+  to a dump that exists today**: the 2026-09-13 dual-build run in `test/suite/out/run_old|run_new`
+  is on the *same pinned pair* this section is about — `prov|old|301b706` and `prov|new|6a05127`,
+  whose `wooldid.ado` is byte-identical to the pin `08ec0b4` (md5
+  `382c1e0ee3e1be37fa2e9b677a65fdcc`). Read 2026-09-14; artifact `critleft/retie_0914.txt`. On
+  `trig_extmiss`:
+  ```
+  e(b)[1,3]   old 0.705705705      new 0.7042335867
+  e(b)[1,6]   old -0.08800843031   new -0.0835492375
+  ```
+  Both reproduce the magnitudes quoted above (worst 5.07e-02 on `b`).
 - **Classification: old-bug-fixed.**
 
 ### L.4 Estimand weights built on the pre-regression sample, not `e(sample)` (B10) — ledger `A7-drop-m`, `A7-kit-s/m`
@@ -328,7 +361,27 @@ so the reproductions are the run, not a look-alike of it.
   2.11e-09, `wdidmainresults` 62 cells 1.42e-07, `summarystats` 1.48e-01, `joint_horiz`
   0.11412498 → 0.11412499, `joint_horiz_i` 0.23377417 → 0.23377418, `ypre_iqr` 3.7133 →
   3.7775. All identical to 2026-08-23.
-- **Reproduction:** not re-run this pass; the run's dumps are the evidence.
+- **Reproduction:** not re-run this pass. **No two-build do-file for this family** (see L.9.3
+  for the full coverage statement). What stands in its place is a **re-tie of the decisive cells
+  to a dump that exists today**: the 2026-09-13 dual-build run in `test/suite/out/run_old|run_new`
+  is on the *same pinned pair* this section is about — `prov|old|301b706` and `prov|new|6a05127`,
+  whose `wooldid.ado` is byte-identical to the pin `08ec0b4` (md5
+  `382c1e0ee3e1be37fa2e9b677a65fdcc`). Read 2026-09-14; artifact `critleft/retie_0914.txt`. On
+  `trig_allest_drop` and
+  `cov_kitchen`:
+  ```
+  trig_allest_drop  e(b) main_att            old 2.146022965   new 2.146022965   BIT-IDENTICAL +1.12b0e168eb563X+001
+                    e(b) main_att_it         old 2.146022965   new 2.146022965   BIT-IDENTICAL +1.12b0e168eb563X+001
+                    e(b) main_att_i          old 2.280693743   new 2.280693748
+                    e(b) main_att_itime      old 2.280693743   new 2.280693748
+                    e(b) pretreatment_att_i  old 0.2839344819  new 0.3093541662
+                    e(b) pretreatment_att_itime old 0.2839344819 new 0.3093541662
+  cov_kitchen       joint_horiz              old 0.1141249833  new 0.1141249916
+                    joint_horiz_i            old 0.2337741748  new 0.2337741842
+                    ypre_iqr                 old 3.713320289   new 3.777455563
+  ```
+  The att/att_it bit-identity that carries this item's inference — and the `%21x` string
+  `+1.12b0e168eb563X+001` it rests on — is re-read directly out of both dumps.
 - **Classification: old-bug-fixed.**
 
 ### L.5 `timetrends` numerically inert at large calendar codes (tcen) — ledger `A12-ttb-s/m/p/vn`, `A12-ttp-s`
@@ -441,7 +494,24 @@ so the reproductions are the run, not a look-alike of it.
   0.96680 → 1.18453; [1,6] 1.61506 → 1.78800), `V` 6 cells 1.59e-01, `wdidmainresults`
   33 cells 9.07e-01. The default-safety companion `trig_mintsent_def` is the F13 refusal
   (rc-by-design 0 → 459). Identical to 2026-08-23 (which recorded N 296 → 290).
-- **Reproduction:** not re-run this pass; the run's dumps are the evidence.
+- **Reproduction:** not re-run this pass. **No two-build do-file for this family** (see L.9.3
+  for the full coverage statement). What stands in its place is a **re-tie of the decisive cells
+  to a dump that exists today**: the 2026-09-13 dual-build run in `test/suite/out/run_old|run_new`
+  is on the *same pinned pair* this section is about — `prov|old|301b706` and `prov|new|6a05127`,
+  whose `wooldid.ado` is byte-identical to the pin `08ec0b4` (md5
+  `382c1e0ee3e1be37fa2e9b677a65fdcc`). Read 2026-09-14; artifact `critleft/retie_0914.txt`. On
+  `trig_mintsent_off`:
+  ```
+  N          old 296            new 290          N_dropped  old 4    new 10
+  Nclus      old 30             new 29           df_r       old 29   new 28
+  ll         old -327.41807     new -323.7506043 r2         old 0.589158811  new 0.5786458842
+  e(b)[1,1]  old 0.9045468954   new 1.063611069
+  e(b)[1,5]  old 0.9667957393   new 1.184531679
+  e(b)[1,6]  old 1.61505938     new 1.787992707
+  ```
+  Every figure quoted above reproduces. One refinement the re-tie adds: the cluster count is
+  `e(Nclus)` on **both** builds (30 → 29); new additionally posts `e(N_clust)` = 29, which old does
+  not post at all — an addition alongside the move, not the move itself.
 - **Classification: old-bug-fixed.**
 
 ### L.7 The esf calendar-support drop ran AFTER the reference checks (G10B) — ledger `G10B-esf-s/m/e/n`
@@ -473,8 +543,25 @@ so the reproductions are the run, not a look-alike of it.
   fixture 0.6149 silently wrong; old on the hand-benchmark sample 1.4106; new 1.4106 to
   16 digits), `V` 22 cells, `wdidmainresults` 39 cells. `trig_esfsup_ref322` (default
   safety) is pinned 322 → 0. Identical to 2026-08-23.
-- **Reproduction:** not re-run this pass; the run's dumps and the committed
-  `test/test_esfsupport.do` are the evidence.
+- **Reproduction:** not re-run this pass; the committed `test/test_esfsupport.do` pins the HEAD
+contract. **No two-build do-file for this family** (see L.9.3 for the full coverage statement).
+  What stands in its place is a **re-tie of the decisive cells to a dump that exists today**: the
+  2026-09-13 dual-build run in `test/suite/out/run_old|run_new` is on the *same pinned pair* this
+  section is about — `prov|old|301b706` and `prov|new|6a05127`, whose `wooldid.ado` is
+  byte-identical to the pin `08ec0b4` (md5 `382c1e0ee3e1be37fa2e9b677a65fdcc`). Read 2026-09-14;
+  artifact `critleft/retie_0914.txt`. On `trig_esfsup_ref`:
+  ```
+  N          old 70            new 50           N_dropped  old 8   new 28
+  Nclus      old 14            new 10           df_r       old 13  new 9
+  ll         old 48.55284255   new 26.26879591  r2         old 0.9618496683  new 0.929840854
+  e(b)[1,1]  old 0.614874351   new 1.410624802
+  matnames b old 1x6|y1|main_att pretreatment_att ES_att_pre3 ES_att_pre2 ES_att_post0 ES_att_post1
+             new 1x5|y1|main_att pretreatment_att ES_att_pre3 ES_att_post0 ES_att_post1
+  ```
+  Including the decisive one: `ES_att_pre2` — the rel −2 row that sat only in the unsupported
+  t = 3 — is present on old and gone on new, and `b[1,1]` 0.61487 → 1.41062 is the
+  three-value triangle's old-full-fixture and new values to the digits quoted. Same `Nclus` /
+  `N_clust` refinement as L.6 (14 → 10 on `Nclus`; `N_clust` added on new only).
 - **Classification: old-bug-fixed.**
 
 ---
@@ -532,17 +619,52 @@ unchanged.
    builds here where the colleagues' Stata-17 old build recorded r(503) — Stata's
    conformability error, which is what its `msg_old` column in `configs_ext.csv` says.
 5. **Corrected T1 reading (old-build missing pairwise-SG cells = the %21x encoding of
-   Stata missing, not maxdouble artifacts) — unchanged.** The *encoding* reading stands
-   and is part of the report of record. **The hand-off that followed it does not:**
-   this item used to say the DDG family "is re-verified by another agent", and the other
-   agent did not confirm it. `inference` §5 classifies DDG **unclear**, on the grounds
-   that §1.13's framing "old returned missing where HEAD returns valid values" does not
-   describe these cells — the "recovered" values are numerically degenerate (t of order
-   1e9 on contrasts of exactly 1.0, p `1e-207`) and **one equality p moves the other way,
-   real → missing** (`joint_pre_att_allsgssame` `.99999787` → `.`) on two configs, under
-   a ledger reason that says "recovered". **This section and `inference` §5 disagree and
-   neither defers to the other:** read them together, and see `EDITS.md` (S-5) — the
-   disagreement is owed to the coordinator, not settled here.
+   Stata missing, not maxdouble artifacts) — unchanged, and now re-measured.** The
+   *encoding* reading stands and is part of the report of record. Re-measured
+   2026-09-14 on the 2026-09-13 dual-build dumps: across the four DDG configs old carries
+   **60 missing `pwsgs` cells, every one of them exactly `+1.0000000000000X+3ff`**
+   (= 2^1023 = Stata system missing), and **zero** maxdouble-like artifacts — 120 `pwsgs`
+   cells scanned in `run_old/ext_cov10_rcs_{pweight_ddd,twoway_cluster}_c{1,2}.csv`.
+   **The hand-off that followed it does NOT stand, and this item now defers.** It used
+   to say the DDG family "is re-verified by another agent"; the other agent did not
+   confirm it, and on the primary sources that section is right. `inference` §5 classifies DDG
+   **unclear**, and that classification is adopted here. **The disagreement the earlier
+   draft left open is settled 2026-09-14 in `inference` §5's favour**, from the two
+   builds, the dumps and the ledger row (`CRITIQUE_CLOSEOUT.md` item 1; working dir
+   `critleft/`):
+   - the real → missing move is real, on **two** configs: `joint_pre_att_allsgssame`
+     `+1.ffffb8906f474X-001` (= `.999997871047198`) old → `+1.0000000000000X+3ff` (= `.`)
+     new, identically on `ext_cov10_rcs_pweight_ddd_c1` and
+     `ext_cov10_rcs_twoway_cluster_c1`;
+   - the "recovery" on the `pwsgs` surface of `..._pweight_ddd_c1` is a **relabelling,
+     bit-for-bit**: old's `att_i:2vs1.group` row (`+1.ffffffffffff8X-001`;
+     `+1.0000000000000X-020` = 2^-32; `+1.ffffffffffff8X+01f` = 2^32;
+     `+1.55fa32d00a453X-2af` = 2.08e-207; and its two CI cells) is **byte-identical to
+     new's `att:2vs1.group` row and to new's `att_itime:2vs1.group` row**, while new's own
+     `att_i` inference cells go missing. Census of that matrix: 48 cells, **15
+     missing → value, 5 value → missing**, 20 bit-identical;
+   - the ledger has already moved the same way. At `26ce421` `DDG-jt-1` and `DDG-jt-3`
+     both read "same"; at `4280f3b` = `HEAD`, `DDG-jt-1` reads *"joint_att_it_allsgssame is
+     recovered (. -> value) AND joint_pre_att_allsgssame is withheld (0.999998 -> .) -
+     this one row blesses both directions; the withheld move is recorded here not
+     re-diagnosed (hygiene 2026-09-13)"* and `DDG-jt-3` *"here ONLY the withheld direction
+     fires (joint_pre_att_allsgssame 0.999998 -> .)"*. That wording is suite hygiene, not an
+     author ruling on DDG — none was found — which is exactly why the class is `unclear`
+     rather than either settled verdict;
+   - the suite's own degeneracy component corroborates "degenerate on both builds":
+     `test/suite/degeneracy_expected.csv` line 173 classes `ext_cov10_rcs_pweight_ddd_c1`
+     **RULED / `PWSGS_DEAD`, citation `DDG-pw-1`**, and the 2026-09-13 scan of the **new**
+     dump records `PWSGS_DEAD(0v+2i/8) SGDEGEN(8:report)`
+     (`test/suite/out/degeneracy/degeneracy_table.csv`) — two of eight pairwise rows are
+     still inference-dead *after* the "recovery".
+
+   **One thing is still wrong in the repo and is not this report's to fix.** `DDG-pw-1`'s
+   reason is **byte-unchanged** from `26ce421` and still reads *"v1.3 returns MISSING
+   pairwise-SG cells … where HEAD returns valid values"* — which the five value → missing
+   cells and the `PWSGS_DEAD(0v+2i/8)` scan contradict on that same config. `4280f3b` gave
+   the two-direction wording to the `-jt` rows only, and expanded `DDG-pw-2` / `-pw-3` from
+   "same" to *"as DDG-pw-1 … missing-cells-recovered class"* without changing the framing.
+   Recorded here, not edited: `test/` and `wooldidinstall/` were read-only for this agent.
 6. **T-M2 (continuous-SG joint pre-trend p stored as literal missing on BOTH builds) —
    RETIRED; the adjacent allsgssame-ame observation is superseded on `cont_sg*` and
    otherwise UNCLEAR.** SI-10/T-M2 was fixed 2026-08-25 (author-ordered; the
@@ -601,10 +723,42 @@ unchanged.
 2. **Section 2 item 6, second half:** the continuous `allsgssame` ame equality tests
    being missing-valued on both builds outside the cell-containment regime is
    unrecorded as diagnosed or as closed; the `cont_sg*` configs no longer reach it.
-3. **Not re-run this pass:** A5-cfx, A6-ext, A7-drop/kit, A15-mint, G10B-esf rely on the
-   2026-09-11 dumps (which this agent verified are the same run the two reproductions
-   reproduce byte-for-byte) and on the committed cert suites; the task asked for two
-   reproductions and both landed.
+3. **Reproduction coverage — stated explicitly, because it is not one per family
+   (critique S-6).** The report's template promises every family a runnable two-build
+   reproduction. **This section delivers two, for seven families.** That is disclosed here
+   rather than papered over. `CRITIQUE.md` S-6 reports it as the only such gap in the six
+   sections — it checked the other five and found every family there covered by a named
+   reproduction block; that check is the critique's, not re-done here.
+
+   | family | ledger rows | two-build do-file? | what stands in its place |
+   |---|---|---|---|
+   | L.1 A1/A2 (B1, B2) | `A1-B1a..e`, `A2-B2a..e` | **yes** — `repro_A1A2.do` | — |
+   | L.5 A12 (tcen) | `A12-ttb-*`, `A12-ttp-s` | **yes** — `repro_A12TTB.do` | — |
+   | L.2 A5-cfx (B7) | `A5-cfx-m`, `A5-cfx-n` | **no** | decisive cells re-tied 2026-09-14 (above); `3df74db`'s 3/3 verification record |
+   | L.3 A6-ext (B9) | `A6-ext-m` | **no** | decisive cells re-tied (above); `2adf447`'s 3+3 record |
+   | L.4 A7-drop / A7-kit (B10) | `A7-drop-m`, `A7-kit-s/m` | **no** | decisive cells re-tied (above), incl. the `%21x` bit-identity the item's inference rests on; `40e1913`'s 3+3 record |
+   | L.6 A15-mint | `A15-mint-s/m/e` | **no** | decisive cells re-tied (above); `test/test_mint.do` |
+   | L.7 G10B-esf | `G10B-esf-s/m/e/n` | **no** | decisive cells re-tied (above); `test/test_esfsupport.do` |
+
+   **Why only two.** This agent's brief asked for two reproductions and named which two; the
+   remaining five were left on the run's dumps. That was a defensible allocation when written
+   and is a real gap in the assembled report, because the dumps a reader was pointed at
+   (`test/suite/out/` — gitignored) are regenerated in place by every run.
+
+   **What closes the hole without five more Stata families.** The 2026-09-13 dual-build run
+   is on the **same pinned build pair** this section is about — `run_old` carries
+   `prov|old|301b706` and `run_new` carries `prov|new|6a05127`, whose `wooldid.ado` is
+   byte-identical to the pin `08ec0b4` (md5 `382c1e0ee3e1be37fa2e9b677a65fdcc`) — so the five
+   families' decisive cells were re-read out of it on 2026-09-14 and printed in each family's
+   Reproduction bullet above. **Every figure reproduced**, including the two the items' own
+   reasoning leans on: `trig_allest_drop`'s `main_att` / `main_att_it` bit-identity at
+   `+1.12b0e168eb563X+001`, and `trig_esfsup_ref`'s `ES_att_pre2` present on old and absent on
+   new. Artifact: `critleft/retie_0914.txt` (the script that produced it, `retie_final.py`,
+   sits beside it). This is a re-tie to a live dump, **not** a substitute for a two-build
+   reproduction: it re-runs nothing, so it cannot catch anything the suite harness itself would
+   get wrong. The honest statement for the assembled report's front matter is: *legacy ships 2
+   reproductions for 7 families; the other 5 are evidenced by the dual-build dumps, re-tied
+   2026-09-14 to the 2026-09-13 run on the same pinned builds, plus the committed cert suites.*
 
 ### L.10 Files
 
@@ -639,6 +793,16 @@ the drafting session and are regenerable by running them; see `repro/README.md`.
 
 
 > ## Headline of record and evidence provenance (added 2026-09-13; identical in all six sections)
+>
+> **Superseding note added 2026-09-14.** Two things below have since moved and are corrected
+> here rather than rewritten in place, because the block is accurate about the run it describes.
+> (i) `4280f3b` is no longer `HEAD`; the report's own header names the run of record by its
+> `prov[new]` sha, and **that** is the build the report's claims attach to. (ii) The closing run
+> of this assessment is the **2026-09-14** one over a **559-config** universe against the same
+> v1.3 old side, reported in Part 7.5: **559 of 559 compared, zero DIFFERS, unexplained 0,
+> stale_ledger 0**. The 2026-09-11 run described below is where this section's EVIDENCE was
+> gathered and its magnitudes measured; the 2026-09-14 run is what verifies that nothing still
+> differs. Neither supersedes the other - they answer different questions.
 >
 > **Run of record.** The 2026-09-11 dual-build run: **old = `301b706`** (published v1.3),
 > **new = `14c30d3`**, whose `wooldid.ado` is byte-identical to this section's pin `08ec0b4`
@@ -1039,6 +1203,16 @@ section (the Findings block shows it can read `0bn.` with b = 0); the *value* is
 
 
 > ## Headline of record and evidence provenance (added 2026-09-13; identical in all six sections)
+>
+> **Superseding note added 2026-09-14.** Two things below have since moved and are corrected
+> here rather than rewritten in place, because the block is accurate about the run it describes.
+> (i) `4280f3b` is no longer `HEAD`; the report's own header names the run of record by its
+> `prov[new]` sha, and **that** is the build the report's claims attach to. (ii) The closing run
+> of this assessment is the **2026-09-14** one over a **559-config** universe against the same
+> v1.3 old side, reported in Part 7.5: **559 of 559 compared, zero DIFFERS, unexplained 0,
+> stale_ledger 0**. The 2026-09-11 run described below is where this section's EVIDENCE was
+> gathered and its magnitudes measured; the 2026-09-14 run is what verifies that nothing still
+> differs. Neither supersedes the other - they answer different questions.
 >
 > **Run of record.** The 2026-09-11 dual-build run: **old = `301b706`** (published v1.3),
 > **new = `14c30d3`**, whose `wooldid.ado` is byte-identical to this section's pin `08ec0b4`
@@ -1463,11 +1637,44 @@ Ledger rows: `SI7-sg-m`, `SI7-sg-n`, `SI7-eb-n`, `SI7-eb-m`.
   state both append lines are gated off on either build (old 2834/2835, new 3522/3523), so
   the stale `truerow` is never used as a row subscript — but old 2836 / new 3528
   (`if "`truerow'" != "" local firsttimethrough 0`) is reached, and there old still holds
-  `sgnum` while new holds empty. **Whether that reaches `ext_contract10_rcs_factor_fe` is
-  undetermined here**; what is determined is that the site is not byte-identical and
-  `01a3b58` acted on it. S7 attributes the dupcol repair solely to `9d2e4df` and does not
-  mention `01a3b58`; folding it into S7's mechanism, or ruling out its reach on evidence,
-  is owed (see `LEDGER_DELTA.md` §G).
+  `sgnum` while new holds empty. **`01a3b58`'s reach on this config was UNDETERMINED in the
+  earlier draft; it is now MEASURED, and the answer is that it has none.** Four one-line-twin
+  builds were run on this config, 2026-09-14 (working dir `critleft/`):
+
+  ```
+  build      wooldid.ado md5                    what it is
+  old        5f067940742613346d90fc65eb088590   v1.3, git main = 301b706; L2829 `local trurerow`
+  old+fix    5fddf7298a87fc6822fbe2fa758bbcb8   old with L2829 -> `local truerow`
+  new        382c1e0ee3e1be37fa2e9b677a65fdcc   08ec0b4 (= 6a05127, the run's new leg); L3517 `local truerow`
+  new+typo   3b52a608fe31a6e25e169bea6022fa75   new with L3517 -> `local trurerow`
+  each pair differs by exactly one line (diff: 1 changed line, nothing else).
+
+  e() dumps (%21x, this section's own dumpres helper), default path AND fullprecisionslow:
+    old vs old+fix    si7_default.csv BYTE-IDENTICAL   si7_fps.csv BYTE-IDENTICAL (rc 198 both: v1.3 has no fullprecisionslow)
+    new vs new+typo   si7_default.csv BYTE-IDENTICAL   si7_fps.csv BYTE-IDENTICAL (rc 0 both)
+  ```
+
+  **Mechanism, measured rather than reasoned.** A counter inserted in the `else` leg, and a second
+  in the enclosing per-object loop body, show the leg is entered **0 times** on this config against
+  **4** loop iterations — on both builds and on both paths (`TR_ELSE_COUNT=0 TR_ITER_COUNT=4`;
+  `TRFPS_ELSE_COUNT=0 TRFPS_ITER_COUNT=4` on new). The instrumented builds' dumps are byte-identical
+  to the un-instrumented ones, so the probe is inert. The line `01a3b58` changed **never executes on
+  this config**: whenever the `pre`/`contpre` branch is taken here, `sghaspre` is `yes` and the
+  `if` leg runs, not the `else`. So `01a3b58` is **not** part of this config's old-vs-new
+  difference, and S7's attribution of the dupcol repair to `9d2e4df` alone stands *for this
+  config*. What survives from the critique is the narrower point, which this section accepts: the
+  site is **not** byte-identical across the builds, and a second commit acted inside the range the
+  earlier draft named.
+
+  **Tie to the run of record.** The probe's dumps match the suite's 2026-09-13 dual-build run cell
+  for cell: **124 of 124** value cells on old and **218 of 218** on new are identical to
+  `test/suite/out/run_old|run_new/ext_contract10_rcs_factor_fe.csv` (old `301b706`; new `6a05127`,
+  whose ado is byte-identical to this section's pin `08ec0b4`, md5 `382c1e0e…`). The only four
+  non-matching lines are `matnames` rows, where this section's helper prints bare rownames
+  (`att att pre2 post0`) and the suite's prints the equation-prefixed stripe (`main:att
+  pretreatment:att ES_att:pre2 ES_att:post0`) — a harness formatting difference, not a value. That
+  also re-ties this section's SI-7 shape claims (old `wdidsgresults_1` 3x7, new 4x7) to a dump that
+  exists today.
 - **Open questions:** (i) **[CLOSED by `4280f3b`, 2026-09-13 — retained, not deleted; see `LEDGER_DELTA.md` §E3]** — `4280f3b` rewrote all four SI-7 reasons for
   the default path; `SI7-eb-n` now reads *"e(b) gains the pretreatment_SG1_att entry (default
   cell-collapse path); 11 names -> 12 on 2026-09-11 (the reason once said 11 -> 10: a drop that
@@ -1702,6 +1909,16 @@ reproduction.
 
 
 > ## Headline of record and evidence provenance (added 2026-09-13; identical in all six sections)
+>
+> **Superseding note added 2026-09-14.** Two things below have since moved and are corrected
+> here rather than rewritten in place, because the block is accurate about the run it describes.
+> (i) `4280f3b` is no longer `HEAD`; the report's own header names the run of record by its
+> `prov[new]` sha, and **that** is the build the report's claims attach to. (ii) The closing run
+> of this assessment is the **2026-09-14** one over a **559-config** universe against the same
+> v1.3 old side, reported in Part 7.5: **559 of 559 compared, zero DIFFERS, unexplained 0,
+> stale_ledger 0**. The 2026-09-11 run described below is where this section's EVIDENCE was
+> gathered and its magnitudes measured; the 2026-09-14 run is what verifies that nothing still
+> differs. Neither supersedes the other - they answer different questions.
 >
 > **Run of record.** The 2026-09-11 dual-build run: **old = `301b706`** (published v1.3),
 > **new = `14c30d3`**, whose `wooldid.ado` is byte-identical to this section's pin `08ec0b4`
@@ -2189,6 +2406,16 @@ draft this supersedes).
 
 > ## Headline of record and evidence provenance (added 2026-09-13; identical in all six sections)
 >
+> **Superseding note added 2026-09-14.** Two things below have since moved and are corrected
+> here rather than rewritten in place, because the block is accurate about the run it describes.
+> (i) `4280f3b` is no longer `HEAD`; the report's own header names the run of record by its
+> `prov[new]` sha, and **that** is the build the report's claims attach to. (ii) The closing run
+> of this assessment is the **2026-09-14** one over a **559-config** universe against the same
+> v1.3 old side, reported in Part 7.5: **559 of 559 compared, zero DIFFERS, unexplained 0,
+> stale_ledger 0**. The 2026-09-11 run described below is where this section's EVIDENCE was
+> gathered and its magnitudes measured; the 2026-09-14 run is what verifies that nothing still
+> differs. Neither supersedes the other - they answer different questions.
+>
 > **Run of record.** The 2026-09-11 dual-build run: **old = `301b706`** (published v1.3),
 > **new = `14c30d3`**, whose `wooldid.ado` is byte-identical to this section's pin `08ec0b4`
 > and to current `HEAD` apart from a nine-line comment block and a shortened `dis as text`
@@ -2231,7 +2458,8 @@ draft this supersedes).
 > **Per-edit log:** `EDITS.md`. **Ledger delta and closed open questions:** `LEDGER_DELTA.md`.
 
 
-Group: `BS15-pw / BS15-jt / BS15-jtp`, `BS10-dfr`, `CS60-jhm`, `TM2-sg / TM2-ext`,
+Group: `BS15-pw / BS15-jt / BS15-jtp`, `BS10-dfr`, `CS60-jhm` (the four `CS60-jhm-*` rows were
+retired at `4280f3b`; §3 is now framed on the cells, not the rows), `TM2-sg / TM2-ext`,
 `DDG-pw / DDG-jt`, `A18`, `A16-imd / A17 / A17-part`, `A3 / B4-ext`.
 
 Builds: **old** = published wooldid v1.3 (`git main`, `301b706`); **new** = git HEAD
@@ -2479,18 +2707,24 @@ REPRO_BS10_DONE  (both builds)
   as ruled at its extreme — conservative for every row — and the footer plus
   `e(imdf_min)`/`e(imdf_max)` disclose it; noted here because the number is startling.
 
-### 3. CS-60: per-subgroup joint pre-trend p-values were `e()` macros; now scalars (`CS60-jhm`)
+### 3. CS-60: per-subgroup joint pre-trend p-values were `e()` macros; now scalars — value-compared at `HEAD`, no blanket row needed
 
-> **ROW IDS RETIRED AT `4280f3b` (2026-09-13).** All four rows this section is built on —
-> `CS60-jhm-trig`, `CS60-jhm-adm`, `CS60-jhm-sg`, `CS60-jhm-ext` — **no longer exist** in
-> `test/suite/ledger.csv` at `HEAD`. The commit's reason: the comparer now compares **across the
-> macro→scalar kind change**, so the cells are value-compared rather than blessed as a removal plus
-> an informational addition, and the four blanket rows retire. **The measurements below are
-> unaffected** — the movement is real and is precisely what made MATCH reachable on 25 configs (see
-> the headline block). What a reader must not do is look these ids up at `HEAD` and conclude the
-> section is wrong. The T-M2 subset is carried by `TM2-sg-p` / `TM2-ext-p`, whose `kind` is now
-> `scalar` and whose patterns narrowed to `joint_Choriz*_s*`. Framing this section around live rows
-> is owed to the coordinator — `LEDGER_DELTA.md` §A and §G(2).
+> **What this section is judged against (framing rewritten 2026-09-14).** At `HEAD` (`4280f3b`)
+> there is **no ledger row for this class, and none is needed**: the comparer now compares the old
+> macro against the new scalar **across the kind change**, so these cells are value-compared at
+> `--rtol 1e-10` and come back MATCH instead of "a removal plus an informational addition". That is
+> exactly the reclassification the headline block reconciles — `399 EXPLAINED` at `26ce421`
+> `= 374 EXPLAINED + 25 MATCH` at `4280f3b`, the 25 being the configs on which MATCH became
+> reachable once the comparer read these two sides as one value (`4280f3b`, verbatim: *"The comparer
+> keys its kinds separately, so 361 values on 103 configs were being blessed as a removal plus an
+> informational addition and never value-compared. It now compares across the kind change; six
+> blanket ledger rows retire and MATCH becomes reachable again (25 configs)."* The commit does not
+> say which 25, and neither does this section.) An earlier draft was framed on four blanket rows,
+> `CS60-jhm-trig` / `-adm` / `-sg` / `-ext`, which `4280f3b` retired for that reason — a reader will
+> not find them at `HEAD` and does not need to. What *is* live, and is what a reader should look up,
+> is the narrower T-M2 subset: `TM2-sg-p` (`trig_tm2_sgjoint`) and `TM2-ext-p` (`ext_c2_*`), both now
+> `kind = scalar` with the pattern narrowed to `joint_Choriz*_s*` (§4 is about those). **Not one
+> measurement below changed; only the framing did.** See `LEDGER_DELTA.md` §A and §D.
 
 - **Symptom / impact:** `e(joint_horiz)`, `e(joint_horiz_i)`, `e(joint_Choriz)`,
   `e(joint_Choriz_i)` were `ereturn scalar`, and the adversarial and `allsgssame` families
@@ -2514,12 +2748,15 @@ REPRO_BS10_DONE  (both builds)
   `test/test_stored.do` asserts by regex that no `joint_*_s*` name is still a macro. Commit
   record: cert 40/40, battery re-blessed; every battery difference line was an added name or
   the CS-60 macro-to-scalar swap.
-- **This run:** the comparer reports each `joint_horiz[_i]_s#` macro REMOVED and the
-  identically-named scalar ADDED with the same value: `CS60-jhm-trig` on
-  `trig_tm2_sgjoint` (3 lines: `.1036776642908662`, `8.53032953287e-16`,
-  `1.9389369068e-45`), `CS60-jhm-adm` on `adm_base` (4), `CS60-jhm-sg` on `sg_attit`,
-  `sg_degpre`, `sg_missif` (9), `CS60-jhm-ext` across the `ext_b2_*`, `ext_b3_*`,
-  `ext_b4_*`, `ext_c2_*` grids (260 lines). Zero p-values moved.
+- **This run, as the `26ce421` comparer reported it:** that comparer keyed macro and scalar cells
+  separately, so it reported each `joint_horiz[_i]_s#` macro REMOVED and the identically-named
+  scalar ADDED with the same value, and four blanket rows blessed the pairs — on
+  `trig_tm2_sgjoint` 3 lines (`.1036776642908662`, `8.53032953287e-16`, `1.9389369068e-45`), on
+  `adm_base` 4, on `sg_attit`, `sg_degpre`, `sg_missif` 9, and 260 lines across the `ext_b2_*`,
+  `ext_b3_*`, `ext_b4_*`, `ext_c2_*` grids. **Zero p-values moved.** The line counts are that
+  comparer's bookkeeping; the values are the same values on both sides, which is why `HEAD`'s
+  comparer — reading the pair as one value — returns MATCH on these cells and needs no row.
+
 - **Reproduction (`trig_tm2_sgjoint`, shared with §4):**
 
 ```
@@ -2683,10 +2920,18 @@ REPRO_DDG_DONE  (both builds)
  the identical row sat under att_i, on HEAD under att and att_itime while att_i went missing)
 ```
 
-- **Classification: unclear.** (**Note a live disagreement with `legacy` L.8 item 5**, which
-  hands the DDG family off as "re-verified by another agent" and therefore settled. It is not
-  settled by this section: the verdict below is *unclear*. Neither section defers to the other;
-  the disagreement is owed to the coordinator — see `EDITS.md` (S-5).)
+- **Classification: unclear.** (**The disagreement with `legacy` L.8 item 5 is settled, in this
+  section's favour, 2026-09-14.** That item used to hand the DDG family off as "re-verified by
+  another agent" and therefore settled; it now adopts *unclear* and defers here. The settlement was
+  made from the primary sources — the two builds, the 2026-09-13 `run_old`/`run_new` dumps on the
+  same pinned pair (old `301b706`; new `6a05127`, whose ado is byte-identical to this section's pin
+  `08ec0b4`, md5 `382c1e0e…`) and the ledger row — and every measured claim below reproduced
+  exactly: `joint_pre_att_allsgssame` `+1.ffffb8906f474X-001` (= `.999997871047198`) →
+  `+1.0000000000000X+3ff` (= `.`) on **two** configs; `joint_att_it_allsgssame` `.` →
+  `+1.1630ccf698a1aX-294` (= 2.27e-199); and the `2^-32 / 2^32 / 2.1e-207` residue row
+  **byte-identical** across builds, sitting under `att_i` on old and under `att` *and* `att_itime`
+  on new while new's `att_i` goes missing. Census on `..._pweight_ddd_c1`'s 48 `pwsgs` cells: 15
+  missing → value, **5 value → missing**, 20 bit-identical. See `CRITIQUE_CLOSEOUT.md` item 1.)
   The old → new movement is real and traces to the E1 chain
   machinery replacing two margins passes, but §1.13's framing "old returned missing where
   HEAD returns valid values" does not describe these cells: the "recovered" values are
@@ -2699,8 +2944,24 @@ REPRO_DDG_DONE  (both builds)
 - **Open questions:** (i) the `DDG-jt-1`/`DDG-jt-3` `joint_*` wildcard absorbs a
   real → missing move (`joint_pre_att_allsgssame` `.99999787` → `.`) under a reason that
   says "recovered"; its cause on HEAD is not BS-15 (report mode there) — HEAD's console on this block prints, before the table, the cell-collapse degeneracy caution (`wooldid found subgroup contrasts with zero variance at a subgroup margins call ... which subgroup horizons and joint tests are reported can depend on the summation order - which the default cell collapse changes ... with safety(off) it proceeds on the collapsed rows as requested`; `e(wdid_fcguard)` = `caution`), i.e. the F-collapse guard `wooldid_fcdeg` let the subgroup tests be evaluated on collapsed rows under `safety(off)`, and the identical `2^-32 / 2^32 / 2.1e-207` residue row that v1.3 carried under `att_i` appears under `att` and `att_itime` on HEAD while `att_i` goes missing — residue relabelled across rows, not recovered. Read from the console only; not instrumented.
+  **[Console reading CONFIRMED against the dumps 2026-09-14]** — the relabelling this question
+  reads off the console is now measured cell by cell in the `%21x` dumps: old's `att_i` row is
+  byte-identical to new's `att` and `att_itime` rows, and five of new's `att_i` cells are missing.
+  **[PARTIALLY CLOSED by `4280f3b`, 2026-09-13]** — the `joint_*` half of the complaint is fixed:
+  `DDG-jt-1`'s reason now records both directions explicitly (*"this one row blesses both
+  directions; the withheld move is recorded here not re-diagnosed"*) and `DDG-jt-3` says only the
+  withheld direction fires. Retained, not deleted: the question as written was that the wildcard
+  absorbed the move under a reason that said "recovered".
   (ii) The class deserves a ledger reason that says "spec-degenerate on both builds; cells
-  move" rather than "missing → valid".
+  move" rather than "missing → valid". **Still open on the `-pw` rows.** `4280f3b` gave the three
+  `-jt` reasons the two-direction wording but left the `-pw` framing as "recovered":
+  `DDG-pw-1`'s reason is **byte-unchanged** from `26ce421` and still reads *"v1.3 returns
+  MISSING pairwise-SG cells … where HEAD returns valid values"*, while `DDG-pw-2` / `-pw-3` were
+  merely expanded from "same" to *"as DDG-pw-1 … missing-cells-recovered class"*. On that same
+  config five
+  `pwsgs` cells move value → missing and the suite's own degeneracy scan of the **new** dump
+  records `PWSGS_DEAD(0v+2i/8)` against `degeneracy_expected.csv`'s RULED row citing `DDG-pw-1`
+  (line 173). Corroborating, not contradicting, this section's *unclear*.
 
 ### 6. E1b / A18: the whole-sample joint pre-trend tests ignored the requested unconditional VCE (`A18-jt`)
 
@@ -2871,14 +3132,19 @@ the same numbers the reproduction prints.
 ### Relevant but untested here
 
 - `BS15-*` on `esptrip`, `plot_sg`, `cont_sg_tidose`; `BS10-dfr-extbin/extcont`;
-  `CS60-jhm-adm/sg/ext`; `TM2-ext-p` on the 24 `ext_c2_*` configs; `DDG-*-2/3`;
+  the `adm_base` / `sg_*` / `ext_*` CS-60 cells (rows `CS60-jhm-adm/sg/ext` at `26ce421`, retired at
+  `4280f3b`); `TM2-ext-p` on the 24 `ext_c2_*` configs; `DDG-*-2/3`;
   `A17-sgv/uz/cd`; `A3-B4c`, `B4-ext-*` — cited from the 2026-09-11 dumps and the verbose
   re-judge, not re-run (one representative config per family was re-run, per the brief).
 - The BS-15 cut's behaviour on designs between rho `.99` and `.997` (the retained
   `adm_svpsg` row) was measured, not adjudicated; the sweep's robust-vs-cluster discriminator
   was not run on `adm_svpsg`, and the 44x figure is cited from the dta_binary fixture.
 - The DDG pre-att equality p's real → missing cause on HEAD (§5) was read from HEAD's
-  console output only, not instrumented.
+  console output only, not instrumented. **Updated 2026-09-14:** the *movement* is no longer
+  console-only — the real → missing pair and the byte-identical residue-row relabelling are now
+  measured cell by cell in the `%21x` dumps of the 2026-09-13 run on the same pinned build pair
+  (`CRITIQUE_CLOSEOUT.md` item 1). What remains console-only is the attribution of the cause to
+  the F-collapse guard `wooldid_fcdeg` under `safety(off)`; that was not instrumented.
 
 
 ---
@@ -2888,6 +3154,16 @@ the same numbers the reproduction prints.
 
 
 > ## Headline of record and evidence provenance (added 2026-09-13; identical in all six sections)
+>
+> **Superseding note added 2026-09-14.** Two things below have since moved and are corrected
+> here rather than rewritten in place, because the block is accurate about the run it describes.
+> (i) `4280f3b` is no longer `HEAD`; the report's own header names the run of record by its
+> `prov[new]` sha, and **that** is the build the report's claims attach to. (ii) The closing run
+> of this assessment is the **2026-09-14** one over a **559-config** universe against the same
+> v1.3 old side, reported in Part 7.5: **559 of 559 compared, zero DIFFERS, unexplained 0,
+> stale_ledger 0**. The 2026-09-11 run described below is where this section's EVIDENCE was
+> gathered and its magnitudes measured; the 2026-09-14 run is what verifies that nothing still
+> differs. Neither supersedes the other - they answer different questions.
 >
 > **Run of record.** The 2026-09-11 dual-build run: **old = `301b706`** (published v1.3),
 > **new = `14c30d3`**, whose `wooldid.ado` is byte-identical to this section's pin `08ec0b4`
@@ -3029,14 +3305,21 @@ fired on both builds. The decisive lines below are pasted verbatim from those lo
 - **Classification: intended-change.** Author-ruled design change; the diagonal — every
   reported standard error — is unchanged to the bit on every config; no new estimation.
 
-### I.2 `e(cmdline)` begins with the command name (CORE-10, ledger `CORE10-cmdline`) — INTENDED CHANGE
+### I.2 `e(cmdline)` begins with the command name (CORE-10) — INTENDED CHANGE; at `HEAD` the comparer normalises the prefix and no row is needed
 
-> **ROW ID RETIRED AT `4280f3b` (2026-09-13).** `CORE10-cmdline` **no longer exists** in
-> `test/suite/ledger.csv` at `HEAD`: the comparer now **normalises the `"wooldid "` prefix**, so the
-> difference is not reported at all and needs no ledger row. The same commit removed `B21b-ic8-p`,
-> which the unbounded CORE-10 row had been hiding. The change to `e(cmdline)` and every measurement
-> below are unaffected; the row id is not lookup-able at `HEAD`. `legacy` L.1 and `si20` S.3 cite the
-> same retired row. See `LEDGER_DELTA.md` §A and §G(3).
+> **What this item is judged against (framing rewritten 2026-09-14).** At `HEAD` (`4280f3b`) there
+> is **no ledger row for this change, and none is needed**: the comparer strips the uniform
+> `"wooldid "` prefix before comparing, so the difference is not reported at all and the *rest* of
+> `e(cmdline)` is compared instead of being blanket-blessed by an unbounded all-config row. The code
+> is `test/suite/compare_oldnew.py` **lines 157-158** — `if p[1] == "cmdline" and
+> v.startswith("wooldid "):` / `v = v[len("wooldid "):]` — under a comment that states the same
+> 399 this item measures (*"new
+> e(cmdline) = 'wooldid ' + the v1.3 text (equal on all 399 rc-0/0 configs, 2026-09-12)"*). An
+> earlier draft was framed on the blanket row `CORE10-cmdline`, retired in the same commit, together
+> with `B21b-ic8-p`, which the unbounded CORE-10 row had been hiding (`B21b-ic8-s` and `-m` survive).
+> **The change to `e(cmdline)` and every measurement below are unaffected; only the framing moved.**
+> `legacy` L.1 and `si20` S.3 also cite the retired id; both already annotate it inline as *"retired
+> at `4280f3b`"*, and neither was rewritten in this pass. See `LEDGER_DELTA.md` §A and §G(3).
 
 - **Symptom / impact:** old's `e(cmdline)` omitted the leading `wooldid `, contrary to Stata
   convention (every official estimator's `e(cmdline)` is re-runnable as typed).
@@ -3045,10 +3328,13 @@ fired on both builds. The decisive lines below are pasted verbatim from those lo
 - **Fix + proof:** `aec904e` (2026-08-19, "isolated re-bless", verified row-by-row —
   `wooldid_solved_issues.md` batch record at line 402 ff.). Uniform 8-byte prefix, no other
   content change; this is why MATCH has been 0 since the 08-23 run.
-- **This run:** `CORE10-cmdline` fired on **398 configs**; the 399th EXPLAINED config,
-  `cov_icbad2`, carries the same prefix but its cmdline diff was claimed by the earlier-ordered
-  config-scoped wildcard row `B21b-ic8-p` (first match wins) — so all 399 rc-0 configs show the
-  prefix and nothing else in that macro.
+- **This run:** **all 399 rc-0 configs carry the `"wooldid "` prefix on `e(cmdline)` and nothing
+  else in that macro** — that is the standing measurement, and it is the same number the comparer's
+  own CORE-10 comment records. At `26ce421` the bookkeeping split it: `CORE10-cmdline` fired on
+  **398** configs, and the 399th, `cov_icbad2`, carried the identical prefix but had its cmdline
+  diff claimed by the earlier-ordered config-scoped wildcard `B21b-ic8-p` (first match wins). That
+  398/1 split was an artifact of which row claimed the cell, never of the builds; at `4280f3b`
+  neither row exists and the cell is not reported at all.
 - **Reproduction (`repro_intended.do`, block `basic`):**
   ```
   REPRO_CORE10 build=old rc=0 e(cmdline)=[y i t ttre, att cluster(i) esprelength(3) espostlength(3) summarystats jointtests safety(off)]
@@ -3435,11 +3721,17 @@ Not a divergence class; listed because the task asked for the full rc taxonomy.
 # Part 7 - this run's own new material: the 31 new configs, their first-pass degeneracy stems, and the re-verification of Parts 1-6
 
 
-**Scope.** Parts 1-6 were drafted against the 2026-09-11 dumps of a 507-config universe. This part
-carries what only the 2026-09-13 run produces: the 31 configs that are new in it, the degeneracy
-stems they surfaced, and the re-verification of Parts 1-6 against this run.
+**Scope.** Parts 1-6 were drafted against the 2026-09-11 dumps of a 507-config universe. Sections
+7.0-7.4 below carry what the **2026-09-13 adjudication run** produced: the 31 configs new in it,
+the degeneracy stems they surfaced, and the re-verification of Parts 1-6 against it. That run is
+where the report's evidence was gathered, so it is kept as written.
 
-### 7.0 The result, stated first
+**Section 7.5 is the run this report actually documents.** After the 2026-09-13 rulings landed in
+the package, the suite was re-run end to end on 2026-09-14 over a 559-config universe - 21 more
+configs, and a changed package. The header of this report quotes THAT run, not the one in 7.0.
+Read 7.0-7.4 as the adjudication, and 7.5 as the closing verification.
+
+### 7.0 The adjudication run's result (2026-09-13), stated first
 
     VERDICTS  DIFFERS=14 EXPLAINED=382 MATCH=26 RC_EXPLAINED=116
     COMPARED  538 of 538 configured
@@ -3528,6 +3820,137 @@ ledger hours after those sections were drafted, retiring 7 cited row ids, rewrit
 texts and closing 10 of the sections' open questions. Each is reconciled there and marked in
 place; none was deleted. One caveat carried forward: `4280f3b` also changed the dump format, so
 the re-tie compares value cells, not dump text.
+
+### 7.5 The closing run (2026-09-14) - the one this report's header quotes
+
+Sections 7.0-7.4 describe the run on which the adjudication was DONE. This section describes the
+run that verifies it against the package the author's 2026-09-13 rulings produced. Both are
+reported because they are different questions: 7.0 asks "what differs and why", 7.5 asks "does
+anything still differ once the rulings are in".
+
+    prov[old] = old|301b706
+    prov[new] = new|04cc333
+    VERDICTS EXPLAINED=411 MATCH=26 RC_EXPLAINED=122
+    COMPARED 559 of 559 configured
+    SUMMARY unexplained=0 explained=4626 additions=17069 stale_ledger=0 unscoped=0 prov_fail=0
+    pool.log  112 shards OK, 0 TIMEOUT / INCOMPLETE / FAIL.  0 MISSING dumps.
+
+**There is no DIFFERS line because the count is zero.** 411 + 26 + 122 = 559: every configured
+config compared, every one of them either explained by a scoped ledger row, matching outright, or
+explained by an rc pair. The comparer prints `DIFFERS=` only when it is nonzero.
+
+**What changed between the two runs**, so the zero is not read as a re-run of the same thing:
+
+| | 2026-09-13 (7.0) | 2026-09-14 (7.5) |
+|---|---|---|
+| configs compared | 538 | **559** (+21) |
+| new side | `4280f3b`-era tree | **`04cc333`**, carrying the 2026-09-13 rulings |
+| DIFFERS at first judging | 14 | **0** |
+| shards | 106 | 112 |
+
+The +21 are the coverage wave (18) and the three concentration configs (`real_perm_t`,
+`real_perm_sd`, `real_boot_alpha`) that moved the riskiest single-fixture options onto a second
+host, per the author's "move the riskiest onto a second fixture" ruling. The new side carries the
+degrees-of-freedom fix, the weighted Bayesian bootstrap `P :/ N` correction, the fastnose posting
+change and six smaller rulings.
+
+**The 21 new configs produced nothing to adjudicate.** No new DIFFERS, and the degeneracy
+component passed **on its first pass over them** - `DEGEN_CHECK_OK`, `fail=0 stale=0 badrow=0
+classmoved=0`, with 175 curated expectation rows still summing exactly
+(`curated=[BY_CONSTRUCTION=131 DATASET_DESIGN=11 HIDDEN=11 PART_RULED=13 RULED=9]`). That is
+unlike 7.2, where a first pass over new fixtures correctly failed on nine stems. The difference is
+that the coverage wave targets option SURFACES on fixtures already characterised, where the
+2026-09-13 wave introduced two new fixtures.
+
+**The one thing this run did surface: 46 ledger rows went stale, and 7 of them had blamed the
+wrong cause.** The degrees-of-freedom fix made 46 rows unnecessary - the differences they excused
+no longer exist. They were retired in `81b3ce2` rather than left in place, because a ledger row
+that no longer fires is a row that will excuse the next real difference in its pattern.
+
+Retiring them exposed a mis-attribution worth recording on its own. Seven rows carried the reason
+id `R4W-fitstats`, attributing a root-mean-square-error divergence to the estimand-weight float
+family of Part 3. It was not that. With the dof fix in, the same configs' rmse divergence falls
+from **6.6e-4 to 3.0e-14** - ten orders of magnitude, and squarely the accounting change, not the
+weights. The weight family is real and Part 3's evidence for it stands; what was wrong was
+attaching these seven rows to it. **A ledger reason is a claim about mechanism, and this one was
+checkable and wrong.** It is recorded here because the same mistake is cheap to repeat: a row
+written while a second bug is live can blame the bug the author happened to be holding.
+
+**Component verdicts for the closing run.**
+
+| component | verdict |
+|---|---|
+| oldnew | 559/559, `unexplained=0`, `stale_ledger=0`, 0 missing dumps |
+| cert | 43 / 43 |
+| newfeat | 13 / 13 (each confirmed against the harness's own anchored `^[A-Z0-9_]+_ALL_PASS`) |
+| coverage | `COVERAGE_OK` |
+| degeneracy | `DEGEN_CHECK_OK` |
+| battery | 46 of 48 bit-identical; the two predicted movers are treated in 7.6 |
+
+**Honest note on how the run was judged.** `run_full.sh` reported `oldnew` and `battery` as
+FAILURES on this pass. Both were expected and both were adjudicated rather than waved through:
+`oldnew` failed only on `stale_ledger=46` - the retirement above, after which the same dumps
+re-judge `stale_ledger=0` - and `battery` failed on exactly the two configs the dof fix was
+predicted to move. Neither failure was a difference in a number the package reports.
+
+### 7.6 The two battery movers, and why they were blessed
+
+The degrees-of-freedom fix changes how many parameters an absorbing fit counts. Two of the 48
+battery configs, `cont_lat` and `perm_cfxnose`, carry cells that depend on that count, and the
+author's ruling ("fix the model, absorb the finest set only") carried a baseline re-bless with it.
+The question was not whether to re-bless but whether the movement is the predicted one, and the
+answer is a census rather than an assurance.
+
+**The discipline came first.** The project's standing rule for any battery movement is
+pristine-twice before per-config judgement. The battery was run a **second** time into a separate
+fresh directory and the two runs compared **to each other at rtol 0**: `TOTAL_DIFF_GROUPS=0`, all
+**48 configs bit-identical across the two runs**, `cont_lat` and `perm_cfxnose` included. The
+movement is therefore deterministic, not run-to-run noise. After blessing, `test/baseline` compares
+**48 IDENTICAL at rtol 0** against both that run and the full run's own battery output.
+
+**What actually moved, counted cell by cell** (30 changed cells on `cont_lat`, 421 on
+`perm_cfxnose`; the large count is the 20-replication `permdist_b` matrix, where every cell shifts
+in its last digits):
+
+| | `cont_lat` | `perm_cfxnose` |
+|---|---|---|
+| changed cells | 30 | 421 |
+| at or below the project's 1e-10 indifference threshold | 24 | 410 |
+| above it | 5 | 10 |
+| `rmse` (the designed effect) | 6.63e-4 | 6.40e-4 |
+| `rss` | **unchanged** | **unchanged** |
+
+**The cells above the threshold, named individually, because a threshold breach that is not named
+is a threshold that is not enforced:**
+
+- `r2adj` and `r2_withinadj` on both configs, moving 2.1e-9 to 4.8e-9. These are **the designed
+  effect, not an exception**: the degrees of freedom enter the adjustment formula directly, so a
+  correct dof count must move them. Together with `rmse` they are the whole point of the change.
+- `cont_lat`: **one** coefficient, appearing in three objects (`b[1,6]`, `b_es_att[1,2]`,
+  `wdidmainresults[6,1]` are the same number). Its value is **8.10e-07** and its absolute change is
+  **7.11e-15** - the double-precision floor for arithmetic over order-one quantities. Divided by a
+  near-zero denominator that reads as 8.77e-09 relative. A relative tolerance is the wrong
+  instrument on a cell whose denominator is itself numerical noise; this is the same tail
+  amplification the ledger's own `SI20-P` rows describe for the comparison harness.
+- `perm_cfxnose`: **8 `permdist_b` cells** at 1.45e-10 relative - absolute 1.08e-11 on values near
+  0.075. These are permutation *replication* coefficients: each replication is its own fit, so each
+  inherits the same last-digit shift the observed fit gets.
+
+**The check that settles whether any of that reaches a user.** On `perm_cfxnose`:
+
+- **All 56 permutation p-value cells are bit-identical.** Not close - identical. A 1e-11 shift in
+  the replication distribution cannot move a p-value that counts replications against an observed
+  statistic, and the count confirms it rather than assuming it.
+- Every joint and adversarial statistic: unchanged.
+- Worst movement across every reported coefficient and variance cell (`b`, `V`, `b_es_*`,
+  `V_es_*`): **3.27e-11**, below the threshold.
+- Permutation confidence-interval endpoints move at worst **2.50e-11**, below the threshold.
+
+So the honest summary is: `rss` is unchanged and the fit is the same fit; the dof-dependent fit
+statistics move because they are supposed to; every p-value a user reads is bit-identical; and the
+only cells that trip a mechanical relative gate are two adjusted R-squareds that the fix is meant
+to move, one near-zero coefficient whose absolute change is 7e-15, and eight permutation
+replication cells whose absolute change is 1e-11.
 
 
 ---
@@ -3835,7 +4258,24 @@ from two sides.
 
 ---
 
-### C.6 CANDIDATE, NOT RULED — wooldid standard errors undercover in two arms, with the external tools on identical points as the control
+### C.6 CANDIDATE — wooldid standard errors undercover in two arms, with the external tools on identical points as the control
+
+> **STATUS AT CLOSE (2026-09-14): closed by RULING, not by measurement, and the distinction
+> matters.** This section had two halves. The **help half** - `wooldid.sthlp:67` steering users
+> toward the `i` geometry that these draws show undercovering - was put to the author on
+> 2026-09-13 and he ruled: *"Let's remove this statement from the help file and call it a day; I
+> am skeptical of it."* The claim was removed, so the help no longer points anyone at the arm in
+> question, and that half is closed.
+>
+> The **statistical half is not closed and is not measured.** No 500-draw MC was run. Everything
+> below still rests on 30 draws at a single G, and the shape the section itself specifies as the
+> minimum before anyone rules (500+ draws, G in {20, 40, 200}, a coarse-`i` arm, csdid and
+> did_imputation as controls in every cell) remains unbuilt. Recorded plainly so that the removal
+> of a help sentence is never later read as evidence that the SEs were checked and found
+> correct. **This is one of the items going to the author as open at the close of this
+> assessment.** Cost estimate stands at roughly half an hour of machine time; what it lacked was
+> not feasibility but a slot.
+
 
 **Why this is here at all.** csdid produces the *same point estimates* as wooldid to 1.02e-14 and
 did_imputation to 1.16e-07, from the same data with the same `cluster(i)`. Same data, same
@@ -4078,19 +4518,8 @@ difference alone**: pre-period coefficients on random draws pass through zero (c
    rerun with `esprelength(4)` and assert `max_h |b_w4 − b_bjs| > 1e-3`, recording the shift.
    **Third leg:** `anticipation(1)` vs `did_imputation … shift(1)` at the same 1e-6 gate, and vs
    wooldid on `ttre−1` at **exact 0, SEs included**.
-5. **[I] `newfeat/xtevent_identity.do`. BUILT 2026-09-13, and this entry's advice about the
-   staggered panel is STRUCK — it was wrong.** The file ships the common-onset panel only.
-   Following the original advice would have produced a permanently red leg: on the staggered
-   fixture wooldid against `xtevent, impute(stag)` is **mreldif 6.2e-02** at `window(-4 5)` and
-   6.3e-02 at `window(-3 4)`, worst absolute gap 1.19e-01 on post3. And the cause is NOT
-   treatment-effect heterogeneity — a two-cohort panel whose cohorts share a CONSTANT HOMOGENEOUS
-   effect still diverges by 6.0e-02 absolute. It is estimator structure: xtevent's OLS pools
-   cells under its own weights, not wooldid's. There is no identity there to test.
-   A second correction to this entry: the endpoint exclusion below must be UNCONDITIONAL. The
-   original probe matched every horizon INCLUDING the endpoints, but that was an accident of its
-   panel's support — at `window(-4 5)` each bin happens to hold exactly one relative period, so
-   the excluded lead agrees to 2.1e-17, while at `window(-3 4)` the bins pool two periods and the
-   same lead diverges by 7.0e-02. The rest of this entry stands and is what was built. `gen byte z = (ttre<. & t>=ttre)` then `xtevent y, policyvar(z)
+5. **[I] `newfeat/xtevent_identity.do`.** `cohom` **first, then `costag`** — the staggered panel
+   is the gap (§C.7 iii). `gen byte z = (ttre<. & t>=ttre)` then `xtevent y, policyvar(z)
    panelvar(i) timevar(t) window(-P Q) impute(stag) vce(cluster i)` against the same
    `esfixedbaseperiod` wooldid fit; map `_k_eq_m<h>`→`pre<h>`, `_k_eq_p<h>`→`post<h>`, and
    **exclude the outermost lead/lag on each side** — the window endpoints are binned and are not
@@ -4341,8 +4770,15 @@ and the other 14 were all configs meeting v1.3 for the first time. Not one PRE-E
 moved: strip the new ones out and the other 507 reproduce their prior verdicts exactly, 374
 explained / 25 matching / 108 by return code. Adjudicating the 14 gave **10 old-bug-fixed, 2
 intended-change, 2 mixed, 0 both-builds-defect, 0 unclear, and 0 regressions** - on every one of
-them the current build is the more correct or the author-ruled side. The suite now reports
-`unexplained=0 stale_ledger=0 unscoped=0` over 538 of 538.
+them the current build is the more correct or the author-ruled side.
+
+**And the closing run, over a larger universe and a changed package, found nothing further.**
+After the author's 2026-09-13 rulings landed, the suite was re-run end to end over **559** configs
+(21 more than the adjudication run) against the same v1.3 old side. **Zero DIFFERS at first
+judging** - `EXPLAINED=411 MATCH=26 RC_EXPLAINED=122`, `unexplained=0 stale_ledger=0 unscoped=0`
+over 559 of 559, with cert 43/43, newfeat 13/13, coverage OK and the degeneracy component clean on
+its first pass over all 21 new configs. Details and the one thing that run did surface - 46 stale
+ledger rows, 7 of which had blamed the wrong cause - are in Part 7.5.
 
 The four package fixes below were found by the assessment, not by the comparison: none of them
 moves a number, which is why the dual build could never have caught them.
@@ -4398,21 +4834,62 @@ that survives Stage B is the open question; this line gets updated, not deleted,
   it now states the shipped composition and the rule that you count UNRULED citations, not the
   HIDDEN class. The same off-by-one was in my own working notes and in the brief I gave an agent.
 
-### 6. Still open, not fixed here
+### 6. Still open, restated 2026-09-14 after fourteen author rulings
 
-Nine issues the external-benchmark probes found are written up rather than fixed, because they
-are documentation wording or number-moving changes that are the author's call. They are items in
-`review_process/held_for_ruling_2026-09-13.md` and in Part 8 of the report of record. One
-candidate - standard-error undercoverage in two arms where an external tool sits on identical
-points, so the variance path is isolated - was measured over only 30 draws and needs a 500-draw
-simulation before anyone rules on it. One ticket that was on this list as a HEAD defect is now
-CLOSED as a misreading rather than a defect: `e(joint_horiz)` was recorded as 3.343872, an
-impossible p-value, but the value is 3.34387233470e-07 and the `e-07` had been dropped reading a
-`%18.12g` CSV field by eye. It reproduced exactly at the original seed, the mechanism is an
-ordinary `Ftail(4, 29, 16.686166)` on a dataset with a real planted pre-trend, no code path can
-emit a value above 1, and the old build is bit-identical there. What is owed is a corrected
-comment in the driver that had recorded the misreading as a finding.
+The nine issues the external-benchmark probes found are no longer the open list. Six are fixed,
+one was never ours, and two are closed by ruling rather than by repair. What is actually open is
+below, and it is shorter and sharper than what it replaced.
 
+**Open, and each needs a decision rather than a keystroke.**
+
+1. **The subgroup pre-treatment row is over-dropped, in BOTH builds.** Where only one subgroup
+   realises in the pre-period subpopulation, `margins` drops the grouping stripe entirely and the
+   name match that decides the drop finds nothing - so EVERY subgroup loses its pre-treatment row,
+   including one with two estimable event-study pre horizons and a live covariance. Measured
+   identically on both builds and already pinned in `test/baseline/sg_degpre.csv`, so the suite
+   records the wrong behaviour as correct. The existing guard keys on the POST-period count, which
+   is 2 here, so it does not fire.
+2. **That drop decision is invisible in both directions.** Whether the row is kept or deleted,
+   nothing is posted, no caution fires, and there is no marker - so neither the user, the
+   degeneracy scanner, nor the ledger can see it. The package has exactly the pattern this site
+   lacks a few thousand lines away.
+3. **A size lead on the adversarial test under continuous treatment.** The marginal-effect family's
+   adversarial p rejected on 7 of 20 null replications at a nominal 5% where the true profile is
+   the zero line - 3.4e-05 under a binomial. Twenty replications is a lead, not a finding, and it
+   sits outside the driver's recorded columns. The campaign that settles it is the one the work
+   file asks for.
+4. **105 ledger rows carry a clause the degrees-of-freedom fix makes false**, all of them `SI20-*`
+   across 19 config globs. (The count was 138 before the closing run; 46 rows the fix made stale
+   were retired in `81b3ce2`, and 33 of those carried this clause.) The rows still FIRE - they
+   excuse differences that are really there - but the sentence explaining WHY is now wrong, and a
+   ledger reason is a claim about mechanism. Reported rather than bulk-edited: rewriting 105
+   reasons is a scope decision, and the author asked to see the count rather than have them
+   silently edited.
+5. **Numerically degenerate pairwise-subgroup inference is DISCLOSED rather than withheld, on
+   both builds.** On `ext_cov10_rcs_pweight_ddd_c1` the four `att`-family pairwise rows all carry
+   one point estimate - exactly 1 - and the inference published beside it is **se 2.33e-10, t
+   4.29e9, p 2.1e-207, CI [1, 1]**. That is a contrast the fit determines exactly, reported as
+   though it were estimated. v1.3 published inference on `att_i` alone; HEAD publishes it on
+   `att`, `att_it` and `att_itime` and withholds `att_i`. `att` and `att_itime` carry v1.3's
+   `att_i` numbers to the bit; `att_it`'s are its own and equally degenerate (se 5.21e-10,
+   t 1.92e9). The package's own degeneracy scan sees part of
+   this - it records `PWSGS_DEAD(0v+2i/8)` - but not these rows. **Found while checking a ledger
+   reason, not by any test**, which is the point: the suite explained this config as a recovery
+   for months. The reason text is corrected; the surface itself is the author's call, and it
+   belongs with items 1 and 2 as the same kind of problem.
+6. **One external defect that is not ours**: the `jwdid` help documents weights its code refuses.
+
+**Closed by ruling rather than by repair, which is a different thing and worth the distinction.**
+The efficiency claim about where to set the cohort identifier was REMOVED from the help rather
+than measured, at the author's instruction ("I am skeptical of it"). The standard-error
+undercoverage candidate therefore has no pending simulation: it stays in Part 8 as a measured
+observation, not as an owed task. The honestdid degenerate-covariance guard was ruled to stay as
+it is, on the grounds that our handoff need not protect against cases honestdid does not protect
+against itself. The silent window truncation was ruled to stay silent.
+
+**Also closed**: the ticket once listed here as an impossible p-value above 1. It was a misreading
+of a `%18.12g` field with the exponent dropped by eye; the value is 3.34e-07, it reproduces at the
+original seed, no code path can emit a value above 1, and the old build is bit-identical there.
 
 ### 7. Fixed during the Stage B triage, 2026-09-13 (each verified in BOTH directions)
 
@@ -4424,6 +4901,19 @@ comment in the driver that had recorded the misreading as a finding.
 | 7.4 | The `degeneracy` component detected a curated class moving and emitted only a WARNING, then exited 0 - so genuine drift would print and pass. Its own contract is that a curated expectation still describes the run. | Promoted to a failure, along with a dangling ledger citation. Proven by deliberately corrupting a row: `DEGEN_CHECK_FAIL ... 1 class-moved/dangling`, and clean again when restored. **This hole was in a component written during Stage A of this same assessment**, and was found by an agent auditing it. |
 | 7.5 | `DEGEN_SUMMARY`'s class bracket printed SCANNER classes only, so curated `DATASET_DESIGN` rows were counted under `HIDDEN` and the line could not be reconciled against the file it summarises. This is what made a spurious "22 hidden versus 9 expected" discrepancy look like drift. | The line now prints the file's own tally beside the scanner's; the curated counts sum to the row count exactly. |
 
+#### 7.6 A ledger reason that was factually wrong at HEAD (fixed 2026-09-14)
+
+`DDG-pw-1` said v1.3 returns missing pairwise-subgroup cells "where HEAD returns valid values".
+A cell-by-cell census of the config's 48 `pwsgs` cells says otherwise: **15 missing to valued, 5
+valued to missing, 5 missing on both, 23 valued on both** (8 of those changed value). The five
+going the other way are `att_i`'s entire inference row. The move is a relabelling of which
+degenerate contrast gets disclosed, not a recovery. `DDG-pw-2` and `-pw-3` had been expanded to
+read "as DDG-pw-1 ... missing-cells-recovered class", propagating the same wrong framing to two
+more configs; both now say only that the disclosure surface moves, and say explicitly that their
+direction was not characterised. Re-judging with the corrected reasons gives verdicts identical to
+the run's own and `stale_ledger=0`, so all three rows still fire exactly as before - the text was
+wrong, the scoping was not.
+
 ### 8. Ledger and expectation rows written by the triage
 
 45 ledger rows across 14 blocks, every one scoped to its config and pattern rather than
@@ -4431,6 +4921,20 @@ blanketing a matrix - the project's own rule, which Stage A had to enforce by re
 blanket rows that were swallowing 361 unexamined values. That none of the 45 went stale is the
 proof each actually fired. Nine degeneracy expectation rows: six `DATASET_DESIGN` on the biennial
 fixture, one `RULED`, and two `HIDDEN`+`UNRULED` for the bias-corrected bootstrap case.
+
+
+### 9. Fixed by the 2026-09-13/14 rulings (the author ruled; these are the repairs)
+
+| # | what was wrong | how it was proven |
+|---|---|---|
+| 9.1 | **Absorbed degrees of freedom were over-counted.** Duplicate dose terms are bit-exact copies of columns already in the equation - their job is to steer the collinearity drop, not to be parameters - yet they consumed a degree of freedom wherever a finer set was also absorbed. | Three ways: a rank computation is unchanged; `regress` with explicit dummies agrees with every spelling except the shipped one; and across the suite the residual count moves while the residual sum of squares differs by 0 or 3e-15. After the fix the absorbing standard error equals the non-absorbing one for the same model to sixteen digits, where it was 0.2% off. Battery 46 of 48 identical; no point estimate moved. |
+| 9.2 | **The weighted Bayesian bootstrap sampled the wrong estimand.** The Dirichlet parameter came from the cluster's row count and its mass was divided by the cluster's weight total; equal only when the base weight is 1, which every call site happened to be. | Replications sat 9.36 bootstrap deviations off centre with every draw on one side, and the printed interval excluded the user's own estimate. Now 0.10. Unweighted is an exact no-op on draws, coefficients and covariance. The convention the code cited was measured, not assumed, and the comment naming it was false. A new pin FAILS on the pre-fix build and passes after. |
+| 9.3 | **`fastnose` withheld the event-study coefficient vector** the help promised it returned. | Code changed to match the help, per ruling; the covariance stays absent, which is the other half of that claim. One battery config moved, additively: the added cells are byte-identical to cells already in the same result. |
+| 9.4 | **A caution prescribed a remedy that cannot work.** It advised raising the replication count whenever every draw fell on one side - correct for sparsity, useless when the distribution is displaced. | Qualified so it no longer prescribes unconditionally. |
+| 9.5 | **`bootalpha(size)` is now disclosed as unweighted-only** where it claims parity with the reference package, because that package refuses user weights outright. | Measured against the package itself. |
+| 9.6 | **Three help claims were false**: `impvalues` listed as returning a vector it does not, the `did_imputation` equivalence conditions missing the one option that makes them true, and the honestdid example missing the option that stops it spawning four child processes. | Each verified against the code or the external package before editing. The suite's own three honestdid call sites were fixed hours earlier; the line a user copies was not. |
+| 9.8 | **The two battery baselines the dof fix moved were re-blessed**, `cont_lat` and `perm_cfxnose`. | Not blessed on assertion. Pristine-twice first: the battery was run a second time into a fresh directory and the two runs compared to each other at rtol 0 - `TOTAL_DIFF_GROUPS=0`, all 48 configs bit-identical including both movers, so the movement is deterministic. Then a cell census: 30 and 421 changed cells, of which 24 and 410 sit at or below the 1e-10 indifference threshold. `rss` is unchanged; `rmse` moves 6.6e-4 and the two adjusted R-squareds 2-5e-9, which is the designed effect. The only other above-threshold cells are one `cont_lat` coefficient of value 8.1e-07 whose absolute change is 7.11e-15, and eight `permdist_b` replication cells whose absolute change is 1.08e-11. **All 56 permutation p-value cells are bit-identical**, as are every joint and adversarial statistic; the worst movement across all reported `b`/`V`/`b_es_*`/`V_es_*` cells is 3.27e-11. After blessing, baseline compares 48 IDENTICAL at rtol 0. See Part 7.6. |
+| 9.7 | **The coefficient names in `e(b)` were undocumented** - two of them appeared zero times - in a help that tells users eleven times to address coefficients by them. | Now documented where the stored results are. |
 
 
 ---
