@@ -425,7 +425,7 @@ version 16.0
     * posted matrix does not apply
     * the joint/adversarial accumulators were MOVED into e(boot_jointW)/e(boot_advW) by
     * wooldid_bootjnt (ereturn matrix moves its source), so bootsave reads them from e()
-    if "`bootsave'" != "" wooldid_bootsave , file(`bootsave') acc(`wdbacc') obsb(`wdbobsb') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') wmat(`=cond("`cluster'" != "", "`wdbW'", "")') wobs(`=cond("`bootstrap'" == "bayes", cond("`bootalpha'" == "size", 1/max(`wdb_r_wtot', 1e-300), 1/max(`wdb_r_nclus', 1)), 1)') jwacc(`=cond("`boottstat'" != "", "e(boot_jointW)", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advW)", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') seed(`rseed') rng(`wdb_r_rng0') `replace'
+    if "`bootsave'" != "" wooldid_bootsave , file(`bootsave') acc(`wdbacc') obsb(`wdbobsb') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') wmat(`=cond("`cluster'" != "", "`wdbW'", "")') wobs(`=cond("`bootstrap'" == "bayes", cond("`bootalpha'" == "size", 1/max(`wdb_r_nrows', 1), 1/max(`wdb_r_nclus', 1)), 1)') jwacc(`=cond("`boottstat'" != "", "e(boot_jointW)", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advW)", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') seed(`rseed') rng(`wdb_r_rng0') `replace'
     ereturn local boot_rngstate `wdb_r_rng0'
     * deferred display: worker skipped these under bootstrap; they read only e(),
     * which now carries the bootstrap inference (identical formatting, free replay)
@@ -1191,9 +1191,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       * minyearobserved is just any value not appearing in ttre; ttre is guaranteed to not include that value
     }
 
-    * initialize
+    * initialize. ccringerhead / ccringerheadabs / ccringertail are the pieces the two
+    * spellings are composed from at the end of this block (see DF-1 there)
 		local contreatcontrolinserterFE
 		local contreatcontrolinserter
+		local contreatcontrolinserterABS
+		local ccringerhead
+		local ccringerheadabs
+		local ccringertail
 
     * handle basic, byTreated, byTtre, and byCohort in order since these are successively more intensive and supersede each other
 
@@ -1210,22 +1215,72 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if strpos("`contreatcontrols'",  "basic") != 0 | "`unconditionalse'" == "unconditionalse" | "`customvce'" != "" | "`poisson'" == "poisson" {
       tempvar null
       qui gen `null' = 1
-      local contreatcontrolinserterFE  i.`null'##`ringerpoly'
-			if "`latticepart2hash'" != ""  local contreatcontrolinserterFE `contreatcontrolinserterFE'  i.`latticevar'##`ringerpoly'
+      local ccringerhead  i.`null'##`ringerpoly'
+      local ccringerheadabs  i.`null'##`ringerpoly'
+			if "`latticepart2hash'" != "" {
+			  local ccringerhead `ccringerhead'  i.`latticevar'##`ringerpoly'
+			  local ccringerheadabs  i.`latticevar'##`ringerpoly'
+			}
 			*using latticepart2hash as a check here is arbitrary and a different lattice byproduct could be used
     }
 
     * built on top of the initialized contreatcontrolisnerterFE -- add lattice components only if useful
-    if strpos("`contreatcontrols'",  "byTreated") != 0  local contreatcontrolinserterFE `contreatcontrolinserterFE' i.`evertreated'`ringerinj'
-    if strpos("`contreatcontrols'",  "byTreated") != 0 & "`latticepart2hash'" != "" local contreatcontrolinserterFE `contreatcontrolinserterFE'  i.`evertreated'`latticepart2hash'
-    if strpos("`contreatcontrols'",  "byTtre") != 0  local contreatcontrolinserterFE `contreatcontrolinserterFE' i.`modified_ttre'`ringerinj'
-    if strpos("`contreatcontrols'",  "byTtre") != 0  & "`latticepart2hash'" != "" local contreatcontrolinserterFE `contreatcontrolinserterFE'  i.`modified_ttre'`latticepart2hash'
-    if strpos("`contreatcontrols'",  "byCohort") != 0  local contreatcontrolinserterFE `contreatcontrolinserterFE'  i.`i'`ringerinj'
-    if strpos("`contreatcontrols'",  "byCohort") != 0  & "`latticepart2hash'" != "" local contreatcontrolinserterFE `contreatcontrolinserterFE'   i.`i'`latticepart2hash'
+    if strpos("`contreatcontrols'",  "byTreated") != 0  local ccringertail `ccringertail' i.`evertreated'`ringerinj'
+    if strpos("`contreatcontrols'",  "byTreated") != 0 & "`latticepart2hash'" != "" local ccringertail `ccringertail'  i.`evertreated'`latticepart2hash'
+    if strpos("`contreatcontrols'",  "byTtre") != 0  local ccringertail `ccringertail' i.`modified_ttre'`ringerinj'
+    if strpos("`contreatcontrols'",  "byTtre") != 0  & "`latticepart2hash'" != "" local ccringertail `ccringertail'  i.`modified_ttre'`latticepart2hash'
+    if strpos("`contreatcontrols'",  "byCohort") != 0  local ccringertail `ccringertail'  i.`i'`ringerinj'
+    if strpos("`contreatcontrols'",  "byCohort") != 0  & "`latticepart2hash'" != "" local ccringertail `ccringertail'   i.`i'`latticepart2hash'
 
     * handle by period - this is in addition to, not in lieu of the others
-    if strpos("`contreatcontrols'",  "byTime") != 0  local contreatcontrolinserterFE `contreatcontrolinserterFE' i.`t'`ringerinj'
-    if strpos("`contreatcontrols'",  "byTime") != 0  & "`latticepart2hash'" != "" local contreatcontrolinserterFE `contreatcontrolinserterFE'     i.`t'`latticepart2hash'
+    if strpos("`contreatcontrols'",  "byTime") != 0  local ccringertail `ccringertail' i.`t'`ringerinj'
+    if strpos("`contreatcontrols'",  "byTime") != 0  & "`latticepart2hash'" != "" local ccringertail `ccringertail'     i.`t'`latticepart2hash'
+
+    * ---- DF-1 (author ruling 2026-09-13): TWO spellings of this control set, because the
+    * engines consume it two different ways.
+    * `ringer' is a bit-exact double copy of the dose, so the pooled i.`null'##c.(ringer)
+    * set is a numerical twin of columns the margins-visible block already carries through
+    * its ## chain (c.`contreat', and with a lattice i.lattice and i.lattice#c.`contreat').
+    * It adds no rank. Inside absorb() it nonetheless adds a slope that reghdfe COUNTS in
+    * df_a, so the residual df came out too small and every att-row se, t, p and interval,
+    * plus rmse, F, r2_a and ll_0, carried a spurious sqrt(df_old/df_new) of about
+    * 0.14-0.25%. Measured three ways: the rank of the design is unchanged; a reg with
+    * explicit dummies agrees with every spelling except the shipped one; and across the
+    * suite 36 configs move the residual count with a residual sum of squares differing by
+    * exactly 0 or at most 3e-15. Point estimates, ll, rss, r2 and N do not move.
+    * Measured again on dta_cont while building this (df_a read back as rss/rmse^2):
+    * basic + lattice(all 3) goes 753 -> 754, which is the count the ccnoabsorb, customvce
+    * and unconditionalse spellings of the SAME specification already reported, so the fix
+    * makes the absorbing path agree with the explicit ones rather than inventing a third
+    * answer; basic + byTime goes 890 -> 891; basic + byTime + lattice goes 703 -> 709.
+    * The 48-config battery moves exactly its two lattice configs and, at rtol 1e-8, in
+    * rmse alone - no b, ll, rss, r2 or N anywhere.
+    * THE RULE: absorb the FINEST ringer partition requested and only that one. The pooled
+    * i.`null'## set is redundant as soon as ANY other ringer set is absorbed (the lattice
+    * twin, or any byX - byX carries the lattice inside `ringerinj'), and the lattice twin
+    * is redundant as soon as a byX one is. It is correct and free only on plain basic with
+    * neither a lattice nor a byX. `ccringertail' is non-empty exactly when a byX was asked
+    * for, because every byX adds its ringer term, which is what makes it the test here.
+    * The manipulation the long comment above describes is NOT given up: the finest set
+    * that survives partials the base dose slope out exactly as the pooled one did, within
+    * a finer cell, and it is still spelled explicitly.
+    * A caveat worth keeping: the suite's 36-config sweep was over basic + lattice configs
+    * (only one suite config carries a byX at all), so the byX arms are thinner evidence.
+    * On basic + byTime the two spellings agree to 3e-9 in rss and 1e-10 in b rather than
+    * the 2e-15 the lattice arm shows, and basic + byTime + lattice on dta_cont is a
+    * degenerate design in BOTH builds - its own coefficients move by O(1) between
+    * regtol(9) and regtol(14) before the change as well as after, and its clustered VCE
+    * comes back all zero - so nothing there is evidence about this edit either way.
+    * ENGINE-CONDITIONED, and this is the part to keep: the thinning applies ONLY to what
+    * goes inside absorb(). On every path that passes these terms as explicit REGRESSORS -
+    * ccnoabsorb, unconditionalse, customvce, and the ppmlhdfe rc-3200 fallback - the
+    * i.`null'## spelling is load-bearing for the collinearity DROP ORDER, since nothing in
+    * an HDFE absorb is dropped for collinearity with something outside it but an explicit
+    * regressor certainly is; those paths already report the correct residual count, and
+    * they keep reading `contreatcontrolinserterFE', which is the full set exactly as before
+    local contreatcontrolinserterFE `ccringerhead' `ccringertail'
+    if "`ccringertail'" != "" local ccringerheadabs
+    local contreatcontrolinserterABS `ccringerheadabs' `ccringertail'
 
 
     * in terms of interpreting these control measures, note that allow each cohort to have its own contreat control function can have some interesting consequences
@@ -1245,6 +1300,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`ccnoabsorb'" == "ccnoabsorb"   {
 		local contreatcontrolinserter `contreatcontrolinserterFE'
 		local contreatcontrolinserterFE
+		* and with it the absorb spelling (DF-1): under ccnoabsorb the whole set is an
+		* explicit regressor, so nothing is left for absorb() to take
+		local contreatcontrolinserterABS
 	}
 
 
@@ -1377,8 +1435,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * ppmlhdfe specification is different from reghdfe b/c it is more hostile to partialling out continuous variables
     * ppmlhdfe requires d for predict, which margins requires
     if "`poisson'" == "poisson" {
-      if "`verbose'" != "" dis "ppmlhdfe `y' `contreatcontrolinserter' `trendinjector'    i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'   `contreatcontrolinserterFE'     `ccc_absorbinserter'  ) `vcespecifier' tol(1e-`regtol') d "
-      qui cap ppmlhdfe `y' `contreatcontrolinserter' `trendinjector'    i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'    `contreatcontrolinserterFE'  `ccc_absorbinserter' ) `vcespecifier' tol(1e-`regtol') d
+      if "`verbose'" != "" dis "ppmlhdfe `y' `contreatcontrolinserter' `trendinjector'    i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'   `contreatcontrolinserterABS'     `ccc_absorbinserter'  ) `vcespecifier' tol(1e-`regtol') d "
+      qui cap ppmlhdfe `y' `contreatcontrolinserter' `trendinjector'    i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'    `contreatcontrolinserterABS'  `ccc_absorbinserter' ) `vcespecifier' tol(1e-`regtol') d
       if _rc == 3200 {
         dis as text "Caution: initial estimation of ppmlhdfe failed, possibly due to inclusion of an absorbed categorical fixed effect with only 1 level."
         dis as text "Falling back to estimation with ppmlhdfe, but with any included time-trend controls, ccc_absorb controls, and/or continuous treatment controls pulled out of the absorb() statement and placed in the main regression."
@@ -1391,8 +1449,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       }
     }
     else{
-      if "`verbose'" != "" dis "reghdfe `y' `contreatcontrolinserter' `trendinjector' i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'   `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'     `contreatcontrolinserterFE'   `ccc_absorbinserter'  ) `vcespecifier' tol(1e-`regtol')  "
-      qui reghdfe `y' `contreatcontrolinserter' `trendinjector'  i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'     `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'     `contreatcontrolinserterFE'   `ccc_absorbinserter'  ) `vcespecifier' tol(1e-`regtol')
+      if "`verbose'" != "" dis "reghdfe `y' `contreatcontrolinserter' `trendinjector' i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'   `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'     `contreatcontrolinserterABS'   `ccc_absorbinserter'  ) `vcespecifier' tol(1e-`regtol')  "
+      qui reghdfe `y' `contreatcontrolinserter' `trendinjector'  i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'     `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'     `contreatcontrolinserterABS'   `ccc_absorbinserter'  ) `vcespecifier' tol(1e-`regtol')
     }
   }
   else{
@@ -1811,9 +1869,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`impvalues'" != "" local fckeyx `fckeyx' `cluster'
     if "`contreat'" != "" {
       local fckeyx `fckeyx' `i'
-      * the ringer (wooldid's double copy of the dose) is averaged the same way: wherever
-      * contreatcontrolinserterFE is non-empty it is an explicit regressor whose level shifts
-      * the round-off of every prediction
+      * the ringer (wooldid's double copy of the dose) is averaged the same way: wherever a
+      * ringer set is in the model at all - absorbed as `contreatcontrolinserterABS' or
+      * carried as an explicit regressor in `contreatcontrolinserterFE' - its level shifts
+      * the round-off of every prediction. Unconditional on purpose: the ringer is built
+      * whenever contreat() is given, and averaging it costs nothing where it is unused
       local fccont contreat(`contreat' `ringer')
     }
     wooldid_fcol `esamp' , key(`_i' `_t' `targetflag' `ifvar' `t' `ttre' `subgroups' `fckeyx') wvars(`w_att' `w_att_it' `w_att_i' `w_att_itime') `fccont'
@@ -1894,6 +1954,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * so fast mode still posts no e(V_es_*) (bug sweep BS-26)
   local sgmarginsdof `marginsdof'
   if "`fastnose'" != "" & "`subgroups'" != "" & `espre' + `espl' > 0 local sgmarginsdof df(`df_r')
+  * 2026-09-13 author ruling: fast mode posts the event-study COEFFICIENT vector and
+  * e(numpre_*) - sthlp:1295 has always said it does - while e(V_es_*) stays withheld
+  * (BS-26 above). The F2 sites below therefore capture b alone wherever margins was asked
+  * for nose, and the posting block reads an empty f2v_ as "no covariance to post".
+  * permute()'s fast-mode default borrows `fastnose' from the shell (~5274) and is carved
+  * out here: its stored-result contract is the permutation one, and its replications are
+  * nested fastnose calls that consume e(b) alone. impvalues sets nose on its own account
+  * below and is untouched (it is refused with fastnose in any case)
+  local f2bonly = ("`fastnose'" != "" & "`permute'" == "")
   tempname f9tab
 
   * initialize the joint-test p-value locals
@@ -2065,13 +2134,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           }
           matrix `___`horizitem'_horiz' = ( `f9tab'[1..6, `matrixstartgrab'..`=colsof(r(b))']',`relyrcolumn')
           * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
-          if "`marginsdof'" != "nose" {
+          if "`marginsdof'" != "nose" | `f2bonly' {
             tempname f2bmat f2vmat
             matrix `f2bmat' = r(b)[1, `matrixstartgrab'..`=colsof(r(b))']
-            matrix `f2vmat' = r(V)[`matrixstartgrab'..`=colsof(r(b))', `matrixstartgrab'..`=colsof(r(b))']
             local f2k `horizitem'
             local f2b_`f2k' `f2bmat'
-            local f2v_`f2k' `f2vmat'
+            * nose leaves margins no r(V) to slice, so f2v_ stays empty and this family
+            * posts its coefficients without a covariance
+            if "`marginsdof'" != "nose" {
+              matrix `f2vmat' = r(V)[`matrixstartgrab'..`=colsof(r(b))', `matrixstartgrab'..`=colsof(r(b))']
+              local f2v_`f2k' `f2vmat'
+            }
             local f2keys `f2keys' `f2k'
             local f2rl_`f2k'
             forval f2ri = 1/`=rowsof(`relyrcolumn')' {
@@ -2566,13 +2639,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               }
             }
             * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
-            if "`marginsdof'" != "nose" {
+            if "`marginsdof'" != "nose" | `f2bonly' {
               tempname f2bmat f2vmat
               matrix `f2bmat' = r(b)[1, 1..`=colsof(r(b))']
-              matrix `f2vmat' = r(V)[1..`=colsof(r(b))', 1..`=colsof(r(b))']
               local f2k = cond("`horizitem'"=="att","ame","ame_it")
               local f2b_`f2k' `f2bmat'
-              local f2v_`f2k' `f2vmat'
+              if "`marginsdof'" != "nose" {
+                matrix `f2vmat' = r(V)[1..`=colsof(r(b))', 1..`=colsof(r(b))']
+                local f2v_`f2k' `f2vmat'
+              }
               local f2keys `f2keys' `f2k'
               local f2rl_`f2k'
               forval f2ri = 1/`=rowsof(`relyrcolumn')' {
@@ -2807,13 +2882,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 matrix rownames `f9tab' = b se t pvalue ll ul
               }
               * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
-              if "`marginsdof'" != "nose" {
+              if "`marginsdof'" != "nose" | `f2bonly' {
                 tempname f2bmat f2vmat
                 matrix `f2bmat' = r(b)[1, `matrixstartgrab'..`=colsof(r(b))']
-                matrix `f2vmat' = r(V)[`matrixstartgrab'..`=colsof(r(b))', `matrixstartgrab'..`=colsof(r(b))']
                 local f2k `horizitem'_s`sgcase'
                 local f2b_`f2k' `f2bmat'
-                local f2v_`f2k' `f2vmat'
+                * sgmarginsdof keeps this ONE call's VCE in fast mode (BS-26, for the
+                * estimability markers), so r(V) exists here where it does not elsewhere;
+                * the grab stays keyed on `marginsdof' so fast mode still posts none
+                if "`marginsdof'" != "nose" {
+                  matrix `f2vmat' = r(V)[`matrixstartgrab'..`=colsof(r(b))', `matrixstartgrab'..`=colsof(r(b))']
+                  local f2v_`f2k' `f2vmat'
+                }
                 local f2keys `f2keys' `f2k'
               }
               *the above will be updated w/ rownames / relyrs by the below
@@ -2841,6 +2921,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               * recover compiled-size headroom; the numbers are unchanged)
               local f2opt
               if "`marginsdof'" != "nose" local f2opt b(`f2bmat') v(`f2vmat')
+              else if `f2bonly' local f2opt b(`f2bmat')
               wooldid_sglbl , names(`names') tab(`f9tab') first(`matrixstartgrab') mint(`min_t') old(`oldsyntax') sg(`sgcase') tvar(`_t') strip(1.`targetflag') fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_s`sgcase'') lbl(relyrlist_s`sgcase'_`horizitem') f2l(f2rl_`horizitem'_s`sgcase') `f2opt'
               if `wdsg_skip' continue
               local sgndrop `wdsg_ndrop'
@@ -3176,11 +3257,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 local finaladvtest = colsof(r(b))
                 local f2kC = cond("`horizitem'" == "att", "ame", "ame_it")
                 local f2optC
-                if "`marginsdof'" != "nose" {
+                if "`marginsdof'" != "nose" | `f2bonly' {
                   tempname f2bmat f2vmat
                   matrix `f2bmat' = r(b)[1, 1..`=colsof(r(b))']
-                  matrix `f2vmat' = r(V)[1..`=colsof(r(b))', 1..`=colsof(r(b))']
-                  local f2optC b(`f2bmat') v(`f2vmat')
+                  local f2optC b(`f2bmat')
+                  if "`marginsdof'" != "nose" {
+                    matrix `f2vmat' = r(V)[1..`=colsof(r(b))', 1..`=colsof(r(b))']
+                    local f2optC b(`f2bmat') v(`f2vmat')
+                  }
                 }
                 wooldid_sglbl , names(`namesC') tab(`f9tab') mint(`min_t') old(`oldsyntax') sg(`sgcase') tvar(`_t') kind(continuous-treatment) fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_Cs`sgcase'') lbl(relyrlist_s`sgcase'_`f2kC') f2l(f2rl_`f2kC'_s`sgcase') `f2optC'
                 if `wdsg_skip' continue
@@ -3195,10 +3279,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                   }
                 }
                 * F2: capture event-study b/V (relyr-labeled) for honestdid/lincom/test [pure-add]
-                if "`marginsdof'" != "nose" {
+                if "`marginsdof'" != "nose" | `f2bonly' {
                   local f2k `f2kC'_s`sgcase'
                   local f2b_`f2k' `f2bmat'
-                  local f2v_`f2k' `f2vmat'
+                  if "`marginsdof'" != "nose" local f2v_`f2k' `f2vmat'
                   local f2keys `f2keys' `f2k'
                 }
                 * handle the adversarial pre-trends test
@@ -3956,10 +4040,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`f2bm'" != "" & "`f2rl'" != "" {
       if `=colsof(`f2bm')' == `:list sizeof f2rl' & `=colsof(`f2bm')' > 0 {
         cap mata: st_matrix("`f2bm'", st_matrix("`f2bm'"))
-        cap mata: st_matrix("`f2vm'", st_matrix("`f2vm'"))
         matrix colnames `f2bm' = `f2rl'
-        matrix colnames `f2vm' = `f2rl'
-        matrix rownames `f2vm' = `f2rl'
+        * fast mode captures b alone (`f2bonly' at the nose switch), so there is nothing
+        * to stripe here and nothing to score below: f2ok stays 0 and the family posts its
+        * coefficients under the Caution, which is what sthlp:1295 describes
+        if "`f2vm'" != "" {
+          cap mata: st_matrix("`f2vm'", st_matrix("`f2vm'"))
+          matrix colnames `f2vm' = `f2rl'
+          matrix rownames `f2vm' = `f2rl'
+        }
         local f2np 0
         foreach f2t of local f2rl {
           if substr("`f2t'",1,3) == "pre" local ++f2np
@@ -3971,7 +4060,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         * advertised name was the gap: caution + machine-readable marker below
         local f2ok 0
         local f2nbad 0
-        local f2k = colsof(`f2vm')
+        local f2k 0
+        if "`f2vm'" != "" local f2k = colsof(`f2vm')
         forval f2d = 1/`f2k' {
           if `f2vm'[`f2d',`f2d'] > 0 & `f2vm'[`f2d',`f2d'] < . local f2ok 1
           else local ++f2nbad
@@ -8574,9 +8664,12 @@ version 16.0
 *** multiplier corrected 2026-09-06, quality-review F001): cluster c draws Dirichlet mass
 *** draw_c. Under bootalpha(equal) every row of the cluster is multiplied by draw_c (cluster
 *** total = W_c * draw_c, Rubin's cluster Bayesian bootstrap, centred on the observation-
-*** weighted estimand); under bootalpha(size) the mass is split over the cluster's base
-*** weight (row multiplier = draw_c / W_c), which matches bayesboot BITWISE on unweighted
-*** data. The rwgen priorpowers(-n_c) oracle for equal is its weights times n_c.
+*** weighted estimand); under bootalpha(size) the mass is spread EQUALLY over the cluster's
+*** rows (row multiplier = draw_c / n_c, n_c the row count and also the Gamma shape), which
+*** matches bayesboot BITWISE on unweighted data. The divisor was the cluster's base-weight
+*** total W_c until 2026-09-13: identical unweighted, since W_c == n_c on a total() of ones,
+*** and a displaced replication distribution under weights (quality-review F001).
+*** The rwgen priorpowers(-n_c) oracle for equal is its weights times n_c.
   syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string) wmat(string) jkacc(string)]
 
   if `dots' == -1 local dots 1
@@ -8603,17 +8696,26 @@ version 16.0
   if "`wexp'" != "" qui gen double `basew' = (`wexp') if `smp'
   else qui gen double `basew' = 1 if `smp'
 
-  * map frame: one row per cluster with n_c (row count) and W_c (base-weight total);
+  * map frame: one row per cluster with n_c, the cluster's ROW COUNT. n_c is both the
+  * Gamma shape under bootalpha(size) and the divisor that spreads the cluster's drawn
+  * mass over its rows - the two have to be the same quantity or the replications centre
+  * somewhere the point estimate does not (see wooldid_bootdw). The base-weight total W_c
+  * that used to be built here as __wdbW was that divisor until 2026-09-13 and is now
+  * nothing's input, so it is gone rather than left standing: a live weight-total variable
+  * beside a shape-proportional divisor is the trap that produced the defect.
   * frozen generation-time row ids (NFPERM-02: frlink re-sorts the linked frame)
   tempname mbfr
   frame put `clusv' `basew' if `smp', into(`mbfr')
   frame `mbfr' {
     qui bysort `clusv': gen double __wdbn = _N
-    qui gegen double __wdbW = total(`basew'), by(`clusv')
-    * total weight W (the map frame holds the in-sample rows only): the observed row of a
-    * bootsave() file under bootalpha(size) is written on the replication scale 1/W (BS-18)
-    qui sum `basew', meanonly
-    local wdb_wtot = r(sum)
+    * in-sample ROW COUNT (the map frame holds the in-sample rows only, one per
+    * observation until the collapse below): the observed row of a bootsave() file under
+    * bootalpha(size) is written on the replication scale 1/N (BS-18). The multipliers a
+    * replication actually applies are p_c/n_c, which sum to 1 over ROWS - sum_c n_c *
+    * (p_c/n_c) = sum_c p_c = 1 - so 1/N is the flat multiplier on that same scale. It was
+    * 1/W, sum(basew), while the divisor was W_c; on unweighted data sum(basew) == N, so
+    * only weighted bootsave() output moves
+    local wdb_nrows = _N
     qui bysort `clusv': keep if _n == 1
     qui sort `clusv'
     qui gen double __wdbdraw = .
@@ -8636,7 +8738,7 @@ version 16.0
 
   * draws. bayes: C x R Dirichlet matrix up front - per-rep (outer) per-cluster-
   * ascending (inner) Gamma draws from the seeded mt64 stream, the exact rwgen bayes
-  * consumption order; row multiplier = (g/colsum)/W_c. standard: draws happen
+  * consumption order; row multiplier = (g/colsum)/n_c. standard: draws happen
   * INSIDE the rep loop (one bsample per rep - the official bootstrap prefix's
   * consumption sequence, so same-seed runs are comparable; nested wooldid calls
   * leave c(rngstate) untouched, measured)
@@ -9100,7 +9202,7 @@ version 16.0
   * the resampling-unit count: clusters, or observations under the observation-level
   * branch. bootdf(clusters) turns this into the t degrees of freedom
   c_local wdb_r_nclus `wdb_C'
-  c_local wdb_r_wtot `wdb_wtot'
+  c_local wdb_r_nrows `wdb_nrows'
   c_local wdb_r_rng0 `wdb_rng0'
 end
 
@@ -9697,6 +9799,38 @@ version 16.0
   ereturn hidden matrix boot_ptails = `wdbpt'
   ereturn matrix boot_p_bc = `cbp'
   ereturn matrix boot_z0 = `cz0'
+  * 2026-09-13 author ruling: disclose the withheld bias-corrected family. A column whose
+  * completed draws all sit on one side of the rep-0 comparator has z0 = invnormal(0) or
+  * invnormal(1), which is undefined, so wooldid_bootci leaves that column's z0, BC interval
+  * and BC p missing - and the BCa twin with them, since it starts from the same z0 - while
+  * the percentile and Wald families stand. Read the POSTED matrices, not `cz0'/`cip':
+  * `ereturn matrix' moved those. The discriminator is a live percentile endpoint; a column
+  * with fewer than 2 available reps or no dispersion carries no bootstrap inference at all
+  * and is not a BC withholding. Named columns rather than a bare flag, on the
+  * boot_ves_failed precedent: the caution scrolls away, the macro survives a replay.
+  * 2026-09-13: the remedy clause is QUALIFIED rather than flat. It used to end "a larger
+  * reps() makes a one-sided draw set less likely", which is true only when the cause is
+  * sampling noise about the estimate. When the replication distribution is DISPLACED from
+  * the estimate the draws are one-sided at every reps() - the weighted bootalpha(size)
+  * divisor defect measured at 3.5-9.4 bootstrap deviations was exactly that - so the flat
+  * advice sent a user to spend hours of replications on an interval that would still
+  * exclude their own estimate. The same sentence in the sthlp bootdisplay() entry is
+  * qualified with it; keep the two in step
+  tempname wdbz0m wdbpcm
+  matrix `wdbz0m' = e(boot_z0)
+  matrix `wdbpcm' = e(boot_ci_percentile)
+  local wdb_bcn : colnames `wdbz0m'
+  local wdb_bcbad
+  forval wdbk = 1/`=colsof(`wdbz0m')' {
+    if missing(`wdbz0m'[1,`wdbk']) & !missing(`wdbpcm'[1,`wdbk']) {
+      local wdb_bcw : word `wdbk' of `wdb_bcn'
+      local wdb_bcbad `wdb_bcbad' `wdb_bcw'
+    }
+  }
+  if "`wdb_bcbad'" != "" {
+    ereturn local boot_bc_absent `wdb_bcbad'
+    dis as text "Caution: the bias-corrected family is withheld for: `wdb_bcbad'. Every completed replication of those columns fell on one side of the rep-0 comparator, so the median-bias correction z0 is invnormal(0) or invnormal(1) and is undefined; e(boot_z0), e(boot_ci_bc) and e(boot_p_bc) are missing there, and the BCa twin with them where it was requested. The percentile and Wald families are unaffected; under bootdisplay(bc) the affected rows print a blank p-value and interval rather than one borrowed from another family. Whether a larger reps() helps depends on the cause: it makes a one-sided draw set less likely when the draws are simply sparse around the estimate, and does nothing when the replication distribution sits away from the estimate altogether, which is a property of the specification rather than of the replication count."
+  }
   if `wdbbca' {
     matrix colnames `ciba' = `obn'
     matrix rownames `ciba' = ll ul
@@ -12189,7 +12323,8 @@ prog def wooldid_sglbl
   if "`b'" != "" & `ndrop' > 0 {
     local keepm = subinstr(trim("`keep'"), " ", ",", .)
     mata: st_matrix("`b'", st_matrix("`b'")[1, (`keepm')])
-    mata: st_matrix("`v'", st_matrix("`v'")[(`keepm'), (`keepm')])
+    * fast mode hands b alone (no covariance is captured or posted there), so v() is optional
+    if "`v'" != "" mata: st_matrix("`v'", st_matrix("`v'")[(`keepm'), (`keepm')])
   }
   c_local `lbl' `lbls'
   if "`f2l'" != "" c_local `f2l' `f2lbls'
@@ -13780,16 +13915,15 @@ cap mata: mata drop wooldid_bootband()
 mata:
 // draw matrix: per-rep (outer) per-cluster-ascending (inner) Gamma(alpha,1) draws -
 // the exact rwgen bayes stream-consumption order; alpha = n_c (size) or 1 (equal);
-// row multiplier = (g/colsum)/W_c. writes a C x R matrix (transposed for el() reads)
+// row multiplier = (g/colsum)/n_c. writes a C x R matrix (transposed for el() reads)
 void wooldid_bootdw(string scalar fr, string scalar amode, real scalar R, string scalar outname)
 {
   string scalar cur
-  real matrix N, W, E, P
+  real matrix N, E, P
   real scalar C, r, k, a
   cur = st_framecurrent()
   st_framecurrent(fr)
   N = st_data(., "__wdbn")
-  W = st_data(., "__wdbW")
   st_framecurrent(cur)
   C = rows(N)
   E = J(C, R, .)
@@ -13800,14 +13934,33 @@ void wooldid_bootdw(string scalar fr, string scalar amode, real scalar R, string
     }
   }
   P = E :/ colsum(E)
-  // bootalpha(size) only: split the cluster's mass over its base weight so that every row
-  // carries p_c / W_c - the bayesboot / rwgen priorpowers convention. Under bootalpha(equal)
-  // (the default) every row carries p_c itself, so the cluster's TOTAL replicate mass is
-  // W_c * p_c: Rubin's Bayesian bootstrap with clusters as the exchangeable units, whose
-  // replications stay centred on the observation-weighted estimand. Until 2026-09-06 the
-  // split applied under equal too, which centred the replications on the equal-cluster-
-  // weighted estimand (rep mean .80 vs att 1.69 on a 12-state unbalanced fixture)
-  if (amode == "size") P = P :/ W
+  // bootalpha(size) only: spread the cluster's Dirichlet mass EQUALLY over its rows, so
+  // that every row carries p_c / n_c. The divisor has to be proportional to the Gamma
+  // SHAPE, which under size is the cluster's row count n_c: E[p_c] = n_c/N, so a row of
+  // cluster c carries expected multiplier 1/N whatever its cluster's size or weight, and
+  // the replications centre on the same weighted estimand the point estimate targets.
+  // Dividing by the base-weight TOTAL W_c instead (the form shipped until 2026-09-13) put
+  // expected multiplier n_c/(N*W_c) on each row, so a cluster's expected replicate mass
+  // was its ROW-COUNT share n_c/N rather than its weight share W_c/W - the replications
+  // bootstrapped the row-count-weighted estimand while the point estimate was the user's.
+  // Unweighted it is invisible because W_c == n_c identically (a total() of ones), and
+  // weighted it displaced the replication distribution from the estimate by a measured
+  // 3.5 to 9.4 bootstrap deviations with every draw on one side, which also killed the
+  // whole bias-corrected family (measured 2026-09-13 on dta_s_stateyear, cluster(st),
+  // [aw=pop]: max |replicate mean - estimate| / bootstrap sd 9.36 -> 0.10, and
+  // e(boot_bc_absent) six columns -> empty). The comment that stood here cited "p_c / W_c -
+  // the bayesboot / rwgen priorpowers convention": that convention was MEASURED and is
+  // p_c / n_c - rwgen bayes puts p_c/n_c on each row with the weight total appearing
+  // nowhere, the recovered Dirichlet parameters match the row counts, and bayesboot
+  // refuses user weights outright. See test_bootstrap_bayes.do O2/O2d and
+  // review_process/quality_review_2026-09-05.md F001.
+  // Under bootalpha(equal) (the default) every row carries p_c itself, so the cluster's
+  // TOTAL replicate mass is W_c * p_c: Rubin's Bayesian bootstrap with clusters as the
+  // exchangeable units, whose replications stay centred on the observation-weighted
+  // estimand. Until 2026-09-06 the split applied under equal too, which centred the
+  // replications on the equal-cluster-weighted estimand (rep mean .80 vs att 1.69 on a
+  // 12-state unbalanced fixture)
+  if (amode == "size") P = P :/ N
   st_matrix(outname, P)
 }
 

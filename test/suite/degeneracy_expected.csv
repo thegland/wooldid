@@ -8,14 +8,14 @@ config,class,stems,citation
 # citation = ledger ids separated by ';' (RULED/PART_RULED) | BY_CONSTRUCTION | DATASET_DESIGN: <why> | UNRULED[: <what>] (needs an author ruling).,,,
 # Optional 5th column ncaution = HEAD's per-config console-caution count (digest of out/wd_new); blank = not pinned; a pinned count that moves is a DEGEN_WARN.,,,
 "# INFO-class flags (NOSE_BY_DESIGN, NCLUST_TINY, BES_ABSENT(impvalues|permute), SGDEGEN(:report)) are never stems, so INFO configs have no row.",,,
-"# Seeded 2026-09-13 from the Stage A degeneracy scan (HEAD 08ec0b4, dumps of the 2026-09-11 run): 165 rows, 10 UNRULED citations pending rulings.",,,
+"# Seeded 2026-09-13 from the Stage A degeneracy scan (HEAD 08ec0b4, dumps of the 2026-09-11 run): 165 rows, 10 PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface) citations pending rulings.",,,
 esptrip,RULED,PWSGS_DEAD SGDEGEN,BS15-pw-esptrip
 cont_basic,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_DIAG_DEAD,AMESE-R1-v;AMESE-R1-w
 cont_uz,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_ABSENT,AMESE-R1-v;AMESE-R1-w
 cont_uz_ss,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_ABSENT,AMESE-R1-v;AMESE-R1-w
 cont_lat,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_ABSENT,AMESE-R1-v;AMESE-R1-w
 cont_ss,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_DIAG_DEAD,AMESE-R1-v;AMESE-R1-w
-simple_esf,HIDDEN,WINDOW_SHORT,UNRULED
+simple_esf,HIDDEN,WINDOW_SHORT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
 cont_sg,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG PWSGS_DEAD SG_DEAD VES_ABSENT V_DIAG_DEAD,AMESE-R1-sgp;AMESE-R1-sgr;AMESE-R1-v;AMESE-R1-w
 sg_degpre,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: prep sgd2_degpre puts sgd2==2 onset in the second sample year so that subgroup has 0 pre periods (data_classes.csv config:sg_degpre)
 adv_gapa,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: dta_path_relyrgap has two surgically removed relative-year cells incl. cohort A reference relyr -1 (data_classes.csv); the gap IS the test subject (B16)
@@ -23,11 +23,11 @@ adv_gapb,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: dta_path_relyrgap has two s
 cont_sg_tidose,RULED,AME_NO_LIVE_INFERENCE B_ZERO MAIN_VOID PWSGS_DEAD SGDEGEN SG_DEAD V_DIAG_DEAD,A17-sgv-1;AMESE-R1-v;AMESE-R1-w;SIA4-td-p;SIA4-td-s
 cont_sg_gap,RULED,AME_NO_LIVE_INFERENCE B_ZERO MAIN_VOID PWSGS_DEAD SGDEGEN SG_DEAD V_DIAG_DEAD,A17-sgv-2;AMESE-R1-v;AMESE-R1-w;SIA4-gp-p;SIA4-gp-s
 trig_cfx,PART_RULED,AME_NO_LIVE_INFERENCE CFX_DEAD MAIN_INFDEG VES_ABSENT V_ABSENT,A5-cfx-m;AMESE-R1-w3
-trig_sgadv_deeppre,HIDDEN,PWSGS_DEAD SGDEGEN,UNRULED
-trig_tt_year,HIDDEN,MAIN_INFDEG VES_ABSENT V_ABSENT,UNRULED
+trig_sgadv_deeppre,HIDDEN,PWSGS_DEAD SGDEGEN,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
+trig_tt_year,HIDDEN,MAIN_INFDEG VES_ABSENT V_ABSENT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
 trig_tt_big,RULED,MAIN_INFDEG VES_ABSENT V_ABSENT,A12-ttb-m;A12-ttb-p
-trig_tt_pois,HIDDEN,MAIN_INFDEG VES_ABSENT V_ABSENT,UNRULED
-trig_bigcodes,HIDDEN,WINDOW_SHORT,UNRULED
+trig_tt_pois,HIDDEN,MAIN_INFDEG VES_ABSENT V_ABSENT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
+trig_bigcodes,HIDDEN,WINDOW_SHORT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
 trig_imdeg_part,PART_RULED,MAIN_INFDEG V_DIAG_DEAD,A17-part-p;A17-part-w
 cov_advpool,BY_CONSTRUCTION,ADV_POOLED_NOP,NFADV-core-p
 adm_svpsg,RULED,PWSGS_DEAD SGDEGEN,BS15-pw-adm_svpsg
@@ -124,10 +124,10 @@ ext_b4_h03_f4,BY_CONSTRUCTION,ADV_IMPOSSIBLE_WINDOW,NFADV-ext-p
 ext_b4_h11_p,BY_CONSTRUCTION,ADV_POOLED_NOP,NFADV-ext-p
 ext_b4_h22_p,BY_CONSTRUCTION,ADV_POOLED_NOP,NFADV-ext-p
 ext_b4_h33_p,BY_CONSTRUCTION,ADV_POOLED_NOP,NFADV-ext-p
-ext_b4_h55_p,PART_RULED,ADV_POOLED_NOP WINDOW_SHORT,"NFADV-ext-p;UNRULED: WINDOW_SHORT att_s1 pre4/5 - SG1 loses pre5 to the forced reference, silent under the grid's safety(off) (audit F8, critique A4/A5)"
-ext_b4_h55_f1,HIDDEN,WINDOW_SHORT,UNRULED
-ext_b4_h55_f2,HIDDEN,WINDOW_SHORT,UNRULED
-ext_b4_h55_f4,HIDDEN,WINDOW_SHORT,UNRULED
+ext_b4_h55_p,PART_RULED,ADV_POOLED_NOP WINDOW_SHORT,"NFADV-ext-p;PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface): WINDOW_SHORT att_s1 pre4/5 - SG1 loses pre5 to the forced reference, silent under the grid's safety(off) (audit F8, critique A4/A5)"
+ext_b4_h55_f1,HIDDEN,WINDOW_SHORT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
+ext_b4_h55_f2,HIDDEN,WINDOW_SHORT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
+ext_b4_h55_f4,HIDDEN,WINDOW_SHORT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
 ext_c1_h00_p,BY_CONSTRUCTION,ADV_IMPOSSIBLE_WINDOW JT_WINDOW_SHORT,NFADV-ext-p
 ext_c1_h00_f1,BY_CONSTRUCTION,ADV_IMPOSSIBLE_WINDOW JT_WINDOW_SHORT,NFADV-ext-p
 ext_c1_h00_f2,BY_CONSTRUCTION,ADV_IMPOSSIBLE_WINDOW JT_WINDOW_SHORT,NFADV-ext-p
@@ -171,7 +171,7 @@ ext_c2_h55_p,BY_CONSTRUCTION,ADV_POOLED_NOP,NFADV-ext-p
 ext_cont_ext_untreatedzero,PART_RULED,B_ZERO ES_NDEGEN MAIN_INFDEG V_DIAG_DEAD V_es_ame_DIAG_DEAD,A17-uz
 ext_san_input_missing,RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_ABSENT,SI20-L-ext_san_input_missing-macr-properties;SI20-L-ext_san_input_missing-mat-V;SI20-L-ext_san_input_missing-mat-wdidmainresults
 ext_cov10_rcs_pweight_ddd_c1,RULED,PWSGS_DEAD,DDG-pw-1
-ext_cov10_rcs_twoway_cluster_c2,HIDDEN,MAIN_INFDEG PWSGS_DEAD SG_DEAD VES_ABSENT V_ABSENT,UNRULED
+ext_cov10_rcs_twoway_cluster_c2,HIDDEN,MAIN_INFDEG PWSGS_DEAD SG_DEAD VES_ABSENT V_ABSENT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
 ext_path10_sparse_subgroup,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: prep drops sg_three==1 & t<5 leaving sg1 one pre period while esprelength(2) (data_classes.csv config:ext_path10_sparse_subgroup)
 ext_contract10_rcs_factor_fe,PART_RULED,B_ZERO MAIN_INFDEG PWSGS_DEAD SG_DEAD VES_ABSENT V_ABSENT,SI7-sg-m
 # ---------------- 2026-09-13 Stage B first-run adjudication: the two new fixtures ----------------
@@ -181,7 +181,7 @@ bien_aw,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: dta_s_biennial is a spacing-
 bien_es,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: dta_s_biennial is a spacing-2 calendar (data_classes.csv) so esprelength(4) espostlength(5) realizes pre4 pre2 post0 post2 post4 -> pre2/4+post3/5; the empty odd horizons ARE this config's test subject (configs.csv bien_es)
 bien_esf2,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: dta_s_biennial is a spacing-2 calendar (data_classes.csv) and esrelativeto(-2) drops cohort 2011 whose base period is the 2009 hole; the surviving cohort realizes pre4 post0 post2 -> pre1/4+post2/4 (configs.csv bien_esf2)
 bien_pois,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: dta_s_biennial is a spacing-2 calendar (data_classes.csv) so relative period -1 and +1 exist for no cohort and esprelength(2) espostlength(2) realizes pre2+post0 only -> pre1/2+post1/2 (help esprelength() slot note e26b3dd)
-real_boot,HIDDEN,BOOTRES_DEAD BOOT_CI_BC_DEAD BOOT_P_BC_DEAD,"UNRULED: BC family only - z0 = invnormal(1) is missing because all 10 draws of ES_att_pre2 fall below the observed estimate at reps(10), and wooldid.ado:15172 skips the column; e(boot_display) is percentile so the printed tables are live. No caution and nothing in sthlp:539/:1310 names this case"
-real_boot_t,HIDDEN,BOOTRES_DEAD BOOT_CI_BC_DEAD BOOT_P_BC_DEAD,"UNRULED: as real_boot - identical rseed(12345) draws, so the same ES_att_pre2 column; under boottstat the BC family is not even displayable (sthlp:539), so this is a stored-only surface"
+real_boot,HIDDEN,BOOT_FAILED BOOT_INCOMPLETE,"PINNED_DEGENERATE (ruled 2026-09-13, RELABELLED the same day): this row pinned the WITHHELD BIAS-CORRECTED family at reps(10). Raising to reps(60) - a separate ruling the same day - made that family fully alive, so THAT surface now has no host anywhere in the deck and the loss was accepted knowingly. What this row pins now is the replication loss itself: the resample loses all three never-treated states on 2 of 60 draws (boot_failed 2, boot_completed 58 under rseed(12345), measured 2026-09-13) - (9/12)^12 = 3.2% per replication is a property of G=12, so the lost draws are the surface and no reps() setting removes them. REPLACES the BC-family stems this row carried at reps(10) (BOOTRES_DEAD BOOT_CI_BC_DEAD BOOT_P_BC_DEAD: z0 = invnormal(1) undefined because all 10 draws of ES_att_pre2 fell below the observed estimate, wooldid.ado:15172): at reps(60) e(boot_bc_absent) is empty and boot_z0/boot_ci_bc/boot_p_bc are complete. real_boot and real_boot_t were the only hosts of the BC-withheld surface, which now has none. Stems measured on the two configs directly, not through a degeneracy component run"
+real_boot_t,HIDDEN,BOOT_FAILED BOOT_INCOMPLETE,"PINNED_DEGENERATE (ruled 2026-09-13, RELABELLED the same day): this row pinned the WITHHELD BIAS-CORRECTED family at reps(10). Raising to reps(60) - a separate ruling the same day - made that family fully alive, so THAT surface now has no host anywhere in the deck and the loss was accepted knowingly. What this row pins now is the replication loss itself: as real_boot - identical rseed(12345) draws, so the same two lost replications (boot_failed 2, boot_completed 58 at reps(60), measured 2026-09-13). Its BC-family stems went the same way as real_boot's and for the same reason"
 real_sg,RULED,PWSGS_DEAD SGDEGEN,BS15-pw-real_sg
 trig_bigcodes_gridwin,DATASET_DESIGN,WINDOW_SHORT,"DATASET_DESIGN: dta_s_bigcodes is a YYYYMMDD month-start grid spaced 100 apart (data_classes.csv) and wooldid's relative period is t - ttre in those raw units (wooldid.ado:11596), so a requested window of L slots can realize at most floor(L/100) horizons on either side and NO multi-horizon window can ever be fully realized. esprelength(200) espostlength(200) is the genuinely realizable window - it realizes every relative period the grid holds inside it (pre200 pre100 post0 post100) and reproduces the small-recode twin trig_bigids_month bit-exactly - so the pre2/200+post2/200 shortfall is a horizon-counting artifact, not a dead surface (configs.csv trig_bigcodes_gridwin)"

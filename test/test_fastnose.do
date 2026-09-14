@@ -73,10 +73,29 @@ else {
     dis as error "T2 FAIL: e(V) posted under fastnose"
     local ++fails
   }
+  * 2026-09-13 author ruling: fast mode posts the event-study COEFFICIENT vector and
+  * e(numpre_*) - sthlp:1295 always said it did - and still no covariance. Both halves
+  * are pinned here, on the main family and on a subgroup twin
   cap confirm matrix e(b_es_att)
-  if _rc == 0 {
-    dis as error "T2 FAIL: e(b_es_att) posted under fastnose"
+  if _rc != 0 {
+    dis as error "T2 FAIL: e(b_es_att) not posted under fastnose"
     local ++fails
+  }
+  cap confirm matrix e(b_es_att_s1)
+  if _rc != 0 {
+    dis as error "T2 FAIL: e(b_es_att_s1) not posted under fastnose"
+    local ++fails
+  }
+  if e(numpre_att) != 2 {
+    dis as error "T2 FAIL: e(numpre_att) = " e(numpre_att) " under fastnose, expected 2"
+    local ++fails
+  }
+  foreach t2v in V_es_att V_es_att_it V_es_att_s1 V_es_att_it_s1 {
+    cap confirm matrix e(`t2v')
+    if _rc == 0 {
+      dis as error "T2 FAIL: e(`t2v') posted under fastnose"
+      local ++fails
+    }
   }
   if "`e(joint_att_allsgssame)'" != "" | "`e(joint_horiz)'" != "" {
     dis as error "T2 FAIL: joint-test results posted under fastnose"

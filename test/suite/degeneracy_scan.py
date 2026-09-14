@@ -1126,7 +1126,7 @@ def main():
             if e["class"] in ("RULED", "PART_RULED"):
                 for cid in e["citation"].split(";"):
                     cid = cid.strip()
-                    if cid and not cid.startswith("UNRULED") and cid not in ledger_ids:
+                    if cid and not cid.startswith("UNRULED") and not cid.startswith("PINNED_DEGENERATE") and cid not in ledger_ids:
                         # RF-12: a citation that resolves to nothing is a broken contract, same tier.
                         warns.append(f"dangling ledger citation: {cfg} cites '{cid}' which is not a ledger.csv id")
                         classmoved.append(cfg)
@@ -1142,6 +1142,12 @@ def main():
                 stale.append(f"{cfg}: expectation on a config outside the assertion universe (class={S['cls']}, rc_new={S['rc_expected']})")
     n_unruled = sum(1 for e in exp.values() if "UNRULED" in e["citation"])
     if n_unruled: warns.append(f"{n_unruled} degeneracy_expected.csv rows carry UNRULED citations (pending an author ruling)")
+    # Ruled 2026-09-13: keep these as pins of their degenerate surface rather than re-hosting
+    # or silently accepting them. They stay WARNed on purpose - the author's stated reason for
+    # keeping them was that the warning keeps them visible rather than forgotten - but they are
+    # no longer PENDING, so the wording above would be false for them.
+    n_pinned = sum(1 for e in exp.values() if "PINNED_DEGENERATE" in e["citation"])
+    if n_pinned: warns.append(f"{n_pinned} degeneracy_expected.csv rows are PINNED degenerate surfaces (ruled 2026-09-13: kept as pins, kept visible deliberately)")
     # RF-13 (2026-09-13): DEGENERACY.md states a census of this CSV in prose, and prose goes
     # stale in silence - it said 165 rows and 10 UNRULED within an hour of nine rows being
     # added, and nothing in the suite noticed because no component checks a document's

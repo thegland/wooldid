@@ -10,8 +10,11 @@ Why it exists: `oldnew` compares HEAD against v1.3 cell by cell, so a surface th
 option. That is the "looks covered, is degenerate" class the Stage A audit (2026-09-13) set out to
 find, and this component makes it mechanical. As shipped, `degeneracy_expected.csv` holds 175
 rows: 131 BY_CONSTRUCTION, 13 PART_RULED, 11 HIDDEN, 11 DATASET_DESIGN, 9 RULED.
-12 of those rows carry an `UNRULED` citation and are waiting on the author. Count the UNRULED
-citations, not the HIDDEN class, when you want to know what is still open.
+0 of those rows carry an `UNRULED` citation and are waiting on the author. A further
+12 are `PINNED_DEGENERATE`: ruled 2026-09-13 to be KEPT as pins of their degenerate
+surface rather than re-hosted or silently accepted. Those still WARN on every run, on purpose -
+the warning is what keeps them visible rather than forgotten - but they are no longer pending.
+Count the UNRULED citations, not the HIDDEN class, when you want to know what is still open.
 
 Files: `degeneracy_scan.py` (the scanner), `degeneracy_expected.csv` (the contract), this note.
 The `run_full.sh` hook (`do_degeneracy`, component name `degeneracy`, after `oldnew` in `all`)

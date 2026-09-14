@@ -2,7 +2,9 @@
 * Run from test/: stata-mp -e do test_bootstrap_bayes.do
 * O1/O2: BITWISE oracle vs a manual rwgen-bayes-driven rep loop (both alpha
 * conventions - proves draws, weight injection and accumulation exactly reproduce
-* the rwgen/bayesboot weight algorithm). O3: point estimates never change. O4 aw;
+* the rwgen/bayesboot weight algorithm; O2d pins the size divisor against a WEIGHTED
+* unbalanced panel, where it is the only thing keeping the replications on the
+* estimate). O3: point estimates never change. O4 aw;
 * O5 poisson pw; O6 subgroups (SG tables rewired, pwsgs blanked); O7 esf + the A8
 * raw-esprelength emission; O8 replay; O9 state hygiene; O10 d3-class contreat
 * parity with the analytic scrub. Prints BOOTBAYES_ALL_PASS iff all pass.
@@ -143,6 +145,67 @@ mata: st_numscalar("o2c_meansz", mean(select(st_matrix("e(bootdist)")[., 1], st_
 di "O2c_MEAN_EQUAL=" o2c_mean " MEAN_STANDARD=" o2c_meanstd " MEAN_SIZE=" o2c_meansz " ATT=" `attobs'
 if abs(o2c_mean - o2c_meanstd) > 0.15 {
   di as error "O2c FAIL: equal-alpha replication mean " o2c_mean " is not beside the standard engine's " o2c_meanstd
+  local ++fails
+}
+
+* ---- O2d (author ruling 2026-09-13, quality-review F001): bootalpha(size) on a WEIGHTED
+* unbalanced panel. The engine divides the cluster's Dirichlet draw by a divisor that has
+* to be proportional to the Gamma SHAPE, which under size is the cluster's ROW COUNT n_c:
+* E[p_c] = n_c/N, so each row's expected multiplier is 1/N and the replications centre on
+* the same weighted estimand the point estimate targets. The divisor shipped until
+* 2026-09-13 was the cluster's base-weight TOTAL W_c, which is the SAME NUMBER unweighted
+* (a total() of ones) and is why no existing leg saw it. Weighted, it put expected mass
+* n_c/(N W_c) on each row - the row-count-weighted estimand - and the replication
+* distribution came away from the estimate: every draw on one side, the whole BC family
+* withheld, and no reps() setting repairs any of it.
+* The weight below is constant WITHIN state and rises with the state's treatment effect,
+* so W_c/n_c differs by a factor of ~40 across clusters and the weighted att is far from
+* the row-count-weighted one - the discriminating shape. THIS LEG FAILS ON A PRE-FIX
+* BUILD (measured on ado_pristine: max |z| = 6.51, e(boot_bc_absent) = pretreatment_att
+* ES_att_pre1); after the fix max |z| = 0.17 and nothing is withheld.
+cap prog drop mkpan_unbw
+prog def mkpan_unbw
+  clear
+  set obs 12
+  gen state = _n
+  gen nunits = _n
+  expand nunits
+  gen unit = _n
+  gen ttre = cond(mod(state, 2) == 1, 5, .)
+  expand 8
+  bysort unit: gen t = _n
+  set seed 12
+  gen y = (0.1*nunits)*(t>=ttre & ttre<.) + 0.1*state + 0.05*t + rnormal()
+  gen double wt = 0.05 + 0.5*state
+end
+mkpan_unbw
+qui wooldid y unit t ttre [aw=wt], att cluster(state) esprelength(1) espostlength(1) ///
+    bootstrap(bayes) reps(80) rseed(557) bootalpha(size) dots(0)
+matrix O2DD = e(bootdist)
+matrix O2DB = e(b)
+local o2dbc `e(boot_bc_absent)'
+local o2dK = colsof(O2DD)
+local o2dzmax = 0
+local o2dncol = 0
+preserve
+clear
+qui set obs `=rowsof(O2DD)'
+qui svmat double O2DD, names(o2dc)
+forval c = 1/`o2dK' {
+  qui sum o2dc`c'
+  if r(N) >= 5 & r(sd) > 0 & !missing(O2DB[1, `c']) {
+    local o2dzmax = max(`o2dzmax', abs((r(mean) - O2DB[1, `c'])/r(sd)))
+    local ++o2dncol
+  }
+}
+restore
+di "O2d_WEIGHTED_SIZE_MAXZ=" `o2dzmax' " over `o2dncol' column(s); bc_absent=[`o2dbc']"
+if `o2dzmax' > 1 | `o2dncol' < 3 {
+  di as error "O2d FAIL: the bootalpha(size) replication mean is `o2dzmax' bootstrap deviations from the estimate (max over `o2dncol' columns); the size divisor is not the cluster's row count"
+  local ++fails
+}
+if "`o2dbc'" != "" {
+  di as error "O2d FAIL: the bias-corrected family is withheld for [`o2dbc'] on a centred weighted bayes run"
   local ++fails
 }
 

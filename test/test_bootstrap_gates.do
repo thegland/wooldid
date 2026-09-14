@@ -883,8 +883,10 @@ if `g35jk' > 2 | `g35cimiss' != 1 | `g35sd' >= . | `g35sd' != `g35sdbc' | `g35bl
 cap erase boot_gates_g35.txt
 
 * G36 (BS-18): bootsave() under bootalpha(size) writes row 0 on the replication scale -
-* the invariant sum_c W_c w_c = 1 (W_c = 8 rows per unit here, so the row total of the
-* w_ columns is 1/8) holds on every row including _rep = 0
+* the invariant sum_c n_c w_c = 1 (n_c = 8 rows per unit here, so the row total of the
+* w_ columns is 1/8) holds on every row including _rep = 0. n_c, the cluster's ROW COUNT,
+* is the divisor since the 2026-09-13 ruling; unweighted it equals the base-weight total
+* this leg was written against, so the expected numbers are unchanged
 use `panel', clear
 cap erase boot_gates_g36.dta
 cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) bootalpha(size) reps(8) rseed(7) bootsave(boot_gates_g36)
