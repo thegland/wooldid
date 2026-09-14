@@ -1,0 +1,204 @@
+files: 4   G values: [40]
+estimation errors by tag: none
+
+==============================================================================
+hom  (common onset)
+==============================================================================
+
+-- wooldid esfixedbaseperiod, i = unit id   [esfeb_hom]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   ES_att_pre2       500    0.1798    0.1712   0.952   0.926
+   ES_att_pre3       500    0.1791    0.1699   0.949   0.948
+   ES_att_pre4       500    0.1775    0.1731   0.975   0.926
+   ES_att_pre5       500    0.1829    0.1707   0.933   0.910
+   ES_att_pre6       500    0.1761    0.1702   0.966   0.932
+   ES_att_post0      500    0.1719    0.1700   0.989   0.952
+   ES_att_post1      500    0.1836    0.1695   0.923   0.936
+   ES_att_post2      500    0.1691    0.1687   0.997   0.940
+   ES_att_post3      500    0.1798    0.1684   0.937   0.924
+   ES_att_post4      500    0.1802    0.1706   0.947   0.938
+   ES_att_post5      500    0.1779    0.1700   0.955   0.932
+   main_att          500    0.1358    0.1288   0.948   0.938
+   pretreatment_att  500    0.1390    0.1319   0.949     nan
+   -> median SE/SD 0.949   median cov95 0.934   n=500
+
+-- wooldid esfixedbaseperiod, i = cohort id   [esfceb_hom]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   ES_att_pre2       500    0.1798    0.1832   1.019   0.944
+   ES_att_pre3       500    0.1791    0.1825   1.019   0.958
+   ES_att_pre4       500    0.1775    0.1836   1.034   0.936
+   ES_att_pre5       500    0.1829    0.1830   1.000   0.944
+   ES_att_pre6       500    0.1761    0.1834   1.041   0.956
+   ES_att_post0      500    0.1719    0.1833   1.066   0.966
+   ES_att_post1      500    0.1836    0.1825   0.994   0.952
+   ES_att_post2      500    0.1691    0.1823   1.078   0.960
+   ES_att_post3      500    0.1798    0.1827   1.017   0.950
+   ES_att_post4      500    0.1802    0.1833   1.017   0.960
+   ES_att_post5      500    0.1779    0.1830   1.029   0.952
+   main_att          500    0.1358    0.1392   1.025   0.954
+   pretreatment_att  500    0.1390    0.1414   1.017     nan
+   -> median SE/SD 1.019   median cov95 0.953   n=500
+
+-- wooldid pooled esprelength(0), i = unit id   [pooleb_hom]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   ES_att_post0      500    0.1363    0.1093   0.802   0.870
+   ES_att_post1      500    0.1351    0.1097   0.812   0.888
+   ES_att_post2      500    0.1258    0.1106   0.879   0.900
+   ES_att_post3      500    0.1392    0.1109   0.796   0.876
+   ES_att_post4      500    0.1402    0.1102   0.786   0.852
+   ES_att_post5      500    0.1390    0.1111   0.799   0.876
+   main_att          500    0.0746    0.0592   0.794   0.856
+   -> median SE/SD 0.799   median cov95 0.876   n=500
+
+-- wooldid pooled esprelength(0), i = cohort id   [poolceb_hom]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   ES_att_post0      500    0.1363    0.1390   1.020   0.962
+   ES_att_post1      500    0.1351    0.1386   1.026   0.954
+   ES_att_post2      500    0.1258    0.1400   1.113   0.962
+   ES_att_post3      500    0.1392    0.1406   1.010   0.946
+   ES_att_post4      500    0.1402    0.1394   0.994   0.944
+   ES_att_post5      500    0.1390    0.1399   1.006   0.940
+   main_att          500    0.0746    0.0747   1.002   0.950
+   -> median SE/SD 1.010   median cov95 0.950   n=500
+
+-- csdid long2 estat event   [CONTROL]   [cs_hom]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   Tm2               500    0.1798    0.1728   0.961   0.932
+   Tm3               500    0.1791    0.1721   0.961   0.942
+   Tm4               500    0.1775    0.1732   0.975   0.928
+   Tm5               500    0.1829    0.1726   0.943   0.932
+   Tm6               500    0.1761    0.1729   0.982   0.948
+   Post_avg          500    0.1358    0.1313   0.967   0.934
+   Pre_avg           500    0.1390    0.1333   0.959     nan
+   Tp0               500    0.1719    0.1729   1.006   0.960
+   Tp1               500    0.1836    0.1721   0.937   0.938
+   Tp2               500    0.1691    0.1719   1.017   0.948
+   Tp3               500    0.1798    0.1724   0.959   0.940
+   Tp4               500    0.1802    0.1729   0.959   0.940
+   Tp5               500    0.1779    0.1726   0.970   0.934
+   -> median SE/SD 0.961   median cov95 0.939   n=500
+
+-- did_imputation horizons   [CONTROL]   [di_hom]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   tau0              500    0.1363    0.1319   0.967   0.948
+   tau1              500    0.1351    0.1315   0.973   0.950
+   tau2              500    0.1258    0.1328   1.055   0.954
+   tau3              500    0.1392    0.1334   0.958   0.930
+   tau4              500    0.1402    0.1322   0.943   0.928
+   tau5              500    0.1390    0.1327   0.954   0.922
+   -> median SE/SD 0.963   median cov95 0.939   n=500
+
+   CONTROLS (cs, di) inside [SE/SD >= 0.9, cov >= 0.93]: True
+   ok    esfeb    SE/SD 0.949  cov 0.934
+   ok    esfceb   SE/SD 1.019  cov 0.953
+   FLAG  pooleb   SE/SD 0.799  cov 0.876  <- below band while both controls are inside it
+   ok    poolceb  SE/SD 1.010  cov 0.950
+
+==============================================================================
+stag  (staggered, two onsets)
+==============================================================================
+
+-- wooldid esfixedbaseperiod, i = unit id   [esfeb_stag]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   ES_att_pre2       500    0.1563    0.1219   0.780   0.862
+   ES_att_pre3       500    0.1645    0.1214   0.738   0.838
+   ES_att_pre4       500    0.1489    0.0845   0.567   0.726
+   ES_att_pre5       500    0.2339    0.1703   0.728   0.832
+   ES_att_pre6       500    0.2277    0.1722   0.756   0.848
+   ES_att_pre7       500    0.2440    0.1689   0.692   0.808
+   ES_att_post0      500    0.1607    0.1200   0.747   0.844
+   ES_att_post1      500    0.1576    0.1227   0.778   0.852
+   ES_att_post2      500    0.1457    0.0861   0.591   0.740
+   ES_att_post3      500    0.1566    0.1217   0.777   0.864
+   ES_att_post4      500    0.1632    0.1204   0.738   0.838
+   ES_att_post5      500    0.2307    0.1723   0.747   0.832
+   ES_att_post6      500    0.2272    0.1722   0.758   0.834
+   ES_att_post7      500    0.2230    0.1683   0.754   0.848
+   main_att          500    0.1281    0.0945   0.738   0.848
+   pretreatment_att  500    0.1376    0.0984   0.715     nan
+   -> median SE/SD 0.742   median cov95 0.838   n=500
+
+-- wooldid esfixedbaseperiod, i = cohort id   [esfceb_stag]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   ES_att_pre2       500    0.1563    0.1596   1.021   0.950
+   ES_att_pre3       500    0.1645    0.1587   0.965   0.940
+   ES_att_pre4       500    0.1489    0.1438   0.966   0.924
+   ES_att_pre5       500    0.2339    0.2205   0.943   0.926
+   ES_att_pre6       500    0.2277    0.2229   0.979   0.938
+   ES_att_pre7       500    0.2440    0.2205   0.904   0.898
+   ES_att_post0      500    0.1607    0.1591   0.990   0.946
+   ES_att_post1      500    0.1576    0.1590   1.009   0.946
+   ES_att_post2      500    0.1457    0.1440   0.988   0.932
+   ES_att_post3      500    0.1566    0.1584   1.012   0.942
+   ES_att_post4      500    0.1632    0.1583   0.970   0.934
+   ES_att_post5      500    0.2307    0.2242   0.972   0.932
+   ES_att_post6      500    0.2272    0.2210   0.973   0.930
+   ES_att_post7      500    0.2230    0.2203   0.988   0.952
+   main_att          500    0.1281    0.1231   0.961   0.924
+   pretreatment_att  500    0.1376    0.1292   0.939     nan
+   -> median SE/SD 0.972   median cov95 0.934   n=500
+
+-- wooldid pooled esprelength(0), i = unit id   [pooleb_stag]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   ES_att_post0      500    0.1173    0.0731   0.623   0.778
+   ES_att_post1      500    0.1127    0.0739   0.656   0.798
+   ES_att_post2      500    0.1108    0.0739   0.667   0.780
+   ES_att_post3      500    0.1150    0.0850   0.740   0.848
+   ES_att_post4      500    0.1253    0.0842   0.672   0.794
+   ES_att_post5      500    0.1774    0.1155   0.651   0.784
+   ES_att_post6      500    0.1788    0.1144   0.640   0.770
+   ES_att_post7      500    0.1710    0.1130   0.661   0.802
+   main_att          500    0.0725    0.0541   0.746   0.850
+   -> median SE/SD 0.661   median cov95 0.794   n=500
+
+-- wooldid pooled esprelength(0), i = cohort id   [poolceb_stag]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   ES_att_post0      500    0.1173    0.1174   1.001   0.942
+   ES_att_post1      500    0.1127    0.1171   1.039   0.948
+   ES_att_post2      500    0.1108    0.1173   1.059   0.954
+   ES_att_post3      500    0.1150    0.1242   1.080   0.952
+   ES_att_post4      500    0.1253    0.1234   0.985   0.928
+   ES_att_post5      500    0.1774    0.1739   0.981   0.946
+   ES_att_post6      500    0.1788    0.1730   0.967   0.936
+   ES_att_post7      500    0.1710    0.1720   1.006   0.946
+   main_att          500    0.0725    0.0732   1.009   0.962
+   -> median SE/SD 1.006   median cov95 0.946   n=500
+
+-- csdid long2 estat event   [CONTROL]   [cs_stag]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   Tm2               500    0.1563    0.1530   0.979   0.936
+   Tm3               500    0.1645    0.1515   0.921   0.928
+   Tm4               500    0.1489    0.1389   0.933   0.910
+   Tm5               500    0.2339    0.2051   0.877   0.906
+   Tm6               500    0.2277    0.2073   0.911   0.918
+   Tm7               500    0.2440    0.2051   0.841   0.878
+   Post_avg          500    0.1335    0.1277   0.956   0.910
+   Pre_avg           500    0.1485    0.1289   0.868     nan
+   Tp0               500    0.1607    0.1645   1.024   0.960
+   Tp1               500    0.1576    0.1640   1.041   0.958
+   Tp2               500    0.1457    0.1527   1.048   0.946
+   Tp3               500    0.1566    0.1643   1.050   0.950
+   Tp4               500    0.1632    0.1646   1.009   0.942
+   Tp5               500    0.2307    0.2085   0.904   0.916
+   Tp6               500    0.2272    0.2055   0.905   0.908
+   Tp7               500    0.2230    0.2049   0.919   0.926
+   -> median SE/SD 0.927   median cov95 0.926   n=500
+
+-- did_imputation horizons   [CONTROL]   [di_stag]
+   coef                n     SD(b)    meanSE   SE/SD   cov95
+   tau0              500    0.1173    0.1103   0.941   0.932
+   tau1              500    0.1127    0.1100   0.976   0.942
+   tau2              500    0.1108    0.1103   0.995   0.940
+   tau3              500    0.1150    0.1167   1.016   0.944
+   tau4              500    0.1253    0.1160   0.926   0.908
+   tau5              500    0.1774    0.1635   0.922   0.914
+   tau6              500    0.1788    0.1626   0.909   0.918
+   tau7              500    0.1710    0.1617   0.946   0.940
+   -> median SE/SD 0.943   median cov95 0.936   n=500
+
+   CONTROLS (cs, di) inside [SE/SD >= 0.9, cov >= 0.93]: False
+   -> C.6's flag rule does NOT apply on this DGP: a wooldid arm below band here is not evidence about wooldid, because a control is below band too.
+   note  esfeb    SE/SD 0.742  cov 0.838  (below band, but see above)
+   ok    esfceb   SE/SD 0.972  cov 0.934
+   note  pooleb   SE/SD 0.661  cov 0.794  (below band, but see above)
+   ok    poolceb  SE/SD 1.006  cov 0.946
