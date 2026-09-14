@@ -2813,6 +2813,26 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         if (`espre' > 0 & "`esfixedbaseperiod'" == "") | ("`esfixedbaseperiod'" == "esfixedbaseperiod" & (`esrelativeto' < -1 | (`min_t' > 2 | (`min_t' > 1 & "`timetrends'" == "")))) {
           tempname ___`item'_pre_s
           local sgpre 1
+          * F1 (2026-09-14): the subgroups the PRE-PERIOD subpopulation actually realizes.
+          * when it realizes exactly one, margins drops the over() stripe altogether and names
+          * the single row for the targetflag tempvar (1.__000005), so no returned name carries
+          * the subgroup token and the name match below cannot say WHICH subgroup the row is.
+          * that match used to rescue the shape off wordcount(`sglist'), the POST-period count,
+          * which is a different quantity: at two post-period subgroups and one pre-period one
+          * it never fired and every subgroup lost its pre-treatment row, estimable or not
+          * domain = the subpop of the level call that produces the collapsed stripe (the
+          * pwcompare twin adds & `ttre' != ., a subset, so this list is a superset of what
+          * either call can realize and the rescue errs toward NOT firing). computed over the
+          * data rather than e(sample) for the same reason. glevelsof is rclass: this site is
+          * chosen because the posttreatment r() above has already been read into ___`item'_s
+          * (or deferred to a later pass that re-issues its own margins), and nothing between
+          * here and the pre-period margins call reads r()
+          if "`sgprelistdone'" == "" {
+            local sgprelist
+            cap qui glevelsof(`subgroups') if `ifstatement' & `targetflag'==1 & `t' < `ttre' & `_t' != 0 , clean local(sgprelist)
+            if _rc != 0 local sgprelist
+            local sgprelistdone 1
+          }
 
           if "`impvalues'" == "" {
             * EFF3: see the posttreatment twin. the pre-period comparison pass is
@@ -3560,7 +3580,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       local sgnum 0
       local sgmatricestodrop
       foreach sgcase in `sglist' {
-        local sglistlength = wordcount("`sglist'")
         *sgpre is for any sg; sghaspre is the sg being looped through. sghaspre yes is a default addressed later and updated only if necessary
         local sghaspre yes
         local ++sgnum
@@ -3591,11 +3610,36 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                   local word = subinstr("`word'","bn.`subgroups'","",.)
                   local word = subinstr("`word'",".`subgroups'","",.)
                   if "`word'" == "`sgcase'" local truerow `wordcounter'
-                  * include an adjustment in case only 1 sg group exists
-                  if strpos("`word'","`subgroups'") == 0 & `sglistlength' == 1 local truerow `wordcounter'
+                  * include an adjustment in case only 1 sg realizes in the pre-period
+                  * subpopulation: margins then returns the targetflag level rather than an
+                  * over() stripe, so `word' carries no subgroup token at all. `sgprelist'
+                  * (F1, built beside the pre-period margins call) is the one thing on hand
+                  * that names the realizing subgroup, and the equality below is both tests at
+                  * once - exactly one realized level, and it is this sgcase's
+                  if strpos("`word'","`subgroups'") == 0 & "`sgprelist'" == "`sgcase'" local truerow `wordcounter'
                   local ++wordcounter
                 }
-                if "`truerow'" == "" local sghaspre no
+                * F2 (2026-09-14): record the withholding rather than performing it silently.
+                * the gate above skips every later round and object once sghaspre is no, so a
+                * subgroup enters these three parallel lists exactly once. the reason is the
+                * discriminator the site already holds: a subgroup missing from the realized
+                * pre-period levels has no pre-period cells to average, while one that IS
+                * there reached this line because margins returned its level carrying the
+                * omission marker, which the strip above cannot turn back into the sg value
+                * the round says WHICH rows go: flipping at pre costs the subgroup every
+                * pre-treatment row it would have had (the gate suppresses contpre too),
+                * while flipping at contpre costs only the continuous-treatment pre-treatment
+                * marginal effect - its pre-treatment att row is already appended and stays.
+                * (pre precedes contpre in roundlist, so a nocells subgroup always flips at
+                * pre and the contpre x nocells pair is unreachable by construction)
+                if "`truerow'" == "" {
+                  local sghaspre no
+                  local sgnopre `sgnopre' `sgcase'
+                  if strpos(" `sgprelist' ", " `sgcase' ") == 0 local sgnoprewhy `sgnoprewhy' nocells
+                  else local sgnoprewhy `sgnoprewhy' omitted
+                  if "`round'" == "contpre" local sgnoprerow `sgnoprerow' ame
+                  else local sgnoprerow `sgnoprerow' all
+                }
               }
               else{
                 local truerow
@@ -4357,6 +4401,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   ereturn hidden local wdid_contreat "`contreat'"
   ereturn hidden local wdid_sgvar "`subgroups'"
   ereturn hidden local wdid_sglist "`sglist'"
+  * F2 (2026-09-14): the subgroups whose pre-treatment row was withheld, why, and which rows
+  * went, written as the sibling of wdid_sgdegen/wdid_sgdegenr/wdid_sgdegenact - read back by
+  * wooldid_display so replay reproduces the caution. the three lists are parallel (the k-th
+  * reason and k-th row token belong to the k-th subgroup). reasons: "nocells" (the subgroup
+  * realizes no pre-period cells outside the reference period) and "omitted" (it does, but
+  * margins marked its level omitted). rows: "all" (every pre-treatment row that subgroup
+  * would have had) and "ame" (only the continuous-treatment pre-treatment marginal effect;
+  * its pre-treatment att row is present). an ereturn local with an empty value creates no
+  * macro, so a run that withheld nothing posts none of the three and the caution cannot fire
+  ereturn hidden local wdid_sgnopre "`sgnopre'"
+  ereturn hidden local wdid_sgnoprewhy "`sgnoprewhy'"
+  ereturn hidden local wdid_sgnoprerow "`sgnoprerow'"
   ereturn hidden local wdid_estimands "`att' `att_it' `att_i' `att_itime'"
   ereturn hidden local wdid_cwm "`customweightmultiplier'"
   ereturn hidden local wdid_semielas "`semielasticity'"
@@ -10939,6 +10995,11 @@ version 16.0
   local contreat `e(wdid_contreat)'
   local subgroups `e(wdid_sgvar)'
   local sglist `e(wdid_sglist)'
+  * F2: the withheld-pre-treatment disclosure, posted by wooldid_worker. absent on every run
+  * that withheld nothing, and on any store written before the macro existed
+  local sgnopre `e(wdid_sgnopre)'
+  local sgnoprewhy `e(wdid_sgnoprewhy)'
+  local sgnoprerow `e(wdid_sgnoprerow)'
   local estimandlist `e(wdid_estimands)'
   local customweightmultiplier `e(wdid_cwm)'
   local semielasticity `e(wdid_semielas)'
@@ -11192,6 +11253,19 @@ version 16.0
         wooldid_mlfmt , mat(e(wdidsgresults_`sgcase'))
         matlist e(wdidsgresults_`sgcase'), cspec(`wdmlfmt') rspec(`wdmlfmtr')
         wooldid_pfloor e(wdidsgresults_`sgcase')
+        * F2 (2026-09-14): name the missing pre-treatment row. posted by wooldid_worker and
+        * read from e() so replay reproduces it, as the wdid_sgdegen caution is; written in
+        * the register of the SI-7 horizon caution, whose sibling it is - same mechanism on
+        * the whole-pre-history row rather than on a single relative period
+        local sgnopi : list posof "`sgcase'" in sgnopre
+        if `sgnopi' > 0 {
+          local sgnopr : word `sgnopi' of `sgnoprewhy'
+          local sgnopq : word `sgnopi' of `sgnoprerow'
+          local sgnopref The subgroups withheld this way are named in e(wdid_sgnopre), with the reason for each in e(wdid_sgnoprewhy) and the rows withheld in e(wdid_sgnoprerow).
+          if "`sgnopr'" == "nocells" dis as text "Caution: subgroup `subgroups' == `sgcase' has no usable pre-treatment observations outside the reference period, so it has no pre-treatment average and no pre-treatment row appears in the table above; its remaining rows, and all other subgroups, are unaffected. `sgnopref'"
+          else if "`sgnopq'" == "ame" dis as text "Caution: the pre-treatment average marginal effect of `contreat' for subgroup `subgroups' == `sgcase' is not estimable (margins reports its level as omitted), so its pre-treatment ame row is absent from the table above; the subgroup's pre-treatment att row, its remaining rows, and all other subgroups, are unaffected. This typically arises when the specified fixed effects absorb the subgroup-by-time variation in the pre-period. `sgnopref'"
+          else dis as text "Caution: the pre-treatment average(s) for subgroup `subgroups' == `sgcase' are not estimable (margins reports its level as omitted), so no pre-treatment row appears in the table above; its remaining rows, and all other subgroups, are unaffected. This typically arises when the specified fixed effects absorb the subgroup-by-time variation in the pre-period. `sgnopref'"
+        }
         dis as result  " "
         * F8: per-subgroup composition table under summarystats
         cap confirm matrix e(escomp_s`sgcase')
