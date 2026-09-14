@@ -23,8 +23,9 @@ Per config it reads the %21x dump and classifies every result surface as LIVE / 
 the feature flags the ado posts (perm_*/boot_*/es_ndegen_*/wdid_sgdegen/...), checks the
 realized event-study window against the requested one, counts exact-zero b cells and
 non-positive e(V) diagonals, joins the config's options (canonicalised with the same
-abbreviation rule coverage_check.py uses), its data class, the LARGE ledger rows that already
-explain a degeneracy, and the column-0 `Caution:` lines of its shard log.
+abbreviation rule coverage_check.py uses), its data class, the LARGE ledger rows that
+degeneracy_expected.csv cites as explaining a degeneracy, and the column-0 `Caution:` lines of
+its shard log.
 
 Classes (per clean-rc config; see DEGENERACY.md):
   CLEAN            no flag
@@ -32,9 +33,11 @@ Classes (per clean-rc config; see DEGENERACY.md):
                    (the config's own options make the surface impossible)
   INFO             only NOSE_BY_DESIGN / NCLUST_TINY / BES_ABSENT(impvalues|permute) /
                    SGDEGEN(:report) - the values are present or the mode computes no variance
-  RULED            every substantive flag's e() object is named by a LARGE ledger row for the
-                   config (first-match-wins, as compare_oldnew does)
-  PART_RULED       the ledger names some of them
+  RULED            every substantive flag's e() object is named by a LARGE ledger row that
+                   degeneracy_expected.csv CITES for the config (the citation column gates the
+                   join - see ledger_known; before 2026-09-14 any row on the same matrix
+                   counted, which credited rows written about something else)
+  PART_RULED       the cited rows name some of them
   HIDDEN           none of them - nobody has ruled this degeneracy
   (degeneracy_expected.csv may additionally class a row DATASET_DESIGN / DATA_EDGE: the data was
   built to lack the cells; those are HIDDEN or PART_RULED to the scanner.)
