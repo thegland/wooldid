@@ -42,3 +42,4 @@ suite/mc/out2/*/START.txt
 suite/mc/out3/**/*.log
 suite/mc/out3/*_runner.log
 .DS_Store
+suite/mc/out3/smoke_*/
