@@ -59,16 +59,38 @@ amendment. Every rep records its seed — any row reproduces standalone.
   (prints `MCB_CHECK` lines; NO analyzer consumes its `mc_bootse_*.csv`). It is NOT the
   bootstrap calibration guard — `mc_bootse2.do` + `analyze_bootse2.py` is.
 
-**6. Stage C scaffolds (written 2026-09-13, NOT yet run in production)** — the three
-measurements the 2026-09-13 assessment audit found owed. They are scaffolds: each parses,
-runs and writes its CSV, but no campaign has been run and there is no analyzer yet, so
-nothing here is evidence of anything until one is. Shared runner `run_stagec.sh`.
+**6. Stage C campaigns** — the measurements the 2026-09-13 assessment audit found owed.
+Shared runner `run_stagec.sh` (honours `MC_STATA_CAP`, default 6). **`bs12` RAN 2026-09-14**
+(200 reps per cell, B = 199, 8 shards, ~7 h); its results are tracked in `out3/bs12/` with the
+judged `bs12_report.md`. `bands` and `riext` are costed from smokes — 5.1 and 3.6 minutes per
+rep, so ~2.1 h and ~1.5 h at 25 reps a shard — and not yet run in production.
+- **`mc_ame_cellsize.do` + `analyze_ame_cellsize.py`** (added 2026-09-14) — size of the
+  CONTINUOUS adversarial line test as a function of observations per treated cohort-by-period
+  cell, which is the one precondition `wooldid.sthlp:745` states for that test ("on the order of
+  fifty") and which had never been measured. Holds the spec fixed and varies `U`, the units per
+  cohort, alone; a treated cell holds exactly `U` observations. Results of record in
+  `out3/cellsize/`: at six observations per cell the ame p rejects .402 at a nominal .05 and
+  uniformity is rejected outright; at fifty it rejects .110 and uniformity is not rejected — a
+  large improvement that is still about twice nominal. The `att` p from the SAME fit is .049 and
+  .080, inside band at both, which is what isolates this to the ame variance path. These are the
+  numbers the help now quotes (commit `6ccceec`).
+  `<stata> -e do mc_ame_cellsize.do <ado> <nreps> <outdir> <U> <first-shard> <last-shard>`
 - `mc_adv_bs12.do` — the paired SIZE ladder for the BS-12 one-parameter adversarial null.
   Every adversarial size number on record (`MC_REPORT_2026-08-24.md`,
   `REPORT_ADVBOUND_2026-08-26.md`, the help) was measured on the free-intercept statistic
   BS-12 replaced on 2026-09-10, and the ruling's own prerequisite simulation was never run.
   Arms: analytic p, permutation p, bootstrap. `./run_stagec.sh bs12 <outdir> <nreps> <B>
   <slope> <geoms|-> <shards...>`; slope 0 is the null arm.
+  **RAN 2026-09-14**, and the shipped statistic now has a number where every figure on record
+  had described its retired predecessor. Size at a nominal .05 on 200 reps, band [3,17]: AB1/an
+  .045 PASS, AB1C/an .050 PASS, PM/pm .035 PASS, AB13/an .180 FAIL, AB12/an .725 (containment,
+  not scored), AB12/bt .000 FAIL. So it is correctly sized where the help says it should be,
+  including under a continuous treatment on the att family. The two failures put numbers on the
+  help's qualitative claims — threefold at two clusters measured 4.0x, an order of magnitude
+  under containment measured 16x — and AB12/bt never rejecting at all is new and unruled.
+  The driver gained a `p_ame` column on 2026-09-14; the analyzer REPORTS it and does not score
+  it, because AB1C sits below the help's cell-size precondition by construction (see the P3
+  amendment in the preregistration). Judge the continuous case on `mc_ame_cellsize.do`.
 - `mc_bands.do` — coverage of the simultaneous sup-t band (`simultaneousbands`, PS-45) on
   the analytic-simulated and bootstrap-studentized engines, including a cluster strictly
   BELOW `i`, which no MC has ever used and which is the geometry the help recommends.

@@ -125,6 +125,11 @@ No slope != 0 rows in this outdir.
 `advw_n` is the count of usable replication W statistics behind that rep's p and `advw_max` their maximum; `tstud_n` is e(boot_tstud)'s n for main_att. A mean p far from the lattice mean, or an advw_max in the 1e10s, says the tail is one draw.
 
 
+## 5. The ame line test (reported, NOT scored)
+
+No `p_ame` column in this outdir - it was added to the driver on 2026-09-14, so runs older than that have none. Nothing to report; this is not a failure.
+
+
 ## Verdict summary
 
 - checks FAILED: 2

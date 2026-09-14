@@ -611,6 +611,43 @@ L.append("\n`advw_n` is the count of usable replication W statistics behind that
          "`advw_max` their maximum; `tstud_n` is e(boot_tstud)'s n for main_att. A mean p "
          "far from the lattice mean, or an advw_max in the 1e10s, says the tail is one draw.\n")
 
+# ---- 5. the ame line test: recorded from 2026-09-14, REPORTED and deliberately NOT SCORED.
+# The driver gained a p_ame column on 2026-09-14 (it was out of contract before, which is why
+# the preregistration's C5/P3 say the ame test is not scored here). It is reported rather than
+# banded because the only rung that produces it, AB1C, sits about an order of magnitude BELOW
+# the precondition wooldid.sthlp:745 states for the continuous line test - cells of "on the
+# order of fifty" observations, against AB1C's six. Banding a cell the help already declares
+# untrustworthy would manufacture a failure out of documented behaviour. The compliant
+# measurement is mc_ame_cellsize.do, which varies observations per cell and nothing else.
+# Recording it here anyway matters because a column that is written and never read is exactly
+# the failure the preregistration's C4 exists to prevent: a family that wrote missing values
+# and got read as a zero result.
+ame_cells = [(cfg, arm) for (cfg, arm) in CELLS
+             if any(num(r, "p_ame") is not None for r in cells[(cfg, arm)])]
+L.append("\n## 5. The ame line test (reported, NOT scored)\n")
+if not ame_cells:
+    L.append("No `p_ame` column in this outdir - it was added to the driver on 2026-09-14, so "
+             "runs older than that have none. Nothing to report; this is not a failure.\n")
+else:
+    L.append("| config | arm | n with a p_ame | rej@.05 | rej@.10 | mean p_ame | att p rej@.05 |")
+    L.append("|---|---|---|---|---|---|---|")
+    for cfg, arm in ame_cells:
+        g = cells[(cfg, arm)]
+        pa = [num(r, "p_ame") for r in g if num(r, "p_ame") is not None]
+        pt = [num(r, "p") for r in g if num(r, "p") is not None]
+        a05 = sum(1 for p in pa if p <= 0.05 + EPS)
+        a10 = sum(1 for p in pa if p <= 0.10 + EPS)
+        t05 = sum(1 for p in pt if p <= 0.05 + EPS)
+        L.append(f"| {cfg} | {arm} | {len(pa)} | {rate(a05, len(pa))} | {rate(a10, len(pa))} | "
+                 f"{(sum(pa)/len(pa) if pa else float('nan')):.4f} | {rate(t05, len(pt))} |")
+    L.append("\nThe att column beside it is the control: it comes from the SAME fit, so a run "
+             "where the ame p rejects far more often than the att p is telling you about the ame "
+             "variance path and not about the design. Under the 2026-09-14 amendment to the "
+             "preregistration's P3, AB1C is the VIOLATING arm by construction - it measures the "
+             "continuous line test below the cell size the help requires - so a high rate here "
+             "is the documented caveat reproducing, not a new defect. Judge the continuous case "
+             "on `mc_ame_cellsize.do` instead.\n")
+
 L.append("\n## Verdict summary\n")
 L.append(f"- checks FAILED: {len(FAILS)}")
 for f_ in FAILS:

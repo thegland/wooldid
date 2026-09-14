@@ -65,6 +65,20 @@
 * Cost measured in the 2-rep smoke at B=20 (2026-09-13): an 1.5-1.9 s, pm 15 s, bt 26 s per rep;
 * scaled to B=199: pm ~2.5 min, bt ~4.5 min per rep, so 400 reps are ~47 h single-stream -
 * shard 8 ways (~6 h), or run bt at M = 200 with the binomial region widened accordingly.
+* CONTRACT CHANGE 2026-09-14: e(adversarial_pval_ame) IS now recorded, as the trailing p_ame
+* column. It was out of contract when this driver was written, which is why the 2026-09-13
+* preregistration's C5/P3 say the ame line test is not scored here. It is scored now.
+* PRECONDITION THE ORIGINAL HEADER DID NOT RECORD, and it governs how AB1C must be read.
+* wooldid.sthlp:745 says the continuous line test "additionally requires cells containing many
+* observations - on the order of fifty - because each cell's dose slope is otherwise too
+* imprecisely estimated for the test's covariance to be trustworthy". AB1C is G=30 x U=6 x T=12,
+* so a treated cohort-by-period cell holds SIX observations against the help's ~50 - about an
+* order of magnitude BELOW the documented precondition. AB1C is therefore the VIOLATING arm by
+* construction: it measures the ame test where the help already says not to trust it. Measured
+* 2026-09-14 over 200 draws: ame rejects .402 at a nominal .05 here, and .110 at U=50; the att
+* p on the very same fits is .050 at both. The cluster half of the caveat IS met at U=6
+* (cluster(unitid) puts six clusters in every cell, threshold "six or more"), which is exactly
+* why the att twin is clean. For the compliant arm use mc_ame_cellsize.do, which varies U alone.
 * AB1C measured 2026-09-14 in the same shape: 5.2-5.4 s per rep. It does no resampling, so that
 * does NOT scale with B - adding AB1C to a 400-rep ladder costs ~36 min single-stream, ~4.5 min
 * per shard at 8 shards. Run it FOLDED into the ladder (AB1+AB13+AB12+AB1C): the pm arm is
@@ -201,12 +215,16 @@ end
 cap program drop emitrow
 program define emitrow
   args config arm rep seed slope rc secs
-  local FLD p pjoint n ncomp nfail advabsent advw_n advw_big advw_max tstud_n
+  local FLD p pjoint n ncomp nfail advabsent advw_n advw_big advw_max tstud_n p_ame
   foreach nm of local FLD {
     local `nm' .
   }
   if `rc' == 0 {
     cap local p = e(adversarial_pval_att)
+    * 2026-09-14: the ame line test is now RECORDED as well as the att one. It is missing on
+    * every binary rung by construction (no contreat, no ame family), and that missingness is
+    * itself the contract - see the CONTREAT COVERAGE note in the header.
+    cap local p_ame = e(adversarial_pval_ame)
     cap local pjoint = e(joint_horiz)
     cap local n = e(N)
     local advabsent = (`p' >= .)
@@ -270,7 +288,7 @@ if _rc {
   tempname fh0
   file open `fh0' using "${MCBS12_OUT}", write replace
   file write `fh0' "config,arm,shard,rep,seed,slope,rc,secs," ///
-    "p,pjoint,n,ncomp,nfail,advabsent,advw_n,advw_big,advw_max,tstud_n" _n
+    "p,pjoint,n,ncomp,nfail,advabsent,advw_n,advw_big,advw_max,tstud_n,p_ame" _n
   file close `fh0'
 }
 
