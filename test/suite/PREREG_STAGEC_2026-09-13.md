@@ -50,6 +50,34 @@ for ("whether the adversarial line test p-values are correctly sized"), so this 
 against the ask; it IS a gap against anyone who later wants power, and adding one needs a
 deviation that is not a line through the reference period.
 
+**P3 AMENDMENT, 2026-09-14 — a precondition neither this preregistration nor the driver
+recorded, and what it does to P3's claim.** `wooldid.sthlp:745` ("Size of the adversarial test")
+states a condition specific to the continuous case: *"Under a continuous treatment the line test
+additionally requires cells containing many observations - on the order of fifty - because each
+cell's dose slope is otherwise too imprecisely estimated for the test's covariance to be
+trustworthy."* AB1C's geometry is G = 30 cohorts x U = 6 units x T = 12 periods, so a treated
+cohort-by-period cell holds **six** observations against the help's ~50. **AB1C sits about an
+order of magnitude below the documented precondition.**
+
+This amendment changes no band and no prediction. What it changes is what the rung can be read as
+showing. As designed, AB1C **cannot certify that the continuous line test is correctly sized**; it
+can only measure the test on a design the help already declares untrustworthy, which is a
+confirmation of a documented caveat rather than a test of the feature. Recorded here because P3 as
+written ("the DRIVER now covers this") invites exactly the wrong reading.
+
+Note which half of the caveat AB1C *does* meet: the cluster condition. `cluster(unitid)` puts six
+clusters in every cell and the help's threshold is "six or more" - which is why the `att` line
+test on the very same fits is expected to be, and is measured to be, correctly sized. The
+asymmetry between the two families on one fit is the help's own prediction.
+
+**Consequence for the chunk's question.** "Whether the adversarial line test p-values are
+correctly sized ... including with continuous treatments" needs a COMPLIANT geometry. The measured
+arm is therefore a dose-response in observations per cell at a fixed spec (`probe_ame_u.do`, U as
+the only varying quantity, an arm only), with U = 50 as the help's own number. The prediction
+stated in advance: rejection at nominal .05 falls toward nominal as U rises, and at U = 50 the ame
+line test is inside the Binomial(n, .05) central region while the att twin stays inside it at
+every U.
+
 **P3 — the known gap, recorded so the campaign is not later read as covering it.** The
 geometries are all BINARY. The chunk asks for sizing "including with continuous treatments". A
 contreat geometry, `AB1C`, was ADDED to the driver on 2026-09-14 and its null was verified before
