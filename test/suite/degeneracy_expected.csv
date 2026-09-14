@@ -17,7 +17,18 @@ cont_lat,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_ABSENT,AMESE-
 cont_ss,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG VES_ABSENT V_DIAG_DEAD,AMESE-R1-v;AMESE-R1-w
 simple_esf,HIDDEN,WINDOW_SHORT,PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin of this surface)
 cont_sg,PART_RULED,AME_NO_LIVE_INFERENCE MAIN_INFDEG PWSGS_DEAD SG_DEAD VES_ABSENT V_DIAG_DEAD,AMESE-R1-sgp;AMESE-R1-sgr;AMESE-R1-v;AMESE-R1-w
-sg_degpre,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: prep sgd2_degpre puts sgd2==2 onset in the second sample year so that subgroup has 0 pre periods (data_classes.csv config:sg_degpre)
+# sg_degpre moved DATASET_DESIGN -> RULED on 2026-09-14 and the reason is worth stating, because
+# the citation field can only hold ledger ids and so cannot hold it. The SURFACE did not change:
+# prep sgd2_degpre puts the sgd2==2 onset in the second sample year so that subgroup has 0 pre
+# periods (data_classes.csv config:sg_degpre) and the stem is still WINDOW_SHORT(att_s2:pre0/2).
+# What changed is that the F1 fix 1a52a8e made this config differ old-vs-new - v1.3 dropped every
+# subgroup's pre-treatment row where HEAD keeps the realizing one - so F1SG-degpre-* ledger rows
+# were written for that INSERTION, and degeneracy_scan.py:744 promotes any config whose dead
+# objects are all covered by ledger ids to RULED. READ THE CITATION PRECISELY: nobody has ruled
+# that subgroup 2 should have no pre-treatment row. It has none because the fixture was built
+# that way. The promotion is a side effect of the ledger join matching a row written about a
+# different question that happens to cover the same matrix.
+sg_degpre,RULED,WINDOW_SHORT,F1SG-degpre-m-b
 adv_gapa,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: dta_path_relyrgap has two surgically removed relative-year cells incl. cohort A reference relyr -1 (data_classes.csv); the gap IS the test subject (B16)
 adv_gapb,DATASET_DESIGN,WINDOW_SHORT,DATASET_DESIGN: dta_path_relyrgap has two surgically removed relative-year cells incl. cohort A reference relyr -1 (data_classes.csv); the gap IS the test subject (B16)
 cont_sg_tidose,RULED,AME_NO_LIVE_INFERENCE B_ZERO MAIN_VOID PWSGS_DEAD SGDEGEN SG_DEAD V_DIAG_DEAD,A17-sgv-1;AMESE-R1-v;AMESE-R1-w;SIA4-td-p;SIA4-td-s

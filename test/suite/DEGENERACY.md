@@ -9,7 +9,7 @@ Why it exists: `oldnew` compares HEAD against v1.3 cell by cell, so a surface th
 **both** builds compares equal and passes, and `coverage_check.py` (static) still credits the
 option. That is the "looks covered, is degenerate" class the Stage A audit (2026-09-13) set out to
 find, and this component makes it mechanical. As shipped, `degeneracy_expected.csv` holds 175
-rows: 131 BY_CONSTRUCTION, 13 PART_RULED, 11 HIDDEN, 11 DATASET_DESIGN, 9 RULED.
+rows: 131 BY_CONSTRUCTION, 13 PART_RULED, 11 HIDDEN, 10 DATASET_DESIGN, 10 RULED.
 0 of those rows carry an `UNRULED` citation and are waiting on the author. A further
 12 are `PINNED_DEGENERATE`: ruled 2026-09-13 to be KEPT as pins of their degenerate
 surface rather than re-hosted or silently accepted. Those still WARN on every run, on purpose -
