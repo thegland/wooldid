@@ -752,7 +752,13 @@ of fifty - because each cell's dose slope is otherwise too imprecisely estimated
 cohort-by-period level, no analytic variance estimator can capture it: such a shock is absorbed into the cell's own coefficient and leaves no trace in the residuals, so the test
 becomes badly oversized regardless of the clustering chosen, increasingly so as cells grow. Where these conditions are not met, prefer randomization inference (see {it:permute()})
 or bootstrap-based standard errors for pre-trend inference. {it:wooldid} does not test for these conditions at run time; they are a matter for the user's judgement about the
-design. {p_end}
+design. Magnitudes, from 200 replications per cell under a true null on one cohort-by-period design (30 cohorts, 12 periods, the statistic in force since
+2026-09-08): with six clusters spanning each treated cell the test rejected 4.5 percent of the time at a nominal 5 percent, and the permutation p on the same draws
+rejected 3.5 percent; with two clusters per cell it rejected 18.0 percent, and with each cell inside a single cluster 72.5 percent. The threefold degradation described
+above is therefore nearer fourfold at two clusters, and the single-cluster case is worse than an order of magnitude. Under a continuous treatment on the same design the
+{it:att} line test rejected 5.0 percent, while the {it:ame} line test - the one the cell-size condition concerns - rejected 40.2 percent with six observations per cell
+and 11.0 percent with fifty, its reported standard errors running about a fifth below the sampling standard deviation at the smaller size. Fifty observations per cell
+improves the {it:ame} line test greatly without making it exact. {p_end}
 
 {phang}{opt altmethod_adversarial}: Modifies {it:adversarial} and does not stand alone: specifying it without {it:adversarial} is an error. It is an alternate method of implementing the test above, which projects a trend forward using the pre-treatment coefficients only (plus the planted
 zero-valued reference row or rows), and then tests whether the post-treatment coefficients collectively fall in line with the projected values. The test propagates the full
