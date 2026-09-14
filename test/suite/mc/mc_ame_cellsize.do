@@ -67,6 +67,13 @@ local SLOPE 0
 
 global AMEU_OUT `"`OUTDIR'/probe_ame_u`U'.csv"'
 
+* ON THE DUPLICATED mkdgp. The program below is a THIRD copy of mc_advb.do's DGP, also carried
+* by mc_adv_bs12.do and mc_adv_bs12_power.do. The duplication is DELIBERATE and must not be
+* "fixed" into a shared include: each driver reproduces standalone from its own file, which is
+* the property that lets a result be re-run years later without the rest of the mc/ tree. If you
+* change the DGP, change it in all three and say so in each header - they are meant to stay
+* byte-identical in the shared part.
+*
 cap program drop mkdgp
 program define mkdgp
   args seed slope G U T onset

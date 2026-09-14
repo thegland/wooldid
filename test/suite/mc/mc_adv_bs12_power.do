@@ -53,6 +53,13 @@ global BSPW_OUT `"`OUTDIR'/mc_adv_bs12_power_s`SHARD'.csv"'
 
 * mc_adv_bs12.do's mkdgp with the plant replaced by a STEP. Everything else is byte-identical
 * so the datasets differ from the size campaign's in the outcome alone.
+* ON THE DUPLICATED mkdgp. The program below is a THIRD copy of mc_advb.do's DGP, also carried
+* by mc_adv_bs12.do and mc_adv_bs12_power.do. The duplication is DELIBERATE and must not be
+* "fixed" into a shared include: each driver reproduces standalone from its own file, which is
+* the property that lets a result be re-run years later without the rest of the mc/ tree. If you
+* change the DGP, change it in all three and say so in each header - they are meant to stay
+* byte-identical in the shared part.
+*
 cap program drop mkdgp
 program define mkdgp
   args seed tau G U T onset
