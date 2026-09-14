@@ -28,7 +28,8 @@
 #
 # Like run_mcri2.sh this honours the machine's Stata instance cap by counting processes whose
 # ARGV[0] is the Stata binary (a pgrep on " -e do " also matches monitoring pipelines and
-# deadlocks on a busy box), and runs at most 2 of its own shards at a time.
+# deadlocks on a busy box). The cap is the machine's, not this script's, so it is an env knob:
+# MC_STATA_CAP (default 6, the standing limit). Raise it only when told the box has headroom.
 set -u
 STATA=/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp
 REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -56,8 +57,8 @@ waitslot () {
   local n
   while :; do
     n=$(nstata)
-    [ "$n" -lt 6 ] && break
-    echo "$(date +%H:%M:%S) cap-wait: $n real stata -e do jobs running"
+    [ "$n" -lt "${MC_STATA_CAP:-6}" ] && break
+    echo "$(date +%H:%M:%S) cap-wait: $n real stata -e do jobs running (cap ${MC_STATA_CAP:-6})"
     sleep 60
   done
 }

@@ -37,4 +37,8 @@ l6probe_*
 suite/mc/out2/*/logs/
 suite/mc/out2/*/*.sched
 suite/mc/out2/*/START.txt
+# Same split for the Stage C campaign tree suite/mc/out3: the per-rep .csv results and the
+# judged reports are tracked (they ARE the evidence), the Stata logs and runner chatter are not.
+suite/mc/out3/**/*.log
+suite/mc/out3/*_runner.log
 .DS_Store
