@@ -51,9 +51,12 @@ against the ask; it IS a gap against anyone who later wants power, and adding on
 deviation that is not a line through the reference period.
 
 **P3 — the known gap, recorded so the campaign is not later read as covering it.** The
-geometries are all BINARY. The chunk asks for sizing "including with continuous treatments". No
-contreat geometry exists in this driver, so this campaign does not answer that half of the
-sentence and must not be cited as if it did.
+geometries are all BINARY. The chunk asks for sizing "including with continuous treatments". A
+contreat geometry, `AB1C`, was ADDED to the driver on 2026-09-14 and its null was verified before
+anything else, so the DRIVER now covers this. Every CAMPAIGN run to date still does not, and no
+campaign output may be cited for the continuous case until one includes AB1C. `AB1C` is an-arm
+only: `cluster(unitid)` does not nest `i`, so the resampling engines refuse it and there is still
+no continuous rung at the permutation or studentized arms.
 
 ## C2 — simultaneous sup-t band coverage (`mc_bands.do`)
 

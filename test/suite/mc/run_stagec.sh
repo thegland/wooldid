@@ -7,7 +7,8 @@
 #   driver          arg7                 arg8 (the phase/arm/geometry list, + or , separated)
 #   mc_bands.do     TAU (planted effect) ARMS   an+bs+bt
 #   mc_ri_ext.do    TAU                  PHASES E1+E2+E3+E4+E5
-#   mc_adv_bs12.do  SLOPE (0 = null)     GEOMS  AB1+AB13+AB12
+#   mc_adv_bs12.do  SLOPE (0 = null)     GEOMS  AB1+AB13+AB12 (default); AB1C is the
+#                                                continuous-treatment rung, non-default, an-arm only
 #
 # B is the replication count the driver hands to bootstrap()/permute(); wooldid's floor for
 # permreps() is 20, so B < 20 makes the permutation arms refuse rather than run.

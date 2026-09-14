@@ -394,7 +394,7 @@ for (cfg, arm, sl) in sorted(inv):
              f"{sum(1 for r in g if (num(r, 'advabsent') or 0) > 0)} | "
              f"{(sum(secs)/len(secs) if secs else float('nan')):.2f} |")
 missing_cells = [k for k in [("AB1", "an"), ("AB13", "an"), ("AB12", "an"), ("AB12", "bt"),
-                             ("PM", "pm")] if k not in cells]
+                             ("PM", "pm"), ("AB1C", "an")] if k not in cells]
 if missing_cells:
     L.append("\nRungs of the ladder with NO null rows in this outdir: " +
              ", ".join(f"{c}/{a}" for c, a in missing_cells) +
