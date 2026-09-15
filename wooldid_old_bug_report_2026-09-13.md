@@ -13,7 +13,7 @@ as soon as any fix lands after the run, and a reader who checks out HEAD gets th
 
 Run verdicts, read from the comparison this report documents:
 
-    prov[new] = new|1a52a8e
+    prov[new] = new|c45ef13
     VERDICTS EXPLAINED=411 MATCH=26 RC_EXPLAINED=122
     COMPARED 559 of 559 configured
     SUMMARY unexplained=0 explained=4631 additions=17078 stale_ledger=0 unscoped=0 prov_fail=0
@@ -3821,7 +3821,7 @@ texts and closing 10 of the sections' open questions. Each is reconciled there a
 place; none was deleted. One caveat carried forward: `4280f3b` also changed the dump format, so
 the re-tie compares value cells, not dump text.
 
-### 7.5 The closing run (2026-09-14) - the one this report's header quotes
+### 7.5 The 2026-09-14 run and its adjudication (superseded as the header's run by 7.10)
 
 Sections 7.0-7.4 describe the run on which the adjudication was DONE. This section describes the
 run that verifies it against the package the author's 2026-09-13 rulings produced. Both are
@@ -3952,7 +3952,7 @@ only cells that trip a mechanical relative gate are two adjusted R-squareds that
 to move, one near-zero coefficient whose absolute change is 7e-15, and eight permutation
 replication cells whose absolute change is 1e-11.
 
-### 7.7 How the closing green was actually obtained - provenance, stated because it is not one clean pass
+### 7.7 How the 2026-09-14 green was obtained - provenance, because that one was not a clean pass (superseded by 7.10)
 
 The final component states below are real and each was verified. But `run_full.sh` did **not**
 produce them in a single pass, and a reader entitled to the verdicts is entitled to how they were
@@ -4146,6 +4146,49 @@ shard, and a classifier that credited ledger rows written about something else. 
 found by a test, because **the suite has no tests of itself**. That remains true. The defects
 were found by closing out carefully, which is not a repeatable mechanism, and it is the gap in
 this list a future reader should take most seriously.
+
+### 7.10 The closing run (2026-09-15) - one clean pass at HEAD, which is what 7.7 could not claim
+
+`STATA_JOBS=8 ./run_full.sh all`, 13:48 to 15:22, on a machine running nothing else. **Every
+component passed in a single wrapper-driven pass**, with no hand-repaired shard and no direct
+invocation of any component's tool:
+
+```
+oldnew      112 shards OK, 0 problems
+            VERDICTS EXPLAINED=411 MATCH=26 RC_EXPLAINED=122
+            COMPARED 559 of 559 configured
+            SUMMARY unexplained=0 explained=4631 additions=17078
+                    stale_ledger=0 unscoped=0 prov_fail=0
+cert        43/43            newfeat     13 passing, 0 failing
+battery     IDENTICAL vs baseline        coverage    COVERAGE_OK
+degeneracy  DEGEN_CHECK_OK
+== run complete - ALL COMPONENTS PASS
+```
+
+**This is the run this report's header quotes**, and `prov[new] = new|c45ef13` is HEAD, so for
+once the report describes the tree a reader gets by checking out the branch rather than an
+earlier build.
+
+**Three things it establishes that the 2026-09-14 run could not.**
+
+1. **The green needed no repair.** 112 of 112 shards completed inside their limits and
+   `pool.log` carries no `TIMEOUT`, `INCOMPLETE` or `FAIL` line at all. 7.7 exists because the
+   previous run needed two shards re-run outside the pool after I saturated the box; running at
+   eight jobs on ten cores with nothing else competing, that did not recur.
+2. **The two tooling fixes work end to end.** The repaired degeneracy guard (7.8.1) and the
+   citation-gated ledger join (7.8.2) had only ever been exercised by invoking their tools
+   directly. Here `run_full.sh` reached `degeneracy` on its own and returned `DEGEN_CHECK_OK`,
+   which is the first time the fixed guard has passed a component it was previously refusing.
+3. **Nothing in the tree moved a number.** The verdict triple is identical to 2026-09-14's -
+   `EXPLAINED=411 MATCH=26 RC_EXPLAINED=122` over 559 of 559, `unexplained=0` - across a week of
+   suite, ledger, scanner, driver and documentation edits. That is the point of running it: the
+   ado has not changed since `1a52a8e`, so any movement would have been a defect in my own
+   tooling changes rather than in wooldid, and there is none.
+
+**7.5 and 7.7 are kept unchanged as history.** 7.5 carries the adjudication of the 14 first-run
+differences and the degeneracy stems, which is the record regardless of which run the header
+quotes; 7.7 records how a stitched green was reached and why that had to be disclosed. Neither
+is the closing green any more, and both say so.
 
 
 ---
@@ -5035,13 +5078,22 @@ The nine issues the external-benchmark probes found are no longer the open list.
 one was never ours, and two are closed by ruling rather than by repair. What is actually open is
 below, and it is shorter and sharper than what it replaced.
 
-**Where these stand after the 2026-09-14 rulings.** Two items that stood here on the morning of
-2026-09-14 - the subgroup pre-treatment over-drop and its invisibility - were ruled and are now
-built; they moved to section 9b. Four remain below, and they are not all the same kind of thing.
-Items 1 and 4 have been RULED and are kept here anyway, because a ruling to take no action does
-not make the finding go away and a reader looking for known limitations deserves to meet them.
-Item 2 is a live call still awaiting the author - a disclosure surface, not a computation.
-Item 3 is not ours to fix.
+**ALL FOUR ARE NOW CLOSED BY RULING (2026-09-15). Nothing in this section is awaiting anyone.**
+Two items that stood here on the morning of 2026-09-14 - the subgroup pre-treatment over-drop and
+its invisibility - were ruled and built; they moved to section 9b. The four below were ruled
+closed on 2026-09-15 and are kept here in full, because **a ruling to take no action does not
+make a finding go away**, and a reader looking for this package's known limitations should meet
+them in one place rather than reconstruct them from campaign sections. What each ruling was is
+recorded against the item.
+
+The dispositions, in one view, because they are three different kinds of closure:
+
+| item | what it is | disposition |
+|---|---|---|
+| 1 `AB12/bt` inert | a shipped statistic with no demonstrated power on the geometry measured | **accepted limitation**, not disclosed in the help, by ruling |
+| 2 DDG degenerate pairwise disclosure | inference published on a contrast the design pins exactly | **accepted**, twice: no package guard, and no test-suite change |
+| 3 `jwdid` help vs code | an external package's defect | **not ours**; closed, no action available to us |
+| 4 continuous `ame` line test ~2x nominal | a size distortion at the cell count the help recommends | **accepted limitation**, disclosed in the help with measured magnitudes |
 
 1. **The bootstrapped adversarial statistic is INERT on a containment geometry - measured both
    ways.** Under the null `AB12/bt` rejected 0 of 200 at 5% and 0 of 200 at 10%, which alongside
@@ -5070,11 +5122,25 @@ Item 3 is not ours to fix.
    `att`, `att_it` and `att_itime` and withholds `att_i`. `att` and `att_itime` carry v1.3's
    `att_i` numbers to the bit; `att_it`'s are its own and equally degenerate (se 5.21e-10,
    t 1.92e9). The package's own degeneracy scan sees part of
-   this - it records `PWSGS_DEAD(0v+2i/8)` - but not these rows. **Found while checking a ledger
-   reason, not by any test**, which is the point: the suite explained this config as a recovery
-   for months. The reason text is corrected; the surface itself is the author's call, and it
-   belongs with items 1 and 2 as the same kind of problem.
+   this - it records `PWSGS_DEAD(0v+2i/8)` - but not these rows, because its deadness test asks
+   whether a cell is missing or a sentinel and an se of 2.33e-10 is neither. **Found while
+   checking a ledger reason, not by any test**, which is the point: the suite explained this
+   config as a recovery for months. The reason text is corrected (`DDG-pw-1`).
+   **RULED CLOSED 2026-09-15, in two parts.** On the package: no guard. The author's reasoning is
+   that a user can write arbitrarily many bad specifications and wooldid cannot be expected to
+   intercept them all - which is this project's standing effort cap on pathological input, applied
+   consistently. On the assessment suite: the four configs that produce this
+   (`ext_cov10_rcs_pweight_ddd_c1`/`c2`, `ext_cov10_rcs_twoway_cluster_c1`/`c2`, all
+   `subgroups(group)` with `fe(group_time)`) are NOT to be changed either. A structural scan
+   established that of the 187 configs using `subgroups()` exactly **4** have the subgroup
+   dimension absorbed by its own fixed effect, so the other **183 carry genuine pairwise-subgroup
+   coverage** and nothing is lost by leaving these as they are. They also still test what their
+   names say - pweights and a DDD on repeated cross-sections, and two-way clustering - since only
+   the incidental `pwsgs` surface is residue.
 3. **One external defect that is not ours**: the `jwdid` help documents weights its code refuses.
+   **RULED CLOSED 2026-09-15**: there is no action available to us on another package's source,
+   and it is recorded here so that anyone cross-checking wooldid against `jwdid` under weights
+   knows why the two can disagree.
 4. **The continuous `ame` line test is about twice nominal size AT the cell size the help
    recommends** - disclosed rather than repaired, and listed here because a reader looking for
    known limitations should not have to find it inside a campaign section. Measured by varying
