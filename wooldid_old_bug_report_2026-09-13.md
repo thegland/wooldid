@@ -1,6 +1,6 @@
-# Old-wooldid bug attribution report - full assessment run, 2026-09-14
+# Old-wooldid bug attribution report - full assessment run, 2026-09-15
 
-**Claim this report makes:** every old-vs-new difference observed in the 2026-09-14
+**Claim this report makes:** every old-vs-new difference observed in the 2026-09-15
 full assessment run traces to a documented, verified bugfix in old wooldid, or to a documented
 intended change ruled by the author. Each part below gives, per family: what old wooldid did
 wrong and whom it affected; the mechanism located in the v1.3 source; the fix commit with its
@@ -5356,6 +5356,107 @@ relabelled pointwise interval. It is real.
 (`esprelength(4) espostlength(4) esfixedbaseperiod`), one level (95), one tau. It establishes
 that the band covers at its nominal level where the help says to use it; it says nothing about
 other windows or levels. Data and report: `test/suite/mc/out3/bands/`.
+
+#### 10.5 C3 - the randomization-inference extensions, and one result still open (`8329324`)
+
+**Why it needed measuring.** Continuous treatment under `permute()`, `permside(right)`,
+`level(90)`, `permstrata()` and a `permtstat` null arm had **no Monte Carlo coverage at HEAD**.
+No earlier RI campaign ran continuous treatment at all - every call in `mc_ri.do` and `mc_ri2.do`
+is binary-onset `att` - and no campaign, prior or current, had ever measured an `ame` element
+under permutation.
+
+**Design.** 8 shards x 25 reps x 5 phases, 1000 rows, B = 199, tau = 0.
+
+**P0 integrity is clean on all 1000 rows**: `rc = 0`, `nfail = 0`, `ncomp = 199`, `namesok = 1`,
+every p in [0,1], `pconv` equal to each phase's convention, `level` 95 and 90 on E3, `tau = 0` on
+every size arm, and `p_main` on the B = 199 lattice on 1000/1000. **P1**: assignment space 18480
+on E1/E2/E3/E5 and **3136 on E4** - above the preregistered ~3000 floor, but by only 4.5%, and
+since `npos` is a property of the design rather than the draw it is 3136 on every E4 rep. E4's
+size result should be read with that margin in mind.
+
+**Results.** E2, E3, E4 and E5 pass every scored claim. E3's interval coverage is 177/200 =
+0.885 against nominal 0.90, PASS. **E1 fails two of nine columns**, both at alpha = .10 only,
+with alpha = .05 clean everywhere:
+
+| E1 column | alpha=.05 (band [3,17]) | alpha=.10 (band [11,29]) |
+|---|---|---|
+| `ES_att_post1` | 13/200 = .065 | **36/200 = .180 FAIL** |
+| `ES_ame_post0` | 10/200 = .050 | **31/200 = .155 FAIL** |
+| `main_ame` | 15/200 = .075 | 29/200 = .145, at the band edge |
+
+These are reported as failures, not smoothed away. What follows is why they are **not** yet
+called a defect.
+
+##### What the investigation established, including against my own first reading
+
+A four-angle read of the source (read-only, every claim cited to file:line) **closed every
+mechanism it examined**. Only the cluster-level onset is permuted and the dose stays bolted to
+its rows (`wooldid.ado:142`, `:7398-7443`, `:13451`); E1 sets tau = 0 and `mc_ri_ext.do:145`
+generates `y` with no treatment or dose term, so potential outcomes are invariant to assignment
+and **the null is sharp for every estimand**, att and ame alike; comparator and draws use the
+same code path and option string (`:7506` vs `:7615`); accumulator columns are matched by name
+through a colstripe hash, never by position (`:7561-7562`); the horizon set is invariant across
+all 18480 reassignments because `shuffle` preserves the onset label multiset (`:13447-13454`);
+the one ame-specific rule, the A12b exact-zero blank (`:14175`), did not fire and its sign is
+conservative anyway. The cell-collapse fallback - the last candidate, and the only one that is
+genuinely assignment-dependent, since `wooldid_fcdegx` reads the `r(V)` of the margins call just
+issued - **cannot fire here at all**: its screen arms on `subgroups()` alone
+(`wooldid.ado:1849` sets `fcsg 0`, `:1884` is the only line setting it to 1) and E1's call
+carries no `subgroups()`.
+
+**The project's own trap was checked and does not apply.** `wooldid.sthlp:727-729` does require
+"many observations per cell, on the order of fifty" for the continuous case and E1 has five - but
+that condition is about the ANALYTIC covariance, and a permutation rank p-value does not use
+`e(V)`. Exactness under a sharp null is distribution-free, so cell size cannot excuse this.
+
+##### Three corrections to the cross-phase reading, two of them to my own
+
+The first look across phases suggested the lean tracked the p-convention rather than continuous
+treatment, since mean p sat below the exact lattice null (0.5050) in E1, E3 and E5 at t of
+-1.66, -1.78 and -1.79 while E2 and E4 sat above it. **That reading was wrong in three ways, and
+the corrections matter more than the original observation.**
+
+1. **The phases are not independent replicates.** All five share `dgpseed` AND `rseed` within a
+   (shard, rep) cell, and `mkCONT` and `mkR1` draw `u` and `a` in the same order from the same
+   stream - so E1 and E2/E3/E5 have **identical onset vectors and identical unit effects**. The
+   onset vector is precisely what the permutation conditions on. "Three phases lean" is closer to
+   one set of 200 assignment vectors read several ways.
+2. **E2 and E3 are the same draws, not a contrast.** They record identical `plo_main`/`phi_main`.
+   E2's reported `p_main` is simply the one-sided piece; reconstruct the equal-tailed p from
+   E2's own recorded pieces and it is .4685, t = -1.78 - **identical to E3**. They do not lean
+   opposite ways; a one-sided report is merely insensitive to a two-sided effect.
+3. **The independent precedent collapses.** `mc_ri2`'s D1 phase - binary onset, no `contreat`,
+   the same 12-cohort layout - has `ES_att_post1` at t = -1.80 over all 84 reps, which looked
+   like corroboration. Split by seed overlap: **-1.95 on the 50 reps sharing seeds with this
+   campaign, and -0.60 on the 34 that do not.** The lean is carried by the shared seeds.
+
+**So everything rests on one seed set, and the honest verdict is that this is most likely
+chance.** The per-rep aggregate over all seven E1 columns is t = -3.07, but the four
+individually-passing columns give -1.58 and the three flagged ones -3.31: the aggregate is
+largely the flagged columns restated, on a statistic **chosen after seeing which columns
+failed**. That is disclosed rather than presented as evidence.
+
+##### What is being done about it
+
+Probe **P-E3**, preregistered in `PREREG_STAGEC_2026-09-13.md` **before it was launched**, with
+thresholds fixed in advance precisely because the discussion statistic above was chosen after the
+fact: phase E3 only, plain `att cluster(i)`, full support, **fresh shards 9-16** giving dgpseed
+1800009..2500066, disjoint from this run's 1000002..1700033. One knob changes. n = 400. Primary
+readout: `main_att` equal-tailed mean p against 0.5050, |t| > 2.5 confirms, |t| < 1.5 refutes.
+The original failing column is scored against Binomial(400, .10) = [29, 52].
+
+The driver now also records `e(perm_n)` per column and `e(perm_blank)` (`6bd082b`). Both are
+posted by the package and neither had ever been recorded, which left the one gap the source read
+could not close: the lattice check reads `main_att` alone, and an on-lattice p is reachable at
+several denominators below 199, so a column that quietly lost draws was indistinguishable from
+one that did not.
+
+**One loose end in the preregistration, recorded rather than quietly fixed.** The analyzer labels
+E3 "coverage of the planted tau", and the driver header says the same, but this campaign ran
+tau = 0 on every phase - so E3 measures coverage of **zero**. Prereg P4 says only "coverage of
+tau by `[ll_main, ul_main]`", which tau = 0 satisfies, so the result stands as a valid
+null-coverage check. It is weaker than a planted-tau check would have been, and the "planted"
+wording in the driver and analyzer is loose.
 
 
 ---
