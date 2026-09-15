@@ -125,36 +125,61 @@ resampled cluster identity as required while units stay whole.
 
 ---
 
-## T4 - `impvalues`: adjust estimand weights when clusters cross-cut cohorts
+## T4 - `impvalues`: refuse the incoherent combination rather than reweighting it
 
-**This one is already documented as broken**, which is why it is the most defensible of the five.
-`wooldid.sthlp:279`: "Note that {it:wooldid} does not adjust the weights used for computing
-different estimands when IM-style inference is requested: in general, IM-style inference will
-yield incorrect results for non-att estimands if clusters cross-cut cohorts."
+**REVISED 2026-09-15 after the author's assessment, which was right.** This ticket originally
+proposed recomputing estimand weights under IM-style inference, by analogy with T2. That is the
+wrong fix and the reason is worth keeping.
 
-Same principle as T2 - the estimand weights are tied to the original cohort structure instead of
-being recomputed for the inference scheme in force. IM-style inference computes cluster-specific
-estimates and t-tests them, so when clusters cross-cut cohorts the non-`att` estimands are
-averaging over the wrong thing.
+**Why reweighting cannot work here.** IM computes cluster-specific treatment effects, presents
+their AVERAGE as the estimate, and t-tests the cluster-specific estimates against 0 on `q-1`
+degrees of freedom (`wooldid.sthlp`, `impvalues` entry). The estimand is therefore *structurally*
+the equally-weighted mean over clusters. That equal weighting is not incidental: Ibragimov and
+Muller's validity result requires the group estimates to be independent, approximately normal
+and to share a COMMON MEAN, with possibly heterogeneous variances, and it is the t-statistic of
+their EQUALLY weighted mean that gets the conservative `t_{q-1}` reference at small `q`.
+Reweighting the cluster estimates to reproduce `att`'s observation or cell weights would recover
+the point estimand but forfeit that justification - it would need a Satterthwaite-style
+approximation and would give up precisely the small-`q`, heterogeneous-variance robustness that
+is the reason to use IM instead of plain cluster-robust standard errors. **Reweighting buys the
+estimand by spending the inference.**
 
-**Proposed.** Recompute the estimand weights for the cluster partition actually in use, so
-non-`att` estimands are correct under IM-style inference; or, if that is not tractable, refuse
-the combination rather than shipping documented-incorrect numbers.
+So IM coheres with a wooldid estimand only when `cluster()` = `i` and the estimand is `att_i`,
+which is exactly what the help observes at the cohort-level case ("IM-style inference will cause
+`att` to yield the same effect estimates as `att_i`"). That is a necessary preference, not an
+accident to be engineered away.
 
-**Note it is currently a silent correctness hazard**, not an error: the run completes and prints
-numbers, with the caveat living only in the help.
+**What IS actionable, and it is a defect rather than a feature.** The help says non-`att`
+estimands under IM are "incorrect ... if clusters cross-cut cohorts or (worse) cohort-time period
+cells", and wooldid computes and prints them anyway. Shipping numbers the documentation calls
+incorrect, with no error and the caveat living only in the help, is the real problem here.
 
----
+**Proposed.** Refuse non-`att` estimands under `impvalues` when the clusters cross-cut cohorts
+(or cohort-by-period cells), or failing that print a caution at the table rather than only in the
+help. **There is strong precedent for refusal**: `impvalues` is already refused in combination
+with `subgroups()`, `jointtests`, `makecfxplots`, `adversarial`, `customvce()`, `fastnose`,
+`pretrendpower()`, `permute()` and `bootstrap()` - nine screens. One more for a combination the
+help already calls incorrect is consistent with how this option is governed, not a new policy.
+
+**A second, cheaper item worth considering alongside it.** The help notes that IM "implicitly
+changes wooldid's target estimand" even for `att`. wooldid could report which estimand IM
+actually delivered rather than printing it under the requested name, so a user reading `att` in
+the table knows it is the cluster-equal-weighted average. Pure transparency, no numbers move.
+
+**Author ruling needed on one point.** The standing instruction is not to build guards against
+arbitrary bad user specifications. This is arguably a different category - it is not a user
+writing something silly, it is wooldid emitting a result its own documentation calls incorrect -
+but the distinction is the author's to draw, not mine to assume.
 
 ## Considered and NOT proposed, with reasons
 
-**Multi-way `cluster()` under the replication engines.** Refused by both today
+**Multi-way `cluster()` under the replication engines.** (Author 2026-09-15: confirmed, not pursuing.) Refused by both today
 (`wooldid.sthlp:1220`: "Both engines resample or relabel ONE unit, so there must be exactly
 one"). This is a genuinely different problem - you cannot resample two crossed dimensions with a
 single-dimension scheme - and the methods for it are their own literature, not an application of
 the principle above. Worth its own investigation if wanted, but it does not belong in this group.
 
-**`subgroups()` requiring the subgroup constant within `i`.** The remedy the help gives is
+**`subgroups()` requiring the subgroup constant within `i`.** (Author 2026-09-15: confirmed, keeping the requirement as it stands.) The remedy the help gives is
 defining `i` finer (`wooldid.sthlp:869`, `egen newi = group(i sg)`), which does pull against the
 new coarse-`i` recommendation. But this is a real estimand constraint rather than a conflation:
 if the subgroup varies inside an `i`-by-`t` cell, that cell's effect is not subgroup-specific and
