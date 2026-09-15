@@ -155,7 +155,8 @@ program define emitrow
   args phase arm tau rep dgpseed rseed rc secs level
   local FLD ncomp nfail npos namesok ///
     p_main p_pre p_post0 p_post1 p_ame p_amepost0 p_amepost1 plo_main phi_main ///
-    jointp jointCp ll_main ul_main ll_ame ul_ame sd_main b_main b_ame ndraw
+    jointp jointCp ll_main ul_main ll_ame ul_ame sd_main b_main b_ame ndraw ///
+    permblank n_main n_post1 n_amepost0
   foreach nm of local FLD {
     local `nm' .
   }
@@ -190,6 +191,21 @@ program define emitrow
       foreach z in main pre post0 post1 ame amepost0 amepost1 {
         if `i_`z'' < . & `i_`z'' > 0 local p_`z' = `P'[1, `i_`z'']
       }
+      * CONTRACT CHANGE 2026-09-15. e(perm_n) is a MATRIX of PER-COLUMN draw counts and
+      * e(perm_blank) a scalar; both are posted by the package (wooldid.ado:7971, :8031) and
+      * neither was ever recorded here. Without them the lattice check - which reads main_att
+      * alone - proves nothing about the OTHER columns' denominators: an on-lattice p is
+      * reachable at several n below 199, so a column that quietly lost draws is
+      * indistinguishable from one that did not. That was the one gap the 2026-09-14 source
+      * read could not close on the E1 over-rejection, so the counts are recorded from now on.
+      tempname PN
+      cap matrix `PN' = e(perm_n)
+      if _rc == 0 {
+        foreach z in main post1 amepost0 {
+          if `i_`z'' < . & `i_`z'' > 0 local n_`z' = `PN'[1, `i_`z'']
+        }
+      }
+      cap local permblank = e(perm_blank)
       tempname PL PH CI SD BB PD
       cap matrix `PL' = e(perm_p_lo)
       if _rc == 0 local plo_main = `PL'[1, `i_main']
@@ -245,7 +261,8 @@ if _rc {
   file write `fh0' "phase,arm,tau,shard,rep,dgpseed,rseed,rc,secs,pconv,level," ///
     "ncomp,nfail,npos,namesok," ///
     "p_main,p_pre,p_post0,p_post1,p_ame,p_amepost0,p_amepost1,plo_main,phi_main," ///
-    "jointp,jointCp,ll_main,ul_main,ll_ame,ul_ame,sd_main,b_main,b_ame,ndraw" _n
+    "jointp,jointCp,ll_main,ul_main,ll_ame,ul_ame,sd_main,b_main,b_ame,ndraw," ///
+    "permblank,n_main,n_post1,n_amepost0" _n
   file close `fh0'
 }
 

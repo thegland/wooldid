@@ -150,3 +150,57 @@ form is observable. No `bt` row exists in any sample collected so far. `analyze_
 therefore MEASURES the observed lattice and prints a finding naming what to change if the
 assumption is wrong, rather than trusting it. Recorded here so that if the convention turns out
 to differ, the band change is visibly a correction and not a post-hoc adjustment.
+
+---
+
+## C3 AMENDMENT / PROBE P-E3 — preregistered 2026-09-15 00:5x, BEFORE the run was launched
+
+**Why.** The C3 campaign returned two FAILs, both on E1 (continuous treatment): `ES_att_post1`
+36/200 = .180 and `ES_ame_post0` 31/200 = .155 against the band [11,29] at alpha=.10, with
+alpha=.05 clean everywhere. Follow-up established that **every candidate explanation now rests on
+one seed set**:
+
+- All five phases share `dgpseed` AND `rseed` within a (shard, rep) cell, and `mkCONT` and `mkR1`
+  draw `u` and `a` in the same order from the same stream, so **E1 and E2/E3/E5 have IDENTICAL
+  onset vectors `ttre` and identical unit effects** - the very object the permutation conditions
+  on. The phases are not independent replicates.
+- E2 and E3 record identical `plo_main`/`phi_main`: they are the same draws. E2's reported
+  `p_main` is just the one-sided piece. Reconstructing the equal-tailed p from E2's own pieces
+  gives mean .4685, t = -1.78, **identical to E3** - so the earlier "E2 and E3 lean opposite
+  ways" reading was an artifact of comparing a one-sided number with a two-sided one.
+- The `mc_ri2` D1 precedent **collapses on independent seeds**: t = -1.80 over all 84 reps, but
+  -1.95 on the 50 reps sharing seeds with riext and only **-0.60 on the 34 that do not**.
+- No mechanism survived a four-angle read of the source: only onset is permuted and dose stays
+  fixed; tau=0 makes Y invariant so the null is sharp for every estimand; columns are matched by
+  name; the horizon set is invariant across all 18480 reassignments; the ame A12b blank did not
+  fire; and the cell-collapse fallback cannot fire at all because its screen arms on
+  `subgroups()` alone (wooldid.ado:1849, :1884) and E1 passes none.
+
+So the live hypotheses are H0 (chance on one seed set) and H1 (something about the two-sided
+equal-tailed statistic on this layout). Fresh seeds discriminate them; nothing else does.
+
+**Design.** Phase E3 only (`mkR1`, plain `att cluster(i)`, full support npos=18480, equal-tailed,
+B=199, tau=0), **shards 9-16**, 50 reps each, n=400. Seed base `900000+S` gives dgpseed
+1800009..2500066, disjoint from the run in hand (1000002..1700033). One knob changes - the shard
+block. No change to the DGP, estimand, B, convention or geometry.
+
+**READOUT, FIXED NOW. These thresholds are not to be revised after seeing the numbers.**
+
+- **A (primary).** `main_att` equal-tailed mean p, one-sample t against the exact lattice null
+  0.5050, n=400, empirical sd: **|t| > 2.5 CONFIRMS** a real lean; **|t| < 1.5 REFUTES** it;
+  1.5 <= |t| <= 2.5 is the ambiguous zone and means n >= 800 is needed.
+- **B (control).** `main_att` one-sided `phi_main` mean against 0.5025. Predicted near 0 under
+  both hypotheses; a large value here instead would mean the ranks themselves are asymmetric,
+  which is a different finding and must be reported as such.
+- **C (the original failure).** `ES_att_post1` equal-tailed rejection at alpha=.10 against the
+  central Binomial(400, .10) band **[29, 52]**. Outside = confirms.
+- **D (the gap now closed).** Per-column draw counts `n_main`, `n_post1`, `n_amepost0` from the
+  newly recorded `e(perm_n)`, plus `permblank`. Any column below 199 on any rep invalidates the
+  lattice argument for that column and is itself the finding.
+
+**Forking-paths disclosure.** The per-rep aggregate t used in the discussion above (-3.07 over
+all 7 E1 columns; -1.58 over the 4 individually-passing ones; -3.31 over the 3 flagged) was
+chosen AFTER seeing which columns failed. It is not a preregistered statistic and is not a
+readout of this probe. A and C are.
+
+**Cost.** ~51 s per E3 rep measured; 50 reps x 8 shards run concurrently, about 50 minutes.
