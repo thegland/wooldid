@@ -13,10 +13,10 @@ as soon as any fix lands after the run, and a reader who checks out HEAD gets th
 
 Run verdicts, read from the comparison this report documents:
 
-    prov[new] = new|04cc333
+    prov[new] = new|1a52a8e
     VERDICTS EXPLAINED=411 MATCH=26 RC_EXPLAINED=122
     COMPARED 559 of 559 configured
-    SUMMARY unexplained=0 explained=4626 additions=17069 stale_ledger=0 unscoped=0 prov_fail=0
+    SUMMARY unexplained=0 explained=4631 additions=17078 stale_ledger=0 unscoped=0 prov_fail=0
 
 Every part was drafted by an independent agent working from the ledger, the dumps, the v1.3
 source and `wooldid_solved_issues.md`, and each ran its own two-build reproduction. Where a
@@ -3952,6 +3952,141 @@ only cells that trip a mechanical relative gate are two adjusted R-squareds that
 to move, one near-zero coefficient whose absolute change is 7e-15, and eight permutation
 replication cells whose absolute change is 1e-11.
 
+### 7.7 How the closing green was actually obtained - provenance, stated because it is not one clean pass
+
+The final component states below are real and each was verified. But `run_full.sh` did **not**
+produce them in a single pass, and a reader entitled to the verdicts is entitled to how they were
+reached.
+
+**Two shards timed out on the run that produced these dumps.** `old_shard_covars_01` at its 600s
+limit and `new_shard_real_slow_00` at its 1800s limit, because the suite was run at six jobs
+concurrently with a four-shard Monte Carlo campaign and the box has ten cores. That orphaned four
+configs' dumps - `cov_aw_disp` on the old side, and `real_boot_alpha`, `real_perm_sd` and
+`real_perm_t` on the new side, the three concentration configs whose replication counts were
+deliberately raised and which are therefore the slowest in the deck. It also turned three
+`cov_aw_disp` ledger rows stale, since a row cannot fire against a dump that does not exist.
+
+**Nothing about that was a defect in the package**, and the first judging said so plainly:
+`DIFFERS=1` (the genuine `sg_degpre` insertion) alongside `MISSING=4` and `stale_ledger=3` that
+were purely an artifact of how the machine was scheduled.
+
+**The repair, and the two places it departs from a clean run.** Both shards were re-run to
+completion **outside the pool**, each reaching its own `SHARD_DONE` sentinel, and all four dumps
+verified present on both sides. The comparison was then re-judged and is the one quoted below.
+Two honest caveats follow from that:
+
+1. **`cert`, `newfeat`, `battery` and `coverage` passed earlier in the same run**, against a tree
+   whose oldnew dumps were still incomplete. The file times say so and can be checked:
+   `cert.log` 13:38, `newfeat.log` 13:47, `battery_compare.txt` and `coverage.txt` both 13:53,
+   against `out/run_old` completing its repair at 13:59 and `out/run_new` at 14:51. That does not weaken them - none of the four reads
+   those dumps; `cert` and `battery` run against the working tree, `newfeat` against its own
+   fixtures - but they were not re-run after the repair.
+2. **`degeneracy` was run by invoking `degeneracy_scan.py` directly**, because the `run_full.sh`
+   wrapper refuses to scan when the last run left dumps missing, and `pool.log` is append-only:
+   its two `TIMEOUT` lines persist even after the shards are repaired, so the guard stays tripped
+   while the comparison is clean. The scanner's own output answers the question the guard exists
+   to ask - `nodump=0` over all 559 configs - which is why running it directly is sound rather
+   than a way around a red light. **The wrapper's guard cannot see a manually repaired shard**, and
+   that is worth someone's attention as a suite observation - **it was ruled on and fixed the
+   same day; see 7.8**. (`pool.log`, frozen at 13:53,
+   carries the two `TIMEOUT` lines at its lines 29 and 112; `oldnew_compare.txt` is 14:52 and
+   `degeneracy.txt` 14:53, both after the repair.)
+
+**The lesson, which is about scheduling and not about the package.** The chunk's instruction is to
+iterate until all tests pass; the first iteration here failed for a reason I introduced by
+saturating the machine, and reporting it as anything other than that would misattribute my own
+resource contention to the code under test.
+
+### 7.8 Two defects in the suite's own tooling, found while closing out and fixed (`23400f9`)
+
+Both were found by the closeout rather than by a test, both were put to the author, and both
+were ruled FIX. Neither is a defect in wooldid; both are defects in the apparatus that judges
+wooldid, which is the harder kind to notice because a broken judge reports success.
+
+#### 7.8.1 The degeneracy guard could not see a repaired shard
+
+`run_full.sh`'s degeneracy precondition refused to scan when EITHER `pool.log` carried a
+`TIMEOUT` line OR the comparer reported a missing dump. `pool.log` is **append-only**. So once
+a shard had timed out, the first condition was tripped permanently - including after that shard
+was re-run by hand to its own `SHARD_DONE` sentinel and every dump verified recovered. The
+wrapper then refused a scan that the scanner itself passes at `nodump=0`, and the only way to
+close the run was to invoke `degeneracy_scan.py` directly, which is precisely the bypass a
+guard exists to make unnecessary. That is what happened on 2026-09-14 and it is why 7.7 has to
+describe the closing scan as a direct call.
+
+The comparer's own MISSING report is the correct condition **alone**: it is recomputed from the
+dumps on disk at judging time, so it clears when a repair really lands and stays tripped when
+one does not. The stale-dump case the `pool.log` condition was guarding against is ruled out by
+that same re-judge. Dropped the `pool.log` clause. **Proven** by running `./run_full.sh
+degeneracy` with the identical stale `pool.log` still on disk: it now passes the scan it
+previously refused.
+
+#### 7.8.2 The ledger join credited rows written about something else
+
+This is the more interesting one, and it is a defect in a **classifier**, so its failure mode is
+a confident wrong answer rather than an error.
+
+`degeneracy_scan.py`'s `ledger_known` credited degeneracy coverage from any ledger row matching
+the same e() **matrix**. A config whose dead objects were all covered was promoted to RULED.
+The promotion therefore did not require anyone to have adjudicated the degeneracy - only that
+some row, written for any reason at all, happened to touch the same matrix.
+
+Two configs were being classified on that basis:
+
+- **`sg_degpre`**: its `WINDOW_SHORT(att_s2:pre0/2)` - subgroup 2 has no pre-treatment row - was
+  promoted to RULED by `F1SG-degpre-m-b`, a row about a **positional insertion in `b`** that
+  says nothing whatever about subgroup 2's window.
+- **`ext_cov10_rcs_pweight_ddd_c1`**: the same shape, via `DDG-pw-1`.
+
+What makes this hard is that **nothing mechanical separates those from the honest cases**.
+`BS15-pw-esptrip` really is about `esptrip`'s `pwsgs` deadness; it has the same `kind`, the same
+shape of `pattern`, and names the same matrix. The difference lives only in the prose, so no
+glob or kind filter can recover it - a human has to assert the tie.
+
+**The fix, and a correction to the mechanism first proposed.** The first design was to require a
+row's `pattern` to name the dead object's stem. That is not available: `pattern` is also
+`compare_oldnew.py`'s cell-match key (`compare_oldnew.py:216`), so narrowing it would have
+stopped those rows explaining the cells they exist to explain and turned the 559-config
+comparison red. Checked before anything was edited.
+
+What shipped instead uses a field that already exists for exactly this purpose.
+`degeneracy_expected.csv`'s `citation` column for a RULED/PART_RULED row **is** a human saying
+"these ledger ids rule this config's surfaces" - it was simply never used as anything but a
+danglingness check. `ledger_known` now takes a `candidates` set and credits coverage only from
+the cited ids. No ledger edits, no effect on the comparer, and no machine-parsing of a free-text
+field. The all-ledger pass survives as a `DEGEN_NOTE` so "the ledger now covers this, consider
+citing it" stays visible without being allowed to classify anything.
+
+**What it moved, measured before the rule was changed.** 27 configs were RULED or PART_RULED and
+22 of them were credited on a dead-row object, which made the change look enormous. Under the
+citation gate exactly **three** moved - `cont_sg_tidose`, `cont_sg_gap`,
+`ext_san_input_missing` - all RULED to PART_RULED, all on an uncovered `mat:b`. All three turned
+out to be honest rows the citation list had simply omitted: `BS8-cont-sg-tidose-b`,
+`BS8-cont-sg-gap-b` and `SI20-L-ext_san_input_missing-mat-b` each explicitly assert that
+config's own `e(b)` is non-estimable. Citing them restored RULED, now as an explicit assertion
+rather than a coincidence of matrix names.
+
+**`sg_degpre` went back to `DATASET_DESIGN`**, which is what it has been all along: subgroup 2
+has no pre-treatment row because the fixture was built that way (`data_classes.csv`), and the
+ledger says so in `F1SG-degpre-n-sg` ("Subgroup 2 genuinely has no pre cells and is still
+withheld"). It was only ever moved to RULED because `class_compatible()` rejects
+`DATASET_DESIGN` against a computed RULED, so the curated file had to be edited to match a
+promotion nobody had made. Census back to **11 DATASET_DESIGN / 9 RULED**.
+
+**A correction to my own framing.** When this was put to the author I described it as fixing the
+class of error behind "R4W-fitstats, DDG-pw-1 and sg_degpre" - three instances. R4W-fitstats is
+not one of them. Those rows were retired from the ledger and were never cited in
+`degeneracy_expected.csv`; they were a **comparer-side** mis-attribution, blaming the AMESE R4
+refit removal for an rmse/r2adj divergence that was really a degrees-of-freedom over-count. The
+same shape of error in a different tool, untouched by this fix. For the scanner join the count
+is **two**.
+
+**Verification.** `./run_full.sh degeneracy` returns `DEGEN_CHECK_OK` with `fail=0 stale=0
+badrow=0 classmoved=0` and a curated census matching `DEGENERACY.md`. `./run_full.sh compare` is
+unchanged at `EXPLAINED=411 MATCH=26 RC_EXPLAINED=122` over 559/559 with `unexplained=0
+stale_ledger=0`, which is what proves the ledger and the comparison were not disturbed.
+
+
 
 ---
 
@@ -4834,38 +4969,40 @@ that survives Stage B is the open question; this line gets updated, not deleted,
   it now states the shipped composition and the rule that you count UNRULED citations, not the
   HIDDEN class. The same off-by-one was in my own working notes and in the brief I gave an agent.
 
-### 6. Still open, restated 2026-09-14 after fourteen author rulings
+### 6. Still open, restated at the close of 2026-09-14
 
 The nine issues the external-benchmark probes found are no longer the open list. Six are fixed,
 one was never ours, and two are closed by ruling rather than by repair. What is actually open is
 below, and it is shorter and sharper than what it replaced.
 
-**Open, and each needs a decision rather than a keystroke.**
+**Where these stand after the 2026-09-14 rulings.** Two items that stood here on the morning of
+2026-09-14 - the subgroup pre-treatment over-drop and its invisibility - were ruled and are now
+built; they moved to section 9b. Four remain below, and they are not all the same kind of thing.
+Items 1 and 4 have been RULED and are kept here anyway, because a ruling to take no action does
+not make the finding go away and a reader looking for known limitations deserves to meet them.
+Item 2 is a live call still awaiting the author - a disclosure surface, not a computation.
+Item 3 is not ours to fix.
 
-1. **The subgroup pre-treatment row is over-dropped, in BOTH builds.** Where only one subgroup
-   realises in the pre-period subpopulation, `margins` drops the grouping stripe entirely and the
-   name match that decides the drop finds nothing - so EVERY subgroup loses its pre-treatment row,
-   including one with two estimable event-study pre horizons and a live covariance. Measured
-   identically on both builds and already pinned in `test/baseline/sg_degpre.csv`, so the suite
-   records the wrong behaviour as correct. The existing guard keys on the POST-period count, which
-   is 2 here, so it does not fire.
-2. **That drop decision is invisible in both directions.** Whether the row is kept or deleted,
-   nothing is posted, no caution fires, and there is no marker - so neither the user, the
-   degeneracy scanner, nor the ledger can see it. The package has exactly the pattern this site
-   lacks a few thousand lines away.
-3. **A size lead on the adversarial test under continuous treatment.** The marginal-effect family's
-   adversarial p rejected on 7 of 20 null replications at a nominal 5% where the true profile is
-   the zero line - 3.4e-05 under a binomial. Twenty replications is a lead, not a finding, and it
-   sits outside the driver's recorded columns. The campaign that settles it is the one the work
-   file asks for.
-4. **105 ledger rows carry a clause the degrees-of-freedom fix makes false**, all of them `SI20-*`
-   across 19 config globs. (The count was 138 before the closing run; 46 rows the fix made stale
-   were retired in `81b3ce2`, and 33 of those carried this clause.) The rows still FIRE - they
-   excuse differences that are really there - but the sentence explaining WHY is now wrong, and a
-   ledger reason is a claim about mechanism. Reported rather than bulk-edited: rewriting 105
-   reasons is a scope decision, and the author asked to see the count rather than have them
-   silently edited.
-5. **Numerically degenerate pairwise-subgroup inference is DISCLOSED rather than withheld, on
+1. **The bootstrapped adversarial statistic is INERT on a containment geometry - measured both
+   ways.** Under the null `AB12/bt` rejected 0 of 200 at 5% and 0 of 200 at 10%, which alongside
+   the analytic arm's 72.5% over-rejection looked like the bootstrap repairing it. The author
+   ruled "measure power first, then decide", and power is now measured: with a genuine violation
+   planted (a step, which is not a line through the reference period and so is outside BS-12's
+   null), **the analytic arm rejects 35 of 40 with p reaching 1.7e-09 while the bootstrapped arm
+   rejects 0 of 40, minimum p 0.080** - paired on the same 40 datasets, never once agreeing on a
+   rejection. So it is not conservative, it is inert: it rejects nothing under the null and
+   nothing under a violation the analytic arm detects at one part in a billion. A user reading a
+   non-significant `AB12/bt` p learns nothing from it.
+   **RULED 2026-09-14, after the measurement: LEAVE IT UNTOUCHED.** The options put to the
+   author were to withhold the statistic under the existing containment screens, to withhold and
+   then measure whether the inertness extends beyond containment, to ship it documented as a
+   known limitation, or to leave it. He chose to leave it: no code change, no help-file change.
+   The measurement stands here as a recorded fact about the shipped statistic rather than as a
+   pending repair. Stating the limit of the evidence alongside the ruling, because the ruling
+   does not extend it: **the ladder is all-containment geometry**, so nothing here establishes
+   how `bt` behaves elsewhere, and the 0-of-40 result should not be read as a general claim
+   about the bootstrapped adversarial test.
+2. **Numerically degenerate pairwise-subgroup inference is DISCLOSED rather than withheld, on
    both builds.** On `ext_cov10_rcs_pweight_ddd_c1` the four `att`-family pairwise rows all carry
    one point estimate - exactly 1 - and the inference published beside it is **se 2.33e-10, t
    4.29e9, p 2.1e-207, CI [1, 1]**. That is a contrast the fit determines exactly, reported as
@@ -4877,7 +5014,25 @@ below, and it is shorter and sharper than what it replaced.
    reason, not by any test**, which is the point: the suite explained this config as a recovery
    for months. The reason text is corrected; the surface itself is the author's call, and it
    belongs with items 1 and 2 as the same kind of problem.
-6. **One external defect that is not ours**: the `jwdid` help documents weights its code refuses.
+3. **One external defect that is not ours**: the `jwdid` help documents weights its code refuses.
+4. **The continuous `ame` line test is about twice nominal size AT the cell size the help
+   recommends** - disclosed rather than repaired, and listed here because a reader looking for
+   known limitations should not have to find it inside a campaign section. Measured by varying
+   observations per cohort-by-period cell and nothing else: rejection 0.402 at six observations
+   per cell, **0.110 at fifty**, against a nominal 0.05, with the `att` family from the same fits
+   inside its band at both (0.049 and 0.080). So the help's precondition is **necessary but not
+   sufficient**: "on the order of fifty" is a large improvement, not a cure. The author ruled the
+   cell-size question to user judgement, and the help now carries the measured magnitudes
+   (`6ccceec`), so this is a documented limitation rather than an owed repair - but it is a
+   limitation, and 10.2 has the mechanism, including the part that is NOT explained (a uniform
+   20% understatement of the diagonal predicts at most ~0.22 joint rejection at eight degrees of
+   freedom against 0.402 observed, so `e(V_es_ame)` is mis-shaped rather than merely scaled, and
+   the measurement covers the diagonal only).
+
+**Worth putting items 1 and 4 side by side, because they were treated differently.** Both are
+known limitations of shipped statistics that this assessment measured for the first time. Item 4
+is disclosed in the help; item 1 is not disclosed anywhere, by ruling. That is the author's call
+and it is recorded as his, not presented as a conclusion of the assessment.
 
 **Closed by ruling rather than by repair, which is a different thing and worth the distinction.**
 The efficiency claim about where to set the cohort identifier was REMOVED from the help rather
@@ -4935,6 +5090,212 @@ fixture, one `RULED`, and two `HIDDEN`+`UNRULED` for the bias-corrected bootstra
 | 9.6 | **Three help claims were false**: `impvalues` listed as returning a vector it does not, the `did_imputation` equivalence conditions missing the one option that makes them true, and the honestdid example missing the option that stops it spawning four child processes. | Each verified against the code or the external package before editing. The suite's own three honestdid call sites were fixed hours earlier; the line a user copies was not. |
 | 9.8 | **The two battery baselines the dof fix moved were re-blessed**, `cont_lat` and `perm_cfxnose`. | Not blessed on assertion. Pristine-twice first: the battery was run a second time into a fresh directory and the two runs compared to each other at rtol 0 - `TOTAL_DIFF_GROUPS=0`, all 48 configs bit-identical including both movers, so the movement is deterministic. Then a cell census: 30 and 421 changed cells, of which 24 and 410 sit at or below the 1e-10 indifference threshold. `rss` is unchanged; `rmse` moves 6.6e-4 and the two adjusted R-squareds 2-5e-9, which is the designed effect. The only other above-threshold cells are one `cont_lat` coefficient of value 8.1e-07 whose absolute change is 7.11e-15, and eight `permdist_b` replication cells whose absolute change is 1.08e-11. **All 56 permutation p-value cells are bit-identical**, as are every joint and adversarial statistic; the worst movement across all reported `b`/`V`/`b_es_*`/`V_es_*` cells is 3.27e-11. After blessing, baseline compares 48 IDENTICAL at rtol 0. See Part 7.6. |
 | 9.7 | **The coefficient names in `e(b)` were undocumented** - two of them appeared zero times - in a help that tells users eleven times to address coefficients by them. | Now documented where the stored results are. |
+
+### 9b. Fixed by the 2026-09-14 rulings
+
+| # | what was wrong | how it was proven |
+|---|---|---|
+| 9b.1 | **One degenerate subgroup deleted EVERY subgroup's pre-treatment row**, on both builds. When only one subgroup realises in the pre-period subpopulation, `margins` drops the grouping stripe and returns the target-flag tempvar name; no name carries a subgroup token, so the name match that decides the row found nothing for anyone. The guard written for this shape keyed on the POST-period subgroup count - which is 2 in exactly the case that breaks - so it never fired. | The guard is re-keyed on which subgroups the PRE period actually realises, captured on the same subpopulation as the call that produces the collapsed stripe. On `sg_degpre`, subgroup 1 regains a row that is live rather than residue: estimate 2.08e-4, se 0.067, p 0.9975. Subgroup 2, which genuinely has no pre cells, is still withheld. The three-subgroup case where only the third is degenerate is bit-unchanged - the stripe survives there and the name match does the work. Cert 43/43, battery `TOTAL_DIFF_GROUPS=0`. |
+| 9b.2 | **A second defect the same change repairs.** The old guard's first term is vestigial - always true after two `subinstr` strips - so it reduced to "one subgroup in the list implies the row is the LAST one", which would have handed subgroup 1 the wrong row had a one-subgroup list ever met a multi-level pre stripe. | Repaired by the same re-keying. The vestigial term is kept as the file's idiom rather than widening the diff. |
+| 9b.3 | **The drop was invisible in both directions** - kept or deleted, nothing posted, no caution, no marker, so neither the user nor the degeneracy scanner nor the ledger could see it. | Three self-gating hidden macros on the existing `e(wdid_sgdegen)` shape record which subgroups lost the row, why, and WHICH row; a per-subgroup caution prints beside the table and survives replay. The third macro exists because the first caution written was wrong: on `cont_sg_gap` the withheld row is the `ame` while `pretreatment:att` sits in the same table with a live estimate, so "the pre-treatment average is not estimable" would have been false. **A disclosure that misstates what it discloses is worse than silence**, and it was caught before it shipped. |
+| 9b.4 | **The 105 rewritten ledger reasons reproduced the very defect they repaired.** The honest mechanism is ~1800 characters and near-identical across all 105, so the file went 159KB to 300KB - about 190KB of duplicated prose, which is the shape that let one sentence go stale across 138 rows in the first place. | Stated once as a named `SI20-L-MECHANISM` note and cited by the 105, following the file's own convention where `PS62-esblock` covers a class with one row. Measured first: the 116 `SI20-L` rows carried only **16 distinct texts**, 105 of them beginning with the same 1837-character block. Verified by the comparer's own loader - 437 rows, same id set, **zero rows whose config, kind, pattern or rtol changed**. 300KB to 124KB. |
+| 9b.5 | **The help's adversarial-size warning made four claims and none had been measured** on the statistic that ships. | All four now carry numbers, and two were modestly wrong: the "threefold" degradation at two clusters per cell is 4.0x, and the single-cluster case is 16x rather than the "order of magnitude" claimed. See 10.1. |
+| 9b.6 | **Was the F1 repair protected against regression?** The agent that built 9b.1 recommended a dedicated cert leg and left it for a ruling. | **RULED 2026-09-14: no cert leg; the battery pin is enough.** `sg_degpre`'s blessed baseline pins the 15-name shape, so an F1 regression turns the battery red today. Recording the contingency the ruling rests on: that protection exists only while `sg_degpre` stays in the battery deck, so if it is ever removed this ruling lapses with it and the cert leg becomes the open question again. |
+
+
+### 10. The Stage C campaigns: what was measured, 2026-09-14
+
+Three campaigns were preregistered at the start of this assessment - C1 the BS-12 adversarial
+size ladder (`mc_adv_bs12.do`), C2 simultaneous sup-t band coverage (`mc_bands.do`), C3 the
+randomization-inference extensions (`mc_ri_ext.do`) - and all three shipped as scaffolds that
+had never been executed. They are reported here because the chunk asks whether the new features
+are correctly sized, and until they ran the honest answer was that nobody knew.
+
+C1 is below at 10.1. **C2 and C3 are in 10.4 and 10.5.** Three further measurements were not
+preregistered and were added because the work turned them up: the continuous-treatment
+cell-size dose-response (10.2), which exists because C1's continuous rung violates a
+precondition the help states; the standard-error coverage MC (10.3), which C.6 asked for; and
+the AB12/bt power run, which the author ordered before ruling on the inert statistic and which
+is reported with the defect it measures in section 6 rather than here.
+
+#### 10.1 The BS-12 adversarial size ladder - the shipped statistic finally has a number
+
+**Why it was owed.** Every adversarial size figure on record - both Monte Carlo reports and the
+help - was measured on the free-intercept statistic that BS-12 replaced on 2026-09-08. The
+ruling's own prerequisite simulation was never run. So the package's documented size claims
+described a statistic that no longer shipped.
+
+200 replications per cell, B = 199, slope 0, four geometries, 8 shards, about seven hours.
+Integrity was clean throughout: `rc = 0` on all 1200 rows, `advabsent` 0, `nfail` 0, `ncomp` =
+199 on every resampling row, every p inside [0,1], and `advw_big` 0 on the permutation arm.
+
+| cell | what it is | size at nominal .05 | |
+|---|---|---|---|
+| `AB1` / an | 6 clusters per cell - the compliant geometry | 9/200 = **0.045** | **PASS** |
+| `AB1C` / an | continuous treatment, att family | 10/200 = **0.050** | **PASS** |
+| `PM` / pm | permutation p, exact by construction | 7/200 = **0.035** | **PASS** |
+| `AB13` / an | 2 clusters per cell | 36/200 = 0.180 | FAIL |
+| `AB12` / an | containment, 1 cluster per cell | 145/200 = 0.725 | not scored |
+| `AB12` / bt | bootstrapped, containment cell | 0/200 = 0.000 | FAIL |
+
+**The headline is the three passes.** The statistic the package actually ships is correctly
+sized where its help says it should be, including under a continuous treatment on the att
+family, and the permutation arm is exact. That is the first evidence for BS-12 rather than for
+its predecessor.
+
+**The two failures are both regimes the help already describes, and they put numbers on claims
+that had none.** The help said size rises "roughly threefold when cells were spanned by only two
+clusters": measured 4.0x. It said "an order of magnitude when each cell lay entirely within a
+single cluster": measured 16x, worse than its own estimate. Both corrections are now in the help.
+
+**`AB12/bt` is new and is open.** See section 6 item 3.
+
+#### 10.2 The continuous cell-size precondition - a caveat confirmed, and a correction to my own reading
+
+The help states one condition specific to the continuous case: cells "on the order of fifty"
+observations, because each cell's dose slope is otherwise too imprecisely estimated for the
+test's covariance to be trustworthy. It had never been measured, and - this is the part worth
+recording - **the rung preregistered as the continuous half of the ask violates it**. `AB1C` is
+30 cohorts x 6 units x 12 periods, so a treated cohort-by-period cell holds six observations
+against the help's fifty.
+
+That was found the hard way. A probe measured the `ame` line test rejecting at 40% against a
+nominal 5% and it looked like an undocumented defect in a shipped feature. It is not: the help
+predicts it, and the probe was measuring a design the help warns against. **A measured
+over-rejection is not a finding until the help has been read.**
+
+Measured properly, by varying observations per cell and nothing else:
+
+| observations per cell | `ame` p at nominal .05 | uniformity | `att` p from the same fits |
+|---|---|---|---|
+| 6 | **0.402** | KS 0.520, rejected | 0.049, inside band |
+| 50 | **0.110** | KS 0.109, not rejected | 0.080, inside band |
+
+So the caveat is real, the direction is right, and fifty observations per cell is a large
+improvement rather than exactness - 0.110 is still about twice nominal. The help now says that.
+
+The mechanism is only partly diagnosed, and the report says so rather than overclaiming. Over
+200 draws the reported `ame` standard errors run at 0.800 of the sampling standard deviation,
+every one of eight horizons below 0.85, while the `att` family sits at 1.036 with every horizon
+in [0.96, 1.14]; `e(V_es_ame)` is posted on every draw, so the documented cell-containment screen
+never fires here. But a uniform 20 percent understatement of the diagonal predicts at most about
+0.22 joint rejection at eight degrees of freedom, and 0.402 was observed - so `e(V_es_ame)` is
+**mis-shaped, not merely scaled down**. The measurement records the diagonal only and therefore
+establishes that the variance is understated, not by how much in which direction.
+
+**What this cost the assessment, stated plainly.** A preregistered sizing rung was built on a
+design its own help declares untrustworthy, and neither the preregistration nor the driver
+header recorded the precondition. That is a design error in the assessment, not in the package.
+Both are amended, and the compliant measurement now ships as `mc_ame_cellsize.do` so the help's
+numbers are reproducible from the repository.
+
+#### 10.3 The standard-error coverage MC - C.6's candidate, confirmed at 500 draws
+
+Part 8 C.6 flagged wooldid's analytic standard errors running 20-40% below the sampling standard
+deviation on two arms, with csdid and did_imputation covering correctly on IDENTICAL point
+estimates in the same draws. It rested on 30 draws at one cluster count and C.6 itself said that
+was not ruling-grade. The author's help-side ruling of 2026-09-13 closed the documentation half by
+removing the sentence that steered users toward the geometry; it did not measure anything. On
+2026-09-14 he ruled to run the measurement at G = 40. Medians across horizons, 500 draws:
+
+| arm | hom SE/SD | hom cov | stag SE/SD | stag cov |
+|---|---|---|---|---|
+| `esfixedbaseperiod`, **i = unit id** | 0.949 | 0.934 | **0.742** | **0.838** |
+| `esfixedbaseperiod`, i = cohort id | 1.019 | 0.953 | 0.972 | 0.934 |
+| pooled `esprelength(0)`, **i = unit id** | **0.799** | **0.876** | **0.661** | **0.794** |
+| pooled `esprelength(0)`, i = cohort id | 1.010 | 0.950 | 1.006 | 0.946 |
+| csdid `long2` *(control)* | 0.961 | 0.939 | 0.927 | 0.926 |
+| did_imputation *(control)* | 0.963 | 0.939 | 0.943 | 0.936 |
+
+**On the common-onset DGP C.6's own pre-written flag rule fires cleanly**: the pooled arm at
+`i` = unit reports SEs at 0.799 of the sampling SD and covers at 0.876 against a nominal 0.95
+while both controls cover at 0.939. **S2 is confirmed at 500 draws.**
+
+**On the staggered DGP the rule abstains, on a technicality that is stated rather than hidden**:
+csdid's coverage is 0.926, four thousandths below the rule's 0.93 gate, so "both controls inside
+band" fails. The magnitudes are not close - wooldid's two `i` = unit arms cover at 0.838 and 0.794.
+C.6 predicted 0.838 on that arm from thirty draws and five hundred draws return 0.838. Read the
+gate as abstaining, not exonerating.
+
+**The decisive detail is per horizon.** On the staggered DGP the empirical SD of wooldid's
+estimates and csdid's are identical to four decimals, horizon by horizon - 0.1563, 0.1645, 0.1489,
+0.2339 - because they ARE the same estimates. What differs is the reported standard error: 0.1219
+against 0.1530 at the first pre horizon, 0.0845 against 0.1389 at the fourth. Same estimates, same
+sampling variability, different reported uncertainty, and no DGP explanation is available for it.
+
+**`i` = the cohort id is clean everywhere** (0.95-1.02, 0.934-0.953), across both DGPs and both
+estimators. The effect is specific to `i` = the unit id, which is what the removed help sentence
+used to recommend - so the ruling that removed it is validated by this run.
+
+Scope: one cluster count, one panel length, `cluster(i)` only. C.6 asked for a G sweep and this run
+was scoped to G = 40, so it establishes the effect is real and large there and says nothing about
+how it behaves in G. **That is a ruling, not an omission.** A G = 200 follow-up (one shard,
+about four hours) was offered on 2026-09-14 on the explicit ground that the original concern was
+whether the shortfall is a small-G artifact and that G = 40 is itself small; the author ruled
+SKIP. The G = 40 result therefore stands as the scoped answer and the sentence above is the
+honest boundary of it. Two staggered horizons are far worse than their neighbours (0.567, 0.591) and
+that is unexplained. Report and driver: `review_process/se_coverage_2026-09-14/`.
+
+#### 10.4 C2 - the simultaneous sup-t band, measured for the first time (`558f18d`)
+
+**Why it needed measuring.** The band shipped on 2026-09-10, *after* every Monte Carlo in the
+project had already run. `test_esband.do` pins its structure - that the matrix exists and has the
+right shape - and nothing pinned its **coverage**. No MC had ever used a cluster strictly below
+`i`, which is both the geometry the help recommends and the only one on which the analytic
+`e(V_es_*)` the band is simulated from is the right object. So the headline claim of the feature
+was unverified.
+
+**Design.** 150 reps per arm, 6 shards, B = 199, tau = 0.5, three engines: analytic-simulated
+(`an`), bootstrap (`bs`), bootstrap-studentized (`bt`). 450 rows, no `level()` passed, so
+wooldid's default 95 is in force.
+
+**The result: every preregistered check passes, 0 failures.**
+
+**P1, the headline.** Simultaneous coverage against nominal 0.95, preregistered count band
+[137,148]:
+
+| arm | engine | `band_all` | rate | verdict |
+|---|---|---|---|---|
+| an | analytic-simulated | 139/150 | 0.9267 [0.8735,0.9586] | PASS |
+| bs | bootstrap | 139/150 | 0.9267 [0.8735,0.9586] | PASS |
+| bt | bootstrap-studentized | 146/150 | 0.9733 [0.9334,0.9896] | PASS |
+
+The margin is worth stating rather than hiding behind the verdict: `an` and `bs` sit **two counts
+above the band's lower edge**. That is a pass and not a close one in any statistical sense - the
+Wilson interval comfortably contains 0.95 - but they are not central either, and if this band is
+ever re-measured at higher n the honest prior is that analytic and bootstrap sit a little under
+nominal while the studentized arm runs slightly conservative.
+
+**P2, the control.** All 8 horizons of all 3 arms lie inside their pointwise binomial regions.
+
+**P3, the directional check, and the sign IS the claim.** A simultaneous band that is not wider
+than the pointwise intervals is not doing its job. With 8 horizons, intervals claiming only
+pointwise coverage should cover *all* of them well below 95%. They do, and the gap is large and
+consistent:
+
+| arm | `pw_all` | `band_all` | gap |
+|---|---|---|---|
+| an | 0.7000 | 0.9267 | +0.2267 |
+| bs | 0.7067 | 0.9267 | +0.2200 |
+| bt | 0.7133 | 0.9733 | +0.2600 |
+
+**P0 integrity, clean on all 450 rows.** `rc = 0`; a band present on every rep
+(`band_absent = 0`, so no rep was silently dropped by the kernel refusing a degenerate horizon);
+`nh = 8`; `pw_n = nh`, so the control is measured on the same horizon set as the band;
+`ncomp = 199` and `nfail = 0` on both bootstrap arms; and the summary columns arithmetically
+consistent with the per-horizon ones on every row. That last family exists because **a driver
+that mis-writes its summary columns turns a coverage number into fiction without failing
+anything**, and it is the check that would have caught it.
+
+**One secondary fact that carries the mechanism.** Mean critical value is 2.644 (`an`), 2.658
+(`bs`) and 5.049 (`bt`), against a pointwise 1.96. The critical value both exceeds the pointwise
+one and **moves with the engine** - if it did not, the simultaneity would be nominal only, a
+relabelled pointwise interval. It is real.
+
+**Scope.** One geometry (G = 30, U = 6, T = 12, cluster strictly below `i`), one window
+(`esprelength(4) espostlength(4) esfixedbaseperiod`), one level (95), one tau. It establishes
+that the band covers at its nominal level where the help says to use it; it says nothing about
+other windows or levels. Data and report: `test/suite/mc/out3/bands/`.
 
 
 ---
