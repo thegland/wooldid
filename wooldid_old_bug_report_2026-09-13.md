@@ -4087,6 +4087,66 @@ unchanged at `EXPLAINED=411 MATCH=26 RC_EXPLAINED=122` over 559/559 with `unexpl
 stale_ledger=0`, which is what proves the ledger and the comparison were not disturbed.
 
 
+### 7.9 What this assessment added to the suite, and what the suite still does not cover
+
+The chunk asks, in as many words, to "ensure the assessment suite includes any major tests or
+cases that you can think of that are not yet covered." This section answers it directly, in both
+directions, because an answer that lists only what was added is not an answer.
+
+#### What was added
+
+**63 new files under `test/`** since the chunk opened at `08ec0b4`, and the dual-build universe
+grew from **538 configs to 559**. The additions that change what the suite can *see*, rather
+than merely adding rows:
+
+- **A hidden-degeneracy scanner** (`degeneracy_scan.py`, `degeneracy_expected.csv`,
+  `DEGENERACY.md`). Before it, a config could return `rc = 0` with a dead estimate or dead
+  inference on the exact surface it was written to exercise, and every component would pass. The
+  suite judged permute and bootstrap configs on `rc` alone and `coverage_check` credited them.
+  This is the single largest coverage gain of the assessment.
+- **Five Monte Carlo drivers and four analyzers** that did not exist: `mc_adv_bs12.do` (the
+  BS-12 adversarial ladder), `mc_bands.do` (sup-t band coverage), `mc_ri_ext.do` (the
+  randomization-inference extensions), plus `mc_ame_cellsize.do` and `mc_adv_bs12_power.do`,
+  which were not preregistered and exist because the work turned up the questions they answer.
+- **Two preregistrations** (`PREREG_2026-09-13.md`, `PREREG_STAGEC_2026-09-13.md`) that fix the
+  acceptance bands *before* the numbers exist, which is what stops a band being widened to fit
+  a result.
+- **Three campaigns that had never been executed** - C1, C2, C3, reported at 10.1, 10.4 and 10.5.
+
+#### What is still not covered, and why
+
+Stated as specifically as the gaps are known. **This is the list this assessment can name from
+its own work; it is not the output of an exhaustive coverage audit**, and that distinction is
+the honest one.
+
+1. **The sup-t band's coverage is measured but not PINNED.** 10.4 measures it; `test_esband.do`
+   still pins only its structure. This is a deliberate non-gap rather than an oversight: a
+   coverage measurement is 150 reps at ~7 minutes each per engine, so it cannot become a cert
+   leg without turning a 40-second component into a multi-hour one. The artifact that protects
+   the result is the committed campaign and its report, not a test.
+2. **The band is measured at ONE geometry, window and level** - G=30, U=6, T=12, cluster
+   strictly below `i`, `esprelength(4) espostlength(4) esfixedbaseperiod`, level 95. Nothing is
+   known about other windows or levels.
+3. **`AB12/bt`'s inertness is established only under CONTAINMENT.** The ladder is
+   all-containment geometry by construction, so whether the bootstrapped adversarial statistic
+   is equally inert elsewhere is unmeasured. Section 6 item 1 says so beside the result.
+4. **`e(V_es_ame)` is established as mis-shaped but not characterised.** The measurement covers
+   the DIAGONAL only - reported SEs at 0.800 of the sampling SD - and the mis-shape is inferred
+   from the gap between what a uniform diagonal understatement predicts (~0.22 joint rejection)
+   and what was observed (0.402). The off-diagonal structure has not been measured, so "in which
+   direction, by how much" is open.
+5. **The standard-error coverage result's dependence on G is unmeasured**, at G=40 only. A
+   G=200 follow-up was offered and the author ruled SKIP (10.3), so this is a bounded scope
+   rather than an omission.
+
+#### One gap that was closed by finding it, and is worth naming separately
+
+The assessment's own apparatus had two defects (7.8) - a guard that could not see a repaired
+shard, and a classifier that credited ledger rows written about something else. Neither was
+found by a test, because **the suite has no tests of itself**. That remains true. The defects
+were found by closing out carefully, which is not a repeatable mechanism, and it is the gap in
+this list a future reader should take most seriously.
+
 
 ---
 
