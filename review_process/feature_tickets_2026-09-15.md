@@ -1,5 +1,7 @@
 # Feature tickets: decoupling `i` from the resampling unit
 
+**Status 2026-09-15: T1, T2, T3 OPEN and unstarted. T4 CLOSED by ruling (documentation only).**
+
 Opened 2026-09-15 at the author's instruction, after a help-file edit turned up the underlying
 issue. These are FEATURE requests, not defects, so they do not belong in `open_defects.md` -
 with the partial exception of T4, which the help already documents as a correctness limitation.
@@ -154,22 +156,33 @@ estimands under IM are "incorrect ... if clusters cross-cut cohorts or (worse) c
 cells", and wooldid computes and prints them anyway. Shipping numbers the documentation calls
 incorrect, with no error and the caveat living only in the help, is the real problem here.
 
-**Proposed.** Refuse non-`att` estimands under `impvalues` when the clusters cross-cut cohorts
-(or cohort-by-period cells), or failing that print a caution at the table rather than only in the
-help. **There is strong precedent for refusal**: `impvalues` is already refused in combination
-with `subgroups()`, `jointtests`, `makecfxplots`, `adversarial`, `customvce()`, `fastnose`,
-`pretrendpower()`, `permute()` and `bootstrap()` - nine screens. One more for a combination the
-help already calls incorrect is consistent with how this option is governed, not a new policy.
+**RULED AND CLOSED 2026-09-15: documentation only. No refusal, and no runtime caution.**
 
-**A second, cheaper item worth considering alongside it.** The help notes that IM "implicitly
-changes wooldid's target estimand" even for `att`. wooldid could report which estimand IM
-actually delivered rather than printing it under the requested name, so a user reading `att` in
-the table knows it is the cluster-equal-weighted average. Pure transparency, no numbers move.
+Both code options were put to the author and both declined. The non-`att` estimands keep
+printing under `impvalues` with cross-cutting clusters, and the help is the whole mitigation.
+Recorded because a reader will otherwise assume this was an oversight: it was considered, the
+options were costed, and the author chose the documented behaviour.
 
-**Author ruling needed on one point.** The standing instruction is not to build guards against
-arbitrary bad user specifications. This is arguably a different category - it is not a user
-writing something silly, it is wooldid emitting a result its own documentation calls incorrect -
-but the distinction is the author's to draw, not mine to assume.
+What was declined, so nobody re-proposes it:
+- **Refusal.** There was precedent - `impvalues` is already refused with `subgroups()`,
+  `jointtests`, `makecfxplots`, `adversarial`, `customvce()`, `fastnose`, `pretrendpower()`,
+  `permute()` and `bootstrap()`, nine screens - and the author still declined a tenth. This is
+  the standing position on not guarding specifications, applied to a case that sat near its edge.
+- **A runtime caution at the table.** Declined even though it was free: all 15 suite configs
+  using `impvalues` request `att` only, so nothing would have triggered it and no caution counts
+  are pinned in `degeneracy_expected.csv`. Cost was not the reason.
+
+**What WAS done instead, and it is the part that mattered** (`2d41a22`). The help entry said IM
+"implicitly changes wooldid's target estimand" and then offered cohort-level clustering as an
+example, which reads as a special case a user might avoid. It is the general rule. The entry now
+leads with it - the procedure averages cluster-specific estimates with equal weight, so the
+cluster-equally-weighted mean is what it reports in every run - names `cluster()` at `i` with
+`att_i` as the pairing coherent by construction, and records why the equal weighting cannot be
+reweighted away: it is what earns the `q-1` degrees of freedom, so trading it for the requested
+estimand's weights would cost the inference that motivates the method.
+
+So the transparency item is delivered in documentation rather than in `e()` or at the table,
+which is where the author wanted it.
 
 ## Considered and NOT proposed, with reasons
 
