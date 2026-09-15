@@ -5458,5 +5458,50 @@ tau by `[ll_main, ul_main]`", which tau = 0 satisfies, so the result stands as a
 null-coverage check. It is weaker than a planted-tau check would have been, and the "planted"
 wording in the driver and analyzer is loose.
 
+#### 10.6 Probe P-E3 - the C3 lean was one seed set, and the readout was fixed before the run (`58184cc`)
+
+**What was tested.** Phase E3 alone (`mkR1`, plain `att cluster(i)`, full support, equal-tailed,
+B = 199, tau = 0), 400 reps on fresh shards 9-16 giving dgpseed 1800010..2500066, disjoint from
+the campaign's 1000002..1700033. One knob changed: the shard block, which sets both seeds. No
+change to the DGP, estimand, B, convention or geometry.
+
+**The readout was preregistered in `PREREG_STAGEC_2026-09-13.md` before the launch command ran**,
+and is scored below exactly as written, with nothing added afterwards. That precaution was taken
+because the aggregate statistic used in 10.5's discussion was chosen after seeing which columns
+failed, and a second such statistic would have been worth nothing.
+
+| readout | preregistered rule | result | verdict |
+|---|---|---|---|
+| **A (primary)** `main_att` equal-tailed mean p vs 0.5050 | \|t\| > 2.5 confirms, \|t\| < 1.5 refutes | 0.5200, **t = +1.02** | **REFUTES** |
+| **B (control)** one-sided `phi_main` vs 0.5025 | predicted near 0 | 0.4909, t = -0.82 | as predicted |
+| **C** `ES_att_post1` rejection at .10 | inside the band refutes | **33/400 = .0825**, mean p 0.5011, t = -0.27 | **REFUTES** |
+| **D** per-column draw counts | any column below 199 is itself the finding | `n_main` and `n_post1` = **199 on all 400 rows**; `permblank` = 0 throughout | no draw loss |
+
+On A the sign is also **reversed**: the campaign's phases sat below the null mean, this sits
+above it. On C, the column that rejected 36/200 = .180 in the campaign rejects .0825 here and its
+mean p is 0.5011 - dead on the null.
+
+**D closes the one gap the source read could not.** Because `e(perm_n)` is now recorded per
+column, the exactness argument no longer rests on `main_att`'s denominator alone: every column
+examined used all 199 draws on every rep, so no column quietly lost draws. `n_amepost0` is empty
+because E3 carries no ame columns without `contreat`, which is expected rather than a failure.
+
+**Verdict.** The C3 lean was a property of one seed set, not of the estimator. Together with the
+source read - which closed every mechanism it examined, including the only assignment-dependent
+one - **E1's two failures in 10.5 are chance**, and the correct reading of C3 is that all five
+randomization-inference extensions are correctly sized at the geometries measured.
+
+**Two honest residuals.**
+
+1. **This probe re-ran E3, not E1.** It cannot directly test `ES_ame_post0`, which exists only
+   under `contreat`. The inference to E1 rests on the source read closing every contreat-specific
+   mechanism plus the shared onset vectors making E1 and E3 the same seed set. A direct E1
+   replicate on fresh seeds is the only thing that would close it outright, and at 210 s per rep
+   that is about three hours. It was not run unbidden.
+2. **A small preregistration error, recorded rather than quietly corrected.** The amendment wrote
+   C's band as [29, 52]; recomputing it from floor/ceil of 40 +/- 1.96 x 6.0 gives **[28, 52]**.
+   The observed 33 is well inside either, so the verdict is unaffected - but the preregistered
+   number was one count off and saying so is cheaper than having a reader find it.
+
 
 ---
