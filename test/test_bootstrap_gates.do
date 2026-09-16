@@ -93,14 +93,80 @@ chk 7 0 _rc
 cap qui wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20)
 chk 7b 0 _rc
 
-* G8 standard + cell-weighted + no cluster -> obs-level refusal
-cap qui wooldid y unit t ttre, att_it robust bootstrap(standard) reps(50)
-chk 8 198 _rc
+* G8 CONVERTED 2026-09-16 (T2) from a refusal test to a positive one, case number kept
+* so the history reads. It used to pin r(198), "observation-level resampling cannot
+* re-identify duplicated treatment cells". The leg now keeps i and resamples
+* observations, and duplicate (i,t) rows are a cell with more rows and more weight
+* rather than a contradiction - so the case now pins the branch it used to exclude:
+* the run completes, NO replication fails, and the point estimates are bitwise the
+* analytic run's, since a bootstrap replaces the inference and must never move the
+* estimate. A branch that fragmented units into single-period units would fail
+* replications on inestimable horizons long before it moved a coefficient.
+* rseed() is load-bearing: without it the draw depends on whatever RNG state the cases
+* above happened to leave, so the completion count is not a property of this case at all.
+* 50/50 is the MEASURED value at rseed(9090) on this fixture, pinned deliberately.
+qui wooldid y unit t ttre, att_it robust
+tempname G8B
+matrix `G8B' = e(b)
+cap qui wooldid y unit t ttre, att_it robust bootstrap(standard) reps(50) rseed(9090)
+chk 8 0 _rc
+if _rc == 0 {
+  if e(boot_completed) != 50 | e(boot_failed) != 0 {
+    di as error "G8b FAIL: " e(boot_completed) " of 50 replications completed, " e(boot_failed) " failed (measured 50/0 at rseed(9090))"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+  if mreldif(e(b), `G8B') != 0 {
+    di as error "G8c FAIL: bootstrap(standard) moved the point estimates (mreldif " mreldif(e(b), `G8B') ")"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+}
 
-* G9 standard + cell-weighted + NON-nesting cluster: i = s (coarse), cluster = unit
-* (finer than i: unit varies within s) -> r459
-cap qui wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50)
-chk 9 459 _rc
+* G9 CONVERTED 2026-09-16 (T2) the same way, case number kept. i = s (3 coarse groups),
+* cluster = unit (12), so the cluster is STRICTLY FINER than i - unit varies within s.
+* It used to pin r(459), "requires the cluster() variable to nest i". i is an
+* estimand-definition choice and cluster() a claim about dependence and assignment, so
+* the pairing is legitimate and the leg keeps i here rather than splitting a straddling
+* unit in two. The fixture's own shape is asserted first: without it a later change to
+* the panel could turn this back into a nesting case and the test would still "pass"
+* while no longer being about the feature.
+qui wooldid y s t ttre, att_it cluster(unit)
+tempname G9B
+matrix `G9B' = e(b)
+local g9nc = e(N_clust)
+qui levelsof s, local(g9s)
+qui levelsof unit, local(g9u)
+if `: word count `g9s'' != 3 | `: word count `g9u'' != 12 | `g9nc' != 12 {
+  di as error "G9a FAIL: fixture is not finer-than-i (s levels `: word count `g9s'', unit levels `: word count `g9u'', e(N_clust) `g9nc'; expected 3, 12, 12)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap qui wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50) rseed(9090)
+chk 9 0 _rc
+local g9done = e(boot_completed)
+local g9fail = e(boot_failed)
+if _rc == 0 {
+  if `g9done' != 50 | `g9fail' != 0 {
+    di as error "G9b FAIL: " `g9done' " of 50 replications completed, " `g9fail' " failed (measured 50/0 at rseed(9090))"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+  if mreldif(e(b), `G9B') != 0 {
+    di as error "G9c FAIL: bootstrap(standard) moved the point estimates (mreldif " mreldif(e(b), `G9B') ")"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+}
+* G9d the PAIRED CONTROL, and the reason G9b can be pinned at all. Measured 2026-09-16:
+* on this 12-cluster fixture a replication can lose a cohort entirely and fail, and that
+* happens at the SAME seeds and the SAME rate under keep-i (i = s, cluster = unit) as
+* under the group() branch (i = unit, cluster = unit) - across seeds 1-5, both arms gave
+* 50, 49, 50, 50, 50 completions, while dropping to cluster(s) (3 clusters) cost 15-20 of
+* 50 in BOTH regimes. So a lost replication here is a property of the cluster count, not
+* of the branch, and the discriminating assertion is that the two regimes agree at one
+* seed rather than that either reaches 50. Pinning only G9b would make a fixture change
+* look like a branch defect; pinning only G9d would miss a branch that failed outright.
+cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(standard) reps(50) rseed(9090)
+if _rc == 0 & e(boot_completed) != `g9done' {
+  di as error "G9d FAIL: keep-i completed `g9done' of 50 where the group() branch on the same fixture and seed completed " e(boot_completed) "; the two regimes should lose replications at the same rate here"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
 
 * G10 standard + att only + cluster(unit): runs (count path)
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20)
@@ -191,8 +257,11 @@ qui log using boot_gates_m2.smcl, replace name(m2) smcl
 cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off)
 logh m2 Caution: bootstrap(bayes) standard errors for att_it
 qui log using boot_gates_m3.smcl, replace name(m3) smcl
+* m3 used to pin the nesting refusal's message; T2 (2026-09-16) removed the refusal,
+* so what this leg now pins is that the same request RUNS and prints the bootstrap
+* footer rather than a message about nesting
 cap noi wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50)
-logh m3 requires the cluster() variable to nest i
+logh m3 Bootstrap Inference
 qui log using boot_gates_m4.smcl, replace name(m4) smcl
 cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) oldsyntax
 logh m4 not available under oldsyntax

@@ -822,17 +822,46 @@ else {
     }
   }
 
-  * ============ C-BOOT-7(b): the re-identification leg's nesting requirement ======
+  * ============ C-BOOT-7(b): the re-identification leg under a cross-cutting cluster ==
   * [SCOPE].  On this panel cluster(state) does not nest i = cohid (a cohort spans
-  * states), so the physical re-identification leg is unavailable and wooldid refuses
-  * with r(459) and a message naming the requirement rather than silently producing
-  * the pooled leg.  This is the other side of the mapping the A16-A19 legs certify.
+  * states).  Until T3 (2026-09-16) the physical re-identification leg refused that
+  * with r(459); it now has a rule for it - keep i, and let a twice-drawn cluster
+  * arrive as duplicate rows inside its unit's cell - so what this leg pins is that
+  * the request RUNS and completes its replications.  Re-identifying here would split
+  * a cohort that straddles two states into two cohorts in EVERY replication, drawn or
+  * not, which is the failure the keep-i rule exists to avoid.
+  * The fixture's own shape is asserted first, because "cross-cutting" is the whole
+  * point: cohid has 4 levels, state has 48, and neither nests the other.  Without this
+  * a later change to dta_s_admin could turn the case into a nesting one and the leg
+  * would still "pass" while no longer being about the feature.
   use `"`SDATA'/dta_s_admin.dta"', clear
+  qui levelsof cohid, local(c16c)
+  qui levelsof state, local(c16s)
+  tempvar c16mn c16mx
+  qui egen double `c16mn' = min(state), by(cohid)
+  qui egen double `c16mx' = max(state), by(cohid)
+  cap assert `c16mn' == `c16mx'
+  local c16nest = (_rc == 0)
+  _echk C16a `c16nest' 0 "[SCOPE] fixture check: cluster(state) does NOT nest i = cohid"
+  cap qui wooldid y cohid year ttre, att cluster(state) esprelength(1) espostlength(1)
+  local c16arc = _rc
+  tempname C16B
+  if `c16arc' == 0 matrix `C16B' = e(b)
+  _echk C16e `c16arc' 0 "[SCOPE] the analytic comparison run of the same spec succeeded"
   cap noi wooldid y cohid year ttre, att cluster(state) esprelength(1) espostlength(1) ///
       bootstrap(standard) reps(5) rseed(1) boottstat
   local rcN = _rc
-  _echk C16 `rcN' 459 "[SCOPE] boottstat refused r(459) where cluster() does not nest i"
-  dis "C16 info (uncounted): the log above this line carries two probe-recorded cosmetic defects — the standard r(459) trailer printed TWICE, and the low-reps() Caution printed BEFORE the validation error that aborts the run"
+  local ndN = e(boot_completed)
+  local nfN = e(boot_failed)
+  _echk C16 `rcN' 0 "[SCOPE] boottstat RUNS where cluster() does not nest i (was r(459) before T3)"
+  _echk C16b `ndN' 5 "[SCOPE] every replication of that run completed"
+  _echk C16c `nfN' 0 "[SCOPE] no replication of that run failed"
+  * a bootstrap replaces the inference and must never move the estimate; a branch that
+  * split the straddling cohorts would fail replications before it moved a coefficient,
+  * so this pairs with C16b/C16c rather than standing alone
+  local c16ok = 0
+  if `rcN' == 0 & `c16arc' == 0 local c16ok = (mreldif(e(b), `C16B') == 0)
+  _echk C16d `c16ok' 1 "[SCOPE] the point estimates are bitwise the analytic run's"
 
   * ============ C-BOOT-8: hand-rebuilt stage 1 (and boottest, recorded only) ======
   * [EXACT re-derivation, rule 1e-10].  An independent reconstruction of wooldid's

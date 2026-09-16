@@ -380,8 +380,13 @@ version 16.0
     * letting each copy carry the user's own weight represents both facts. No unit re-id:
     * the resampling unit is the observation, so re-identifying by draw would fragment every
     * unit into single-period units. Duplicate (i,t) rows are tolerated by the observation-
-    * weighted estimands (att/ame); the cell-weighted ones are refused without cluster()
-    * at parse and never reach this leg. Author ruling 2026-09-04
+    * weighted estimands (att/ame) and, since T2 (2026-09-16), by the cell-weighted ones
+    * too - a cell holds many rows whenever i is a cohort, and the collapse takes the
+    * cell's estimand-weighted mean, so duplicates are more rows carrying more weight.
+    * A cell-weighted estimand with no cluster() therefore now sets `wdb_reid' as well,
+    * and where BOTH are set this leg wins: it is tested first in the rep loop, and it
+    * is the right leg there - unclustered resampling wants exactly this rule (keep i,
+    * no re-identification). Author ruling 2026-09-04; extended 2026-09-16
     local wdb_phys = cond("`bootstrap'" == "standard" & "`boottstat'" != "" & "`cluster'" == "" & "`wdp_wt'" != "" & "`poisson'" == "", "phys", "")
     tempname wdbW wdbjk
     cap noi wooldid_bootrun , wmat(`wdbW') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")') y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' `wdb_phys' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp') seaccname(`=cond("`boottstat'" != "", "`wdbsacc'", "")') pwseaccname(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwaccname(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobsname(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awaccname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobsname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') advesrel(`esrelativeto') advtt(`timetrends') advalt(`altmethod_adversarial') cellacc(`=cond("`gteffects'`makecfxplots'" != "", "`wdbcell'", "")')
@@ -394,8 +399,10 @@ version 16.0
     global WOOLDID_LASTRC postloop
     * A10: the re-id leg duplicates clusters but user covariates keyed to unit
     * identity keep their original codes across copies (the official idcluster
-    * convention shares this) - say so once
-    if "`wdb_reid'" != "" {
+    * convention shares this) - say so once. Only in the NESTING regime: under a
+    * cluster finer than or cross-cutting i the leg keeps i everywhere (wooldid_bootrun
+    * returns `wdb_nest'), so no code is re-identified and there is nothing to say
+    if "`wdb_reid'" != "" & "`wdb_nest'" == "1" {
       local wdb_ikeyed
       foreach wdbcv in `fe' `interactivecontrols' `controls' `coarsecohortcontrols' `ccc_absorb' {
         if "`wdbcv'" == "`i'" local wdb_ikeyed 1
@@ -6341,32 +6348,19 @@ version 16.0
     }
     dis as text "Caution: bootstrap(bayes) standard errors for `cellwtd' omit the cell-sampling variance component (cluster reweighting cannot resample treatment cells) and can be too small when treatment effects vary across clusters. Everything computed from that covariance inherits the understatement - the joint tests, the pairwise subgroup contrasts and the confidence intervals for those estimands, where p-values can be extreme - so read them alongside a bootstrap(standard) run, which does not have this limitation."
   }
-  * the physical re-id leg - taken for the cell-weighted estimands, and since 2026-09-04
-  * also for boottstat under cluster() - requires the cluster() variable to nest i. The
-  * two routes reach it for different reasons and get different messages
-  local wdb_btsclus = ("`bts'" != "" & "`clus'" != "" & "`bootstrap'" == "standard")
-  if "`bootstrap'" == "standard" & ("`cellwtd'" != "" | `wdb_btsclus') {
-    * the resampling copies of a drawn cluster must be re-identifiable as distinct
-    * units, which is defined only when every i lies wholly inside one resampling
-    * cluster. observation-level resampling (no cluster()) can never satisfy this.
-    if "`clus'" == "" & "`cellwtd'" != "" {
-      dis as error "Error: bootstrap(standard) with `cellwtd' requires cluster(): observation-level resampling cannot re-identify duplicated treatment cells. Specify cluster() at or above the i level, or request att/ame estimands only."
-      error 198
-    }
-    if "`clus'" != "" {
-      tempvar smp cmin cmax
-      if `"`ifr'"' != "" qui gen byte `smp' = ((`ifr')==1) & !missing(`clus')
-      else qui gen byte `smp' = !missing(`clus')
-      qui gegen double `cmin' = min(`clus') if `smp', by(`ivar')
-      qui gegen double `cmax' = max(`clus') if `smp', by(`ivar')
-      cap assert `cmin' == `cmax' if `smp'
-      if _rc != 0 {
-        if "`cellwtd'" != "" dis as error "Error: bootstrap(standard) with `cellwtd' requires the cluster() variable to nest i (every i wholly inside one cluster): resampled clusters are duplicated as whole units, which is undefined when a unit straddles clusters. Cluster at or above the i level, or request att/ame estimands only."
-        else dis as error "Error: boottstat with cluster() requires the cluster() variable to nest i (every i wholly inside one cluster). A studentized bootstrap has to estimate each replication on a physical expansion of the resampled clusters so that its standard error clusters on the resampled cluster identity, and that expansion is undefined when a unit straddles clusters. Cluster at or above the i level, or drop boottstat (the percentile, bias-corrected and Wald families do not need it)."
-        error 459
-      }
-    }
-  }
+  * T2/T3 (2026-09-16): the three refusals that stood here - bootstrap(standard) with a
+  * cell-weighted estimand and no cluster(), and the two nesting screens on the physical
+  * re-identification leg (one message per route: cell-weighted estimand, and boottstat
+  * under cluster()) - are GONE, not relaxed to cautions. They guarded one real mechanical
+  * failure, a unit straddling two resampling clusters being duplicated as a whole unit,
+  * and wooldid_bootrun now has a rule for that case rather than needing it excluded: it
+  * keeps i whenever the cluster does not nest it and lets a twice-drawn sub-unit cluster
+  * arrive as duplicate rows inside its unit's cell. Nothing is screened in its place,
+  * deliberately. i is an estimand-definition choice - which cohorts the effects average
+  * over - and cluster() is a claim about dependence and assignment; a cluster finer than
+  * or cross-cutting i is a legitimate pairing, not a user mistake to be caught, and the
+  * regime is decided in wooldid_bootrun on the same sample the resample runs on rather
+  * than being computed here and passed down, so the two can never disagree
 
   * cluster-count sanity (resampling/reweighting needs at least two resampling units)
   if "`clus'" != "" {
@@ -7349,11 +7343,14 @@ version 16.0
     * disclosure, not a guard: under clustering at or above i the analytic pairwise
     * margins se is degenerate on some designs (missing, or ~1e-9 with p = 0, seen at HEAD
     * on a saturated i-as-cohort fixture), and boottstat studentizes by exactly that se
-    * in every replication. boottstat + cluster() always nests i (the re-id leg requires it).
-    * Gated on cluster() itself: nclus() is the observation count on an unclustered run
+    * in every replication. Until 2026-09-16 boottstat + cluster() always nested i, because
+    * the re-id leg required it; T3 lifted that, so the condition the caution describes is
+    * no longer implied by the options and the text now says "at or above" as the case it
+    * applies to rather than as a fact about the run. A finer cluster() is in fact the
+    * remedy for it. Gated on cluster() itself: nclus() is the observation count unclustered
     if "`bts'" != "" & "`clus'" != "" {
       local ++wdbncaut
-      local wdbc`wdbncaut' under clustering at or above the i level the analytic pairwise-contrast standard errors can be degenerate (the same limitation behind the refusal of jointtests with analytic clustered SEs), and boottstat studentizes each contrast by that standard error in every replication, so the studentized contrasts and the across-subgroup equality test can be absent or numerically unstable here; the non-studentized bootstrap (bootstrap() without boottstat) forms the contrasts from the coefficient draws instead
+      local wdbc`wdbncaut' where cluster() sits at or above the i level the analytic pairwise-contrast standard errors can be degenerate (the same limitation behind the refusal of jointtests with analytic clustered SEs), and boottstat studentizes each contrast by that standard error in every replication, so the studentized contrasts and the across-subgroup equality test can be absent or numerically unstable there; a cluster() finer than i is the remedy and is supported, and the non-studentized bootstrap (bootstrap() without boottstat) forms the contrasts from the coefficient draws instead
     }
   }
 
@@ -8782,6 +8779,45 @@ version 16.0
     dis as error "Error: bootstrap() requires at least 2 clusters in the estimation sample."
     error 459
   }
+  * T2/T3 (2026-09-16): the NESTING REGIME of the physical re-identification leg.
+  * `i' is an estimand-definition choice (which cohorts the effects average over) and
+  * cluster() is a claim about dependence and assignment; they are orthogonal, so a
+  * cluster finer than - or cross-cutting - `i' is a legitimate specification and the
+  * leg must handle both. Which of its two rules applies is decided HERE, on the same
+  * `smp' the resample itself runs on, rather than being passed down from the parse-time
+  * screen in wooldid_bootctl: a predicate computed on a separately built sample concept
+  * could silently disagree with the rows bsample actually sees, and the whole point of
+  * the branch is that the two rules are not interchangeable (see the leg below).
+  *   wdb_nest 1 - every i lies wholly inside one cluster. __wdbnewi = group(__wdbns, i)
+  *                mints one fresh unit per drawn copy, so a twice-drawn cluster brings
+  *                its cells TWICE and the equal-cell weighting counts them twice.
+  *   wdb_nest 0 - the cluster is finer than, or cross-cutting, i. Keeping i is then the
+  *                rule: re-identifying would split a unit that straddles two clusters
+  *                into two units in EVERY replication, drawn or not, silently turning
+  *                the unit fixed effects into per-(cluster, unit) effects.
+  * Unclustered (clusv is the row id) is the keep-i regime by construction, and is
+  * flagged as such without computing anything: the resampling unit is the observation,
+  * so re-identifying by draw would fragment every unit into single-period units
+  * the `if `smp'' on BOTH the gegen and the assert is load-bearing, not tidiness. `smp'
+  * is exactly the row set the leg keeps before it draws (`qui keep if `smp'' below), so
+  * the predicate is computed on the rows bsample actually sees. Evaluated on the raw
+  * frame instead, a cluster that nests i within the sample but straddles two i's only
+  * through rows the sample excludes would be misclassified as non-nesting, and a
+  * strictly COARSER cluster - the case where group(__wdbns, i) is doing real work,
+  * since at cluster() == i it degenerates to the drawn id alone - would silently take
+  * the keep-i rule and collapse att_i's composition variance
+  local wdb_nest 0
+  if "`reid'" != "" & "`clus'" != "" {
+    tempvar wdbcmin wdbcmax
+    qui gegen double `wdbcmin' = min(`clusv') if `smp', by(`i')
+    qui gegen double `wdbcmax' = max(`clusv') if `smp', by(`i')
+    cap assert `wdbcmin' == `wdbcmax' if `smp'
+    local wdb_nest = (_rc == 0)
+    drop `wdbcmin' `wdbcmax'
+  }
+  * the shell's A10 caution describes re-identified unit codes, which exist only in the
+  * nesting regime - under keep-i nothing is re-identified and the caution would be false
+  c_local wdb_nest `wdb_nest'
   * F063 (2026-09-06): the resample itself, one row per replication and one column per
   * cluster (map-frame order) - Dirichlet multipliers under bayes, multiplicities under
   * standard - kept for bootsave(). Only under cluster(): observation resampling would
@@ -9104,17 +9140,35 @@ version 16.0
       * physical re-id leg (cell-weighted estimands; plan section 7): resample the
       * FULL estimation universe and re-identify duplicated clusters' units so a
       * twice-drawn cluster contributes its cells twice - the textbook cluster
-      * bootstrap of the equal-cell-weighted estimands. cluster nests i (bootctl
-      * gate A1), so group(drawid, i) assigns each copy fresh unit codes. same-seed
-      * draws equal the count path's (one bsample per rep, same form)
+      * bootstrap of the equal-cell-weighted estimands. same-seed draws equal the
+      * count path's (one bsample per rep, same form).
+      * THE UNIT RULE IS TWO-REGIME (T2/T3, 2026-09-16), on `wdb_nest' decided above.
+      * Under nesting, group(drawid, i) assigns each drawn copy fresh unit codes, which
+      * is what makes a twice-drawn cluster's cells count twice in the equal-cell
+      * weighting. Under a finer or cross-cutting cluster the SAME rule is wrong and
+      * silently so: a unit straddling two clusters would be split into two units in
+      * every replication whether or not anything was duplicated, and the unit fixed
+      * effects would become per-(cluster, unit) effects. There the rule is to keep i
+      * and let a twice-drawn sub-unit cluster arrive as duplicate ROWS inside its
+      * unit's cell - which the estimator already carries, since a cell holds many rows
+      * whenever i is a cohort and the collapse replaces it with the cell's
+      * estimand-weighted mean (the duplicates are more rows carrying more weight).
+      * The regimes are NOT interchangeable in the other direction either: keeping i
+      * under nesting would make a twice-drawn cluster's cells identical duplicates that
+      * the equal-cell weighting counts ONCE, collapsing the composition variance of
+      * att_i toward zero. With no cluster() at all the resampling unit is the
+      * observation, so the draw is a plain bsample and there is no drawn-cluster
+      * identity to re-identify by (nor any __wdbns to build one from)
       cap frame drop `wdbrf'
       qui frame
       frame copy `r(currentframe)' `wdbrf'
       frame `wdbrf' {
         qui keep if `smp'
-        bsample, cluster(`clusv') idcluster(__wdbns)
+        if "`clus'" == "" bsample
+        else bsample, cluster(`clusv') idcluster(__wdbns)
         if `wdb_dow' mata: wooldid_bootwrowx("`wmat'", `r', "`clusv'", "__wdbns")
-        qui gegen double __wdbnewi = group(__wdbns `i')
+        if `wdb_nest' qui gegen double __wdbnewi = group(__wdbns `i')
+        else qui gen double __wdbnewi = `i'
         * under boottstat the replication's own VCE must cluster on the RESAMPLED cluster
         * identity __wdbns (which bsample just generated), not on the user's original
         * cluster variable that repopts carries: on this expanded frame a twice-drawn
@@ -9130,8 +9184,20 @@ version 16.0
         * vce(cluster ...) form, a reordered cluster list) and subinstr no-ops, the
         * replication clusters on the ORIGINAL ids again, and the per-replication standard
         * error silently returns to the E[m^2]/E[m] = 2 - 1/G (about sqrt(2)) inflation
-        * this entire leg exists to remove. Nothing checks it and there is no r()
-        if "`seaccname'" != "" & "`clus'" != "" local wdb_ropts : subinstr local wdb_ropts "cluster(`clus')" "cluster(__wdbns)"
+        * this entire leg exists to remove. Since 2026-09-16 the P7 assertion below DOES
+        * check it, on every replication that posts e(N_clust).
+        * WOOLDID_BOOTNOSUB is an internal, undocumented diagnostic global (house style:
+        * WOOLDID_REPMODE just below, WOOLDID_BOOTDEBUG on the phys leg). Setting it
+        * SUPPRESSES the substitution so the same seed can be run with this leg
+        * deliberately broken, which is what makes the 2 - 1/G negative control a control:
+        * a run that merely produces plausible standard errors does not show the leg is
+        * working, while one that reproduces the defect on demand and then does not, does.
+        * It is not a user option and nothing in wooldid sets it
+        local wdb_sub 0
+        if "`seaccname'" != "" & "`clus'" != "" & "${WOOLDID_BOOTNOSUB}" == "" {
+          local wdb_ropts : subinstr local wdb_ropts "cluster(`clus')" "cluster(__wdbns)"
+          local wdb_sub 1
+        }
         nobreak {
           global WOOLDID_REPMODE 1
         cap qui wooldid `y' __wdbnewi `t' `ttrevar' `wtif0' , `wdb_ropts'
@@ -9140,6 +9206,39 @@ version 16.0
         }
         cap error `wdrepdone'
         local wdb_rrc = _rc
+        * P7 (prereg F4, 2026-09-16): the substitution above is a literal string edit that
+        * can silently no-op, and until now nothing checked whether it had landed. It has
+        * landed iff the replication clustered on the RESAMPLED identity, i.e. iff the
+        * cluster count it reports equals the number of distinct __wdbns on the frame it
+        * ran on. Asserted on every replication that posts e(N_clust) - counted over
+        * e(sample), since the replication drops rows the frame still holds (missing y,
+        * an event-study window, singletons). Skipped when the diagnostic global has
+        * deliberately suppressed the substitution, where the original count is the
+        * expected answer and an assert would abort the control run
+        if `wdb_sub' & `wdb_rrc' == 0 {
+          local wdb_ncl = e(N_clust)
+          if "`wdb_ncl'" != "" & "`wdb_ncl'" != "." {
+            cap drop __wdbchk
+            cap qui gen byte __wdbchk = e(sample)
+            local wdb_esok = (_rc == 0)
+            if `wdb_esok' {
+              qui count if __wdbchk == 1
+              local wdb_esok = (r(N) > 0)
+            }
+            if `wdb_esok' == 0 {
+              cap drop __wdbchk
+              qui gen byte __wdbchk = 1
+            }
+            qui gegen double __wdbnsg = group(__wdbns) if __wdbchk == 1
+            qui gstats sum __wdbnsg if __wdbchk == 1, nod
+            local wdb_nsg = r(max)
+            qui drop __wdbnsg __wdbchk
+            if `wdb_nsg' != `wdb_ncl' {
+              dis as error "Error: the bootstrap replication reported `wdb_ncl' clusters where the resampled cluster identity has `wdb_nsg' - the replication did not cluster on the resampled identity, so its standard error carries the 2 - 1/G inflation the re-identification leg exists to remove. This is an internal inconsistency - please report it."
+              error 459
+            }
+          }
+        }
       }
       if `wdb_rrc' == 1 {
         cap frame drop `wdbrf'
