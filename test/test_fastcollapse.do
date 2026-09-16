@@ -7,9 +7,9 @@
 * the estimand.
 *
 * IT IS ON BY DEFAULT (2026-09-01). That inverts the usual test polarity: an equivalence
-* check written against "the command without fastcollapse" would now compare the collapsed
+* check written against "the command without an off-switch" would now compare the collapsed
 * path to ITSELF and pass for free. Every comparison below therefore uses
-* {fullprecisionslow} as the uncollapsed reference, and G1/G2 assert the default is really
+* {nofastcollapse} as the uncollapsed reference, and G1/G2 assert the default is really
 * engaging.
 *
 * NOT BIT-IDENTICAL BY DESIGN. The controls cancel algebraically between xb(tf=1) and
@@ -22,17 +22,19 @@
 * there and equality is free). F0 pins that the equivalence work runs on aggregating data.
 *
 * F0 the test data actually aggregates (subpop rows per cell >> 1)
-* G1 the default ENGAGES: default != fullprecisionslow, and e(wdid_fcol) reports it
-* G2 the default is the SAME PATH as an explicit fastcollapse (bit-identical)
-* F1 default agrees with fullprecisionslow on b and V
+* G1 the default ENGAGES: default != nofastcollapse, and e(wdid_fcol) reports it
+* G2 THE CLEAN BREAK: the two retired spellings, and an abbreviation of the new one, are
+*    all refused r(198)
+* F1 default agrees with nofastcollapse on b and V
 * F2 ... and on the event study and the joint tests
 * F3 compatible with fastnose
-* F4 an explicit fastcollapse with an ineligible option is refused r(198), no safety(off)
-*    escape; fastcollapse + fullprecisionslow is refused as contradictory; and an explicit
-*    fastcollapse WITH subgroups() is accepted (subgroups() left the ineligible list 2026-09-01;
-*    contreat() left it 2026-09-02, so F4's contreat leg now carries contreatpoly(2))
-* F5 WITHOUT an explicit request every ineligible option runs normally and silently skips,
-*    while a subgroups() run and a bare contreat() run collapse
+* F4 an ineligible option runs normally, skips the collapse, and DISCLOSES the skip in a
+*    caution naming the option; safety(off) does not silence it and nofastcollapse does;
+*    a subgroups() run is eligible and collapses (subgroups() left the ineligible list
+*    2026-09-01; contreat() left it 2026-09-02, so F4's contreat leg now carries
+*    contreatpoly(2))
+* F5 every ineligible option runs normally and skips the collapse, while a subgroups() run
+*    and a bare contreat() run collapse
 * F6 the off-switch reaches permute and bootstrap replications
 * F7 poisson (dydx scale) collapses and agrees; poisexpresults does not collapse
 * F8 REGRESSION: the subgroups()+fe()+jointtests command that hard-errored r(503) under the
@@ -40,7 +42,7 @@
 * F9 THE SUBGROUP SCREEN: a healthy subgroup run collapses with an empty e(wdid_fcguard); a
 *    numerically singular subgroup VCE under the default safety falls back to the full data
 *    (e(wdid_fcguard)=fallback) and every result read after the fallback is BIT-IDENTICAL to
-*    fullprecisionslow; the same run under safety(off) stays collapsed with
+*    nofastcollapse; the same run under safety(off) stays collapsed with
 *    e(wdid_fcguard)=caution and rc 0
 * F10 THE 2026-09-01 ADVERSARIAL PROBE'S PINS: (a) a subgroup whose pre window holds only
 *    the reference period (no pre-trend joint test in either arm) does not trip the screen;
@@ -51,11 +53,11 @@
 *    and puts the user's cohort variable in the key. (a) five eligible reads - plain att; all
 *    four estimands with an event study and jointtests; contreatelasticitytype(dyex); poisson
 *    on the default dydx scale; subgroups(); poisson+dyex (since 2026-09-06, F032) - collapse
-*    and agree with fullprecisionslow;
+*    and agree with nofastcollapse;
 *    (b) each of the six refused reads (contreatpoly(>1), eyex, eydx, lattice(),
-*    poisson+eydx, the dose inside controls()) skips SILENTLY and stays bit-identical to it;
-*    (c) an explicit fastcollapse with each is r(198) with no safety(off) escape, while a
-*    plain contreat() run is accepted; (d) the two provisos the worker's form exists for -
+*    poisson+eydx, the dose inside controls()) skips and stays bit-identical to it;
+*    (c) each of those skips announces itself in a caution naming its own token, which
+*    safety(off) does not silence, while a plain contreat() run collapses quietly; (d) the two provisos the worker's form exists for -
 *    a customweightmultiplier() of 0 on the pick row (the mean is written onto every row of
 *    the cell, not by gcollapse (mean) [aw=w] merge) and a float-stored dose (the recast)
 * F12 THE TWO GUARDS ADDED ON TOP OF F11 (2026-09-02). (a) THE GATE UNABBREVIATES: the
@@ -74,7 +76,7 @@
 * dedicated margins call that runs when only one subgroup is realized, and the pre-period
 * fallback after a deferred pwcompare, now sit inside the same two-pass wooldid_fcdeg
 * screen the pwcompare pass uses. All three legs assert the guard did NOT fire and the
-* numbers match fullprecisionslow: a spurious fire on a healthy run is the risk here.
+* numbers match nofastcollapse: a spurious fire on a healthy run is the risk here.
 * Prints FASTCOLLAPSE_ALL_PASS iff all pass.
 clear all
 local REPO ..
@@ -99,7 +101,7 @@ if `ratio' < 10 {
   local ++fails
 }
 
-* ---- the three arms: default (collapsed), fullprecisionslow (not), explicit request
+* ---- the two arms: default (collapsed) and nofastcollapse (not)
 use "`ADMIN'", clear
 qui wooldid y cohid year ttre, att robust esprelength(2) espostlength(2) jointtests
 matrix bD = e(b)
@@ -110,7 +112,7 @@ local fcolD = e(wdid_fcol)
 local rcD = _rc
 
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att robust esprelength(2) espostlength(2) jointtests fullprecisionslow
+qui wooldid y cohid year ttre, att robust esprelength(2) espostlength(2) jointtests nofastcollapse
 matrix bS = e(b)
 matrix VS = e(V)
 matrix eS = e(b_es_att)
@@ -118,29 +120,35 @@ scalar jS = e(joint_horiz)
 local fcolS = e(wdid_fcol)
 local rcS = _rc
 
-use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att robust esprelength(2) espostlength(2) jointtests fastcollapse
-matrix bE = e(b)
-local fcolE = e(wdid_fcol)
-
 * ---- G1: the default really engages. If this ever reads 0 differences, the default has
 * silently stopped applying and every equivalence check below is meaningless.
 local ddefslow = mreldif(bD, bS)
-di "G1_default_fcol=" `fcolD' " slow_fcol=" `fcolS' " explicit_fcol=" `fcolE' " default_vs_slow_mreldif=" `ddefslow'
-if `fcolD' != 1 | `fcolS' != 0 | `fcolE' != 1 {
-  di as error "G1 FAIL: e(wdid_fcol) should be 1/0/1 for default/fullprecisionslow/explicit, got `fcolD'/`fcolS'/`fcolE'"
+di "G1_default_fcol=" `fcolD' " slow_fcol=" `fcolS' " default_vs_slow_mreldif=" `ddefslow'
+if `fcolD' != 1 | `fcolS' != 0 {
+  di as error "G1 FAIL: e(wdid_fcol) should be 1/0 for default/nofastcollapse, got `fcolD'/`fcolS'"
   local ++fails
 }
 if `ddefslow' == 0 {
-  di as error "G1 FAIL: the default produced results identical to fullprecisionslow - the collapse is NOT engaging, and every check below passes vacuously"
+  di as error "G1 FAIL: the default produced results identical to nofastcollapse - the collapse is NOT engaging, and every check below passes vacuously"
   local ++fails
 }
 
-* ---- G2: default and an explicit request are the same code path, so bit-identical
-local ddefexp = mreldif(bD, bE)
-di "G2_default_vs_explicit_mreldif=" `ddefexp'
-if `ddefexp' != 0 {
-  di as error "G2 FAIL: default and explicit fastcollapse differ (`ddefexp') - they must be the same code path"
+* ---- G2: THE CLEAN BREAK (option consolidation, author ruling 2026-09-16). fastcollapse is
+* gone and fullprecisionslow was renamed rather than aliased, so an archived do-file naming
+* either stops with r(198) instead of running something the author did not ask for. The new
+* spelling takes no abbreviation, the convention both retired options used, because
+* nofastcollapse shortened to nofast is read by Stata's syntax parser as the negation of
+* fastnose and would be swallowed without a word (measured 2026-09-16).
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att robust fastcollapse
+local gx1 = _rc
+cap qui wooldid y cohid year ttre, att robust fullprecisionslow
+local gx2 = _rc
+cap qui wooldid y cohid year ttre, att robust nofastc
+local gx3 = _rc
+di "G2_retired fastcollapse=" `gx1' " fullprecisionslow=" `gx2' " abbrev_nofastc=" `gx3' " (want 198 x3)"
+if `gx1' != 198 | `gx2' != 198 | `gx3' != 198 {
+  di as error "G2 FAIL: a retired or abbreviated spelling was accepted (rcs `gx1'/`gx2'/`gx3') - the break must be clean"
   local ++fails
 }
 
@@ -172,7 +180,7 @@ if "`cnD'" != "`cnS'" {
 
 * ---- F3: composes with fastnose
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att robust esprelength(2) espostlength(2) fastnose fullprecisionslow
+qui wooldid y cohid year ttre, att robust esprelength(2) espostlength(2) fastnose nofastcollapse
 matrix bC = e(b)
 local rcC = _rc
 use "`ADMIN'", clear
@@ -187,63 +195,119 @@ if `rcC' != 0 | `rcF' != 0 | `fcolF' != 1 | `dcf' > 1e-8 {
   local ++fails
 }
 
-* ---- F4: an EXPLICIT request for an ineligible configuration is refused r(198), and
-* safety(off) does NOT open an escape (these are measured wrong answers, not risks).
-* Plus the contradictory pair.
+* ---- F4: THE DISCLOSURE. Each of these configurations is ineligible for the collapse.
+* Until the 2026-09-16 option consolidation the way to learn that was to type fastcollapse
+* and read the r(198) it raised; that option is gone and its diagnostic is now a caution
+* every such run prints, which is what this leg asserts. Each gate must (a) run to rc 0,
+* (b) report e(wdid_fcol) = 0, and (c) name its own reason in the caution. safety(off) is
+* carried where the run needs it for an unrelated screen and must not silence the caution.
 * Gate 1 was a bare contreat() run until 2026-09-02, when contreat() itself left the
 * ineligible list (F11); it now carries contreatpoly(2), one of the six contreat reads that
-* ARE still refused, so this leg keeps covering the contreat family on dta_cont. The
+* ARE still gated, so this leg keeps covering the contreat family on dta_cont. The
 * acceptance side of the new contract is pinned in F11c.
-use "`REPO'/test/data/dta_cont.dta", clear
-cap qui wooldid y i t ttre, att contreat(intensity) contreatcontrols(basic) contreatpoly(2) cluster(i) fastcollapse safety(off)
-local g1 = _rc
-use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att robust interactivecontrols(x1 x2) fastcollapse safety(off)
-local g2 = _rc
-use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att robust unconditionalse fastcollapse safety(off)
-local g3 = _rc
-use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att robust semielasticity fastcollapse safety(off)
-local g4 = _rc
-use "`ADMIN'", clear
+local F4D1 `REPO'/test/data/dta_cont.dta
+local F4V1 y i t ttre
+local F4O1 att contreat(intensity) contreatcontrols(basic) contreatpoly(2) cluster(i) safety(off)
+local F4W1 contreatpoly(>1)
+local F4D2 `ADMIN'
+local F4V2 y cohid year ttre
+local F4O2 att robust interactivecontrols(x1 x2) safety(off)
+local F4W2 interactivecontrols()
+local F4D3 `ADMIN'
+local F4V3 y cohid year ttre
+local F4O3 att robust unconditionalse safety(off)
+local F4W3 unconditionalse
+local F4D4 `ADMIN'
+local F4V4 y cohid year ttre
+local F4O4 att robust semielasticity safety(off)
+local F4W4 semielasticity
 * 2026-09-06 (F062): impvalues left the ineligible list - the cluster variable joins the
-* cell key - so an explicit fastcollapse with impvalues is now ACCEPTED (rc 0); the gate
-* count below keeps its shape with customvce() as gate 5's stand-in
-cap qui wooldid y cohid year ttre, att customvce(cluster state) fastcollapse safety(off)
-local g5 = _rc
-use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att customvce(cluster state) fastcollapse safety(off)
-local g6 = _rc
-use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att robust fastcollapse fullprecisionslow
-local g7 = _rc
-di "F4_gate_rcs contreatpoly=" `g1' " interactive=" `g2' " uncond=" `g3' " semielas=" `g4' " impvalues=" `g5' " customvce=" `g6' " contradictory=" `g7'
-forval g = 1/7 {
-  if `g`g'' != 198 {
-    di as error "F4 FAIL: gate `g' returned rc `g`g'' (want 198)"
+* cell key - so an impvalues run collapses (see F15); the gate count below keeps its shape
+* with customvce() as gate 5's stand-in
+local F4D5 `ADMIN'
+local F4V5 y cohid year ttre
+local F4O5 att customvce(cluster state) safety(off)
+local F4W5 customvce()
+local F4D6 `ADMIN'
+local F4V6 y cohid year ttre
+local F4O6 att robust poisson poisexpresults safety(off)
+local F4W6 poisexpresults
+forval g = 1/6 {
+  use "`F4D`g''", clear
+  qui log using fcol_f4.txt, text replace name(fc)
+  cap noi wooldid `F4V`g'' , `F4O`g''
+  local g`g' = _rc
+  local q`g' = e(wdid_fcol)
+  qui log close fc
+  local lg = fileread("fcol_f4.txt")
+  local lg = subinstr(`"`lg'"', char(13), "", .)
+  local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+  local c`g' = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: `F4W`g''") > 0
+  local r`g' = strpos(`"`lg'"', "Specify nofastcollapse to silence this") > 0
+}
+cap erase fcol_f4.txt
+di "F4_rcs contreatpoly=" `g1' " interactive=" `g2' " uncond=" `g3' " semielas=" `g4' " customvce=" `g5' " poisexp=" `g6' " (want 0 x6)"
+di "F4_fcol=" `q1' "/" `q2' "/" `q3' "/" `q4' "/" `q5' "/" `q6' " (want 0 x6)  caution=" `c1' "/" `c2' "/" `c3' "/" `c4' "/" `c5' "/" `c6' " remedy=" `r1' "/" `r2' "/" `r3' "/" `r4' "/" `r5' "/" `r6' " (want 1 x6)"
+forval g = 1/6 {
+  if `g`g'' != 0 {
+    di as error "F4 FAIL: gate `g' (`F4W`g'') returned rc `g`g'' (want 0) - an ineligible request must run, not error"
+    local ++fails
+  }
+  if `q`g'' != 0 {
+    di as error "F4 FAIL: gate `g' (`F4W`g'') reports e(wdid_fcol)=`q`g'' (want 0)"
+    local ++fails
+  }
+  if !`c`g'' {
+    di as error "F4 FAIL: gate `g' skipped the collapse without a caution naming `F4W`g''"
+    local ++fails
+  }
+  if !`r`g'' {
+    di as error "F4 FAIL: gate `g' (`F4W`g'') cautioned without naming nofastcollapse as the way to silence it"
     local ++fails
   }
 }
-* subgroups() is NOT on the list any more: an explicit request is accepted and engages
-* (region varies within cohid, so the command carries safety(off) for that reason alone)
+* the off-switch is the ONE thing that silences it: the collapse is off because the user
+* asked for that, so there is nothing to disclose
 use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att cluster(state) subgroups(region) fastcollapse safety(off)
+qui log using fcol_f4.txt, text replace name(fc)
+cap noi wooldid y cohid year ttre, att robust interactivecontrols(x1 x2) nofastcollapse
+local g7 = _rc
+qui log close fc
+local lg = fileread("fcol_f4.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local c7 = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
+cap erase fcol_f4.txt
+di "F4_offswitch_silent rc=" `g7' " (want 0) caution_present=" `c7' " (want 0)"
+if `g7' != 0 | `c7' {
+  di as error "F4 FAIL: nofastcollapse rc `g7', caution present `c7' - the user's own switch must say nothing"
+  local ++fails
+}
+* subgroups() is NOT on the ineligible list: the run collapses and says nothing
+use "`ADMIN'", clear
+qui log using fcol_f4.txt, text replace name(fc)
+cap noi wooldid y cohid year ttre, att cluster(state) subgroups(region) safety(off)
 local g8 = _rc
 local f8 = e(wdid_fcol)
-di "F4_subgroups_explicit rc=" `g8' " (want 0)  fcol=" `f8' " (want 1)"
-if `g8' != 0 | `f8' != 1 {
-  di as error "F4 FAIL: explicit fastcollapse + subgroups() rc `g8' fcol `f8' - subgroups() must be eligible"
+qui log close fc
+local lg = fileread("fcol_f4.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local c8 = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
+cap erase fcol_f4.txt
+di "F4_subgroups rc=" `g8' " (want 0)  fcol=" `f8' " (want 1) caution_present=" `c8' " (want 0)"
+if `g8' != 0 | `f8' != 1 | `c8' {
+  di as error "F4 FAIL: subgroups() rc `g8' fcol `f8' caution `c8' - subgroups() must be eligible and quiet"
   local ++fails
 }
 
-* ---- F5: THE DEFAULT-ON CONTRACT. Without an explicit fastcollapse, every one of those
-* options must run NORMALLY and simply not collapse - a run wooldid cannot collapse must not
-* start erroring because the collapse became the default - and a subgroups() run must
-* collapse (fcol 1) and complete. (unconditionalse needs robust/cluster and region varies
-* within cohid, so the unconditionalse and subgroups(region) commands carry robust /
-* safety(off): each runs rc 0 under fullprecisionslow, measured 2026-09-01, so a nonzero
-* rc here is the default collapse and nothing else.)
+* ---- F5: THE DEFAULT-ON CONTRACT. Every one of those options must run NORMALLY and simply
+* not collapse - a run wooldid cannot collapse must not start erroring because the collapse
+* became the default - and a subgroups() run must collapse (fcol 1) and complete. F4 asserts
+* the caution each of these prints; this leg asserts they still RUN. (unconditionalse needs
+* robust/cluster and region varies within cohid, so the unconditionalse and subgroups(region)
+* commands carry robust / safety(off): each runs rc 0 under nofastcollapse, measured
+* 2026-09-01, so a nonzero rc here is the default collapse and nothing else.)
 * Option 1 followed gate 1 on 2026-09-02: a bare contreat() run now COLLAPSES, so the
 * silent-skip leg carries contreatpoly(2) and the bare run moved to its own leg (s8) below,
 * which keeps the original protection - an ordinary contreat() run must not start erroring.
@@ -276,10 +340,10 @@ use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att cluster(state) subgroups(region) safety(off)
 local s7 = _rc
 local f7 = e(wdid_fcol)
-di "F5_silentskip rcs=" `s1' "/" `s2' "/" `s3' "/" `s4' "/" `s5' "/" `s6' "/" `s7' "  fcol=" `f1' "/" `f2' "/" `f3' "/" `f4' "/" `f5' "/" `f6' "/" `f7' " (want 0 x6 then 1)"
+di "F5_skip rcs=" `s1' "/" `s2' "/" `s3' "/" `s4' "/" `s5' "/" `s6' "/" `s7' "  fcol=" `f1' "/" `f2' "/" `f3' "/" `f4' "/" `f5' "/" `f6' "/" `f7' " (want 0 x6 then 1)"
 forval k = 1/6 {
   if `s`k'' != 0 {
-    di as error "F5 FAIL: ineligible option `k' errored (rc `s`k'') without an explicit fastcollapse - it must run normally and skip the collapse"
+    di as error "F5 FAIL: ineligible option `k' errored (rc `s`k'') - it must run normally and skip the collapse"
     local ++fails
   }
   if `f`k'' != 0 {
@@ -308,13 +372,13 @@ if `sct8' != 0 | `fct8' != 1 {
 * the treatment-onset groups, which dta_s_admin does not satisfy. PLUMBING checks: a rep
 * that could not parse the forwarded option would abort the run.
 use "`REPO'/test/data/dta_binary.dta", clear
-cap qui wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20) fullprecisionslow
+cap qui wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20) nofastcollapse
 local p1 = _rc
 use "`REPO'/test/data/dta_binary.dta", clear
 cap qui wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20)
 local p2 = _rc
 use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att cluster(state) bootstrap(standard) reps(15) rseed(7) fullprecisionslow
+cap qui wooldid y cohid year ttre, att cluster(state) bootstrap(standard) reps(15) rseed(7) nofastcollapse
 local b1 = _rc
 use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att cluster(state) bootstrap(standard) reps(15) rseed(7)
@@ -328,7 +392,7 @@ if `p1' != 0 | `p2' != 0 | `b1' != 0 | `b2' != 0 {
 * ---- F7: poisson on the dydx (log) scale collapses and agrees; the exponentiated
 * reporting scale is not linear in the coefficients and does not collapse.
 use "`ADMIN'", clear
-qui wooldid ycount cohid year ttre, att poisson robust esprelength(2) espostlength(2) fullprecisionslow
+qui wooldid ycount cohid year ttre, att poisson robust esprelength(2) espostlength(2) nofastcollapse
 matrix bP = e(b)
 local rp1 = _rc
 use "`ADMIN'", clear
@@ -342,15 +406,22 @@ cap qui wooldid ycount cohid year ttre, att poisson poisexpresults robust
 local rp3 = _rc
 local fcolR = e(wdid_fcol)
 use "`ADMIN'", clear
-cap qui wooldid ycount cohid year ttre, att poisson poisexpresults robust fastcollapse safety(off)
+qui log using fcol_x.txt, text replace name(fc)
+cap noi wooldid ycount cohid year ttre, att poisson poisexpresults robust safety(off)
 local rp4 = _rc
-di "F7_poisson_rc=" `rp1' "/" `rp2' " fcol=" `fcolQ' " mreldif=" `dpq' " poisexp_rc=" `rp3' " poisexp_fcol=" `fcolR' " poisexp_explicit_rc=" `rp4'
+qui log close fc
+local lg = fileread("fcol_x.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local rp5 = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: poisexpresults") > 0
+cap erase fcol_x.txt
+di "F7_poisson_rc=" `rp1' "/" `rp2' " fcol=" `fcolQ' " mreldif=" `dpq' " poisexp_rc=" `rp3' " poisexp_fcol=" `fcolR' " poisexp_safetyoff_rc=" `rp4' " caution=" `rp5'
 if `rp1' != 0 | `rp2' != 0 | `fcolQ' != 1 | `dpq' > 1e-8 {
   di as error "F7 FAIL: poisson dydx rc `rp1'/`rp2', fcol `fcolQ', mreldif=`dpq'"
   local ++fails
 }
-if `rp3' != 0 | `fcolR' != 0 | `rp4' != 198 {
-  di as error "F7 FAIL: poisexpresults rc `rp3' fcol `fcolR' explicit rc `rp4' - it must run uncollapsed by default and be refused when asked for"
+if `rp3' != 0 | `fcolR' != 0 | `rp4' != 0 | !`rp5' {
+  di as error "F7 FAIL: poisexpresults rc `rp3' fcol `fcolR' safety(off) rc `rp4' caution `rp5' - it must run uncollapsed and say so, and safety(off) must not silence it"
   local ++fails
 }
 
@@ -359,12 +430,15 @@ if `rp3' != 0 | `fcolR' != 0 | `rp4' != 198 {
 * estimands lost different numbers of horizons to the omission-marker drop, and the
 * non-conformable concatenation aborted the run. The screen catches the singular VCE
 * that drives that; under safety(off) the run stays collapsed with the caution
-* (e(wdid_fcguard) = caution) and must COMPLETE, whether or not fastcollapse is spelled out.
+* (e(wdid_fcguard) = caution) and must COMPLETE. The off-switch arm is the control: the
+* same command with nofastcollapse never reaches the collapse, so it completes with
+* e(wdid_fcol) = 0 and an empty guard.
 use "`REPO'/test/suite/data/survey_rcs.dta", clear
 qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
 cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att att_it subgroups(group) ///
-    fe(group_time) esprelength(2) espostlength(2) jointtests cluster(state) safety(off) fastcollapse
+    fe(group_time) esprelength(2) espostlength(2) jointtests cluster(state) safety(off) nofastcollapse
 local r8a = _rc
+local f8a = e(wdid_fcol)
 local g8a "`e(wdid_fcguard)'"
 use "`REPO'/test/suite/data/survey_rcs.dta", clear
 qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
@@ -373,9 +447,9 @@ cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att att_it subgroup
 local r8b = _rc
 local f8b = e(wdid_fcol)
 local g8b "`e(wdid_fcguard)'"
-di "F8_r503regression explicit=" `r8a' " (want 0, was 503) guard=`g8a' (want caution)  default=" `r8b' " (want 0) default_fcol=" `f8b' " (want 1) guard=`g8b' (want caution)"
-if `r8a' != 0 | "`g8a'" != "caution" | `r8b' != 0 | `f8b' != 1 | "`g8b'" != "caution" {
-  di as error "F8 FAIL: rc `r8a'/`r8b' fcol `f8b' guard `g8a'/`g8b' - the r(503) regression is not pinned"
+di "F8_r503regression offswitch=" `r8a' " (want 0) fcol=`f8a' (want 0) guard=`g8a' (want empty)  default=" `r8b' " (want 0, was 503) default_fcol=" `f8b' " (want 1) guard=`g8b' (want caution)"
+if `r8a' != 0 | `f8a' != 0 | "`g8a'" != "" | `r8b' != 0 | `f8b' != 1 | "`g8b'" != "caution" {
+  di as error "F8 FAIL: rc `r8a'/`r8b' fcol `f8a'/`f8b' guard `g8a'/`g8b' - the r(503) regression is not pinned"
   local ++fails
 }
 
@@ -385,10 +459,10 @@ if `r8a' != 0 | "`g8a'" != "caution" | `r8b' != 0 | `f8b' != 1 | "`g8b'" != "cau
 * full-data reads at the subgroup sites disagree beyond residue (a measured divergence,
 * 2026-09-01). Under the default safety the screen must fall back to the full data at the
 * first flagged site, and everything read after it must be BIT-IDENTICAL to
-* fullprecisionslow (mreldif exactly 0 on the posted subgroup matrices), while the main
+* nofastcollapse (mreldif exactly 0 on the posted subgroup matrices), while the main
 * results read before it stay within residue. Under safety(off) the run stays collapsed
 * with the caution. The healthy command must pass the screen untouched: guard empty,
-* collapsed, and within residue of fullprecisionslow.
+* collapsed, and within residue of nofastcollapse.
 local RCS "`REPO'/test/suite/data/survey_rcs.dta"
 local DEG "att subgroups(group) fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state)"
 use "`RCS'", clear
@@ -403,7 +477,7 @@ cap matrix S9a1 = e(wdidsgresults_1)
 cap matrix S9a2 = e(wdidsgresults_2)
 use "`RCS'", clear
 qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
-cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], `DEG' fullprecisionslow
+cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], `DEG' nofastcollapse
 local r9u = _rc
 local g9u "`e(wdid_fcguard)'"
 cap matrix B9u = e(b)
@@ -427,7 +501,7 @@ if `r9a' != 0 | `f9a' != 1 | "`g9a'" != "fallback" | `r9u' != 0 | "`g9u'" != "" 
   local ++fails
 }
 if `d9p' != 0 | `d9s' != 0 | `d9b' >= 1e-8 {
-  di as error "F9 FAIL: after the fallback pwsgs/sgresults must be bit-identical to fullprecisionslow (mreldif `d9p'/`d9s') and b within residue (`d9b')"
+  di as error "F9 FAIL: after the fallback pwsgs/sgresults must be bit-identical to nofastcollapse (mreldif `d9p'/`d9s') and b within residue (`d9b')"
   local ++fails
 }
 if `r9c' != 0 | `f9c' != 1 | "`g9c'" != "caution" {
@@ -449,7 +523,7 @@ local g9h "`e(wdid_fcguard)'"
 cap matrix P9h = e(pwsgs)
 cap matrix S9h = e(wdidsgresults_1)
 use "`BB'", clear
-cap qui wooldid y cohort t ttre, att att_it esprelength(2) espostlength(2) subgroups(sg_three) jointtests fullprecisionslow
+cap qui wooldid y cohort t ttre, att att_it esprelength(2) espostlength(2) subgroups(sg_three) jointtests nofastcollapse
 local r9hu = _rc
 cap matrix P9hu = e(pwsgs)
 cap matrix S9hu = e(wdidsgresults_1)
@@ -468,7 +542,7 @@ local g9k "`e(wdid_fcguard)'"
 cap matrix P9k = e(pwsgs)
 cap matrix S9k = e(wdidsgresults_1)
 use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att att_it subgroups(region) esprelength(2) espostlength(2) safety(off) fullprecisionslow
+cap qui wooldid y cohid year ttre, att att_it subgroups(region) esprelength(2) espostlength(2) safety(off) nofastcollapse
 local r9ku = _rc
 cap matrix P9ku = e(pwsgs)
 cap matrix S9ku = e(wdidsgresults_1)
@@ -485,7 +559,7 @@ if `r9k' != 0 | `r9ku' != 0 | `f9k' != 1 | "`g9k'" != "" | `d9kp' >= 1e-8 | `d9k
 *     window holding only the reference period, so its pre-trend joint test is absent in
 *     both arms (b = 0, V = 0 structurally). The overjoint screen used to flag that as
 *     "zero variance" and cost the speedup at default safety; it is now gated on r(p).
-*     Pin: guard empty, collapsed, bit-identical to fullprecisionslow.
+*     Pin: guard empty, collapsed, bit-identical to nofastcollapse.
 local DB "`REPO'/test/data/dta_binary.dta"
 use "`DB'", clear
 qui sum t, meanonly
@@ -499,7 +573,7 @@ local g10a "`e(wdid_fcguard)'"
 local j10a "`e(joint_horiz_s1)'"
 local k10a "`e(joint_horiz_s2)'"
 cap matrix P10a = e(pwsgs)
-cap qui wooldid y i t ttre, att robust esprelength(2) espostlength(2) subgroups(sgd2) jointtests fullprecisionslow
+cap qui wooldid y i t ttre, att robust esprelength(2) espostlength(2) subgroups(sgd2) jointtests nofastcollapse
 local r10au = _rc
 local j10au "`e(joint_horiz_s1)'"
 local k10au "`e(joint_horiz_s2)'"
@@ -515,7 +589,7 @@ if `r10a' != 0 | `r10au' != 0 | `f10a' != 1 | "`g10a'" != "" | "`j10a'" != "`j10
 *     collapsed joint test that differed from the full data by an order of magnitude
 *     (1.5e-82 vs 3.3e-83; a known-degenerate dataset). The test is now anchored to the
 *     level scale too. Pin: the att read flags (guard=fallback) and the all-subgroups-equal
-*     joint tests match fullprecisionslow exactly.
+*     joint tests match nofastcollapse exactly.
 use "`BB'", clear
 qui gen double pw1 = 1
 qui replace pw1 = 1 + 1e-3 if person_id == 101
@@ -525,7 +599,7 @@ local r10b = _rc
 local g10b "`e(wdid_fcguard)'"
 local ja10b = e(joint_att_allsgssame)
 local jp10b = e(joint_pre_att_allsgssame)
-cap qui wooldid y cohort t ttre [pw=pw1], att att_it esprelength(2) espostlength(2) subgroups(sg_three) cluster(cohort) fullprecisionslow
+cap qui wooldid y cohort t ttre [pw=pw1], att att_it esprelength(2) espostlength(2) subgroups(sg_three) cluster(cohort) nofastcollapse
 local r10bu = _rc
 local ja10bu = e(joint_att_allsgssame)
 local jp10bu = e(joint_pre_att_allsgssame)
@@ -540,8 +614,8 @@ if `r10b' != 0 | `r10bu' != 0 | "`g10b'" != "fallback" | `da10b' >= 1e-8 | `dp10
 *     r(V) to read, so after an observed-run fallback they are sent to the full data
 *     outright. Before, on this exactly degenerate contrast the collapsed replicates were
 *     bit-constant and the bootstrapped subgroup-equality test came back unavailable while
-*     fullprecisionslow reported one. Pin: guard=fallback and pwsgs / joint test / e(V)
-*     match fullprecisionslow exactly under the same seed.
+*     nofastcollapse reported one. Pin: guard=fallback and pwsgs / joint test / e(V)
+*     match nofastcollapse exactly under the same seed.
 local RCS "`REPO'/test/suite/data/survey_rcs.dta"
 use "`RCS'", clear
 cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) fe(group_time) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) bootstrap(standard) reps(5) rseed(123) dots(0)
@@ -551,7 +625,7 @@ local ja10c "`e(joint_att_allsgssame)'"
 cap matrix P10c = e(pwsgs)
 cap matrix V10c = e(V)
 use "`RCS'", clear
-cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) fe(group_time) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) bootstrap(standard) reps(5) rseed(123) dots(0) fullprecisionslow
+cap qui wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) fe(group_time) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) bootstrap(standard) reps(5) rseed(123) dots(0) nofastcollapse
 local r10cu = _rc
 local ja10cu "`e(joint_att_allsgssame)'"
 cap matrix P10cu = e(pwsgs)
@@ -572,7 +646,7 @@ if `r10c' != 0 | `r10cu' != 0 | "`g10c'" != "fallback" | "`ja10c'" != "`ja10cu'"
 * the dose and of wooldid's internal ringer copy, written onto every row of the cell before
 * the first-row pick. What stays refused is the reads that are not linear in the dose and the
 * requests that split a cell on a variable outside the key.
-* F11.0 non-vacuity; F11a five eligible reads agree with fullprecisionslow; F11b every new
+* F11.0 non-vacuity; F11a five eligible reads agree with nofastcollapse; F11b every new
 * gate token skips silently and stays bit-identical; F11c the explicit-request refusals and
 * the plain-contreat acceptance; F11d the two provisos (a zero-weight pick row, a float dose).
 local CCD "`REPO'/test/suite/data/continuous_control_dense.dta"
@@ -611,7 +685,7 @@ if "`ctftype'" != "float" {
   local ++fails
 }
 
-* ---- F11a: THE COLLAPSE ENGAGES WITH contreat() AND AGREES WITH fullprecisionslow.
+* ---- F11a: THE COLLAPSE ENGAGES WITH contreat() AND AGREES WITH nofastcollapse.
 * Five reads, each compared on e(b), e(V) and the reported table e(wdidmainresults):
 * (1) a plain att run, (2) all four estimands with an event study and the joint tests,
 * (3) contreatelasticitytype(dyex), (4) poisson on the default dydx scale, (5) subgroups(),
@@ -629,7 +703,7 @@ matrix b11a1 = e(b)
 matrix V11a1 = e(V)
 matrix M11a1 = e(wdidmainresults)
 use "`CCD'", clear
-qui wooldid y_cont_vary cohort t ttre, att contreat(dose_vary) contreatcontrols(basic) robust fullprecisionslow
+qui wooldid y_cont_vary cohort t ttre, att contreat(dose_vary) contreatcontrols(basic) robust nofastcollapse
 local ra1u = _rc
 local fa1u = e(wdid_fcol)
 matrix b11a1u = e(b)
@@ -658,7 +732,7 @@ matrix E11a2 = e(b_es_att)
 scalar jh2 = e(joint_horiz)
 scalar jc2 = e(joint_Choriz_i)
 use "`CCD'", clear
-qui wooldid y_cont_vary cohort t ttre, `CT2' fullprecisionslow
+qui wooldid y_cont_vary cohort t ttre, `CT2' nofastcollapse
 local ra2u = _rc
 local fa2u = e(wdid_fcol)
 matrix b11a2u = e(b)
@@ -705,7 +779,7 @@ matrix b11a3 = e(b)
 matrix V11a3 = e(V)
 matrix M11a3 = e(wdidmainresults)
 use "`CCD'", clear
-qui wooldid y_cont_vary cohort t ttre, `CT3' fullprecisionslow
+qui wooldid y_cont_vary cohort t ttre, `CT3' nofastcollapse
 local ra3u = _rc
 matrix b11a3u = e(b)
 matrix V11a3u = e(V)
@@ -720,8 +794,8 @@ if `ra3' != 0 | `ra3u' != 0 | `fa3' != 1 | `da3b' > 1e-8 | `da3v' > 1e-8 | `da3m
 }
 
 * (6) poisson with contreatelasticitytype(dyex) - eligible since 2026-09-06 (F032): the
-* analytic-Jacobian form under poisson makes the collapsed ame rows exact; an explicit
-* fastcollapse is accepted
+* analytic-Jacobian form under poisson makes the collapsed ame rows exact, so the run
+* collapses without a word
 local CT6 att poisson contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(dyex) robust esprelength(2) espostlength(2)
 use "`CCD'", clear
 cap qui wooldid y_count cohort t ttre, `CT6'
@@ -731,7 +805,7 @@ cap matrix b11a6 = e(b)
 cap matrix V11a6 = e(V)
 cap matrix M11a6 = e(wdidmainresults)
 use "`CCD'", clear
-cap qui wooldid y_count cohort t ttre, `CT6' fullprecisionslow
+cap qui wooldid y_count cohort t ttre, `CT6' nofastcollapse
 local ra6u = _rc
 cap matrix b11a6u = e(b)
 cap matrix V11a6u = e(V)
@@ -740,11 +814,18 @@ local da6b = mreldif(b11a6, b11a6u)
 local da6v = mreldif(V11a6, V11a6u)
 local da6m = mreldif(M11a6, M11a6u)
 use "`CCD'", clear
-cap qui wooldid y_count cohort t ttre, `CT6' fastcollapse
+qui log using fcol_x.txt, text replace name(fc)
+cap noi wooldid y_count cohort t ttre, `CT6'
 local ra6x = _rc
-di "F11a6_poisson_dyex rc=" `ra6' "/" `ra6u' "/" `ra6x' " fcol=" `fa6' " (want 1) mreldif b=" `da6b' " V=" `da6v' " table=" `da6m'
-if `ra6' != 0 | `ra6u' != 0 | `ra6x' != 0 | `fa6' != 1 | `da6b' > 1e-8 | `da6v' > 1e-8 | `da6m' > 1e-8 {
-  di as error "F11a6 FAIL: poisson+dyex rc `ra6'/`ra6u'/`ra6x' fcol `fa6' mreldif `da6b'/`da6v'/`da6m' - eligible since F032 and must collapse exactly"
+qui log close fc
+local lg = fileread("fcol_x.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local ca6 = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
+cap erase fcol_x.txt
+di "F11a6_poisson_dyex rc=" `ra6' "/" `ra6u' "/" `ra6x' " fcol=" `fa6' " (want 1) caution=" `ca6' " (want 0) mreldif b=" `da6b' " V=" `da6v' " table=" `da6m'
+if `ra6' != 0 | `ra6u' != 0 | `ra6x' != 0 | `ca6' | `fa6' != 1 | `da6b' > 1e-8 | `da6v' > 1e-8 | `da6m' > 1e-8 {
+  di as error "F11a6 FAIL: poisson+dyex rc `ra6'/`ra6u'/`ra6x' caution `ca6' fcol `fa6' mreldif `da6b'/`da6v'/`da6m' - eligible since F032, so it must collapse exactly and say nothing"
   local ++fails
 }
 
@@ -758,7 +839,7 @@ matrix b11a4 = e(b)
 matrix V11a4 = e(V)
 matrix M11a4 = e(wdidmainresults)
 use "`CCD'", clear
-qui wooldid y_count cohort t ttre, `CT4' fullprecisionslow
+qui wooldid y_count cohort t ttre, `CT4' nofastcollapse
 local ra4u = _rc
 matrix b11a4u = e(b)
 matrix V11a4u = e(V)
@@ -787,7 +868,7 @@ matrix M11a5 = e(wdidmainresults)
 matrix P11a5 = e(pwsgs)
 matrix S11a5 = e(wdidsgresults_1)
 use "`CCD'", clear
-qui wooldid y_cont_vary cohort t ttre, `CT5' fullprecisionslow
+qui wooldid y_cont_vary cohort t ttre, `CT5' nofastcollapse
 local ra5u = _rc
 matrix b11a5u = e(b)
 matrix V11a5u = e(V)
@@ -806,9 +887,9 @@ if `ra5' != 0 | `ra5u' != 0 | `fa5' != 1 | "`ga5'" != "" | `da5b' > 1e-8 | `da5v
   local ++fails
 }
 
-* ---- F11b: EVERY NEW GATE TOKEN SKIPS SILENTLY. Without an explicit fastcollapse each of the
-* refused reads must run normally, report e(wdid_fcol)=0, and - because it then takes the SAME
-* code path as fullprecisionslow - reproduce it BIT-IDENTICALLY (mreldif exactly 0, as measured
+* ---- F11b: EVERY NEW GATE TOKEN SKIPS, UNDER THE CAUTION F4 ASSERTS. Each of the gated
+* reads must run normally, report e(wdid_fcol)=0, and - because it then takes the SAME
+* code path as nofastcollapse - reproduce it BIT-IDENTICALLY (mreldif exactly 0, as measured
 * 2026-09-02). Anything else means the gate leaked. The six tokens: contreatpoly(>1),
 * contreatelasticitytype(eyex), contreatelasticitytype(eydx), lattice(), poisson+eydx (poisson
 * with dyex is eligible since 2026-09-06 - F032 - so eydx under poisson stands in for it), and
@@ -844,7 +925,7 @@ forval k = 1/6 {
   cap matrix V11b = e(V)
   cap matrix M11b = e(wdidmainresults)
   use "`CCD'", clear
-  cap qui wooldid `BY`k'' cohort t ttre, `BOPT`k'' fullprecisionslow
+  cap qui wooldid `BY`k'' cohort t ttre, `BOPT`k'' nofastcollapse
   local bqu`k' = _rc
   cap matrix b11bu = e(b)
   cap matrix V11bu = e(V)
@@ -855,7 +936,7 @@ forval k = 1/6 {
   * dydx on the xb scale - where a plain marginal effect already IS the semi-elasticity -
   * so the read became linear in the coefficients and the collapse ban lifted on exactly
   * the F032 argument. Its contract flips: the collapse must now be ON, and the collapsed
-  * answer must agree with fullprecisionslow to the file's usual 1e-8, not bit-exactly
+  * answer must agree with nofastcollapse to the file's usual 1e-8, not bit-exactly
   * (they are different code paths once the collapse engages). Measured 9.1e-14, which is
   * the same figure a plain poisson + contreat() run posts, so it is the poisson path's
   * ordinary reproducibility and not anything the remap introduced.
@@ -867,7 +948,7 @@ forval k = 1/6 {
   }
   di "F11b`k' `BNM`k'' rc=" `bq`k'' "/" `bqu`k'' " fcol=" `bf`k'' " (want `wantfcol`k'') worst mreldif b/V/table=" `bd`k'' " (want <= `wanttol`k'')"
   if `bq`k'' != 0 | `bqu`k'' != 0 {
-    di as error "F11b FAIL: read `BNM`k'' errored (rc `bq`k''/`bqu`k'') without an explicit fastcollapse"
+    di as error "F11b FAIL: read `BNM`k'' errored (rc `bq`k''/`bqu`k'')"
     local ++fails
   }
   if `bf`k'' != `wantfcol`k'' {
@@ -875,37 +956,63 @@ forval k = 1/6 {
     local ++fails
   }
   if `bd`k'' > `wanttol`k'' {
-    di as error "F11b FAIL: read `BNM`k'' differs from fullprecisionslow by `bd`k'' (want <= `wanttol`k'')"
+    di as error "F11b FAIL: read `BNM`k'' differs from nofastcollapse by `bd`k'' (want <= `wanttol`k'')"
     local ++fails
   }
 }
 
-* ---- F11c: an EXPLICIT fastcollapse with each of those is refused r(198), with no safety(off)
-* escape (they are measured wrong answers, not risks), while an explicit fastcollapse with a
-* plain contreat() run is ACCEPTED and engages. This is F4's contract, re-pointed: the old
-* blanket contreat() refusal is gone and only the six reads above are refused.
+* ---- F11c: each of those five gated reads DISCLOSES its skip in the caution, naming its own
+* token, while leg 5 (poisson + eydx, eligible since BS-6) collapses and says nothing. This is
+* F4's contract on the continuous-treatment gate tokens: the old blanket contreat() refusal is
+* gone, only the reads above are gated, and each gated one is now announced rather than either
+* silent or fatal. safety(off) is carried as before and must not silence it.
+local CW1 contreatpoly(>1)
+local CW2 contreatelasticitytype(eyex)
+local CW3 contreatelasticitytype(eydx)
+local CW4 lattice()
+local CW5 .
+local CW6 contreat-in-controls
 forval k = 1/6 {
   use "`CCD'", clear
-  cap qui wooldid `BY`k'' cohort t ttre, `BOPT`k'' fastcollapse safety(off)
+  qui log using fcol_f11c.txt, text replace name(fc)
+  cap noi wooldid `BY`k'' cohort t ttre, `BOPT`k'' safety(off)
   local cx`k' = _rc
+  local cf`k' = e(wdid_fcol)
+  qui log close fc
+  local lg = fileread("fcol_f11c.txt")
+  local lg = subinstr(`"`lg'"', char(13), "", .)
+  local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+  if `k' == 5 local cc`k' = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") == 0
+  else        local cc`k' = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: `CW`k''") > 0
 }
-* BS-6: leg 5 is now ACCEPTED (rc 0), the other five stay refused
-di "F11c_gate_rcs poly2=" `cx1' " eyex=" `cx2' " eydx=" `cx3' " lattice=" `cx4' " pois_eydx=" `cx5' " (want 0 since BS-6) ctl=" `cx6' " (want 198 elsewhere)"
+cap erase fcol_f11c.txt
+* BS-6: leg 5 is eligible (fcol 1, no caution), the other five skip and caution
+di "F11c_rcs poly2=" `cx1' " eyex=" `cx2' " eydx=" `cx3' " lattice=" `cx4' " pois_eydx=" `cx5' " ctl=" `cx6' " (want 0 x6)"
+di "F11c_caution=" `cc1' "/" `cc2' "/" `cc3' "/" `cc4' "/" `cc5' "/" `cc6' " (want 1 x6; leg 5 means SILENT)"
 forval k = 1/6 {
-  local wantrc`k' 198
-  if `k' == 5 local wantrc`k' 0
-  if `cx`k'' != `wantrc`k'' {
-    di as error "F11c FAIL: explicit fastcollapse with `BNM`k'' returned rc `cx`k'' (want `wantrc`k'')"
+  if `cx`k'' != 0 {
+    di as error "F11c FAIL: `BNM`k'' returned rc `cx`k'' (want 0)"
+    local ++fails
+  }
+  if !`cc`k'' {
+    di as error "F11c FAIL: `BNM`k'' disclosure wrong - leg 5 must be silent, every other leg must caution naming its token"
     local ++fails
   }
 }
 use "`CCD'", clear
-cap qui wooldid y_cont_vary cohort t ttre, att contreat(dose_vary) contreatcontrols(basic) robust fastcollapse
+qui log using fcol_f11c.txt, text replace name(fc)
+cap noi wooldid y_cont_vary cohort t ttre, att contreat(dose_vary) contreatcontrols(basic) robust
 local cx7 = _rc
 local cf7 = e(wdid_fcol)
-di "F11c_plain_explicit rc=" `cx7' " (want 0) fcol=" `cf7' " (want 1)"
-if `cx7' != 0 | `cf7' != 1 {
-  di as error "F11c FAIL: explicit fastcollapse + plain contreat() rc `cx7' fcol `cf7' - contreat() left the ineligible list 2026-09-02"
+qui log close fc
+local lg = fileread("fcol_f11c.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local cc7 = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
+cap erase fcol_f11c.txt
+di "F11c_plain rc=" `cx7' " (want 0) fcol=" `cf7' " (want 1) caution_present=" `cc7' " (want 0)"
+if `cx7' != 0 | `cf7' != 1 | `cc7' {
+  di as error "F11c FAIL: plain contreat() rc `cx7' fcol `cf7' caution `cc7' - contreat() left the ineligible list 2026-09-02 and must collapse quietly"
   local ++fails
 }
 
@@ -951,7 +1058,7 @@ matrix V11d1 = e(V)
 matrix M11d1 = e(wdidmainresults)
 use "`CCD'", clear
 qui gen double w0f = cond(mod(_n,12)==1, 0, 1)
-qui wooldid y_cont_vary cohort t ttre [pw=probability_weight], `CTD' customweightmultiplier(w0f) fullprecisionslow
+qui wooldid y_cont_vary cohort t ttre [pw=probability_weight], `CTD' customweightmultiplier(w0f) nofastcollapse
 local rd1u = _rc
 matrix b11d1u = e(b)
 matrix V11d1u = e(V)
@@ -982,7 +1089,7 @@ matrix V11d2 = e(V)
 matrix M11d2 = e(wdidmainresults)
 use "`CCD'", clear
 qui gen double w01 = cond(mod(_n,12)==5, 1, 0)
-qui wooldid y_cont_vary cohort t ttre, `CTD' customweightmultiplier(w01) fullprecisionslow
+qui wooldid y_cont_vary cohort t ttre, `CTD' customweightmultiplier(w01) nofastcollapse
 local rd2u = _rc
 matrix b11d2u = e(b)
 matrix V11d2u = e(V)
@@ -1009,7 +1116,7 @@ matrix b11d3 = e(b)
 matrix V11d3 = e(V)
 matrix M11d3 = e(wdidmainresults)
 use "`DC'", clear
-qui wooldid y i t ttre, att att_it contreat(intensity) contreatcontrols(basic) fullprecisionslow
+qui wooldid y i t ttre, att att_it contreat(intensity) contreatcontrols(basic) nofastcollapse
 local rd3u = _rc
 matrix b11d3u = e(b)
 matrix V11d3u = e(V)
@@ -1061,9 +1168,9 @@ if `gaex' == 0 | `gaunrc' != 0 | "`gaunab'" != "dose_vary" {
 }
 
 * ---- F12a: the four legs. Each is run three ways: the default (does the gate fire?),
-* fullprecisionslow (the reference), and an explicit fastcollapse (is the refusal loud?).
+* nofastcollapse (the reference), and an explicit fastcollapse (is the refusal loud?).
 * Legs 1/2/4 must refuse, and with the collapse off they take the SAME code path as
-* fullprecisionslow, so they must be bit-identical to it (measured exactly 0, 2026-09-02).
+* nofastcollapse, so they must be bit-identical to it (measured exactly 0, 2026-09-02).
 * Leg 3 must NOT fire - coarsecohortcontrols(c.x1#c.x2) never mentions the dose - so it
 * collapses and agrees to residue (measured 9.5e-16), and its explicit request is accepted.
 * safety(off) rides on the three refusing legs to pin that it opens no escape.
@@ -1079,10 +1186,12 @@ local GAF1 0
 local GAF2 0
 local GAF3 1
 local GAF4 0
-local GAX1 198
-local GAX2 198
+* GAX: does the gated read announce itself? 1 = caution naming the token, 0 = silence
+* (leg 3's term does not touch the dose, so the collapse engages and nothing is said)
+local GAX1 1
+local GAX2 1
 local GAX3 0
-local GAX4 198
+local GAX4 1
 local GAS1 safety(off)
 local GAS2 safety(off)
 local GAS3
@@ -1107,18 +1216,25 @@ forval k = 1/4 {
   cap matrix V12a = e(V)
   cap matrix M12a = e(wdidmainresults)
   use "`CCD'", clear
-  cap qui wooldid y_cont_vary cohort t ttre, `GA`k'' fullprecisionslow
+  cap qui wooldid y_cont_vary cohort t ttre, `GA`k'' nofastcollapse
   local gru`k' = _rc
   cap matrix b12au = e(b)
   cap matrix V12au = e(V)
   cap matrix M12au = e(wdidmainresults)
   local gd`k' = max(mreldif(b12a, b12au), mreldif(V12a, V12au), mreldif(M12a, M12au))
   use "`CCD'", clear
-  cap qui wooldid y_cont_vary cohort t ttre, `GA`k'' fastcollapse `GAS`k''
-  local gx`k' = _rc
-  di "F12a`k' `GAN`k'' rc=" `gr`k'' "/" `gru`k'' " fcol=" `gf`k'' " (want `GAF`k'') worst mreldif b/V/table=" `gd`k'' " (want <= `GAD`k'') explicit_rc=" `gx`k'' " (want `GAX`k'')"
+  qui log using fcol_x.txt, text replace name(fc)
+  cap noi wooldid y_cont_vary cohort t ttre, `GA`k'' `GAS`k''
+  local gy`k' = _rc
+  qui log close fc
+  local lg = fileread("fcol_x.txt")
+  local lg = subinstr(`"`lg'"', char(13), "", .)
+  local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+  local gx`k' = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: contreat-in-controls") > 0
+  cap erase fcol_x.txt
+  di "F12a`k' `GAN`k'' rc=" `gr`k'' "/" `gru`k'' "/" `gy`k'' " fcol=" `gf`k'' " (want `GAF`k'') worst mreldif b/V/table=" `gd`k'' " (want <= `GAD`k'') caution=" `gx`k'' " (want `GAX`k'')"
   if `gr`k'' != 0 | `gru`k'' != 0 {
-    di as error "F12a FAIL: `GAN`k'' errored (rc `gr`k''/`gru`k'') without an explicit fastcollapse - a gated read must run normally on the full data, never start erroring"
+    di as error "F12a FAIL: `GAN`k'' errored (rc `gr`k''/`gru`k'') - a gated read must run normally on the full data, never start erroring"
     local ++fails
   }
   if `gf`k'' != `GAF`k'' {
@@ -1126,11 +1242,11 @@ forval k = 1/4 {
     local ++fails
   }
   if `gd`k'' > `GAD`k'' {
-    di as error "F12a FAIL: `GAN`k'' differs from fullprecisionslow by `gd`k'' (want <= `GAD`k'') - `GAR`k''"
+    di as error "F12a FAIL: `GAN`k'' differs from nofastcollapse by `gd`k'' (want <= `GAD`k'') - `GAR`k''"
     local ++fails
   }
-  if `gx`k'' != `GAX`k'' {
-    di as error "F12a FAIL: explicit fastcollapse with `GAN`k'' returned rc `gx`k'', want `GAX`k'' (the refusals carry no safety(off) escape)"
+  if `gy`k'' != 0 | `gx`k'' != `GAX`k'' {
+    di as error "F12a FAIL: `GAN`k'' rc `gy`k'' caution `gx`k'', want rc 0 and caution `GAX`k'' (safety(off) must not silence the disclosure)"
     local ++fails
   }
 }
@@ -1138,7 +1254,7 @@ forval k = 1/4 {
 * ---- F12b1: THE CALLER'S GUARANTEE. wooldid zeroes the if-marker on any row whose contreat()
 * value is missing, so no missing dose can reach the worker. Blank the dose on every 7th row
 * and check that every one of those rows leaves e(sample) - under the default (collapsed) path
-* and under fullprecisionslow alike. Measured 2026-09-02: 1728 rows, 246 blanked, e(N) falling
+* and under nofastcollapse alike. Measured 2026-09-02: 1728 rows, 246 blanked, e(N) falling
 * 1728 -> 1482 in both arms with no missing-dose row left in e(sample).
 use "`CCD'", clear
 qui count
@@ -1152,11 +1268,11 @@ if `gbbase' != `gbn' {
 }
 local GBW att contreat(dose_vary) contreatcontrols(basic) robust
 local GBN1 default
-local GBN2 fullprecisionslow
+local GBN2 nofastcollapse
 local GBF1 1
 local GBF2 0
 local GBO1
-local GBO2 fullprecisionslow
+local GBO2 nofastcollapse
 forval k = 1/2 {
   use "`CCD'", clear
   qui replace dose_vary = . if mod(_n,7) == 0
@@ -1277,7 +1393,7 @@ qui wooldid y cohid year ttre, att robust
 local nc13 = e(wdid_fcncell)
 local fs13 "`e(wdid_fcskip)'"
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att robust fullprecisionslow
+qui wooldid y cohid year ttre, att robust nofastcollapse
 local nc13s = e(wdid_fcncell)
 use "`ADMIN'", clear
 qui wooldid y cohid year ttre, att customvce(cluster state)
@@ -1289,40 +1405,40 @@ if `nc13' >= . | `nc13' < 1 | `nc13' >= `n13' | `nc13s' < . | `nc13i' < . | "`fs
   local ++fails
 }
 
-* ---- F14 (F037, 2026-09-06): the verbose collapse-decision line names fullprecisionslow as
+* ---- F14 (F037, 2026-09-06): the verbose collapse-decision line names nofastcollapse as
 * the reason, alone and beside an ineligible option (which used to be blamed instead)
 use "`ADMIN'", clear
 qui log using fcol_f14.txt, text replace name(fc)
-cap noi wooldid y cohid year ttre, att robust fullprecisionslow verbose
+cap noi wooldid y cohid year ttre, att robust nofastcollapse verbose
 local rc14a = _rc
 qui log close fc
 local lg = fileread("fcol_f14.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-local ok14a = strpos(`"`lg'"', "on the full data (fullprecisionslow).") > 0
+local ok14a = strpos(`"`lg'"', "on the full data (nofastcollapse).") > 0
 use "`ADMIN'", clear
 qui log using fcol_f14.txt, text replace name(fc)
-cap noi wooldid y cohid year ttre, att customvce(cluster state) fullprecisionslow verbose
+cap noi wooldid y cohid year ttre, att customvce(cluster state) nofastcollapse verbose
 local rc14b = _rc
 qui log close fc
 local lg = fileread("fcol_f14.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-local ok14b = strpos(`"`lg'"', "(fullprecisionslow; the default cell collapse would not apply with customvce() either)") > 0
-local ok14c = strpos(`"`lg'"', "does not apply with customvce() (see fastcollapse") == 0
+local ok14b = strpos(`"`lg'"', "(nofastcollapse; the default cell collapse would not apply with customvce() either)") > 0
+local ok14c = strpos(`"`lg'"', "does not apply with customvce() (see nofastcollapse") == 0
 cap erase fcol_f14.txt
 di "F14 rcs=`rc14a'/`rc14b' alone=`ok14a' with_impvalues=`ok14b' old_text_absent=`ok14c'"
 if `rc14a' != 0 | `rc14b' != 0 | !`ok14a' | !`ok14b' | !`ok14c' {
-  di as error "F14 FAIL: the verbose collapse line does not name fullprecisionslow as the reason"
+  di as error "F14 FAIL: the verbose collapse line does not name nofastcollapse as the reason"
   local ++fails
 }
 
 * ---- F15 (F062, 2026-09-06): impvalues collapses. With the cluster variable in the cell
 * key the per-cluster reads are exact: (a) a cluster CROSSED with i (state x cohid on the
 * admin panel; the key change is what makes it exact - 2,878 cells instead of 60) and (b)
-* a cluster NESTING i (cohid itself, 60 cells) both agree with fullprecisionslow on b, V
-* and the main table at 1e-12; the collapse engages (e(wdid_fcol) = 1) and an explicit
-* fastcollapse is accepted
+* a cluster NESTING i (cohid itself, 60 cells) both agree with nofastcollapse on b, V
+* and the main table at 1e-12; the collapse engages (e(wdid_fcol) = 1) and the run says
+* nothing
 use "`ADMIN'", clear
 qui wooldid y cohid year ttre, att cluster(state) impvalues
 matrix bF15a = e(b)
@@ -1331,7 +1447,7 @@ matrix MF15a = e(wdidmainresults)
 local fc15a = e(wdid_fcol)
 local nc15a = e(wdid_fcncell)
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att cluster(state) impvalues fullprecisionslow
+qui wooldid y cohid year ttre, att cluster(state) impvalues nofastcollapse
 local d15a = max(mreldif(bF15a, e(b)), mreldif(VF15a, e(V)), mreldif(MF15a, e(wdidmainresults)))
 use "`ADMIN'", clear
 qui wooldid y cohid year ttre, att cluster(cohid) impvalues
@@ -1341,21 +1457,29 @@ matrix MF15b = e(wdidmainresults)
 local fc15b = e(wdid_fcol)
 local nc15b = e(wdid_fcncell)
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att cluster(cohid) impvalues fullprecisionslow
+qui wooldid y cohid year ttre, att cluster(cohid) impvalues nofastcollapse
 local d15b = max(mreldif(bF15b, e(b)), mreldif(VF15b, e(V)), mreldif(MF15b, e(wdidmainresults)))
 use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att cluster(state) impvalues fastcollapse
+qui log using fcol_x.txt, text replace name(fc)
+cap noi wooldid y cohid year ttre, att cluster(state) impvalues
 local rc15c = _rc
-di "F15 crossed: fcol=`fc15a' cells=`nc15a' mreldif=`d15a' | nesting: fcol=`fc15b' cells=`nc15b' mreldif=`d15b' | explicit fastcollapse rc=`rc15c'"
-if `fc15a' != 1 | `fc15b' != 1 | `d15a' > 1e-12 | `d15b' > 1e-12 | `nc15a' <= `nc15b' | `rc15c' != 0 {
+qui log close fc
+local lg = fileread("fcol_x.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local cc15 = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
+cap erase fcol_x.txt
+di "F15 crossed: fcol=`fc15a' cells=`nc15a' mreldif=`d15a' | nesting: fcol=`fc15b' cells=`nc15b' mreldif=`d15b' | rc=`rc15c' caution=`cc15' (want 0)"
+if `fc15a' != 1 | `fc15b' != 1 | `d15a' > 1e-12 | `d15b' > 1e-12 | `nc15a' <= `nc15b' | `rc15c' != 0 | `cc15' {
   di as error "F15 FAIL: impvalues under the collapse is not exact or did not engage"
   local ++fails
 }
 
 
 * ---- F16 (bug sweep BS-27, 2026-09-06): cfxlattice() without makecfxplots is ignored, as
-* announced, and no longer disables the default collapse or refuses fastcollapse; the
-* real bin-readers (makecfxplots with cfxlattice(), lattice()) still refuse fastcollapse
+* announced, and no longer disables the default collapse, so that run says nothing; the
+* real bin-readers (makecfxplots with cfxlattice(), lattice()) still gate the collapse and
+* must now announce the skip
 use "`REPO'/test/data/dta_cont.dta", clear
 gen zbin = mod(i, 3)
 tempfile f16
@@ -1365,23 +1489,42 @@ local f16rc = _rc
 local f16col = e(wdid_fcol)
 local f16skip `e(wdid_fcskip)'
 use `f16', clear
-cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) cfxlattice(zbin) fastcollapse
+qui log using fcol_x.txt, text replace name(fc)
+cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) cfxlattice(zbin)
 local f16rcb = _rc
+qui log close fc
+local lg = fileread("fcol_x.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local f16cb = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
 use `f16', clear
-cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) makecfxplots cfxlattice(zbin) fastcollapse
+qui log using fcol_x.txt, text replace name(fc)
+cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) makecfxplots cfxlattice(zbin)
 local f16rcc = _rc
+qui log close fc
+local lg = fileread("fcol_x.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local f16cc = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: makecfxplots") > 0
 use `f16', clear
-cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) lattice(zbin) fastcollapse
+qui log using fcol_x.txt, text replace name(fc)
+cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) lattice(zbin)
 local f16rcd = _rc
-di "F16 cfxlattice alone: rc=`f16rc' fcol=`f16col' fcskip=[`f16skip'] | +fastcollapse rc=`f16rcb' | makecfxplots+cfxlattice+fastcollapse rc=`f16rcc' | lattice+fastcollapse rc=`f16rcd'"
-if `f16rc' != 0 | `f16col' != 1 | "`f16skip'" != "" | `f16rcb' != 0 | `f16rcc' != 198 | `f16rcd' != 198 {
-  di as error "F16 FAIL: cfxlattice() alone must not decide the collapse"
+qui log close fc
+local lg = fileread("fcol_x.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local f16cd = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: lattice()") > 0
+cap erase fcol_x.txt
+di "F16 cfxlattice alone: rc=`f16rc' fcol=`f16col' fcskip=[`f16skip'] caution=`f16cb' (want 0) | makecfxplots+cfxlattice rc=`f16rcc' caution=`f16cc' | lattice rc=`f16rcd' caution=`f16cd' (want 1 each)"
+if `f16rc' != 0 | `f16col' != 1 | "`f16skip'" != "" | `f16rcb' != 0 | `f16cb' | `f16rcc' != 0 | !`f16cc' | `f16rcd' != 0 | !`f16cd' {
+  di as error "F16 FAIL: cfxlattice() alone must not decide the collapse, and the real bin-readers must skip it under a caution"
   local ++fails
 }
 
 * ---- F13 (BS-28): the one-realized-subgroup level margins take the collapse screen ----
 * the dominant risk of BS-28 is a SPURIOUS fire on a healthy run, so all three legs assert
-* the guard stayed empty and the numbers did not move against fullprecisionslow
+* the guard stayed empty and the numbers did not move against nofastcollapse
 
 * F13a SITE A/B inertness, no missing subgroup values
 use "`REPO'/test/data/dta_binary.dta", clear
@@ -1393,7 +1536,7 @@ local g13a = "`e(wdid_fcguard)'"
 matrix F13AD = e(wdidsgresults_7)
 use "`REPO'/test/data/dta_binary.dta", clear
 qui gen sg1 = 7
-qui wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sg1) fullprecisionslow
+qui wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sg1) nofastcollapse
 local rc13as = _rc
 local g13as = "`e(wdid_fcguard)'"
 matrix F13AS = e(wdidsgresults_7)
@@ -1416,7 +1559,7 @@ matrix F13BD = e(wdidsgresults_1)
 use "`REPO'/test/data/dta_binary.dta", clear
 qui gen sgm1 = 1
 qui replace sgm1 = . if mod(i,5) == 0
-qui wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sgm1) fullprecisionslow
+qui wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sgm1) nofastcollapse
 local rc13bs = _rc
 local g13bs = "`e(wdid_fcguard)'"
 matrix F13BS = e(wdidsgresults_1)
@@ -1449,7 +1592,7 @@ use "`REPO'/test/data/dta_binary.dta", clear
 qui gen sg2 = 1
 qui replace sg2 = 2 if mod(i,7) == 0
 qui drop if sg2 == 2 & t < ttre - 1 & ttre != .
-qui wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(2) esfixedbaseperiod esrelativeto(-1) subgroups(sg2) fullprecisionslow
+qui wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(2) esfixedbaseperiod esrelativeto(-1) subgroups(sg2) nofastcollapse
 local rc13cs = _rc
 local g13cs = "`e(wdid_fcguard)'"
 matrix F13C1S = e(wdidsgresults_1)
