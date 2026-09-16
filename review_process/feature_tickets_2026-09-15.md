@@ -96,8 +96,11 @@ carrying more weight. **Resolved, not open.**
 
 ### T1's option name, as implemented
 
-`permiisonsetgrouping` (declared `PERMIISOnsetgrouping`, minimum abbreviation `permiiso`) - the
-spelling encodes the assertion "perm: {it:i} is onset grouping" rather than the effect. Registered
+`permonsetcohorts` (declared `PERMONSETcohorts`, minimum abbreviation `permonset`), by author
+ruling 2026-09-16. The implementation first used `permiisonsetgrouping`, encoding the assertion
+"perm: {it:i} is onset grouping"; the name was put to the author because it is permanent
+user-facing API, and the ruling preferred naming what {it:i} must BE over asserting a sentence
+about it, the run-together "iis" reading as a typo. Registered
 in the worker syntax line, the validate syntax line, the c_local blanket and the `permstray`
 screen; `check_validate_sync.py` passes all three of its checks.
 
