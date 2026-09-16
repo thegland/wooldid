@@ -40,33 +40,7 @@ judged by the stricter gates), then the changes that move no number, then the th
 
 ## OPEN — to address at the end
 
-**A10's caution has no test on either branch (opened 2026-09-16).** A coverage gap rather than a
-defect, opened at the author's instruction.
-
-What A10 says: on the re-identification leg a twice-drawn cluster's copies get fresh CELL
-identities, so the estimand counts them separately, but a covariate that names the `i` variable
-itself - inside `fe()`, `controls()`, `interactivecontrols()`, `coarsecohortcontrols()` or
-`ccc_absorb()` - keeps its ORIGINAL `i` codes across both copies. The copies are therefore distinct
-units for the estimand while sharing fixed-effect codes. That is Stata's official `idcluster`
-convention and the caution states it once.
-
-What changed on 2026-09-16: T2/T3 gated it, `if "\`wdb_reid'" != "" & "\`wdb_nest'" == "1"`
-(`ado:407`). Under the keep-`i` regime nothing is re-identified, so there is no discrepancy and the
-caution would be false. The gate is correct.
-
-Why it wants a test: **neither branch has ever executed in the suite.** The caution fires only when
-a covariate option literally names the `i` variable, and no config in the deck writes `fe(i)` or
-`controls(i)`. So the firing path was already untested before today, and the new suppression path
-ships untested as well.
-
-The failure that would go uncaught: if the gate were ever inverted or dropped, a user clustering
-finer than `i` would be told that their fixed effects share codes across duplicated copies, which
-under keep-`i` is simply untrue. A caution that lies is worse than no caution, and nothing in the
-deck would notice.
-
-Two configs close it, both cheap: one nesting run naming `i` in `fe()` (caution MUST appear) and
-one finer-than-`i` run with the same covariate specification (caution MUST NOT appear). Message
-assertions, in the `logh` style `test_bootstrap_gates.do` already uses; no number moves.
+Nothing.
 
 The fifteen items the documentation review of 2026-09-10 turned up were ruled on 2026-09-11
 and all fifteen are built - see CLOSED below.
@@ -85,6 +59,44 @@ was ruled on 2026-09-11 and built the same day (see CLOSED).
 ---
 
 ## CLOSED
+
+**A10's caution now tested on both branches - opened and closed 2026-09-16.** Closed by three
+message-assertion legs in `test_bootstrap_gates.do` (m7/m8/m9), not the two the opening entry
+proposed. The gate is a conjunction - `wdb_reid' non-empty AND `wdb_nest' == 1 AND a covariate
+naming `i' - so two legs would have left a vacuous pass available: a gate that never fires at all
+also satisfies "fires here, silent there" if the silent leg is the only negative. The three legs
+pin each conjunct separately, on the fixture's `s = ceil(unit/4)` (s nests unit):
+
+| leg | regime | covariate | expected |
+|---|---|---|---|
+| m7 | `i=unit`, `cluster(s)` - nesting | `fe(unit)` | caution MUST appear |
+| m8 | `i=s`, `cluster(unit)` - finer | `fe(s)` | MUST NOT appear (the T2/T3 suppression) |
+| m9 | `i=unit`, `cluster(s)` - nesting | none | MUST NOT appear (the `wdb_ikeyed' conjunct) |
+
+All three run at rc 0 and the file prints `BOOTGATES_ALL_PASS`.
+
+**And the legs immediately found a defect in the harness they were written for - the more
+important half of this entry.** `logh` asserts a needle appears in a log it opens, runs a command
+into, then closes and reads. Stata echoes every command into EVERY open log, so the
+`logh <marker> <needle>' line itself was written into the log a moment before `logh' closed it -
+carrying the needle. **The needle always matched its own echo. All six pre-existing `logh`
+assertions had been passing vacuously and could not have failed.** It surfaced only because the
+new negative helper `lognh` has the opposite polarity, so the same echo made m8 and m9 fail
+where it had been silently rescuing everything else.
+
+Fixed by skipping SMCL command-echo lines (`{com}. ` and continuations `{com}> `); genuine output
+is unprefixed or carries `{txt}`/`{res}`/`{err}`. A second latent bug fell out of the same fix:
+`gettoken` leaves the separating blank on the remainder, so the needle carried a leading space and
+could never have matched a message starting at column 0 - invisible while the echo was matching,
+fatal the moment it stopped. Both helpers now `strtrim()` the needle.
+
+Re-run after the fix: all six original assertions still pass, so their CLAIMS were true - only the
+test was. That is this slate's fifth instance of one shape, and the first on the negative side:
+a check credited with catching a failure it structurally could not catch. The general lesson stands
+unchanged - calibrate an instrument on a case whose answer you already know, in BOTH directions.
+
+Eleven other files under `test/` both open a log and read a file; whether any shares this shape is
+recorded as UNASSESSED, not as clean.
 
 **RNG bleed in `test_bootstrap_gates.do` — opened and closed 2026-09-16 (`REDACTED_SHA`).**
 Cases without their own `rseed()` draw from whatever RNG state earlier cases left, so one can go

@@ -231,20 +231,61 @@ cap prog drop logh
 prog def logh
   * logh <marker> <needle...>: assert the log section written since `marker' log
   * was opened contains the needle string; closes the log
+  * The {com} skip is load-bearing, not cosmetic (2026-09-17). Stata echoes every
+  * command into EVERY open log, so the `logh mN <needle>' line itself lands in the
+  * log a moment before logh closes and reads it - and the echo carries the needle.
+  * Without this filter the needle always matched its own echo and every assertion
+  * below passed vacuously; the sibling lognh always failed, which is how it
+  * surfaced. SMCL marks echoed commands `{com}. ' and continuations `{com}> ';
+  * genuine output lines are unprefixed or carry {txt}/{res}/{err}
   gettoken lg 0 : 0
   qui log close `lg'
-  local needle `"`0'"'
+  * gettoken leaves the separating blank on the remainder; an untrimmed needle
+  * would never match a message that starts at column 0
+  local needle = strtrim(`"`0'"')
   tempname fh
   local found 0
   file open `fh' using boot_gates_`lg'.smcl, read
   file read `fh' line
   while r(eof) == 0 {
-    if strpos(`"`macval(line)'"', `"`needle'"') local found 1
+    if substr(`"`macval(line)'"', 1, 5) != "{com}" {
+      if strpos(`"`macval(line)'"', `"`needle'"') local found 1
+    }
     file read `fh' line
   }
   file close `fh'
   if `found' == 0 {
     di as error "MSG-`lg' FAIL: expected message not found: `needle'"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+end
+
+* lognh is logh's other half. A message assertion that only ever checks for
+* PRESENCE cannot tell a correctly suppressed message from a message that was
+* never written at all, so a gate with two branches needs both directions
+cap prog drop lognh
+prog def lognh
+  * lognh <marker> <needle...>: assert the log section written since `marker' log
+  * was opened does NOT contain the needle string; closes the log
+  * skips echoed command lines for the reason given in logh above
+  gettoken lg 0 : 0
+  qui log close `lg'
+  * gettoken leaves the separating blank on the remainder; an untrimmed needle
+  * would never match a message that starts at column 0
+  local needle = strtrim(`"`0'"')
+  tempname fh
+  local found 0
+  file open `fh' using boot_gates_`lg'.smcl, read
+  file read `fh' line
+  while r(eof) == 0 {
+    if substr(`"`macval(line)'"', 1, 5) != "{com}" {
+      if strpos(`"`macval(line)'"', `"`needle'"') local found 1
+    }
+    file read `fh' line
+  }
+  file close `fh'
+  if `found' != 0 {
+    di as error "MSG-`lg' FAIL: message present that should be suppressed: `needle'"
     global BOOTG_FAILS = ${BOOTG_FAILS} + 1
   }
 end
@@ -271,6 +312,33 @@ logh m5 Bootstrap Inference
 qui log using boot_gates_m6.smcl, replace name(m6) smcl
 cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(20) rseed(3)
 logh m6 Bootstrap Inference
+
+* ---- A10 (open_defects.md): the re-id leg's covariate caution, pinned on BOTH
+* branches of its gate. The caution says that when clusters are duplicated, a
+* covariate keyed to unit identity keeps its original codes across the copies.
+* T2/T3 (2026-09-16) gated it on `wdb_nest' because under a cluster finer than or
+* cross-cutting i the leg keeps i whole and re-identifies nothing, so the caution
+* would be false there. Neither branch had ever run: no config wrote fe(i).
+* Three legs, because the gate has two independent conjuncts:
+*   m7  nesting regime + fe(i)     -> MUST fire      (the claim is true)
+*   m8  finer regime  + fe(i)      -> MUST NOT fire  (the T2/T3 suppression)
+*   m9  nesting regime, no fe(i)   -> MUST NOT fire  (the wdb_ikeyed conjunct)
+* m8 and m9 together rule out the two ways a vacuous gate could pass m7.
+* s nests unit (s = ceil(unit/4)), so cluster(s) with i=unit is the nesting
+* regime and cluster(unit) with i=s is the finer one. att_it + bootstrap(standard)
+* is what sets `wdb_reid' in the first place (wooldid.ado:378)
+qui log using boot_gates_m7.smcl, replace name(m7) smcl
+cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) fe(unit) rseed(70109)
+chk 7m 0 _rc
+logh m7 Caution: a covariate specification names the i variable
+qui log using boot_gates_m8.smcl, replace name(m8) smcl
+cap noi wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(20) fe(s) rseed(70110)
+chk 8m 0 _rc
+lognh m8 Caution: a covariate specification names the i variable
+qui log using boot_gates_m9.smcl, replace name(m9) smcl
+cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) rseed(70111)
+chk 9m 0 _rc
+lognh m9 Caution: a covariate specification names the i variable
 
 * G16 bootsave(): stray without bootstrap() -> 198; writes <name>.dta to the cwd with the draws
 * bitwise equal to e(bootdist) and an observed _rep = 0 row equal to e(b); an existing file is
