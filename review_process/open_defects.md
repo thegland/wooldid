@@ -40,29 +40,7 @@ judged by the stricter gates), then the changes that move no number, then the th
 
 ## OPEN — to address at the end
 
-**RNG bleed between cases in `test_bootstrap_gates.do` (opened 2026-09-16).** 41 of that
-file's 99 `bootstrap()` calls carry no `rseed()` of their own, so their draws depend on
-whatever RNG state the preceding cases left behind. `test_bootstrap_tstat.do` (12 of 12)
-and `test_bootstrap_std.do` (9 of 9) are fully seeded; the exposure is confined to this one
-leg.
-
-Found the hard way rather than by inspection. While the T2/T3 work was converting G9 from a
-refusal test into a positive one, a strengthened case asserting 50 of 50 completed
-replications **passed when run in isolation and failed at 49/50 inside the file**. That was
-diagnosed at the time - the lost replication is the cluster count, measured identically in
-both the keep-`i` and `group()` regimes across seeds 1 to 5 - and the case now carries
-`rseed(9090)`, which the commit records as load-bearing for exactly this reason.
-
-Why it is a defect and not a curiosity: an unseeded case can go red after an edit that
-changes how many draws an *earlier* case consumes, and it then reads as a regression in the
-thing just edited. It is a false-positive generator pointed at whoever touches this file
-next.
-
-Not fixed inline on 2026-09-16 because the fix touches 41 cases in a cert leg and the value
-of doing it is highest when it can be verified by a full cert run, which is the natural
-moment to also confirm no case was depending on the bleed for its pinned numbers.
-
-The fifteen items the documentation review of 2026-09-10 turned up were ruled on 2026-09-11
+Nothing. The fifteen items the documentation review of 2026-09-10 turned up were ruled on 2026-09-11
 and all fifteen are built - see CLOSED below.
 
 ---
@@ -79,6 +57,32 @@ was ruled on 2026-09-11 and built the same day (see CLOSED).
 ---
 
 ## CLOSED
+
+**RNG bleed in `test_bootstrap_gates.do` — opened and closed 2026-09-16 (`REDACTED_SHA`).**
+Cases without their own `rseed()` draw from whatever RNG state earlier cases left, so one can go
+red after an edit that changes how many draws an EARLIER case consumes, reading as a regression in
+whatever was just touched. Found because a strengthened G9 asserting 50 of 50 completed
+replications passed in isolation and failed at 49/50 inside the file.
+
+**The opening report overstated it and the corrected scope is the useful part.** "41 of 99" counted
+`bootstrap(` occurrences, comments included, not calls. There are 29 unseeded CALLS, and they are
+not one population:
+
+- **19 assert a nonzero rc** - parse-time refusals (`bootstrap(wild)`, a missing `reps()`,
+  `bootalpha(nonsense)`, `dots(-2)`). They error before any resampling and never touch the RNG, so
+  seeding them is churn that changes nothing.
+- **2 must stay unseeded**: G31 at lines 745 and 750 runs the same command twice with no seed,
+  captures `e(boot_rngstate)` and asserts `mreldif(G31D1, G31D2) != 0`. The shared ambient state IS
+  the test. A seed there would not tighten the case, it would delete what it checks.
+- **8 genuinely run and assert an rc or a log message**, and those were the real exposure: the two
+  `bayes` + `att_it` runs under `safety(off)`, the G7/G7b nesting controls, G10, G15b, and the three
+  `logh` message assertions, whose printed text can shift with the draws.
+
+Those 8 now carry distinct seeds (70101-70108). Verified by running the leg end to end:
+`BOOTGATES_ALL_PASS`, no failures. Necessary rather than ceremonial, since changing a seed changes
+the draws and a case pinned on a caution's wording can legitimately flip - which is precisely the
+G9b failure mode.
+
 
 ### The help-file audit — 55 gaps written, 1 ado defect fixed, 2026-09-11
 Second half of the documentation instruction. 14 agents worked FROM THE ADO (options off the

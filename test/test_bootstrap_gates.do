@@ -81,16 +81,16 @@ chk 5h 198 _rc
 * G6 bayes + cell-weighted: refuse under default safety, caution + proceed-to-tail under safety(off)
 cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(50)
 chk 6a 198 _rc
-cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off)
+cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off) rseed(70101)
 chk 6b 0 _rc
 * (6b now RUNS: caution printed, then full bayes bootstrap - message-checked below)
 
 * G7 standard + cell-weighted + nesting cluster (cluster == i) -> RUNS (re-id leg)
-cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(standard) reps(20)
+cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(standard) reps(20) rseed(70102)
 chk 7 0 _rc
 * G7b coarser nesting cluster (s nests unit? NO - s is COARSER than unit: each unit
 * wholly inside one s, so cluster(s) nests i=unit) -> gates pass -> tail
-cap qui wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20)
+cap qui wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) rseed(70103)
 chk 7b 0 _rc
 
 * G8 CONVERTED 2026-09-16 (T2) from a refusal test to a positive one, case number kept
@@ -169,7 +169,7 @@ if _rc == 0 & e(boot_completed) != `g9done' {
 }
 
 * G10 standard + att only + cluster(unit): runs (count path)
-cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20)
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20) rseed(70104)
 chk 10 0 _rc
 
 * G11 single cluster -> r459
@@ -191,7 +191,7 @@ chk 14 0 _rc
 * on the author's ruling: the Roth diagnostics now run from the shell AFTER the bootstrap
 * rewiring, so Roth's own formulas consume the BOOTSTRAP event-study covariance. The
 * refusal had rested on an ordering constraint, not an impossibility.
-cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) esfixedbaseperiod bootstrap(bayes) reps(20) pretrendpower(80)
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) esfixedbaseperiod bootstrap(bayes) reps(20) pretrendpower(80) rseed(70105)
 chk 15 0 _rc
 * G15b it must actually CONSUME the bootstrap covariance, not merely run: the power
 * figures have to move against the analytic fit on the same data. A run that silently
@@ -254,16 +254,16 @@ qui log using boot_gates_m1.smcl, replace name(m1) smcl
 cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20) rseed(8)
 logh m1 Bootstrap Inference
 qui log using boot_gates_m2.smcl, replace name(m2) smcl
-cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off)
+cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off) rseed(70106)
 logh m2 Caution: bootstrap(bayes) standard errors for att_it
 qui log using boot_gates_m3.smcl, replace name(m3) smcl
 * m3 used to pin the nesting refusal's message; T2 (2026-09-16) removed the refusal,
 * so what this leg now pins is that the same request RUNS and prints the bootstrap
 * footer rather than a message about nesting
-cap noi wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50)
+cap noi wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50) rseed(70107)
 logh m3 Bootstrap Inference
 qui log using boot_gates_m4.smcl, replace name(m4) smcl
-cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) oldsyntax
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) oldsyntax rseed(70108)
 logh m4 not available under oldsyntax
 qui log using boot_gates_m5.smcl, replace name(m5) smcl
 cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) rseed(8)
