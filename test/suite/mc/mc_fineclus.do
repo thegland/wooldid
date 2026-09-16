@@ -17,6 +17,25 @@
 * seed sequence is indistinguishable in the log from running until something passes.
 * reps(199) rather than 99 so the .95 percentile interval is the 5th and 195th order
 * statistics rather than an interpolation between the 2nd and 3rd.
+*
+* MEASURED 2026-09-16, M = 150 per arm, reps(199), 150/150 rows rc 0 and 199/199
+* replications complete on EVERY draw of both arms:
+*   P4  FINE  cluster(unit), strictly finer than i   att_i 142/150 = .9467  PASS
+*   P5  NEST  cluster(state) == i                    att_i 149/150 = .9933  FAIL
+* judged against Binomial(150, .95) -> [137, 148]. Reported beside them, never judged:
+* att covered 147/150 = .9800 (FINE) and 149/150 = .9933 (NEST), so the DGP's cohort
+* heterogeneity is live on both.
+*
+* P5 fails by OVER-covering, and it is not this feature's doing. cluster(state) == i is
+* the nesting regime, which the two-regime branch leaves byte-for-byte unchanged, and
+* that was checked rather than asserted: the first 40 draws of the P5 arm were re-run
+* against the pristine bd41e01 ado on the same seeds and came back BITWISE identical on
+* every field - rc, N_clust, completions, both point estimates and all four intervals.
+* So the conservatism is a pre-existing property of the estimator at cluster() == i on
+* this design, where each cohort is its own resampling cluster, and it is the same
+* effect the help already describes at "What level to cluster at" - at or above the i
+* level the covariance stops seeing the treated cells' own variation. Here it lands on
+* the conservative side. The feature's own leg, P4, sits on nominal.
 clear all
 set more off
 set linesize 200
