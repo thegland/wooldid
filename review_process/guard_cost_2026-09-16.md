@@ -56,6 +56,27 @@ once per run ahead of the replication loop (verified: none sits inside a `forv` 
 replications). Their cost is O(1) against the engine's O(R), so they are not candidates
 however expensive they look in a raw count. The same is true of `wooldid_permrun`'s sites.
 
+## Census of the `safety()`-gated blocks
+
+The `safety()` family is where a reader would expect the skippable checks to live, so it was
+enumerated exhaustively rather than sampled. There are **24** `safety`-gated blocks. Excluding
+display lines and matching only outside quoted strings (message text mentioning `margins`
+otherwise scores as a `margins` call), **7** contain a genuinely executed expensive operation:
+
+| site | program | what it is | verdict |
+|---|---|---|---|
+| L762 | `wooldid_worker` | F13 onset-constancy, 2 `gegen by(i)` | **candidate — rep-gate** |
+| L898 | `wooldid_worker` | pre/post-period sufficiency, 1 `gstats` | core estimability — author's carve-out |
+| L1341 | `wooldid_worker` | si8 variable-count, 3 `gegen tag` | **candidate — rep-gate** |
+| L2399 | `wooldid_worker` | `makecfxplots` production, 4 `margins` | not a guard; output, and only under `makecfxplots` |
+| L4959 | `wooldid_validate` | float-precision screen, 1 `gstats` | cheap, once |
+| L5326 | `wooldid_validate` | time-range screen, 2 `gstats` | cheap, once |
+| L12234 | `wooldid_sgdom` | subgroup-constancy, 2 `gegen by(i t)` | **candidate — rep-gate**, under `subgroups()` |
+
+**The other 17 are macro or scalar comparisons and cost nothing measurable.** That is the
+short answer to the survey half of the author's question: the `safety()` surface is mostly
+free, and its cost is concentrated in three blocks.
+
 ## The one real finding: the whole-sample safety blocks re-run on every replication
 
 Two blocks in `wooldid_worker` are gated on `safetyinput != "off"` and on nothing else:
@@ -65,6 +86,14 @@ Two blocks in `wooldid_worker` are gated on `safetyinput != "off"` and on nothin
 - **si8, variable-count** (`ado:1341-1365`) — three `gegen ... tag()` passes plus three
   `count`s, producing a caution when `i` has over 100 levels and pre-empting an `r(907)`
   when the implied variable count would exceed `c(maxvar)`.
+
+A third block has the identical shape one level down: **`wooldid_sgdom:12234`**,
+subgroup-constancy within `i`-by-`t`, two `gegen ... by(i t)` passes and an `assert`. It runs
+only under `subgroups()`, but `wooldid_worker:985` calls `wooldid_sgdom` on every worker entry,
+so under `subgroups()` it too is paid once per replication. It carries the same safety argument:
+under bootstrap re-id the rebuilt `i` is *finer* than the original, so constancy within
+`(i, t)` is implied by the constancy rep 0 already verified; and `permonsetcohorts` refuses
+`subgroups()` outright, so the rebuild case cannot arise.
 
 `wooldid_worker` is re-entered once per replication: `wooldid_bootrun` and `wooldid_permrun`
 set `WOOLDID_REPMODE 1` around each nested `wooldid` call. Measured on a 240-unit × 16-period
@@ -165,8 +194,11 @@ cannot have changed. That is a strictly weaker claim and a strictly safer change
 
 One change, offered for the author's ruling and **not made**:
 
-> Add `& "\`wdrepmode'" != "1"` to the two `safetyinput != "off"` gates at `ado:762` and
-> `ado:1341`, matching `ado:3816` and the rule stated at `ado:533-537`.
+> Add `& "\`wdrepmode'" != "1"` to the `safetyinput != "off"` gates at `ado:762` and
+> `ado:1341`, matching `ado:3816` and the rule stated at `ado:533-537`. The same gate applies
+> to `wooldid_sgdom:12234` under `subgroups()`, with the caveat that `wooldid_sgdom` does not
+> currently receive `wdrepmode` and would need it passed in — a slightly larger change, and
+> worth treating as a separate decision from the two worker sites.
 
 What it buys and what it costs is measured in the next section. What it does **not** cost:
 any diagnostic on the observed run. Both checks still run at rep 0, on the user's real data,
