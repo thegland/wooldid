@@ -21,6 +21,17 @@
 *                5 / 7), tau = 0, permstrata(str) at B draws (R4 was B = 99): exact size.
 *   E5 tstat0    R1 DGP, tau = 0, permtstat: SIZE of the studentized p (the tau = 0 companion
 *                of mc_ri2 D4, which measured only coverage at tau = 1).
+*   E6 fineclus  ADDED 2026-09-16 for ticket T1 (PREREG_FEATURE_FINECLUS_2026-09-16.md F2/P1).
+*                The R1 DGP UNCHANGED and tau = 0, but the call is the coarse-i / fine-cluster
+*                pairing the help recommends and the engine refused until T1: i is the onset
+*                COHORT (3 levels - onset 5, onset 7, never-treated) and cluster() is the unit
+*                (12), strictly finer, under permonsetcohorts. Every replication therefore
+*                rebuilds i from the onsets it drew. SIZE of p, judged by the SAME lattice rule
+*                and the SAME bands as E2/E4/E5, which are its controls in the same campaign:
+*                a wrong rebuild that is merely different still produces plausible p-values, so
+*                exactness under the sharp null is the readout that detects it and the only one.
+*                The assignment space is R1's 18480, unchanged - the rebuild regroups units,
+*                it does not touch the generator.
 * Recorded per row: ncomp/nfail/npos, namesok, e(perm_pconv), the arm's level, e(perm_p) by
 * name for main_att / pretreatment_att / ES_att_post0 / ES_att_post1 / main_ame /
 * ES_ame_post0 / ES_ame_post1 (ame columns '.' outside E1), e(perm_p_lo/hi) main_att,
@@ -71,6 +82,8 @@ local B = `6'
 local TAU `7'
 if "`TAU'" == "" local TAU 1
 local PHASES `8'
+* the default list is UNCHANGED by the T1 addition: E6 is opted into by name, so a rerun of
+* the existing campaign reproduces the existing arms and nothing else
 if "`PHASES'" == "" local PHASES E1+E2+E3+E4+E5
 local PHASES = subinstr(subinstr("`PHASES'", "+", " ", .), ",", " ", .)
 
@@ -308,6 +321,17 @@ foreach ph of local PHASES {
       mkR1 `dgpseed' 0
       cap qui wooldid y i t ttre, att cluster(i) `ESOPT' jointtests ///
           permute(shuffle) permreps(`B') permtstat rseed(`rseed') dots(0)
+    }
+    else if "`ph'" == "E6" {
+      * T1: the same R1 data, the same seeds, the same statistic - only the (i, cluster)
+      * pairing moves. icoh is R1's onset grouping (a deterministic function of ttre, so the
+      * DGP is untouched); cluster(i) is then strictly finer than i and the run is reachable
+      * only under permonsetcohorts
+      local arm fineclus
+      mkR1 `dgpseed' 0
+      qui gen icoh = cond(ttre == 5, 1, cond(ttre == 7, 2, 3))
+      cap qui wooldid y icoh t ttre, att cluster(i) `ESOPT' jointtests ///
+          permute(shuffle) permreps(`B') permonsetcohorts rseed(`rseed') dots(0)
     }
     else {
       di as error "mc_ri_ext: unknown phase `ph'"
