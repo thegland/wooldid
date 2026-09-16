@@ -1094,7 +1094,7 @@ phenomenon); wooldid does not suppress them. On some of these designs the estima
 {marker technical}{...}
 {dlgtab:Technical Features}
 
-{phang}{opt update}: If specified, the command {it:wooldid,} {it:update} will update your local installation of {it:wooldid} based on the most recent edition of the program available on github. {p_end}
+{phang}{opt update}: If specified, the command {it:wooldid,} {it:update} will update your local installation of {it:wooldid} based on the most recent edition of the program available on github. The new files are written to disk, but a running Stata session keeps using the copy of {it:wooldid} it has already loaded, so the update takes effect only after you restart Stata or run {cmd:discard}. {p_end}
 
 {phang}{opt customw:eightmultiplier(varname)}: When computing various treatment effects using the margins calculation (see step 2 {help wooldid##description:here}), the weights normally 
 used to produce the requested type of treatment effect (ATT, ATT_i, etc.) will be multiplied by this variable. When requesting an ATT without specifying sample weights, this is 
