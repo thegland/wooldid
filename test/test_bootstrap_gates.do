@@ -93,14 +93,19 @@ chk 7 0 _rc
 cap qui wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20)
 chk 7b 0 _rc
 
-* G8 standard + cell-weighted + no cluster -> obs-level refusal
+* G8 standard + cell-weighted + no cluster -> RUNS (T2, 2026-09-16). Was an
+* observation-level refusal (198) on the ground that duplicated treatment cells could
+* not be re-identified; the leg now keeps i and resamples observations, and duplicate
+* (i,t) rows are cells with more rows and more weight rather than a contradiction
 cap qui wooldid y unit t ttre, att_it robust bootstrap(standard) reps(50)
-chk 8 198 _rc
+chk 8 0 _rc
 
 * G9 standard + cell-weighted + NON-nesting cluster: i = s (coarse), cluster = unit
-* (finer than i: unit varies within s) -> r459
+* (finer than i: unit varies within s) -> RUNS (T2, 2026-09-16). Was r459. i is an
+* estimand-definition choice and cluster() a dependence claim, so this pairing is
+* legitimate; the leg keeps i here rather than splitting a straddling unit in two
 cap qui wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50)
-chk 9 459 _rc
+chk 9 0 _rc
 
 * G10 standard + att only + cluster(unit): runs (count path)
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20)
@@ -191,8 +196,11 @@ qui log using boot_gates_m2.smcl, replace name(m2) smcl
 cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off)
 logh m2 Caution: bootstrap(bayes) standard errors for att_it
 qui log using boot_gates_m3.smcl, replace name(m3) smcl
+* m3 used to pin the nesting refusal's message; T2 (2026-09-16) removed the refusal,
+* so what this leg now pins is that the same request RUNS and prints the bootstrap
+* footer rather than a message about nesting
 cap noi wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50)
-logh m3 requires the cluster() variable to nest i
+logh m3 Bootstrap Inference
 qui log using boot_gates_m4.smcl, replace name(m4) smcl
 cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) oldsyntax
 logh m4 not available under oldsyntax

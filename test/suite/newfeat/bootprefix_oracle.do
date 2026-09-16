@@ -822,17 +822,21 @@ else {
     }
   }
 
-  * ============ C-BOOT-7(b): the re-identification leg's nesting requirement ======
+  * ============ C-BOOT-7(b): the re-identification leg under a cross-cutting cluster ==
   * [SCOPE].  On this panel cluster(state) does not nest i = cohid (a cohort spans
-  * states), so the physical re-identification leg is unavailable and wooldid refuses
-  * with r(459) and a message naming the requirement rather than silently producing
-  * the pooled leg.  This is the other side of the mapping the A16-A19 legs certify.
+  * states).  Until T3 (2026-09-16) the physical re-identification leg refused that
+  * with r(459); it now has a rule for it - keep i, and let a twice-drawn cluster
+  * arrive as duplicate rows inside its unit's cell - so what this leg pins is that
+  * the request RUNS and completes its replications.  Re-identifying here would split
+  * a cohort that straddles two states into two cohorts in EVERY replication, drawn or
+  * not, which is the failure the keep-i rule exists to avoid.
   use `"`SDATA'/dta_s_admin.dta"', clear
   cap noi wooldid y cohid year ttre, att cluster(state) esprelength(1) espostlength(1) ///
       bootstrap(standard) reps(5) rseed(1) boottstat
   local rcN = _rc
-  _echk C16 `rcN' 459 "[SCOPE] boottstat refused r(459) where cluster() does not nest i"
-  dis "C16 info (uncounted): the log above this line carries two probe-recorded cosmetic defects — the standard r(459) trailer printed TWICE, and the low-reps() Caution printed BEFORE the validation error that aborts the run"
+  local ndN = e(boot_completed)
+  _echk C16 `rcN' 0 "[SCOPE] boottstat RUNS where cluster() does not nest i (was r(459) before T3)"
+  _echk C16b `ndN' 5 "[SCOPE] every replication of that run completed"
 
   * ============ C-BOOT-8: hand-rebuilt stage 1 (and boottest, recorded only) ======
   * [EXACT re-derivation, rule 1e-10].  An independent reconstruction of wooldid's
