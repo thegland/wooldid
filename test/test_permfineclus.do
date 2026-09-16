@@ -96,16 +96,26 @@ xrc "Q1c i IS the onset grouping, cluster finer" 0 `=_rc'
 cap noi qui wooldid y i t ttre, att cluster(i) `ESO' `PO' permonsetcohorts safety(off)
 xrc "Q1d safety(off) does not bypass the verification" 459 `=_rc'
 
-* Q1e: a design with NO never-treated units. Two things are only reachable here: the second
-* direction of the verification has no missing onset group to check, and the never-treated
-* code the rebuild assigns to rows the cluster map does not reach falls to its reserved
-* branch (one below the smallest observed i code) instead of a real cohort's code
+* Q1e: a design with NO never-treated units, which is where the second direction of the
+* verification has no missing onset group to check. wooldid refuses such a design outright -
+* a documented design rejection, not a degeneracy (test/suite/data_classes.csv on
+* dta_path_nonever: "a design wooldid intentionally rejects (r459) ... not to be run to
+* results") - and this option must not change WHICH refusal fires. The screens added here run
+* before the data setup that rejects it, so an over-broad one would replace an informative
+* message with its own; assert the same return code with the option, without it, and with a
+* finer cluster. MEASURED 2026-09-16: all three are r459 carrying the data-setup message.
+* This is also why the rebuild's reserved never-treated code (the branch taken when the
+* design sample holds no never-treated rows) is unreachable in practice: the observed run
+* never reaches the replication loop on such a design.
 mkfc 12 6 10 0
+cap noi qui wooldid y icoh t ttre, att cluster(icoh) `ESO' `PO'
+local rce1 = _rc
+cap noi qui wooldid y icoh t ttre, att cluster(icoh) `ESO' `PO' permonsetcohorts
+local rce2 = _rc
 cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' `PO' permonsetcohorts
-xrc "Q1e no never-treated units" 0 `=_rc'
-if _rc == 0 {
-  xok "Q1e2 no never-treated: every replication estimated" `=(e(perm_completed) == 99 & e(perm_failed) == 0 & e(perm_irebuilt) == 1)'
-}
+local rce3 = _rc
+dis "Q1e no never-treated: rc without=`rce1' with=`rce2' with+finer=`rce3'"
+xok "Q1e the option does not pre-empt the no-never-treated design rejection" `=(`rce1' == 459 & `rce2' == 459 & `rce3' == 459)'
 mkfc 12 3 10 0
 
 *=============================================================== Q2 the refusals

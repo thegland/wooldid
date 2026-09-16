@@ -7578,7 +7578,11 @@ version 16.0
   * the design sample - a row with no cluster value is dropped by the clustered fit (110 of
   * 120 rows estimated on a 12-unit panel with one unit's cluster set missing) - so the
   * sentinel never reaches an estimated row and the rep-0 / replication asymmetry for such
-  * rows is unreachable rather than merely unlikely.
+  * rows is unreachable rather than merely unlikely. The ELSE branch below (no never-treated
+  * rows in the design sample, so the sentinel is one below the smallest observed code) is
+  * unreachable for a second reason: a panel with no never-treated units is a design wooldid
+  * rejects outright in its data setup, which runs before this loop, so the observed run
+  * never gets here. Measured, and pinned by test_permfineclus.do's Q1e.
   local wdp_rebuild 0
   if "`onc'" != "" & "`clus'" != "`i'" {
     tempvar wdpcg wdpcmn wdpcmx
