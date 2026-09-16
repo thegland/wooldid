@@ -129,3 +129,36 @@ nesting - a twice-drawn sub-unit cluster must still be two clusters.
   report P7 as evidence the leg works.
 - Any of these may be overturned by the author; none may be overturned by re-running with a
   different seed until it passes.
+
+## F2 AMENDMENT - P2 was crediting a tripwire that cannot fire (recorded 2026-09-16, mid-implementation)
+
+**What P2 claimed.** "A rebuilt {it:i} whose codes do not reproduce the observed column set fails P2
+loudly instead of producing a quietly thinner permutation distribution", resting on `ado:7556`'s
+rep-0 `colfullnames` check against the observed run.
+
+**What was measured.** The T1 implementation measured that **no accumulated `e(b)` column name
+embeds an `i` code**: relabelling `i` leaves `colfullnames` identical. The consequence is that
+`ado:7556` can detect a change in the column SET - a cohort vanishing from a replication - but
+**cannot detect a wrong onset-to-cohort map**, which is the failure mode T1 actually introduces.
+A rebuild that assigns the right number of cohorts to the wrong onsets passes the tripwire
+silently and produces a plausible, wrong permutation distribution.
+
+**Why this is recorded as an amendment rather than a correction in place.** P2 was written before
+the measurement and credited the tripwire with more than it can do. Editing the original text
+would hide that the protection was assumed rather than verified. The original P2 stands as
+written and is narrowed here.
+
+**P2a (the original, narrowed).** `rc == 0` on every row, `p` in [0,1], and `e(perm_n)` equal to
+the requested replication count on every accumulated column. This detects column-SET loss - the
+`select(draws, draws :< .)` denominator drop at `ado:15683` - and nothing else.
+
+**P2b (new, and it is the one that covers the actual failure mode).** An explicit assertion in
+`wooldid_permrun` that rep 0's rebuilt `i` equals the observed `i` on the design sample. Its
+falsifiability is established by construction rather than by hope: it was measured to fire r459
+on a deliberately reversed onset-to-cohort map. A negative control that fires on a known-wrong
+input is what P2 lacked.
+
+**Standing lesson for the rest of this work.** A tripwire named in a preregistration has to be
+demonstrated to fire on the failure it is credited with, not merely to exist at a line number.
+The same question is open for T3's `e(N_clust)` assertion (P7) and is answered there by P6's
+suppressed arm; if P6's control comes back UNINFORMATIVE, P7 inherits exactly this defect.

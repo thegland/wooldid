@@ -94,6 +94,13 @@ by cluster id. It already does: when `i` is a cohort every cell holds many rows,
 at `ado:1860` replaces the cell with its estimand-weighted mean. Duplicates are more rows
 carrying more weight. **Resolved, not open.**
 
+### T1's option name, as implemented
+
+`permiisonsetgrouping` (declared `PERMIISOnsetgrouping`, minimum abbreviation `permiiso`) - the
+spelling encodes the assertion "perm: {it:i} is onset grouping" rather than the effect. Registered
+in the worker syntax line, the validate syntax line, the c_local blanket and the `permstray`
+screen; `check_validate_sync.py` passes all three of its checks.
+
 ### One risk that is new only to T1
 
 The accumulator matches columns by NAME against the observed `e(b)`, and a missing column becomes
@@ -103,6 +110,13 @@ undrawn, against today's vanishing when its single cluster goes undrawn, so the 
 unchanged. Under T1 it IS new, and only under `permute(probabilities)`: `shuffle` permutes every
 onset value across clusters and preserves the level set. The tripwire already exists at
 `ado:7556` (rep-0 `colfullnames` vs the observed run).
+
+**MEASURED 2026-09-16, and it narrows the paragraph above.** No accumulated `e(b)` column name
+embeds an `i` code - relabelling `i` leaves `colfullnames` identical - so `ado:7556` detects a
+changed column SET but cannot detect a wrong onset-to-cohort map. T1 therefore carries an explicit
+assertion in `wooldid_permrun` that rep 0's rebuilt `i` equals the observed `i` on the design
+sample, measured to fire r459 on a deliberately reversed map. See the F2 amendment in the prereg.
+
 
 ## T1 - `permute()`: recompute `i` after assignment when `i` is an onset grouping
 
