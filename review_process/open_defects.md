@@ -40,7 +40,29 @@ judged by the stricter gates), then the changes that move no number, then the th
 
 ## OPEN — to address at the end
 
-Nothing.
+**`si8demand` under-predicts the variable requirement, so the r(907) pre-emption misses
+(opened 2026-09-16).** Found incidentally by the guard-cost investigation
+(`guard_cost_2026-09-16.md`), not by anything that investigation was looking for.
+
+`wooldid.ado:1355` estimates the specification's variable demand as
+`si8cells*(1 + (contreat != "")) + si8ilev + si8tlev + 200` and, when that exceeds
+`c(maxvar)`, stops the run early with an expressive message naming the count and advising
+`fe()` plus a coarser `i`. The estimate is too low. On a plain 200-unit × 20-period panel with
+`i = unit` and `c(maxvar) = 5000` - not a pathological shape, just a small panel with a granular
+`i` - the block measured `cells=2004 ilev=200 tlev=20 demand=2424`, correctly did not fire at
+2424 < 5000, and the run then died on **Stata's own** `maxvar too small ... currently 5000`,
+r(907). So the true requirement exceeded the estimate by more than a factor of two, and the
+pre-emption delivered exactly the outcome it exists to prevent: Stata's generic message instead
+of wooldid's. Verified on a build carrying a single added `dis` and no logic change, so this is
+not an instrumentation artifact.
+
+**Partly mitigated, which is why this is not urgent.** `si8ilev` was 200, so the companion
+`> 100` caution fired immediately beforehand and did give the coarsen-`i` advice. The user is
+not left with nothing - they lose the named variable count and the early exit, not the guidance.
+
+Not chased further, under the pathological-data effort cap: the question of which term is
+undercounted (the `_i`-by-`_t` cell count against what `reghdfe`/`margins` actually materializes)
+wants its own measurement, and the fix may be a constant factor rather than a new formula.
 
 The fifteen items the documentation review of 2026-09-10 turned up were ruled on 2026-09-11
 and all fifteen are built - see CLOSED below.
@@ -95,8 +117,14 @@ test was. That is this slate's fifth instance of one shape, and the first on the
 a check credited with catching a failure it structurally could not catch. The general lesson stands
 unchanged - calibrate an instrument on a case whose answer you already know, in BOTH directions.
 
-Eleven other files under `test/` both open a log and read a file; whether any shares this shape is
-recorded as UNASSESSED, not as clean.
+Eleven other files under `test/` both open a log and read a file. All eleven were then checked and
+**none shares this shape**, for two independent reasons: (1) structurally, each closes its log
+BEFORE calling its assertion helper, so the helper's own invocation line cannot reach the log it
+reads - `logh` was unique in closing the log inside the helper; and (2) empirically, no assertion
+needle in any of the eleven occurs in that file's own command text, which is the only other way an
+echo could satisfy a needle. (A literal scan flags `if flag == 1` in `test_edges.do`,
+`joint_horiz` in `test_permute3.do` and two log filenames; all are commands, comments or e()
+names, none an assertion needle.) The residual exposure is therefore zero rather than unmeasured.
 
 **RNG bleed in `test_bootstrap_gates.do` — opened and closed 2026-09-16 (`REDACTED_SHA`).**
 Cases without their own `rseed()` draw from whatever RNG state earlier cases left, so one can go
