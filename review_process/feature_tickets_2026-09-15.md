@@ -87,6 +87,15 @@ The re-id leg's replication is a full nested `wooldid y __wdbnewi t ttrevar, ...
 not need new weighting machinery. Its real content is the gate relaxation, the `__wdbnewi` rule
 above, and the `error 198` relaxation for the unclustered case.
 
+### Ruled: no display line for the rebuild (author, 2026-09-16)
+
+The implementation proposed a one-line `part(perm)` footer saying that each replication
+regrouped `i` by the onset it drew. **Ruled against.** Rebuilding `i` from the drawn
+assignment is the natural behaviour of permutation inference in this setting rather than a
+caveat about it, and the table does not need furniture saying so. `e(perm_irebuilt)` remains
+posted for anyone who wants to check which of the two paths a run took, and the
+`permonsetcohorts` help entry explains the rebuild in full. Not to be reopened.
+
 ### Five refinements from the T1 implementation (2026-09-16, measured)
 
 **(a) The rebuild opens no column-loss channel at all.** The survey said column loss "IS new under

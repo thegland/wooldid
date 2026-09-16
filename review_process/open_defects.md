@@ -40,9 +40,30 @@ judged by the stricter gates), then the changes that move no number, then the th
 
 ## OPEN — to address at the end
 
-Nothing. Every item recorded in this file has been built, ruled closed, or resolved by
-measurement. The fifteen items the documentation review of 2026-09-10 turned up were ruled
-on 2026-09-11 and all fifteen are built - see CLOSED below.
+**RNG bleed between cases in `test_bootstrap_gates.do` (opened 2026-09-16).** 41 of that
+file's 99 `bootstrap()` calls carry no `rseed()` of their own, so their draws depend on
+whatever RNG state the preceding cases left behind. `test_bootstrap_tstat.do` (12 of 12)
+and `test_bootstrap_std.do` (9 of 9) are fully seeded; the exposure is confined to this one
+leg.
+
+Found the hard way rather than by inspection. While the T2/T3 work was converting G9 from a
+refusal test into a positive one, a strengthened case asserting 50 of 50 completed
+replications **passed when run in isolation and failed at 49/50 inside the file**. That was
+diagnosed at the time - the lost replication is the cluster count, measured identically in
+both the keep-`i` and `group()` regimes across seeds 1 to 5 - and the case now carries
+`rseed(9090)`, which the commit records as load-bearing for exactly this reason.
+
+Why it is a defect and not a curiosity: an unseeded case can go red after an edit that
+changes how many draws an *earlier* case consumes, and it then reads as a regression in the
+thing just edited. It is a false-positive generator pointed at whoever touches this file
+next.
+
+Not fixed inline on 2026-09-16 because the fix touches 41 cases in a cert leg and the value
+of doing it is highest when it can be verified by a full cert run, which is the natural
+moment to also confirm no case was depending on the bleed for its pinned numbers.
+
+The fifteen items the documentation review of 2026-09-10 turned up were ruled on 2026-09-11
+and all fifteen are built - see CLOSED below.
 
 ---
 
