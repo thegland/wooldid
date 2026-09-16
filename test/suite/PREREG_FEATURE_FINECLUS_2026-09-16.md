@@ -194,3 +194,67 @@ rather than independent of it. The four non-`att` columns carry the independent 
 **Standing lesson, and it is the same one as the first amendment.** A preregistered readout must be
 stated with the failure class it detects, not only the property it measures. "Exactness under the
 sharp null" sounds total and is not: it is blind to any error that is still a function of the draw.
+
+## F3/F4 AMENDMENT 3 - P5's disposition, and P7 finally falsified (2026-09-16, post-run)
+
+### P5 FAILED, on the high side, and the failure is not this ticket's
+
+**Measured.** NEST arm, `cluster(state) == i`, `e(N_clust)` 40: `att_i` covered 149/150 = .9933
+against the band (137, 148). F5 anticipated "P4 fails while P5 passes"; this is the reverse, and
+F5 had no disposition written for it.
+
+**It is not a regression.** The arm's first 40 draws were re-run against pristine `bd41e01` on the
+same seeds. Comparing field by field, **18 of the 19 columns are identical** - `rc`, `nclust`,
+`ndone`, `nfail`, both point estimates and all eight interval endpoints. The only column that
+differs is `secs`, wall clock. So the nesting leg behaves exactly as it did before the two-regime
+rule landed, and T2's core claim is not refuted by this.
+
+**It is not an `att_i` weighting effect either, which is what the prediction was really about.**
+The `att` control, reported but never judged, covered **149/150 on the same arm** - identical to
+`att_i`. An error in the per-replication cohort weights would move the equal-cohort-weighted
+estimand and leave the observation-weighted one alone. Both moving together, by the same count,
+says the interval is wide for reasons that have nothing to do with the weighting. For contrast the
+FINE arm at `e(N_clust)` 160 sits at .9467 for `att_i` and .9800 for `att`.
+
+**What it actually is, stated as a hypothesis and not as a measurement**: conservatism of the
+percentile cluster bootstrap where every cohort is its own resampling cluster. This run is the
+first time the nesting case's coverage has been measured at all.
+
+**A wrong analogy, retracted here so it does not propagate.** The implementation's commit message
+likened this to `sthlp:255` ("What level to cluster at"). That passage documents the ANALYTIC
+cluster-robust covariance at or above `i` and its direction is **anti-conservative** - standard
+errors measured at 0.66 to 0.75 of reference, joint tests oversized. This measurement is the
+BOOTSTRAP and its direction is conservative. Same location in the design, different estimator,
+opposite sign. Do not cite that passage for this finding.
+
+**Disposition: recorded, not fixed.** It is pre-existing, it is on the leg this ticket did not
+change, and it is conservative rather than anti-conservative. The author declined a G sweep on
+2026-09-15 and nothing here reopens that.
+
+### P7 was credited without ever being falsified - now it has been
+
+**The defect in the prediction.** The implementation's table reads "P7: never fired - PASS". An
+assertion that never fires is evidence of nothing until it is shown to fire on the failure it
+names. F5 credited P7 on the strength of P6's suppressed arm inflating, but that proves the
+SUBSTITUTION does something, not that the ASSERTION would catch it failing to.
+
+**And the diagnostic switch structurally cannot test it.** `ado:9358-9361` sets `wdb_sub` to 1
+only when the substitution is performed, and `WOOLDID_BOOTNOSUB` suppresses both together, so in
+the single state where `e(N_clust)` and the distinct `__wdbns` count genuinely disagree, the
+assertion is skipped by construction.
+
+**So the P2b method was applied instead.** On a scratch copy the `subinstr` search string was
+pointed at a token that cannot match, reproducing precisely the fragility `ado:9345-9356` warns
+about in prose - the substitution silently does nothing - while leaving `wdb_sub` at 1 so the
+assertion still runs. Measured: **`error 459`**, reporting 80 distinct resampled cluster
+identities against the count the replication posted.
+
+**P7 is now demonstrated to fire on the failure it is credited with**, and the `ado:9345` comment's
+"nothing checks it" is no longer true.
+
+### Standing lesson, third instance
+
+P2 credited a tripwire that could not fire. P1 was credited with a failure class it is blind to.
+P7 was credited on the strength of a different prediction's control. Each time the fix was the
+same: construct the failure, and require the check to fire on it. A preregistration should name,
+for every check, the input on which it is expected to fail.
