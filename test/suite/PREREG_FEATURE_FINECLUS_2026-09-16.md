@@ -162,3 +162,35 @@ input is what P2 lacked.
 demonstrated to fire on the failure it is credited with, not merely to exist at a line number.
 The same question is open for T3's `e(N_clust)` assertion (P7) and is answered there by P6's
 suppressed arm; if P6's control comes back UNINFORMATIVE, P7 inherits exactly this defect.
+
+## F2 AMENDMENT 2 - P1 cannot detect the failure class F5 implicitly assigned to it (2026-09-16, post-run)
+
+**What F5 said.** "P1 fails while P2 passes -> the rebuild is mechanically sound and inferentially
+wrong." That phrasing treats P1 as the inferential readout and P2 as the mechanical one, and by
+omission implies that P1 passing means the rebuild is inferentially right.
+
+**Why that is wrong, established by the T1 implementation.** Sharp-null exactness detects a rebuild
+that is **not a function of the drawn assignment** - one that leaks observed onsets into the
+replication, or attaches a row to the wrong cluster's draw. It **cannot** detect a rebuild that is
+a correct function of the draw but assigns the wrong codes. A relabelling of the rebuilt cohorts is
+still deterministic in the draw, so the permutation distribution is still the null distribution of
+the statistic and the p-values are still uniform. P1 passes on a relabelled map.
+
+**So the converse case has no readout in F2 as written**, and the gap is not hypothetical: it is
+exactly the failure mode the whole ticket introduces, since the rebuild is precisely a map from
+drawn onsets to cohort codes.
+
+**What covers it** is P2b from the first amendment, the rep-0 assertion that the rebuilt `i` equals
+the observed `i` on the design sample, measured to fire r459 on a deliberately reversed map. P2b was
+added as a mechanical tripwire; it is in fact the **only** readout either prediction has for the
+relabelling class. P1 is not sufficient on its own.
+
+**A second, smaller qualification on P1's weight, volunteered by the implementation.** On the R1 DGP
+the cohort-`i` and unit-`i` designs are near-degenerate for `att`: at full `%21x` precision the
+`att` draws coincide on only 1 of 199 replications, yet the observed `att` agrees to ~1e-13 and the
+null SD to 12 significant figures. E6's `att` verdict is therefore close to inherited from E2's
+rather than independent of it. The four non-`att` columns carry the independent content.
+
+**Standing lesson, and it is the same one as the first amendment.** A preregistered readout must be
+stated with the failure class it detects, not only the property it measures. "Exactness under the
+sharp null" sounds total and is not: it is blind to any error that is still a function of the draw.

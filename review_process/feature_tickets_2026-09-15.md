@@ -1,6 +1,6 @@
 # Feature tickets: decoupling `i` from the resampling unit
 
-**Status 2026-09-16: T1 and T2+T3 IN PROGRESS. T4 CLOSED by ruling (documentation only).**
+**Status 2026-09-16: T1 COMPLETE (worktree 84da86f, unmerged). T2+T3 IN PROGRESS. T4 CLOSED by ruling (documentation only).**
 Implementation opened 2026-09-16; the survey below ("What the code actually assumes") was written
 before any edit and changed the shape of the work: **T2 and T3 are one edit, not two**, and T2 is
 substantially smaller than the ticket assumed. Preregistered readouts:
@@ -86,6 +86,37 @@ The re-id leg's replication is a full nested `wooldid y __wdbnewi t ttrevar, ...
 (`ado:9137`), so `att_i`'s weights are rebuilt from whatever data the replication holds. T2 does
 not need new weighting machinery. Its real content is the gate relaxation, the `__wdbnewi` rule
 above, and the `error 198` relaxation for the unclustered case.
+
+### Five refinements from the T1 implementation (2026-09-16, measured)
+
+**(a) The rebuild opens no column-loss channel at all.** The survey said column loss "IS new under
+T1, and only under `permute(probabilities)`", with `ado:7556` as the net. Measured: no accumulated
+`e(b)` column name embeds an `i` code (relabelling the cohort variable leaves `colfullnames`
+byte-identical), and the realized relative-year set depends on the drawn onsets rather than on how
+units are grouped. `e(gteffects)` is the only `i`-keyed surface and `permute()` blanks it outright.
+Under `probabilities` what shrinks is the level set of `i`, which moves the per-replication
+estimand, not the column set.
+
+**(b) Under the assertion, "cluster nests i" collapses to "cluster == i".** `wooldid_permctl`
+already requires every cluster to sit inside one onset group, and the assertion makes the onset
+grouping BE `i`. So cluster is always a subset of `i`, and only two cases are constructible: equal,
+where the rebuild is skipped, and strictly finer, where it is live. The ticket's "cluster at or
+above `i`" has exactly one reachable case here, which is what makes the P3 no-op control exact
+rather than approximate.
+
+**(c) T1 needs nothing from T2.** The open question "estimands averaging over `i` must then be
+recomputed per replication - see T2, which this shares machinery with" is already answered: a
+permutation replication is a full nested `wooldid` call, so `att_i`'s weights are rebuilt from
+whatever data the draw holds. The two tickets share a principle, not machinery.
+
+**(d) Sharp-null exactness cannot distinguish a correct rebuild from a correctly relabelled one.**
+A relabelling is still a deterministic function of the draw, so the p-values stay uniform. The
+prereg's F5 named the case "P1 fails while P2 passes" but had no readout for its converse. The
+rep-0 assertion is the only thing that covers it. Recorded as the prereg's second F2 amendment.
+
+**(e) The rebuild's reserved never-treated code is unreachable.** A panel with no never-treated
+units is a design `wooldid` rejects in data setup, which runs before the replication loop. Pinned
+by cert Q1e, which asserts the option's screens do not pre-empt that rejection.
 
 ### One design question closed
 
