@@ -326,3 +326,42 @@ defining `i` finer (`wooldid.sthlp:869`, `egen newi = group(i sg)`), which does 
 new coarse-`i` recommendation. But this is a real estimand constraint rather than a conflation:
 if the subgroup varies inside an `i`-by-`t` cell, that cell's effect is not subgroup-specific and
 no reweighting recovers it. Left alone deliberately.
+
+
+## The `fcol_sg` exposure, and a correction to how I measured it (2026-09-16)
+
+Retiring `fastcollapse` turned `fcol_sg` from a row pinned r198/r198 into an ordinary dual-build
+row, so its `e()` reached content comparison for the first time since it was written. The suite's
+comparer reported it DIFFERS. The author ruled to re-point the config off its straddling-subgroup
+design rather than ledger the divergence.
+
+**The re-point is sound and is not the problem.** `region` is constant within `fips` and straddles
+`cohid`, `adm_sgsplit` already pins the straddle as its own r459 refusal, and the re-pointed command
+runs without `safety(off)` at all, which the original needed only to bypass that refusal.
+
+**What went wrong was my verification, and it is worth writing down.** I tried to confirm the
+re-point by comparing `e(b)` and `e(V)` bitwise at `%21x` between the staged v1.3 build and HEAD.
+It kept reporting a divergence, through two fixtures:
+
+- `i=fips` at a thinned subsample: 120 of 3660 cells. That subsample turned out to give exactly
+  2.00 counties per state, a thin-cluster degeneracy I had introduced myself while trying to cut
+  runtime - the very thing the author ruled against testing by accident.
+- `i=fips` at the deck's own `adm_sub` prep, 6.00 counties per state: 120 cells again.
+
+The third measurement is the one that matters. Running the **exact `adm_base` command** through the
+same harness also differs, 100 of 1225 cells - and `adm_base` carries no `b`/`V` ledger rows and is
+clean in the suite. So the harness, not the config, was the outlier: a bitwise `%21x` comparison is
+strictly stronger than the suite's comparer, which applies bounded storage-noise tiers and named
+ledger classes. Every "still differs" I reported was measuring a difference the suite would have
+tolerated.
+
+**Consequence.** Nothing about `fcol_sg` should be decided on those three probes. The authoritative
+reading is the `oldnew` component with the real comparer, which is deferred with the rest of the
+full suite to 2026-09-17. `fcol_sg` is committed unchanged apart from the flag removal, so the
+config is in a valid state meanwhile.
+
+**The lesson, and it is the session's fourth instance of the same shape.** Three preregistered
+checks were credited with catching failures they could not catch. This is the mirror image: a check
+strong enough to report failures that are not there. Either way the fix is the same - establish what
+the instrument does on a case whose answer you already know. One run of `adm_base` through my
+harness at the start would have saved three rounds.
