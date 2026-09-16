@@ -8798,6 +8798,14 @@ version 16.0
   * Unclustered (clusv is the row id) is the keep-i regime by construction, and is
   * flagged as such without computing anything: the resampling unit is the observation,
   * so re-identifying by draw would fragment every unit into single-period units
+  * the `if `smp'' on BOTH the gegen and the assert is load-bearing, not tidiness. `smp'
+  * is exactly the row set the leg keeps before it draws (`qui keep if `smp'' below), so
+  * the predicate is computed on the rows bsample actually sees. Evaluated on the raw
+  * frame instead, a cluster that nests i within the sample but straddles two i's only
+  * through rows the sample excludes would be misclassified as non-nesting, and a
+  * strictly COARSER cluster - the case where group(__wdbns, i) is doing real work,
+  * since at cluster() == i it degenerates to the drawn id alone - would silently take
+  * the keep-i rule and collapse att_i's composition variance
   local wdb_nest 0
   if "`reid'" != "" & "`clus'" != "" {
     tempvar wdbcmin wdbcmax
