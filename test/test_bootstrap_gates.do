@@ -102,14 +102,17 @@ chk 7b 0 _rc
 * analytic run's, since a bootstrap replaces the inference and must never move the
 * estimate. A branch that fragmented units into single-period units would fail
 * replications on inestimable horizons long before it moved a coefficient.
+* rseed() is load-bearing: without it the draw depends on whatever RNG state the cases
+* above happened to leave, so the completion count is not a property of this case at all.
+* 50/50 is the MEASURED value at rseed(9090) on this fixture, pinned deliberately.
 qui wooldid y unit t ttre, att_it robust
 tempname G8B
 matrix `G8B' = e(b)
-cap qui wooldid y unit t ttre, att_it robust bootstrap(standard) reps(50)
+cap qui wooldid y unit t ttre, att_it robust bootstrap(standard) reps(50) rseed(9090)
 chk 8 0 _rc
 if _rc == 0 {
   if e(boot_completed) != 50 | e(boot_failed) != 0 {
-    di as error "G8b FAIL: " e(boot_completed) " of 50 replications completed, " e(boot_failed) " failed"
+    di as error "G8b FAIL: " e(boot_completed) " of 50 replications completed, " e(boot_failed) " failed (measured 50/0 at rseed(9090))"
     global BOOTG_FAILS = ${BOOTG_FAILS} + 1
   }
   if mreldif(e(b), `G8B') != 0 {
@@ -136,17 +139,33 @@ if `: word count `g9s'' != 3 | `: word count `g9u'' != 12 | `g9nc' != 12 {
   di as error "G9a FAIL: fixture is not finer-than-i (s levels `: word count `g9s'', unit levels `: word count `g9u'', e(N_clust) `g9nc'; expected 3, 12, 12)"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
-cap qui wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50)
+cap qui wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50) rseed(9090)
 chk 9 0 _rc
+local g9done = e(boot_completed)
+local g9fail = e(boot_failed)
 if _rc == 0 {
-  if e(boot_completed) != 50 | e(boot_failed) != 0 {
-    di as error "G9b FAIL: " e(boot_completed) " of 50 replications completed, " e(boot_failed) " failed"
+  if `g9done' != 50 | `g9fail' != 0 {
+    di as error "G9b FAIL: " `g9done' " of 50 replications completed, " `g9fail' " failed (measured 50/0 at rseed(9090))"
     global BOOTG_FAILS = ${BOOTG_FAILS} + 1
   }
   if mreldif(e(b), `G9B') != 0 {
     di as error "G9c FAIL: bootstrap(standard) moved the point estimates (mreldif " mreldif(e(b), `G9B') ")"
     global BOOTG_FAILS = ${BOOTG_FAILS} + 1
   }
+}
+* G9d the PAIRED CONTROL, and the reason G9b can be pinned at all. Measured 2026-09-16:
+* on this 12-cluster fixture a replication can lose a cohort entirely and fail, and that
+* happens at the SAME seeds and the SAME rate under keep-i (i = s, cluster = unit) as
+* under the group() branch (i = unit, cluster = unit) - across seeds 1-5, both arms gave
+* 50, 49, 50, 50, 50 completions, while dropping to cluster(s) (3 clusters) cost 15-20 of
+* 50 in BOTH regimes. So a lost replication here is a property of the cluster count, not
+* of the branch, and the discriminating assertion is that the two regimes agree at one
+* seed rather than that either reaches 50. Pinning only G9b would make a fixture change
+* look like a branch defect; pinning only G9d would miss a branch that failed outright.
+cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(standard) reps(50) rseed(9090)
+if _rc == 0 & e(boot_completed) != `g9done' {
+  di as error "G9d FAIL: keep-i completed `g9done' of 50 where the group() branch on the same fixture and seed completed " e(boot_completed) "; the two regimes should lose replications at the same rate here"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 
 * G10 standard + att only + cluster(unit): runs (count path)
