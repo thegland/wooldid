@@ -281,6 +281,18 @@ cap noi wooldid y i t ttre, att att_i cluster(i) esprelength(2) espostlength(2) 
 local rc = _rc
 dumpres perm_atti `rc'
 
+* permonsetcohorts (feature ticket T1, 2026-09-16): i is asserted to BE the treatment-onset
+* grouping, and on that assertion cluster() may sit below i - here icoh has 3 onset levels and
+* cluster(i) has 80 units. Each replication then rebuilds i from the onsets it drew. This was
+* r459 before the option existed. permreps(20) because the engine floors it there. Measured
+* e(perm_irebuilt) = 1, i.e. the rebuild engaged rather than being skipped as a no-op
+freshstart "`DATA'/dta_binary"
+qui egen long icoh = group(ttre), missing
+set seed 409160
+cap noi wooldid y icoh t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) permonsetcohorts rseed(40916)
+local rc = _rc
+dumpres perm_onsetcohorts `rc'
+
 * New-feature benchmark pins (added 2026-08-24, blessed in-commit; PREREG_NEWFEAT
 * chunk): close the battery's coverage gaps for fastnose, pretrendpower,
 * anticipation, permtstat/permtci, and permute(probabilities). Appended AFTER all
@@ -504,6 +516,50 @@ set seed 141421
 cap noi wooldid y i t ttre, att att_itime cluster(i) esprelength(2) espostlength(2) bootstrap(standard) reps(10) rseed(14142136) dots(0)
 local rc = _rc
 dumpres boot_itime_reid `rc'
+
+* ---- the keep-i regime (feature tickets T2/T3, 2026-09-16) ----
+* Everything above reaches the re-identification leg with cluster() at or above i, where a drawn
+* copy becomes a fresh set of units. These four pin the OTHER branch, where the cluster does not
+* nest i and the units are kept whole, so a twice-drawn cluster arrives as duplicate rows inside
+* its own cell. icoh = group(ttre) is the treatment-onset grouping (3 levels), so cluster(i) at
+* the 80 units is STRICTLY FINER than i - the pairing the analytic path recommends and the
+* resampling engines refused until now. All four returned r459 or r198 on the pre-feature build.
+freshstart "`DATA'/dta_binary"
+qui egen long icoh = group(ttre), missing
+set seed 902100
+cap noi wooldid y icoh t ttre, att att_i cluster(i) esprelength(2) espostlength(2) bootstrap(standard) reps(10) rseed(90210) dots(0)
+local rc = _rc
+dumpres boot_keepi_fine `rc'
+
+* the same fixture under boottstat: the replication substitutes its own VCE onto the resampled
+* cluster identity, and the per-replication assertion that e(N_clust) equals the count of distinct
+* resampled identities rides on every replication here
+freshstart "`DATA'/dta_binary"
+qui egen long icoh = group(ttre), missing
+set seed 902101
+cap noi wooldid y icoh t ttre, att att_i cluster(i) esprelength(2) espostlength(2) bootstrap(standard) reps(10) boottstat rseed(90211) dots(0)
+local rc = _rc
+dumpres boot_keepi_bts `rc'
+
+* CROSS-CUTTING rather than merely finer: xc cuts across the onset cohorts, so neither variable
+* nests the other. The author declined a guard against this, so it must run rather than be
+* screened, and it takes the same keep-i branch as the finer case
+freshstart "`DATA'/dta_binary"
+qui egen long icoh = group(ttre), missing
+qui gen long xc = mod(i,20)+1
+set seed 333330
+cap noi wooldid y icoh t ttre, att att_i cluster(xc) esprelength(2) espostlength(2) bootstrap(standard) reps(10) rseed(33333) dots(0)
+local rc = _rc
+dumpres boot_keepi_xcut `rc'
+
+* a cell-weighted estimand with NO cluster() at all, which was error 198 before: the resampling is
+* observation-level, bsample runs without idcluster, and every downstream reference to the
+* resampled cluster identity must be guarded. boot_obs is this command minus att_i
+freshstart "`DATA'/dta_binary"
+set seed 444440
+cap noi wooldid y i t ttre, att att_i robust esprelength(2) espostlength(2) bootstrap(standard) reps(10) rseed(44444) dots(0)
+local rc = _rc
+dumpres boot_keepi_noclus `rc'
 
 * poisson under bootstrap(standard) on the full panel: ppmlhdfe replications on the count path,
 * att-only (the replication kernel, not poisson event-study or subgroup wiring under bootstrap).
