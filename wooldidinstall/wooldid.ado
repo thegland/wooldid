@@ -168,7 +168,7 @@ version 16.0
     tempname wdpobs wdpdist wdpcomp wdpobsb wdpacc wdpsacc wdpcmpb wdpcmpse wdpcell wdpcell0 wdpasg
     qui est sto `wdpobs'
     matrix `wdpobsb' = e(b)
-    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist') compname(`wdpcomp') obsb(`wdpobsb') accname(`wdpacc') seaccname(`=cond(`wdp_ts', "`wdpsacc'", "")') cmpbname(`wdpcmpb') cmpsename(`=cond(`wdp_ts', "`wdpcmpse'", "")') cellacc(`=cond("`makecfxplots'" != "", "`wdpcell'", "")') cell0(`wdpcell0') dots(`dots') rseed(`rseed') asgname(`=cond("`permsave'" != "", "`wdpasg'", "")') iso(`permiisonsetgrouping')
+    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist') compname(`wdpcomp') obsb(`wdpobsb') accname(`wdpacc') seaccname(`=cond(`wdp_ts', "`wdpsacc'", "")') cmpbname(`wdpcmpb') cmpsename(`=cond(`wdp_ts', "`wdpcmpse'", "")') cellacc(`=cond("`makecfxplots'" != "", "`wdpcell'", "")') cell0(`wdpcell0') dots(`dots') rseed(`rseed') asgname(`=cond("`permsave'" != "", "`wdpasg'", "")') onc(`permonsetcohorts')
     local wdp_rc = _rc
     qui est restore `wdpobs'
     cap est drop `wdpobs'
@@ -193,7 +193,7 @@ version 16.0
     * T1: posted ONLY under the user's assertion, so a run without the option keeps the
     * e() surface it had. 1 = the replications regrouped i by the onset they drew;
     * 0 = the assertion was made but cluster() sits at i, where the rebuild is a no-op
-    if "`permiisonsetgrouping'" != "" ereturn scalar perm_irebuilt = `wdp_r_rebuilt'
+    if "`permonsetcohorts'" != "" ereturn scalar perm_irebuilt = `wdp_r_rebuilt'
     local wdp_M = cond("`permexact'" != "", "`wdp_r_reps'", ".")
     * BS-23 (author ruling 2026-09-07): the kernels switch the share convention on
     * MEMBERSHIP - is the observed statistic one of the reference values - rather than on
@@ -547,7 +547,7 @@ version 16.0
   set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMIISOnsetgrouping SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -4548,7 +4548,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMIISOnsetgrouping SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -4871,7 +4871,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`permside'" != "" local permstray `permstray' permside()
     if "`permrawp'" != "" local permstray `permstray' permrawp
     if "`permstepdown'" != "" local permstray `permstray' permstepdown
-    if "`permiisonsetgrouping'" != "" local permstray `permstray' permiisonsetgrouping
+    if "`permonsetcohorts'" != "" local permstray `permstray' permonsetcohorts
     if "`permstray'" != "" {
       dis as error "Error: `permstray' require(s) the permute() option."
       error 198
@@ -4903,7 +4903,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * a caution - the exact failure the safetyinput split exists to prevent. Pass
   * si(`safetyuser') at that point, as bootctl already does
   if "`permute'" != "" {
-    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safety') psave(`permsave') level(`level') iso(`permiisonsetgrouping') `replace'
+    cap noi wooldid_permctl , permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safety') psave(`permsave') level(`level') onc(`permonsetcohorts') `replace'
     if _rc != 0 exit _rc   // RF-1: exit, not error - the cap noi above already printed it (rule at :61)
   }
 
@@ -5482,7 +5482,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * literal 95, so `set level 90' produced lb_90ci columns holding 95% intervals under
   * bootstrap() / permute(). Resolve it once here; every consumer sees a number
   if `level' == 0 local level = c(level)
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp permstepdown permiisonsetgrouping simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw semielasraw cetyperaw {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp permstepdown permonsetcohorts simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw semielasraw cetyperaw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -5781,7 +5781,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) side(string) rawp(string) iso(string) replace]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) side(string) rawp(string) onc(string) replace]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -5957,7 +5957,7 @@ version 16.0
     error 459
   }
 
-  * ---- permiisonsetgrouping (T1, 2026-09-16): the user ASSERTS that i is exactly the
+  * ---- permonsetcohorts (T1, 2026-09-16): the user ASSERTS that i is exactly the
   * treatment-onset grouping - one level of i per distinct value of the timing variable,
   * with the never-treated a single level of their own. Under that assertion each
   * replication can rebuild i from the onsets it drew ("the units sharing the drawn onset"
@@ -5974,7 +5974,7 @@ version 16.0
   * within i (with treated and never-treated rows never mixed, exactly as for clusters),
   * and i constant within onset level (never-treated, i.e. plain missing, being one level -
   * so an i that splits the never-treated by region fails here, and must)
-  if "`iso'" != "" {
+  if "`onc'" != "" {
     tempvar wdpimn wdpimx wdpitr wdpinv
     qui gegen double `wdpimn' = min(`ttrevar') if `insmp', by(`ivar')
     qui gegen double `wdpimx' = max(`ttrevar') if `insmp', by(`ivar')
@@ -5982,7 +5982,7 @@ version 16.0
     qui gegen double `wdpinv' = total(missing(`ttrevar')) if `insmp', by(`ivar')
     qui count if `insmp' & ((`wdpitr' > 0 & `wdpinv' > 0) | (`wdpitr' > 0 & `wdpimn' != `wdpimx'))
     if r(N) > 0 {
-      dis as error "Error: permiisonsetgrouping asserts that `ivar' IS the treatment-onset grouping, but `r(N)' in-sample observation(s) sit in levels of `ivar' that carry more than one onset value (or mix treated and never-treated rows). Drop permiisonsetgrouping, or define `ivar' as the onset grouping."
+      dis as error "Error: permonsetcohorts asserts that `ivar' IS the treatment-onset grouping, but `r(N)' in-sample observation(s) sit in levels of `ivar' that carry more than one onset value (or mix treated and never-treated rows). Drop permonsetcohorts, or define `ivar' as the onset grouping."
       error 459
     }
     qui drop `wdpimn' `wdpimx'
@@ -5992,7 +5992,7 @@ version 16.0
     qui gegen double `wdpimx' = max(`ivar') if `insmp', by(`ttrevar')
     qui count if `insmp' & `wdpimn' != `wdpimx'
     if r(N) > 0 {
-      dis as error "Error: permiisonsetgrouping asserts that `ivar' IS the treatment-onset grouping - exactly one level of `ivar' per distinct onset value, with the never-treated a single level - but `r(N)' in-sample observation(s) sit in onset groups that span more than one level of `ivar'. Splitting a cohort (or the never-treated) across several levels of `ivar' leaves the per-replication rebuild of `ivar' undefined. Collapse `ivar' to the onset grouping, or drop permiisonsetgrouping."
+      dis as error "Error: permonsetcohorts asserts that `ivar' IS the treatment-onset grouping - exactly one level of `ivar' per distinct onset value, with the never-treated a single level - but `r(N)' in-sample observation(s) sit in onset groups that span more than one level of `ivar'. Splitting a cohort (or the never-treated) across several levels of `ivar' leaves the per-replication rebuild of `ivar' undefined. Collapse `ivar' to the onset grouping, or drop permonsetcohorts."
       error 459
     }
     qui drop `wdpimn' `wdpimx' `wdpitr' `wdpinv'
@@ -6004,7 +6004,7 @@ version 16.0
     * replication by replication. (This is also the standing ruling of 2026-09-15: the
     * subgroups()-constant-within-i requirement is a real estimand constraint and stays.)
     if "`sg'" != "" {
-      dis as error "Error: permiisonsetgrouping is not compatible with subgroups(). Each replication rebuilds `ivar' from the onsets it drew, so a rebuilt `ivar'-by-time cell pools clusters from different observed cohorts and the subgroup variable varies inside it - which the estimator refuses (r411) in every replication. Define the subgroup at the onset-grouping level and drop subgroups(), or drop permiisonsetgrouping and cluster at or above `ivar'."
+      dis as error "Error: permonsetcohorts is not compatible with subgroups(). Each replication rebuilds `ivar' from the onsets it drew, so a rebuilt `ivar'-by-time cell pools clusters from different observed cohorts and the subgroup variable varies inside it - which the estimator refuses (r411) in every replication. Define the subgroup at the onset-grouping level and drop subgroups(), or drop permonsetcohorts and cluster at or above `ivar'."
       error 198
     }
   }
@@ -6015,7 +6015,7 @@ version 16.0
   * permexact the enumeration is over the wrong design). The cluster() variable must
   * nest i: clustering at i or coarser passes, finer is refused (the bootstrap's re-id
   * leg has the same requirement). Added 2026-09-05 (review finding econ_perm F4)
-  * RELAXED 2026-09-16 (T1) UNDER permiisonsetgrouping ONLY. The refusal was never about
+  * RELAXED 2026-09-16 (T1) UNDER permonsetcohorts ONLY. The refusal was never about
   * dependence or assignment - i is an estimand-definition choice and cluster() is a claim
   * about both of those, and they are orthogonal - it was about the mechanical fact that a
   * straddling unit would carry two onsets at once. When the user asserts that i IS the
@@ -6045,14 +6045,14 @@ version 16.0
   local wdpntc = r(N)
   cap drop `wdpttag'
   if `wdpntc' > 0 & `wdpntc' < 6 dis as text "Caution: only `wdpntc' of the resampling clusters are ever treated, so the number of DISTINCT onset assignments is small. Sampled draws will repeat, and the reference set - hence the set of p-values the run can produce - is coarse however large permreps() is; the limit is the design, not the replication count. permexact enumerates the assignments and reports the exact floor instead of sampling them. This is the randomization-inference analogue of the bootstrap's few-treated-cluster caution, not the same condition: that one is about resampling variance, this one about how many assignments exist."
-  if "`clus'" != "`ivar'" & "`iso'" == "" {
+  if "`clus'" != "`ivar'" & "`onc'" == "" {
     tempvar cgrp cmin cmax
     qui gegen double `cgrp' = group(`clus') if `insmp'
     qui gegen double `cmin' = min(`cgrp') if `insmp', by(`ivar')
     qui gegen double `cmax' = max(`cgrp') if `insmp', by(`ivar')
     qui count if `insmp' & `cmin' != `cmax'
     if r(N) > 0 {
-      dis as error "Error: permute() requires the cluster() variable to nest i (every i wholly inside one cluster): each replication assigns one onset per cluster to all of its observations, which is undefined when a unit straddles clusters (`r(N)' in-sample observation(s) do). Cluster at or above the i level, or - if i was constructed as the treatment-onset grouping - assert that with permiisonsetgrouping, which has each replication rebuild i from the onsets it drew."
+      dis as error "Error: permute() requires the cluster() variable to nest i (every i wholly inside one cluster): each replication assigns one onset per cluster to all of its observations, which is undefined when a unit straddles clusters (`r(N)' in-sample observation(s) do). Cluster at or above the i level, or - if i was constructed as the treatment-onset grouping - assert that with permonsetcohorts, which has each replication rebuild i from the onsets it drew."
       error 459
     }
   }
@@ -6100,7 +6100,7 @@ version 16.0
   }
 
   * strata: clusters must be strict subsets of strata
-  * permstrata() + permiisonsetgrouping COMPOSES and is deliberately not refused (T1,
+  * permstrata() + permonsetcohorts COMPOSES and is deliberately not refused (T1,
   * 2026-09-16). permstrata() constrains the GENERATOR - which onsets a cluster may draw -
   * and the rebuild is downstream of it: whatever assignment comes out, i is regrouped by
   * the drawn onset, ttre is single-valued within the rebuilt i, and the estimator is
@@ -7451,7 +7451,7 @@ end
 cap prog drop wooldid_permrun
 prog def wooldid_permrun
 version 16.0
-  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis) compname(string) obsb(string) accname(string) seaccname(string) cmpbname(string) cmpsename(string) cellacc(string) cell0(string) dots(integer 1) asgname(string) rseed(string) iso(string)]
+  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis) compname(string) obsb(string) accname(string) seaccname(string) cmpbname(string) cmpsename(string) cellacc(string) cell0(string) dots(integer 1) asgname(string) rseed(string) onc(string)]
   if `dots' == -1 local dots 1
   * rseed(): seeds the assignment draws (Mata's jumble/runiform share Stata's RNG
   * state), set before anything random runs; accepted under permute() since 2026-09-05
@@ -7552,7 +7552,7 @@ version 16.0
   local repcall `y' `i' `t'
 
   * ---- T1 (2026-09-16): rebuild i inside each replication from the drawn onsets.
-  * WHEN IT RUNS. Only under permiisonsetgrouping (the user's assertion, verified as a
+  * WHEN IT RUNS. Only under permonsetcohorts (the user's assertion, verified as a
   * bijection in wooldid_permctl) AND only when cluster() does not already nest i. If it
   * nests, the straddling problem the rebuild exists to dissolve does not arise, so the
   * rebuild is skipped and the run is the pre-T1 code path byte for byte - the option is
@@ -7580,7 +7580,7 @@ version 16.0
   * sentinel never reaches an estimated row and the rep-0 / replication asymmetry for such
   * rows is unreachable rather than merely unlikely.
   local wdp_rebuild 0
-  if "`iso'" != "" & "`clus'" != "`i'" {
+  if "`onc'" != "" & "`clus'" != "`i'" {
     tempvar wdpcg wdpcmn wdpcmx
     qui gegen double `wdpcg' = group(`clus') if `smp'
     qui gegen double `wdpcmn' = min(`wdpcg') if `smp', by(`i')
@@ -7618,7 +7618,7 @@ version 16.0
     mata: wooldid_permirb("`ttrevar'", "`repi'", "`wdpomap'", `wdp_ncode')
     cap assert `repi' == `i' if `smp'
     if _rc != 0 {
-      dis as error "Error: under permiisonsetgrouping the per-replication rebuild of `i' does not reproduce `i' at the observed assignment; the onset-to-cohort map is not the identity there. This is unexpected - please report it."
+      dis as error "Error: under permonsetcohorts the per-replication rebuild of `i' does not reproduce `i' at the observed assignment; the onset-to-cohort map is not the identity there. This is unexpected - please report it."
       error 459
     }
     local repcall `y' `repi' `t'
@@ -7880,7 +7880,7 @@ version 16.0
   matrix colnames `distname' = `estimands'
 
   c_local wdp_r_reps `wdp_R'
-  * T1: whether the replications actually rebuilt i (0 under permiisonsetgrouping with
+  * T1: whether the replications actually rebuilt i (0 under permonsetcohorts with
   * cluster() at i, where the rebuild is a declared no-op); the caller posts it
   c_local wdp_r_rebuilt `wdp_rebuild'
   c_local wdp_r_done `ndone'
@@ -16427,7 +16427,7 @@ void wooldid_permsaveasg(string scalar assignname, string scalar clusvals, strin
 
 // T1 (2026-09-16): rebuild i from a replication's drawn onsets. `map' is the L x 2 matrix
 // of (observed onset level, the i code that cohort carries), a bijection verified in
-// wooldid_permctl under permiisonsetgrouping; every row whose drawn onset is one of the
+// wooldid_permctl under permonsetcohorts; every row whose drawn onset is one of the
 // levels takes THAT LEVEL'S OBSERVED i CODE, so the observed assignment reproduces the
 // observed i exactly. Rows with no drawn onset - never-treated in this replication, or
 // outside the design sample the cluster map covers - take ncode, one code for all of them

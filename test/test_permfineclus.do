@@ -1,14 +1,15 @@
 * Targeted suite for T1 (2026-09-16): permute() with cluster() FINER than i, under the
-* user's assertion permiisonsetgrouping that i IS the treatment-onset grouping. Each
+* user's assertion permonsetcohorts that i IS the treatment-onset grouping. Each
 * replication then rebuilds i from the onsets it drew, so ttre is single-valued within the
 * rebuilt i by construction and a unit can no longer straddle two onsets in one draw.
 * Covered here: the parse-time verification of the assertion (both directions of the
 * bijection), the subgroups() and stray-companion refusals, that the refusal of finer
 * clustering STILL stands without the option, the declared-no-op property at cluster() = i
-* (bitwise), the column-set/denominator integrity of the accumulator, and the one direct
-* mechanical check of the rebuilt map: under permexact the observed assignment is one of
-* the enumerated columns, so its replication must reproduce the comparator BITWISE - which
-* it can only do if the map hands each drawn onset its own cohort's i code.
+* (bitwise), the column-set/denominator integrity of the accumulator, and that the exact
+* test's observed-is-a-member property survives the rebuild path. What is NOT here, said so
+* the file does not imply coverage it has not got: the check that the onset-to-cohort map is
+* right. That one lives in wooldid_permrun (rep 0's rebuilt i must equal the observed i) and
+* is measured to fire; Q5 below says why nothing in this file can do it instead.
 * Run from test/:  "<stata>" -e do test_permfineclus.do   -> expect PERMFINECLUS_ALL_PASS
 clear all
 set more off
@@ -79,29 +80,41 @@ mkfc 12 3 10 0
 
 * Q1a: i finer than the onset grouping (the unit itself) - onset constant within i holds,
 * but several i share an onset, so the map has no unique image
-cap noi qui wooldid y i t ttre, att cluster(i) `ESO' `PO' permiisonsetgrouping
+cap noi qui wooldid y i t ttre, att cluster(i) `ESO' `PO' permonsetcohorts
 xrc "Q1a i finer than the onset grouping" 459 `=_rc'
 
 * Q1b: the never-treated split across two levels of i - the direction a user who defines
 * i as cohort-by-region trips
-cap noi qui wooldid y icohbad t ttre, att cluster(icohbad) `ESO' `PO' permiisonsetgrouping
+cap noi qui wooldid y icohbad t ttre, att cluster(icohbad) `ESO' `PO' permonsetcohorts
 xrc "Q1b never-treated split across levels of i" 459 `=_rc'
 
 * Q1c: the honest case passes parse
-cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' `PO' permiisonsetgrouping
+cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' `PO' permonsetcohorts
 xrc "Q1c i IS the onset grouping, cluster finer" 0 `=_rc'
 
 * Q1d: safety(off) does NOT buy past the verification - it is a mechanical precondition
-cap noi qui wooldid y i t ttre, att cluster(i) `ESO' `PO' permiisonsetgrouping safety(off)
+cap noi qui wooldid y i t ttre, att cluster(i) `ESO' `PO' permonsetcohorts safety(off)
 xrc "Q1d safety(off) does not bypass the verification" 459 `=_rc'
+
+* Q1e: a design with NO never-treated units. Two things are only reachable here: the second
+* direction of the verification has no missing onset group to check, and the never-treated
+* code the rebuild assigns to rows the cluster map does not reach falls to its reserved
+* branch (one below the smallest observed i code) instead of a real cohort's code
+mkfc 12 6 10 0
+cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' `PO' permonsetcohorts
+xrc "Q1e no never-treated units" 0 `=_rc'
+if _rc == 0 {
+  xok "Q1e2 no never-treated: every replication estimated" `=(e(perm_completed) == 99 & e(perm_failed) == 0 & e(perm_irebuilt) == 1)'
+}
+mkfc 12 3 10 0
 
 *=============================================================== Q2 the refusals
 * Q2a: subgroups() is refused with the option (F13 would fire r411 in every replication)
-cap noi qui wooldid y icoh t ttre, att cluster(i) subgroups(sg) `ESO' `PO' permiisonsetgrouping
+cap noi qui wooldid y icoh t ttre, att cluster(i) subgroups(sg) `ESO' `PO' permonsetcohorts
 xrc "Q2a subgroups() refused under the option" 198 `=_rc'
 
 * Q2b: the option without permute() is a stray companion
-cap noi qui wooldid y icoh t ttre, att cluster(i) permiisonsetgrouping
+cap noi qui wooldid y icoh t ttre, att cluster(i) permonsetcohorts
 xrc "Q2b option without permute()" 198 `=_rc'
 
 * Q2c: finer clustering WITHOUT the option is still refused - the relaxation is gated on
@@ -123,7 +136,7 @@ matrix `K0' = e(perm_kernel)
 matrix `D0' = e(permdist_b)
 local irb0 = e(perm_irebuilt)
 
-cap noi qui wooldid y icoh t ttre, att cluster(icoh) `ESO' `PO' permiisonsetgrouping
+cap noi qui wooldid y icoh t ttre, att cluster(icoh) `ESO' `PO' permonsetcohorts
 xrc "Q3 setup (option present)" 0 `=_rc'
 local r3b = _rc
 matrix `B1' = e(b)
@@ -156,7 +169,7 @@ else {
 }
 
 *=============================================================== Q4 accumulator integrity (P2)
-cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' `PO' permiisonsetgrouping
+cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' `PO' permonsetcohorts
 xrc "Q4 setup" 0 `=_rc'
 if _rc == 0 {
   tempname PN4 PP4
@@ -183,14 +196,20 @@ else {
   global pf = $pf + 1
 }
 
-*=============================================================== Q5 the map is the identity
-* at the observed assignment. permexact enumerates every assignment, so one enumerated
-* column IS the observed one; its replication runs on the rebuilt i and must reproduce the
-* comparator BITWISE. A map that handed cohort A the code of cohort B would still give the
-* right column names (no accumulated e(b) column name embeds an i code) and a different
-* number, so this is the check that catches it.
+*=============================================================== Q5 observed-is-a-member
+* survives the rebuild path. permexact enumerates every assignment, so one enumerated column
+* IS the observed one; under the rebuild its replication runs on a regrouped i and must still
+* reproduce the comparator BITWISE, which is the property the exact test's p-values rest on.
+* WHAT THIS DOES NOT CHECK, stated so the file does not imply coverage it has not got: it is
+* not the check that catches a wrong onset-to-cohort map. Both sides of the comparison are
+* built by the same map from the same onsets, so they agree whatever the map says. The map
+* itself is checked in wooldid_permrun, by the assertion that rep 0's rebuilt i equals the
+* observed i on the design sample - measured 2026-09-16 to fire (r459) on a deliberately
+* reversed map, before any enumeration runs. The rep-0 colfullnames tripwire cannot do it
+* either: no accumulated e(b) column name embeds an i code, so a wrong map reproduces the
+* column set exactly and changes only the numbers.
 mkfc 6 2 10 0
-cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' permute(shuffle) permexact rseed(31) dots(0) permiisonsetgrouping
+cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' permute(shuffle) permexact rseed(31) dots(0) permonsetcohorts
 xrc "Q5 setup (permexact, cluster finer than i)" 0 `=_rc'
 if _rc == 0 {
   tempname D5 CB5
@@ -212,7 +231,7 @@ qui gen str = 1 + (i > 6)
 
 * Q6a: permstrata() - the generator is constrained, the rebuild is downstream of it
 cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' permute(shuffle) permreps(99) ///
-    permstrata(str) rseed(77) dots(0) permiisonsetgrouping
+    permstrata(str) rseed(77) dots(0) permonsetcohorts
 xrc "Q6a permstrata() composes" 0 `=_rc'
 if _rc == 0 {
   tempname PN6
@@ -227,7 +246,7 @@ if _rc == 0 {
 * Q6b: permtstat - the side benefit. At cluster() = i the help cautions that the
 * studentized statistic is unprotected because the cluster-robust se cannot see the treated
 * cells' variance; a finer cluster is what makes it informative, so it must at least run
-cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' `PO' permiisonsetgrouping permtstat
+cap noi qui wooldid y icoh t ttre, att cluster(i) `ESO' `PO' permonsetcohorts permtstat
 xrc "Q6b permtstat with cluster() below i" 0 `=_rc'
 if _rc == 0 xok "Q6b2 permtstat completed every replication" `=(e(perm_completed) == 99 & e(perm_failed) == 0)'
 
@@ -240,7 +259,7 @@ forval c = 1/12 {
   local PP `PP' (`c' .25 .25 .5)
 }
 cap noi qui wooldid y icoh t ttre, att att_i cluster(i) `ESO' permute(probabilities) ///
-    permreps(100) permprobs(`PP') rseed(9) dots(0) permiisonsetgrouping
+    permreps(100) permprobs(`PP') rseed(9) dots(0) permonsetcohorts
 xrc "Q6c permute(probabilities) composes" 0 `=_rc'
 if _rc == 0 {
   tempname PN6c

@@ -25,7 +25,7 @@
 *                The R1 DGP UNCHANGED and tau = 0, but the call is the coarse-i / fine-cluster
 *                pairing the help recommends and the engine refused until T1: i is the onset
 *                COHORT (3 levels - onset 5, onset 7, never-treated) and cluster() is the unit
-*                (12), strictly finer, under permiisonsetgrouping. Every replication therefore
+*                (12), strictly finer, under permonsetcohorts. Every replication therefore
 *                rebuilds i from the onsets it drew. SIZE of p, judged by the SAME lattice rule
 *                and the SAME bands as E2/E4/E5, which are its controls in the same campaign:
 *                a wrong rebuild that is merely different still produces plausible p-values, so
@@ -326,12 +326,12 @@ foreach ph of local PHASES {
       * T1: the same R1 data, the same seeds, the same statistic - only the (i, cluster)
       * pairing moves. icoh is R1's onset grouping (a deterministic function of ttre, so the
       * DGP is untouched); cluster(i) is then strictly finer than i and the run is reachable
-      * only under permiisonsetgrouping
+      * only under permonsetcohorts
       local arm fineclus
       mkR1 `dgpseed' 0
       qui gen icoh = cond(ttre == 5, 1, cond(ttre == 7, 2, 3))
       cap qui wooldid y icoh t ttre, att cluster(i) `ESOPT' jointtests ///
-          permute(shuffle) permreps(`B') permiisonsetgrouping rseed(`rseed') dots(0)
+          permute(shuffle) permreps(`B') permonsetcohorts rseed(`rseed') dots(0)
     }
     else {
       di as error "mc_ri_ext: unknown phase `ph'"

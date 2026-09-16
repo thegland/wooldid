@@ -97,7 +97,7 @@ PHASES = {
     # be judged by the existing rule that would itself be the finding.
     "E6": {"arm": "fineclus", "null": True, "level": 95, "conv": "equaltailed",
            "ps": ATT_PS, "joint": [("jointp", "e(joint_horiz)")], "extra_live": [],
-           "what": "cluster() strictly finer than i under permiisonsetgrouping (T1)"},
+           "what": "cluster() strictly finer than i under permonsetcohorts (T1)"},
 }
 # Live on EVERY phase; all-missing here is a vacuous family, not a zero result.
 LIVE_ALWAYS = ["ncomp", "nfail", "npos", "namesok", "p_main", "p_pre", "p_post0",
