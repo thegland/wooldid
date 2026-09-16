@@ -6015,6 +6015,14 @@ version 16.0
   * permexact the enumeration is over the wrong design). The cluster() variable must
   * nest i: clustering at i or coarser passes, finer is refused (the bootstrap's re-id
   * leg has the same requirement). Added 2026-09-05 (review finding econ_perm F4)
+  * RELAXED 2026-09-16 (T1) UNDER permiisonsetgrouping ONLY. The refusal was never about
+  * dependence or assignment - i is an estimand-definition choice and cluster() is a claim
+  * about both of those, and they are orthogonal - it was about the mechanical fact that a
+  * straddling unit would carry two onsets at once. When the user asserts that i IS the
+  * onset grouping, each replication rebuilds i from the onsets it drew (wooldid_permrun),
+  * "the units sharing the drawn onset" is the onset grouping by construction, and no unit
+  * carries two onsets. The assertion is verified as a bijection above; without the option
+  * the refusal stands exactly as before, which is what keeps every pre-T1 run unchanged
   * F049 (quality review 2026-09-05, author ruling 2026-09-06): the studentized statistic is
   * MacKinnon-Webb (2020)'s remedy for atypical treated clusters, but it presumes a
   * cluster-robust se that sees each treated cluster's own variance. With cluster() at i
@@ -6037,14 +6045,14 @@ version 16.0
   local wdpntc = r(N)
   cap drop `wdpttag'
   if `wdpntc' > 0 & `wdpntc' < 6 dis as text "Caution: only `wdpntc' of the resampling clusters are ever treated, so the number of DISTINCT onset assignments is small. Sampled draws will repeat, and the reference set - hence the set of p-values the run can produce - is coarse however large permreps() is; the limit is the design, not the replication count. permexact enumerates the assignments and reports the exact floor instead of sampling them. This is the randomization-inference analogue of the bootstrap's few-treated-cluster caution, not the same condition: that one is about resampling variance, this one about how many assignments exist."
-  if "`clus'" != "`ivar'" {
+  if "`clus'" != "`ivar'" & "`iso'" == "" {
     tempvar cgrp cmin cmax
     qui gegen double `cgrp' = group(`clus') if `insmp'
     qui gegen double `cmin' = min(`cgrp') if `insmp', by(`ivar')
     qui gegen double `cmax' = max(`cgrp') if `insmp', by(`ivar')
     qui count if `insmp' & `cmin' != `cmax'
     if r(N) > 0 {
-      dis as error "Error: permute() requires the cluster() variable to nest i (every i wholly inside one cluster): each replication assigns one onset per cluster to all of its observations, which is undefined when a unit straddles clusters (`r(N)' in-sample observation(s) do). Cluster at or above the i level."
+      dis as error "Error: permute() requires the cluster() variable to nest i (every i wholly inside one cluster): each replication assigns one onset per cluster to all of its observations, which is undefined when a unit straddles clusters (`r(N)' in-sample observation(s) do). Cluster at or above the i level, or - if i was constructed as the treatment-onset grouping - assert that with permiisonsetgrouping, which has each replication rebuild i from the onsets it drew."
       error 459
     }
   }
@@ -7565,7 +7573,12 @@ version 16.0
   * Rows the cluster map does not reach (outside the design sample) take `wdp_ncode' - the
   * never-treated cohort's own code where the sample has never-treated units, and
   * otherwise a reserved code below every observed one. They are never-treated in every
-  * replication, so one code for all of them is the right grouping.
+  * replication (their `repons' is missing, exactly as before T1), so one code for all of
+  * them is the right grouping. MEASURED 2026-09-16: the estimation sample is a subset of
+  * the design sample - a row with no cluster value is dropped by the clustered fit (110 of
+  * 120 rows estimated on a 12-unit panel with one unit's cluster set missing) - so the
+  * sentinel never reaches an estimated row and the rep-0 / replication asymmetry for such
+  * rows is unreachable rather than merely unlikely.
   local wdp_rebuild 0
   if "`iso'" != "" & "`clus'" != "`i'" {
     tempvar wdpcg wdpcmn wdpcmx

@@ -90,6 +90,14 @@ PHASES = {
     "E5": {"arm": "tstat0", "null": True, "level": 95, "conv": "equaltailed",
            "ps": ATT_PS, "joint": [("jointp", "e(joint_horiz)")], "extra_live": [],
            "what": "permtstat at tau = 0 (the size companion of mc_ri2 D4)"},
+    # E6 added 2026-09-16 for ticket T1 (PREREG_FEATURE_FINECLUS_2026-09-16.md F2/P1). It is
+    # a REGISTRY ENTRY ONLY: same null status, same convention, same p columns and therefore
+    # the same lattice rule, the same binomial region and the same MARGINAL corridors as
+    # E2/E4/E5. No band is derived for it - the prereg forbids that, and if the arm could not
+    # be judged by the existing rule that would itself be the finding.
+    "E6": {"arm": "fineclus", "null": True, "level": 95, "conv": "equaltailed",
+           "ps": ATT_PS, "joint": [("jointp", "e(joint_horiz)")], "extra_live": [],
+           "what": "cluster() strictly finer than i under permiisonsetgrouping (T1)"},
 }
 # Live on EVERY phase; all-missing here is a vacuous family, not a zero result.
 LIVE_ALWAYS = ["ncomp", "nfail", "npos", "namesok", "p_main", "p_pre", "p_post0",
