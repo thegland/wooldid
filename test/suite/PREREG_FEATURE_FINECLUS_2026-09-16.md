@@ -258,3 +258,22 @@ P2 credited a tripwire that could not fire. P1 was credited with a failure class
 P7 was credited on the strength of a different prediction's control. Each time the fix was the
 same: construct the failure, and require the check to fire on it. A preregistration should name,
 for every check, the input on which it is expected to fail.
+
+## F4 POSTSCRIPT - the P7 assertion's cost, measured (2026-09-16)
+
+The implementation flagged P7's per-replication cost as unmeasured: the assertion runs two gtools
+calls on every `boottstat` + `cluster()` replication. It was also reported that a NEST-arm re-run
+took 130.2 s against the original 69.2 s, which read as a possible regression.
+
+Measured, paired, on the battery's `runbattery.do:327` config (`boottstat`, `cluster(i)`,
+`gteffects`, reps 20, same seed), pre-merge build against merged build, one Stata session each so
+neither pays the other's warm-up:
+
+| build | rc | secs |
+|---|---|---|
+| pre-merge (`281ca06`) | 0 | 45.062 |
+| merged | 0 | 45.800 |
+
+Ratio 1.016. The assertion costs about 37 ms per replication and does not show above run-to-run
+noise. The 130.2 s figure was machine load during a concurrent campaign, not the code. Recorded so
+that a slow shard going red in a later full-suite run is not attributed here without evidence.
