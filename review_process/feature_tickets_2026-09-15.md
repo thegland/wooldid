@@ -1,6 +1,10 @@
 # Feature tickets: decoupling `i` from the resampling unit
 
-**Status 2026-09-15: T1, T2, T3 OPEN and unstarted. T4 CLOSED by ruling (documentation only).**
+**Status 2026-09-16: T1 and T2+T3 IN PROGRESS. T4 CLOSED by ruling (documentation only).**
+Implementation opened 2026-09-16; the survey below ("What the code actually assumes") was written
+before any edit and changed the shape of the work: **T2 and T3 are one edit, not two**, and T2 is
+substantially smaller than the ticket assumed. Preregistered readouts:
+`test/suite/PREREG_FEATURE_FINECLUS_2026-09-16.md`, written before any line of `wooldid.ado` moved.
 
 Opened 2026-09-15 at the author's instruction, after a help-file edit turned up the underlying
 issue. These are FEATURE requests, not defects, so they do not belong in `open_defects.md` -
@@ -39,6 +43,66 @@ advice - coarse `i`, finer cluster - cannot use `permute()` at all.
 about removing the failure, not the guard.
 
 ---
+
+## What the code actually assumes (survey, 2026-09-16, before any edit)
+
+The tickets were written from the three places that *check* nesting. Implementation began by
+asking where nesting is *assumed* - a larger set, and the difference reshaped T2 and T3.
+
+| site | what assumes cluster nests `i` | ticket |
+|---|---|---|
+| `ado:5990` (`wooldid_permctl`) | the permute check itself | T1 |
+| `ado:6353` (`wooldid_bootctl`) | `error 198`: cell-weighted estimand with no `cluster()` | T2 |
+| `ado:6362-6365` (`wooldid_bootctl`) | the bootstrap check itself, two distinct messages | T2/T3 |
+| `ado:9107` (`wooldid_bootrun`) | **`__wdbnewi = group(__wdbns, i)`** - the actual mechanism | T2/T3 |
+| `ado:9135` (`wooldid_bootrun`) | `subinstr` of the rep VCE onto `cluster(__wdbns)`; unchecked | T3 |
+| `ado:7352` (`wooldid_bootctl`) | disclosure text asserting "clustering at or above i" | T3 |
+| `ado:11968` (F13) | `subgroups()` constant within the `(i,t)` cell | T1 |
+
+### Three findings that changed the plan
+
+**1. The re-id leg already does most of T3.** `bsample, cluster(clusv) idcluster(__wdbns)`
+already mints a fresh cluster id per draw, and `ado:9135` already substitutes the replication's
+own VCE onto it. That IS the `2 - 1/G` fix, shipped 2026-09-04. What breaks under finer
+clustering is a single line, `ado:9107`.
+
+**2. T2 and T3 are therefore the same edit.** `__wdbnewi = group(__wdbns, i)` is correct under
+nesting (each `i` sits in one cluster, so this mints one new unit per drawn copy) and wrong under
+finer clustering, where a unit spanning two clusters is **split into two units in every
+replication** whether or not anything was duplicated - unit fixed effects silently become
+per-(cluster, unit). The rule that fixes both tickets is one two-regime branch:
+
+- cluster nests `i` -> `group(__wdbns, i)`, exactly as today;
+- cluster does not nest `i` (finer or cross-cutting) -> keep `i` unchanged, and let a twice-drawn
+  sub-unit cluster appear as duplicate rows inside its unit's cell.
+
+The nesting branch must stay `group()`. Keeping `i` there would make a twice-drawn cluster's
+cells identical duplicates that the equal-cell weighting counts ONCE, collapsing the composition
+variance of `att_i` toward zero. Detection is the `cmin`/`cmax` computation already standing at
+`ado:6360`; it becomes a flag passed down rather than an error.
+
+**3. T2's headline - "recompute the weights per replication" - is already true on this path.**
+The re-id leg's replication is a full nested `wooldid y __wdbnewi t ttrevar, ...` call
+(`ado:9137`), so `att_i`'s weights are rebuilt from whatever data the replication holds. T2 does
+not need new weighting machinery. Its real content is the gate relaxation, the `__wdbnewi` rule
+above, and the `error 198` relaxation for the unclustered case.
+
+### One design question closed
+
+T3 asked whether the estimator can carry two copies of the same `(i,t)` cell distinguished only
+by cluster id. It already does: when `i` is a cohort every cell holds many rows, and the collapse
+at `ado:1860` replaces the cell with its estimand-weighted mean. Duplicates are more rows
+carrying more weight. **Resolved, not open.**
+
+### One risk that is new only to T1
+
+The accumulator matches columns by NAME against the observed `e(b)`, and a missing column becomes
+a blank that `ado:15683`'s `select(draws, draws :< .)` drops from the denominator. Under the
+bootstrap's keep-`i` regime this is not new - a unit vanishes only when all its clusters go
+undrawn, against today's vanishing when its single cluster goes undrawn, so the accounting is
+unchanged. Under T1 it IS new, and only under `permute(probabilities)`: `shuffle` permutes every
+onset value across clusters and preserves the level set. The tripwire already exists at
+`ado:7556` (rep-0 `colfullnames` vs the observed run).
 
 ## T1 - `permute()`: recompute `i` after assignment when `i` is an onset grouping
 
