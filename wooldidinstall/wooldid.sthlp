@@ -76,7 +76,7 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 {synoptset 1 tabbed }{...}
 {synopt : {help wooldid##specifyestimand:Specifying the Estimand(s):}} {opt att} {opt att_it} {opt att_i} {opt att_itime} {opt semi:elasticity} {p_end}
 
-{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values} {opt fast:nose} {opt fastcollapse} {opt fullprecisionslow} {opt simult:aneousbands}{p_end}
+{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values} {opt fast:nose} {opt nofastcollapse} {opt simult:aneousbands}{p_end}
 {synopt : {space 4}{it:shared by both replication engines:}} {opt level(#)} {opt dots(int)} {opt rseed(#)}{p_end}
 {synopt : {space 4}{it:permutation only:}} {opt perm:ute(method)} {opt permreps(int)} {opt permex:act} {opt permstr:ata(variable)} {opt permpr:obs(spec)} {opt permts:tat} {opt permt:ci} {opt permsa:ve(name)} {opt perman:alyticse} {opt permab:sp} {opt permsi:de(left|right)} {opt permraw:p} {opt permstep:down} {opt permonset:cohorts}{p_end}
 {synopt : {space 4}{it:bootstrap only:}} {opt boot:strap(mode)} {opt reps(int)} {opt ties} {opt bootalp:ha(spec)} {opt bootd:f(spec)} {opt bootts:tat} {opt bootdisp:lay(spec)} {opt bootsa:ve(name)}
@@ -246,7 +246,7 @@ to present the average percentage change, rather than the average level differen
 {ul:Under {it:poisson} without {it:poisexpresults}} the reporting scale is already the linear index {it:xb} = ln E[y|x], on which a plain marginal effect {ul:is} the semi-elasticity of E[y];
 {it:margins}' {it:eydx} there would take a further log of the linear index and report a number that depends on the units of {it:y}. On that combination {it:wooldid} computes {it:dydx} on the
 {it:xb} scale instead and prints a caution saying so, so the option changes the table header rather than the estimates - which are exactly a plain {it:poisson} run's. Use {it:poisexpresults}
-if you want the semi-elasticity of the exponentiated prediction. Note also that {it:eydx} divides by the prediction, which makes a run ineligible for the cell collapse: it is evaluated on the full data, silently unless {it:verbose} is on, and an explicitly typed {it:fastcollapse} is refused with an error (see {help wooldid##standarderrors:fastcollapse}). The remapped {it:poisson} case just described is the exception, since what it computes there is {it:dydx}. {p_end}
+if you want the semi-elasticity of the exponentiated prediction. Note also that {it:eydx} divides by the prediction, which makes a run ineligible for the cell collapse: it is evaluated on the full data, under a caution naming the option responsible (see {help wooldid##standarderrors:nofastcollapse}). The remapped {it:poisson} case just described is the exception, since what it computes there is {it:dydx}. {p_end}
 
 
 {marker standarderrors}{...}
@@ -265,12 +265,12 @@ option will underlyingly rely on either {it:reghdfe} or, for poisson, {it:ppmlhd
 
 {phang}{opt uncond:itionalse}: Compute standard errors that account for sampling variation in covariates. With {cmd:cluster()}, a single cluster variable is supported: the variance comes from {it:margins, vce(unconditional)}, which accepts one. This option also forces {it:wooldid} to abandon
 high dimensional fixed effect estimation packages for the underlying two-way fixed effect regression in favor of the commands {it:regress} and {it:poisson}.
-As such, this option should be slower to use on average. This option requires specifying either robust or clustered standard errors (a robust or clustered vce supplied via {it:customvce()} also satisfies this requirement, as do pweights, which imply robust standard errors). Under the default {it:safety()} setting it is refused with {it:att_i}, {it:att_it} and {it:att_itime}, whose unconditional standard errors are unreliable ({it:safety(off)} proceeds anyway), and it cautions with {it:aweight}s and with {it:fe()} or {it:ccc_absorb()}, which the {cmd:regress} path cannot absorb - specify those as {it:controls()} with your own {it:i.} prefixes. It is refused outright with {it:impvalues}, {it:fastnose}, {cmd:permute()} and {cmd:bootstrap()}, and it turns the default cell collapse off, since {it:margins} checks the collapsed row count against {it:e(N)} when building the unconditional variance (an explicit {opt fastcollapse} alongside it is then an error). {p_end}
+As such, this option should be slower to use on average. This option requires specifying either robust or clustered standard errors (a robust or clustered vce supplied via {it:customvce()} also satisfies this requirement, as do pweights, which imply robust standard errors). Under the default {it:safety()} setting it is refused with {it:att_i}, {it:att_it} and {it:att_itime}, whose unconditional standard errors are unreliable ({it:safety(off)} proceeds anyway), and it cautions with {it:aweight}s and with {it:fe()} or {it:ccc_absorb()}, which the {cmd:regress} path cannot absorb - specify those as {it:controls()} with your own {it:i.} prefixes. It is refused outright with {it:impvalues}, {it:fastnose}, {cmd:permute()} and {cmd:bootstrap()}, and it turns the default cell collapse off, since {it:margins} checks the collapsed row count against {it:e(N)} when building the unconditional variance. {p_end}
 
 {phang}{opt customvce()}: Forces {it:wooldid} to switch to using either the {help regress} or {help poisson} command for underlying regression estimation,
 and then passes the user specified text without modification into the {it:vce()} option for these commands. This allows specifying a broader set of
 standard error calculation methods than allowed by the default high dimensional fixed effects estimation packages used by {it:wooldid}. Not compatible with {it:robust} or
-{it:cluster()}: specify the clustering or robustness desired inside the {it:vce()} text itself. Also refused with {it:impvalues} and with {cmd:bootstrap()}, whose reported standard errors would be replication quantities rather than the custom VCE's. It cannot be combined with {cmd:permute()} either, though by construction rather than by a screen of its own: {cmd:permute()} requires a single {it:cluster()} variable to randomize onsets over, and {it:customvce()} refuses {it:cluster()}, so the pair cannot be written down. Specifying the clustering inside the {it:vce()} text does not get you there, because it is the {it:cluster()} variable itself that the permutation engine needs. It turns the default cell collapse off pending measurement, so an explicit {opt fastcollapse} alongside it is refused. With {it:fe()} or {it:ccc_absorb()} {it:wooldid} cautions, since the {cmd:regress} path it switches to cannot absorb them - specify those as {it:controls()} with your own {it:i.} prefixes. {p_end}
+{it:cluster()}: specify the clustering or robustness desired inside the {it:vce()} text itself. Also refused with {it:impvalues} and with {cmd:bootstrap()}, whose reported standard errors would be replication quantities rather than the custom VCE's. It cannot be combined with {cmd:permute()} either, though by construction rather than by a screen of its own: {cmd:permute()} requires a single {it:cluster()} variable to randomize onsets over, and {it:customvce()} refuses {it:cluster()}, so the pair cannot be written down. Specifying the clustering inside the {it:vce()} text does not get you there, because it is the {it:cluster()} variable itself that the permutation engine needs. It turns the default cell collapse off pending measurement. With {it:fe()} or {it:ccc_absorb()} {it:wooldid} cautions, since the {cmd:regress} path it switches to cannot absorb them - specify those as {it:controls()} with your own {it:i.} prefixes. {p_end}
 
 {phang}{opt imp:values}: Implements Ibragimov and Muller (2010) style cluster-robust inference for all estimates. The idea behind the Ibragimov and Muller approach is to compute
 cluster-specific treatment effect estimates, present their average as one's final treatment effect estimate, and conduct inference by t-testing the cluster-specific estimates against 0.
@@ -296,17 +296,25 @@ roughly the last digit of precision (absolute differences on the order of 1e-15;
 contrasts, whose differencing amplifies rounding, up to roughly 1e-14 under {it:timetrends}, and larger still in relative terms where an estimate is itself near zero), because
 {it:margins} follows a different computational path when the variance is skipped. {p_end}
 
-{phang}{opt fastcollapse}: The cell collapse. {it:wooldid} speeds up its {it:margins} calls by evaluating them on one row per cohort-by-period-by-treatment cell instead of on every
+{phang}{opt nofastcollapse}: Turn the default cell collapse off, so that every {it:margins} call is evaluated on the full estimation sample as it was before the collapse existed.
+Results are then bit-identical to those of earlier {it:wooldid} versions given the same data and options wherever the estimator itself is unchanged. The option restores the
+summation order, not a computation that has since moved: under {it:poisson} without {it:poisexpresults}, {it:semielasticity} and {it:contreatelasticitytype(eyex)}/{it:(eydx)} are
+now computed as {it:dydx}/{it:dyex} on the linear-index scale (see {opt semi:elasticity}), and no setting of this option recovers the {it:eydx}/{it:eyex} number an earlier version
+reported. Use it when you need byte-for-byte reproduction of an archived result, when you are comparing output across runs at the last digit, or when memory is tight and the extra
+copy of the data held during the collapsed window is unwelcome. The price is the run time the collapse would have saved, quantified under {ul:When it pays} below. It is forwarded
+to {cmd:permute()} and {cmd:bootstrap()} replications. The rest of this entry describes what you are turning off. {p_end}
+
+{phang2}{ul:The cell collapse.} {it:wooldid} speeds up its {it:margins} calls by evaluating them on one row per cohort-by-period-by-treatment cell instead of on every
 observation. {it:wooldid}'s estimands are weighted averages of cell-level treatment effects, and within the conditions listed below the treatment derivative is constant inside such
 a cell, so the collapsed row - carrying the cell's summed weight - represents the whole cell exactly. The regression itself is untouched and still runs on the full data, so the
 coefficients, the variance matrix and the clustering are unaffected; only the averaging step that {it:margins} performs is handed a smaller dataset. The full data is restored
 before any plotting or display work. {bf:Continuous treatments are covered too}: with {it:contreat()} the collapsed row additionally carries the cell's weighted mean of the
 treatment variable, which reproduces every reported effect exactly because each of them is linear in the dose inside a cell - the treatment-dummy derivative is
 {it:delta + beta*dose}, the dose derivative ({it:ame}) is constant, and {it:contreatelasticitytype(dyex)} is proportional to the dose. The forms that are {ul:not} linear in the
-dose are listed below and turn the collapse off. {bf:The collapse is on by default} whenever the request permits it, so this option is never needed to obtain it: specifying it asks {it:wooldid}
-to {bf:insist} on the collapse, and turns the silent skip described under {it:What turns the collapse off} into an error. Use {opt fullprecisionslow} to turn the collapse off. The
-collapse composes with {it:fastnose}, is applied inside {cmd:permute()} and {cmd:bootstrap()} replications, and is recorded in the hidden macro {it:e(wdid_fcol)} (1 when it was
-applied, 0 when it was not), beside the scalar {it:e(wdid_fcncell)} - the collapsed cell count - and the macro {it:e(wdid_fcskip)}, which names the reason when an eligible run did not collapse after all; {it:verbose} reports the decision as the run proceeds. {p_end}
+dose are listed below and turn the collapse off. {bf:The collapse is on by default} whenever the request permits it, so there is nothing to type to obtain it, and {opt nofastcollapse} is the only
+way to change that. Where a request is ineligible the collapse is skipped and {it:wooldid} says so, in a caution naming the option responsible, as described under {it:What turns
+the collapse off}. The collapse composes with {it:fastnose}, is applied inside {cmd:permute()} and {cmd:bootstrap()} replications, and is recorded in the hidden macro {it:e(wdid_fcol)} (1 when it was
+applied, 0 when it was not), beside the scalar {it:e(wdid_fcncell)} - the collapsed cell count - and the macro {it:e(wdid_fcskip)}, which names the reason when an ineligible run did not collapse; {it:verbose} reports the decision as the run proceeds. {p_end}
 
 {phang2}{ul:When it pays.} The saving grows with the number of observations per cell and with the size of the regression, and is unaffected by the choice of standard errors. On a
 30,000-observation administrative panel with roughly 500 rows per cell it removed 35-60% of total run time; on a 475,000-row version, 56%. It pays for itself inside a single
@@ -319,7 +327,7 @@ periods, where the absorbing regression rather than {it:margins} dominates the r
 {phang2}{ul:Results agree to machine precision but are not bit-identical.} Collapsing changes the order in which {it:margins} accumulates its averages, and the controls' contribution
 cancels algebraically between the treated and untreated predictions without cancelling bit for bit. If you diff output across runs, expect low-order digits to differ between a
 collapsed and an uncollapsed run; if you need byte-identical reproductions of a result produced by an earlier {it:wooldid} version, which had no collapse, run with
-{opt fullprecisionslow} - which restores the summation order, but not a computation that has itself changed since; see its entry. {p_end}
+{opt nofastcollapse}, which restores the summation order but not a computation that has itself changed since. {p_end}
 
 {phang2}{ul:How large are the differences?} The difference is bounded, in {bf:absolute} terms, by about one unit in the last place of the linear prediction - the size of the
 prediction divided by 2 to the 52nd power - and every difference measured was a small integer multiple of that one quantum. On a panel whose predictions are of order 10, that is about 2e-15. Note this scales with the prediction, not with the
@@ -341,8 +349,8 @@ was 4.8e-10, in the tenth significant digit of a t statistic of 39.2; coefficien
 
 {phang2}{ul:When should you care?} For almost all work, not at all: no digit {it:wooldid} displays is affected, and the differences are several orders of magnitude below any
 sampling uncertainty you are reporting. Two situations warrant attention. First, if you compare output byte-for-byte across runs, or archive results for exact reproduction - then
-be deliberate about whether the collapse is on or off ({opt fullprecisionslow}) in every run you compare, and bear in mind that a request outside the eligible set is run
-uncollapsed without notice, and that a {it:subgroups()} run can switch to the full data part-way through (see below; {it:e(wdid_fcguard)} records it). Second, if your analysis differences two nearly equal estimates, or otherwise divides by a quantity that is near zero, since that amplifies the relative
+be deliberate about whether the collapse is on or off ({opt nofastcollapse}) in every run you compare, and bear in mind that a request outside the eligible set is run
+uncollapsed under a caution, and that a {it:subgroups()} run can switch to the full data part-way through (see below; {it:e(wdid_fcguard)} records it). Second, if your analysis differences two nearly equal estimates, or otherwise divides by a quantity that is near zero, since that amplifies the relative
 size of any rounding difference. {p_end}
 
 {phang2}A useful calibration for the second case: merely permuting the order of the rows in your dataset - leaving the data otherwise untouched, with the collapse off -
@@ -350,10 +358,10 @@ moves the same near-zero coefficient about 19 times {bf:more} than the collapse 
 observations happen to be stored in, which is worth knowing whether or not the collapse is in use. {p_end}
 
 {phang2}{ul:What turns the collapse off: the complete list.} There are three ways the collapse does not run, and this paragraph is the single place that enumerates them.
-{bf:(1) You turn it off}, with {opt fullprecisionslow}. {bf:(2) The request is ineligible}, in which case the collapse is {bf:skipped} and the run proceeds on the full data
-exactly as it would have before the collapse existed - silently, unless {it:verbose} is on, which names the option responsible. If {it:fastcollapse} was specified explicitly the
-same combination is instead refused with an error, and {it:safety(off)} does {ul:not} override that refusal, because each entry below is a demonstrated wrong answer rather than
-an accepted risk. {bf:(3) A {it:subgroups()} run sets it aside part-way through}, which is a screen rather than an eligibility rule and is described in the next paragraph. {p_end}
+{bf:(1) You turn it off}, with {opt nofastcollapse}, and {it:wooldid} says nothing further about it. {bf:(2) The request is ineligible}, in which case the collapse is
+{bf:skipped} and the run proceeds on the full data exactly as it would have before the collapse existed. That skip is announced: {it:wooldid} prints a caution naming the option
+responsible and what it breaks, since a run that quietly declines to collapse is a run whose timing and last digits both change for a reason you cannot see. {it:safety(off)} does
+{ul:not} silence the caution, and neither does anything but asking for {opt nofastcollapse} yourself. {bf:(3) A {it:subgroups()} run sets it aside part-way through}, which is a screen rather than an eligibility rule and is described in the next paragraph. {p_end}
 
 {phang2}The ineligible list, grouped by the condition each one breaks. {ul:The treatment effect is no longer constant inside a cell:} {it:interactivecontrols()}, which interacts
 the treatment dummy with a variable that varies within the cell; and, under {it:contreat()}, the treatment variable {ul:also} appearing inside {it:controls()},
@@ -386,11 +394,10 @@ therefore screens each binary-treatment subgroup {it:margins} call after the fac
 contrast whose variance is below 1e-9 of the largest, or a contrast direction singular at that tolerance (the smallest genuine subgroup contrast measured across the test inventory
 is 3.5e-5 and the residue is around 1e-16, so the band has ample room on both sides). The screen is a few matrix operations per call. If it finds nothing, the collapsed result
 stands. If it finds a singular direction, then under the default safety setting wooldid restores the full data at that point and evaluates that call and every remaining subgroup
-call on it, so everything downstream of the flag is exactly what {opt fullprecisionslow} would have produced (the main results, and any subgroup horizons already read before the
+call on it, so everything downstream of the flag is exactly what {opt nofastcollapse} would have produced (the main results, and any subgroup horizons already read before the
 flag, were computed collapsed and agree with their full-data values to the last digit as described above); {it:verbose} reports when this happens. Under {it:safety(off)} wooldid
 instead keeps the collapsed rows, as requested, and prints a caution naming what it found, since in that situation which subgroup horizons and joint tests are reported can depend on
-the summation order. The outcome is recorded in the hidden macro {it:e(wdid_fcguard)}: empty when nothing was flagged, {it:fallback}, or {it:caution}. An explicit
-{it:fastcollapse} is a request the screen may set aside in the same way; and a fallback carries into the replications of both {cmd:permute()} and {cmd:bootstrap()}, which are otherwise evaluated collapsed. {p_end}
+the summation order. The outcome is recorded in the hidden macro {it:e(wdid_fcguard)}: empty when nothing was flagged, {it:fallback}, or {it:caution}. A fallback carries into the replications of both {cmd:permute()} and {cmd:bootstrap()}, which are otherwise evaluated collapsed. {p_end}
 
 {phang2}{ul:When does the screen fire?} In practice when a contrast between two subgroups has {bf:exactly} zero variance in the full data too, so the "significance" of that
 contrast rests on rounding residue whichever way it is computed. The common route is clustering on a variable that nests the cohort variable - {it:cluster(state)} where the cohorts
@@ -408,14 +415,9 @@ speedup under the default safety, and under {it:safety(off)} a caution that over
 {it:margins} result name, and 123 non-subgroup comparisons on aggregating data showed no structural difference at all. (The adversarial rank truncation just described applies to non-subgroup event studies too, but it is a fixed rule of the test itself, not a read of a {it:margins} result name.) {p_end}
 
 {phang2}{ul:Memory.} The full data is held aside while the collapsed window runs, so peak memory includes an extra copy of your dataset. This is immaterial for typical panels but
-worth knowing if you are already near your memory limit, particularly if you have issued your own {help preserve} before calling {it:wooldid}; {opt fullprecisionslow} removes
+worth knowing if you are already near your memory limit, particularly if you have issued your own {help preserve} before calling {it:wooldid}; {opt nofastcollapse} removes
 the extra copy. {p_end}
 
-{phang}{opt fullprecisionslow}: Turn the default cell collapse off, so that every {it:margins} call is evaluated on the full estimation sample as it was before the collapse
-existed. Results are then bit-identical to those of earlier {it:wooldid} versions given the same data and options wherever the estimator itself is unchanged - the option restores the summation order, not a computation that has since moved: under {it:poisson} without {it:poisexpresults}, {it:semielasticity} and {it:contreatelasticitytype(eyex)}/{it:(eydx)} are now computed as {it:dydx}/{it:dyex} on the linear-index scale (see {opt semi:elasticity}), and no setting of this option recovers the {it:eydx}/{it:eyex} number an earlier version reported, at the cost of the run time the collapse would have saved
-(see {opt fastcollapse} for the magnitudes on both sides). Use it when you need byte-for-byte reproduction of an archived result, when you are comparing output across runs at
-the last digit, or when memory is tight and the extra copy of the data held during the collapsed window is unwelcome. Forwarded to {cmd:permute()} and {cmd:bootstrap()}
-replications. Cannot be combined with {it:fastcollapse} (the pair is refused as contradictory). {p_end}
 
 {phang}{opt permute(method)}: Randomization (permutation) inference over the treatment assignment, for settings - most importantly few treated clusters - where cluster-asymptotic standard errors are unreliable.
 
@@ -445,7 +447,7 @@ in {it:e(perm_se_shift)}. The pooled-estimand summaries in the footer (p, the {c
 {ul:Fast-mode default.} Without {cmd:permtstat} the observed run and the replications all run in fast (no-SE) mode: nothing the permutation inference reports needs the analytic standard errors, so computing them
 is wasted {it:margins} work. {it:e(V)}, {it:e(b_es_*)} and {it:e(V_es_*)} are then not posted and the {it:honestdid}/{it:pretrends} handoff is unavailable. {ul:So that the standard table tools still work}, the run posts its permutation inference under the names {it:estout} looks for before it looks at any covariance: {it:e(p)} (the same numbers as {it:e(perm_p)}) and {it:e(ci_l)}/{it:e(ci_u)} (the shift interval, the same as {it:e(perm_ci)}). {cmd:esttab, p} and {cmd:esttab, ci} therefore carry this run's real permutation figures under truthful footers, and a plain {cmd:esttab} tables the coefficients. There is deliberately no {it:e(se)}: a permutation run has no standard error, and the shift standard error in {it:e(perm_se_shift)} is a different object, so naming it {it:se} would put a number in a column that has none. Nothing else changes - with no {it:e(V)} posted, {it:test}, {it:lincom}, {it:_se[]} and {it:estat vce} go on refusing, which is correct. {cmd:permanalyticse} restores the analytic standard errors
 (shown for reference only; {it:e(V)} and {it:e(V_es_*)} are then analytic, and {it:test} or {it:lincom} run by hand on them are analytic quantities). The cell collapse applies to the replications as to the observed
-run ({it:fullprecisionslow} opts out); its degenerate-subgroup fallback reads a variance, which under the fast-mode default only the subgroup-by-horizon margins call carries, so elsewhere it engages only under {cmd:permtstat} or {cmd:permanalyticse}.
+run ({it:nofastcollapse} opts out); its degenerate-subgroup fallback reads a variance, which under the fast-mode default only the subgroup-by-horizon margins call carries, so elsewhere it engages only under {cmd:permtstat} or {cmd:permanalyticse}.
 {ul:Joint, equality and adversarial tests} are one-sided permutation tests of a quadratic-form statistic in the {ul:permutation-covariance metric} - the covariance of the replications' coefficients over the
 relevant elements (replications plus the observed comparator, listwise complete; under a complete {cmd:permexact} enumeration the enumerated assignments alone, the observed one being among them) - so they exist in both modes and consume no per-replication covariance: the joint pre-trend tests ({cmd:jointtests}) test the
 pre-treatment horizons jointly, the across-subgroup equality tests use the chain contrast of the subgroup levels, and the adversarial line test ({cmd:adversarial} with {cmd:esfixedbaseperiod}) is {it:wooldid}'s
@@ -1075,7 +1077,7 @@ slope column that was exactly collinear with the time-period interactions plus t
 horizon estimates, their standard errors, the pre-treatment joint tests and {it:e(b_es_*)}/{it:e(V_es_*)} were solver- and regressor-order-dependent wherever the control varies within
 cohort over time, under weights, or on an unbalanced panel. Results under this option changed on that date. {p_end}
 
-{pmore}This option also puts the run outside the default cell collapse: the {it:margins} stage is evaluated on the full estimation sample, and an explicit {it:fastcollapse} is refused with an error naming the option (see {it:fastcollapse}). {p_end}
+{pmore}This option also puts the run outside the default cell collapse: the {it:margins} stage is evaluated on the full estimation sample, under a caution naming the option (see {it:nofastcollapse}). {p_end}
 
 
 {pstd} {ul:Caution Regarding Continuous Treatment Variables and Controls:} If seeking to manually specify additional controls as a function of a continuous treatment variable, be sure not
@@ -1124,7 +1126,7 @@ with variables being inappropriately dropped from the regression. {p_end}
 a high dimensional fixed effects estimator. This is often less efficient than the alternative approach in terms of computation time, but can be important in terms of memory
 efficiency in the main regression or under certain other circumstances. Note: be extra careful to ensure that specifications featuring ccc_absorb() are identified; not all cases
 of identification failure in this case are bound to be automatically detected. Under {cmd:contreat()}, naming the treatment variable itself inside {it:ccc_absorb()} puts the run
-on the ineligible list for the default cell collapse (see {it:fastcollapse}), which silently turns the collapse off and makes an explicit {it:fastcollapse} an error. It is not refused with an event-study window, but it can collide with one: whenever the {it:ccc_absorb()} variables are constant within a cohort-by-period cell - a unit-level variable with a unit-level {it:i} is the usual case - the absorbed set takes in the cohort-by-period treatment interactions themselves, the fitted model then carries no coefficient at any relative period, and the run stops with an error naming {it:ccc_absorb()} as a likely cause. Where those variables vary within the cell the combination estimates normally. {p_end}
+on the ineligible list for the default cell collapse (see {it:nofastcollapse}), which turns the collapse off under a caution naming it. It is not refused with an event-study window, but it can collide with one: whenever the {it:ccc_absorb()} variables are constant within a cohort-by-period cell - a unit-level variable with a unit-level {it:i} is the usual case - the absorbed set takes in the cohort-by-period treatment interactions themselves, the fitted model then carries no coefficient at any relative period, and the run stops with an error naming {it:ccc_absorb()} as a likely cause. Where those variables vary within the cell the combination estimates normally. {p_end}
 
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses and prints progress reports throughout the estimation process. The regression itself is run quietly on every estimation path, so its coefficient table is never displayed.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
@@ -1271,12 +1273,12 @@ largely does not. Narrowing the event-study window helps in proportion to the ho
 the absorbing regression; prefer the smallest {it:latticenum} that answers the question. {it:emptycellsoverride} forgoes a measured factor of about 2.24.
 The {cmd:bootstrap()} re-identification leg - required by {it:att_it}, {it:att_i} and {it:att_itime}, and taken by {cmd:boottstat} whenever {cmd:cluster()} is given - roughly doubles per-replication cost where the cluster nests {it:i}, because the re-identified copies present a larger cell count to the regression; where the cluster is finer than {it:i} or cross-cuts it the units are kept whole, the cell count does not grow, and the overhead is the physical frame alone. On the other side,
 {it:fastnose} skips the variance calculation that accounts for most of a {it:margins} call and is correspondingly worth several times over on runs where
-standard errors are not needed. The default cell collapse (see {it:fastcollapse}) attacks the same cost from
+standard errors are not needed. The default cell collapse (see {it:nofastcollapse}) attacks the same cost from
 the other side - it shrinks the data each {it:margins} call sees rather than skipping the variance - and the two compose. The collapse is already on unless
-{it:fullprecisionslow} or an ineligible option turns it off, so a run that must be evaluated on the full data ({it:unconditionalse}, {it:interactivecontrols()}, {it:customvce()},
-{it:poisexpresults}, {it:semielasticity}, {it:contreatpoly()} above 1, or one of the other {cmd:contreat()} reads on the ineligible list under {it:fastcollapse}) is the one paying
+{it:nofastcollapse} or an ineligible option turns it off, so a run that must be evaluated on the full data ({it:unconditionalse}, {it:interactivecontrols()}, {it:customvce()},
+{it:poisexpresults}, {it:semielasticity}, {it:contreatpoly()} above 1, or one of the other {cmd:contreat()} reads on the ineligible list under {it:nofastcollapse}) is the one paying
 the full per-row {it:margins} cost described here. {cmd:subgroups()} is {ul:not} one of them: it collapses like any other run, and only sets the collapse aside part-way through
-if the estimability screen described under {it:fastcollapse} fires. {p_end}
+if the estimability screen described under {it:nofastcollapse} fires. {p_end}
 
 {pstd}{bf:Where the time goes.} Nearly all of a typical run is spent inside Stata's {it:margins}, and most of each {it:margins} call is the delta-method
 variance calculation rather than the point estimates. Very little time is spent in {it:wooldid}'s own code, which is why the levers that matter are the ones
@@ -1459,7 +1461,7 @@ and accepts no options: any non-empty command line - including {it:wooldid, upda
 be misleading. The refusal is session-scoped (an internal {it:WOOLDID_LASTRC} marker; {it:WOOLDID_*} global names are reserved by {it:wooldid}): it also blocks replay of models
 explicitly selected with {it:estimates restore} until some {it:wooldid} call completes. A failure inside the replication loop of a {cmd:permute()} or {cmd:bootstrap()} call is the one case that preserves replayability: that call's own completed ordinary estimation is restored, valid, and remains replayable, the marker is cleared, and the call exits with the loop's return code (the engine request itself failed loudly). Everything after the loop behaves like any other post-estimation failure (the rewiring of {it:e()} to the engine's inference, the deferred display, and the deferred continuous-treatment and event-study plots, {cmd:pretrendpower()} and the {cmd:bootsave()}/{cmd:permsave()} write), because {it:e()} is then a half-rewired mixture of observed and replication results, and replay is refused until some {it:wooldid} call completes successfully. A failure during the rewiring reports a message naming that state; a failure in one of the deferred plots is caught and reports the ordinary form. Either way, refit before replaying. Replay requires results posted by a
 {it:wooldid} version with replay support; internally, the display state travels in hidden {it:e(wdid_*)} results, which are implementation details and not part of the documented
-{it:e()} surface, with the exception of those that carry their own description somewhere in this help, whether in Stored Results or in an option's entry, which {ul:are} documented and supported. Today those are the macros {it:e(wdid_vcvstate)} and {it:e(wdid_vblocks)} and the scalar {it:e(wdid_vblockn)} (see Stored Results), and the cell-collapse results {it:e(wdid_fcol)}, {it:e(wdid_fcskip)} and {it:e(wdid_fcguard)} with the scalar {it:e(wdid_fcncell)} (see {opt fastcollapse}). Being hidden, none of the {it:e(wdid_*)} results appear under a plain {it:ereturn list}; read them by name, or use {it:ereturn list, all}. {p_end}
+{it:e()} surface, with the exception of those that carry their own description somewhere in this help, whether in Stored Results or in an option's entry, which {ul:are} documented and supported. Today those are the macros {it:e(wdid_vcvstate)} and {it:e(wdid_vblocks)} and the scalar {it:e(wdid_vblockn)} (see Stored Results), and the cell-collapse results {it:e(wdid_fcol)}, {it:e(wdid_fcskip)} and {it:e(wdid_fcguard)} with the scalar {it:e(wdid_fcncell)} (see {opt nofastcollapse}). Being hidden, none of the {it:e(wdid_*)} results appear under a plain {it:ereturn list}; read them by name, or use {it:ereturn list, all}. {p_end}
 
 {pstd} {ul:Incompatible Post-Estimation Commands:} {it:lincom}, {it:test}, and all other post-estimation commands that rely on receiving a valid variance-covariance matrix from
 an estimator. While {it:wooldid} does return a coefficient vector ({it:e(b)}) and a variance-covariance matrix ({it:e(V)}), these are for display purposes only. On an analytic run that produced an event study the variance-covariance

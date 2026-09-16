@@ -248,10 +248,10 @@ local p8a = e(adversarial_pval_att_s1)
 local g8 `e(wdid_fcguard)'
 use data/dta_binary.dta, clear
 gen cl8 = mod(i, 4)
-cap noi wooldid y i t ttre, att cluster(cl8) subgroups(sg) esfixedbaseperiod esprelength(4) espostlength(4) adversarial fullprecisionslow
+cap noi wooldid y i t ttre, att cluster(cl8) subgroups(sg) esfixedbaseperiod esprelength(4) espostlength(4) adversarial nofastcollapse
 local rc8b = _rc
 local p8b = e(adversarial_pval_att_s1)
-di "E8 adversarial p (sg1) default=`p8a' fullprecisionslow=`p8b' fcguard=[`g8'] rc=`rc8'/`rc8b'"
+di "E8 adversarial p (sg1) default=`p8a' nofastcollapse=`p8b' fcguard=[`g8'] rc=`rc8'/`rc8b'"
 if `rc8' != 0 | `rc8b' != 0 | "`p8a'" != "`p8b'" | "`g8'" != "" | "`p8a'" == "" {
   di as error "E8 FAIL: the subgroup adversarial p should be identical collapsed and uncollapsed with no fallback"
   local ++fails

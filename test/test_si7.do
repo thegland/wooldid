@@ -69,7 +69,7 @@ end
 * On this fixture the non-estimability is intrinsic to the data (the documented
 * knife-edge design), not caused by fe() - the recorded bisection shows dropping
 * fe() does NOT avoid it. Expect: rc 0, the caution names pre2 and sg1, sg1 loses
-* ONLY that horizon, sg2 keeps all of its. fullprecisionslow because safety(off)
+* ONLY that horizon, sg2 keeps all of its. nofastcollapse because safety(off)
 * with the default cell collapse keeps the collapsed rows (documented), on which the
 * horizon happens to be estimable (bug sweep 5c-1).
 use suite/data/survey_rcs.dta, clear
@@ -77,7 +77,7 @@ qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
 qui log using si7_t1.txt, text replace name(si7)
 cap noi wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) ///
     fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) ///
-    safety(off) adversarial fullprecisionslow
+    safety(off) adversarial nofastcollapse
 local rc1 = _rc
 qui log close si7
 scanlog si7_t1.txt "are not estimable for subgroup 1"
@@ -149,7 +149,7 @@ qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
 qui log using si7_t3.txt, text replace name(si7)
 cap noi wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) ///
     fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state) ///
-    fastnose fullprecisionslow
+    fastnose nofastcollapse
 local rc3 = _rc
 qui log close si7
 scanlog si7_t3.txt "are not estimable for subgroup 1"

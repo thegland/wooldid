@@ -137,8 +137,7 @@ version 16.0
     * margins r(V); under the fast-mode default only the subgroup-by-horizon call
     * carries one (BS-26), so the rule bites there and under permtstat/permanalyticse
     local wdp_fb = cond("`e(wdid_fcguard)'" == "fallback", "fallback", "")
-    if "`fastcollapse'" != "" & "`wdp_fb'" == "" local wdp_ro `wdp_ro' fastcollapse
-    if "`fullprecisionslow'`wdp_fb'" != "" local wdp_ro `wdp_ro' fullprecisionslow
+    if "`nofastcollapse'`wdp_fb'" != "" local wdp_ro `wdp_ro' nofastcollapse
     if "`contreat'" != "" local wdp_ro `wdp_ro' contreat(`contreat') contreatpoly(`contreatpoly')
     if `"`contreatcontrols'"' != "" local wdp_ro `wdp_ro' contreatcontrols(`contreatcontrols')
     if `"`lattice'"' != "" local wdp_ro `wdp_ro' lattice(`lattice')
@@ -334,8 +333,7 @@ version 16.0
     * contrast is built from collapsed replicates while the observed inference is not
     * (2026-09-01 probe, A4)
     local wdb_fb = cond("`e(wdid_fcguard)'" == "fallback", "fallback", "")
-    if "`fastcollapse'" != "" & "`wdb_fb'" == "" local wdb_ro `wdb_ro' fastcollapse
-    if "`fullprecisionslow'`wdb_fb'" != "" local wdb_ro `wdb_ro' fullprecisionslow
+    if "`nofastcollapse'`wdb_fb'" != "" local wdb_ro `wdb_ro' nofastcollapse
     if "`contreat'" != "" local wdb_ro `wdb_ro' contreat(`contreat') contreatpoly(`contreatpoly')
     if `"`contreatcontrols'"' != "" local wdb_ro `wdb_ro' contreatcontrols(`contreatcontrols')
     if `"`lattice'"' != "" local wdb_ro `wdb_ro' lattice(`lattice')
@@ -554,7 +552,7 @@ version 16.0
   set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -1848,7 +1846,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * quantity it computes is a cell-level weighted average and the derivative is constant
   * within an (_i, _t, targetflag) cell. So the margins calls below can be handed one row
   * per cell carrying the cell's SUMMED weight. `fcon' is wooldid_validate's realized
-  * decision (on by default, off under fullprecisionslow or any ineligible option).
+  * decision (on by default, off under nofastcollapse or any ineligible option).
   * `preserve' is inline here on purpose - issued inside wooldid_fcol it would unwind at
   * that program's return and every margins call would silently run on full data. The
   * restore twin is likewise inline.
@@ -1893,17 +1891,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * noesample; rows in memory ARE the estimation sample (wooldid_fcol keeps on it)
     local fcnoes noesample
     if "`subgroups'" != "" local fcsg 1
-    if "`verbose'" == "verbose" dis as text "Wooldid is evaluating the margins calls on one row per cell (`fconn' cells; see fastcollapse / fullprecisionslow in the help file)."
+    if "`verbose'" == "verbose" dis as text "Wooldid is evaluating the margins calls on one row per cell (`fconn' cells; see nofastcollapse in the help file)."
   }
   else if "`verbose'" == "verbose" {
     * F037 (2026-09-06): the user's own switch is the reason whenever it is given, with the
-    * ineligible option(s) noted beside it; the option-naming text covers the silent skip
-    if "`fullprecisionslow'" != "" {
-      local fcwhy (fullprecisionslow)
-      if "`fcskip'" != "" local fcwhy (fullprecisionslow; the default cell collapse would not apply with `fcskip' either)
+    * ineligible option(s) noted beside it. The ineligible skip is no longer silent - since
+    * the 2026-09-16 option consolidation wooldid_validate cautions about it in every run -
+    * so the branch below narrates where this run is evaluating, not that a skip happened
+    if "`nofastcollapse'" != "" {
+      local fcwhy (nofastcollapse)
+      if "`fcskip'" != "" local fcwhy (nofastcollapse; the default cell collapse would not apply with `fcskip' either)
       dis as text "Wooldid is evaluating the margins calls on the full data `fcwhy'."
     }
-    else if "`fcskip'" != "" dis as text "Wooldid is evaluating the margins calls on the full data: the default cell collapse does not apply with `fcskip' (see fastcollapse in the help file)."
+    else if "`fcskip'" != "" dis as text "Wooldid is evaluating the margins calls on the full data: the default cell collapse does not apply with `fcskip' (see nofastcollapse in the help file)."
   }
 
   * since semielasticities are allowed, we need text for inserting that info into plots
@@ -4555,7 +4555,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose fastcollapse fullprecisionslow GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson POISEXPresults   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose SEMIelasticity CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -5035,15 +5035,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * quantity is a plain marginal effect on a scale linear in the coefficients.
   *
   * IT IS ON BY DEFAULT (author-ruled 2026-09-01) whenever the request permits it:
-  *   fullprecisionslow          -> never collapse
-  *   fastcollapse, ineligible   -> ERROR: an explicit request for something that would
-  *                                 return a measured-wrong answer must not pass silently
-  *   otherwise                  -> collapse iff eligible; SILENTLY skip if not, because
-  *                                 an ordinary contreat() run must not start erroring
-  * The refusals carry no safety(off) escape: safety(off) means "I accept a risk", never
-  * "give me numbers I have been shown are wrong". `fcon' is the realized decision; the
-  * worker consumes it and records it in e(wdid_fcol). `fcskip' names the skip reason(s)
-  * for the verbose line.
+  *   nofastcollapse             -> never collapse, and say nothing: the user turned it off
+  *   ineligible                 -> skip, and CAUTION naming the option responsible
+  *   otherwise                  -> collapse
+  * The skip is a caution rather than an error (author ruling 2026-09-16, the option
+  * consolidation): an ordinary contreat() run must not start erroring, but it must not
+  * have to run verbose to learn that the collapse did not engage either. The retired
+  * fastcollapse option was an assertion that turned exactly this skip into an error, and
+  * its diagnostic - which named each incompatible option with the measured magnitude -
+  * is what the caution below carries. `fcon' is the realized decision; the worker
+  * consumes it and records it in e(wdid_fcol). `fcskip' names the skip reason(s) for
+  * e(wdid_fcskip) and the verbose line.
   * subgroups() is NOT on this list (author-ruled 2026-09-01, after a 2026-09-01 refusal):
   * the subgroup reads are exact under the collapse except in a numerically singular VCE
   * direction, where the exact zero they branch on is cancellation residue. The worker
@@ -5064,7 +5066,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * remapped to dyex|dydx above, so they never reach this line and the collapse ban lifts
     * on exactly the F032 argument - the remapped reads are linear in the coefficients.
     * Measured on test/suite/data/continuous_control_dense.dta: e(wdid_fcol) 0 -> 1, and the
-    * collapsed answer agrees with fullprecisionslow to 9.1e-14, the same figure a plain
+    * collapsed answer agrees with nofastcollapse to 9.1e-14, the same figure a plain
     * poisson contreat() run posts. Off the poisson path, and under poisexpresults, nothing
     * was remapped and the ban stands (test_fastcollapse F11b/F11c legs 2, 3 and 5).
     if "`contreatelasticitytype'" == "eyex" | "`contreatelasticitytype'" == "eydx" local fcbad `fcbad' contreatelasticitytype(`contreatelasticitytype')
@@ -5105,28 +5107,28 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`semielasticity'" != "dydx"           local fcbad `fcbad' semielasticity
   if "`poisexpresults'" != ""               local fcbad `fcbad' poisexpresults
   if `"`customvce'"' != ""                  local fcbad `fcbad' customvce()
-  if "`fastcollapse'" != "" & "`fullprecisionslow'" != "" {
-    dis as error "Error: fastcollapse and fullprecisionslow are contradictory - the first asks for the cell collapse and the second suppresses it. Specify at most one. (The collapse is on by default wherever the request permits it, so neither is needed to get it.)"
-    error 198
-  }
-  if "`fastcollapse'" != "" {
-    if "`fcbad'" != "" {
-      dis as error "Error: fastcollapse is incompatible with: `fcbad'."
-      dis as error "fastcollapse evaluates the margins calls on one row per cohort-by-period-by-treatment cell, which is exact only when the reported quantity is linear in the coefficients and, within a cell, linear in the treatment variable. Each option above breaks one of those conditions:"
-      dis as error "  interactivecontrols() interacts the treatment dummy with a variable that varies inside a cell, so the effect is no longer cell-constant. contreat() itself is eligible - the collapse carries the cell's weighted mean of the dose - but the reads listed below are not."
-      dis as error "  contreatpoly() above 1 makes the effect a polynomial in the dose, which the cell mean does not reproduce; lattice(), makecfxplots and cfxlattice() split a cell on a binning of the dose, which is not part of the cell key."
-      dis as error "  contreat-in-controls means the contreat variable also appears inside controls(), coarsecohortcontrols(), fe() or ccc_absorb(); the dose derivative then varies inside the cell on a variable the collapse does not average (measured: the ame rows move by up to 0.6 percent while the att rows stay exact)."
-      dis as error "  semielasticity (and the contreat elasticity forms eyex and eydx) divide by the prediction, which re-introduces the within-cell variation that a plain marginal effect cancels. contreatelasticitytype(dydx) and (dyex) are linear in the dose and stay eligible."
-      dis as error "  poisexpresults reports on the exponentiated scale, which is not linear in the coefficients (measured: estimates moved in the 7th significant digit)."
-      dis as error "  unconditionalse asks margins for a variance built from observation-level influence functions; margins verifies the visible row count against e(N) and errors when it is collapsed."
-      dis as error "  customvce() is not verified for fastcollapse rather than known-broken; it is refused pending measurement."
-      dis as error "Drop fastcollapse, or drop the conflicting option. (No safety(off) escape: these are measured wrong answers, not risks.) Without an explicit fastcollapse the run proceeds normally on the full data - the collapse simply does not engage."
-      error 198
-    }
-  }
   local fcon 0
   local fcskip `fcbad'
-  if "`fullprecisionslow'" == "" & "`fcbad'" == "" local fcon 1
+  if "`nofastcollapse'" == "" & "`fcbad'" == "" local fcon 1
+  * The disclosure. Only the reasons that actually fired are printed: this runs on every
+  * unconditionalse, customvce() or semielasticity call, where nine paragraphs about
+  * options the user did not type would be noise. Nothing is said under nofastcollapse -
+  * the collapse is off because the user asked for that. Replications re-parse under
+  * `cap qui wooldid', and the shell's own re-validation under `qui', so a permute() or
+  * bootstrap() run prints this once, from the observed run's worker call.
+  if "`fcbad'" != "" & "`nofastcollapse'" == "" {
+    dis as text "Caution: the default cell collapse does not apply with: `fcskip'. Wooldid evaluates the margins calls on the full estimation sample instead, which is what it did before the collapse existed - the run is slower, and no answer changes."
+    dis as text "  The collapse hands margins one row per cohort-by-period-by-treatment cell, which is exact only when the reported quantity is linear in the coefficients and, within a cell, linear in the treatment variable. What is listed above breaks one of those conditions:"
+    if strpos("`fcskip'", "interactivecontrols()") dis as text "  interactivecontrols() interacts the treatment dummy with a variable that varies inside a cell, so the effect is no longer cell-constant."
+    if strpos("`fcskip'", "contreatpoly(>1)") dis as text "  contreatpoly() above 1 makes the effect a polynomial in the dose, which the cell mean does not reproduce. contreat() itself is eligible: the collapse carries the cell's weighted mean of the dose."
+    if strpos("`fcskip'", "lattice()") | strpos("`fcskip'", "makecfxplots") dis as text "  lattice() and makecfxplots split a cell on a binning of the dose, which is not part of the cell key."
+    if strpos("`fcskip'", "contreat-in-controls") dis as text "  contreat-in-controls means the contreat variable also appears inside controls(), coarsecohortcontrols(), fe() or ccc_absorb(); the dose derivative then varies inside the cell on a variable the collapse does not average (measured: the ame rows move by up to 0.6 percent while the att rows stay exact)."
+    if strpos("`fcskip'", "semielasticity") | strpos("`fcskip'", "contreatelasticitytype(") dis as text "  semielasticity (and the contreat elasticity forms eyex and eydx) divide by the prediction, which re-introduces the within-cell variation that a plain marginal effect cancels. contreatelasticitytype(dydx) and (dyex) are linear in the dose and stay eligible."
+    if strpos("`fcskip'", "poisexpresults") dis as text "  poisexpresults reports on the exponentiated scale, which is not linear in the coefficients (measured: estimates moved in the 7th significant digit)."
+    if strpos("`fcskip'", "unconditionalse") dis as text "  unconditionalse asks margins for a variance built from observation-level influence functions; margins verifies the visible row count against e(N) and errors when it is collapsed."
+    if strpos("`fcskip'", "customvce()") dis as text "  customvce() is not verified for the collapse rather than known-broken; it is held out pending measurement."
+    dis as text "  Specify nofastcollapse to silence this and evaluate every run on the full data."
+  }
 
   * do some light processing of the "number of pre-treatment coefs" input - it needs some adjustment when esfixedbaseperiod is used since the period normalized to 0 could fall within your range of requested coefs
   * F-boot A8: preserve the user's raw esprelength for rep-line reconstruction. the
@@ -5489,7 +5491,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * literal 95, so `set level 90' produced lb_90ci columns holding 95% intervals under
   * bootstrap() / permute(). Resolve it once here; every consumer sees a number
   if `level' == 0 local level = c(level)
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose fastcollapse fullprecisionslow fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp permstepdown permonsetcohorts simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw semielasraw cetyperaw {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson poisexpresults oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose semielasticity contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose nofastcollapse fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp permstepdown permonsetcohorts simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw semielasraw cetyperaw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -5569,7 +5571,7 @@ version 16.0
 end
 
 * ---------------------------------------------------------------------------
-* F-collapse helper (on by default; fastcollapse / fullprecisionslow). Replaces the
+* F-collapse helper (on by default; nofastcollapse turns it off). Replaces the
 * estimation sample with ONE row per (_i, _t, targetflag [, subgroup]) cell, carrying that
 * cell's SUMMED weight and keeping the cell's FIRST row.
 *
@@ -5580,8 +5582,8 @@ end
 * gate enforces; outside it (interactivecontrols(), a non-dydx operator, the exponentiated
 * poisson scale) the derivative varies observation by observation and the retained row would
 * BE the estimand rather than an irrelevant carrier - which is why those combinations skip
-* the collapse by default and are refused when it is asked for explicitly, rather than
-* cautioned. contreat() is inside the condition rather than outside it: the retained row
+* the collapse, under a caution naming the option responsible, rather than collapsing and
+* reporting the wrong number. contreat() is inside the condition rather than outside it: the retained row
 * carries the cell's weighted mean of the dose (below), which reproduces every read that is
 * linear in the dose.
 *
@@ -5777,7 +5779,7 @@ version 16.0
   }
   c_local fcguard caution
   if "`guard'" == "caution" exit
-  dis as text "Caution: wooldid found `fcdegwhy' at a subgroup margins call. Wooldid treats that as a numerically singular direction of the VCE, where an exact zero margins returns can be cancellation residue rather than an estimate, so which subgroup horizons and joint tests are reported can depend on the summation order - which the default cell collapse (see fastcollapse in the help file) changes. Under the default safety setting wooldid would evaluate the subgroup results on the full data from this point; with safety(off) it proceeds on the collapsed rows as requested. Specify fullprecisionslow to evaluate everything on the full data."
+  dis as text "Caution: wooldid found `fcdegwhy' at a subgroup margins call. Wooldid treats that as a numerically singular direction of the VCE, where an exact zero margins returns can be cancellation residue rather than an estimate, so which subgroup horizons and joint tests are reported can depend on the summation order - which the default cell collapse (see nofastcollapse in the help file) changes. Under the default safety setting wooldid would evaluate the subgroup results on the full data from this point; with safety(off) it proceeds on the collapsed rows as requested. Specify nofastcollapse to evaluate everything on the full data."
 end
 
 
