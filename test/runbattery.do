@@ -561,6 +561,17 @@ cap noi wooldid y i t ttre, att att_i robust esprelength(2) espostlength(2) boot
 local rc = _rc
 dumpres boot_keepi_noclus `rc'
 
+* the four-way combination that only became reachable when the error 198 came out: a
+* cell-weighted estimand AND boottstat AND no cluster() AND [aw]. This sets both the phys and
+* the reid paths, and phys is tested first, so phys wins - the right leg (units kept whole, no
+* re-identification, no VCE substitution). Nothing but the retired refusal was preventing it, so
+* nothing had ever exercised it. Measured r198 on the pre-feature build, rc 0 with 10/10 here
+freshstart "`DATA'/dta_binary"
+set seed 808080
+cap noi wooldid y i t ttre [aw=w], att att_it esprelength(2) espostlength(2) bootstrap(standard) reps(10) boottstat rseed(80808) dots(0)
+local rc = _rc
+dumpres boot_physwin_aw `rc'
+
 * poisson under bootstrap(standard) on the full panel: ppmlhdfe replications on the count path,
 * att-only (the replication kernel, not poisson event-study or subgroup wiring under bootstrap).
 * bootstrap + poisson has no content-judged coverage anywhere (test_bootstrap_bayes O5 is rc-only).

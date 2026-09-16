@@ -40,7 +40,35 @@ judged by the stricter gates), then the changes that move no number, then the th
 
 ## OPEN — to address at the end
 
-Nothing. The fifteen items the documentation review of 2026-09-10 turned up were ruled on 2026-09-11
+**A10's caution has no test on either branch (opened 2026-09-16).** A coverage gap rather than a
+defect, opened at the author's instruction.
+
+What A10 says: on the re-identification leg a twice-drawn cluster's copies get fresh CELL
+identities, so the estimand counts them separately, but a covariate that names the `i` variable
+itself - inside `fe()`, `controls()`, `interactivecontrols()`, `coarsecohortcontrols()` or
+`ccc_absorb()` - keeps its ORIGINAL `i` codes across both copies. The copies are therefore distinct
+units for the estimand while sharing fixed-effect codes. That is Stata's official `idcluster`
+convention and the caution states it once.
+
+What changed on 2026-09-16: T2/T3 gated it, `if "\`wdb_reid'" != "" & "\`wdb_nest'" == "1"`
+(`ado:407`). Under the keep-`i` regime nothing is re-identified, so there is no discrepancy and the
+caution would be false. The gate is correct.
+
+Why it wants a test: **neither branch has ever executed in the suite.** The caution fires only when
+a covariate option literally names the `i` variable, and no config in the deck writes `fe(i)` or
+`controls(i)`. So the firing path was already untested before today, and the new suppression path
+ships untested as well.
+
+The failure that would go uncaught: if the gate were ever inverted or dropped, a user clustering
+finer than `i` would be told that their fixed effects share codes across duplicated copies, which
+under keep-`i` is simply untrue. A caution that lies is worse than no caution, and nothing in the
+deck would notice.
+
+Two configs close it, both cheap: one nesting run naming `i` in `fe()` (caution MUST appear) and
+one finer-than-`i` run with the same covariate specification (caution MUST NOT appear). Message
+assertions, in the `logh` style `test_bootstrap_gates.do` already uses; no number moves.
+
+The fifteen items the documentation review of 2026-09-10 turned up were ruled on 2026-09-11
 and all fifteen are built - see CLOSED below.
 
 ---

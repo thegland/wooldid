@@ -1,6 +1,14 @@
 # Feature tickets: decoupling `i` from the resampling unit
 
-**Status 2026-09-16: T1 COMPLETE (worktree 84da86f, unmerged). T2+T3 IN PROGRESS. T4 CLOSED by ruling (documentation only).**
+**Status 2026-09-16: T1, T2 and T3 are COMPLETE, merged and blessed. T4 CLOSED by ruling.**
+All three are implemented, verified against a preregistration, merged to `bugfixes`, documented in
+`wooldid.sthlp`, and covered in the suite from both directions - the nesting branch pinned so it
+cannot move, the new keep-`i` branch pinned so it cannot regress, and each of the three retired
+refusals given a config measured at r459/r459/r198 before the change and rc 0 after. The full
+assessment suite is deferred to 2026-09-17 by the author; it is the only outstanding item, besides
+the `fcol_sg` exposure recorded below.
+
+**Superseded status line, kept for the record: T1 COMPLETE (worktree 84da86f, unmerged). T2+T3 IN PROGRESS. T4 CLOSED by ruling (documentation only).**
 Implementation opened 2026-09-16; the survey below ("What the code actually assumes") was written
 before any edit and changed the shape of the work: **T2 and T3 are one edit, not two**, and T2 is
 substantially smaller than the ticket assumed. Preregistered readouts:
