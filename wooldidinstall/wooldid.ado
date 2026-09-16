@@ -548,7 +548,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 * Execute update before running main program
   if "`update'" == "update" {
     net install wooldid, from(https://raw.githubusercontent.com/thegland/wooldid/main/wooldidinstall/) replace
-    dis as text "Update complete; please restart stata or use 'discard' command to load the new version of wooldid. Other dependencies (reghdfe, ftools, gtools, ppmlhdfe (optional)) must be updated manually if necessary."
+    dis as text "Update complete; please restart stata or use 'discard' command to load the updated version of wooldid. Other dependencies (reghdfe, ftools, gtools, ppmlhdfe (optional)) must be updated manually if necessary."
     exit
   }
 
