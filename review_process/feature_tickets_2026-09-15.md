@@ -428,7 +428,17 @@ with `att_it` on data where the collapse is active.
   "> 100 distinct values" runtime caution, and at Stata's default `maxvar` of 5000 the re-pointed
   command **fails outright with r(907)**. It only runs at all because `mkrun.py:137` sets
   `maxvar 20000`. It is also far slower - the runtime cliff that same caution describes - and this
-  config runs twice per dual build.
+  config runs twice per dual build. **Measured, paired, same session, same data:**
+
+  | command | seconds |
+  |---|---|
+  | `fcol_sg` as it stands today (`i = cohid`) | **2.663** |
+  | the ruled re-point (`i = fips`, 288 levels) | **522.189** |
+
+  A factor of **196**. `oldnew` runs every config on both builds, so this one row would go from
+  about five seconds of suite time to roughly seventeen minutes, on a component that already
+  takes fifty. That is a large price for a change which, by measurements (1) and (3) above,
+  does not address the cause.
 
 **This wants a fresh ruling**, because the original one ("re-point rather than ledger the
 divergence") was made on the understanding that the straddle was the cause. It is not.
