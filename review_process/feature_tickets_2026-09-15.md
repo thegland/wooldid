@@ -495,3 +495,64 @@ Concretely, what a ledger entry would look like - **not applied, pending ruling*
 
 with 1e-6 bounding the observed worst of 2.70e-07 with roughly a factor of four of headroom,
 matching the `A9-svmat-*` rows.
+
+### CORRECTION: the cause is neither the straddle nor the collapse. It is a precision FIX.
+
+Everything above about the collapse being the cause is **wrong**, and the author caught it with one
+observation: 2.70e-07 is too large to be floating-point reordering. It is. Over the 4,162 rows of
+this sample, reordering double-precision additions has a worst case of `N * eps` = **9.2e-13**. The
+observed difference is **292,000 times larger than that**. Reordering cannot produce it, so the
+explanation was arithmetic-shaped but not arithmetically possible.
+
+Two further measurements killed the remaining guesses before the right answer was found:
+
+- **Disabling the collapse on the new build does not remove it.** With `nofastcollapse`,
+  `main_att` and `pretreatment_att` return to the old build's values EXACTLY, but `main_att_it`
+  still differs. So the collapse accounts for the one-ulp movement in the `att` quantities and
+  none of the large movement in the `att_it` ones.
+- **`regtol(14)` changes nothing** on either build, so it is not reghdfe's convergence tolerance
+  either.
+
+**Bisected instead of guessed again.** 240 commits touch `wooldid.ado` between published `main`
+and HEAD; a binary search over them, running this exact config and comparing `e(b)[1,2]` bitwise,
+took eight runs:
+
+```
+=== FIRST COMMIT THAT MOVES att_it ===
+3cb0c41  2026-07-21  B21: gen double for ringer, interactive-control, and estimand-weight copies
+parent : OK b2=+1.4b320b8e68b80X-001     <- published value
+this   : OK b2=+1.4b320b8828b20X-001     <- new value
+```
+
+What B21 changed:
+
+```stata
+-    qui gen `w_att_it'     = `w' `customweighttext'/`w_per_it'
++    qui gen double `w_att_it' = `w' `customweighttext'/`w_per_it'
+```
+
+`gen` with no type declaration defaults to **float**. Verified directly on the staged old build by
+printing the storage type at that line: `OLDTYPE w_att_it=float w_per_it=double w=float`.
+
+**So the published version carries the cell weights for the cell-weighted estimands in single
+precision, about 7 significant digits, and B21 made them double.** That is the whole difference.
+The magnitude now makes sense: float epsilon is 1.19e-07, which is the scale of the observed
+differences, and 1e9 times the scale reordering could ever produce.
+
+**The direction matters: the new numbers are MORE accurate, and the old ones were the defective
+ones.** This is not tolerable noise being explained away. It is a correctness fix showing up for
+the first time.
+
+**Why only this config.** `fcol_sg` was pinned at r198 on the old side until the `fastcollapse`
+retirement, so its `e()` had never reached content comparison. Every other config touched by B21
+was either ledgered at the time or re-blessed. **The ledger already carries this exact class** -
+`B21b-ic8-s` and `B21b-ic8-m` for `cov_icbad2`, "SI-15 B21 3cb0c41 gen-double", and a sibling row
+for the companion `gen double for _i` fix at `8c5bfd7`. `fcol_sg` is a latecomer to a known class,
+not a new phenomenon.
+
+**Disposition this implies.** The original ruling, "re-point rather than ledger", was made on the
+belief that the cause was a design flaw in the config. It is not: it is a deliberate, already
+ledgered precision fix, and the config is the only place it had not yet surfaced. Re-pointing
+would hide an intended improvement behind a config change that also destroys the config's
+coverage and costs 196x. A ledger row in the established B21 class is the treatment every other
+affected config already received.
