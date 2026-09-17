@@ -21,7 +21,7 @@ deterministic data and dumps **every** e() scalar, macro, and matrix cell in Sta
 runs therefore detects *any* change in returned results, down to the last bit.
 
 ## Layout
-- `runbattery.do` — runs the 48 configurations against the repo's `wooldidinstall/wooldid.ado`.
+- `runbattery.do` — runs the 59 configurations against the repo's `wooldidinstall/wooldid.ado`.
 - `data/` — frozen input datasets (binary, continuous, tiny, simple; deterministic seeds).
 - `mkdata.do` — regenerates `data/` from scratch (run from `test/`). Only needed if the
   datasets are ever deliberately changed — doing so invalidates `baseline/`.
@@ -60,7 +60,7 @@ cd test && mkdir run1 && cd run1
 "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp" -e do ../runbattery.do
 python3 ../compare.py ../baseline .
 ```
-Expected: `48/48 IDENTICAL, TOTAL_DIFF_GROUPS=0` for a change that should not alter results.
+Expected: `59/59 IDENTICAL, TOTAL_DIFF_GROUPS=0` for a change that should not alter results.
 When a fix intentionally changes output, the diff must match the predicted signature exactly
 (e.g. B12's only signature was one variable leaving the poisson config's varlist) — then the
 new outputs become the baseline: `cp run1/*.csv baseline/` and commit with the fix.
@@ -72,8 +72,9 @@ re-blesses every config and hides an unintended move. Run the battery a second t
 the new files run to run at `--rtol 0` before committing them, in one commit with `runbattery.do`.
 
 Notes:
-- Run one battery at a time; the 48 configs take 6-7 minutes in a fresh process (measured on
-  two fresh processes 2026-09-13: 275-292 s for the first 37 plus 90-108 s for the
+- Run one battery at a time. The timing below was measured on 2026-09-13, when the battery held
+  48 configs; it has since grown to 59, so treat these as a floor rather than a current figure
+  (measured on two fresh processes: 275-292 s for the first 37 plus 90-108 s for the
   permute()/bootstrap() block, 366-400 s in all; a loaded machine took 450 s for the first 37
   alone).
 - The battery is bit-reproducible. (gtools is a hard requirement since `40414c7`; the
