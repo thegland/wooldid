@@ -289,3 +289,87 @@ while paying for it once instead of `reps` times.
   all guard cost from above rather than attributing it - one reason it was the weaker instrument.
 - Rarity, the author's second criterion, is not measured anywhere in this report. It is not needed:
   the recommendation does not drop a check on the grounds that its condition is rare.
+
+---
+
+# Addendum: what each guard actually protects against (2026-09-16, author's question)
+
+The body of this report said "the failures these guards prevent are **silent**". **That
+generalisation was wrong**, and this document contradicted itself about it: the si8 section
+already noted that the failure si8 pre-empts is `r(907)`, "which Stata raises loudly on its own".
+The author asked the sharper question, and it deserves a sharper answer.
+
+## The taxonomy
+
+| case | what happens without the guard | who notices |
+|---|---|---|
+| **1** | the run crashes anyway, but with an unhelpful message - usually Stata's own | user knows something broke, not what |
+| **2** | the run completes with visibly broken output - all missing, all zero, absurd magnitudes | a competent user notices |
+| **3** | the run completes and returns **plausible numbers that are wrong** | **nobody notices** |
+
+## The answer: they do not all protect against case 3
+
+All 24 `safety()`-gated blocks were classified, each by one agent and then adversarially
+re-read by a second (one classification was disputed and revised):
+
+| case | count | reading |
+|---|---|---|
+| **3 - plausible but wrong** | **11** | the majority, and the reason the `safety()` surface exists |
+| **1 - crash with a poor message** | **4** | pure message-quality guards |
+| **mixed** | **9** | different inputs land in different cases; typical input usually case 3 |
+| 2 - obviously wrong output | 0 | nothing classified here alone |
+
+So the body's claim holds for the *majority* and for the two blocks this report actually
+recommended changing, but **not for the set as a whole**.
+
+## The four case-1 guards, and why only one is a candidate
+
+| site | what it checks | what happens without it | expensive? |
+|---|---|---|---|
+| `worker:908` | treated rows straddle the reference period under `esfixedbaseperiod` | dies later at the dropped-dummy screen with a worse message | one `gstats` - no |
+| `worker:1355` **si8** | implied variable count vs `c(maxvar)` | **Stata's own `r(907)` "maxvar too small"**, mid-estimation, naming no wooldid concept | **3 `gegen tag` - YES** |
+| `validate:5290` | `lattice()` values are non-negative integers | **Stata's own `r(452)`** - verified directly: "factor variables may not contain negative values" / "noninteger values". `lattice()` reaches the model only as `#i.\`latticevar'` | one `assert` - no |
+| `validate:5473` | `safety()` token is literally on/off | nothing breaks: **no `== "on"` test exists anywhere in the file** (verified by grep), so an unrecognised token coerces to safety-ON, the conservative direction. A typo-catcher | macro test - free |
+
+**Only si8 is both case 1 and expensive, and it is therefore the single genuine candidate this
+investigation found by the author's original three criteria.** It is worth noting what that
+candidate is really worth:
+
+- Its expensive arm is only part of the block. `si8ilev` (one `gegen tag(i)`) feeds the `> 100`
+  cohorts caution, which is *advice*, not a failure guard. `si8cells` and `si8tlev` (the other
+  two passes, including the two-variable `tag(_i _t)`) exist **only** to form `si8demand` for
+  the maxvar pre-emption. So the case-1 arm could be dropped while keeping the caution.
+- **And the pre-emption does not reliably work.** `si8demand` under-predicts by more than 2x
+  (see `open_defects.md`), so on the fixture measured here it stayed silent and Stata's generic
+  `r(907)` fired anyway - the exact outcome the guard exists to prevent. A case-1 guard that
+  misses is worth still less.
+- Since the rep-gate landed, it runs once per run rather than once per replication, so the
+  absolute saving is now small.
+
+No change is recommended on this without a ruling; it is recorded as the one thing that survives
+the author's filter.
+
+## Two classifications worth knowing, because they invert the intuition
+
+- **`worker:718`, "customweightmultiplier() must be >= 0", is case 3, not the input-validation
+  case-1 it looks like.** `cwm` is deliberately not folded into the regression weight, so the fit
+  is untouched; it enters only the estimand weights handed to `margins` as `[iw=]`, and Stata's
+  iweight plumbing accepts negative weights silently. The code comment records the probe:
+  *"a negative value silently corrupts weight masses, estimates, and the escomp shares under the
+  default iweight plumbing (probed rc 0, no message)"*.
+- **`validate:5246`, "weights must not be negative", is not a crash guard either.** The worker's
+  sample markout drops every row with `w <= 0` before weights reach anything, so the run
+  completes on a **silently narrowed sample** with ordinary-looking estimates.
+
+A guard's message text is a poor guide to what it protects against. Both of these read like
+domain validation and both actually stand between the user and a plausible wrong number.
+
+## Method and its limits
+
+Classification was static code reading, two independent passes per block (classify, then an
+adversarial re-read instructed to hunt for inflation to case 3 *and* deflation to case 1), with
+the code's own rationale comments as primary evidence - this codebase documents what goes wrong
+unusually well, and several entries rest on a comment recording an actual probe. **Nothing here
+was verified by deleting a guard and running the bad input**, except the two claims acted on
+above (`r(907)` observed twice today; `r(452)` reproduced directly). Confidence is recorded
+per guard in the workflow output; 9 of 24 are `medium` and one is `low`.

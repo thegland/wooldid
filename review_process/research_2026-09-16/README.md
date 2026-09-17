@@ -29,3 +29,11 @@ gate removes ~5.2% of a bootstrap run. The differencing harness was wrong becaus
 variance of one bootstrap configuration is ~17%, several times the effect - so it could not have
 detected the effect at any sign. **A null result from an instrument that could not have detected
 the effect is not a null result.** Both files are kept so the comparison stays visible.
+
+## `guard_failure_modes.json`
+
+Per-guard classification behind the addendum in `guard_cost_2026-09-16.md`: for each of the 24
+`safety()`-gated blocks, what it checks, what happens without it, which of the author's three
+failure cases that is, the supporting evidence quote, and the classifier's confidence. Produced
+by a two-stage pass (classify, then an adversarial re-read told to hunt for inflation to case 3
+and deflation to case 1). Static reading only - see the addendum's "Method and its limits".
