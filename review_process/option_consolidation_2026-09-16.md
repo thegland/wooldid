@@ -1,7 +1,13 @@
 # Ticket: consolidate fastcollapse / fullprecisionslow into nofastcollapse
 
-**Status 2026-09-16: OPEN, ruled, NOT started. Blocked on the T1/T2/T3 merge** - it edits both
-syntax lines, which the T1 stream is editing concurrently, and the two must stay byte-identical.
+**Status 2026-09-16: COMPLETE and shipped (`38f0362`), after the T1/T2/T3 merge cleared the block
+on the two syntax lines.** `fastcollapse` is removed, the silent ineligibility skip is promoted to
+a caution, and `fullprecisionslow` is a clean break with no alias, all as ruled. The option surface
+check now lists `nofastcollapse` where `fastcollapse` and `fullprecisionslow` used to appear, and
+the full suite of 2026-09-16 passed every component with it in place.
+
+This header previously read "OPEN, ruled, NOT started" and was stale; the work had shipped the
+same day. Corrected 2026-09-16.
 
 ## What the audit found before the ruling
 
