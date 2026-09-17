@@ -1,4 +1,38 @@
-# Held for the author, 2026-09-13
+# Held for the author, 2026-09-13 — ALL RULED 2026-09-13, BUILT 2026-09-14
+
+**Every item in this file was ruled.** The rulings were taken the same day in multiple-choice
+batches and carried out the next: `6fe814d` ("Implement the author's 2026-09-13 rulings: degrees
+of freedom, the weighted Bayesian bootstrap, and six smaller calls") opens "Fourteen rulings were
+taken today in multiple-choice batches. This is the code half", and its siblings on 2026-09-14
+carry the rest - `1a52a8e` for the subgroup pre-treatment drop, `81b3ce2`/`cb1796b`/`b0a783f` for
+the ledger rows the degrees-of-freedom fix falsified, `64c03dd` for the two battery baselines it
+moved, `af3c47c` for the suite rows the subgroup fix needed.
+
+The file is kept as the record of what was put to the author and on what evidence. **The body
+below is unchanged from the day it was written**, so its own line "nothing in it has been decided"
+is true only of that morning. This header is the correction.
+
+Where the rulings are recorded, since they are not in this file: in the code and data themselves.
+`wooldid.ado:1258` carries `DF-1 (author ruling 2026-09-13)` with the full measurement for item 1;
+`degeneracy_expected.csv` writes the keep-as-pins decision into its rows as
+`PINNED_DEGENERATE (ruled 2026-09-13: keep as a pin ...)`, which `DEGENERACY.md` and the suite's
+own degeneracy warning both echo at a total of twelve pinned rows, the nine of item 8A among them; item 13's `esprelength(0)` condition is at `sthlp:1495`.
+
+**Verification status, stated honestly.** Items 1, 8 and 13 were confirmed directly in the code
+and data files on 2026-09-16. Items 4 and 11 rest on `6fe814d`'s message plus partial code
+evidence. The remainder rest on that commit message alone. A systematic pass over all thirteen
+implementations has NOT been run; the project has previously found ruled items quietly
+unimplemented after being declared done, so "the commit says so" is not the same as verified.
+
+**Why this header exists.** The file was committed once and never updated to record its own
+outcome, and on 2026-09-16 that stale opening line was read as evidence that thirteen decisions
+were still waiting on the author. Searching later commits for the internal item codes (`df_a`,
+`F058`, `T-FN1`) found nothing, because the rulings were recorded in prose - "degrees of freedom",
+"fastnose" - and never by code. A status line that is only true on the day it is written should
+say so.
+
+---
+
 
 Thirteen items reached during the 2026-09-12/13 assessment chunk (Stage A suite audit, the Stage B
 old-vs-new proof drafts, and the Stage C benchmark feasibility probes) where the work cannot go on
