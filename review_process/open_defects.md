@@ -40,29 +40,7 @@ judged by the stricter gates), then the changes that move no number, then the th
 
 ## OPEN — to address at the end
 
-**`si8demand` under-predicts the variable requirement, so the r(907) pre-emption misses
-(opened 2026-09-16).** Found incidentally by the guard-cost investigation
-(`guard_cost_2026-09-16.md`), not by anything that investigation was looking for.
-
-`wooldid.ado:1355` estimates the specification's variable demand as
-`si8cells*(1 + (contreat != "")) + si8ilev + si8tlev + 200` and, when that exceeds
-`c(maxvar)`, stops the run early with an expressive message naming the count and advising
-`fe()` plus a coarser `i`. The estimate is too low. On a plain 200-unit × 20-period panel with
-`i = unit` and `c(maxvar) = 5000` - not a pathological shape, just a small panel with a granular
-`i` - the block measured `cells=2004 ilev=200 tlev=20 demand=2424`, correctly did not fire at
-2424 < 5000, and the run then died on **Stata's own** `maxvar too small ... currently 5000`,
-r(907). So the true requirement exceeded the estimate by more than a factor of two, and the
-pre-emption delivered exactly the outcome it exists to prevent: Stata's generic message instead
-of wooldid's. Verified on a build carrying a single added `dis` and no logic change, so this is
-not an instrumentation artifact.
-
-**Partly mitigated, which is why this is not urgent.** `si8ilev` was 200, so the companion
-`> 100` caution fired immediately beforehand and did give the coarsen-`i` advice. The user is
-not left with nothing - they lose the named variable count and the early exit, not the guidance.
-
-Not chased further, under the pathological-data effort cap: the question of which term is
-undercounted (the `_i`-by-`_t` cell count against what `reghdfe`/`margins` actually materializes)
-wants its own measurement, and the fix may be a constant factor rather than a new formula.
+Nothing.
 
 The fifteen items the documentation review of 2026-09-10 turned up were ruled on 2026-09-11
 and all fifteen are built - see CLOSED below.
@@ -81,6 +59,33 @@ was ruled on 2026-09-11 and built the same day (see CLOSED).
 ---
 
 ## CLOSED
+
+**RETRACTED the same day: `si8demand`'s under-prediction is the documented design, not a defect
+(opened and closed 2026-09-16).** I opened this as a bug after watching a plain 200-unit x
+20-period panel measure `cells=2004 ilev=200 tlev=20 demand=2424` against `c(maxvar) = 5000`,
+stay silent, and then die on Stata's own generic `maxvar too small`. The measurement is correct
+and reproduced on a build carrying one added `dis`. **The conclusion was wrong.** The block's own
+comment states the intent outright (`wooldid.ado:1342-1345`):
+
+> *"The preflight uses the EXACT treated interaction-cell count (distinct (_i,_t) pairs, x2 under
+> contreat for the dose slopes), **a lower bound on the regression's variable demand**, so an
+> early refusal can only fire when the late r(907) was certain anyway."*
+
+`si8demand` is deliberately a LOWER bound. The design accepts false negatives - runs that will hit
+r(907) and are not pre-empted - in order to guarantee zero false positives, because a false
+positive would refuse a specification that would actually have estimated fine. Given that the
+guard's whole value is a better message for a failure that happens either way (a case-1 guard,
+see `guard_cost_2026-09-16.md`), trading recall for precision is the right way round: a spurious
+refusal is worse than a generic error message.
+
+So the observed miss is the design working as specified, not failing. **What the episode actually
+shows is how wide the gap can be** - the true requirement exceeded the lower bound by more than
+2x - which is worth knowing when judging what the guard is worth, and is recorded in the
+guard-cost report for that purpose. No code change is wanted.
+
+I should have read the eleven lines of comment above the block before filing. The same comment
+also explains the `safetyinput` gate (P6, author ruling 2026-09-07) that this session's rep-gate
+work extended.
 
 **A10's caution now tested on both branches - opened and closed 2026-09-16.** Closed by three
 message-assertion legs in `test_bootstrap_gates.do` (m7/m8/m9), not the two the opening entry
