@@ -442,3 +442,56 @@ with `att_it` on data where the collapse is active.
 
 **This wants a fresh ruling**, because the original one ("re-point rather than ledger the
 divergence") was made on the understanding that the straddle was the cause. It is not.
+
+### The remedy tested directly — it works, and that is the problem
+
+I predicted above that the re-point would not remove the divergence, on the reasoning that it
+keeps `att_it`. **That prediction was wrong, and testing it rather than trusting it is what
+found the real objection.** Running the ruled re-point against both staged builds:
+
+```
+REMEDY old rc=0 ncols=60   b11=+1.5a450f9448eb0X-001  b12=+1.5a450f9448eb0X-001  b13=-1.44ff367212400X-004
+REMEDY new rc=0 ncols=60   b11=+1.5a450f9448eb0X-001  b12=+1.5a450f9448eb0X-001  b13=-1.44ff367212400X-004
+```
+
+Bit-identical. The re-point does remove the divergence. **But it removes it by making the collapse
+a no-op**, which is the one thing this config exists to exercise. Cell occupancy on `adm_sub`:
+
+| `i` | rows per `(i,t)` cell | what the collapse does |
+|---|---|---|
+| `cohid` (as the config stands) | min 33, **mean 78.3**, max 109 | a real reduction - so `1eea605`'s "one row per cell" changes the numerical path, and the builds diverge |
+| `fips` (the ruled re-point) | min 0, **max 1** | **identity**. There is nothing to collapse |
+
+The data is one row per county-year, so an `i` at county level puts a single row in every
+cell. `fcol_sg`'s own comment states its purpose - "the collapse WITH subgroups() (author-ruled
+2026-09-01)" - and `test_fastcollapse.do` F8-F10 pin the screen, not the arithmetic. Re-pointing
+to `i = fips` would leave a config that still *looks* like it covers the collapse, costs 196x the
+runtime, and exercises an identity operation. That is worse than either alternative: it is silent
+lost coverage, and lost coverage that reads as green.
+
+### What this leaves
+
+The divergence is a genuine, intended, already-shipped numerical change - `1eea605` evaluating the
+margins calls on one row per cell - showing up on the only deck config that reaches content
+comparison with a cell-weighted estimand on data where the collapse actually reduces anything.
+Worst reldiff 2.70e-07.
+
+**There is direct precedent for ledgering exactly this class.** `ledger.csv` already carries
+`QR-sgjt-2,cont_sg,scalar,joint_pre_att_allsgssame,1e-9,"subgroup cell collapse class
+(2026-09-01 default; blessed in test/baseline 2026-09-05 ...)"`. A bounded row is the house
+convention (`A9-svmat-*` at 1e-6, `A17-part-b` at 1e-4) and bounds rather than blankets: a numeric
+`rtol` only explains a finite numeric difference within it, so a real regression still fails.
+
+Concretely, what a ledger entry would look like - **not applied, pending ruling**:
+
+| id | config | kind | pattern | rtol |
+|---|---|---|---|---|
+| `FCOL-attit-b` | `fcol_sg` | `mat` | `b` | `1e-6` |
+| `FCOL-attit-V` | `fcol_sg` | `mat` | `V` | `1e-6` |
+| `FCOL-attit-pw` | `fcol_sg` | `mat` | `pwsgs` | `1e-6` |
+| `FCOL-attit-res` | `fcol_sg` | `mat` | `wdidmainresults` | `1e-6` |
+| `FCOL-attit-sg` | `fcol_sg` | `mat` | `wdidsgresults_*` | `1e-6` |
+| `FCOL-attit-j` | `fcol_sg` | `scalar` | `joint_*att_it_allsgssame` | `1e-6` |
+
+with 1e-6 bounding the observed worst of 2.70e-07 with roughly a factor of four of headroom,
+matching the `A9-svmat-*` rows.
