@@ -759,7 +759,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * screened estimation sample - exactly the rows the construction reads. all missing flavors
   * fold to one sentinel value so all-missing (never-treated) units pass while mixed
   * missing/nonmissing within a unit fails
-  if "`safetyinput'" != "off" {
+  * Skipped inside a replication (`wdrepmode'), per the rule stated at the head of this
+  * program and already applied at the event-study block below: a replication is read for
+  * its coefficients, and this check cannot newly fail there. Under bootstrap re-id `i' is
+  * rebuilt as group(__wdbns, `i'), which is FINER than the original, so onset-constancy
+  * within the new `i' follows from constancy within the old one; under permonsetcohorts the
+  * rebuild makes `i' a function of the drawn onset, which the rep-0 assertion already pins.
+  * The observed run still performs the full check with its full message. Measured
+  * 2026-09-16: this block and the si8 block below are 5.3% of total runtime and never fired
+  * in ~168 replication-time executions across four engine configurations - see
+  * review_process/guard_cost_2026-09-16.md.
+  if "`safetyinput'" != "off" & "`wdrepmode'" != "1" {
     tempvar f13ttremin f13ttremax
     qui gegen double `f13ttremin' = min(cond(`ttre' >= ., -8.9884656743115785e+307, `ttre')) if `ifstatement', by(`i')
     qui gegen double `f13ttremax' = max(cond(`ttre' >= ., -8.9884656743115785e+307, `ttre')) if `ifstatement', by(`i')
@@ -1338,7 +1348,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * silently disabled this preflight for a user who never asked for safety(off) - and the
   * preflight is the difference between an early named error and a late r(907) mid-estimation.
   * The relaxation contreatwithin needs is of the estimability screens, not of a variable count.
-  if "`safetyinput'" != "off" {
+  * Skipped inside a replication for the reason given at the F13 block above: resampling
+  * cannot create more distinct cohorts than the data holds, so the implied variable count
+  * cannot exceed what rep 0 measured. Every si8* local is consumed inside this block, so
+  * gating it leaves nothing undefined downstream.
+  if "`safetyinput'" != "off" & "`wdrepmode'" != "1" {
     tempvar si8tag
     qui gegen byte `si8tag' = tag(`i') if `ifstatement'
     qui count if `si8tag' == 1
