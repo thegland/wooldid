@@ -164,6 +164,7 @@ applies precisely this gate at `ado:3816` for the same reason.
 | F13 / si8 on the *observed* run | fails (3): F13's failure is **silent**, not loud. Its own comment says rows of the same `i` with different onsets "are silently re-timed row by row ... with no error." A check against a silent wrong answer is never redundant with a later fail-safe. |
 | `permctl` / `bootctl` setup (26 sites) | fails (1) in relative terms: once per run against R replications. |
 | `wooldid_reltime`, `wooldid_fcol` top-of-program sites | not guards — load-bearing computation. |
+| `wooldid_amescreen` (10 sites, under `contreat()`) | **core estimability — the author's carve-out.** The code says so itself at the `mode(bycoh)` call site: "byCohort point-identification screen ... the pre-treatment-period sufficiency errors' sibling, one layer down: rows can exist while the baseline dose slope's identifying VARIATION does not." A point-identification screen is the paradigm case of a check too valuable to skip, and its failure is silent. |
 | `wooldid_validate` double-parse | not a guard for a rare thing. It is architecture: the worker parses `0`, then `wooldid_validate` re-parses it with a byte-identical syntax line, and that happens on every worker entry and so on every replication. Noted as the largest *structural* per-replication overhead, but outside the author's stated criteria — recorded, not recommended. |
 
 ## Incidental finding — now a ticket, not a footnote
@@ -190,9 +191,11 @@ recommendation below does not depend on any rarity estimate — it does not drop
 the grounds that its condition is rare. It removes a repetition of a check whose answer
 cannot have changed. That is a strictly weaker claim and a strictly safer change.
 
-## Recommendation
+## The one candidate — read with the measurement section that follows it
 
-One change, offered for the author's ruling and **not made**:
+One change, offered for the author's ruling, **not made, and on the measured numbers not
+recommended** (see "Measured cost of that change" below, which is why this section is not
+titled "Recommendation"):
 
 > Add `& "\`wdrepmode'" != "1"` to the `safetyinput != "off"` gates at `ado:762` and
 > `ado:1341`, matching `ado:3816` and the rule stated at `ado:533-537`. The same gate applies
@@ -204,7 +207,53 @@ What it buys and what it costs is measured in the next section. What it does **n
 any diagnostic on the observed run. Both checks still run at rep 0, on the user's real data,
 with their full messages.
 
-## Measured cost of that change
+## Measured cost of that change — and it does not pay for itself
 
-*(paired A/B timing — pending; the machine was running the full assessment suite at pool 8
-when this section was drafted, and a timing probe alongside it would be worthless)*
+Paired, alternating A/B/A/B (A = pristine, B = the two worker blocks gated on `wdrepmode`),
+500 units × 20 periods = 10,000 observations, `reps(50)`, one background Stata job present.
+
+| pass | analytic, safety on | analytic, `safety(off)` | bootstrap A (pristine) | bootstrap B (rep-gated) |
+|---|---|---|---|---|
+| 1 | 0.536 | 0.600 | 32.303 | 31.619 |
+| 2 | 0.587 | 1.223 | 29.200 | 34.179 |
+| 1 | 0.702 | 0.647 | — | — |
+| 2 | 0.675 | 0.628 | — | — |
+| **mean** | **0.625** | **0.775** | **30.75** | **32.90** |
+
+**Both comparisons come out with the wrong sign, and both are noise.** `safety(off)` — which
+disables strictly more work than the two blocks under study, and so bounds their cost from above —
+measured *slower* than safety-on. The rep-gated build measured *slower* than pristine. The same
+bootstrap configuration varies between 29.2 and 34.2 seconds run to run, about 17%, which swamps
+anything being looked for.
+
+That is consistent with an order-of-magnitude estimate rather than a surprise. Five `gegen` passes
+over 10,000 observations cost single-digit milliseconds each; at 51 worker entries that is roughly
+half a second against a 31-second run, near 1.5% — below this measurement's noise floor.
+
+### What that does to the recommendation
+
+**It downgrades it.** The repetition is real and measured — 22 and 21 executions at `reps(20)`,
+with zero firings across ~168 replication-time executions. But "real" and "worth changing" are
+different claims, and only the first is established. At the scale tested the change buys something
+close to 1.5%, which this harness cannot separate from noise, and every edit to a guard's gate
+carries the risk of disabling a check in a case nobody enumerated.
+
+So the honest statement of the finding is: **`wooldid` does not spend a meaningful share of a
+typical run proving things are fine.** Of 24 `safety()`-gated blocks 17 are free, the expensive
+ones are a handful of grouped passes, and the analytic guard share is not measurable above
+run-to-run variation. The author's worry — one unit spent to avoid fifty in a rare failure mode —
+does not appear to be realised anywhere in this package on the evidence gathered here.
+
+The rep-gate remains the only defensible candidate if the author wants one, and it becomes
+worth more as `N` and `reps` grow (the `gegen` cost scales with `N`, the repetition with `reps`),
+so a large panel with many replications is where it would show. It is **not** recommended on
+these numbers.
+
+### Honest limits of this measurement
+
+- One background Stata job was present throughout (the suite's `cert` component). The alternating
+  design cancels monotone drift but not variance, and the variance is what dominates here.
+- One panel size and one `reps` value. The effect is expected to grow with both, and was not
+  measured at a scale where it would be visible.
+- `safety(off)` bounds the two blocks from above rather than isolating them, so the analytic row
+  is an upper bound on all guard cost, not an attribution to these blocks.
