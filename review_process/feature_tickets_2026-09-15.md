@@ -365,3 +365,70 @@ checks were credited with catching failures they could not catch. This is the mi
 strong enough to report failures that are not there. Either way the fix is the same - establish what
 the instrument does on a case whose answer you already know. One run of `adm_base` through my
 harness at the start would have saved three rounds.
+
+---
+
+## `fcol_sg`: the authoritative reading, and why the ruled remedy does not address the cause (2026-09-16)
+
+The full assessment suite ran on 2026-09-16 (569 configs, pool 8) and gives the authoritative
+`oldnew` reading the section above deferred. **`fcol_sg` is the only DIFFERS in the deck**:
+
+```
+VERDICTS DIFFERS=1 EXPLAINED=414 MATCH=26 RC_EXPLAINED=128
+COMPARED 569 of 569        SUMMARY unexplained=10 ... stale_ledger=0 unscoped=0 prov_fail=0
+[fcol_sg] DIFFERS (+89 new-only objects)
+    UNEXPLAINED scalar joint_att_it_allsgssame      0.0006310002949791 -> 0.0006310003791699
+    UNEXPLAINED scalar joint_pre_att_it_allsgssame  0.6189793806821372 -> 0.6189793788099903
+    UNEXPLAINED matrix b   30 cells, worst reldiff 5.04e-08
+    UNEXPLAINED matrix V   30 cells, worst reldiff 1.40e-08
+    UNEXPLAINED matrix pwsgs 72 cells, worst reldiff 1.60e-07
+    UNEXPLAINED matrix wdidmainresults / wdidsgresults_1..4, worst reldiff 2.70e-07
+```
+
+So the divergence is real by the real comparer, not an artifact of the `%21x` harness that
+misjudged it before. The comparer applies a **global** `--rtol 1e-10` with no absolute floor plus
+per-config ledger rows; `fcol_sg` carries no ledger rows, and neither does the passing `adm_base`.
+
+**But the cause is not the straddle, and so the ruled re-point cannot fix it.** Three measurements:
+
+1. **The degeneracy guard never fires, on either build.** Running the config's exact command against
+   the staged `build_old` and `build_new`: both return rc 0, both `e(wdid_fcguard)` **empty**, both
+   `e(N) = 4162`. The premise behind re-pointing - that the straddle drives the two builds down
+   different collapse branches - is not what is happening. Both builds collapse, identically.
+
+2. **`adm_base` is the natural control and it passes.** Same dataset, same `adm_sub` prep, same
+   `subgroups(region)`, same `cluster(state)`, same `safety(off)`, same `i = cohid`, same straddle.
+   It differs from `fcol_sg` essentially in one respect: `fcol_sg` adds **`att_it`**. And every
+   differing object above is an `att_it` surface - `joint_att_it_*`, `pwsgs`, `wdidsgresults_*`.
+
+3. **The discriminating run settles it.** `att att_it` on `adm_sub` with **no `subgroups()` at all**,
+   so no straddle is in play anywhere:
+
+   | arm | old | new | verdict |
+   |---|---|---|---|
+   | A: `att att_it`, no subgroups | `+1.4b320b8e68b80X-001` | `+1.4b320b8828b20X-001` | **differs, ~1e-8** |
+   | B: `att` only, with subgroups (the `adm_base` shape) | `-1.2916b1e875280X-004` | `-1.2916b1e875200X-004` | agrees to the last hex digit |
+
+   A cell-weighted estimand diverges between the two builds with the straddle entirely removed;
+   the straddle with no cell-weighted estimand does not diverge.
+
+**Reading.** The cause is the numerical path for **cell-weighted estimands under the collapse** -
+consistent with `1eea605`, "fastcollapse: evaluate the margins calls on one row per cell", which is
+in HEAD and not in the published v1.3 that stages as `build_old`. That is a deliberate, already
+shipped optimization, and a change of this shape moves cell-weighted results in the last few digits
+by construction. `fcol_sg` is simply the only config in the deck that reaches content comparison
+with `att_it` on data where the collapse is active.
+
+**Two facts the author did not have when he ruled**, both of which bear on the remedy:
+
+- Re-pointing `i: cohid -> fips` removes the straddle but **keeps `att_it`**, so by measurement (1)
+  and (3) it should not remove the divergence. Tested directly rather than inferred; result recorded
+  below.
+- The re-point is not free. `i = fips` is **288 levels** on `adm_sub`, which trips wooldid's own
+  "> 100 distinct values" runtime caution, and at Stata's default `maxvar` of 5000 the re-pointed
+  command **fails outright with r(907)**. It only runs at all because `mkrun.py:137` sets
+  `maxvar 20000`. It is also far slower - the runtime cliff that same caution describes - and this
+  config runs twice per dual build.
+
+**This wants a fresh ruling**, because the original one ("re-point rather than ledger the
+divergence") was made on the understanding that the straddle was the cause. It is not.
