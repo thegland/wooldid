@@ -373,3 +373,91 @@ unusually well, and several entries rest on a comment recording an actual probe.
 was verified by deleting a guard and running the bad input**, except the two claims acted on
 above (`r(907)` observed twice today; `r(452)` reproduced directly). Confidence is recorded
 per guard in the workflow output; 9 of 24 are `medium` and one is `low`.
+
+---
+
+# Addendum 2: si8 in detail — what, how, when, and what it costs (author's question)
+
+## What it tests
+
+Two things sharing three counts, `wooldid.ado:1355-1378`:
+
+```stata
+gegen si8tag = tag(i)       if ifstatement            -> si8ilev   distinct cohort values
+gegen si8tag = tag(_i _t)   if ifstatement & _i != 0  -> si8cells  distinct TREATED (cohort x relative-period) cells
+gegen si8tag = tag(t)       if ifstatement            -> si8tlev   distinct calendar periods
+
+si8demand = si8cells*(1 + (contreat != "")) + si8ilev + si8tlev + 200
+```
+
+- **Arm (a), advice.** `si8ilev > 100` prints the granular-`i` runtime caution. Not a correctness
+  guard at all - it is performance guidance recommending `fe()` plus a coarser `i`.
+- **Arm (b), the guard.** `si8demand > c(maxvar)` errors 907 naming the required count.
+
+## How, and why that shape
+
+Counting is **tag-based, never `levelsof`** - deliberately, per the comment ("no level lists in
+macros - the huge-cardinality lesson"). A level list on a high-cardinality `i` would overflow the
+macro limit, which is precisely the situation this check exists to detect: the check would
+otherwise fail on the inputs it is for.
+
+`si8demand` is a deliberate **lower bound** (see the retraction in `open_defects.md`): it counts
+the exact treated interaction-cell count, doubled under `contreat()` for the dose slopes, plus
+slack of 200. The design accepts false negatives to guarantee zero false positives, "so an early
+refusal can only fire when the late r(907) was certain anyway".
+
+## When
+
+Between `_i`/`_t` construction (`ado:929`) and the estimation at `ado:1462` whose term it counts,
+`i.\`_i'#i.\`_t'#i.\`targetflag'`. It cannot run earlier (it needs `_i`/`_t`) and must precede the
+regression to be a preflight.
+
+Gated on `safetyinput != "off" & wdrepmode != "1"`. **Measured, all three rows:**
+
+| run | working `safety` | block entered | caution |
+|---|---|---|---|
+| default | on | 1 | printed |
+| `safety(off)` | off | **0** | absent |
+| `contreatwithin contreat() contreatcontrols(byCohort)` | **internally rewritten to off** | **1** | printed |
+
+The third row is P6 (author ruling 2026-09-07) working: the gate reads `safetyinput`, the value
+the USER typed, so the internal rewrite that `contreatwithin` performs does not silently drop the
+preflight. Only an explicit `safety(off)` does - and it suppresses **both** arms, so a user who
+turns safety off also stops being told that their `i` is what is making the run slow.
+
+## Cost
+
+Timers around each pass individually:
+
+| panel | total run | si8 block | share | `tag(i)` | `tag(_i _t)` | `tag(t)` |
+|---|---|---|---|---|---|---|
+| 10k rows, 8 cohorts | 0.691s | 0.016s | 2.3% | .006 | .005 | .005 |
+| 40k rows, 8 cohorts | 1.700s | 0.019s | 1.1% | .006 | .007 | .006 |
+| 40k rows, **200 cohorts** | **486.4s** | 0.020s | **0.004%** | .006 | .007 | .007 |
+| 160k rows, 8 cohorts | 5.683s | 0.035s | 0.6% | .010 | .014 | .011 |
+
+Two facts, and the second is the interesting one.
+
+**The block is nearly free and nearly constant.** 16x the rows raises it from 16ms to 35ms;
+25x the cohorts does not move it at all (gtools tagging is O(N), indifferent to cardinality).
+
+**And the run it guards is not.** Rows 2 and 3 hold the data fixed at 40,000 observations and
+change only the cohort count, 8 to 200: **1.70s to 486.42s, a factor of 286.** That is an
+empirical exponent of **1.76** on cell count (log 286 / log 25) - which independently confirms
+the caution's own stated "roughly its 1.3rd to 1.7th power", at the top of the quoted range.
+
+So **si8 is cheapest, as a share, exactly where it matters most**: on the granular-`i` run whose
+286x cliff it exists to warn about, the whole block costs four thousandths of one percent. Twenty
+milliseconds buys the user the one message that could have saved them eight minutes.
+
+## Consequence for the candidate list
+
+Addendum 1 named si8's arm (b) as the only candidate surviving the author's three criteria, on
+the grounds that it is case 1 and expensive. **The cost measurement withdraws it.** Since the
+rep-gate landed, the block runs once per run rather than once per replication, so dropping arm
+(b) would save the two passes it exclusively needs - `tag(_i _t)` and `tag(t)` - for about
+**11-25 ms per run**. That is not worth a code change, and it is emphatically not worth it on the
+granular-`i` runs where those milliseconds are 0.004% of the total.
+
+**Nothing in this package now survives the author's filter.** The guard surface is cheap, and
+what little it costs is spent where it buys the most.
