@@ -364,7 +364,7 @@ the copy.) {ul:The reported quantity is not linear in the dose:}
 {it:margins} checks against {it:e(N)}. {ul:Unverified rather than known-broken:} {it:customvce()}, refused pending measurement. {p_end}
 
 {phang2}Everything else is eligible, including several combinations that are easy to assume are not. {it:contreat()} is eligible on the default {it:dydx} scale and under
-{it:contreatelasticitytype(dyex)}, with every flavour of {it:contreatcontrols()} and with {it:ccnoabsorb}. Poisson estimation on the default (log) reporting scale is eligible,
+{it:contreatelasticitytype(dyex)}, with every flavour of {it:contreatcontrols()} and with {it:ccnoabsorb}. Poisson estimation is eligible,
 including with {it:contreat()} and with {it:contreatelasticitytype(dyex)}. So are {it:fastnose}, {it:jointtests}, {it:adversarial} and {it:altmethod_adversarial}, {it:esfixedbaseperiod} and {it:esrelativeto()},
 {it:pretrendpower()}, {it:histogramcohorteffects}, {it:summarystats}, {it:gteffects} (which {it:wooldid} refuses alongside {it:contreat()} for a separate reason), {it:makeplots}
 and {it:saveplots()}, and the replications of {cmd:permute()} and {cmd:bootstrap()}, which are evaluated collapsed like any other run. {p_end}
@@ -1202,9 +1202,7 @@ working value and are relaxed by that rewrite whether or not you asked for it. {
 {pstd}
 {bf:What {it:safety(off)} does {ul:not} buy.} About forty-five refusals stand whatever it is set to, and they
 are the ones that matter most: every option-combination and domain screen, the missing-package check, the
-{it:poisson} non-negativity requirement, every {it:fastnose} incompatibility, and the two cell-collapse
-refusals whose own message says it in as many words:
-{it:"No safety(off) escape: these are measured wrong answers, not risks."}
+{it:poisson} non-negativity requirement, and every {it:fastnose} incompatibility.
 That is the line the option draws. {it:safety(off)} means {it:"I accept a risk"}; it has never meant
 {it:"give me numbers I have been shown are wrong"}, and no future narrowing of the option
 should move a check across that line. {p_end}
