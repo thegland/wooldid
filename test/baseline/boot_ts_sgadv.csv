@@ -527,6 +527,10 @@ mat|pwsgs|2|3|+1.01a68e687e792X+018
 mat|pwsgs|2|4|+1.0000000000000X-002
 mat|pwsgs|2|5|+1.6c5f6b848fd92X-005
 mat|pwsgs|2|6|+1.6c5f81d44d804X-005
+matnames|boot_advWobs|1x3|r1|att_a0 att_s1_a0 att_s2_a0
+mat|boot_advWobs|1|1|+1.15a81b90b19d7X+006
+mat|boot_advWobs|1|2|+1.5129affde43bbX+005
+mat|boot_advWobs|1|3|+1.bbc06a2bfdb65X+006
 matnames|boot_advW|10x3|r1 r2 r3 r4 r5 r6 r7 r8 r9 r10|att_a0 att_s1_a0 att_s2_a0
 mat|boot_advW|1|1|+1.8b159e473607fX+000
 mat|boot_advW|1|2|+1.49a57d11bffa2X+000
@@ -558,6 +562,10 @@ mat|boot_advW|9|3|+1.a730e37c7a265X-00b
 mat|boot_advW|10|1|+1.04a8d7c06d96aX+003
 mat|boot_advW|10|2|+1.b36bdc6943c95X+002
 mat|boot_advW|10|3|+1.39b9a45dd22bcX+004
+matnames|boot_jointWobs|1x3|r1|att att_s1 att_s2
+mat|boot_jointWobs|1|1|+1.7a4e348beef58X-001
+mat|boot_jointWobs|1|2|+1.d185f4899782dX+003
+mat|boot_jointWobs|1|3|+1.28e84d2925ef4X+002
 matnames|boot_jointW|10x3|r1 r2 r3 r4 r5 r6 r7 r8 r9 r10|att att_s1 att_s2
 mat|boot_jointW|1|1|+1.52e7f6fb5ffacX+003
 mat|boot_jointW|1|2|+1.81a9858880093X+004

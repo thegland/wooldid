@@ -28,8 +28,9 @@ macro|wdid_fcskip|unconditionalse
 macro|wdid_fcol|0
 macro|wdid_estimands|att   
 macro|wdid_vcespec|vce(robust)
-macro|vcetype|Robust
-macro|vce|robust
+macro|vce_stage1|robust
+macro|vcetype|Unconditional
+macro|vce|unconditional
 macro|wdid_vblocks|att
 macro|wdid_vcvstate|analytic-blocks
 macro|estimate_type|pooled_reference_period

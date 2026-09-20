@@ -3,6 +3,7 @@ varlist|i ttre sg ife t w eff y ycount
 scalar|df_r|+1.3c00000000000X+006
 scalar|numpre_att|+1.0000000000000X+001
 scalar|numpre_att_it|+1.0000000000000X+001
+scalar|gt_ncontained|+1.7700000000000X+008
 scalar|escomp_refN|+1.c200000000000X+007
 scalar|escomp_refnunits|+1.9000000000000X+005
 scalar|escomp_refncoh|+1.0000000000000X+001
@@ -19,11 +20,11 @@ scalar|r2_within|+1.1b2b894798dd6X-001
 scalar|r2_withinadj|+1.b5da3e2fc19d5X-003
 scalar|rmse|+1.f447d1a2c45e0X-002
 scalar|rss|+1.d7a4d8b935943X+006
-scalar|N_dropped|+0.0000000000000X-3ff
 scalar|wdid_fcncell|+1.8c00000000000X+008
 scalar|level|+1.7c00000000000X+006
 scalar|N_clust|+1.4000000000000X+006
 scalar|wdid_vblockn|+1.8000000000000X+003
+scalar|N_dropped|+0.0000000000000X-3ff
 macro|wdid_replayv|2
 macro|wdid_esrel|-1
 macro|wdid_espre|2
