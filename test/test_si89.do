@@ -131,9 +131,11 @@ estimates clear
 matrix drop _all
 clear mata
 set maxvar 2500
-* 200 treated cohorts x (5 post cells + 1 pooled-reference cell) = 1200 cells;
-* demand = 1200*2 + 400 + 10 + 200 = 3010 > 2500 with real margin
-mkgran 400
+* 300 treated cohorts x 5 post cells = 1500 treated cohort-by-period terms;
+* demand = 1500*2 + 200 = 3200 > 2500 with real margin. the preflight charges two
+* variables per treated cell plus a flat 200, and adds the i and t level counts only
+* on the regress-based paths (unconditionalse, customvce), which this arm is not.
+mkgran 600
 qui log using si89_t5.txt, text replace name(si89)
 cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(basic)
 qui log close si89
