@@ -1,1 +1,5 @@
 .DS_Store
+
+# battery / suite scratch run directories and stray test artifacts
+test/run*/
+test/*_ES.dta

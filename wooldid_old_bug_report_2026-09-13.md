@@ -1,5 +1,12 @@
 # Old-wooldid bug attribution report - full assessment run, 2026-09-15
 
+> **Note on the reproduction scripts.** This report cites
+> `review_process/assessment_2026-09-13/repro/` as the reproductions of record. Those
+> scripts have been removed from the working tree; git still holds them, and the run they
+> reproduce was itself superseded by the 559-config dual-build run. To read one:
+> `git log --diff-filter=D --oneline -- review_process/assessment_2026-09-13/` then
+> `git show <commit>^:review_process/assessment_2026-09-13/<path>`.
+
 **Claim this report makes:** every old-vs-new difference observed in the 2026-09-15
 full assessment run traces to a documented, verified bugfix in old wooldid, or to a documented
 intended change ruled by the author. Each part below gives, per family: what old wooldid did
