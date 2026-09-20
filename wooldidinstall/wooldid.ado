@@ -1798,7 +1798,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * all-zero covariance and continues with the standard errors it actually has.
   if "`fastnose'" == "" {
     wooldid_amescreen , mode(vzero) r1fired(`amescrub') contreat(`contreat') clusvars(`amescrubclus') latflag(`=cond("`latticevar'" != "", "1", "0")')
-    if r(vzero) == 1 {
+    local wdvz  = r(vzero)
+    local wdvzx = r(vzexact)
+    if `wdvz' == 1 {
       * the "see the caution above" pointer keys on whether R1 ACTUALLY FIRED, not on
       * whether contreat() was specified: R1 needs a cluster-type VCE, so on a bare-robust
       * contreat run the old text sent the reader to a caution that was never printed, then
@@ -1813,7 +1815,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       local wdr4alt "bootstrap() or permute()"
       if "`amescrubclus'" != "" local wdr4alt "impvalues dispersion inference, `wdr4alt', or a finer-than-cell clustering"
       if "`amescrubclus'" == "" & "`robust'" == "" & "`customvce'" == "" & "`unconditionalse'" == "" local wdr4alt "`wdr4alt', or conditional robust standard errors"
-      dis as text "Caution: the estimation command returned an all-zero variance-covariance matrix, so no standard error in this run is identified. The reported estimates stand; every standard error, test statistic, p-value and interval is missing. This is a property of the specification, not a numerical accident: `=cond(`amescrub' == 1, "see the cell-containment caution above for the mechanism and for the alternatives", "the alternatives are")' (`wdr4alt')."
+      * GTE-3: both clauses are stated per case. On an exactly zero covariance the wording is
+      * unchanged, byte for byte, because there the standard errors really are missing. Under
+      * the new residue floor both would be false as written: the matrix is not all zeros, and
+      * the standard errors are not missing - they print as numbers of order 1e-15.
+      local wdr4noun "an all-zero variance-covariance matrix"
+      local wdr4st "every standard error, test statistic, p-value and interval is missing"
+      if `wdvzx' == 0 {
+        local wdr4noun "a variance-covariance matrix that is cancellation residue rather than zeros"
+        local wdr4st "every standard error, test statistic, p-value and interval below is that residue rather than an estimate, printing as a number of order 1e-15 with a p-value of order 1e-45 instead of as a missing value; read none of them"
+      }
+      dis as text "Caution: the estimation command returned `wdr4noun', so no standard error in this run is identified. The reported estimates stand; `wdr4st'. This is a property of the specification, not a numerical accident: `=cond(`amescrub' == 1, "see the cell-containment caution above for the mechanism and for the alternatives", "the alternatives are")' (`wdr4alt')."
     }
   }
 
@@ -13950,19 +13962,58 @@ version 16.0
   }
   if "`mode'" == "vzero" {
     local vzero 0
+    local vzexact 0
     tempname vchk
     cap matrix `vchk' = e(V)
     if _rc == 0 {
-      mata: st_local("vzero", strofreal(max(abs(st_matrix(st_local("vchk")))) == 0))
+      * GTE-3 (author-ruled 2026-09-20: ship, with a conservative band). A FLOOR, not an
+      * exact-zero test. A cluster-robust sandwich that is rank-deficient in EVERY direction
+      * returns cancellation RESIDUE rather than zeros - measured max|e(V)| = 7.3e-29 on a
+      * two-cluster design whose reported standard errors were 4e-16 and whose p-values were
+      * of order 1e-45, and on which this screen stayed silent. The floor is relative to the
+      * fit's own largest coefficient, which makes it equivariant in the units of y: measured
+      * invariant to 8 significant figures across 18 orders of y-scale. An absolute floor is
+      * not, which is why the anchor is there.
+      *
+      * WHERE THE BAND CAME FROM. Write r = sqrt(max|e(V)|) / max|e(b)|; the screen fires iff
+      * r <= 1e-12. The 135 stage-1 fits of the regression battery run from r = 2.3e-04
+      * (cont_ss, cont_sg) to 5.6e-01, median 7.0e-02 - so the nearest healthy run sits 8.4
+      * ORDERS above the band. Adversarial search for a healthy design closer to it failed:
+      * two clusters with ordinary noise gives 3.7e-02, three clusters 3.5e-03, a regressor
+      * rescaled by 1e+/-12 gives 0.36 and 0.021 (b and se move together, so the anchor fails
+      * safe). The smallest r reachable on any fit that still carries a residual is 2.6e-09,
+      * and that is a model reproducing its own outcome to nine significant digits, floored by
+      * reghdfe's convergence tolerance rather than by the data. The motivating residue case
+      * sits 2.4 orders BELOW the band.
+      *
+      * KNOWN LIMIT, measured rather than papered over. The residue is accumulated rounding,
+      * so on this degeneracy it grows linearly in the row count - r is about 8.0e-18 * N -
+      * and crosses the band at roughly 1.2e5 rows. A K=1 two-cluster design larger than that
+      * escapes the screen and is not cautioned. No CONSTANT band repairs this: the exact-fit
+      * floor falls as about 2.0e-7/sqrt(N) while residue rises linearly, and the two classes
+      * meet near 8.5e6 rows, above which no fixed tolerance separates them at all. An N-aware
+      * floor is the shape of that remedy; it is deliberately not built here.
+      mata: st_local("vzero", strofreal(max(abs(st_matrix(st_local("vchk")))) <= (1e-12*wooldid_vzanchor("e(b)"))^2))
+      mata: st_local("vzexact", strofreal(max(abs(st_matrix(st_local("vchk")))) == 0))
+    }
+    * GTE-3: an exactly zero covariance keeps the wording it has always had, because there the
+    * standard errors really are missing. A run caught by the new floor gets the extra sentence
+    * instead: on that run they are NOT missing, they are rounding noise that prints as a number.
+    local vznoun "an all-zero variance-covariance matrix"
+    local vzres
+    if `vzero' & `vzexact' == 0 {
+      local vznoun "a variance-covariance matrix that is cancellation residue rather than zeros"
+      local vzres " No entry of it reaches 1e-12 of the largest coefficient once both are put on the standard-error scale, so what is printed below is rounding noise of order 1e-15, with p-values of order 1e-45 to match, rather than the missing values an exactly zero covariance produces. Read none of them."
     }
     * the caution defers to the more precise cell-containment caution when that one
     * already displayed (r1fired); detection is still returned for the refit logic
     if `vzero' & "`r1fired'" != "1" {
-      if "`contreat'" != "" & "`clusvars'" != "" dis as text "Caution: estimation returned an all-zero variance-covariance matrix. The issue is likely related to continuous treatment effect estimation coupled with use of analytic clustered SEs, with clusters occuring at a high level of aggregation. Consider switching to use of bootstrap SEs, IM p-values, or randomization inference if finer clustering levels are non-viable."
-      else if "`clusvars'" != "" dis as text "Caution: estimation returned an all-zero variance-covariance matrix. This usually reflects a degenerate clustering (very few clusters, or clusters at a high level of aggregation relative to the design). Consider switching to bootstrap SEs, IM p-values, or randomization inference."
-      else dis as text "Caution: estimation returned an all-zero variance-covariance matrix. Nothing in this run was clustered, so this is not a clustering problem: Stata replaces a variance matrix it judges nonsymmetric or highly singular with zeros, which is what a near-singular design does to the sandwich estimator.`=cond("`latflag'" == "1", " With lattice() the usual cause is treated cohort-by-period cells that hold too few distinct values of the continuous treatment once the lattice splits them: a cell-by-bin piece with no more observations than it has parameters is fitted exactly, so its residuals are identically zero and no residual-based variance estimator can see it.", "")' Bootstrap SEs and randomization inference (permute()) do not use this matrix; impvalues does not either, but it needs a cluster variable.`=cond("`latflag'" == "1", " A coarser lattice (fewer bins), a base-period lattice type, or a coarser i also restores it.", "")'"
+      if "`contreat'" != "" & "`clusvars'" != "" dis as text "Caution: estimation returned `vznoun'. The issue is likely related to continuous treatment effect estimation coupled with use of analytic clustered SEs, with clusters occuring at a high level of aggregation. Consider switching to use of bootstrap SEs, IM p-values, or randomization inference if finer clustering levels are non-viable.`vzres'"
+      else if "`clusvars'" != "" dis as text "Caution: estimation returned `vznoun'. This usually reflects a degenerate clustering (very few clusters, or clusters at a high level of aggregation relative to the design). Consider switching to bootstrap SEs, IM p-values, or randomization inference.`vzres'"
+      else dis as text "Caution: estimation returned `vznoun'. Nothing in this run was clustered, so this is not a clustering problem: Stata replaces a variance matrix it judges nonsymmetric or highly singular with zeros, which is what a near-singular design does to the sandwich estimator.`=cond("`latflag'" == "1", " With lattice() the usual cause is treated cohort-by-period cells that hold too few distinct values of the continuous treatment once the lattice splits them: a cell-by-bin piece with no more observations than it has parameters is fitted exactly, so its residuals are identically zero and no residual-based variance estimator can see it.", "")' Bootstrap SEs and randomization inference (permute()) do not use this matrix; impvalues does not either, but it needs a cluster variable.`=cond("`latflag'" == "1", " A coarser lattice (fewer bins), a base-period lattice type, or a coarser i also restores it.", "")'`vzres'"
     }
     return scalar vzero = `vzero'
+    return scalar vzexact = `vzexact'
     exit
   }
   dis as error "wooldid_amescreen: unknown mode `mode'"
@@ -14429,6 +14480,35 @@ end
 *** of wooldid_worker to conserve compiled-size headroom). the cap mata drop makes the
 *** file safely re-loadable within a session (two-build harnesses, dev reloads)
 cap mata: mata drop wooldid_gtx()
+mata:
+// GTE-3 (author-ruled 2026-09-20). The anchor for the vzero screen's relative floor: the
+// largest FINITE absolute entry of the named matrix, or 0 when there is none.
+//
+// A named function rather than an inline expression over a temporary. Mata's max() over a
+// vector holding a missing returns missing, and "x <= ." is true for every finite x, so an
+// unfiltered anchor would make the screen fire on EVERY run whose e(b) carries a missing.
+// The filter is element-wise on vec(b), not select() on the matrix, because select() on a
+// matrix selects whole rows or columns and would silently do the wrong thing.
+//
+// Returning 0 on an empty or all-missing selection is deliberate: the predicate then
+// collapses to max|V| <= 0, which is exactly the test this screen used to be, so the new
+// screen is a strict SUPERSET of the old one and nothing that fired before stops firing.
+// A named function also leaves nothing in the user's Mata session - a "cap mata: mata drop"
+// on a following line does not run if the assignment aborts mid-statement. Same reasoning as
+// wooldid_Mtmp (D-3).
+real scalar wooldid_vzanchor(string scalar mname)
+{
+  real matrix b
+  real colvector v
+  b = st_matrix(mname)
+  if (rows(b)*cols(b) == 0) return(0)
+  v = abs(vec(b))
+  v = select(v, v :< .)
+  if (rows(v) == 0) return(0)
+  return(max(v))
+}
+end
+
 mata:
 void wooldid_gtx(string scalar gtiv, string scalar gttv, string scalar gttf,
                  string scalar rawname, string scalar sedname, real scalar gtmint,
