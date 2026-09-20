@@ -253,14 +253,39 @@ else {
   global pf = $pf + 1
 }
 
-* B2: thin variation (two units, dose spread ~1e-7) -> fragility caution, run completes
+* B2: thin variation inside the CAUTION band -> fragility caution, run completes.
+* Retargeted 2026-09-20. FIX-2 R2 (author ruling, built in 1c09efa) moved the byCohort hard
+* leg from "reference-pool sd EXACTLY 0" to "sd <= 1e-5 * sd(dose)", so the old 1e-7 spread
+* here is now a refusal and no longer certifies a caution. Measured on that build: at spread
+* 1e-4 the reference-pool sd is 5.27134e-5 against a sample sd of 0.920508, a ratio of
+* 5.72655e-5 - 5.7x above the hard cut and 17x below the caution ceiling of 1e-3, so the arm
+* has margin on both sides and does not move if tau is retuned a little. The run is still
+* deliberately near-degenerate, so it completes with an all-zero VCE and missing SEs; rc 0
+* with the caution printed is the contract being certified. The refusal side is B2b.
 mkdemo
 drop if i == 2 & unit > 2
-qui replace dose = 1 + 1e-7*(unit == 2) if i == 2
+qui replace dose = 1 + 1e-4*(unit == 2) if i == 2
 cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(byCohort) esf espre(2) espost(2)
 if _rc == 0 dis "B2 ok"
 else {
   dis as error "B2 FAIL: rc=" _rc " (want 0 with the fragility caution)"
+  global pf = $pf + 1
+}
+
+* B2b (FIX-2 R2, author ruling 2026-09-20): a reference-pool sd BELOW 1e-5 of the sample sd is
+* a refusal, not a caution. The old predicate required the sd to be exactly 0 and so let this
+* whole band through, reporting the deterministically collinear ame with text blaming regtol()
+* - false there, since the answer is not noisy. B1 fires at sd exactly 0, so this fixture, kept
+* verbatim at the spread B2 used to carry, is the only arm that tells the two predicates apart.
+* Note dose is a float: 1 + 1e-7 stores as 1 + 1.1920929e-7 (one ulp), giving a reference-pool
+* sd of 6.2829e-8, a ratio of 6.83e-8 - inside the refusal band by a factor of about 135.
+mkdemo
+drop if i == 2 & unit > 2
+qui replace dose = 1 + 1e-7*(unit == 2) if i == 2
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(byCohort) esf espre(2) espost(2)
+if _rc == 459 dis "B2b ok"
+else {
+  dis as error "B2b FAIL: rc=" _rc " (want 459: sd/sd(dose) = 6.8e-8 is inside the 1e-5 hard band)"
   global pf = $pf + 1
 }
 

@@ -12742,7 +12742,32 @@ version 16.0
             * interacted term is often innocuous (a lattice cell, most obviously), which is
             * why the caution beside it says so. safety(off) still bypasses the whole
             * screen, since the gate sits at the call site.
-            if "`cc'" == "untreatedZero" local bigcatastrophe 1
+            * DEF-2 SCOPE CORRECTION (2026-09-20). As first written this line read
+            *     if "`cc'" == "untreatedZero" local bigcatastrophe 1
+            * which made EVERY dropped interacted term fatal under untreatedZero, not only a
+            * dropped dose slope. That is wider than the ruling above, and it inverted the
+            * screen: a run that OBEYS untreatedZero's premise - zero dose in the untreated
+            * periods - has structurally zero dose columns in its pre-treatment treated cells,
+            * those columns are dropped as a matter of arithmetic rather than of rank, and the
+            * run was refused; the same command with a NONZERO pre-period dose, which breaks
+            * that premise, was allowed through. It also contradicted sthlp:889, which promises
+            * that expected zero doses under untreatedZero do not trigger this, and the R6
+            * header below, which asserts targetflag scoping exempts them (it does not under
+            * esfixedbaseperiod, where those cells carry 1o.targetflag). Found by
+            * test/test_amescreen.do scenario C2, which shipped red in the same commit.
+            *
+            * Narrowed to the ruling's own words - a dropped treated-cell DOSE SLOPE - by two
+            * conditions. (a) the dropped token really is a dose term, using the #-terminated
+            * idiom of the R6 loop below so that dose does not match dose2 and so that poly
+            * terms still match. (b) the flagged cell actually carries a nonzero dose, so the
+            * drop is a rank failure and not a structurally zero column. UNIT CHANGE: by this
+            * point `problem_t' has been converted to relative-horizon units, so `+ `min_t' + 1'
+            * puts it back into internal _t units - the same undo the poisson separation count
+            * above performs, and getting its direction wrong would silently invert the test.
+            if "`cc'" == "untreatedZero" & (strpos("``testbvar''#", "c.`contreat'#") != 0 | strpos("``testbvar''#", "co.`contreat'#") != 0) {
+              qui count if `_i' == `problem_i' & `_t' == `problem_t' + `min_t' + 1 & `targetflag' == 1 & `contreat' != 0 & `esamp' & `ifstatement'
+              if r(N) > 0 local bigcatastrophe 1
+            }
             local catastrophe = `catastrophe' + 1
           }
         }

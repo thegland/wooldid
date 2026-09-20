@@ -155,3 +155,111 @@ This touches the AMESE R4 message ruled on 2026-08-24. The evidence is the froze
 Carlo in `fixprop/proposals_LAT.md` s0.3, which puts the conditional robust standard error at
 0.017 of the estimator's own conditional sampling sd on the design that prints this caution.
 It is one local (`wdr4alt`) if the author prefers the old order.
+
+## The R11 `configs_ext` follow-up — CLOSED, nothing to change
+
+`1c09efa`'s message named a loose end: `configs_ext.csv` carries eight `contreatcontrols`
+rows — `byTime` (x3), `byTreated` (x2), `byTtre` (x1) and two compound spellings — whose
+`rc_new` might now be 459, because R11's `ccref` screen is unconditional, is **not** gated on
+`safety()`, and is deliberately not carved out under `contreatwithin`. Six of the eight carry
+`safety(off)` and two carry `contreatwithin`, so none of the usual exemptions would have
+saved them.
+
+Run on the current build through the suite's own runner (`mkrun.py` on a filtered
+`configs_r11.csv`, both shards clean):
+
+| config | recorded `rc_new` | observed |
+|---|---|---|
+| ext_cont_ext_controls_bytreated | 0 | **0** |
+| ext_cont_ext_controls_byttre | 0 | **0** |
+| ext_cont_ext_controls_cohort_time | 0 | **0** |
+| ext_cont_ext_ccnoabsorb | 0 | **0** |
+| ext_char_within_bytime_off | 0 | **0** |
+| ext_cov10_cont_within_vary | 0 | **0** |
+| ext_val_untreatedzero_combo | 198 | **198** |
+| ext_val_within_bytime_safety | 198 | **198** |
+
+Eight of eight match. R11 fires on none of them, because the reference pools in
+`continuous_control_compact`, `continuous_control_dense` and `binary_balanced` all carry
+usable dose variation — which is what the screen asks about. **No `configs_ext.csv` edit is
+needed and no ledger row is owed.** The two 198s never reach R11 at all; they are refused
+earlier, at validation.
+
+## R5 / DEF-2 — SCOPE CORRECTION (2026-09-20), a regression `1c09efa` shipped
+
+**Correction to the R5 row above.** DEF-2's "engines align down" was built as a single line in
+`wooldid_worker`'s multicollinearity block:
+
+```stata
+if "`cc'" == "untreatedZero" local bigcatastrophe 1
+```
+
+That makes **every** dropped interacted term fatal under `untreatedZero`. The ruling, and the
+comment directly above the line, say a dropped treated-cell **dose slope**. The gap inverted the
+screen:
+
+| run | dose in treated pre-periods | `1c09efa` |
+|---|---|---|
+| **obeys** `untreatedZero`'s premise | zero, as documented | **r(322), refused** |
+| **breaks** that premise | nonzero | rc 0, allowed |
+
+Honouring `untreatedZero` makes the pre-period dose columns structurally zero; they are dropped
+as arithmetic, not as a rank failure, and the guard could not tell the difference. It fires on
+any compliant `untreatedZero` run that requests pre-treatment horizons (`att`-only and
+post-only runs are silent). It also contradicts `sthlp:889` ("expected zero doses in untreated
+periods ... do not trigger this") and the R6 header below it, which claims `targetflag` scoping
+exempts those cells — untrue under `esfixedbaseperiod`, where they carry `1o.targetflag`.
+
+**Attribution.** `f8b4a64` rc 0; `1c09efa` rc 322; removing only that line from the current
+build returns rc 0 with `ame b = -.03330222, se = .06590857`, bit-identical to `f8b4a64`.
+
+**The fix** narrows to the ruling's own words: (a) the dropped token is a dose term, via the
+`#`-terminated idiom the R6 loop uses, and (b) the flagged cell carries a nonzero dose.
+
+**Verified in both directions, because half of it is the dangerous half.** Un-refusing the
+compliant case proves nothing on its own — a screen narrowed until it fires on nothing is a
+silent revert of the ruling, and no battery config is on this path.
+
+* **Positives all hold.** 22 `untreatedZero` arms on the adversary's own `d8`/`d9` fixtures
+  (recovered, and their `datasignature` re-verified against a rebuild from `mkdata2.do`/
+  `mkdata3.do`) return the identical rc on the narrowed build, on `62b121c` and on `1c09efa`:
+  r(322) everywhere, on `customvce(ols)`, `customvce(robust)`, `unconditionalse robust` and
+  `contreatpoly(2)` — precisely the arms the ruling was written about. `safety(off)` reproduces
+  the documented truths exactly (d8 `att` 2.254205175163; d9 `att` 1.314259241731,
+  `ame` 0.729333333333, the documented 0.066 deficit).
+* **Condition (b) is the whole discriminator**, measured per flagged cell rather than argued:
+  the refusing cells carry 40 of 40 rows with nonzero dose; C2's 60 released cells carry 0. All
+  60 of C2's tokens *are* dose terms, so condition (a) alone would have refused it too.
+* **The unit conversion is load-bearing and points the right way.** `d9` hangs on one token; had
+  the count written `+ `min_t'` rather than `+ `min_t' + 1`, it would have read 0 and released a
+  case the ruling requires refused.
+* **`test_amescreen.do`: AMESCREEN_ALL_PASS**, 16 of 16.
+
+**A second class is released, named here rather than left to be discovered.** A dropped
+treated-cell slope on an **interactive control** (not the dose) under `untreatedZero` now
+returns rc 0 with the generic caution, where `1c09efa` refused. This is inside the ruling's
+words, and measured on the pre-ruling build `c1d8979` those arms are rc 0 — so the correction
+*restores* prior behaviour rather than inventing new behaviour, and `1c09efa`'s refusal there
+was collateral. If the author wants interactive-control slopes fatal too, condition (a) is the
+one line to widen.
+
+## Two pre-existing defects found while verifying the above — NOT fixed here
+
+1. **`lattice()` with `verbose` off disables the DEF-2 test entirely.** The outer gate reads
+   `wordcountproblem <= 3 | "`lattice'" == "" | "`verbose'" != ""`, so with a lattice active and
+   `verbose` off the `> 3` branch never runs. Measured identically on both builds: `d8`/`d9` +
+   `untreatedZero customvce(robust) lattice(byCohort 2)` returns rc 0 with exactly the DEF-2 and
+   DEF-3 outputs the guard exists to refuse. **R5's "every engine refuses where the default one
+   does" therefore does not hold under `lattice()`.**
+2. **`verbose` changes a return code.** The same command is rc 0 without `verbose` and r(322)
+   with it. A diagnostic option should not decide whether a run errors.
+
+Both predate the scope correction and are untouched by it.
+
+## Process: what let this ship
+
+`1c09efa` and `e2b5fad` were verified on the regression battery alone. The battery captures
+`e()`, `rc` and varlists for its own 59 configs and **never executes a `test_*.do`**, so a red
+certification suite survived two commits and one "does anything remain open" audit. `test/`
+holds 43 targeted cert suites and `test/suite/run_full.sh cert` runs all of them in about 23
+minutes. It should have been run at both checkpoints, and is run now.
