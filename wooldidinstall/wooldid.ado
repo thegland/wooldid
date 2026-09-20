@@ -6467,7 +6467,7 @@ end
 cap prog drop wooldid_bootctl
 prog def wooldid_bootctl
 version 16.0
-*** F-boot (plan: review_process/bootstrap_plan.md): the bootstrap option SCREEN. It runs
+*** the bootstrap option SCREEN. It runs
 *** no loop, calls no Mata and returns nothing - the engine is wooldid_bootrun and the
 *** rewiring is wooldid_bootwire. The deep checks live here rather than in wooldid_validate
 *** for compiled-size headroom (wooldid_validate is within ~1 KB of the per-program

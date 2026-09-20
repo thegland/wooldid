@@ -619,8 +619,7 @@ is why those families never print 0. {p_end}
 {pstd}
 {bf:The floor is a property of the run, not of the data. Raising the draw count is the only thing that lowers it, and the two engines differ on what they will accept: {cmd:bootstrap()} imposes no minimum at all ({cmd:reps()} need only be positive, and a run is refused only when no replication completes), while {cmd:permute()} requires {cmd:permreps()} to be at least 20 and additionally refuses a run in which fewer than {it:max(20, half the requested draws)} complete. A {cmd:permexact} enumeration is exempt from that completion floor, because the shares stay exact over whatever completed and what incompleteness costs there is resolution.} {cmd:reps()} and {cmd:permreps()} both print a
 caution when the floor they imply sits above .05, naming the number, because at that setting no result the
-run can produce would be conventionally significant. Raising the draw count is the only fix; neither engine
-has a hard minimum, since a handful of draws is a legitimate smoke test. {p_end}
+run can produce would be conventionally significant. Raising the draw count is the only fix. {p_end}
 
 {marker enginediff}{...}
 {dlgtab:Why {cmd:bootstrap()} and {cmd:permute()} do not behave identically}

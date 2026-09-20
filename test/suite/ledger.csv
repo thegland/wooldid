@@ -26,7 +26,6 @@ A2-B2d,adm_base,scalar,*_iqr,,B2: same
 A2-B2e,ext_*,scalar,*_iqr,,B2: same
 A3-B4,impv,scalar,ll,,B4 4de841d: old clobbered ll with an IM CI bound under impvalues
 A3-B4b,trig_imdegen,scalar,ll,,B4: same
-A3-B4c,adm_impv,scalar,ll,,B4: same
 B4-ext-1,ext_bin_ext_impvalues,scalar,ll,,B4: same
 B4-ext-2,ext_cov10_cont_impvalues,scalar,ll,,B4: same
 B4-real,real_impv,scalar,ll,,"old-bug-fixed. B4 4de841d: old clobbered ll with an IM CI bound under impvalues - e(ll) 0.4926707586868402 where the model's log-likelihood is -1183.321716535096. As A3-B4, on the realistic state-year impvalues config."
@@ -454,9 +453,6 @@ B21-bien_aw-w,bien_aw,mat,wdidmainresults,1e-6,old-bug-fixed. B21 3cb0c41: as B2
 B21-real_aw-b,real_aw,mat,b,1e-6,"old-bug-fixed. B21 3cb0c41 float w_att* weight copies, as B21-bien_aw-b, on the realistic state-year panel with dispersed lognormal aw (pop). BISECTED - the same four-site patch reproduces HEAD BIT-EXACTLY (b[1 2] +1.7a1fb064dda00X-007 against v1.3's +1.7a1fb221ed800X-007). Measured ceiling 7.02e-08: the wider weight dispersion costs about one more decimal than the biennial fixture and sits right at the 2^-24 float-epsilon scale the mechanism predicts."
 B21-real_aw-V,real_aw,mat,V,1e-6,old-bug-fixed. B21 3cb0c41: as B21-real_aw-b (measured ceiling 1.27e-08).
 B21-real_aw-w,real_aw,mat,wdidmainresults,1e-6,old-bug-fixed. B21 3cb0c41: as B21-real_aw-b (measured ceiling 7.57e-08).
-A9-adm-b,adm_impv,mat,b,1e-5,svmat class on the realistic admin panel; ceiling 7.4e-9 (2026-09-11)
-A9-adm-V,adm_impv,mat,V,1e-5,svmat class; ceiling 7.2e-7 (2026-09-11)
-A9-adm-w,adm_impv,mat,wdidmainresults,1e-4,svmat class; IM t/p cells tail-amplify (ceiling 1.66e-5)
 A9-real_impv-b,real_impv,mat,b,1e-6,"old-bug-fixed. svmat 6267522: v1.3 read the per-cluster IM estimates back with float svmat and HEAD uses svmat double; under impvalues e(b), e(V) and e(wdidmainresults) are posted from the IM-derived results, which is why they shift. Same model on both builds (k 862, rank 860, df_a 19). Measured ceiling 2.20e-08; bound is the A9-svmat-* class bound. Class attribution rests on the documented svmat family and the impv / adm_impv / trig_imdegen precedents - not bisected (16 svmat sites)."
 A9-real_impv-V,real_impv,mat,V,1e-6,old-bug-fixed. svmat 6267522: as A9-real_impv-b (measured ceiling 5.15e-08).
 A9-real_impv-w,real_impv,mat,wdidmainresults,1e-6,old-bug-fixed. svmat 6267522: as A9-real_impv-b; the IM t/p/interval cells tail-amplify (measured ceiling 7.44e-08).
