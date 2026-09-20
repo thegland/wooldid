@@ -12689,15 +12689,62 @@ version 16.0
         local wordcountproblem = wordcount("`checkifpresent'")
 
         * are there observations falling in the _i _t cell associated with the missing coefficient? if not, this isn't a problem
-        * note: this regrettably is a bit computationally intensive -- and its result is
-        * consumed only through the r(N) gate below, whose branches ALL require
-        * wordcount <= 3, no lattice, or verbose: when the flagged term is an interaction
-        * (wordcount > 3) with a lattice active and verbose off, nothing can consume the
-        * count, so skip the full-data pass entirely (lattice drops there are expected)
-        if `wordcountproblem' <= 3 | "`lattice'" == "" | "`verbose'" != "" {
+        * note: this regrettably is a bit computationally intensive. Three things consume it:
+        * the wordcount <= 3 dropped-dummy error, the DISPLAY branch further down (which is
+        * gated on no lattice or verbose, to keep it from spamming lattice runs), and - since
+        * the author ruling of 2026-09-20 - the DEF-2 REFUSAL, which is gated on untreatedZero
+        * ALONE. So the full-data pass is skipped only where nothing can consume it: an
+        * interaction term (wordcount > 3), with a lattice active, verbose off, and not
+        * untreatedZero. Lattice drops are expected there, which is what the display gate is
+        * for. The untreatedZero clause is what makes this pass run on a lattice + untreatedZero
+        * run; that is the cost of letting the refusal out, and it is scoped to that case.
+        if `wordcountproblem' <= 3 | "`lattice'" == "" | "`verbose'" != "" | "`cc'" == "untreatedZero" {
         qui count if `_i' == `problem_i' & `_t' == `problem_t' & `targetflag' == 1 & `w' > 0 & `ifstatement'
         if r(N) > 0 {
           * if we proceeded to this point, then the omitted object has associated observations, so this is an actual problem!
+
+          * DEF-2 (R5, author ruling 2026-09-20 "engines align down"): under untreatedZero a
+          * dropped treated-cell SLOPE is fatal rather than advisory, because every such term
+          * is cell-interacted and a dropped slope means the within-cell ame estimand is not
+          * identified.
+          *
+          * HOISTED OUT OF THE DISPLAY BRANCH on the author's ruling of 2026-09-20: a hard
+          * refusal does not belong inside an anti-spam device. As built it sat inside the
+          * "wordcount > 3" branch, whose `lattice == "" | verbose' gate exists only to stop a
+          * meaningless caution repeating on lattice runs, where dropped interacted terms are
+          * routine. The refusal inherited that gate, so under any lattice() with verbose off
+          * the DEF-2 test did not run at all - measured, d8 and d9 under lattice(byCohort 2)
+          * returned rc 0 with exactly the outputs the guard exists to refuse, and adding
+          * verbose flipped the same command to r(322). A diagnostic option decided whether a
+          * run errored. The advisory keeps its gate below; only the refusal comes out.
+          *
+          * A second gain from the move: `problem_t' is still in internal _t units here, the
+          * same units the count on the line above uses. The previous siting was after the
+          * display branch's conversion to relative horizons and so had to undo it with
+          * `+ `min_t' + 1'; getting that direction wrong would have silently released d9, a
+          * case the ruling requires refused. There is now no conversion to get wrong.
+          *
+          * WHICH SLOPES. A dose slope, and - author ruling 2026-09-20 - an interactive-control
+          * slope too. `interlist' holds the demeaned tempvars that actually enter the model,
+          * which is what the dropped token carries; `interactivecontrols' holds the user's
+          * raw names and would not match. The #-terminated idiom is the R6 loop's, so that
+          * dose does not match dose2 and contreatpoly terms still match.
+          *
+          * AND ONLY IN A LIVE CELL. The cell must carry a nonzero dose, so that the drop is a
+          * rank failure rather than a structurally zero column. Without this, honouring
+          * untreatedZero - zero dose in the untreated periods - was itself refused, while
+          * breaking that premise was allowed through.
+          if `wordcountproblem' > 3 & "`cc'" == "untreatedZero" & "`contreat'" != "" {
+            local wdd2live 0
+            if strpos("``testbvar''#", "c.`contreat'#") != 0 | strpos("``testbvar''#", "co.`contreat'#") != 0 local wdd2live 1
+            foreach wdd2ic of local interlist {
+              if strpos("``testbvar''#", "c.`wdd2ic'#") != 0 | strpos("``testbvar''#", "co.`wdd2ic'#") != 0 local wdd2live 1
+            }
+            if `wdd2live' {
+              qui count if `_i' == `problem_i' & `_t' == `problem_t' & `targetflag' == 1 & `contreat' != 0 & `esamp' & `ifstatement'
+              if r(N) > 0 local bigcatastrophe 1
+            }
+          }
 
           if `wordcountproblem' <= 3 {
             * UNIT CHANGE on this line: `problem_t' arrives in internal _t units (parsed
@@ -12754,32 +12801,6 @@ version 16.0
             * interacted term is often innocuous (a lattice cell, most obviously), which is
             * why the caution beside it says so. safety(off) still bypasses the whole
             * screen, since the gate sits at the call site.
-            * DEF-2 SCOPE CORRECTION (2026-09-20). As first written this line read
-            *     if "`cc'" == "untreatedZero" local bigcatastrophe 1
-            * which made EVERY dropped interacted term fatal under untreatedZero, not only a
-            * dropped dose slope. That is wider than the ruling above, and it inverted the
-            * screen: a run that OBEYS untreatedZero's premise - zero dose in the untreated
-            * periods - has structurally zero dose columns in its pre-treatment treated cells,
-            * those columns are dropped as a matter of arithmetic rather than of rank, and the
-            * run was refused; the same command with a NONZERO pre-period dose, which breaks
-            * that premise, was allowed through. It also contradicted sthlp:889, which promises
-            * that expected zero doses under untreatedZero do not trigger this, and the R6
-            * header below, which asserts targetflag scoping exempts them (it does not under
-            * esfixedbaseperiod, where those cells carry 1o.targetflag). Found by
-            * test/test_amescreen.do scenario C2, which shipped red in the same commit.
-            *
-            * Narrowed to the ruling's own words - a dropped treated-cell DOSE SLOPE - by two
-            * conditions. (a) the dropped token really is a dose term, using the #-terminated
-            * idiom of the R6 loop below so that dose does not match dose2 and so that poly
-            * terms still match. (b) the flagged cell actually carries a nonzero dose, so the
-            * drop is a rank failure and not a structurally zero column. UNIT CHANGE: by this
-            * point `problem_t' has been converted to relative-horizon units, so `+ `min_t' + 1'
-            * puts it back into internal _t units - the same undo the poisson separation count
-            * above performs, and getting its direction wrong would silently invert the test.
-            if "`cc'" == "untreatedZero" & (strpos("``testbvar''#", "c.`contreat'#") != 0 | strpos("``testbvar''#", "co.`contreat'#") != 0) {
-              qui count if `_i' == `problem_i' & `_t' == `problem_t' + `min_t' + 1 & `targetflag' == 1 & `contreat' != 0 & `esamp' & `ifstatement'
-              if r(N) > 0 local bigcatastrophe 1
-            }
             local catastrophe = `catastrophe' + 1
           }
         }

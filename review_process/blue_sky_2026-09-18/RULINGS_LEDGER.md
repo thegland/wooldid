@@ -263,3 +263,51 @@ Both predate the scope correction and are untouched by it.
 certification suite survived two commits and one "does anything remain open" audit. `test/`
 holds 43 targeted cert suites and `test/suite/run_full.sh cert` runs all of them in about 23
 minutes. It should have been run at both checkpoints, and is run now.
+
+## DEF-2 out of the anti-spam gate, and interactive controls back in (ruled 2026-09-20)
+
+Two author rulings on the two items the scope correction left open.
+
+**1. "You shouldn't put a hard gate in an unrelated anti-spam device. Let's fix that."** The
+DEF-2 refusal sat inside the `wordcountproblem > 3` display branch, whose
+`"`lattice'" == "" | "`verbose'" == "verbose"` gate exists only to stop a meaningless caution
+repeating on lattice runs, where dropped interacted terms are routine. The refusal inherited
+that gate. The refusal is now its own branch, gated on `untreatedZero` alone; the advisory
+keeps its gate. The full-data `count` above is widened for `untreatedZero` only, so no other
+run pays, and the comment justifying that skip is corrected, since it no longer holds.
+
+A second gain from the move: at the new site `problem_t` is still in internal `_t` units, the
+same units the count on the line above uses, so the `+ `min_t' + 1` undo of the display
+branch's relative-horizon conversion **is deleted outright**. That was the step whose
+direction, if reversed, silently released `d9`.
+
+**2. "We can widen things for that untreatedZero + interactive controls case."** A dropped
+treated-cell slope on an interactive control is fatal again. The match is against `interlist`,
+the demeaned tempvars that actually enter the model — `interactivecontrols` holds the user's
+raw names and would never appear in a dropped token, so matching on it would have made the
+widening a silent no-op.
+
+### Measured, targeted (no full battery for this change, on the author's instruction)
+
+| arm | before | after | meaning |
+|---|---|---|---|
+| `d8` untreatedZero customvce(robust) **lattice(byCohort 2)** | rc 0 | **322** | the fix |
+| `d9` same | rc 0 | **322** | the fix |
+| `d8` same **+ verbose** | 322 | 322 | `verbose` no longer decides the rc |
+| `d8`/`d9`, no lattice, customvce(robust)/customvce(ols)/unconditionalse/default | 322 | **322** | hoist broke nothing |
+| `dz` untreatedZero + interactivecontrols(z) | rc 0 | **322** | ruling 2 |
+| **`d6` healthy + lattice(byCohort 2)** | rc 0 | **rc 0** | no false positive |
+| **`d6` healthy + lattice(all 3)** | rc 0 | **rc 0** | no false positive |
+| `d6` healthy, no lattice | rc 0 | rc 0 | unchanged |
+| `d6` compliant untreatedZero + esf pre-horizons (the C2 shape) | rc 0 | **rc 0** | the scope correction still holds |
+
+The false-positive question raised when this was proposed — a dropped dose slope under a
+lattice may be innocuous, since the remaining bins can still identify the slope — is answered
+on the fixtures available: **zero false refusals** across three healthy lattice arms. That is
+not a proof over all lattice designs, and it is stated as what it is.
+
+### Battery: predicted IDENTICAL, 0 groups, before the compare
+
+Both `untreatedZero` battery configs (`cont_uz`, `cont_uz_ss`) specify `safety(off)`, and the
+screen's whole call site is gated `if "`safety'" != "off"`, so neither reaches it. No battery
+config pairs `untreatedZero` with `lattice()`. The change therefore cannot move a battery cell.
