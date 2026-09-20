@@ -114,3 +114,14 @@ Stated once, not re-litigated:
 - `fixprop/proposals_*.md` — fix proposals by mechanism, under adversarial review
 - `repro/` — the six coordinator runs, and `repro/agents/` with 1,168 agent do-files by cell
   (8 MB; delete it if you do not want it in the repo — nothing else depends on it)
+
+## findings_raw.json
+
+The full, untruncated record of all 223 findings - claim, expected, observed, refuter note
+and lens detail - which the published reports abbreviate. **Join on `uid`, not on `id`.**
+Nine `id` values were assigned independently by different agents and name unrelated
+findings on different surfaces; `SK-01`, for instance, covers a subgroup-degeneracy guard,
+a semielasticity averaging defect and a cell-collapse read. Keying on `id` silently
+conflates them, which is the defect the published reports were regenerated to remove.
+`uid` is the `id` where it is unique and `id__1`, `id__2`, ... where it is not, so prose
+references to an unambiguous id still resolve.

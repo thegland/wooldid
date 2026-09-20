@@ -283,19 +283,22 @@ every standard run) lives only where it was written down.
 compares every ruled item against the shipped code found twelve items quietly unimplemented after
 they had been declared complete twice.
 
-## Open items recorded here because they are recorded nowhere else
+## Open items
 
-Not lessons; unclosed observations that would otherwise be lost with the files that held them.
-Each carries the condition that retires it.
+None. The three that this file was created to carry are closed.
 
-1. **`review_process/blue_sky_2026-09-18/findings_raw.json` is the pre-correction copy.** It has
-   no unique-id field and repeats nine ids, so a join keyed on `id` reproduces the defect the
-   published reports were regenerated to remove. It is kept because it holds the only untruncated
-   claim, expected, observed and refuter text. *Retire when the file carries a header saying so,
-   or is replaced by the unique-keyed dataset.*
+`findings_raw.json` no longer needs a warning: every record now carries a unique `uid`, and the
+campaign README says to join on it rather than on `id`. Nine `id` values had been assigned
+independently by different agents to unrelated findings on different surfaces, so a join keyed
+on `id` conflated them - the defect the published reports were regenerated to remove. 223
+records, 223 unique keys.
 
-Two further items were found and closed rather than recorded: the help's permutation paragraph
-correctly required `permreps()` of at least 20 and then closed by saying neither engine has a
-hard minimum, which the ado contradicts at its own refusal - the trailing clause is gone; and the
-evidence README asserting that nothing in its directory was tracked by git, when all twenty files
-were, went with that directory.
+The help's permutation-minimum contradiction is fixed, and the evidence README that claimed its
+own directory was untracked went with that directory.
+
+Two standing notices from the suite were reviewed and accepted rather than actioned: the
+options whose clean-rc coverage rests on a single fixture, and the twelve degeneracy rows
+pinned as deliberately visible degenerate surfaces. Both are reported by the harness as
+information, not as defects, and both were accepted on that basis - the twelve pinned rows were
+NOT re-derived against the screens that changed afterwards, so if one of those screens is
+revisited, that pin list is the thing to re-read first.
