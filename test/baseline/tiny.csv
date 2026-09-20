@@ -29,7 +29,6 @@ macro|wdid_espre|1
 macro|wdid_suppressjt|suppressjointtests
 macro|wdid_cetype|dydx
 macro|wdid_fcol|1
-macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_vcespec|cluster(i)
 macro|vcetype|Robust
@@ -118,3 +117,4 @@ mat|V_es_att|2|2|+1.2a8e3e5051ff1X-005
 matnames|b_es_att|1x2|r1|pre1 post0
 mat|b_es_att|1|1|+1.c6ab7ba111110X-003
 mat|b_es_att|1|2|+1.247c94d488884X+000
+files|

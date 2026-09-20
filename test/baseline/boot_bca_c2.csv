@@ -4,12 +4,14 @@ scalar|boot_jk_completed|+1.2000000000000X+003
 scalar|boot_reps|+1.4000000000000X+003
 scalar|boot_completed|+1.4000000000000X+003
 scalar|boot_failed|+0.0000000000000X-3ff
+scalar|boot_novar|+0.0000000000000X-3ff
 scalar|boot_level|+1.7c00000000000X+006
 scalar|df_r_analytic|+1.0000000000000X+003
 scalar|boot_df|+1.0000000000000X+003
 scalar|df_r|+1.0000000000000X+003
 scalar|boot_N_V|+1.4000000000000X+003
 scalar|boot_v_posted|+1.0000000000000X+000
+scalar|boot_sesmall|+0.0000000000000X-3ff
 scalar|N_clust|+1.2000000000000X+003
 scalar|level|+1.7c00000000000X+006
 scalar|wdid_fcncell|+1.9400000000000X+006
@@ -49,7 +51,6 @@ macro|estimate_type|pooled_reference_period
 macro|wdid_vblocks|att
 macro|clustvar|c2
 macro|wdid_estimands|att   
-macro|wdid_semielas|dydx
 macro|wdid_fcol|1
 macro|wdid_cetype|dydx
 macro|wdid_suppressjt|suppressjointtests

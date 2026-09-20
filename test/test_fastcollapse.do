@@ -36,7 +36,8 @@
 * F5 every ineligible option runs normally and skips the collapse, while a subgroups() run
 *    and a bare contreat() run collapse
 * F6 the off-switch reaches permute and bootstrap replications
-* F7 poisson (dydx scale) collapses and agrees; poisexpresults does not collapse
+* F7 poisson (dydx scale) collapses and agrees. Its poisexpresults half went with that
+*    option on 2026-09-20; no poisson reporting scale is uncollapsible any more
 * F8 REGRESSION: the subgroups()+fe()+jointtests command that hard-errored r(503) under the
 *    collapse now completes collapsed (safety(off) => the screen prints its caution)
 * F9 THE SUBGROUP SCREEN: a healthy subgroup run collapses with an empty e(wdid_fcguard); a
@@ -217,10 +218,15 @@ local F4D3 `ADMIN'
 local F4V3 y cohid year ttre
 local F4O3 att robust unconditionalse safety(off)
 local F4W3 unconditionalse
-local F4D4 `ADMIN'
-local F4V4 y cohid year ttre
-local F4O4 att robust semielasticity safety(off)
-local F4W4 semielasticity
+* Gate 4 held semielasticity until 2026-09-20, when that option was removed outright
+* (author ruling). lattice() takes its place: it is one of the seven surviving ineligible
+* reasons and, like contreatpoly(>1), it is a contreat read that is NOT linear in the dose
+* inside a cell. contreatpoly stays at its default of 1 here so that lattice() is the FIRST
+* token in fcbad and the caution test below matches on it.
+local F4D4 `REPO'/test/data/dta_cont.dta
+local F4V4 y i t ttre
+local F4O4 att contreat(intensity) contreatcontrols(basic) lattice(all 3) cluster(i) safety(off)
+local F4W4 lattice()
 * 2026-09-06 (F062): impvalues left the ineligible list - the cluster variable joins the
 * cell key - so an impvalues run collapses (see F15); the gate count below keeps its shape
 * with customvce() as gate 5's stand-in
@@ -228,11 +234,11 @@ local F4D5 `ADMIN'
 local F4V5 y cohid year ttre
 local F4O5 att customvce(cluster state) safety(off)
 local F4W5 customvce()
-local F4D6 `ADMIN'
-local F4V6 y cohid year ttre
-local F4O6 att robust poisson poisexpresults safety(off)
-local F4W6 poisexpresults
-forval g = 1/6 {
+* Gate 6 held poisexpresults, removed 2026-09-20 with semielasticity. The remaining
+* unhosted reasons (makecfxplots, contreat-in-controls) are all contreat reads too, and
+* gates 1 and 4 already cover that family, so this leg now runs five gates rather than
+* padding with a third contreat variant.
+forval g = 1/5 {
   use "`F4D`g''", clear
   qui log using fcol_f4.txt, text replace name(fc)
   cap noi wooldid `F4V`g'' , `F4O`g''
@@ -246,9 +252,9 @@ forval g = 1/6 {
   local r`g' = strpos(`"`lg'"', "Specify nofastcollapse to silence this") > 0
 }
 cap erase fcol_f4.txt
-di "F4_rcs contreatpoly=" `g1' " interactive=" `g2' " uncond=" `g3' " semielas=" `g4' " customvce=" `g5' " poisexp=" `g6' " (want 0 x6)"
-di "F4_fcol=" `q1' "/" `q2' "/" `q3' "/" `q4' "/" `q5' "/" `q6' " (want 0 x6)  caution=" `c1' "/" `c2' "/" `c3' "/" `c4' "/" `c5' "/" `c6' " remedy=" `r1' "/" `r2' "/" `r3' "/" `r4' "/" `r5' "/" `r6' " (want 1 x6)"
-forval g = 1/6 {
+di "F4_rcs contreatpoly=" `g1' " interactive=" `g2' " uncond=" `g3' " lattice=" `g4' " customvce=" `g5' " (want 0 x5)"
+di "F4_fcol=" `q1' "/" `q2' "/" `q3' "/" `q4' "/" `q5' " (want 0 x5)  caution=" `c1' "/" `c2' "/" `c3' "/" `c4' "/" `c5' " remedy=" `r1' "/" `r2' "/" `r3' "/" `r4' "/" `r5' " (want 1 x5)"
+forval g = 1/5 {
   if `g`g'' != 0 {
     di as error "F4 FAIL: gate `g' (`F4W`g'') returned rc `g`g'' (want 0) - an ineligible request must run, not error"
     local ++fails
@@ -323,25 +329,23 @@ use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att robust unconditionalse
 local s3 = _rc
 local f3 = e(wdid_fcol)
-use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att robust semielasticity
+* option 4 followed F4's gate 4 on 2026-09-20: semielasticity was removed, and lattice()
+* took its place as the ineligible contreat read. The poisexpresults leg that stood between
+* this one and customvce() went with it, so this loop runs five options rather than six.
+use "`REPO'/test/data/dta_cont.dta", clear
+cap qui wooldid y i t ttre, att contreat(intensity) contreatcontrols(basic) lattice(all 3) cluster(i)
 local s4 = _rc
 local f4 = e(wdid_fcol)
 use "`ADMIN'", clear
-* 2026-09-06 (F062): impvalues now collapses (see F15); poisexpresults is the silent skip here
-cap qui wooldid y cohid year ttre, att robust poisson poisexpresults
+cap qui wooldid y cohid year ttre, att customvce(cluster state)
 local s5 = _rc
 local f5 = e(wdid_fcol)
-use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att customvce(cluster state)
-local s6 = _rc
-local f6 = e(wdid_fcol)
 use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att cluster(state) subgroups(region) safety(off)
 local s7 = _rc
 local f7 = e(wdid_fcol)
-di "F5_skip rcs=" `s1' "/" `s2' "/" `s3' "/" `s4' "/" `s5' "/" `s6' "/" `s7' "  fcol=" `f1' "/" `f2' "/" `f3' "/" `f4' "/" `f5' "/" `f6' "/" `f7' " (want 0 x6 then 1)"
-forval k = 1/6 {
+di "F5_skip rcs=" `s1' "/" `s2' "/" `s3' "/" `s4' "/" `s5' "/" `s7' "  fcol=" `f1' "/" `f2' "/" `f3' "/" `f4' "/" `f5' "/" `f7' " (want 0 x5 then 1)"
+forval k = 1/5 {
   if `s`k'' != 0 {
     di as error "F5 FAIL: ineligible option `k' errored (rc `s`k'') - it must run normally and skip the collapse"
     local ++fails
@@ -389,8 +393,13 @@ if `p1' != 0 | `p2' != 0 | `b1' != 0 | `b2' != 0 {
   local ++fails
 }
 
-* ---- F7: poisson on the dydx (log) scale collapses and agrees; the exponentiated
-* reporting scale is not linear in the coefficients and does not collapse.
+* ---- F7: poisson on the dydx (log) scale collapses and agrees. This leg used to carry a
+* second half asserting that poisexpresults - the exponentiated reporting scale, which is
+* NOT linear in the coefficients - ran uncollapsed and disclosed the skip. That option was
+* removed on 2026-09-20 (author ruling), and with it the only poisson reporting scale the
+* collapse could not reproduce: every margins call wooldid now makes under poisson is a
+* plain dydx or dyex of the linear index. What remains is the agreement check, which is the
+* half that was always load-bearing.
 use "`ADMIN'", clear
 qui wooldid ycount cohid year ttre, att poisson robust esprelength(2) espostlength(2) nofastcollapse
 matrix bP = e(b)
@@ -401,27 +410,9 @@ local rp2 = _rc
 matrix bQ = e(b)
 local fcolQ = e(wdid_fcol)
 local dpq = mreldif(bP, bQ)
-use "`ADMIN'", clear
-cap qui wooldid ycount cohid year ttre, att poisson poisexpresults robust
-local rp3 = _rc
-local fcolR = e(wdid_fcol)
-use "`ADMIN'", clear
-qui log using fcol_x.txt, text replace name(fc)
-cap noi wooldid ycount cohid year ttre, att poisson poisexpresults robust safety(off)
-local rp4 = _rc
-qui log close fc
-local lg = fileread("fcol_x.txt")
-local lg = subinstr(`"`lg'"', char(13), "", .)
-local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-local rp5 = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: poisexpresults") > 0
-cap erase fcol_x.txt
-di "F7_poisson_rc=" `rp1' "/" `rp2' " fcol=" `fcolQ' " mreldif=" `dpq' " poisexp_rc=" `rp3' " poisexp_fcol=" `fcolR' " poisexp_safetyoff_rc=" `rp4' " caution=" `rp5'
+di "F7_poisson_rc=" `rp1' "/" `rp2' " fcol=" `fcolQ' " mreldif=" `dpq'
 if `rp1' != 0 | `rp2' != 0 | `fcolQ' != 1 | `dpq' > 1e-8 {
   di as error "F7 FAIL: poisson dydx rc `rp1'/`rp2', fcol `fcolQ', mreldif=`dpq'"
-  local ++fails
-}
-if `rp3' != 0 | `fcolR' != 0 | `rp4' != 0 | !`rp5' {
-  di as error "F7 FAIL: poisexpresults rc `rp3' fcol `fcolR' safety(off) rc `rp4' caution `rp5' - it must run uncollapsed and say so, and safety(off) must not silence it"
   local ++fails
 }
 
@@ -890,30 +881,23 @@ if `ra5' != 0 | `ra5u' != 0 | `fa5' != 1 | "`ga5'" != "" | `da5b' > 1e-8 | `da5v
 * ---- F11b: EVERY NEW GATE TOKEN SKIPS, UNDER THE CAUTION F4 ASSERTS. Each of the gated
 * reads must run normally, report e(wdid_fcol)=0, and - because it then takes the SAME
 * code path as nofastcollapse - reproduce it BIT-IDENTICALLY (mreldif exactly 0, as measured
-* 2026-09-02). Anything else means the gate leaked. The six tokens: contreatpoly(>1),
-* contreatelasticitytype(eyex), contreatelasticitytype(eydx), lattice(), poisson+eydx (poisson
-* with dyex is eligible since 2026-09-06 - F032 - so eydx under poisson stands in for it), and
-* the contreat variable inside controls(). eyex/eydx divide by the prediction, so they run on
-* y_positive; gate-off, they were measured at 1.1e-5..2.9e-4 relative wrong.
+* 2026-09-02). Anything else means the gate leaked. THREE tokens remain: contreatpoly(>1),
+* lattice(), and the contreat variable inside controls(). The other three legs this loop used
+* to run were all contreatelasticitytype(eyex)/(eydx) - on their own, and the poisson+eydx
+* BS-6 leg - and those values were removed on 2026-09-20 (author ruling). They were the only
+* legs that divided by the prediction, which is why they alone needed y_positive, and the
+* poisson leg was the only one whose contract was "collapses" rather than "skips"; with it
+* gone every surviving leg is a plain gated read and the loop has no special case left.
 local BOPT1 att contreat(dose_vary) contreatcontrols(basic) contreatpoly(2) robust esprelength(2) espostlength(2)
-local BOPT2 att contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(eyex) robust esprelength(2) espostlength(2)
-local BOPT3 att contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(eydx) robust esprelength(2) espostlength(2)
-local BOPT4 att contreat(dose_vary) contreatcontrols(basic) lattice(all 2) robust esprelength(2) espostlength(2)
-local BOPT5 att poisson contreat(dose_vary) contreatcontrols(basic) contreatelasticitytype(eydx) robust esprelength(2) espostlength(2)
-local BOPT6 att att_it contreat(dose_vary) contreatcontrols(basic) controls(c.dose_vary#c.x1) cluster(person_id) esprelength(2) espostlength(2)
+local BOPT2 att contreat(dose_vary) contreatcontrols(basic) lattice(all 2) robust esprelength(2) espostlength(2)
+local BOPT3 att att_it contreat(dose_vary) contreatcontrols(basic) controls(c.dose_vary#c.x1) cluster(person_id) esprelength(2) espostlength(2)
 local BY1 y_cont_vary
-local BY2 y_positive
-local BY3 y_positive
-local BY4 y_cont_vary
-local BY5 y_count
-local BY6 y_cont_vary
+local BY2 y_cont_vary
+local BY3 y_cont_vary
 local BNM1 contreatpoly(2)
-local BNM2 eyex
-local BNM3 eydx
-local BNM4 lattice()
-local BNM5 poisson+eydx
-local BNM6 contreat-in-controls
-forval k = 1/6 {
+local BNM2 lattice()
+local BNM3 contreat-in-controls
+forval k = 1/3 {
   * dropped first, so a run that posted nothing is a loud mreldif error rather than a
   * silent comparison of the previous iteration's matrices
   cap matrix drop b11b V11b M11b b11bu V11bu M11bu
@@ -931,21 +915,11 @@ forval k = 1/6 {
   cap matrix V11bu = e(V)
   cap matrix M11bu = e(wdidmainresults)
   local bd`k' = max(mreldif(b11b, b11bu), mreldif(V11b, V11bu), mreldif(M11b, M11bu))
-  * BS-6 (author ruling 2026-09-07): leg 5, poisson + contreatelasticitytype(eydx), is no
-  * longer a gated read. Under poisson without poisexpresults the operator is remapped to
-  * dydx on the xb scale - where a plain marginal effect already IS the semi-elasticity -
-  * so the read became linear in the coefficients and the collapse ban lifted on exactly
-  * the F032 argument. Its contract flips: the collapse must now be ON, and the collapsed
-  * answer must agree with nofastcollapse to the file's usual 1e-8, not bit-exactly
-  * (they are different code paths once the collapse engages). Measured 9.1e-14, which is
-  * the same figure a plain poisson + contreat() run posts, so it is the poisson path's
-  * ordinary reproducibility and not anything the remap introduced.
+  * every surviving leg is a gated read: it must skip the collapse (fcol 0) and therefore
+  * take the same code path as nofastcollapse, reproducing it BIT-IDENTICALLY. The BS-6
+  * exception that used to sit here went with contreatelasticitytype(eydx) on 2026-09-20.
   local wantfcol`k' 0
   local wanttol`k' 0
-  if `k' == 5 {
-    local wantfcol`k' 1
-    local wanttol`k' 1e-8
-  }
   di "F11b`k' `BNM`k'' rc=" `bq`k'' "/" `bqu`k'' " fcol=" `bf`k'' " (want `wantfcol`k'') worst mreldif b/V/table=" `bd`k'' " (want <= `wanttol`k'')"
   if `bq`k'' != 0 | `bqu`k'' != 0 {
     di as error "F11b FAIL: read `BNM`k'' errored (rc `bq`k''/`bqu`k'')"
@@ -961,18 +935,16 @@ forval k = 1/6 {
   }
 }
 
-* ---- F11c: each of those five gated reads DISCLOSES its skip in the caution, naming its own
-* token, while leg 5 (poisson + eydx, eligible since BS-6) collapses and says nothing. This is
+* ---- F11c: each of those three gated reads DISCLOSES its skip in the caution, naming its own
+* token. Until 2026-09-20 a sixth leg (poisson + eydx, eligible since BS-6) collapsed and said
+* nothing, which is why this loop used to carry a silent case; that leg is gone. This is
 * F4's contract on the continuous-treatment gate tokens: the old blanket contreat() refusal is
 * gone, only the reads above are gated, and each gated one is now announced rather than either
 * silent or fatal. safety(off) is carried as before and must not silence it.
 local CW1 contreatpoly(>1)
-local CW2 contreatelasticitytype(eyex)
-local CW3 contreatelasticitytype(eydx)
-local CW4 lattice()
-local CW5 .
-local CW6 contreat-in-controls
-forval k = 1/6 {
+local CW2 lattice()
+local CW3 contreat-in-controls
+forval k = 1/3 {
   use "`CCD'", clear
   qui log using fcol_f11c.txt, text replace name(fc)
   cap noi wooldid `BY`k'' cohort t ttre, `BOPT`k'' safety(off)
@@ -982,20 +954,18 @@ forval k = 1/6 {
   local lg = fileread("fcol_f11c.txt")
   local lg = subinstr(`"`lg'"', char(13), "", .)
   local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-  if `k' == 5 local cc`k' = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") == 0
-  else        local cc`k' = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: `CW`k''") > 0
+  local cc`k' = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: `CW`k''") > 0
 }
 cap erase fcol_f11c.txt
-* BS-6: leg 5 is eligible (fcol 1, no caution), the other five skip and caution
-di "F11c_rcs poly2=" `cx1' " eyex=" `cx2' " eydx=" `cx3' " lattice=" `cx4' " pois_eydx=" `cx5' " ctl=" `cx6' " (want 0 x6)"
-di "F11c_caution=" `cc1' "/" `cc2' "/" `cc3' "/" `cc4' "/" `cc5' "/" `cc6' " (want 1 x6; leg 5 means SILENT)"
-forval k = 1/6 {
+di "F11c_rcs poly2=" `cx1' " lattice=" `cx2' " ctl=" `cx3' " (want 0 x3)"
+di "F11c_caution=" `cc1' "/" `cc2' "/" `cc3' " (want 1 x3)"
+forval k = 1/3 {
   if `cx`k'' != 0 {
     di as error "F11c FAIL: `BNM`k'' returned rc `cx`k'' (want 0)"
     local ++fails
   }
   if !`cc`k'' {
-    di as error "F11c FAIL: `BNM`k'' disclosure wrong - leg 5 must be silent, every other leg must caution naming its token"
+    di as error "F11c FAIL: `BNM`k'' skipped the collapse without a caution naming its token"
     local ++fails
   }
 }
@@ -1438,16 +1408,26 @@ if `rc14a' != 0 | `rc14b' != 0 | !`ok14a' | !`ok14b' | !`ok14c' {
 * admin panel; the key change is what makes it exact - 2,878 cells instead of 60) and (b)
 * a cluster NESTING i (cohid itself, 60 cells) both agree with nofastcollapse on b, V
 * and the main table at 1e-12; the collapse engages (e(wdid_fcol) = 1) and the run says
-* nothing
+* nothing.
+*
+* The crossed-cluster legs carry safety(off) as of 2026-09-20. state x cohid on this panel is
+* 3 treated cohort levels across 48 states, which is exactly the geometry the new IM screen
+* refuses r(459) - the 48 per-cluster reads are re-weightings of 3 cohorts' coefficients. That
+* refusal is about whether IM INFERENCE is sound on the geometry; this leg is about whether the
+* CELL COLLAPSE reproduces the per-cluster reads exactly once the cluster variable joins the
+* key. The two are orthogonal, and the collapse property is worth keeping under test on the
+* harder geometry, so the screen is stood down here rather than the leg being retired. The
+* nesting legs (cluster(cohid)) need no such thing: cluster == i is what the screen wants.
+* safety(off) does NOT silence the collapse caution, so the cc15 check below is unaffected.
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att cluster(state) impvalues
+qui wooldid y cohid year ttre, att cluster(state) impvalues safety(off)
 matrix bF15a = e(b)
 matrix VF15a = e(V)
 matrix MF15a = e(wdidmainresults)
 local fc15a = e(wdid_fcol)
 local nc15a = e(wdid_fcncell)
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att cluster(state) impvalues nofastcollapse
+qui wooldid y cohid year ttre, att cluster(state) impvalues nofastcollapse safety(off)
 local d15a = max(mreldif(bF15a, e(b)), mreldif(VF15a, e(V)), mreldif(MF15a, e(wdidmainresults)))
 use "`ADMIN'", clear
 qui wooldid y cohid year ttre, att cluster(cohid) impvalues
@@ -1461,7 +1441,7 @@ qui wooldid y cohid year ttre, att cluster(cohid) impvalues nofastcollapse
 local d15b = max(mreldif(bF15b, e(b)), mreldif(VF15b, e(V)), mreldif(MF15b, e(wdidmainresults)))
 use "`ADMIN'", clear
 qui log using fcol_x.txt, text replace name(fc)
-cap noi wooldid y cohid year ttre, att cluster(state) impvalues
+cap noi wooldid y cohid year ttre, att cluster(state) impvalues safety(off)
 local rc15c = _rc
 qui log close fc
 local lg = fileread("fcol_x.txt")

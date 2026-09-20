@@ -57,7 +57,6 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 - att_i - simple average of all cohort-specific treatment effects 
 - att_it - simple average of all cohort-period-specific treatment effects
 - att_itime - simple average of all cohort-specific treatment effects, where cohort-specific treatment effects are simple averages of each cohort's cohort-period-specific treatment effects  
-- semielasticity - compute estimates as semielasticities (% change in y in response to treatment)
 
 ##### Standard Errors and Inference: 
 - cluster(_varlist_) - specify the clustering variable(s)
@@ -90,7 +89,6 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 
 ##### Supporting Features: 
 - poisson - switch to poisson estimation
-- poisexpresults - present poisson results in terms of differences in exponentiated linear predictions
 - histogramcohorteffects - present histograms of cohort-specific effects
 - summarystats - produce summary statistics on the outcome variable and any included continuous treatment variables
 - saveplots(_prefix_) - save all graphs produced to files with a specified prefix
@@ -98,7 +96,7 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 
 ##### Continuous Treatments: 
 - contreat(_variable_) - specifies the continuous treatment variable
-- contreatelasticitytype(_dydx_, _eydx_, _dyex_, or _eyex_) - specifies what type of continuous treatment effects are to be estimated: standard or some kind of elasticity
+- contreatelasticitytype(_dydx_ or _dyex_) - specifies whether continuous treatment effects are reported as marginal effects (dydx) or as semi-elasticities in the dose (dyex)
 - lattice(), contreatpoly(), and latticeignoreweights - tools for enabling the continuous treatment variable to affect the outcome variable within cohort-periods using a flexible, stepwise function (see help file for details)
 - contreatcontrols(_untreatedZero OR one or more of: basic, byTreated, byTtre, byCohort, byTime_) - specifies what controls for the effect of the continuous treatment outside treated-cohort periods are included; akin to specifying the fixed effects to be included in the binary treatment case
 - contreatwithin - enables estimation of marginal effect of treatment using only within-treated cohort variation in the continuous treatment variable

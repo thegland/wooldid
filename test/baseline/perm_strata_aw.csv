@@ -58,7 +58,6 @@ macro|cmd|wooldid
 macro|estimate_type|pooled_reference_period
 macro|clustvar|i
 macro|wdid_estimands|att att_it  
-macro|wdid_semielas|dydx
 macro|wdid_fcol|1
 macro|wdid_cetype|dydx
 macro|wdid_suppressjt|suppressjointtests

@@ -17,7 +17,6 @@ macro|wdid_espre|0
 macro|wdid_suppressjt|suppressjointtests
 macro|wdid_cetype|dydx
 macro|wdid_fcol|1
-macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_poisson|poisson
 macro|wdid_vcespec|cluster(i)
@@ -42,3 +41,4 @@ mat|wdidmainresults|1|4|+1.ef890c68a69ccX-015
 mat|wdidmainresults|1|5|+1.311037633d458X-004
 mat|wdidmainresults|1|6|+1.63644856c2b5cX-003
 mat|wdidmainresults|1|7|+1.0000000000000X+3ff
+files|

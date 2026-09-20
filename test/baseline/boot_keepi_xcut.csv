@@ -3,12 +3,16 @@ varlist|i ttre sg ife t w eff y ycount icoh xc
 scalar|boot_reps|+1.4000000000000X+003
 scalar|boot_completed|+1.4000000000000X+003
 scalar|boot_failed|+0.0000000000000X-3ff
+scalar|boot_novar|+0.0000000000000X-3ff
 scalar|boot_level|+1.7c00000000000X+006
 scalar|df_r_analytic|+1.3000000000000X+004
 scalar|boot_df|+1.3000000000000X+004
 scalar|df_r|+1.3000000000000X+004
 scalar|boot_N_V|+1.4000000000000X+003
 scalar|boot_v_posted|+1.0000000000000X+000
+scalar|boot_reid|+0.0000000000000X-3ff
+scalar|boot_nstraddle|+1.8000000000000X+001
+scalar|boot_sesmall|+0.0000000000000X-3ff
 scalar|N_dropped|+0.0000000000000X-3ff
 scalar|wdid_vblockn|+1.8000000000000X+003
 scalar|N_clust|+1.4000000000000X+004
@@ -50,7 +54,6 @@ macro|estimate_type|pooled_reference_period
 macro|wdid_vblocks|att att_it
 macro|clustvar|xc
 macro|wdid_estimands|att  att_i 
-macro|wdid_semielas|dydx
 macro|wdid_fcol|1
 macro|wdid_cetype|dydx
 macro|wdid_suppressjt|suppressjointtests

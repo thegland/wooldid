@@ -33,7 +33,6 @@ macro|wdid_esrel|-1
 macro|wdid_espre|2
 macro|wdid_cetype|dydx
 macro|wdid_fcol|1
-macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_sgnoprerow|all
 macro|wdid_sgnoprewhy|nocells

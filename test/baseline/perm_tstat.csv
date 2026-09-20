@@ -49,7 +49,6 @@ macro|clustvar|i
 macro|vce|cluster
 macro|vcetype|Robust
 macro|wdid_estimands|att   
-macro|wdid_semielas|dydx
 macro|wdid_fcol|1
 macro|wdid_cetype|dydx
 macro|wdid_suppressjt|suppressjointtests
@@ -189,3 +188,4 @@ mat|perm_analytic_mainresults|1|4|+1.18c086c66c9a1X-056
 mat|perm_analytic_mainresults|1|5|+1.7abf159e51af7X-001
 mat|perm_analytic_mainresults|1|6|+1.e60655f0f55b9X-001
 mat|perm_analytic_mainresults|1|7|+1.0000000000000X+3ff
+files|

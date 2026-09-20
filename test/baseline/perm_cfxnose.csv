@@ -59,7 +59,6 @@ macro|wdid_cfxytx2|ATT on y
 macro|wdid_cfxxt|xtitle("3 quantiles (type: all)")
 macro|wdid_contreat|intensity
 macro|wdid_estimands|att   
-macro|wdid_semielas|dydx
 macro|wdid_fcol|0
 macro|wdid_fcskip|lattice() makecfxplots
 macro|wdid_cetype|dydx

@@ -1,7 +1,11 @@
 * test_si89.do — certification of SI-8 (granular-i caution + maxvar preflight,
-* author-ruled 2026-08-25) and SI-9 (poisexpresults requires poisson, rc 198).
-* The poisexpresults+poisson POSITIVE path is pinned by the oldnew suite
-* (ext_bin_ext_poisson, ext_cont_ext_poisson) and re-checked here as T2.
+* author-ruled 2026-08-25) and, since 2026-09-20, the retirement of the options
+* SI-9 used to police. poisexpresults, semielasticity and the eyex/eydx forms of
+* contreatelasticitytype were removed (author ruling 2026-09-20); T1 and T2 pin
+* that they are now rejected by name. This file is the cert HOST for that pin:
+* test/suite/configs_ext.csv cannot carry it, because coverage_check.py treats an
+* option token it cannot resolve against the syntax line as FATAL (author ruling
+* 2026-09-11), so a retired NAME cannot appear in a config row at all.
 * Run from test/:  "<stata>" -e do test_si89.do   -> expect SI89_ALL_PASS
 
 clear all
@@ -48,24 +52,49 @@ program define scanlog, rclass
   return scalar found = `found'
 end
 
-* ---- T1: poisexpresults without poisson is an option-contract error (rc 198) ----
+* ---- T1: the retired poisson-scale options are rejected by name (rc 198) ----
+* Stata's own syntax parser raises 198 once the option leaves the syntax line; this is
+* the clean-break signal the fastcollapse retirement set as precedent
+* (review_process/option_consolidation_2026-09-16.md). Both spellings are checked with
+* AND without poisson, since SI-9's old contract screen distinguished those two cases
+* and the retirement must collapse them to the same answer.
 mkgran 30
-cap wooldid y i t ttre, att robust poisexpresults
-if _rc == 198 dis as result "T1 PASS: poisexpresults without poisson -> r(198)"
-else {
-  dis as error "T1 FAIL: rc = " _rc " (wanted 198)"
-  global pf = $pf + 1
+local t1bad 0
+foreach o in "poisexpresults" "poisson poisexpresults" "semielasticity" "poisson semielasticity" {
+  cap wooldid y i t ttre, att robust `o'
+  if _rc != 198 {
+    dis as error "T1 FAIL: `o' -> rc " _rc " (wanted 198)"
+    local t1bad = `t1bad' + 1
+  }
 }
+if `t1bad' == 0 dis as result "T1 PASS: retired poisexpresults/semielasticity -> r(198) in all 4 forms"
+else global pf = $pf + 1
 
-* ---- T2: poisexpresults WITH poisson still estimates (suite-pinned positive) ----
-use suite/data/binary_balanced.dta, clear
-ereturn clear
-cap wooldid y_count_zero cohort t ttre, att poisson poisexpresults customvce(robust) esprelength(2) espostlength(2) safety(off)
-if _rc == 0 & _b[main_att] < . dis as result "T2 PASS: poisexpresults+poisson estimates (att = " %9.6f _b[main_att] ")"
-else {
-  dis as error "T2 FAIL: rc = " _rc
-  global pf = $pf + 1
+* ---- T2: the retired contreatelasticitytype VALUES are refused, survivors still run ----
+* Here the option NAME survives, so the refusal is wooldid's own domain screen rather
+* than Stata's parser, and it must name the removed forms rather than collapsing them
+* silently to dydx (the pre-2026-09-06 behaviour).
+use suite/data/continuous_control_compact.dta, clear
+local t2bad 0
+foreach v in eyex eydx {
+  cap wooldid y_positive_common cohort t ttre, att contreat(dose_common) contreatcontrols(basic) ///
+      contreatelasticitytype(`v') robust safety(off)
+  if _rc != 198 {
+    dis as error "T2 FAIL: contreatelasticitytype(`v') -> rc " _rc " (wanted 198)"
+    local t2bad = `t2bad' + 1
+  }
 }
+foreach v in dydx dyex {
+  ereturn clear
+  cap wooldid y_positive_common cohort t ttre, att contreat(dose_common) contreatcontrols(basic) ///
+      contreatelasticitytype(`v') robust safety(off)
+  if _rc != 0 {
+    dis as error "T2 FAIL: contreatelasticitytype(`v') -> rc " _rc " (wanted 0)"
+    local t2bad = `t2bad' + 1
+  }
+}
+if `t2bad' == 0 dis as result "T2 PASS: eyex/eydx refused r(198); dydx/dyex still estimate"
+else global pf = $pf + 1
 
 * ---- T3: >100 distinct i values -> granular-i caution, estimation proceeds ----
 mkgran 150

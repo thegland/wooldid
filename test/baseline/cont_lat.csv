@@ -30,7 +30,6 @@ macro|wdid_suppressjt|suppressjointtests
 macro|wdid_cetype|dydx
 macro|wdid_fcskip|lattice()
 macro|wdid_fcol|0
-macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_contreat|intensity
 macro|wdid_vcespec|cluster(i)

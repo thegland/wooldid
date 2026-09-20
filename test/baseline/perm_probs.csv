@@ -45,7 +45,6 @@ macro|cmd|wooldid
 macro|estimate_type|pooled_reference_period
 macro|clustvar|i
 macro|wdid_estimands|att   
-macro|wdid_semielas|dydx
 macro|wdid_fcol|1
 macro|wdid_cetype|dydx
 macro|wdid_suppressjt|suppressjointtests
@@ -186,3 +185,4 @@ mat|perm_analytic_mainresults|1|4|+1.0000000000000X+3ff
 mat|perm_analytic_mainresults|1|5|+1.0000000000000X+3ff
 mat|perm_analytic_mainresults|1|6|+1.0000000000000X+3ff
 mat|perm_analytic_mainresults|1|7|+1.0000000000000X+3ff
+files|

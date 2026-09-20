@@ -3,11 +3,13 @@ varlist|i ttre sg ife t w eff y ycount
 scalar|boot_reps|+1.4000000000000X+003
 scalar|boot_completed|+1.4000000000000X+003
 scalar|boot_failed|+0.0000000000000X-3ff
+scalar|boot_novar|+0.0000000000000X-3ff
 scalar|boot_level|+1.7c00000000000X+006
 scalar|df_r_analytic|+1.1000000000000X+009
 scalar|df_r|+1.0000000000000X+3ff
 scalar|boot_N_V|+1.4000000000000X+003
 scalar|boot_v_posted|+1.0000000000000X+000
+scalar|boot_sesmall|+0.0000000000000X-3ff
 scalar|wdid_fcncell|+1.5c00000000000X+008
 scalar|numpre_att|+1.0000000000000X+000
 scalar|escomp_refN|+1.1300000000000X+008
@@ -44,7 +46,6 @@ macro|cmd|wooldid
 macro|estimate_type|pooled_reference_period
 macro|wdid_vblocks|att
 macro|wdid_estimands|att   
-macro|wdid_semielas|dydx
 macro|wdid_fcol|1
 macro|wdid_cetype|dydx
 macro|wdid_suppressjt|suppressjointtests

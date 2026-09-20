@@ -36,7 +36,6 @@ macro|wdid_espre|2
 macro|wdid_suppressjt|suppressjointtests
 macro|wdid_cetype|dydx
 macro|wdid_fcol|1
-macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_sglist|1 2
 macro|wdid_sgvar|sg
@@ -384,3 +383,4 @@ mat|V_es_att|2|2|+1.bc3968970b865X-008
 matnames|b_es_att|1x2|r1|pre2 pre1
 mat|b_es_att|1|1|-1.a75b137ac6b00X-007
 mat|b_es_att|1|2|-1.41958b98d9a60X-004
+files|

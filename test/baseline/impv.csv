@@ -30,7 +30,6 @@ macro|wdid_espre|2
 macro|wdid_suppressjt|suppressjointtests
 macro|wdid_cetype|dydx
 macro|wdid_fcol|1
-macro|wdid_semielas|dydx
 macro|wdid_estimands|att   
 macro|wdid_vcespec|Ibragimov-Muller p-values over cluster(i) (t on G-1 df)
 macro|vcetype|Robust
@@ -162,3 +161,4 @@ mat|escomp|4|5|+1.9000000000000X+005
 mat|escomp|4|6|+1.0000000000000X-002
 mat|escomp|4|7|+1.0000000000000X-002
 mat|escomp|4|8|+1.0000000000000X+000
+files|

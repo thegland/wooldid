@@ -240,11 +240,10 @@ ext_lat_ttre_n2,extlattice,continuous_control_dense.dta,,,,y_cont_common cohort 
 ext_lat_ttre_n3,extlattice,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatpoly(1) lattice(byTtre 3) esprelength(1) espostlength(1) robust safety(off),0,0,,0
 ext_lat_ttretime_n2,extlattice,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatpoly(1) lattice(byTtreByTime 2) esprelength(1) espostlength(1) robust safety(off),0,0,,0
 ext_lat_ttretime_n3,extlattice,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatpoly(1) lattice(byTtreByTime 3) esprelength(1) espostlength(1) robust safety(off),0,0,,0
-ext_bin_ext_semielasticity,extcase,binary_balanced.dta,,,,y_positive_common cohort t ttre,att semielasticity esprelength(2) espostlength(2) cluster(cohort) safety(off),0,0,,0
 ext_bin_ext_controls_fe,extcase,binary_balanced.dta,,,,y cohort t ttre,att controls(c.x1 i.categorical_control) fe(person_id) esprelength(2) espostlength(2) cluster(cohort) safety(off),0,0,,0
 ext_bin_ext_coarse_controls,extcase,binary_balanced.dta,,,,y cohort t ttre,att coarsecohortcontrols(c.x1 i.categorical_control) esprelength(2) espostlength(2) safety(off),0,0,,0
 ext_bin_ext_interactive,extcase,binary_balanced.dta,,,,y cohort t ttre,att interactivecontrols(interactive_x) esprelength(2) espostlength(2) safety(off),0,0,,0
-ext_bin_ext_poisson,extcase,binary_balanced.dta,,,,y_count_zero cohort t ttre,att poisson poisexpresults customvce(robust) esprelength(2) espostlength(2) safety(off),0,0,,1
+ext_bin_ext_poisson,extcase,binary_balanced.dta,,,,y_count_zero cohort t ttre,att poisson customvce(robust) esprelength(2) espostlength(2) safety(off),0,0,,1
 ext_bin_ext_support,extcase,binary_balanced.dta,,,,y_summary cohort t ttre,att att_i histogramcohorteffects summarystats esprelength(2) espostlength(2) makeplots safety(off),0,0,,0
 ext_bin_ext_ccc_absorb,extcase,binary_balanced.dta,,,,y cohort t ttre,att ccc_absorb(x1) esprelength(2) espostlength(2) safety(off),0,0,,0
 ext_bin_ext_fine,extcase,binary_fine.dta,,,,y cohort t ttre,att esprelength(2) espostlength(2) cluster(cohort) safety(off),0,0,,0
@@ -258,8 +257,7 @@ ext_bin_ext_verbose,extcase,binary_balanced.dta,,,,y cohort t ttre,att verbose e
 ext_bin_ext_cleanmatrices,extcase,binary_balanced.dta,,,ext_bin_ext_cleanmatrices,y cohort t ttre,att cleanmatrices esprelength(1) espostlength(1) safety(off),0,0,,0
 ext_bin_ext_saveplots,extcase,binary_balanced.dta,,,,y cohort t ttre,att esprelength(2) espostlength(2) makeplots saveplots(wdbt_saved) replace safety(off),0,0,,0
 ext_bin_ext_postestimation,extcase,binary_balanced.dta,,,,y cohort t ttre,att att_it esprelength(2) espostlength(2) safety(off),0,0,,0
-ext_cont_ext_semielasticity,extcase,continuous_control_compact.dta,,,,y_positive_common cohort t ttre,att semielasticity contreat(dose_common) contreatcontrols(basic) esprelength(3) espostlength(3) robust safety(off),0,0,,0
-ext_cont_ext_elasticity_eyex,extcase,continuous_control_compact.dta,,,,y_positive_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatelasticitytype(eyex) esprelength(2) espostlength(2) robust safety(off),0,0,,0
+ext_cont_ext_elasticity_eyex,extcase,continuous_control_compact.dta,,,,y_positive_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatelasticitytype(eyex) esprelength(2) espostlength(2) robust safety(off),0,198,,0
 ext_cont_ext_poly2,extcase,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatpoly(2) esprelength(2) espostlength(2) robust safety(off),0,0,,0
 ext_cont_ext_poly3,extcase,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatpoly(3) esprelength(1) espostlength(1) robust safety(off),0,0,,0
 ext_cont_ext_controls_bytreated,extcase,continuous_control_compact.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(byTreated) esprelength(2) espostlength(2) robust safety(off),0,0,,0
@@ -272,7 +270,7 @@ ext_cont_ext_varying_dose,extcase,continuous_control_compact.dta,,,,y_cont_vary 
 ext_cont_ext_cfx,extcase,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) lattice(all 3) makecfxplots cfxplottypes(pre post -2 1) esprelength(2) espostlength(2) robust safety(off),0,0,,0
 ext_cont_ext_cfx_subgroups,extcase,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) lattice(all 3) cfxlattice(custom_lattice_common) makecfxplots makecfxplotsbysg subgroups(sg_three) cfxplottypes(post) esprelength(1) espostlength(1) robust safety(off),0,0,,1
 ext_cont_ext_weighted_lattice,extcase,continuous_control_dense.dta,aw=analytic_weight,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) lattice(all 3) latticeignoreweights customweightmultiplier(custom_weight_multiplier) esprelength(1) espostlength(1) robust safety(off),0,0,,0
-ext_cont_ext_poisson,extcase,continuous_control_compact.dta,,,,y_count_zero cohort t ttre,att contreat(dose_common) contreatcontrols(basic) poisson poisexpresults customvce(robust) esprelength(1) espostlength(1) safety(off),0,0,,1
+ext_cont_ext_poisson,extcase,continuous_control_compact.dta,,,,y_count_zero cohort t ttre,att contreat(dose_common) contreatcontrols(basic) poisson customvce(robust) esprelength(1) espostlength(1) safety(off),0,0,,1
 ext_cont_ext_imbalanced,extcase,continuous_imbalanced_dense.dta,,,,y_cont_common cohort t ttre,att att_it contreat(dose_common) contreatcontrols(basic) esfixedbaseperiod esrelativeto(-2) esprelength(3) espostlength(3) robust safety(off),0,0,,0
 ext_cont_ext_interactive,extcase,continuous_control_dense.dta,,,,y_interactive cohort t ttre,att contreat(dose_common) contreatcontrols(basic) interactivecontrols(interactive_x) esprelength(2) espostlength(2) robust safety(off),0,0,,0
 ext_cont_ext_support,extcase,continuous_control_compact.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) summarystats histogramcohorteffects makeplots esprelength(2) espostlength(2) robust safety(off),0,0,,0
@@ -331,7 +329,7 @@ ext_cov10_cont_single_sg,extcase,continuous_control_dense.dta,,,,y_cont_single c
 ext_cov10_cont_within_vary,extcase,continuous_control_dense.dta,,,ext_cov10_cont_within_vary,y_cont_vary cohort t ttre,att contreat(dose_common_vary) contreatcontrols(byTreated) contreatwithin esprelength(1) espostlength(1) robust safety(off),0,0,,0
 ext_cov10_cont_panel_fe,extcase,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) fe(person_id) esprelength(1) espostlength(1) robust safety(off),0,0,,0
 ext_cov10_cont_impvalues,extcase,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) impvalues cluster(cohort) esprelength(1) espostlength(1) safety(off),0,0,,0
-ext_cov10_cont_elasticity_eydx,extcase,continuous_control_dense.dta,,,,y_positive_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatelasticitytype(eydx) esprelength(1) espostlength(1) robust safety(off),0,0,,0
+ext_cov10_cont_elasticity_eydx,extcase,continuous_control_dense.dta,,,,y_positive_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatelasticitytype(eydx) esprelength(1) espostlength(1) robust safety(off),0,198,,0
 ext_cov10_cont_elasticity_dyex,extcase,continuous_control_dense.dta,,,,y_positive_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatelasticitytype(dyex) esprelength(1) espostlength(1) robust safety(off),0,0,,0
 ext_cov10_cfx_inference,extcase,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) lattice(custom_lattice_common) makecfxplots cfxplottypes(post) esprelength(1) espostlength(1) robust safety(off),0,0,,0
 ext_contract10_poisson_converged,extcase,continuous_control_dense.dta,,,,y_count_oracle cohort t ttre,att poisson robust safety(off),0,0,,1
@@ -348,7 +346,6 @@ ext_contract10_fractional_time,extcase,binary_balanced.dta,,,ext_contract10_frac
 ext_contract10_inconsistent_ttre,extcase,binary_balanced.dta,,,ext_contract10_inconsistent_ttre,y cohort t ttre,att robust safety(on),0,459,,0
 ext_contract10_poly_zero,extcase,continuous_control_dense.dta,,,,y_cont_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatpoly(0) robust safety(off),0,198,,0
 ext_contract10_bad_safety,extcase,binary_balanced.dta,,,,y cohort t ttre,att robust safety(nonsense),0,198,,0
-ext_contract10_poisexp_without_poisson,extcase,binary_balanced.dta,,,,y cohort t ttre,att poisexpresults robust safety(off),0,198,,0
 ext_contract10_graph_drop_all,extcase,binary_balanced.dta,,,ext_contract10_graph_drop_all,y cohort t ttre,att esprelength(1) espostlength(1) histogramcohorteffects makeplots robust safety(off),0,0,,0
 ext_cov10_error_emptycells_restore,extval,binary_balanced.dta,,,ext_cov10_error_emptycells_restore,y cohort t,att,198,198,too few variables specified,0
 ext_contract10_if_outside_negative,extcase,binary_balanced.dta,,cohort < 12,ext_contract10_if_outside_negative,y_count_oracle cohort t ttre,att poisson robust,411,322,outcome variable contains negative values,1

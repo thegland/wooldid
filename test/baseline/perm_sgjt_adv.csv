@@ -63,7 +63,6 @@ macro|clustvar|i
 macro|wdid_sgvar|sg
 macro|wdid_sglist|1 2
 macro|wdid_estimands|att   
-macro|wdid_semielas|dydx
 macro|wdid_fcol|1
 macro|wdid_cetype|dydx
 macro|wdid_adversarial|adversarial
