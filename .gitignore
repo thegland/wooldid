@@ -3,3 +3,6 @@
 # battery / suite scratch run directories and stray test artifacts
 test/run*/
 test/*_ES.dta
+
+# third-party comparison packages, fetched not vendored (see test/suite/extfix/config.do)
+wooldid_external/

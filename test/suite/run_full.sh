@@ -4,7 +4,10 @@
 # Usage: ./run_full.sh [component ...]
 #   components: data oldnew compare cert newfeat battery coverage degeneracy all   (default: all)
 #   env: STATA_BIN (default: the direct StataMP binary path — the PATH symlink is broken)
-#        STATA_JOBS (default 6; hard project cap is 8 concurrent Stata instances)
+#        STATA_JOBS (default 6; hard project cap is 8 concurrent Stata instances. Stata-MP
+#          claims several cores per instance, so a pool above the machine's core count
+#          slows every shard instead of finishing sooner - measured, the slowest bootstrap
+#          shard went from 330s at pool 6 to over 600s at pool 10 on ten cores)
 #        ONLY=<comma-list of oldnew components, e.g. core,trig> to subset the dual-build
 #        run (subset runs judge ONLY those components' configs and skip stale checks)
 #
@@ -195,7 +198,15 @@ do_oldnew() {
   for side in old new; do
     while IFS='|' read -r dofile n speed; do
       [ -z "$dofile" ] && continue
-      tmo=600; [ "$speed" = "slow" ] && tmo=1800; [ "$speed" = "vslow" ] && tmo=3600
+      # Tier budgets are a HANG detector, not a runtime bound, so they carry real headroom
+      # over the measured worst case at the default pool: the slowest fast shard
+      # (shard_boot_00) runs 330s and the slowest slow shard (shard_boot_slow_00) 981s, so
+      # these sit at roughly 3.5x each. That margin is what lets STATA_JOBS rise above the
+      # default without a shard tripping its budget: Stata-MP claims several cores per
+      # instance, so raising the pool past the core count slows each shard rather than
+      # speeding the set, and a 600s fast tier turned that into a TIMEOUT at pool 10 on a
+      # 10-core machine. Raise these with the pool, or leave the pool at the default.
+      tmo=1200; [ "$speed" = "slow" ] && tmo=3600; [ "$speed" = "vslow" ] && tmo=7200
       # SI-21: every shard gets its OWN, FRESH working directory. dumpres globs the whole
       # cwd for saveplots output and then erases what it listed, so shards sharing a cwd
       # could record each other's files AND delete them before the owner dumped - a race
