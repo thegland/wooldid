@@ -78,3 +78,80 @@ Not rerun here, and not claimed: the cert suite, `oldnew`, `coverage` and `degen
 user asked for the battery. `configs_ext.csv` carries `byTime` (x3), `byTreated` (x2),
 `byTtre` (x1) and two compound `contreatcontrols` spellings whose `rc_new` may now be 459
 under R11; those are `oldnew` rows and the next full run should adjudicate them.
+
+---
+
+# The non-number-moving batch (2026-09-20)
+
+The nineteen rows above are what the author RULED on. The blue-sky review produced 56
+proposals in all; only 13 moved a number and so only those needed rulings. This section is
+the rest: items that adversarial review verified, that move no reported number, and that were
+therefore never put to the author. They are built here.
+
+## Built
+
+| item | what it does | mechanism |
+|---|---|---|
+| **LAT L1** (4 edits) | the all-zero-covariance cautions state the cause that actually applied | caution text |
+| **LAT L4** | the `lattice()` discussion gains the support requirement, distinct from the functional-form threat already described | help |
+| **VCV-3** | `unconditionalse` is tested FIRST in the vce ladder, so `e(vce)`/`e(vcetype)` name the stage the reported SEs come from and `e(vce_stage1)` names the one underneath | `e()` |
+| **GTE-4** | `e(gt_ncontained)` counts `e(gteffects)` cells that lie wholly inside one cluster, with a caution | `e()` + caution |
+| **BSAVE-1** | the studentized path posts `e(boot_jointWobs)`/`e(boot_advWobs)`, and `bootsave()` reads them from `e()` rather than from the worker's locals | `e()` |
+| **PTP Proposal 2** | singleton-cell detection behind the rank-deficiency caution, recorded in hidden `e(roth_cellmax_*)` | `e()` + caution |
+| **G2** | the identifier-domain assert keys on `safetyinput`, not the `safety` that CS-98 rewrote to `off` under `contreatwithin` | screen |
+| **SMP-2/BSAVE-3** | the small-cluster caution moves from `wooldid_bootctl` to `wooldid_bootrun`, where it can key on the realized `smp` | caution siting |
+| **G1b** | r(907) is named as Stata's variable limit rather than left bare | error text |
+| **G4** | `%7.0f` -> `%7.0g` for the relyr/numpre column | display format |
+| **FIX-PERM-3** | the `permute()` nesting refusal names the smallest offending cluster and explains the design-vs-estimation sample distinction | error text |
+| help | BAND-3, BAND-1b, DOC-1 (x3), IMP P2 (x3), GTE-5 (x3), plus stored-results entries for every new `e()` above | help |
+
+## Closed without building
+
+* **FIX-PERM-2a** — already shipped. Both `sthlp:729` and the runtime caution at `ado:1672`
+  already carry the qualification ("...but only where that finer clustering leaves enough
+  distinct clusters inside each treated cohort-by-period cell"). Moot.
+* **FIX-PERM-2b** — the numeric clusters-per-cell predicate. Ruled out by the author's standing
+  instruction to leave that statement qualitative.
+* **ELAS P2**, **ELAS P3** — moot after R2 removed the options they concerned.
+* **GTE-2** — shipped via R10.
+* **BAND-1b** items 1, 3, 4 — already true of the shipped text.
+* **LAT L5** — a "do not fix" with new evidence: the `regress` refit removed on 2026-09-08
+  should stay removed, because s0.3 measures its answer at `se/sd ~ 0.03`. Its second half
+  (stop steering readers to `customvce(robust)`) is what L1 edit 4 implements.
+
+## Held for ruling
+
+**LAT L3**, **FIX-PERM-1**, **GTE-3** — each adds a screen whose firing is a new event in a
+user's log, and the evidence behind each is the proposer's fixtures rather than a measured
+rate on ordinary data. Written up for a one-line ruling in
+`HELD_FOR_RULING_2026-09-20.md`.
+
+## LAT L1 — all five branches exercised
+
+The proposal's fixture was not preserved, so it was rebuilt from its description (counties
+inside states, dose near-constant within county, `i` = state, so a 3-bin lattice cuts treated
+cells into 1-2 observation pieces).
+
+| arm | expected | observed |
+|---|---|---|
+| contreat + lattice + `robust` | new unclustered text WITH the lattice clauses | as expected |
+| contreat, no lattice, `robust` | new unclustered text, no lattice clauses | as expected |
+| contreat + lattice + `cluster()` | R1 fires, vzero defers, R4 points at a caution that really printed | as expected |
+| contreat + `cluster()`, no lattice | branch 1, the original clustered contreat text | **not reached** - R1 fired here too |
+| `timetrends` + `cluster()`, no contreat | branch 2, the original clustered text verbatim | as expected |
+
+Branch 1 is the shipped text, unchanged; the only edit to it is the added `clusvars != ""`
+condition on its gate, which is the fix. No fixture reached it, and that is recorded rather
+than papered over.
+
+The bug edit 4 repairs is visible on the two bare-`robust` contreat arms: the old text sent
+the reader to a cell-containment caution that was never printed, then offered "a
+finer-than-cell clustering" to a user who had clustered nothing and "conditional robust
+standard errors" to a user who had just asked for them. Both are gone.
+
+**Deliberate change of substance, named so it can be reversed:** edit 4 also reorders R4's
+remedy list, demoting conditional robust standard errors below `bootstrap()`/`permute()`.
+This touches the AMESE R4 message ruled on 2026-08-24. The evidence is the frozen-design Monte
+Carlo in `fixprop/proposals_LAT.md` s0.3, which puts the conditional robust standard error at
+0.017 of the estimator's own conditional sampling sd on the design that prints this caution.
+It is one local (`wdr4alt`) if the author prefers the old order.
