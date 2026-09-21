@@ -303,7 +303,7 @@ version 16.0
     }
     wooldid_display , part(perm)
     * the one surface still drawn from the analytic covariance (mirrors the bootstrap block)
-    if "`histogramcohorteffects'" != "" dis as text "Caution: histogram outputs are drawn from the stage-1 ANALYTIC covariance during estimation; the reported tables, the cfx matrices, the event-study and continuous-treatment plots and the e() inference above are permutation-based."
+    if "`histogramcohorteffects'" != "" dis as text "Caution: the histogram outputs use the analytic covariance; every other reported result is permutation-based."
     dis as result " "
     global WOOLDID_LASTRC
   }
@@ -419,7 +419,7 @@ version 16.0
       foreach wdbcv in `fe' `interactivecontrols' `controls' `coarsecohortcontrols' `ccc_absorb' {
         if "`wdbcv'" == "`i'" local wdb_ikeyed 1
       }
-      if "`wdb_ikeyed'" != "" dis as text "Caution: a covariate specification names the i variable `i'; under resampling, duplicated clusters' copies share their original `i' codes inside fe()/controls() terms (the official bootstrap idcluster convention). Only the cell/aggregation identities are re-identified."
+      if "`wdb_ikeyed'" != "" dis as text "Caution: a covariate specification names the i variable `i'; under resampling, duplicated clusters' copies share their original `i' codes inside fe()/controls() terms, and only the cell and aggregation identities are re-identified."
     }
     * bootdf() default, resolved here because it needs the resampling-cluster count that
     * wooldid_bootrun has just returned: standard normal when the run is unclustered, and
@@ -533,7 +533,7 @@ version 16.0
     * only the histogram outputs remain analytic: the gteffects cells and the cfx matrices
     * are rewired to the bootstrap (wooldid_bootcellsx), the adversarial p is bootstrapped
     * under boottstat and absent otherwise, and event-study plots are drawn after the rewiring
-    if "`histogramcohorteffects'" != "" dis as text "Caution: histogram outputs are drawn from the ANALYTIC covariance during estimation; the reported tables, the gteffects cells, the cfx matrices, the event-study and continuous-treatment plots and the e() inference above are bootstrap-based."
+    if "`histogramcohorteffects'" != "" dis as text "Caution: the histogram outputs use the analytic covariance; every other reported result is bootstrap-based."
     dis as result " "
     global WOOLDID_LASTRC
   }
@@ -548,7 +548,7 @@ version 16.0
   if "`e(wdid_cfxsave)'" != "" {
     cap noi wooldid_cfxplots , saveplots(`e(wdid_cfxsave)') dataonly `e(wdid_cfxrepl)'
     local wdsh_dc = _rc
-    if `wdsh_dc' != 0 dis as text "Caution: the continuous-treatment plot-data file `e(wdid_cfxsave)'_cfx.dta could not be written (r(`wdsh_dc')). The figures and their .gph files are unaffected, as is every estimate and every stored result; only that one machine-readable record of the plotted points is missing. The usual cause is an existing file of that name without the replace option."
+    if `wdsh_dc' != 0 dis as text "Caution: the continuous-treatment plot-data file `e(wdid_cfxsave)'_cfx.dta could not be written (r(`wdsh_dc')), usually because a file of that name exists and replace was not specified. The figures and every stored result are unaffected."
   }
 end
 
@@ -1437,7 +1437,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     }
     local si8demand = `si8cells'*`si8mult' + `si8levels' + 200
     if `si8ilev' > 100 {
-      dis as text "Caution: the cohort variable `i' takes `si8ilev' distinct values. wooldid builds one interaction term per cohort-by-period cell, and runtime grows faster than linearly in that cell count - roughly its 1.3rd to 1.7th power, and about its 1.9th under lattice() - so a granular `i' can dominate runtime long before it approaches Stata's variable limits. Sample size itself is comparatively cheap. Coarsening `i' is normally the single largest speedup available: specify unit-level fixed effects via fe() and swap `i' to a coarser level of aggregation, such as cohorts or treatment onset groups. Keep the fe() half of that recipe: on a panel that is unbalanced inside its cohorts it is what holds the point estimate fixed, not a modelling preference. (safety(off) suppresses this check.)"
+      dis as text "Caution: the cohort variable `i' takes `si8ilev' distinct values. wooldid builds one interaction term per cohort-by-period cell, and runtime grows faster than linearly in that cell count, so a granular `i' can dominate runtime. Coarsening `i' is normally the single largest speedup available: specify unit-level fixed effects via fe(), which on a panel unbalanced within cohorts is what holds the point estimate fixed, and swap `i' to a coarser level of aggregation, such as cohorts or treatment onset groups. (safety(off) suppresses this check.)"
     }
     if `si8demand' > c(maxvar) {
       dis as error "Error: this specification requires at least `si8demand' variables (about `si8cells' treated cohort-by-period interaction terms) but maxvar is currently " c(maxvar) ", so estimation would fail with r(907)."
@@ -1596,7 +1596,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       * the same few-clusters-per-cell size problem. Out: the continuous-treatment ame
       * remedy in the help, which carries the same phrase for a different statistic (a
       * within-cell dose-slope variance, not a joint quadratic form).
-      dis as text "Caution: `=cond("`jointtests'" != "", "jointtests", "pretrendpower()")' was combined with analytic clustered SEs clustered at the level of the cohort variable i or above (`i' is nested within the clustering variable `jtcoarse'). The saturated cell dummies leave each cell's residuals with no within-cluster variation to identify, so the joint test's covariance is degenerate and its p-value should not be read as a calibrated test. wooldid's randomization inference (permute()) or bootstrap-based clustered SEs give a joint test that is valid under this design, as does clustering strictly finer than the cohort-by-period cells, but only where that finer clustering leaves enough distinct clusters inside each treated cohort-by-period cell: with only a few clusters per cell the test stays oversized."
+      dis as text "Caution: `=cond("`jointtests'" != "", "jointtests", "pretrendpower()")' was combined with analytic clustered SEs clustered at the level of the cohort variable i or above (`i' is nested within the clustering variable `jtcoarse'). The saturated cell dummies leave the joint test's covariance degenerate, so its p-value is not a calibrated test. permute(), bootstrap(), or a cluster() strictly finer than the cohort-by-period cells that leaves many clusters inside each cell gives a joint test that is valid under this design."
     }
   }
 
@@ -1738,7 +1738,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         local wdr4noun "a variance-covariance matrix that is cancellation residue rather than zeros"
         local wdr4st "every standard error, test statistic, p-value and interval below is that residue rather than an estimate, printing as a number of order 1e-15 with a p-value of order 1e-45 instead of as a missing value; read none of them"
       }
-      dis as text "Caution: the estimation command returned `wdr4noun', so no standard error in this run is identified. The reported estimates stand; `wdr4st'. This is a property of the specification, not a numerical accident: `=cond(`amescrub' == 1, "see the cell-containment caution above for the mechanism and for the alternatives", "the alternatives are")' (`wdr4alt')."
+      dis as text "Caution: the estimation command returned `wdr4noun', so no standard error in this run is identified. The reported estimates stand; `wdr4st'. `=cond(`amescrub' == 1, "See the cell-containment caution above for the mechanism and for the alternatives", "The alternatives are")' (`wdr4alt')."
     }
   }
 
@@ -2212,7 +2212,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * normal fallback is anti-conservative against every row's t.
     local imdflist
     local imdegwarned
-    local imdegmsg "Caution: for one or more Ibragimov-Muller estimates the per-cluster estimates were numerically identical, so the cross-cluster (IM) standard error is not identified; wooldid has set the standard error, test statistic, p-value, and 95% confidence interval to missing for the affected estimate(s) while retaining the point estimate. A collapsed IM standard error usually reflects deterministic or noiseless data - please verify your input if this was not expected."
+    local imdegmsg "Caution: for one or more Ibragimov-Muller estimates the per-cluster estimates were numerically identical, so the cross-cluster (IM) standard error is not identified; the standard error, test statistic, p-value and confidence interval are set to missing for the affected estimate(s) while the point estimate is retained. This usually reflects deterministic or noiseless data."
   }
 
 
@@ -4365,7 +4365,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       cap ereturn post `eb' `ev', esample(`esamp') depname(`y') obs(`N') dof(`df_r')
       local evpostrc = _rc
       if `evpostrc' == 0 {
-        dis as text "Caution: standard errors were not identified for `evpostmiss' of `evposttotal' reported estimates. e(V) contains placeholder entries for the affected estimates that display as missing standard errors; all other estimates retain their variances in e(V). See e(wdidmainresults) and the displayed tables for per-estimate detail."
+        dis as text "Caution: standard errors were not identified for `evpostmiss' of `evposttotal' reported estimates; their e(V) entries are placeholders that display as missing standard errors, and all other estimates retain their variances."
       }
     }
     if `evpostrc' != 0 {
@@ -4460,7 +4460,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       if `gtprc' != 0 dis as text "Caution: e(gteffects) could not be posted (rc `gtprc')."
       * the containment disclosure. `gtcontain' is 0 unless the screen above ran
       if `gtprc' == 0 & `gtcontain' > 0 {
-        dis as text "Caution: `gtcontain' of `gtn' e(gteffects) cell(s) lie wholly inside a single `gtcmode', so they contribute no independent residual unit to the `gtcvce' variance: their se, p and interval columns are understated by a design-dependent factor and the cell interval does not cover at its nominal level. The aggregate rows are a separate question - see the Standard Errors section of the help. The remedies are a cluster() strictly finer than the cohort-by-period cells, or bootstrap() or permute(), which rebuild the cell inference from replications."
+        dis as text "Caution: `gtcontain' of `gtn' e(gteffects) cell(s) lie wholly inside a single `gtcmode', so their se, p and interval columns are understated and the cell interval does not cover at its nominal level; the aggregate rows are a separate question, discussed under Standard Errors in the help. A cluster() strictly finer than the cohort-by-period cells, bootstrap() or permute() gives valid cell inference."
         cap ereturn scalar gt_ncontained = `gtcontain'
       }
       * report the degeneracy floor. under a plain bootstrap()/permute() the cell inference
@@ -4470,8 +4470,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       * studentizes by, so the caution says so in those terms
       if `gtprc' == 0 & `gtndegen' > 0 {
         cap ereturn scalar gt_ndegen = `gtndegen'
-        if "`bootstrap'`permute'" == "" dis as text "Caution: `gtndegen' of `gtn' e(gteffects) cell(s) have a stage-1 variance that is cancellation residue rather than an estimated variance. That happens when the covariance is rank-deficient in the cell's direction, and also when the stage-1 fit is exact, so it is not confined to a robust or clustered VCE. Their se, p and interval columns are reported as missing rather than as the standard error of order 1e-15 the residue implies; the point estimates are unaffected. bootstrap() rebuilds the cell inference from replications, and a cluster() strictly finer than the cohort-by-period cells avoids the degeneracy; permute() blanks these columns outright either way."
-        else if "`boottstat'" != "" dis as text "Caution: `gtndegen' of `gtn' e(gteffects) cell(s) have a stage-1 variance that is cancellation residue rather than an estimated variance. Under boottstat that analytic standard error is the reported one and is what every replication studentizes by, so those cells report a missing se, p and interval rather than a standard error of order 1e-15. The point estimates are unaffected, but the studentized quantile changes, so the p of the healthy cells moves too."
+        if "`bootstrap'`permute'" == "" dis as text "Caution: `gtndegen' of `gtn' e(gteffects) cell(s) have a stage-1 variance that is cancellation residue rather than an estimated variance, so their se, p and interval columns are reported as missing; the point estimates are unaffected. bootstrap() rebuilds the cell inference from replications, and a cluster() strictly finer than the cohort-by-period cells avoids the degeneracy."
+        else if "`boottstat'" != "" dis as text "Caution: `gtndegen' of `gtn' e(gteffects) cell(s) have a stage-1 variance that is cancellation residue rather than an estimated variance. Under boottstat that standard error is the studentizing denominator, so those cells report a missing se, p and interval, and the p-values of the other cells move too; the point estimates are unaffected."
       }
     }
     else dis as text "Caution: gteffects found no cohort-by-relative-period main-effect coefficients to report."
@@ -5282,7 +5282,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       if "`: type `wdfv''" == "float" {
         qui gstats sum `wdfv' `ifassert', meanonly
         if r(N) > 0 & max(abs(r(min)), abs(r(max))) > 16777216 & max(abs(r(min)), abs(r(max))) < . {
-          dis as text "Caution: `wdfv' is stored as float and holds values above 16,777,216 (2^24), beyond which float cannot represent consecutive integers. Its values were rounded before wooldid saw them, which can silently merge adjacent periods, cohorts or IDs. If it is an 8-digit calendar code or a %tc datetime, regenerate it as double from its source (recasting cannot recover the lost values); coarse or even-valued codes above the threshold are unaffected."
+          dis as text "Caution: `wdfv' is stored as float and holds values above 16,777,216 (2^24), beyond which float cannot represent consecutive integers, so adjacent periods, cohorts or IDs may have been merged before wooldid saw them. If it is an 8-digit calendar code or a %tc datetime, regenerate it as double from its source; recasting cannot recover the lost values."
         }
       }
     }
@@ -5389,7 +5389,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * `cap qui wooldid', and the shell's own re-validation under `qui', so a permute() or
   * bootstrap() run prints this once, from the observed run's worker call.
   if "`fcbad'" != "" & "`nofastcollapse'" == "" {
-    dis as text "Caution: the default cell collapse does not apply with: `fcskip'. Wooldid evaluates the margins calls on the full estimation sample instead, which is what it did before the collapse existed - the run is slower, and no answer changes."
+    dis as text "Caution: the default cell collapse does not apply with: `fcskip'. The margins calls are evaluated on the full estimation sample instead; the run is slower and no answer changes."
     dis as text "  The collapse hands margins one row per cohort-by-period-by-treatment cell, which is exact only when the reported quantity is linear in the coefficients and, within a cell, linear in the treatment variable. What is listed above breaks one of those conditions:"
     if strpos("`fcskip'", "interactivecontrols()") dis as text "  interactivecontrols() interacts the treatment dummy with a variable that varies inside a cell, so the effect is no longer cell-constant."
     if strpos("`fcskip'", "contreatpoly(>1)") dis as text "  contreatpoly() above 1 makes the effect a polynomial in the dose, which the cell mean does not reproduce. contreat() itself is eligible: the collapse carries the cell's weighted mean of the dose."
@@ -5847,7 +5847,7 @@ version 16.0
   * POINT of the rule, not an accident of it, and the help now states it under Syntax
   qui count if `ifv' != 0 & `ifv' != 1 & `ifv' < .
   local wdvifn = r(N)
-  if `wdvifn' > 0 dis as text "Caution: the if() expression is nonzero but not exactly 1 on `wdvifn' observation(s). wooldid keeps only the rows where it equals exactly 1, where Stata's own if-qualifier keeps any nonzero value (missing included), so those observations are excluded here and are counted in the dropped-observation total. Write the restriction as a comparison - for example, if <var> != 0 - for Stata's usual behaviour."
+  if `wdvifn' > 0 dis as text "Caution: the if() expression is nonzero but not exactly 1 on `wdvifn' observation(s). wooldid keeps only the rows where it equals exactly 1, where Stata's own if-qualifier keeps any nonzero value, so those observations are excluded and counted in the dropped-observation total. Write the restriction as a comparison, for example if <var> != 0, for Stata's usual behaviour."
   c_local wdvifexcl `wdvifn'
 end
 
@@ -6057,7 +6057,7 @@ version 16.0
   }
   c_local fcguard caution
   if "`guard'" == "caution" exit
-  dis as text "Caution: wooldid found `fcdegwhy' at a subgroup margins call. Wooldid treats that as a numerically singular direction of the VCE, where an exact zero margins returns can be cancellation residue rather than an estimate, so which subgroup horizons and joint tests are reported can depend on the summation order - which the default cell collapse (see nofastcollapse in the help file) changes. Under the default safety setting wooldid would evaluate the subgroup results on the full data from this point; with safety(off) it proceeds on the collapsed rows as requested. Specify nofastcollapse to evaluate everything on the full data."
+  dis as text "Caution: wooldid found `fcdegwhy' at a subgroup margins call, a numerically singular direction of the VCE where an exact zero can be cancellation residue rather than an estimate, so which subgroup horizons and joint tests are reported can depend on the summation order, which the default cell collapse changes. Under default safety the subgroup results are evaluated on the full data from this point; with safety(off) the run proceeds on the collapsed rows. Specify nofastcollapse to evaluate everything on the full data."
 end
 
 
@@ -6170,7 +6170,7 @@ version 16.0
     * nesting
     local wdpcv = cond("`rawp'" != "", 2, cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != ""))))
     local wdp_floor = cond(`wdpcv' == 0, 2/(`permreps' + 1), cond(`wdpcv' == 2, 0, 1/(`permreps' + 1)))
-    if `wdp_floor' > .05 dis as text "Caution: with permreps(`permreps') the smallest attainable per-coefficient permutation p-value is " %5.3f `wdp_floor' " (" cond(`wdpcv' == 0, "2", "1") "/(permreps + 1)), above .05, so no coefficient p-value can reject at the 5% level whatever the data say, and a p-value printed at that floor is the resolution limit rather than evidence. Use at least " cond("`absp'" != "", "20", "40") " replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). The joint, equality and step-down tests are one-sided add-one shares with floor 1/(permreps + 1)."
+    if `wdp_floor' > .05 dis as text "Caution: with permreps(`permreps') the smallest attainable per-coefficient permutation p-value is " %5.3f `wdp_floor' " (" cond(`wdpcv' == 0, "2", "1") "/(permreps + 1)), above .05, so no coefficient p-value can reject at the 5% level; a p-value printed at that floor is the resolution limit rather than evidence. Use at least " cond("`absp'" != "", "20", "40") " replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). The joint, equality and step-down tests have floor 1/(permreps + 1)."
   }
   if "`permmethod'" == "probabilities" {
     cap confirm numeric variable `clus'
@@ -6339,7 +6339,7 @@ version 16.0
   * variance. With cluster() at i and one observation per i-period the treated cohort-period
   * cells are absorbed by their own terms, so the se cannot see them and permtstat does not
   * restore size. Say so; the run proceeds
-  if "`ts'" != "" & "`clus'" == "`ivar'" dis as text "Caution: permtstat with cluster() at the i level. The studentized permutation statistic protects against treated clusters being atypical in variance only when the cluster-robust standard error is informative about them - many observations per treated cohort-period cell, with cluster() coarser than the cell. With one observation per i-period the treated cells are absorbed by their own cohort-period terms, the standard error cannot see their variance, and permtstat is not protected there either (MacKinnon and Webb 2020); the test presumes exchangeable clusters in both forms."
+  if "`ts'" != "" & "`clus'" == "`ivar'" dis as text "Caution: permtstat with cluster() at the i level. The studentized statistic protects against treated clusters being atypical in variance only when the cluster-robust standard error can see their variance, which needs many observations per treated cohort-period cell and cluster() coarser than the cell; with one observation per i-period it cannot, and permtstat gives no protection there."
   * permute() gets its own exchangeability caution rather than the bootstrap's few-cluster
   * ones. the failure modes differ in kind: the pairs cluster bootstrap fails when clusters
   * are not exchangeable as sampling draws, while a randomization test fails on two other
@@ -6347,13 +6347,13 @@ version 16.0
   * cannot be diagnosed here, and, diagnosably, too few ever-treated clusters, which makes
   * the set of distinct assignments small, a limit no replication count can lift because the
   * draws repeat
-  if "`ts'" == "" & "`clus'" == "`ivar'" dis as text "Caution: cluster() is at the i level and the permuted statistic is the coefficient itself. Randomization inference presumes clusters are exchangeable in ASSIGNMENT; it does not presume they are alike in variance, and the coefficient statistic carries no protection against a treated cluster whose errors are unusually dispersed. permtstat is MacKinnon and Webb's (2020) device for that, with the proviso that it protects only when the cluster-robust standard error can see the treated clusters' own variance - which at cluster() = i with one observation per i-period it cannot."
+  if "`ts'" == "" & "`clus'" == "`ivar'" dis as text "Caution: cluster() is at the i level and the permuted statistic is the coefficient itself. Randomization inference presumes clusters are exchangeable in assignment, not alike in variance, so the coefficient statistic carries no protection against a treated cluster whose errors are unusually dispersed; permtstat protects only when the cluster-robust standard error can see the treated clusters' own variance, which at cluster() = i with one observation per i-period it cannot."
   tempvar wdpttag
   qui gegen byte `wdpttag' = tag(`clus') if `insmp' & `ntr' > 0
   qui count if `wdpttag' == 1
   local wdpntc = r(N)
   cap drop `wdpttag'
-  if `wdpntc' > 0 & `wdpntc' < 6 dis as text "Caution: only `wdpntc' of the resampling clusters are ever treated, so the number of DISTINCT onset assignments is small. Sampled draws will repeat, and the reference set - hence the set of p-values the run can produce - is coarse however large permreps() is; the limit is the design, not the replication count. permexact enumerates the assignments and reports the exact floor instead of sampling them. This is the randomization-inference analogue of the bootstrap's few-treated-cluster caution, not the same condition: that one is about resampling variance, this one about how many assignments exist."
+  if `wdpntc' > 0 & `wdpntc' < 6 dis as text "Caution: only `wdpntc' of the resampling clusters are ever treated, so the number of distinct onset assignments is small: sampled draws will repeat and the set of p-values the run can produce is coarse however large permreps() is. permexact enumerates the assignments and reports the exact floor instead."
   if "`clus'" != "`ivar'" & "`onc'" == "" {
     tempvar cgrp cmin cmax
     qui gegen double `cgrp' = group(`clus') if `insmp'
@@ -6717,7 +6717,7 @@ version 16.0
       dis as error "Error: bootstrap(bayes) with `cellwtd' reweights clusters but cannot resample treatment cells, so those bootstrap standard errors omit the cell-sampling variance component and can be too small when treatment effects vary across clusters. To proceed anyway with a caution, specify safety(off); bootstrap(standard) resamples cells and does not have this limitation."
       error 198
     }
-    dis as text "Caution: bootstrap(bayes) standard errors for `cellwtd' omit the cell-sampling variance component (cluster reweighting cannot resample treatment cells) and can be too small when treatment effects vary across clusters. Everything computed from that covariance inherits the understatement - the joint tests, the pairwise subgroup contrasts and the confidence intervals for those estimands, where p-values can be extreme - so read them alongside a bootstrap(standard) run, which does not have this limitation."
+    dis as text "Caution: bootstrap(bayes) standard errors for `cellwtd' omit the cell-sampling variance component and can be too small when treatment effects vary across clusters; the joint tests, pairwise subgroup contrasts and confidence intervals for those estimands inherit the understatement. Read them alongside a bootstrap(standard) run, which does not have this limitation."
   }
   * no nesting screen here, deliberately. i is an estimand-definition choice - which cohorts the
   * effects average over - and cluster() is a claim about dependence and assignment, so a cluster
@@ -6744,9 +6744,9 @@ version 16.0
   // p-value resolution. keep it here, above the other bootstrap cautions
   if `reps' > 0 {
     local wdbgrid = cond("`bts'" != "", 2/(`reps' + 1), cond("`bdisp'" == "wald", 1/(`reps' + 1), 2/`reps'))
-    if `wdbgrid' > .05 & "`bts'" != "" dis as text "Caution: with reps(`reps') the smallest studentized coefficient p-value this run can produce is " %5.3f `wdbgrid' " (2/(reps + 1)), above .05, so no coefficient p-value can reject at the 5% level whatever the data say, and a p-value printed at that value is the resolution limit rather than evidence. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 39 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). Failed replications are excluded, so the realized resolution can be coarser than this."
-    else if `wdbgrid' > .05 & "`bdisp'" == "wald" dis as text "Caution: with reps(`reps') the joint, equality and adversarial p-values - one-sided add-one shares over their own completed replication counts - cannot fall below " %5.3f `wdbgrid' " (1/(reps + 1)), above .05, so none of them can reject at the 5% level whatever the data say. The coefficient p-values under bootdisplay(wald) are analytic and carry no such limit. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 19 replications for a 5% joint test (roughly 50 for .02, 100 for .01 and 500 for .002). Failed replications are excluded, so the realized resolution can be coarser than this."
-    else if `wdbgrid' > .05 dis as text "Caution: with reps(`reps') the coefficient p-values fall on a grid of " %5.3f `wdbgrid' " (2/reps), so the only value below .05 this run can produce is exactly 0 - which records that no completed replication reached the far side of the null, not that the evidence is that strong. reps() has no minimum - small values are a legitimate way to time a specification - but use at least 40 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). Failed replications are excluded, so the realized grid can be coarser than this. The joint, equality and adversarial p-values are one-sided add-one shares with floor 1/(reps + 1)."
+    if `wdbgrid' > .05 & "`bts'" != "" dis as text "Caution: with reps(`reps') the smallest studentized coefficient p-value this run can produce is " %5.3f `wdbgrid' " (2/(reps + 1)), above .05, so no coefficient p-value can reject at the 5% level; a p-value printed at that value is the resolution limit rather than evidence. Use at least 39 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002); failed replications are excluded, so the realized resolution can be coarser."
+    else if `wdbgrid' > .05 & "`bdisp'" == "wald" dis as text "Caution: with reps(`reps') the joint, equality and adversarial p-values - one-sided add-one shares over their own completed replication counts - cannot fall below " %5.3f `wdbgrid' " (1/(reps + 1)), above .05, so none of them can reject at the 5% level; the coefficient p-values under bootdisplay(wald) are analytic and carry no such limit. Use at least 19 replications for a 5% joint test (roughly 50 for .02, 100 for .01 and 500 for .002); failed replications are excluded, so the realized resolution can be coarser."
+    else if `wdbgrid' > .05 dis as text "Caution: with reps(`reps') the coefficient p-values fall on a grid of " %5.3f `wdbgrid' " (2/reps), so the only value below .05 this run can produce is exactly 0, which records that no completed replication reached the far side of the null rather than strong evidence. Use at least 40 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002); failed replications are excluded, so the realized grid can be coarser. The joint, equality and adversarial p-values have floor 1/(reps + 1)."
   }
     * the few-cluster cautions live in wooldid_bootrun, not here: this program runs from
     * wooldid_validate before the estimation, so e(sample) does not exist yet and a cluster
@@ -7695,7 +7695,7 @@ version 16.0
     * is the observation count unclustered
     if "`bts'" != "" & "`clus'" != "" {
       local ++wdbncaut
-      local wdbc`wdbncaut' where cluster() sits at or above the i level the analytic pairwise-contrast standard errors can be degenerate (the same limitation behind the refusal of jointtests with analytic clustered SEs), and boottstat studentizes each contrast by that standard error in every replication, so the studentized contrasts and the across-subgroup equality test can be absent or numerically unstable there; a cluster() finer than i is the remedy and is supported, and the non-studentized bootstrap (bootstrap() without boottstat) forms the contrasts from the coefficient draws instead
+      local wdbc`wdbncaut' where cluster() sits at or above the i level the analytic pairwise-contrast standard errors can be degenerate, and boottstat studentizes each contrast by that standard error in every replication, so the studentized contrasts and the across-subgroup equality test can be absent or numerically unstable there; a cluster() finer than i is the remedy, and bootstrap() without boottstat forms the contrasts from the coefficient draws instead
     }
   }
 
@@ -8111,7 +8111,7 @@ version 16.0
   * what incompleteness costs is resolution, not the convention: the observed assignment is
   * one of the enumerated columns, so the shares stay exact - over the assignments that
   * completed, whose size is in e(perm_n)
-  if `nfail' > 0 & "`permexact'" != "" dis as text "Caution: `nfail' of `wdp_R' enumerated assignments failed to estimate, so the enumeration is incomplete. The p-values stay exact shares - the observed assignment is still a member of its own reference set - but over the `=`wdp_R' - `nfail'' assignments that completed: the smallest attainable p is 2/n under the default convention (1/n under the absolute-value and one-sided conventions) rather than 2/`wdp_R', with each element's n in e(perm_n)."
+  if `nfail' > 0 & "`permexact'" != "" dis as text "Caution: `nfail' of `wdp_R' enumerated assignments failed to estimate, so the enumeration is incomplete. The p-values remain exact shares over the `=`wdp_R' - `nfail'' assignments that completed, so the smallest attainable p is 2/n under the default convention (1/n under the absolute-value and one-sided conventions) rather than 2/`wdp_R', with each element's n in e(perm_n)."
   * (a failed assignment blanks its WHOLE accumulator row, so every element loses it and
   * n = M - nfail across the board; per-element loss on an assignment that DID estimate is
   * what wooldid_permwire's e(perm_incomplete) caution covers.)
@@ -9048,7 +9048,7 @@ version 16.0
   }
   if `drift' & `ndone' > 0 {
     ereturn scalar perm_cfx_blank = 1
-    dis as text "Caution: the lattice type `lattype' bins the dose on treated units' rows, so its bins are functions of the treatment assignment and differ from replication to replication; the continuous-treatment plot cells therefore have no permutation distribution and carry no permutation inference: their p-value and interval columns are blank, the standard error column keeps the analytic value the estimation posted (as it does on every permutation surface), and the t-ratio is blank unless permtstat is in force. latticetype all, byCohort, byTime, byCohortByTime, or a user-supplied cfxlattice() variable, give assignment-invariant bins that are permuted."
+    dis as text "Caution: the lattice type `lattype' bins the dose on treated units' rows, so its bins change with the treatment assignment and the continuous-treatment plot cells have no permutation distribution: their p-value and interval columns are blank, the standard error column keeps the analytic value, and the t-ratio is blank unless permtstat is in force. Lattice types all, byCohort, byTime and byCohortByTime, or a user-supplied cfxlattice() variable, give assignment-invariant bins that are permuted."
   }
 end
 
@@ -9211,7 +9211,6 @@ version 16.0
   * clusters the resample actually draws from and `smp' is the estimation sample, so both
   * thresholds read what the bootstrap really has
   if "`clus'" != "" {
-    if `wdb_C' < 10 dis as text "Caution: only `wdb_C' clusters are available for the bootstrap; bootstrap inference is unreliable with very few clusters."
     * the total-cluster caution above cannot see the case the few-cluster literature is about
     * - few treated clusters. The pairs cluster bootstrap keeps only the replications that
     * draw at least one treated cluster (the others fail and are excluded), so the retained
@@ -9229,7 +9228,7 @@ version 16.0
       qui gegen byte `wdbctag' = tag(`clusv') if `smp' & `wdbctr' == 1
       qui count if `wdbctag' == 1
       if r(N) < 6 {
-        dis as text "Caution: only " r(N) " treated cluster(s) are available for resampling. What is implemented is the " cond("`mode'" == "bayes", "Bayesian bootstrap, which shares the pairs cluster bootstrap's first two moments", "pairs cluster bootstrap, which keeps only the replications that draw at least one treated cluster, so the retained distribution is conditional on that event") "; with few treated clusters the literature finds this bootstrap badly sized (MacKinnon and Webb 2017, 2018), and boottstat is not a cure for it. Consider permute() - randomization inference over the treatment assignment - or the wild cluster bootstrap-t (boottest, on the stage-1 regression outside wooldid), which wooldid does not offer."
+        dis as text "Caution: only " r(N) " treated cluster(s) are available for resampling. What is implemented is the " cond("`mode'" == "bayes", "Bayesian bootstrap, which shares the pairs cluster bootstrap's first two moments", "pairs cluster bootstrap, which keeps only the replications that draw at least one treated cluster") "; with few treated clusters it is badly sized, and boottstat is not a cure for it. Consider permute(), randomization inference over the treatment assignment, or the wild cluster bootstrap-t (boottest, on the stage-1 regression outside wooldid)."
       }
       drop `wdbtrt' `wdbctr' `wdbctag'
     }
@@ -9284,7 +9283,7 @@ version 16.0
     local wdb_nstrad = r(N)
     drop `wdbstrtag'
     drop `wdbcmin' `wdbcmax'
-    if `wdb_nstrad' > 0 dis as text "Caution: `wdb_nstrad' of the `i' values in the estimation sample straddle two or more `clus' values, so every unit keeps its own identity in every replication. A twice-drawn cluster then contributes its treatment cells once rather than twice, and the bootstrap standard errors of att_i, att_it and att_itime omit part of the composition variance and can be too small - measured at 20 to 29 percent on a diagnostic panel where a single unit out of ninety-six straddles. The att and ame families are observation-weighted and are unaffected. Consider egen newi = group(`i' `clus'), missing - the missing option keeps unlabelled rows as their own group instead of dropping them from the estimation sample - or a cluster() that nests `i'. e(boot_nstraddle) and e(boot_reid) record this."
+    if `wdb_nstrad' > 0 dis as text "Caution: `wdb_nstrad' of the `i' values in the estimation sample straddle two or more `clus' values, so every unit keeps its own identity in every replication, and the bootstrap standard errors of att_i, att_it and att_itime omit part of the composition variance and can be too small; the att and ame families are unaffected. Consider egen newi = group(`i' `clus'), missing (the missing option keeps unlabelled rows as their own group) or a cluster() that nests `i'. e(boot_nstraddle) and e(boot_reid) record this."
   }
   * the shell's re-identification caution describes re-identified unit codes, which exist
   * only in the nesting regime - under keep-i nothing is re-identified and it would be false
@@ -9953,8 +9952,8 @@ version 16.0
   * inside e(boot_completed) - so they are reported separately rather than folded into the
   * failure count, and the text says exactly what survives and where
   if `nnonv' > 0 {
-    dis as text "Caution: `nnonv' of the `ndone' completed bootstrap replications produced no standard error at all: every standard error the replication reported came back below 1e-8 of the outcome's own standard deviation in that replication's estimation sample. That is not a small standard error - it is a variance estimate that is exactly zero, arriving as roundoff. It happens when a resample draws too few distinct clusters: the cohort-by-period dummies then saturate the drawn clusters, the model's own first-order conditions leave every cluster's score at zero, and at the extreme the model fits the resample exactly (R-squared = 1) and there is no residual left at all. The count is in e(boot_novar)."
-    dis as text "Caution: those `nnonv' replications' sampled values are neither edited nor discarded: their standard errors are in e(bootdist_se), and in the bootsave() file if one was written, exactly as they came back, beside their point estimates. What they do not do is enter any studentized object - the percentile-t p-values and intervals, the simultaneous bands, the subgroup contrasts and the joint, equality and adversarial tests are each computed on the replications that returned an estimable standard error, and the counts they ran over are row n of e(boot_tstud), e(boot_tstud_pwsgs) and e(esband_n_*). A design that produces exactly-fitting resamples is one the pairs cluster bootstrap is not reliable on at all: more clusters, or permute(), is the remedy, not a different bootstrap option."
+    dis as text "Caution: `nnonv' of the `ndone' completed bootstrap replications produced no usable standard error: every standard error they reported came back below 1e-8 of the outcome's own standard deviation, which happens when a resample draws too few distinct clusters and the model fits it exactly. The count is in e(boot_novar)."
+    dis as text "Caution: those `nnonv' replications' sampled values are kept as they came back, in e(bootdist_se) and in the bootsave() file if one was written, but they do not enter any studentized object: the percentile-t p-values and intervals, the simultaneous bands, the subgroup contrasts and the joint, equality and adversarial tests are computed on the replications that returned an estimable standard error, with the counts in row n of e(boot_tstud), e(boot_tstud_pwsgs) and e(esband_n_*). A design that produces exactly-fitting resamples is one the pairs cluster bootstrap is not reliable on; more clusters, or permute(), is the remedy."
   }
   * the cut above is deliberately far below anything a real design reaches, so that
   * excluding a draw is as close to a proof of failure as the data allows. That leaves a
@@ -9965,7 +9964,7 @@ version 16.0
   * when the looser cut catches something the stricter one did not; where the counts are
   * equal the caution above has already said it all
   if `nsesmall' > `nnonv' {
-    dis as text "Caution: `nsesmall' of the `ndone' completed bootstrap replications reported at least one standard error below 1e-5 of the outcome's own standard deviation, and `nnonv' of them produced no estimable standard error anywhere and were excluded outright by the 1e-8 cut. So `=`nsesmall' - `nnonv'' replication(s) sit between the two: small enough to be worth knowing about, not small enough to call a failure. They are kept and used in full, and nothing about them is trimmed, floored or rescaled. Read them as a warning about the design rather than about the run - a studentized statistic divides by these, so a handful of them is what drives an implausibly wide simultaneous band or percentile-t interval. More clusters, a coarser cluster(), or permute(), is the remedy. Both counts are in e(boot_sesmall) and e(boot_novar)."
+    dis as text "Caution: `nsesmall' of the `ndone' completed bootstrap replications reported at least one standard error below 1e-5 of the outcome's own standard deviation, and `nnonv' of them were excluded outright by the 1e-8 cut; the `=`nsesmall' - `nnonv'' in between are kept and used in full. A studentized statistic divides by these, so a handful of them can drive an implausibly wide simultaneous band or percentile-t interval. More clusters, a coarser cluster(), or permute(), is the remedy. Both counts are in e(boot_sesmall) and e(boot_novar)."
   }
 
   c_local wdb_r_done `ndone'
@@ -10589,7 +10588,7 @@ version 16.0
   }
   if "`wdb_bcbad'" != "" {
     ereturn local boot_bc_absent `wdb_bcbad'
-    dis as text "Caution: the bias-corrected family is withheld for: `wdb_bcbad'. Every completed replication of those columns fell on one side of the rep-0 comparator, so the median-bias correction z0 is invnormal(0) or invnormal(1) and is undefined; e(boot_z0), e(boot_ci_bc) and e(boot_p_bc) are missing there, and the BCa twin with them where it was requested. The percentile and Wald families are unaffected; under bootdisplay(bc) the affected rows print a blank p-value and interval rather than one borrowed from another family. Whether a larger reps() helps depends on the cause: it makes a one-sided draw set less likely when the draws are simply sparse around the estimate, and does nothing when the replication distribution sits away from the estimate altogether, which is a property of the specification rather than of the replication count."
+    dis as text "Caution: the bias-corrected family is withheld for: `wdb_bcbad'. Every completed replication of those columns fell on one side of the observed estimate, so the median-bias correction is undefined; e(boot_z0), e(boot_ci_bc) and e(boot_p_bc) are missing there, and the BCa twin with them where it was requested. The percentile and Wald families are unaffected; under bootdisplay(bc) the affected rows print a blank p-value and interval. A larger reps() helps only when the draws are sparse around the estimate."
   }
   if `wdbbca' {
     matrix colnames `ciba' = `obn'
@@ -10648,7 +10647,7 @@ version 16.0
     ereturn hidden matrix boot_ase_obs = `aseobs'
     if `wdbtmiss' > 0 dis as text "Caution: `wdbtmiss' reported coefficient(s) had no usable studentized bootstrap distribution (fewer than 2 replications with a positive standard error, or no observed standard error); their statistic, p-value and interval are left blank rather than filled from the coefficient-draw families."
     if `wdbtlow' > 0 dis as text "Caution: `wdbtlow' reported coefficient(s) used fewer than half of the completed replications in their studentized distribution, because the remaining replications produced no usable standard error for that coefficient. Replications are dropped by a rule that correlates with the resample being degenerate, so the studentized tail is trimmed in the anti-conservative direction there; inspect e(boot_tstud) row n."
-    dis as text "Caution: boottstat reports studentized (percentile-t) inference: the statistic t_pt is b/se_analytic, and the p-value and interval come from the ranks of the replications' own t-statistics (b_r - b)/se_r, so the standard-error column is the ANALYTIC standard error (se_analytic), the studentization's denominator, not a bootstrap standard deviation; the interval is equal-tailed from the signed t-quantiles and is not symmetric about the estimate. Under boottstat the pairwise subgroup contrasts are studentized the same way from each replication's own pairwise standard error, and the joint pre-trend tests, the across-subgroup equality tests and the adversarial line tests are bootstrapped as test statistics. bootdisplay(bc) and bootdisplay(wald) are refused under boottstat: the studentized draws have no bias-corrected or Wald (normal or t approximation) family. The studentized kernel is in e(boot_tstud) and the coefficient and standard-error draws in e(bootdist) and e(bootdist_se)."
+    dis as text "Caution: boottstat reports studentized (percentile-t) inference: the standard-error column is the analytic standard error (se_analytic), the statistic t_pt is b/se_analytic, and the p-value and interval come from the ranks of the replications' own t-statistics, so the interval is equal-tailed and not symmetric about the estimate. The pairwise subgroup contrasts are studentized the same way, and the joint pre-trend, subgroup equality and adversarial tests are bootstrapped as test statistics. The studentized kernel is in e(boot_tstud) and the draws in e(bootdist) and e(bootdist_se)."
   }
   * the bootstrap simultaneous band. it must stay HERE, after the studentized block above:
   * under boottstat the band is a percentile-t and needs the observed analytic standard
@@ -10691,7 +10690,7 @@ version 16.0
   local wdb_done0 = cond("`done'" == "", 0, real("`done'"))
   if `wdb_vposted' & `wdb_nlw' < 0.5*`wdb_done0' {
     ereturn scalar boot_V_shortfall = 1
-    dis as text "Caution: e(V) rests on `wdb_nlw' of the `wdb_done0' completed replications - the rows complete across all `K' reported estimates (e(boot_N_V)) - so its rank is at most `=max(`wdb_nlw'-1, 0)' and a hand-run test of more restrictions than that is not identified. `=cond(`wdbdf' < ., "e(df_r) = `wdbdf' describes the reference distribution of the printed table (the resampling-cluster count under bootdf(clusters)), not this covariance, so a test of fewer restrictions than that rank is anti-conservative relative to its nominal size.", "The reported statistics are normal or chi-squared here, which takes no account of how few replications the covariance rests on, so such a test is anti-conservative relative to its nominal size.")' The printed standard errors are NOT affected: each rests on its own e(boot_navail) replications."
+    dis as text "Caution: e(V) rests on `wdb_nlw' of the `wdb_done0' completed replications (the rows complete across all `K' reported estimates; e(boot_N_V)), so its rank is at most `=max(`wdb_nlw'-1, 0)' and a hand-run test of more restrictions than that is not identified. `=cond(`wdbdf' < ., "e(df_r) = `wdbdf' describes the printed table, not this covariance, so a test of fewer restrictions than that rank is anti-conservative.", "The reported statistics are normal or chi-squared here, so such a test is anti-conservative.")' The printed standard errors are not affected."
   }
   if "`rseed'" != "" ereturn local boot_seed `rseed'
   * bias = replicate mean - observed (official convention)
@@ -10981,7 +10980,7 @@ version 16.0
         cap drop `ptpsr'
         cap drop `ptpsn'
       }
-      dis as text "Caution: the `ptpty' pre-period variance-covariance block is rank-deficient (rank `ptpkeff' of `ptpk'). The slope, its CI, the joint test (now `ptpkeff' degrees of freedom), and the detectable-trend columns then reflect only the linearly independent subset of pre-period coefficients a generalized inverse retains - NOT a summary of all pre-period evidence - and can differ arbitrarily from statistics built on the discarded coefficients; interpret with care."
+      dis as text "Caution: the `ptpty' pre-period variance-covariance block is rank-deficient (rank `ptpkeff' of `ptpk'), so the slope, its CI, the joint test (now `ptpkeff' degrees of freedom) and the detectable-trend columns reflect only the linearly independent subset of pre-period coefficients a generalized inverse retains, not a summary of all pre-period evidence; interpret with care."
       if "`ptpsingmax'" != "" {
         if `ptpsingmax' == 1 dis as text "  The usual cause is a singleton-cell design, and this run is one: every treated (i, relative-period) cell holds exactly one observation, so the treated residuals are identically zero and this covariance is built from control-cell variation alone - two pre-period horizons can then be reported as exactly proportional when their estimates are not. It is not caused by the clustering, and it is present under robust. A coarser i (cohorts, or treatment-onset groups) with unit fixed effects supplied through fe() removes it, and bootstrap() or permute() give inference that does not read this matrix. See the Design conditions for every consumer of e(V_es_*) in the help, condition Two."
         if `ptpsingmax' > 1 & `ptpsingmax' < . dis as text "  Treated (i, relative-period) cells here hold up to `ptpsingmax' observations, so the singleton-cell degeneracy the help describes under the Design conditions for every consumer of e(V_es_*) is not the cause; the deficiency is in the estimated covariance itself. bootstrap() or permute() give inference that does not read this matrix."
@@ -11927,7 +11926,7 @@ version 16.0
     local ptpnissize = e(roth_nissize_`ptpty')
     * the rank-deficiency disclosure is reconstructible from e() and is replayed here, with the
     * same text and position the live run prints it in (pre-header)
-    if `ptpkeff' < `ptpk' dis as text "Caution: the `ptpty' pre-period variance-covariance block is rank-deficient (rank `ptpkeff' of `ptpk'). The slope, its CI, the joint test (now `ptpkeff' degrees of freedom), and the detectable-trend columns then reflect only the linearly independent subset of pre-period coefficients a generalized inverse retains - NOT a summary of all pre-period evidence - and can differ arbitrarily from statistics built on the discarded coefficients; interpret with care."
+    if `ptpkeff' < `ptpk' dis as text "Caution: the `ptpty' pre-period variance-covariance block is rank-deficient (rank `ptpkeff' of `ptpk'), so the slope, its CI, the joint test (now `ptpkeff' degrees of freedom) and the detectable-trend columns reflect only the linearly independent subset of pre-period coefficients a generalized inverse retains, not a summary of all pre-period evidence; interpret with care."
     * PTP PROPOSAL 2 replay mirror: the renderer has no data access, so it reads the scalar the
     * live run posted rather than recomputing the cell occupancy
     if `ptpkeff' < `ptpk' & e(roth_cellmax_`ptpty') == 1 dis as text "  The usual cause is a singleton-cell design, and this run is one: every treated (i, relative-period) cell holds exactly one observation, so the treated residuals are identically zero and this covariance is built from control-cell variation alone - two pre-period horizons can then be reported as exactly proportional when their estimates are not. It is not caused by the clustering, and it is present under robust. A coarser i (cohorts, or treatment-onset groups) with unit fixed effects supplied through fe() removes it, and bootstrap() or permute() give inference that does not read this matrix. See the Design conditions for every consumer of e(V_es_*) in the help, condition Two."
@@ -12047,8 +12046,8 @@ version 16.0
       * from e() so replay reproduces it. Written as the sibling of the jointtests caution: same
       * mechanism, same remedies
       if "`e(wdid_sgdegenact)'" != "" {
-        if "`e(wdid_sgdegenact)'" == "blank" dis as text "Caution: the analytic covariance of the subgroup effects is numerically rank-deficient in the contrast direction for `e(wdid_sgdegen)' pairwise row(s) (largest implied correlation between two subgroups' estimates `e(wdid_sgdegenr)'). The saturated cell dummies leave each cell's residuals with no within-cluster variation to identify, so the contrast's standard error is cancellation residue rather than an estimated variance - the same degeneracy named in the jointtests caution. The standard error, statistic, p-value and interval of those rows, and the across-subgroup equality test(s) covering them, are reported as absent rather than computed from that covariance; the point estimates are unaffected. wooldid's randomization inference (permute()) or bootstrap-based clustered SEs give subgroup contrasts and an equality test that are valid under this design - use bootstrap() WITHOUT boottstat, which studentizes each contrast by exactly this standard error - as does clustering strictly finer than the cohort-by-period cells, but only where that finer clustering leaves enough distinct clusters inside each treated cohort-by-period cell: with only a few clusters per cell the test stays oversized."
-        else dis as text "Caution: the analytic covariance of the subgroup effects is numerically rank-deficient in the contrast direction for `e(wdid_sgdegen)' pairwise row(s) (largest implied correlation between two subgroups' estimates `e(wdid_sgdegenr)'), so those contrast standard errors are cancellation residue rather than estimated variances. safety(off) was specified, so they and the across-subgroup equality tests are reported rather than withheld; read them as the residue they are. permute() or bootstrap() without boottstat gives inference that is valid under this design, as does clustering strictly finer than the cohort-by-period cells, but only where that finer clustering leaves enough distinct clusters inside each treated cohort-by-period cell."
+        if "`e(wdid_sgdegenact)'" == "blank" dis as text "Caution: the analytic covariance of the subgroup effects is numerically rank-deficient in the contrast direction for `e(wdid_sgdegen)' pairwise row(s) (largest implied correlation between two subgroups' estimates `e(wdid_sgdegenr)'), so those contrast standard errors are cancellation residue rather than estimated variances. The standard error, statistic, p-value and interval of those rows, and the across-subgroup equality test(s) covering them, are reported as absent; the point estimates are unaffected. permute(), bootstrap() without boottstat, or a cluster() strictly finer than the cohort-by-period cells that leaves many clusters inside each cell gives inference that is valid under this design."
+        else dis as text "Caution: the analytic covariance of the subgroup effects is numerically rank-deficient in the contrast direction for `e(wdid_sgdegen)' pairwise row(s) (largest implied correlation between two subgroups' estimates `e(wdid_sgdegenr)'), so those contrast standard errors are cancellation residue rather than estimated variances. safety(off) was specified, so they and the across-subgroup equality tests are reported rather than withheld; read them as the residue they are. permute(), bootstrap() without boottstat, or a cluster() strictly finer than the cohort-by-period cells that leaves many clusters inside each cell gives inference that is valid under this design."
       }
       dis as result " "
       foreach item in `estimandlist' {
@@ -12476,7 +12475,7 @@ version 16.0
       }
     }
     if `amelive' == 0 & `amedrop' > 0 {
-      dis as text "Caution: every treated cohort-period dose-slope term for the continuous treatment variable `contreat' was dropped for multicollinearity (see the caution counts above); this occurs, for example, when `contreat' is constant within each cohort. The within-cell average marginal effects (ame) that wooldid reports for continuous treatments are NOT IDENTIFIED in this design - the regression's ame entries are structural zeros, not estimates - so wooldid is reporting the ame results as missing and skipping the ame-based tests (only the raw e(b) coefficient vector retains the structural zeros: Stata cannot post missing coefficients). The att-side results are unaffected."
+      dis as text "Caution: every treated cohort-period dose-slope term for the continuous treatment variable `contreat' was dropped for multicollinearity, as happens when `contreat' is constant within each cohort. The within-cell average marginal effects (ame) are not identified in this design, so wooldid reports the ame results as missing and skips the ame-based tests; only the raw e(b) coefficient vector retains the structural zeros. The att-side results are unaffected."
       dis as text "Consider whether a coarser definition of `i' (so that cohort-period cells contain dose variation) matches your design, or estimate binary att effects without contreat(). You can ignore this check if you specify safety(off), but be careful: with safety(off) the ame output will contain the structural zeros."
       c_local amevoid 1
       c_local amescrub 1
@@ -12846,7 +12845,7 @@ version 16.0
     if strlen("`sgcase'") > `sgmaxlen' local sgmaxlen = strlen("`sgcase'")
   }
   if `sgmaxlen' >= 8 | (`sgmaxlen' == 7 & "`makecfxplotsbysg'" != "") {
-    dis as text "Caution: the subgroup variable takes values up to `sgmaxlen' digits long. wooldid embeds subgroup values in the names of stored results, matrices, and plots, and Stata caps such names at 31-32 characters, so values 8 or more digits long (7, with makecfxplotsbysg and 3-digit relative-year plot requests) can sometimes cause unexplained r(198) invalid-name crashes; att_itime results tables, adversarial, and makecfxplotsbysg are most exposed. Values above 2,147,483,647 will generally fail outright at Stata's factor-variable level cap."
+    dis as text "Caution: the subgroup variable takes values up to `sgmaxlen' digits long. wooldid embeds subgroup values in the names of stored results, matrices and plots, which Stata caps at 32 characters, so values 8 or more digits long (7 with makecfxplotsbysg) can cause r(198) invalid-name errors; recode the subgroup variable to small integers first (egen newsg = group(oldsg)). Values above 2,147,483,647 fail outright at Stata's factor-variable level cap."
     dis as text "If wooldid crashes, recode ID-style subgroup values to small integers first (e.g., egen newsg = group(oldsg))."
   }
   * do not add c_locals for joint_horiz_i_s<sg> / joint_Choriz_i_s<sg> here: they would
@@ -13564,7 +13563,7 @@ version 16.0
         qui count if `bctag' == 1
         local bck = r(N)
         qui gstats sum `iorig' if `bctr' & `bcref' == 1 & `bcsd' > 1e-5*`bcsamp' & `bcsd' < 1e-3*`bcsamp' & `bcsd' < ., meanonly
-        dis as text "Caution: under contreatcontrols(byCohort), `bck' treated cohort(s) (smallest: `=r(min)') have untreated/reference-period variation in `contreat' below 1/1000 of its sample standard deviation. The cohort-specific baseline dose slopes are nearly unidentified there. This is NOT numerical noise and regtol() does not reach it - the estimate in this band is deterministic, and on the bracketing sweep it was pinned to the exactly-collinear wrong answer over three to four orders of magnitude above regtol()'s own tolerance. Treat the reported average marginal effect for these cohorts as possibly being that collinear answer rather than an estimate, and examine or drop the affected cohort(s)."
+        dis as text "Caution: under contreatcontrols(byCohort), `bck' treated cohort(s) (smallest: `=r(min)') have untreated/reference-period variation in `contreat' below 1/1000 of its sample standard deviation, so their cohort-specific baseline dose slopes are nearly unidentified. This is not numerical noise and regtol() does not reach it; treat the reported average marginal effect for these cohorts as possibly a wrong answer rather than a noisy estimate, and examine or drop the affected cohort(s)."
       }
     }
     return scalar fail = `fail'
@@ -13651,7 +13650,7 @@ version 16.0
     if `vzero' & "`r1fired'" != "1" {
       if "`contreat'" != "" & "`clusvars'" != "" dis as text "Caution: estimation returned `vznoun'. The issue is likely related to continuous treatment effect estimation coupled with use of analytic clustered SEs, with clusters occuring at a high level of aggregation. Consider switching to use of bootstrap SEs, IM p-values, or randomization inference if finer clustering levels are non-viable.`vzres'"
       else if "`clusvars'" != "" dis as text "Caution: estimation returned `vznoun'. This usually reflects a degenerate clustering (very few clusters, or clusters at a high level of aggregation relative to the design). Consider switching to bootstrap SEs, IM p-values, or randomization inference.`vzres'"
-      else dis as text "Caution: estimation returned `vznoun'. Nothing in this run was clustered, so this is not a clustering problem: Stata replaces a variance matrix it judges nonsymmetric or highly singular with zeros, which is what a near-singular design does to the sandwich estimator.`=cond("`latflag'" == "1", " With lattice() the usual cause is treated cohort-by-period cells that hold too few distinct values of the continuous treatment once the lattice splits them: a cell-by-bin piece with no more observations than it has parameters is fitted exactly, so its residuals are identically zero and no residual-based variance estimator can see it.", "")' Bootstrap SEs and randomization inference (permute()) do not use this matrix; impvalues does not either, but it needs a cluster variable.`=cond("`latflag'" == "1", " A coarser lattice (fewer bins), a base-period lattice type, or a coarser i also restores it.", "")'`vzres'"
+      else dis as text "Caution: estimation returned `vznoun'. Nothing in this run was clustered, so this is not a clustering problem: Stata replaces a variance matrix it judges nonsymmetric or highly singular with zeros, which is what a near-singular design does to the sandwich estimator.`=cond("`latflag'" == "1", " With lattice() the usual cause is treated cohort-by-period cells that hold too few distinct values of the continuous treatment once the lattice splits them; a coarser lattice, a base-period lattice type, or a coarser i gives a usable variance matrix.", "")' Bootstrap SEs and randomization inference (permute()) do not use this matrix; impvalues does not either, but it needs a cluster variable.`vzres'"
     }
     return scalar vzero = `vzero'
     return scalar vzexact = `vzexact'
