@@ -271,7 +271,7 @@ qui log using edges_e9.txt, text replace name(ed)
 cap noi wooldid
 local rc9b = _rc
 qui log close ed
-scanE edges_e9.txt "predate that failed call"
+scanE edges_e9.txt "refit wooldid before replaying"
 local e9r = r(found)
 cap erase edges_e9.txt
 local e9files : dir . files "v1*"

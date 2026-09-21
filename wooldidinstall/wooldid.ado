@@ -38,8 +38,7 @@ version 16.0
     * c_local closure, and this check lives strictly inside the empty-line branch,
     * so "wooldid, update" and every other non-empty call is untouched
     if "${WOOLDID_LASTRC}" != "" {
-      if "${WOOLDID_LASTRC}" == "postloop" dis as error "Error: the last wooldid call failed after its replication loop, while rewiring the stored results to the permutation or bootstrap inference; the stored results are partially rewired. Refit wooldid before replaying."
-      else dis as error "Error: the last wooldid call failed with r(${WOOLDID_LASTRC}); the stored results predate that failed call. Refit wooldid before replaying."
+      dis as error "Error: the last wooldid call failed; refit wooldid before replaying."
       exit 198
     }
     wooldid_display , part(1)
@@ -109,7 +108,7 @@ version 16.0
   * run can still reach stata's variable limit late. arriving there, the user sees only stata's
   * bare "maxvar too small", which says nothing about what in this command consumed the
   * variables. rc-gated on 907, so a successful run never evaluates it and it costs nothing
-  if `wdsh_rc' == 907 dis as error "Note: r(907) is Stata's variable limit; maxvar is currently `=c(maxvar)'. wooldid builds one interaction term per treated cohort-by-period cell and Stata allocates design-matrix columns for all of them, so a granular cohort variable is the usual cause. Either raise the limit with -set maxvar- (fixed at 2048 in Stata/BE and not raisable there), or specify unit-level fixed effects via fe() and swap the cohort variable to a coarser level of aggregation, such as cohorts or treatment-onset groups."
+  if `wdsh_rc' == 907 dis as error "Note: r(907) is Stata's variable limit; maxvar is currently `=c(maxvar)'. Consider setting your cohort variable i to a higher level of aggregation (minimally, groups specifying treatment onset years), and separately using your unit or cluster variable as an input to fe(). If the issue is not an overly granular i variable, consider raising the variable limit using 'set maxvar'."
   if `wdsh_rc' != 0 exit `wdsh_rc'
 
   * permutation inference: runs only after a fully successful estimation. the worker set
@@ -749,7 +748,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`customweightmultiplier'" != "" & "`safetyinput'" != "off" {
     cap assert `customweightmultiplier' >= 0 if `ifstatement'
     if _rc != 0 {
-      dis as error "Error: the customweightmultiplier() variable contains negative values on in-sample observations; the documented domain is non-negative (missing values are dropped). To ignore this error, specify safety(off)."
+      dis as error "Error: the customweightmultiplier() variable contains negative values. To ignore this error, specify safety(off)."
       error 411
     }
   }
@@ -941,8 +940,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       cap assert r(max) > `refperiod'
       if _rc != 0 local failure 1
       if `failure' == 1 dis as error  "Error: cannot find sufficient pre- and post-treatment periods for the treated units."
-      if `failure' == 1 & "`timetrends'" == "timetrends"  dis as error  "Note that inclusion of cohort-specific time trends increases the required number of pre-treatment periods."
-      if `failure' == 1 & `anticipation' > 0 dis as error  "Note: anticipation(`anticipation') shifted every effective onset earlier; a shift larger than the available pre-period window can leave no estimable treated periods."
       if `failure' == 1 error 459
     }
     * send _t to 0  when we want it to be  a comparison period
@@ -983,7 +980,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if r(N) == 0 {
       dis as error  "Error: you have no never-treated control group and no not-yet-treated control group whose treatment falls outside the sample window."
       dis as error  "To ignore this error, specify safety(off) or modify the sample window manually."
-      if `anticipation' > 0 dis as error  "Note: anticipation(`anticipation') moves effective onsets earlier, which can pull cohorts treated after the sample window into it; a larger oostreatedcontrols() or a smaller anticipation() may restore a control group."
       error 459
     }
   }
@@ -11814,14 +11810,12 @@ version 16.0
     wooldid_mlfmt , mat(e(summarystats))
     matlist e(summarystats), cspec(`wdmlfmt') rspec(`wdmlfmtr')
 
-    if "`poisson'" == "poisson" dis as result  "Note: summary stats above are for untransformed Y, while coefficients are from Y=exp(regression equation) and have a log-linear type interpretation."
   }
 
 
   ************* now show main results with matlist
   dis as result  " "
   dis as result  "Main`poistext' Results (Full Estimation Sample): `elasinj'"
-  if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
   wooldid_mlfmt , mat(e(wdidmainresults))
   matlist e(wdidmainresults), cspec(`wdmlfmt') rspec(`wdmlfmtr')
   wooldid_pfloor e(wdidmainresults)
@@ -11979,7 +11973,6 @@ version 16.0
         local poistext
         if "`poisson'" == "poisson" local poistext "Poisson Regression "
         dis as result  "`poistext'Results for Subgroup `subgroups' == `sgcase': `elasinj'"
-        if "`customweightmultiplier'" != "" dis as result  "Note: all Estimates Shown Apply `customweightmultiplier' Weights Post-Estimation"
         wooldid_mlfmt , mat(e(wdidsgresults_`sgcase'))
         matlist e(wdidsgresults_`sgcase'), cspec(`wdmlfmt') rspec(`wdmlfmtr')
         wooldid_pfloor e(wdidsgresults_`sgcase')
@@ -12075,14 +12068,9 @@ version 16.0
     local gtrows = rowsof(`gtd')
     dis as result " "
     dis as result "Cohort-by-Relative-Period Effects (regression scale; full table incl. weight totals in e(gteffects)):"
-    if "`poisson'" == "poisson" dis as text "Note: under poisson these are on the linear-index (xb) scale, as is every other effect wooldid reports there."
-    if "`e(perm_gt_blank)'" == "1" dis as text "Note: under permute() these cells have no permutation distribution (their keys are cohort onsets, which the replications reassign), so their inference columns are blank; rows outside the reported event-study window have inwindow = 0."
-    else if "`e(boot_method)'" != "" dis as text "Note: under bootstrap() the se, p, lb and ub columns are the `=cond("`e(boot_gteffects_family)'" == "", "percentile", "`e(boot_gteffects_family)'")' bootstrap family of each cell's own replications (every family is stored in e(boot_*_gteffects)); rows outside the reported event-study window have inwindow = 0."
-    else dis as text "Note: standard errors are the stage-1 regression's coefficient-level VCE; rows outside the reported event-study window have inwindow = 0."
     * name the blanked cells above the table. Existence-gated on e(), so replay reproduces it.
     * Gated off the replication engines too, since those rewrite the cell inference columns
     * themselves and the note would then describe a number the user is not reading.
-    if "`e(gt_ndegen)'" != "" & "`e(gt_ndegen)'" != "0" & "`e(boot_method)'`e(perm_method)'" == "" dis as text "Note: `=e(gt_ndegen)' cell(s) below carry a degenerate stage-1 variance (cancellation residue, not an estimated variance); their se, p and interval columns are missing by design."
     if `gtrows' <= 200 {
       tempname gtds
       * e(gteffects) is 15 columns (the stripe is set in Mata: i, onset, caltime, relyr,
@@ -12676,8 +12664,6 @@ version 16.0
   cap assert `max_t' > 0 & `max_t' < .
   if _rc != 0 {
     dis as error  "Error: cannot find either a treated time period for any treated units or sufficient untreated periods for treated units."
-    if "`timetrends'" != "" dis as error  "Note that including cohort-specific time trends raises the number of untreated periods required."
-    if `anticipation' > 0 dis as error  "Note: anticipation(`anticipation') shifted every effective onset earlier; a shift larger than the available pre-period window can leave no estimable treated periods."
     error 459
   }
   * produce modified identifiers _i
@@ -13503,7 +13489,6 @@ version 16.0
         dis as error "Two remedies are measured to work: keep in the estimation sample units treated AFTER the end of the window, which restores a dosed comparison pool in the late periods, or drop byTime from contreatcontrols() and use a coarser type."
       }
       if "`ccrtype'" != "byTime" dis as error "Remedies: use a coarser contreatcontrols() type, or examine and drop the affected group(s) from the estimation sample."
-      if "`ccrwithin'" != "" dis as error "Note that contreatwithin does not rescue this: on designs of exactly this shape it has been measured to report a sign-flipped effect with no caution at all. contreatcontrols(untreatedZero) returns the correct answer on that design and is the substitution to consider."
     }
     return scalar fail = `fail'
     return scalar n = `ccrn'

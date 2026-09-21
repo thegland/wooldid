@@ -185,14 +185,14 @@ else {
   }
 }
 
-* ---- G7: poisson - runs, prints the xb-scale note ----
+* ---- G7: poisson - runs; the xb-scale note under the table was removed by the author's 2026-09-21 message review ----
 use "`DATA'/dta_binary", clear
 qui log using gt_t7.txt, text replace name(gt)
 cap noi wooldid ycount i t ttre, att cluster(i) poisson gteffects
 local rc7 = _rc
 qui log close gt
-if `rc7' != 0 | strpos(fileread("gt_t7.txt"), "linear-index (xb) scale") == 0 {
-  dis as error "G7 FAIL: rc=" `rc7' " xbnote missing"
+if `rc7' != 0 | strpos(fileread("gt_t7.txt"), "linear-index (xb) scale") != 0 {
+  dis as error "G7 FAIL: rc=" `rc7' " xb note printed but was removed"
   local ++fails
 }
 
