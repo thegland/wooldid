@@ -45,10 +45,12 @@ a point-estimates-only mode ({it:fastnose}), and replay of the stored results by
 {help wooldid##runtime:Runtime}, {help wooldid##comparison:Comparison with Related Estimators}, {help wooldid##examples:Examples},
 {help wooldid##bugs:Bugs and Assistance}, {help wooldid##citations:Citations}, {help wooldid##author:Author Info and How to Cite}, {help wooldid##disclaimer:Disclaimer} {p_end}
 
-{pstd}{ul:Dependencies:} {cmd:wooldid} requires STATA 16 or higher, {help reghdfe} version 5.7.3, {help ftools},
+{pstd}{ul:Dependencies:} {cmd:wooldid} requires Stata 16 or higher, {help reghdfe} version 5.7.3, {help ftools},
 and {help gtools}. Poisson estimation also requires {help ppmlhdfe}. {p_end}
 
-{pstd}{ul:Github Link:} {browse "https://github.com/thegland/wooldid/"} - the command {it:wooldid, update} updates this program from the materials at this link. A longer usage guide written for AI agents and advanced users is at {browse "https://github.com/thegland/wooldid/blob/main/wooldidinstall/wooldid_agent_guide.md"}. {p_end}
+{pstd}{ul:Github Link:} {browse "https://github.com/thegland/wooldid/"} - the command {it:wooldid, update} updates this program from the materials at this link. A longer usage guide written
+for AI agents and advanced users is at {browse "https://github.com/thegland/wooldid/blob/main/wooldidinstall/wooldid_agent_guide.md"}; it is also an ancillary file of the package, copied to
+the working directory by {cmd:net get wooldid}. {p_end}
 
 {marker syntax}{...}
 {title:Syntax}
@@ -88,11 +90,11 @@ with an informative error unless {opt safety(off)}. Store large onset codes, suc
 {opt pois:son} {p_end}
 
 {synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt espre:length(int>=0)} {opt espost:length(int>=0)} {opt esr:elativeto(-int)}
- {opt joint:tests}   {opt adv:ersarial} {opt altmethod_adversarial} {opt makep:lots} {opt oos:treatedcontrols(int>=0)} {opt antic:ipation(int>=0)} {opt pretrendpow:er(numlist)}  {p_end}
+{opt joint:tests}   {opt adv:ersarial} {opt altmethod_adversarial} {opt makep:lots} {opt oos:treatedcontrols(int>=0)} {opt antic:ipation(int>=0)} {opt pretrendpow:er(numlist)}  {p_end}
 
 {synopt : {help wooldid##interactions:Subgroup Effects:}} {opt sub:groups(variable[>=0 int])} {opt suppress:sgprimaryeffects}  {p_end}
 
-{synopt : {help wooldid##continuous:Continuous Treatments:}} {opt contreat(variable[numerical])} {opt contreatelas:ticitytype(dydx or dyex)}  {opt contreatw:ithin}
+{synopt : {help wooldid##continuous:Continuous Treatments:}} {opt contreat(variable[numerical])} {opt contreatelas:ticitytype(dydx|dyex)}  {opt contreatw:ithin}
 {opt contreatp:oly(+int)} {opt lattice(variable[+int] OR latticetype latticenum)} {opt latticeig:noreweights} {opt makec:fxplots} {opt cfxlattice(variable[+int])}
 {opt cfxplott:ypes(post, pre, and/or integers specifying relative time periods)} {opt makecfxplotsbysg}  {opt cfxplotnose}  {opt contreatc:ontrols(conttreatcontroltype)}  {p_end}
 {phang3} {it:-latticetype}: {it:all}, {it:byTime}, {it:byTreated}, {it:byTtre}, {it:byCohort}, {it:byTreatedByTime}, {it:byTtreByTime}, {it:byCohortByTime}, {it:baseTreated}, {it:baseTreatedRef},
@@ -137,12 +139,12 @@ specified by the user. The overall average treatment effect would be obtained by
   introducing a set of weights (or modifying the pre-existing sample weights) when averaging the computed differences in the margins calculation or by restricting the sample so that the
   average only contains observations from a subgroup or time period of interest.
 For more on the different estimand-types available, see {help wooldid##specifyestimand:estimands}. {p_end}
- {pstd} With respect to inference, there are several approaches to standard error estimation available. The default estimates standard errors in the underlying regression and then obtains
- standard errors on the treatment effects produced by the margins calculation using the delta method. These errors are conditional standard errors in the sense that they are conditional
- on the data: the difference in fitted values potentially depends on the value of various covariates, and this approach takes these values as fixed when performing the margins calculation.
- P-values are then obtained from a t-distribution with the residual degrees of freedom of the underlying regression.
- The alternative is to have {it:margins} produce unconditional standard errors (see the option {it:unconditional} in {help margins}), which account for sampling variation in covariates.
- For more on standard error computation, see {help wooldid##standarderrors:standard_errors}. {p_end}
+{pstd} With respect to inference, there are several approaches to standard error estimation available. The default estimates standard errors in the underlying regression and then obtains
+standard errors on the treatment effects produced by the margins calculation using the delta method. These errors are conditional standard errors in the sense that they are conditional
+on the data: the difference in fitted values potentially depends on the value of various covariates, and this approach takes these values as fixed when performing the margins calculation.
+P-values are then obtained from a t-distribution with the residual degrees of freedom of the underlying regression.
+The alternative is to have {it:margins} produce unconditional standard errors (see the option {it:unconditional} in {help margins}), which account for sampling variation in covariates.
+For more on standard error computation, see {help wooldid##standarderrors:standard_errors}. {p_end}
 
 {pstd} This overall approach can be extended to cover many additional use cases with little or no modification. The user can switch from standard regression to poisson regression without
 requiring any essential modification to the regression equation or margins procedure. Additional controls and fixed effects can be added to the underlying regression without requiring
@@ -237,7 +239,8 @@ cohort i is observed. If weights are not used, w is taken to have a value of 1 f
 {pstd}Under {it:contreat()} each requested estimand is also reported as the average marginal effect of the continuous treatment, labelled {it:ame}, {it:ame_it}, {it:ame_i} and {it:ame_itime}.
 Because {it:att_it}, {it:att_i} and {it:att_itime} weight cells or cohorts equally rather than observations, some options treat them differently. {it:unconditionalse} and
 {it:bootstrap(bayes)} are refused for them unless {it:safety(off)} is specified. {it:makecfxplots} produces its plots and the {it:e(cfx*)} matrices for {it:att} only unless
-{it:safety(off)} is specified. A {it:subgroups()} variable that splits a unit across subgroups over time is refused; under {it:safety(off)} such a unit enters each subgroup by its share of sample weight, so {it:att_i} and {it:att_itime} then no longer weight units equally.{p_end}
+{it:safety(off)} is specified. A {it:subgroups()} variable that splits a unit across subgroups over time is refused; under {it:safety(off)} such a unit enters each subgroup by its share of
+sample weight, so {it:att_i} and {it:att_itime} then no longer weight units equally.{p_end}
 
 {marker standarderrors}{...}
 {dlgtab:Standard Errors}
@@ -307,7 +310,8 @@ by {it:pretrendpower()} are fixed at 5%. {p_end}
 With {it:cluster()} at the level of {it:i} or coarser, each treated cohort-by-period cell lies wholly inside one cluster, and the saturated cell dummies leave the
 cluster-robust covariance nothing within the cluster to identify. Several consequences are specific to {it:wooldid}: the analytic standard errors of the continuous treatment
 ({it:ame}) estimates are not identified and are reported as missing; the analytic joint pre-trend tests and the adversarial line test are not calibrated; pairwise
-subgroup contrasts can be degenerate; and the {it:att} rows' analytic standard errors are understated without a caution, the {it:gteffects} cells more so (a {it:gteffects} run counts the affected cells and cautions). The remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}. {p_end}
+subgroup contrasts can be degenerate; and the {it:att} rows' analytic standard errors are understated without a caution, the {it:gteffects} cells more so (a {it:gteffects} run counts the
+affected cells and cautions). The remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}. {p_end}
 
 {pstd} {ul: Discussion of Unconditional Standard Errors:}
 The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates
@@ -348,7 +352,8 @@ independence assumption. {p_end}
 and subgroup contrasts become bootstrap quantities. Point estimates are unchanged; the analytic covariance is kept in the hidden {it:e(V_analytic)}. Each
 replication re-estimates the full model. {it:bootstrap(standard)} is the pairs cluster bootstrap: the {it:cluster()} groups, or
 the observations when {it:cluster()} is not given, are resampled with replacement. {it:bootstrap(bayes)} is the Bayesian bootstrap: each replication draws one
-Dirichlet weight per cluster and multiplies that cluster's observations by it, so no cluster ever leaves the sample. Requires {it:reps()}. Refused with {it:permute()}, {it:impvalues}, {it:unconditionalse}, {it:customvce()}, {it:fastnose}, {it:oldsyntax},
+Dirichlet weight per cluster and multiplies that cluster's observations by it, so no cluster ever leaves the sample. Requires {it:reps()}. Refused with {it:permute()}, {it:impvalues},
+{it:unconditionalse}, {it:customvce()}, {it:fastnose}, {it:oldsyntax},
 {it:suppresssgprimaryeffects} and multi-way {it:cluster()}. {it:bootstrap(bayes)} with {it:att_it}, {it:att_i} or {it:att_itime} omits the cell-sampling component
 of the variance and is refused unless {it:safety(off)} is given, which makes it a caution. Plots, {it:gteffects} cells, {it:jointtests}
 and {it:pretrendpower()} all follow the bootstrap. Only the {it:histogramcohorteffects} output remains analytic, and a caution says so. Under
@@ -414,57 +419,106 @@ before repeating the call. {p_end}
 {marker permute}{...}
 {dlgtab:Randomization (Permutation) Inference}
 
-{phang}{opt perm:ute(method)}: Randomization inference over the assignment of treatment onset, intended for settings with few treated clusters. {it:wooldid} reassigns onset dates across clusters, re-estimates every requested quantity under each reassignment, and ranks the observed estimates in the resulting distributions. {it:shuffle} permutes the observed onset labels across clusters, holding the count at each onset fixed; {it:probabilities} draws each cluster's onset from the probabilities in {it:permprobs()}. Requires a single {it:cluster()} variable, the randomization unit, that nests {it:i} unless {it:permonsetcohorts} is specified; every cluster must sit inside one treatment-onset group, with the never-treated their own group and coded as plain missing. That screen runs on every row the {it:if} expression keeps, including rows the estimator later drops for a missing outcome or weight, so a specification that runs without {it:permute()} can be refused once {it:permute()} is added; restrict the sample with {it:if}. Also requires {it:permreps()} or, for shuffle only, {it:permexact}. Not compatible with {it:impvalues}, {it:unconditionalse}, {it:contreatwithin}, {it:contreatcontrols(untreatedZero)}, {it:oldsyntax}, {it:suppresssgprimaryeffects}, {it:pretrendpower()}, {it:simultaneousbands} or {it:bootstrap()}. A design that admits only one possible assignment is refused. With {it:subgroups()} the subgroup screens apply over the whole sample, since any cluster can be treated in a replication. Every p-value and interval the run reports is permutation-based, including the subgroup contrasts, the joint pre-trend, subgroup equality and adversarial tests, and the continuous-treatment plot cells. P-values are two-sided equal-tailed, using the add-one form for sampled draws. Intervals are shift intervals at {it:level()}: the estimate minus the equal-tailed quantiles of the permutation distribution. By default the run and the replications are in fast mode, without analytic standard errors, so the {it:se_analytic} column is blank and {it:e(V)}, {it:e(b_es_*)} and {it:e(V_es_*)} are not posted; {it:permanalyticse} restores them. Quantities with no permutation distribution are left blank rather than filled analytically: the {it:gteffects} cells, whose keys are the onsets the replications reassign, and the continuous-treatment plot cells of the {it:baseTreated}, {it:byTreated} and {it:byTtre} lattice types. The {it:histogramcohorteffects} output stays analytic, with a caution. Replications that fail to estimate are excluded and counted in {it:e(perm_failed)}; the run is refused when fewer than max(20, half) complete. A caution prints when fewer than 6 clusters are ever treated, since the set of distinct assignments is then small whatever {it:permreps()} is. {p_end}
+{phang}{opt perm:ute(method)}: Randomization inference over the assignment of treatment onset, intended for settings with few treated clusters. {it:wooldid} reassigns onset dates across
+clusters, re-estimates every requested quantity under each reassignment, and ranks the observed estimates in the resulting distributions. {it:shuffle} permutes the observed onset labels
+across clusters, holding the count at each onset fixed; {it:probabilities} draws each cluster's onset from the probabilities in {it:permprobs()}. Requires a single {it:cluster()} variable,
+the randomization unit, that nests {it:i} unless {it:permonsetcohorts} is specified; every cluster must sit inside one treatment-onset group, with the never-treated their own group and coded
+as plain missing. That screen runs on every row the {it:if} expression keeps, including rows the estimator later drops for a missing outcome or weight, so a specification that runs without
+{it:permute()} can be refused once {it:permute()} is added; restrict the sample with {it:if}. Also requires {it:permreps()} or, for shuffle only, {it:permexact}. Not compatible with
+{it:impvalues}, {it:unconditionalse}, {it:contreatwithin}, {it:contreatcontrols(untreatedZero)}, {it:oldsyntax}, {it:suppresssgprimaryeffects}, {it:pretrendpower()}, {it:simultaneousbands}
+or {it:bootstrap()}. A design that admits only one possible assignment is refused. With {it:subgroups()} the subgroup screens apply over the whole sample, since any cluster can be treated in
+a replication. Every p-value and interval the run reports is permutation-based, including the subgroup contrasts, the joint pre-trend, subgroup equality and adversarial tests, and the
+continuous-treatment plot cells. P-values are two-sided equal-tailed, using the add-one form for sampled draws. Intervals are shift intervals at {it:level()}: the estimate minus the
+equal-tailed quantiles of the permutation distribution. By default the run and the replications are in fast mode, without analytic standard errors, so the {it:se_analytic} column is blank
+and {it:e(V)}, {it:e(b_es_*)} and {it:e(V_es_*)} are not posted; {it:permanalyticse} restores them. Quantities with no permutation distribution are left blank rather than filled
+analytically: the {it:gteffects} cells, whose keys are the onsets the replications reassign, and the continuous-treatment plot cells of the {it:baseTreated}, {it:byTreated} and {it:byTtre}
+lattice types. The {it:histogramcohorteffects} output stays analytic, with a caution. Replications that fail to estimate are excluded and counted in {it:e(perm_failed)}; the run is refused
+when fewer than max(20, half) complete. A caution prints when fewer than 6 clusters are ever treated, since the set of distinct assignments is then small whatever {it:permreps()} is. {p_end}
 
-{phang}{opt permreps(#)}: Number of sampled reassignments, drawn with replacement; at least 20. Required unless {it:permexact} is specified. A sampled-draw p-value cannot fall below 2/({it:permreps}+1) under the default convention, or 1/({it:permreps}+1) under {it:permabsp} or {it:permside()}, and a caution prints when that floor is above .05. A caution also prints when {it:permreps()} exceeds 10 percent of the possible assignments. {p_end}
+{phang}{opt permreps(#)}: Number of sampled reassignments, drawn with replacement; at least 20. Required unless {it:permexact} is specified. A sampled-draw p-value cannot fall below
+2/({it:permreps}+1) under the default convention, or 1/({it:permreps}+1) under {it:permabsp} or {it:permside()}, and a caution prints when that floor is above .05. A caution also prints when
+{it:permreps()} exceeds 10 percent of the possible assignments. {p_end}
 
-{phang}{opt permex:act}: Enumerate every distinct assignment instead of sampling. Only with {it:permute(shuffle)}, and not together with {it:permreps()}. A caution prints above 1,000 assignments and enumeration is refused above 10,000. p-values are then plain shares over the {it:M} assignments, with a floor of 2/{it:M}, or 1/{it:M} under {it:permabsp}. {p_end}
+{phang}{opt permex:act}: Enumerate every distinct assignment instead of sampling. Only with {it:permute(shuffle)}, and not together with {it:permreps()}. A caution prints above 1,000
+assignments and enumeration is refused above 10,000. P-values are then plain shares over the {it:M} assignments, with a floor of 2/{it:M}, or 1/{it:M} under {it:permabsp}. {p_end}
 
-{phang}{opt permstr:ata(varname)}: Confine the shuffle to within strata of a numeric variable, so each onset group keeps its composition across strata. Every cluster must sit inside a single stratum, with no missing values. Only with {it:permute(shuffle)}; under {it:permute(probabilities)} strata are expressed through {it:permprobs()} instead. {p_end}
+{phang}{opt permstr:ata(varname)}: Confine the shuffle to within strata of a numeric variable, so each onset group keeps its composition across strata. Every cluster must sit inside a single
+stratum, with no missing values. Only with {it:permute(shuffle)}; under {it:permute(probabilities)} strata are expressed through {it:permprobs()} instead. {p_end}
 
-{phang}{opt permpr:obs(spec)}: The assignment-probability design for {it:permute(probabilities)}, written as {it:(onsetvar level level ...)} followed by one {it:(clustervalue p p ...)} group per cluster. The first group names the timing variable and lists every in-sample onset level, with never-treated as {it:.}; each later group gives one cluster's probabilities over those levels, nonnegative and summing to 1. Every cluster value must appear exactly once. Requires {it:permreps()}; {it:permexact} is refused. A caution prints if the observed assignment has zero probability under the design. {p_end}
+{phang}{opt permpr:obs(spec)}: The assignment-probability design for {it:permute(probabilities)}, written as {it:(onsetvar level level ...)} followed by one {it:(clustervalue p p ...)} group
+per cluster. The first group names the timing variable and lists every in-sample onset level, with never-treated as {it:.}; each later group gives one cluster's probabilities over those
+levels, nonnegative and summing to 1. Every cluster value must appear exactly once. Requires {it:permreps()}; {it:permexact} is refused. A caution prints if the observed assignment has zero
+probability under the design. {p_end}
 
-{phang}{opt permts:tat}: Randomize on t-ratios instead of coefficients: each replication's estimate over its own analytic standard error. The replications then compute standard errors, so the run is slower, and {it:fastnose} is refused. Intervals become the estimate minus the equal-tailed quantiles of the permuted t-ratios times the analytic standard error. The joint, equality and adversarial tests and the pairwise contrasts are unchanged. It protects against a treated cluster with unusually dispersed errors only where the cluster-robust standard error sees that cluster's own variance, which at {it:cluster()} equal to {it:i} it does not; a caution says so. {p_end}
+{phang}{opt permts:tat}: Randomize on t-ratios instead of coefficients: each replication's estimate over its own analytic standard error. The replications then compute standard errors, so
+the run is slower, and {it:fastnose} is refused. Intervals become the estimate minus the equal-tailed quantiles of the permuted t-ratios times the analytic standard error. The joint,
+equality and adversarial tests and the pairwise contrasts are unchanged. It protects against a treated cluster with unusually dispersed errors only where the cluster-robust standard error
+sees that cluster's own variance, which at {it:cluster()} equal to {it:i} it does not; a caution says so. {p_end}
 
-{phang}{opt permt:ci}: Also report, for the pooled estimands, the symmetric inverted-|t| interval: the estimate plus or minus the {it:level()} quantile of the permuted absolute t-ratios times the observed standard error. Implies {it:permtstat}. {p_end}
+{phang}{opt permt:ci}: Also report, for the pooled estimands, the symmetric inverted-|t| interval: the estimate plus or minus the {it:level()} quantile of the permuted absolute t-ratios
+times the observed standard error. Implies {it:permtstat}. {p_end}
 
-{phang}{opt perman:alyticse}: Without {it:permtstat}, compute the analytic standard errors anyway and show them in the {it:se_analytic} column for reference; the p-values and intervals remain permutation-based, and the posted {it:e(V)} is analytic. {p_end}
+{phang}{opt perman:alyticse}: Without {it:permtstat}, compute the analytic standard errors anyway and show them in the {it:se_analytic} column for reference; the p-values and intervals
+remain permutation-based, and the posted {it:e(V)} is analytic. {p_end}
 
-{phang}{opt permab:sp}: Report absolute-value permutation p-values instead of equal-tailed ones: the share of replications whose absolute statistic is at or above the observed absolute statistic. Intervals become the estimate plus or minus the {it:level()} quantile of the permuted absolute statistics, so p-value and interval keep agreeing. The joint, equality and adversarial tests are unchanged. At most one of {it:permabsp}, {it:permside()} and {it:permrawp} may be specified. {p_end}
+{phang}{opt permab:sp}: Report absolute-value permutation p-values instead of equal-tailed ones: the share of replications whose absolute statistic is at or above the observed absolute
+statistic. Intervals become the estimate plus or minus the {it:level()} quantile of the permuted absolute statistics, so p-value and interval keep agreeing. The joint, equality and
+adversarial tests are unchanged. At most one of {it:permabsp}, {it:permside()} and {it:permrawp} may be specified. {p_end}
 
-{phang}{opt permsi:de(left|right)}: One-sided permutation p-values: {it:permside(left)} is the share of replications at or below the observed statistic and {it:permside(right)} the share at or above it. The intervals stay the two-sided shift intervals. {p_end}
+{phang}{opt permsi:de(left|right)}: One-sided permutation p-values: {it:permside(left)} is the share of replications at or below the observed statistic and {it:permside(right)} the share at
+or above it. The intervals stay the two-sided shift intervals. {p_end}
 
-{phang}{opt permraw:p}: The plain absolute-value share with no add-one adjustment, which is the number {it:ritest} and Stata's {it:permute} prefix report. It can print exactly 0, meaning no draw reached the observed statistic; intervals are those of {it:permabsp}. {p_end}
+{phang}{opt permraw:p}: The plain absolute-value share with no add-one adjustment, which is the number {it:ritest} and Stata's {it:permute} prefix report. It can print exactly 0, meaning no
+draw reached the observed statistic; intervals are those of {it:permabsp}. {p_end}
 
-{phang}{opt permstep:down}: Report, for each family of two or more horizons, the Romano and Wolf max-|studentized| step-down computed from the same replications, which controls the family-wise error rate across the horizons. Post-treatment and pre-treatment horizons are adjusted as separate families. Results are stored in {it:e(perm_stepdown*)} and summarised in the footer; a family whose step-down cannot be formed is silently not posted. {p_end}
+{phang}{opt permstep:down}: Report, for each family of two or more horizons, the Romano and Wolf max-|studentized| step-down computed from the same replications, which controls the
+family-wise error rate across the horizons. Post-treatment and pre-treatment horizons are adjusted as separate families. Results are stored in {it:e(perm_stepdown*)} and summarised in the
+footer; a family whose step-down cannot be formed is silently not posted. {p_end}
 
-{phang}{opt permsa:ve(name)}: Write the permutation draws to {it:name}.dta in the working directory; an existing file needs {it:replace}. One row per replication plus a row 0 with the observed estimates; one column per coefficient of {it:e(b)}, the replication standard errors under {it:permtstat}, and one {it:onset_clustervalue} column per cluster holding its onset in each replication. {p_end}
+{phang}{opt permsa:ve(name)}: Write the permutation draws to {it:name}.dta in the working directory; an existing file needs {it:replace}. One row per replication plus a row 0 with the
+observed estimates; one column per coefficient of {it:e(b)}, the replication standard errors under {it:permtstat}, and one {it:onset_clustervalue} column per cluster holding its onset in
+each replication. {p_end}
 
-{phang}{opt permonset:cohorts}: Assert that {it:i} is the treatment-onset grouping, one level of {it:i} per distinct onset with the never-treated a single level, and on that assertion accept a {it:cluster()} finer than {it:i}; each replication then rebuilds {it:i} from the onsets it drew. The assertion is checked and the run stops if it fails; {it:safety(off)} does not lift the check. Compatible with {it:permstrata()} and {it:permute(probabilities)}, not with {it:subgroups()}. {p_end}
+{phang}{opt permonset:cohorts}: Assert that {it:i} is the treatment-onset grouping, one level of {it:i} per distinct onset with the never-treated a single level, and on that assertion accept
+a {it:cluster()} finer than {it:i}; each replication then rebuilds {it:i} from the onsets it drew. The assertion is checked and the run stops if it fails; {it:safety(off)} does not lift the
+check. Compatible with {it:permstrata()} and {it:permute(probabilities)}, not with {it:subgroups()}. {p_end}
 
 {pstd} {ul: Discussion of Permutation Intervals and Pre-Treatment Tests:}
-The permutation distribution of a coefficient is generated by relabelling outcomes that carry the true effect, so the shift interval widens as the true effect grows and is calibrated only near the null; {it:permtstat} removes that growth for the post-treatment rows only, and the implied standard error in {it:e(perm_se_shift)} is not a sampling standard error. Every pre-treatment p-value, including the joint pre-trend tests, tests the sharp null of no effect at any horizon. In staggered designs the reassigned onsets move post-treatment outcomes into the draws' pre-treatment horizons, so the pre-period p-values rise toward 1 as the true effect grows; a large pre-period p-value is then not by itself evidence of no pre-trend. With a single onset date this does not arise. {p_end}
+The permutation distribution of a coefficient is generated by relabelling outcomes that carry the true effect, so the shift interval widens as the true effect grows and is calibrated only
+near the null; {it:permtstat} removes that growth for the post-treatment rows only, and the implied standard error in {it:e(perm_se_shift)} is not a sampling standard error. Every
+pre-treatment p-value, including the joint pre-trend tests, tests the sharp null of no effect at any horizon. In staggered designs the reassigned onsets move post-treatment outcomes into the
+draws' pre-treatment horizons, so the pre-period p-values rise toward 1 as the true effect grows; a large pre-period p-value is then not by itself evidence of no pre-trend. With a single
+onset date this does not arise. {p_end}
 
 {marker supporting}{...}
 {dlgtab:Supporting Features}
 
-{phang}{opt hist:ogramcohorteffects}: Produce a histogram of cohort i-specific treatment effects; return those effects in {it:e(histogramestimates)} for the user to manipulate. Under {it:att_it} or {it:att_itime}, the column averages each cohort's cell effects. With {it:contreat()}, average marginal effects are histogrammed and appended to the matrix. Under {it:bootstrap()} and {it:permute()}, the histogram estimates come from the initial analytic fit, not the replications. {p_end}
+{phang}{opt hist:ogramcohorteffects}: Produce a histogram of cohort i-specific treatment effects; return those effects in {it:e(histogramestimates)} for the user to manipulate. Under
+{it:att_it} or {it:att_itime}, the column averages each cohort's cell effects. With {it:contreat()}, average marginal effects are histogrammed and appended to the matrix. Under
+{it:bootstrap()} and {it:permute()}, the histogram estimates come from the initial analytic fit, not the replications. {p_end}
 
 {phang}{opt save:plots(string)}: Save all graphs generated to .gph files beginning with the name specified in the option. Also saves .dta files beginning with the same
-name containing the data used to generate any requested event study plots, one per subgroup, and, with {it:makecfxplots}, one {it:name}_cfx.dta of the plotted points. Graphs and datasets generated have a suffix appended to the name specifying the exact graph/dataset
+name containing the data used to generate any requested event study plots, one per subgroup, and, with {it:makecfxplots}, one {it:name}_cfx.dta of the plotted points. Graphs and datasets
+generated have a suffix appended to the name specifying the exact graph/dataset
 generated. Everything is saved to Stata's working directory; the argument is a name, not a path. {p_end}
 
-{phang}{opt replace}: Overwrite any existing files with the names specified in {it:saveplots()}, {it:permsave()}, or {it:bootsave()}. Without it, an existing {it:permsave()} or {it:bootsave()} file is an error, raised before the replications run. {p_end}
+{phang}{opt replace}: Overwrite any existing files with the names specified in {it:saveplots()}, {it:permsave()}, or {it:bootsave()}. Without it, an existing {it:permsave()} or
+{it:bootsave()} file is an error, raised before the replications run. {p_end}
 
 {phang}{opt sum:marystats}: Compute and present summary statistics of the outcome variable y and, if present, of the continuous treatment variable contreat.
-Summary statistics are computed overall, within the treatment group by time period (post-treatment vs pre-treatment), and within the control group; {it:contreatwithin} omits the control group rows, and {it:contreatcontrols(untreatedZero)} omits the pre-treatment and control group rows for contreat. Without a
+Summary statistics are computed overall, within the treatment group by time period (post-treatment vs pre-treatment), and within the control group; {it:contreatwithin} omits the control
+group rows, and {it:contreatcontrols(untreatedZero)} omits the pre-treatment and control group rows for contreat. Without a
 fixed reference period, and with pre-treatment relative time period effects requested, the size of the reference group relative to the rest of the
 pre-treatment period is also shown. When event study horizons are requested, the event study composition table {it:e(escomp)} is also displayed, overall and per subgroup. {p_end}
 
-{phang}{opt pois:son}: Implement the specified {it:wooldid} command using poisson regression, achieved by switching from the regression command {it:reghdfe} to {it:ppmlhdfe}, or from {it:regress} to Stata's {it:poisson} under {it:unconditionalse} or {it:customvce()}. Treatment effects
+{phang}{opt pois:son}: Implement the specified {it:wooldid} command using poisson regression, achieved by switching from the regression command {it:reghdfe} to {it:ppmlhdfe}, or from
+{it:regress} to Stata's {it:poisson} under {it:unconditionalse} or {it:customvce()}. Treatment effects
 are presented in terms of differences in linear predictions (the poisson {it:predict(xb)} option). Poisson regression is useful when one would like to use
 log(y) as an outcome but y contains natural 0s, or when treatment and control groups are only on parallel trends in proportions.
-Poisson accepts pweights but not aweights, refuses a negative outcome, and may not be combined with {it:boottstat}. If {it:ppmlhdfe} fails with r(3200), {it:wooldid} retries once with the {it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. A treated cohort-period cell whose outcome is zero on every row is perfect separation rather than multicollinearity; {it:wooldid} names the cell and exits. Coarsen {it:i}, drop the cohort, or specify {it:safety(off)}, which excludes the separated cells from the estimated effects. The variable name {it:_ppmlhdfe_d} is reserved on poisson runs. {p_end}
+Poisson accepts pweights but not aweights, refuses a negative outcome, and may not be combined with {it:boottstat}. If {it:ppmlhdfe} fails with r(3200), {it:wooldid} retries once with the
+{it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. A treated cohort-period cell whose outcome is zero on every row is perfect separation rather than
+multicollinearity; {it:wooldid} names the cell and exits. Coarsen {it:i}, drop the cohort, or specify {it:safety(off)}, which excludes the separated cells from the estimated effects. The
+variable name {it:_ppmlhdfe_d} is reserved on poisson runs. {p_end}
 
 {marker eventstudy}{...}
 {dlgtab:Event Study Estimation}
@@ -565,7 +619,9 @@ For the {it:att_i} and {it:att_itime} concepts, {it:att_it} type results will be
 
 {phang}{opt sub:groups()}: Specifies the subgroup (SG) variable, whose levels specify subgroups for which {it:wooldid} will compute subgroup specific estimates.
 The SG variable must consist of non-negative integer values (or missing values) on the observations of treated units, and its levels must specify collections of cohorts i. For estimates to be valid, a given cohort i cannot
-be split across multiple subgroups. Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations. A unit must be missing on all of its rows to be left out: a treated unit labelled on some rows and missing on others is refused, and with {it:safety(off)} enters its subgroup weighted by the labelled share of its sample weight, under a caution. Because subgroup values are
+be split across multiple subgroups. Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations. A unit must be missing on all of
+its rows to be left out: a treated unit labelled on some rows and missing on others is refused, and with {it:safety(off)} enters its subgroup weighted by the labelled share of its sample
+weight, under a caution. Because subgroup values are
 embedded in the names of stored results and plots, values 8 or more digits long can exceed Stata's limits on names; recode ID-style codes to small integers first (for example
 {it:egen newsg = group(oldsg)}). With {it:esprelength()} greater than 0 and {it:espostlength()} 0, {it:wooldid} raises {it:espostlength()} to 1 under a caution, since subgroup
 estimation requires a post-treatment horizon; {it:espostlength(-999)} keeps the post-treatment window empty. Not compatible with {it:impvalues}. {p_end}
@@ -581,7 +637,8 @@ Additionally, {it:wooldid} computes all possible pairwise comparisons of the ove
 effects (and pre-treatment effects) estimates by SG (e.g., SG 1 vs 2, 1 vs 3, 2 vs 3, etc.), presenting for each comparison the difference in effect estimates and a p-value for each difference.
 A joint test of the hypothesis that all SGs share the same effect estimate (normalized to be the effect estimate of the numerically lowest numbered SG) is also computed. Note: standard errors
 for subgroup-specific estimates can fail when using clustered standard errors in conjunction with subgroups that contain few (or only one) cluster. Separately, with clustering at
-the level of the cohort variable {it:i} or above, the analytic standard error of a pairwise contrast can be degenerate (its standard error is rounding residue rather than an estimated variance); {it:wooldid} then reports that contrast, and the across-subgroup equality test covering it,
+the level of the cohort variable {it:i} or above, the analytic standard error of a pairwise contrast can be degenerate (its standard error is rounding residue rather than an estimated
+variance); {it:wooldid} then reports that contrast, and the across-subgroup equality test covering it,
 without inference, under a caution naming the count. With {it:safety(off)} they are reported as computed. The remedies are {it:permute()}, {it:bootstrap()} without
 {it:boottstat}, or a {it:cluster()} strictly finer than the cohort-by-period cells. {p_end}
 
@@ -604,9 +661,10 @@ observations on which it is missing are dropped from the estimation sample. If t
 dose slope (for example, a dose constant within each cohort), the within-cell average marginal effects are not identified: under default safety {it:wooldid} names this situation, reports the ame
 results as missing, and continues with the att results. Not available with {it:gteffects}. {p_end}
 
-{phang}{opt contreatelas:ticitytype(dydx/dyex)}: Specifies which type of marginal effect of the continuous treatment to compute. {it:dydx} is the default and reports the
+{phang}{opt contreatelas:ticitytype(dydx|dyex)}: Specifies which type of marginal effect of the continuous treatment to compute. {it:dydx} is the default and reports the
 average marginal effect itself (change in y per unit change in the continuous treatment). {it:dyex} reports the change in y per proportional change in the continuous treatment.
-Under {it:poisson} results are on the linear index, where {it:dydx} already gives the semi-elasticity of E[y] and {it:dyex} the elasticity. Only {it:dydx} and {it:dyex} are accepted; the older {it:eyex} and {it:eydx} forms have been removed. {p_end}
+Under {it:poisson} results are on the linear index, where {it:dydx} already gives the semi-elasticity of E[y] and {it:dyex} the elasticity. Only {it:dydx} and {it:dyex} are accepted; the
+older {it:eyex} and {it:eydx} forms have been removed. {p_end}
 
 {phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option relaxes the estimability
 checks that would otherwise cause {it:wooldid} to stop estimation in the absence of any untreated cohorts (the data-integrity checks still run unless {it:safety(off)} is given),
@@ -619,7 +677,8 @@ allowed to vary, even within cohort-periods and within the reference period. If 
 it must be numeric and contain only non-negative integers, and observations on which it is missing are dropped from the estimation sample.
 If instead a lattice type and a lattice number are passed, this option will generate a lattice variable using {it:latticenum} quantiles (an integer greater than 1), with the quantiles being formed within groups
 according to the {it:latticetype} (see below). Any specified sample weights will be used when constructing the lattice. If {it:lattice} is not specified, {it:wooldid} will proceed without
-using a lattice variable (as though you specified a lattice variable that is always 1). A lattice is the most expensive option in runtime terms (see {help wooldid##runtime:Runtime}). Requires {it:contreat()}. When a lattice is combined with {it:contreatcontrols(basic)}, the baseline dose level is partialled out within each lattice level. {p_end}
+using a lattice variable (as though you specified a lattice variable that is always 1). A lattice is the most expensive option in runtime terms (see {help wooldid##runtime:Runtime}).
+Requires {it:contreat()}. When a lattice is combined with {it:contreatcontrols(basic)}, the baseline dose level is partialled out within each lattice level. {p_end}
 
 {phang} {it:latticetype:} Specifies groups in which to estimate {it:latticenum} quantiles of {it:contreat}; type names are case-sensitive. Choice of lattice type can be important for both interpretive reasons
 (e.g., when interpreting the output of {it:makecfxplots}) and for estimation feasibility reasons: clustered standard error computation will often fail if multiple clusters are not
@@ -696,7 +755,7 @@ within those cells, the function f() can be used to allow for use of a more comp
 {pstd} The options {it:contreatpoly()} and {it:lattice()} determine the contents of the function f(), which in general is a stepwise function of contreat. If no lattice is specified,
 f(Contreat_jt) = beta_it1*Contreat_jt^1 + beta_it2*Contreat_jt^2 + ... + beta_itp*Contreat_jt^p, where p is the polynomial order specified in {it:contreatpoly(p)}. If a lattice variable is
 specified, this is modified to f(Contreat_jt) = sum_over_l_in_L[L_l + L_l * Poly(Contreat_jt)], where L_l is an indicator variable that is one if a given observation falls in
- lattice bin l and is 0 otherwise and where Poly(Contreat_jt) is a term capturing the user specified number of polynomial terms of Contreat_jt. {p_end}
+lattice bin l and is 0 otherwise and where Poly(Contreat_jt) is a term capturing the user specified number of polynomial terms of Contreat_jt. {p_end}
 
 {pstd} It is important to note that specifying a lattice has two effects on the function f(). First, it allows the marginal effect of Contreat_jt to vary within i-t cells, whereas before
 it could not. Second, it adds additional treatment effect intercept terms that exist within i-t cells. A similar effect to including a lattice thus could be achieved via an alternative,
@@ -713,14 +772,14 @@ lattice bin it occupies, since that is the only variation identifying that piece
 averages only the pieces that survived, and the analytic standard errors can be far smaller than the estimates' sampling variability. A useful rule of thumb is that the number of
 units contributing to a treated cell should be several times the number of lattice bins. {p_end}
 
- {pstd} The function g(f(Contreat_jt)) is a control function of Contreat_jt intended to serve as the continuous treatment-equivalent of the binary treatment's fixed effects. As such, g()
- determines to a significant degree what source of variation is used to identify the effect of Contreat_jt. This leads to a complex set of choices: since average marginal effects of
- Contreat_jt can be identified using only within cohort-period variation in treatment intensity, many approaches to identification exist. {p_end}
- {pstd} The first set of options for specifying g() include the control types {it:basic}, {it:byTreated}, {it:byTtre}, and {it:byCohort}. These options are analogous to specifying different
- types of unit fixed effects, and are implemented by including interactions between f(Contreat_jt) and then either a constant ({it:basic}), a treatment vs control group indicator ({it:byTreated}),
- a set of treatment onset group indicators ({it:byTtre}), or a set of cohort indicators ({it:byCohort}). For example, when {it:basic} is specified, g(f(Contreat_jt)) = f(Contreat_jt), while
- when {it:byCohort} is specified, g(f(Contreat_jt)) = sum_over_i[fe_i * f(Contreat_jt)]. Since the treatment effects of Contreat_jt are estimated using interactions between treated i-t cell
- indicator variables and f(Contreat_jt), these different g() options set the reference effect of Contreat_jt relative to which Contreat_jt effects are estimated in treated cells. {p_end}
+{pstd} The function g(f(Contreat_jt)) is a control function of Contreat_jt intended to serve as the continuous treatment-equivalent of the binary treatment's fixed effects. As such, g()
+determines to a significant degree what source of variation is used to identify the effect of Contreat_jt. This leads to a complex set of choices: since average marginal effects of
+Contreat_jt can be identified using only within cohort-period variation in treatment intensity, many approaches to identification exist. {p_end}
+{pstd} The first set of options for specifying g() include the control types {it:basic}, {it:byTreated}, {it:byTtre}, and {it:byCohort}. These options are analogous to specifying different
+types of unit fixed effects, and are implemented by including interactions between f(Contreat_jt) and then either a constant ({it:basic}), a treatment vs control group indicator ({it:byTreated}),
+a set of treatment onset group indicators ({it:byTtre}), or a set of cohort indicators ({it:byCohort}). For example, when {it:basic} is specified, g(f(Contreat_jt)) = f(Contreat_jt), while
+when {it:byCohort} is specified, g(f(Contreat_jt)) = sum_over_i[fe_i * f(Contreat_jt)]. Since the treatment effects of Contreat_jt are estimated using interactions between treated i-t cell
+indicator variables and f(Contreat_jt), these different g() options set the reference effect of Contreat_jt relative to which Contreat_jt effects are estimated in treated cells. {p_end}
 
 {pstd} In addition to the above control types, {it:byTime} can be specified to add interactions between time period indicator variables and f(Contreat_jt) to g(). These time period
 interactions can serve a role analogous to that of the second diff in the binary difference-in-differences case, partialling out time period specific effects of Contreat_jt. The control type
@@ -836,7 +895,8 @@ multicolinearity, as may occur if one's fixed effects or continuous treatment co
 though not necessarily when the problem concerns continuous treatments being analyzed with a lattice or with polynomial terms. Default safety also checks the data (that onset is
 constant within {it:i}, that weights and the {it:customweightmultiplier()} variable are non-negative, that lattice variables are non-negative integers), cautions when {it:i} takes
 more than 100 distinct values (see {help wooldid##runtime:Runtime}), and halts with an informative error before estimation when the specification would exceed the current
-{help maxvar} setting. {it:safety(off)} skips these checks, and downgrades a number of refusals described elsewhere in this help to cautions. If a run changes your specification, {it:wooldid} says so whatever {it:safety()} is set to. Only {it:on} and {it:off} are accepted. {p_end}
+{help maxvar} setting. {it:safety(off)} skips these checks, and downgrades a number of refusals described elsewhere in this help to cautions. If a run changes your specification,
+{it:wooldid} says so whatever {it:safety()} is set to. Only {it:on} and {it:off} are accepted. {p_end}
 
 {phang}{opt oldsyntax}: In older versions, {it:wooldid} used the suffix {it:contemp} to flag the event study coefficient containing the period contemporaneous with treatment.
 This turned out to make {it:wooldid} relatively incompatible with the popular event study plot production program {help event_plot}, so the {it:contemp} suffix has been
@@ -1009,7 +1069,7 @@ step-down tables are {it:e(perm_Cstepdown)} and {it:e(perm_Cstepdown_i)}. {it:e(
 scalars. {p_end}
 
 {pstd} In addition to these objects returned in e(), if saveplots() is specified, a dataset containing the information used to produce event study plots along with .gph files containing
-all graphs generated will be saved to a file with your specified name in STATA's working directory. {p_end}
+all graphs generated will be saved to a file with your specified name in Stata's working directory. {p_end}
 
 {pstd} If the option {it:verbose} is specified, the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called {it:___wooldidfullmodel}, which can be
 accessed using standard {it:estimates restore} type syntax. This is a reserved name that {it:wooldid} overwrites on every run; do not store your own estimates under it. {p_end}
@@ -1028,15 +1088,16 @@ to represent the missing reference period. {p_end}
 an estimator. While {it:wooldid} does return a coefficient vector ({it:e(b)}) and a variance-covariance matrix ({it:e(V)}), these are for display purposes only: on an analytic run
 the off-diagonal elements are 0 except within a single event-study family, so while {it:esttab} and the like will present correct estimates using these inputs, efforts to combine or
 otherwise test different estimates will not, in general, yield valid results ({it:e(wdid_vcvstate)} records what {it:e(V)} is on a given run). The event-study coefficients are
-additionally returned with a genuine full variance-covariance matrix in {it:e(b_es_{it:type})} and {it:e(V_es_{it:type})}, on which {it:lincom} and {it:test} are valid after
-{it:ereturn post e(b_es_{it:type}) e(V_es_{it:type})}. Under {it:bootstrap()} the posted {it:e(V)} is the replication covariance whenever one could be formed, which {it:e(wdid_vcvstate)} confirms by reading
+additionally returned with a genuine full variance-covariance matrix in {it:e(b_es_{it:type})} and {it:e(V_es_{it:type})}, on which {it:lincom} and {it:test} are valid once they are copied to matrices and posted
+({it:matrix b = e(b_es_{it:type})}, {it:matrix V = e(V_es_{it:type})}, {it:ereturn post b V}). Under {it:bootstrap()} the posted {it:e(V)} is the replication covariance whenever one could be
+formed, which {it:e(wdid_vcvstate)} confirms by reading
 {it:bootstrap}. {p_end}
 
 {marker comparison}{...}
 {title:Comparison to Related Estimators}
 
 {pstd} {ul:Comparing Output to hdidregress twfe:}
-The STATA 18 command {help hdidregress} has an option for implementing Wooldridge (2025) style estimates. Its implementation takes the Mundlak approach to estimation
+The Stata 18 command {help hdidregress} has an option for implementing Wooldridge (2025) style estimates. Its implementation takes the Mundlak approach to estimation
 and uses the command {help regress}, in conjunction with {help margins}, to compute estimates. Estimates from {it:hdidregress twfe} with the option {it:notyet}
 (i.e., allowing use of not-yet treated cohorts as controls) should be comparable to estimates from {it:wooldid} using the {it:att} estimand-type, a pooled
 reference period (i.e., not using {it:esfixedbaseperiod}), unconditional standard errors, and sample weights which (if present) do not vary within units.
