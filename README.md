@@ -38,6 +38,8 @@ or
 ### Short Guide to Syntax
 
 _For more detail on syntax, please refer to wooldid's included Stata help file. This is only a brief overview and does not contain as much detail as the help file._
+
+_A much longer usage guide, written for AI agents and advanced users, is in [wooldidinstall/wooldid_agent_guide.md](wooldidinstall/wooldid_agent_guide.md)._
 _Note: the file wooldid_simple_example.do offers a basic example of how to run the program and set up the treatment variable._
 
 ```
