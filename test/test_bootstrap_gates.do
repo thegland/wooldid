@@ -333,11 +333,21 @@ logh m6 Bootstrap Inference
 qui log using boot_gates_m7.smcl, replace name(m7) smcl
 cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) fe(unit) rseed(70109)
 chk 7m 0 _rc
-logh m7 Caution: a covariate specification names the i variable
+* m7/m8 pinned the re-id covariate caution, DELETED 2026-09-21 on the author's ruling: the
+* right answer is to substitute the re-id'd i into the covariate payload rather than warn, and
+* the scan the caution used could not see i.unit anyway. See
+* review_process/open_ticket_bootreid_covariates_2026-09-21.md.
+*
+* The two message assertions are removed rather than inverted. lognh cannot make a negative
+* assertion about a needle that appears in its OWN echoed command line: Stata writes that echo
+* into the open log, and it is not always prefixed {com}, which is the same vacuity trap the
+* logh comment above documents. The two RUNS and their rc assertions stay, so the re-id leg is
+* still exercised; the logs are closed by hand since logh/lognh are what used to close them.
+qui log close m7
 qui log using boot_gates_m8.smcl, replace name(m8) smcl
 cap noi wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(20) fe(s) rseed(70110)
 chk 8m 0 _rc
-lognh m8 Caution: a covariate specification names the i variable
+qui log close m8
 qui log using boot_gates_m9.smcl, replace name(m9) smcl
 cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) rseed(70111)
 chk 9m 0 _rc

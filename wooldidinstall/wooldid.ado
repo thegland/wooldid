@@ -74,7 +74,6 @@ version 16.0
     * Ctrl-C arriving between the worker and the epilogue cannot strand the session level
     if "$WOOLDID_LEVEL0" != "" {
       capture set level $WOOLDID_LEVEL0
-      if _rc dis as text "Caution: wooldid could not restore the confidence level in force before this call (level $WOOLDID_LEVEL0); c(level) is now `=c(level)'."
       macro drop WOOLDID_LEVEL0
     }
     local wdsh_flags "$WOOLDID_CLEANUP"
@@ -264,6 +263,11 @@ version 16.0
     }
     * permsave(): the replication draws as a .dta in the working directory
     if "`permsave'" != "" wooldid_permsave , file(`permsave') acc(`wdpacc') obsb(`wdpobsb') seacc(`=cond(`wdp_ts', "`wdpsacc'", "")') aseobs(`=cond(`wdp_ts', "e(perm_ase_obs)", "")') asg(`wdpasg') clusvals(`wdp_clusvals') obsons(`wdp_obsons') seed(`rseed') rng(`wdp_r_rng0') `replace'
+    * a failed permsave() is a caution, not a refusal (2026-09-21), so the run continues and
+    * the rc is posted instead: it is the only signal a quietly-run script has, since the
+    * caution itself is suppressed by quietly while a nonzero rc never was. Posted only on
+    * failure, so its presence is the flag
+    if "`wdp_save_rc'" != "" & "`wdp_save_rc'" != "0" ereturn local perm_save_rc `wdp_save_rc'
     * deferred display: the worker skipped these under permute(); they read only e(),
     * which now carries the permutation inference (identical formatting, free replay)
     wooldid_display , part(1)
@@ -301,8 +305,6 @@ version 16.0
       }
     }
     wooldid_display , part(perm)
-    * the one surface still drawn from the analytic covariance (mirrors the bootstrap block)
-    if "`histogramcohorteffects'" != "" dis as text "Caution: the histogram outputs use the analytic covariance; every other reported result is permutation-based."
     dis as result " "
     global WOOLDID_LASTRC
   }
@@ -408,18 +410,13 @@ version 16.0
     if `wdb_rc' != 0 exit `wdb_rc'
     * post-loop rewiring marker (see the permutation block): cleared at the end of this block
     global WOOLDID_LASTRC postloop
-    * the re-id leg duplicates clusters but user covariates keyed to unit identity keep
-    * their original codes across copies (the official idcluster convention shares this)
-    * - say so once. only in the nesting regime: under a cluster finer than or
-    * cross-cutting i the leg keeps i everywhere (wooldid_bootrun returns `wdb_nest'), so
-    * no code is re-identified and there is nothing to say
-    if "`wdb_reid'" != "" & "`wdb_nest'" == "1" {
-      local wdb_ikeyed
-      foreach wdbcv in `fe' `interactivecontrols' `controls' `coarsecohortcontrols' `ccc_absorb' {
-        if "`wdbcv'" == "`i'" local wdb_ikeyed 1
-      }
-      if "`wdb_ikeyed'" != "" dis as text "Caution: a covariate specification names the i variable `i'; under resampling, duplicated clusters' copies share their original `i' codes inside fe()/controls() terms, and only the cell and aggregation identities are re-identified."
-    }
+    * The re-id leg duplicates clusters, and user covariates keyed to unit identity keep
+    * their original codes across the copies (the official idcluster convention shares
+    * this). A caution used to say so here. Deleted 2026-09-21 on the author's ruling: the
+    * right answer is to substitute the re-id'd i into those option payloads rather than to
+    * warn about it, and the scan this caution used was too narrow to be trusted anyway -
+    * fe() and controls() are varlist fv, so fe(i.unit) tokenizes to something that never
+    * string-equals the i name. See review_process/open_ticket_bootreid_covariates_2026-09-21.md.
     * bootdf() default, resolved here because it needs the resampling-cluster count that
     * wooldid_bootrun has just returned: standard normal when the run is unclustered, and
     * t with G-1 degrees of freedom when it is clustered, G being the number of resampling
@@ -460,6 +457,9 @@ version 16.0
     * the joint/adversarial accumulators live in e(boot_jointW)/e(boot_advW) by this point -
     * wooldid_bootjnt's `ereturn matrix' moves its source - so bootsave reads them from e()
     if "`bootsave'" != "" wooldid_bootsave , file(`bootsave') acc(`wdbacc') obsb(`wdbobsb') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') wmat(`=cond("`cluster'" != "", "`wdbW'", "")') wobs(`=cond("`bootstrap'" == "bayes", cond("`bootalpha'" == "size", 1/max(`wdb_r_nrows', 1), 1/max(`wdb_r_nclus', 1)), 1)') jwacc(`=cond("`boottstat'" != "", "e(boot_jointW)", "")') jobs(`=cond("`boottstat'" != "", "e(boot_jointWobs)", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advW)", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advWobs)", "")') seed(`rseed') rng(`wdb_r_rng0') `replace'
+    * see the permsave twin above: the rc of a failed bootsave() is posted because the
+    * caution replacing the old refusal is invisible under quietly
+    if "`wdb_save_rc'" != "" & "`wdb_save_rc'" != "0" ereturn local boot_save_rc `wdb_save_rc'
     ereturn local boot_rngstate `wdb_r_rng0'
     * deferred display: worker skipped these under bootstrap; they read only e(),
     * which now carries the bootstrap inference (identical formatting, free replay)
@@ -529,10 +529,15 @@ version 16.0
       }
     }
     wooldid_display , part(boot)
-    * only the histogram outputs remain analytic: the gteffects cells and the cfx matrices
-    * are rewired to the bootstrap (wooldid_bootcellsx), the adversarial p is bootstrapped
-    * under boottstat and absent otherwise, and event-study plots are drawn after the rewiring
-    if "`histogramcohorteffects'" != "" dis as text "Caution: the histogram outputs use the analytic covariance; every other reported result is bootstrap-based."
+    * the histogram outputs are the one surface not rewired to the bootstrap: the gteffects
+    * cells and the cfx matrices go through wooldid_bootcellsx, the adversarial p is
+    * bootstrapped under boottstat and absent otherwise, and event-study plots are drawn
+    * after the rewiring. No caution is printed about it, and the two that used to be here
+    * and in the permutation block were deleted on 2026-09-21 as factually wrong: they said
+    * the histograms "use the analytic covariance", but wooldid_hist passes nose on every
+    * one of its margins calls and draws a plain frequency histogram of the per-cohort point
+    * estimates. No covariance of any kind reaches them, so there was no stale interval for
+    * a reader to go looking for, and neither engine changes the observed point estimates.
     dis as result " "
     global WOOLDID_LASTRC
   }
@@ -547,7 +552,7 @@ version 16.0
   if "`e(wdid_cfxsave)'" != "" {
     cap noi wooldid_cfxplots , saveplots(`e(wdid_cfxsave)') dataonly `e(wdid_cfxrepl)'
     local wdsh_dc = _rc
-    if `wdsh_dc' != 0 dis as text "Caution: the continuous-treatment plot-data file `e(wdid_cfxsave)'_cfx.dta could not be written (r(`wdsh_dc')), usually because a file of that name exists and replace was not specified. The figures and every stored result are unaffected."
+    if `wdsh_dc' != 0 dis as text "Caution: the continuous-treatment plot-data file `e(wdid_cfxsave)'_cfx.dta could not be written (r(`wdsh_dc')), usually because a file of that name exists and replace was not specified."
   }
 end
 
@@ -998,7 +1003,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * refused in wooldid_validate before estimation starts, as pretrendpower() itself
   * refuses at parse time when its prerequisites are missing.
   if (`espre' + `espl'+ 1 < 3 & "`timetrends'" != "") | `espl' == 0 | `espre' == 0 {
-    if "`adversarial'" != "" dis as text "Caution: adversarial pre-trend testing was dropped: the estimation sample realizes `espre' pre-treatment and `espl' post-treatment horizon(s), and the test needs at least one of each (at least three coefficients in total under timetrends). Widen esprelength()/espostlength() to a window the data can support, or drop adversarial."
+    if "`adversarial'" != "" dis as text "Caution: adversarial pre-trend testing was skipped due to insufficient event study horizons. "
     local adversarial
   }
 
@@ -1006,7 +1011,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * coefficients plus the planted reference row; with esrelativeto(-1) and a single pre horizon
   * that fit sample is one row, so no line is estimable
   if "`adversarial'" != "" & "`altmethod_adversarial'" != "" & "`esfixedbaseperiod'" != "" & `esrelativeto' == -1 & `espre' <= 1 {
-    dis as text "Caution: adversarial pre-trend testing was cancelled: with esfixedbaseperiod, esrelativeto(-1), and a single pre-treatment horizon, only the reference row is available to fit the adversarial reference line."
+    dis as text "Caution: adversarial pre-trend testing was cancelled due to insufficient event study horizons. "
     local adversarial
     local altmethod_adversarial
   }
@@ -6482,17 +6487,18 @@ version 16.0
     qui gegen double `sgmin' = min(cond(`sg' >= ., ., `sg')) if `insmp', by(`ivar')
     qui gegen double `sgmax' = max(cond(`sg' >= ., ., `sg')) if `insmp', by(`ivar')
     cap assert `sgmin' == `sgmax' if `insmp'
+    * UNLIFTABLE by safety(off), ruled by the author 2026-09-21 on the message-review page.
+    * Under permute() this screen runs over ALL units, because any cluster can be assigned
+    * treatment in a replication, and each replication assigns one onset per cluster. A unit
+    * that belongs to two subgroups has no well-defined subgroup in a replication that treats
+    * it, so the share-weighted fallback the observed run offers has no counterpart here.
+    * The worker's own split-unit and partial-labelling screens keep their safety(off) escape;
+    * only this one is absolute. Old escape text, kept for reference: "To proceed anyway,
+    * specify safety(off); share weighting then applies inside the replications as it does in
+    * the observed run."
     if _rc != 0 {
-      if "`si'" != "off" {
-        * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
-        *   Permute() with subgroups(): the subgroup variable `sg' splits some units of `ivar' across multiple
-        *   subgroups over time (over ALL units, because any cluster can be assigned treatment in a
-        *   replication). A unit cannot belong to more than one subgroup. To proceed anyway, specify
-        *   safety(off); share weighting then applies inside the replications as it does in the observed run.
-        dis as error "Error: some cohorts of the i variable take on multiple subgroup variable levels. "
-        error 459
-      }
-      else dis as text "Caution: the subgroup variable `sg' splits some units of `ivar' across multiple subgroups over time; under safety(off) the replications proceed with share weighting, as the observed run does."
+      dis as error "Error: some cohorts of the i variable take on multiple subgroup variable levels. "
+      error 459
     }
     qui drop `sgmin' `sgmax'
     if "`permstrata'" == "" & "`permmethod'" == "shuffle" dis as text "Caution: subgroups() with permute(shuffle) and no permstrata(): the shuffled assignments also re-randomize which subgroups the treated clusters fall in, so the reference distribution of the subgroup-specific statistics mixes subgroup composition with onset timing. When subgroup membership is fixed at the cluster level, permstrata(`sg') holds each subgroup's onset composition fixed across replications."
@@ -6957,11 +6963,25 @@ version 16.0
   * has the identical shape and the same constraint
   local wdbsrc = _rc
   cap frame drop `bsf'
+  * CAUTION, NOT FATAL (author, 2026-09-21: "Please convert this to a caution"). This call
+  * sits above the deferred display, so the old error threw away every table the run would
+  * have printed, and it ran inside the post-loop window, so bare `wooldid' then refused to
+  * replay them. The inference in e() was complete and simply unreachable. Falling through
+  * reaches the display and the marker clear, which is the whole fix - no marker change.
+  *
+  * The success line MUST stay in the else arm: `wdbsn' is assigned inside the frame block,
+  * so on the failure path it is empty and the line would print "-1 replication rows" for a
+  * file that does not exist.
+  *
+  * Residual cost, accepted rather than mitigated: with an unwritable target `save, replace'
+  * leaves any PREVIOUS file of that name byte-intact, so a quiet script that reads `fn'.dta
+  * afterwards gets stale draws where it used to die. The rc is therefore handed back to the
+  * caller, which posts it as e(boot_save_rc) so a script can still detect the loss.
   if `wdbsrc' != 0 {
-    dis as error "Error: bootsave(`fn') could not produce the replication dataset (rc=`wdbsrc')."
-    error `wdbsrc'
+    dis as text "Caution: bootsave(`fn') could not produce the replication dataset (rc=`wdbsrc')."
   }
-  dis as text "bootsave(): the replication draws were written to `fn'.dta (`=`wdbsn'-1' replication rows plus the _rep = 0 observed row)."
+  else dis as text "bootsave(): the replication draws were written to `fn'.dta (`=`wdbsn'-1' replication rows plus the _rep = 0 observed row)."
+  c_local wdb_save_rc `wdbsrc'
 end
 
 cap prog drop wooldid_bootcellsx
@@ -9246,15 +9266,21 @@ version 16.0
   }
   local wdpsrc = _rc
   cap frame drop `psf'
+  * CAUTION, NOT FATAL - the twin of the bootsave conversion above, for the reasons given
+  * there. The two content cautions below are re-gated onto the success arm: they describe
+  * what is IN the file, so on a failed save they would be describing a file that was never
+  * written.
   if `wdpsrc' != 0 {
-    dis as error "Error: permsave(`fn') could not produce the replication dataset (rc=`wdpsrc')."
-    error `wdpsrc'
+    dis as text "Caution: permsave(`fn') could not produce the replication dataset (rc=`wdpsrc')."
   }
+  else {
   dis as text "permsave(): the permutation draws were written to `fn'.dta (`=`wdpsn'-1' replication rows plus the _rep = 0 observed row`=cond("`asg'" != "", "; the onset_* columns hold the onset assigned to each cluster", "")')."
   * the assignment block's two failure modes are announced rather than left to be
   * discovered in the saved file
   if "`wdpsasgerr'" == "1" dis as text "Caution: permsave(`fn') could not write the per-cluster assignment block (the cluster-value and observed-onset lists do not conform to the assignment matrix), so `fn'.dta carries the replication draws but NO onset_* columns."
   if `=cond("`wdpsasgdrop'" == "", "0", "`wdpsasgdrop'")' > 0 dis as text "Caution: permsave(`fn') omitted `wdpsasgdrop' cluster assignment column(s) from `fn'.dta because their onset_<id> names were already taken (a name collision with another column, or two cluster ids that map to the same Stata name). The file is that many clusters short and nothing in it marks the gap."
+  }
+  c_local wdp_save_rc `wdpsrc'
 end
 
 

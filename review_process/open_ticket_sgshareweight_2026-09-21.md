@@ -6,7 +6,22 @@ open a ticket to delete this feature."* Rescoped the same day once the survey sh
 feature to delete: *"don't worry about removing features, let's just update the ticket to harden
 our guards for this behavior to always fire."*
 
-**Status: OPEN. Not started. One scope question for the author before any edit (s6).**
+**Status: PARTIALLY BUILT 2026-09-21, and the remaining scope is now in doubt.**
+
+The author ruled on the message-review page rather than on this file, and the ruling is narrower
+than this ticket assumed. He unsilenced exactly ONE of the three containment guards, S3, the
+permute() split-unit screen: card #180, `silenced_by_safety` set false. **S3 is built** and pinned
+by a new G5 leg in `test/test_sgsplit.do`, which asserts r(459) at both safety settings.
+
+He left S1 and S2 alone, and on the same pass he REWROTE both of their messages while deliberately
+keeping the escape clause in the text: the worker's split-unit and within-cell errors still end "To
+ignore this error, specify safety(off)." and the partial-labelling error still ends "Specify
+safety(off) to proceed anyway." So his most recent and most specific signal is that the worker's
+screens keep their escape, which contradicts s1 to s3 of this ticket as originally written.
+
+**S1 and S2 are therefore NOT built, pending his word.** Building them would have made those three
+retained sentences false, which is the defect class the message review exists to remove. If he does
+want them hardened, the escape clauses in all three messages have to go in the same edit.
 
 Line numbers are as of `1323749` on `bugfixes`.
 

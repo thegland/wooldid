@@ -1,6 +1,7 @@
 * Targeted suite for the subgroup-split gate (author directive 2026-07-28): a unit
 * split across subgroups over time is refused under default safety, and proceeds with
-* share weighting plus a caution under safety(off). Also pins the numeric-only
+* share weighting plus a caution under safety(off) on the analytic path - while under
+* permute() the same split is refused at BOTH safety settings (G5). Also pins the numeric-only
 * cluster() syntax. Run from test/: "<stata>" -e do test_sgsplit.do -> SGSPLIT_ALL_PASS
 clear all
 set more off
@@ -87,6 +88,33 @@ if _rc != 0 {
   dis as error "G4 FAIL: numeric cluster run rc=" _rc
   local ++fails
 }
+
+* ---- G5: under permute() the split-unit refusal is UNLIFTABLE by safety(off) ----
+* Ruled by the author 2026-09-21. The worker's own screen (G2) keeps its escape; the
+* permutation screen does not, because each replication assigns one onset per cluster and a
+* unit in two subgroups has no defined subgroup in a replication that treats it. The refusal
+* is raised in wooldid_permctl during validation, before any replication runs, so this leg is
+* cheap. Both safety settings must give 459.
+mksplit
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) permute(shuffle) permreps(20)
+if _rc != 459 {
+  dis as error "G5 FAIL: permute + split sg under default safety rc=" _rc " (expected 459)"
+  local ++fails
+}
+mksplit
+qui log using sgsp_g5.txt, text replace name(sgsp5)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) permute(shuffle) permreps(20) safety(off)
+local rc5 = _rc
+qui log close sgsp5
+if `rc5' != 459 {
+  dis as error "G5 FAIL: safety(off) lifted the permute split-sg refusal, rc=" `rc5' " (expected 459)"
+  local ++fails
+}
+else if strpos(fileread("sgsp_g5.txt"), "multiple subgroup variable levels") == 0 {
+  dis as error "G5 FAIL: the permute split-sg refusal did not name itself under safety(off)"
+  local ++fails
+}
+cap erase sgsp_g5.txt
 
 if `fails' == 0 dis "SGSPLIT_ALL_PASS"
 else dis as error "SGSPLIT_FAILS=`fails'"
