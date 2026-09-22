@@ -103,7 +103,7 @@ if `rc5e' != 198 {
   dis as error "D5e FAIL: contreatwithin+safety(bogus) rc=" `rc5e' " (expected 198)"
   local ++fails
 }
-else if strpos(fileread("vald_d5e.txt"), "safety() must be on or off") == 0 {
+else if strpos(fileread("vald_d5e.txt"), "safety() must be") == 0 {
   dis as error "D5e FAIL: expected safety() domain error text missing"
   local ++fails
 }

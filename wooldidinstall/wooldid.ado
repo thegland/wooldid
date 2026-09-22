@@ -806,10 +806,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       qui gen double `f13badi' = `i' if `f13ttremin' != `f13ttremax' & `ifstatement'
       qui gstats sum `f13badi', meanonly
       local f13badid = strtrim(string(r(min), "%18.0g"))
-      dis as error "Error: the treatment onset variable `ttre_asgiven' is not constant within `i' (smallest offending `i': `f13badid')."
-      dis as error "wooldid requires exactly one treatment onset per group defined by `i': rows of the same `i' carrying different onsets, or a mix of missing and non-missing onsets, are silently split across cohorts, and part of the group can be used as its own control."
-      dis as error "Common causes: an onset recorded only from the onset period onward (fill it in on every in-sample row of a treated group, including pre-treatment rows); underlying units with different onsets combined under one `i' value; or IDs stored as float, which rounds distinct large IDs together (regenerate `i' as double from its source; recasting cannot recover the lost values). Alternatively, restrict the estimation sample with if()."
-      dis as error "To ignore this error, specify safety(off)."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   The treatment onset variable `ttre_asgiven' is not constant within `i' (smallest offending `i':
+      *   `f13badid'). wooldid requires exactly one treatment onset per group defined by `i': rows of the
+      *   same `i' carrying different onsets, or a mix of missing and non-missing onsets, are silently split
+      *   across cohorts, and part of the group can be used as its own control. Common causes: an onset
+      *   recorded only from the onset period onward (fill it in on every in-sample row of a treated group,
+      *   including pre-treatment rows); underlying units with different onsets combined under one `i'
+      *   value; or IDs stored as float, which rounds distinct large IDs together (regenerate `i' as double
+      *   from its source; recasting cannot recover the lost values). Alternatively, restrict the estimation
+      *   sample with if().
+      dis as error "Error: the treatment onset variable `ttre_asgiven' is not constant within `i' (e.g., see `i' level: `f13badid'). To ignore this error, specify safety(off)."
       error 459
     }
     qui drop `f13ttremin' `f13ttremax'
@@ -1436,8 +1443,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       dis as text "Caution: the cohort variable `i' takes `si8ilev' distinct values. wooldid builds one interaction term per cohort-by-period cell, and runtime grows faster than linearly in that cell count, so a granular `i' can dominate runtime. Coarsening `i' is normally the single largest speedup available: specify unit-level fixed effects via fe(), which on a panel unbalanced within cohorts is what holds the point estimate fixed, and swap `i' to a coarser level of aggregation, such as cohorts or treatment onset groups. (safety(off) suppresses this check.)"
     }
     if `si8demand' > c(maxvar) {
-      dis as error "Error: this specification requires at least `si8demand' variables (about `si8cells' treated cohort-by-period interaction terms) but maxvar is currently " c(maxvar) ", so estimation would fail with r(907)."
-      dis as error "Consider specifying unit-level fixed effects via fe() and swapping `i' to a coarser level of aggregation, such as cohorts or treatment onset groups. (safety(off) suppresses this check.)"
+      dis as error "Error: this specification will breach the current maxvar limit; at least `si8demand' variables are needed. Please either raise the maxvar limit or reduce the number of needed variables. If this error seems surprising, check whether your i variable is set to individual units within your dataset, rather than something more aggregate like groups of units by treatment onset (in which case, consider using your unit variable for fe(), and a treatment onset group variable for i). "
       error 907
     }
   }
@@ -1520,10 +1526,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     local imvnic = r(N)
     cap drop `imvtag'
     if `imvni' > 0 & `imvnic' > `imvni' {
-      dis as error "Error: impvalues requires cluster() to be at the level of `i' or coarser, but the `imvni' treated levels of `i' are split across `imvnic' cluster() groups, so cluster() is finer than `i' or cuts across it."
-      dis as error "The per-cluster estimates impvalues t-tests are read off a single fitted model rather than estimated separately, so where several clusters share a level of `i' they are re-weightings of the same coefficients. The reported standard error then shrinks with the number of cluster labels rather than with the information those labels carry, and the interval covers far below its nominal level (measured at 0.38 for a cluster nested inside `i' and 0.25 for one crossing it, against a nominal 0.95)."
-      dis as error "Cluster at the level of `i' or above it, where the method is sound. If the design genuinely needs a cluster below `i', use bootstrap() or permute() instead, which build their inference from replications; a cluster finer than `i' is accepted under bootstrap(standard) with the cell-weighted estimands, under boottstat, and under permute() with permonsetcohorts."
-      dis as error "This screen is conservative: nesting is sufficient for the per-cluster reads to be independent, not necessary, so a panel where only a few units change cluster mid-panel trips it without much affecting the inference. To ignore this error, specify safety(off)."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Impvalues requires cluster() to be at the level of `i' or coarser, but the `imvni' treated levels
+      *   of `i' are split across `imvnic' cluster() groups, so cluster() is finer than `i' or cuts across
+      *   it. The per-cluster estimates impvalues t-tests are read off a single fitted model rather than
+      *   estimated separately, so where several clusters share a level of `i' they are re-weightings of the
+      *   same coefficients. The reported standard error then shrinks with the number of cluster labels
+      *   rather than with the information those labels carry, and the interval covers far below its nominal
+      *   level (measured at 0.38 for a cluster nested inside `i' and 0.25 for one crossing it, against a
+      *   nominal 0.95). Cluster at the level of `i' or above it, where the method is sound. If the design
+      *   genuinely needs a cluster below `i', use bootstrap() or permute() instead, which build their
+      *   inference from replications; a cluster finer than `i' is accepted under bootstrap(standard) with
+      *   the cell-weighted estimands, under boottstat, and under permute() with permonsetcohorts. This
+      *   screen is conservative: nesting is sufficient for the per-cluster reads to be independent, not
+      *   necessary, so a panel where only a few units change cluster mid-panel trips it without much
+      *   affecting the inference. To ignore this error, specify safety(off).
+      dis as error "Error: impvalues cannot be used with cluster() variables finer than `i', or which crosscut `i'.  "
       error 459
     }
   }
@@ -1669,7 +1687,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * continuous treatment; stop here with the reason instead. fast mode asks margins for no
   * variance and may proceed
   if "`fastnose'" == "" & `df_r' < 1 {
-    if e(N_clust) < 2 dis as error "Error: cluster(`cluster') leaves `=e(N_clust)' cluster(s) in the estimation sample; cluster-robust inference needs at least 2. Use a finer cluster variable, robust, or fastnose."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Cluster(`cluster') leaves `=e(N_clust)' cluster(s) in the estimation sample; cluster-robust
+    *   inference needs at least 2. Use a finer cluster variable, robust, or fastnose.
+    if e(N_clust) < 2 dis as error "Error: too few clusters."
     else dis as error "Error: the model leaves no residual degrees of freedom (e(df_r) = `df_r'), so no variance can be estimated."
     error 459
   }
@@ -1870,12 +1891,20 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         if `v' >= `horizonstarter' & `v' <= `horizonend' local wdhit 1
       }
       if `wdhit' {
-        dis as error "Error: the fitted model carries no estimable treatment-effect coefficient at any of the requested event-study relative periods (`=`horizonstarter' - `min_t' - 1' through `=`horizonend' - `min_t' - 1'), although the estimation sample does contain those periods."
-        dis as error "This means the cohort-by-period treatment terms were absorbed or dropped by the specification rather than estimated: check absorbed fixed effects (ccc_absorb() in particular, which can absorb the treatment interactions themselves), fe(), and any control set collinear with the treatment cells."
+        * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+        *   This means the cohort-by-period treatment terms were absorbed or dropped by the specification
+        *   rather than estimated: check absorbed fixed effects (ccc_absorb() in particular, which can absorb
+        *   the treatment interactions themselves), fe(), and any control set collinear with the treatment
+        *   cells.
+        dis as error "Error: the fitted model carries no estimable treatment-effect coefficient at any of the requested event-study relative periods. Check your specified controls and fixed effects. "
         error 459
       }
-      dis as error "Error: no treated unit is observed at any of the requested event-study relative periods (`=`horizonstarter' - `min_t' - 1' through `=`horizonend' - `min_t' - 1'). Relative periods realized by treated units in the estimation sample: `wdreal'."
-      dis as error "This usually means the onset period is missing for every treated cohort (an onset-period gap in the panel, or an onset that falls off the panel's time grid, such as an even-year onset in a biennial panel). Widen esprelength()/espostlength() to reach a realized period, or place ttre on the panel's grid."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Relative periods realized by treated units in the estimation sample: `wdreal'. This usually means
+      *   the onset period is missing for every treated cohort (an onset-period gap in the panel, or an
+      *   onset that falls off the panel's time grid, such as an even-year onset in a biennial panel). Widen
+      *   esprelength()/espostlength() to reach a realized period, or place ttre on the panel's grid.
+      dis as error "Error: no treated unit is observed at any of the requested event-study relative periods. "
       error 459
     }
     matrix `relyrcolumn' = (`relyrlist')'
@@ -4926,7 +4955,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   }
 
   if "`adversarial'" == "adversarial" & "`impvalues'" == "impvalues" {
-    dis as error "Error: Adversarial Pre-Trends Testing not allowed with Ibragimov and Muller p-values."
+    dis as error "Error: adversarial is not allowed with impvalues-type inference."
     error 198
   }
 
@@ -4938,7 +4967,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
   * check conditions for using im p-values
   if "`impvalues'" != "" & "`cluster'" == "" {
-    dis as error "Error: Ibragimov and Muller p-values only allowed when clustering; please specify a clustering variable."
+    dis as error "Error: impvalues requires a cluster() variable."
     error 198
   }
 
@@ -4946,24 +4975,24 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * vce(unconditional), which accepts one cluster variable; a second one reaches regress as
   * a raw "too many variables specified"
   if "`unconditionalse'" != "" & wordcount("`cluster'") > 1 {
-    dis as error "Error: unconditionalse supports a single cluster() variable; multiway clustering is not available with unconditional standard errors."
+    dis as error "Error: unconditionalse does not support multiway clustering."
     dis as text  "unconditionalse estimates through regress/poisson and obtains the variance from margins, vce(unconditional), which accepts only one cluster variable."
     error 198
   }
   if "`impvalues'" != "" & wordcount("`cluster'") > 1 {
-    dis as error "Error: Ibragimov and Muller p-values only allowed with a single cluster variable."
+    dis as error "Error: impvalues does not supprt multi-way clustering. "
     error 198
   }
 
   * check conditions for using im p-values
   if "`impvalues'" != "" & ( "`customvce'" != "" | "`unconditionalse'" != "") {
-    dis as error "Error: Ibragimov and Muller p-values are not compatible with unconditional SE computation and custom VCE specifications."
+    dis as error "Error: impvalues is not compatible with customvce() or unconditionalse."
     error 198
   }
 
   * complain if you specify customvce and something else with it
   if "`customvce'" != "" & ("`robust'" != "" | "`cluster'" != "") {
-    dis as error "Error: customvce() is not compatible with robust and cluster(). You must manually specify the contents of reg's vce() statement in this case."
+    dis as error "Error: customvce() is not compatible with robust or cluster(). You must manually specify the contents of reg's vce() statement."
     error 198
   }
 
@@ -4983,7 +5012,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * impvalues, marginsdof is nose, and a chain `test' after a nose `post' is r(321);
   * do not relax this pairing without also emptying `sgpost' in the SG-comparison blocks
   if "`impvalues'" != "" & "`subgroups'" != "" {
-    dis as error "Error: Ibragimov and Muller p-values not compatible with subgroups."
+    dis as error "Error: impvalues is not compatible with subgroups."
     error 198
   }
 
@@ -4991,14 +5020,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * intercepts at dose zero, not treatment effects, so the building-block table would be
   * silently meaningless there
   if "`gteffects'" != "" & "`contreat'" != "" {
-    dis as error "Error: gteffects is not available with contreat(): the cohort-by-period interaction coefficients are dose-zero intercepts under a continuous treatment, not treatment effects. Aggregate e(b_es_ame) or the cfx materials instead."
+    dis as error "Error: gteffects is not available with contreat()."
     error 198
   }
 
 
   *check conditions for using im p-values - for CFX plots, we have problems similar to with SGs, but even worse
   if "`impvalues'" != "" & "`makecfxplots'" != "" {
-    dis as error "Error: Ibragimov and Muller p-values not compatible with continuous treatment effects plots."
+    dis as error "Error: impvalues is not compatible with continuous treatment effects plots."
     error 198
   }
 
@@ -5011,21 +5040,24 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * for the joint tests, I have not seen IM characterize multi-way tests. implementing a test here of some sort would be easy,
   * but I am not sure if it would technically be valid.
   if "`impvalues'" != "" & ( "`jointtests'" != "" ){
-    dis as error "Error: Ibragimov and Muller p-values are not compatible with the jointtests option."
+    dis as error "Error: impvalues is not compatible with the jointtests option."
     error 198
   }
 
   * verify that if continuous treatment effects plots are requested, we have a lattice over which to produce them
   if "`makecfxplots'" != "" & "`cfxlattice'" == "" & ("`lattice'"=="" ) {
-    dis as error  "Error: You requested continuous treatment effects plots, but either didn't specify a cfxlattice variable or a lattice option for the continuous treatment."
+    dis as error  "Error: You requested continuous treatment effects plots, but either didn't specify a cfxlattice variable or a lattice option."
     error 198
   }
 
   * oostreatedcontrols determines whether or not units treated after the end of the sample window are allowed to contribute to pre-treatment horizons;
   * cancel estimation if you specify a negative value here (corresponding with a within window treatment)
   if `oostreatedcontrols' < 0 {
-    dis as error  "Error: oostreatedcontrols specified as < 0, indicating that treatments occurring within sample should be ignored."
-    dis as error  "This is not allowed; you must specially set up cases of this sort by modifying the ttre variable and the if statement."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Oostreatedcontrols specified as < 0, indicating that treatments occurring within sample should be
+    *   ignored. This is not allowed; you must specially set up cases of this sort by modifying the ttre
+    *   variable and the if statement.
+    dis as error  "Error: oostreatedcontrols specified as < 0."
     error 198
   }
 
@@ -5033,8 +5065,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * pretend onset is later, pushing genuinely treated periods into the control/reference
   * pool - a silent identification failure. delayed-onset designs need their own setup
   if `anticipation' < 0 {
-    dis as error  "Error: anticipation specified as < 0, indicating that treatment onset should be treated as occurring later than recorded."
-    dis as error  "This is not allowed; if you need a delayed-onset design, modify the ttre variable and the if statement directly."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Anticipation specified as < 0, indicating that treatment onset should be treated as occurring
+    *   later than recorded. This is not allowed; if you need a delayed-onset design, modify the ttre
+    *   variable and the if statement directly.
+    dis as error  "Error: anticipation specified as < 0."
     error 198
   }
 
@@ -5043,7 +5078,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`coarsecohortcontrols'" != "" {
     foreach case in `coarsecohortcontrols' {
       if strpos("`case'","c.") == 0 & strpos("`case'","i.") == 0 {
-        dis as error  "Error: Your coarse cohort controls do not all specify whether they are continuous or categorical. You must do this using i. and c. style notation."
+        dis as error  "Error: Your coarse cohort controls do not all specify whether they are continuous or categorical. You must do this using i. and c. style notation for all variables."
         error 198
       }
     }
@@ -5065,21 +5100,24 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * tokens fail confirm number or the mod() test (mod(., 1) != 0 is true)
     cap confirm number `latticenum'
     if _rc != 0 {
-      dis as error "Error: lattice incorrectly specified; `latticenum' is not a valid number of lattice quantiles. lattice() requires a valid lattice type and an integer number of quantiles, or a pre-made lattice variable."
+      dis as error "Error: lattice incorrectly specified; lattice() requires a valid lattice type and an integer number of quantiles, or a pre-made lattice variable."
       error 198
     }
     if mod(`latticenum',1) != 0 {
-      dis as error "Error: lattice incorrectly specified; the number of lattice quantiles (`latticenum') must be an integer."
+      dis as error "Error: lattice incorrectly specified; lattice() requires a valid lattice type and an integer number of quantiles, or a pre-made lattice variable."
       error 198
     }
     if `latticenum' <= 1 {
-      dis as error "Error: lattice incorrectly specified; latticenum must be > 1 or else the lattice does not permit additional variation relative to not specifying a lattice at all."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Lattice incorrectly specified; latticenum must be > 1 or else the lattice does not permit
+      *   additional variation relative to not specifying a lattice at all.
+      dis as error "Error: latticenum must be > 1."
       error 198
     }
 
     local latticetype = word("`lattice'",1)
     if inlist("`latticetype'","all","baseTreated","baseTreatedPost","baseTreatedPre", "baseTreatedRef") == 0 & inlist("`latticetype'","byCohort","byTime","byCohortByTime","byTreated","byTreatedByTime","byTtre","byTtreByTime") == 0{
-      dis as error  "Error: lattice type is misspecified; `latticetype' is not a valid lattice type."
+      dis as error  "Error: `latticetype' is not a valid lattice type."
       error 198
     }
   }
@@ -5088,7 +5126,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`contreatcontrols'" != "" {
     foreach word in `contreatcontrols' {
       if inlist("`word'",  "byTreated", "byTtre", "byCohort", "byTime") == 0 & inlist("`word'","basic","untreatedZero") == 0 {
-        dis as error  "Error: continuous treatment control type misspecified; `word' is not a valid continuous treatment control type."
+        dis as error  "Error: `word' is not a valid continuous treatment control type."
         error 198
       }
     }
@@ -5113,7 +5151,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * error out if a lattice is requested without a continuous treatment - the lattice-construction
   * code all sits inside the contreat block, so the option would otherwise be silently ignored
   if "`lattice'" != "" & "`contreat'" == "" {
-    dis as error "Error: lattice() has no effect without contreat(); specify a continuous treatment variable or remove the lattice() option."
+    dis as error "Error: lattice() has no effect without contreat()."
     error 198
   }
 
@@ -5200,7 +5238,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * shown under permute(), so posting an analytic band under a permutation header is
   * refused rather than silently dropped
   if "`permute'" != "" & "`simultaneousbands'" != "" {
-    dis as error "Error: simultaneousbands is not available under permute(). A simultaneous band is a confidence-band object; the permutation engine's multiplicity tool is the max-|studentized| step-down, permstepdown. Use bootstrap() for a bootstrap band, or drop permute() for the simulated analytic one."
+    dis as error "Error: simultaneousbands is not available under permute()."
     error 198
   }
 
@@ -5236,6 +5274,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') ttrevar(`ttre_asgiven') `replace'
   if _rc != 0 exit _rc   // exit, not error - the cap noi above already printed it (the shell-header rule)
 
+  * drop a redundant fastnose under bootstrap() (ruled 2026-09-21). wooldid_bootctl has
+  * just cautioned that the option is unnecessary, and refused it outright under boottstat;
+  * clearing it here is what makes that caution true, since the observed run then takes the
+  * ordinary bootstrap path rather than fast mode. bootctl cannot do this itself - it is a
+  * validation program and posts no c_local.
+  if "`bootstrap'" != "" & "`fastnose'" != "" & "`boottstat'" == "" local fastnose
+
   * register verbose retention with the shell's error-path cleanup epilogue (top of this
   * file): under verbose, ___wooldidfullmodel (and _ppmlhdfe_d under poisson) are
   * documented as retained for inspection - on failed runs as well
@@ -5260,7 +5305,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`safetyinput'" != "off" {
     cap assert `i' > 0  & int(`i') == `i' `ifassert'
     if _rc != 0 {
-      dis as error  "Error: `i' must consist of positive, non-zero integers, but does not"
+      dis as error  "Error: `i' must consist of positive, non-zero integers, but does not."
       error 411
     }
   }
@@ -5422,7 +5467,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`contreatwithin'" == "contreatwithin" & "`contreat'" != "" {
     if strpos("`contreatcontrols'","byTime") != 0  {
       if "`safetyuser'" == "off" dis as text "Caution: contreatwithin is specified in conjunction with the byTime contreatcontrol type."
-      if "`safetyuser'" != "off" dis as error "Error: contreatwithin is specified in conjunction with the byTime contreatcontrol type."
+      if "`safetyuser'" != "off" dis as error "Error: contreatwithin is specified with the byTime contreatcontrol type."
       if "`verbose'" == "verbose" dis as text "Typically, this partials out some treatment effects and yields unidentified estimates."
       if "`safetyuser'" != "off" {
         dis as error "To proceed anyway in a new estimation run, manually set safety(off) before proceeding."
@@ -5462,7 +5507,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       * does not short-circuit |, so the reference-period comparison always runs)
       cap confirm number `item'
       if _rc != 0 {
-        dis as error "Error: cfxplottypes() contains an unrecognized entry: `item'"
+        dis as error "Error: cfxplottypes() contains an unrecognized type: `item'"
         dis as error "Valid cfxplottypes() entries are post, pre, and/or integers specifying relative time periods."
         error 198
       }
@@ -5471,7 +5516,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       * strip it so +2 means 2 (and the post-loop dedup then also collapses +2 with 2)
       if substr("`item'",1,1) == "+" local item = substr("`item'",2,.)
       if `item' >= . | int(`item') != `item' {
-        dis as error "Error: cfxplottypes() contains a missing or non-integer entry: `item'"
+        dis as error "Error: cfxplottypes() contains a missing or non-integer type: `item'"
         dis as error "Valid cfxplottypes() entries are post, pre, and/or integers specifying relative time periods."
         error 198
       }
@@ -5516,7 +5561,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * production block is gated on contreat(), so makecfxplots + cfxlattice() alone
   * returned rc 0 with no plots and no message
   if "`makecfxplots'" != "" & "`contreat'" == "" {
-    dis as error "Error: makecfxplots requires a continuous treatment; specify contreat()."
+    dis as error "Error: makecfxplots requires a continuous treatment."
     error 198
   }
 
@@ -5529,7 +5574,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if _rc != 0 {
       local wdvlatone = strlower("`lattice'")
       if inlist("`wdvlatone'","all","basetreated","basetreatedpost","basetreatedpre","basetreatedref") | inlist("`wdvlatone'","bycohort","bytime","bycohortbytime","bytreated","bytreatedbytime","byttre","byttrebytime") {
-        dis as error "Error: lattice(`lattice') specifies a lattice type without a quantile count; use, for example, lattice(`lattice' 4)."
+        dis as error "Error: lattice(`lattice') specifies a lattice type without a quantile count."
         error 198
       }
       dis as error "Error: lattice() must contain either an existing numeric variable or a lattice type followed by a quantile count."
@@ -5541,7 +5586,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`safetyinput'" != "off" {
       cap assert (`lattice' >= 0 & int(`lattice') == `lattice') | `lattice' >= . `ifassert'
       if _rc != 0 {
-        dis as error "Error: the lattice() variable must contain only non-negative integers (it is used as a factor variable)."
+        dis as error "Error: the lattice() variable must contain only non-negative integers."
         error 411
       }
     }
@@ -5570,7 +5615,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       * mirrors the ttre_asgiven >= . tolerance of the commensurability screen below
       cap assert (`cfxlattice' >= 0 & int(`cfxlattice') == `cfxlattice') | `cfxlattice' >= . | `ttre_asgiven' >= . `ifassert'
       if _rc != 0 {
-        dis as error "Error: the cfxlattice() variable must contain only non-negative integers on observations with a nonmissing treatment onset (margins allows only non-negative integers in over())."
+        dis as error "Error: the cfxlattice() variable must contain only non-negative integers."
         error 411
       }
       local wdvcfxmiss `cfxlattice' >= . & `ttre_asgiven' < .
@@ -5608,7 +5653,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       }
       cap assert (`t' - `ttre_asgiven') == int(`t' - `ttre_asgiven') | `ttre_asgiven' >= . | `ttre_asgiven' <= `wdvtlo' | `ttre_asgiven' > `wdvthi' `ifassert'
       if _rc != 0 {
-        dis as error "Error: t minus ttre takes non-integer values, so relative-period horizons cannot be constructed. Treatment onset times must sit on the same grid as the time variable; if the time variable itself is on a fractional grid (e.g. year + quarter/4), recode both to consecutive integers."
+        * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+        *   T minus ttre takes non-integer values, so relative-period horizons cannot be constructed.
+        *   Treatment onset times must sit on the same grid as the time variable; if the time variable itself
+        *   is on a fractional grid (e.g. year + quarter/4), recode both to consecutive integers.
+        dis as error "Error: t minus ttre takes non-integer values; correct either t or ttre."
         error 459
       }
       dis as text "Caution: some treatment onset times are not on the same grid as t (t minus ttre is non-integer), but all such onsets fall outside the usable estimation window and will be dropped or treated as never-treated downstream."
@@ -5630,12 +5679,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * MISSING p rather than erroring, which would otherwise be displayed and ereturn'd.
   if "`fastnose'" != "" {
     if "`unconditionalse'" != "" {
-      dis as error "Error: fastnose is not compatible with unconditionalse; unconditional standard errors are produced by margins, which fast mode does not ask for."
+      dis as error "Error: fastnose is not compatible with unconditionalse."
       error 198
     }
+    * ruled 2026-09-21 (author): impvalues already sets marginsdof to nose on its own
+    * account and passes nose on every one of its own margins calls, so fastnose asks for a
+    * speedup that is already in force. Caution rather than refuse. The option is then
+    * CLEARED rather than carried: letting it stand would newly expose an impvalues run to
+    * fast mode's other effects (the skipped zero-variance and identical-SE screens, the
+    * b-only event-study capture), which have never been exercised together with impvalues.
+    * Clearing keeps the run byte-identical to a plain impvalues run, which is what the
+    * caution tells the user they are getting. The remaining gates in this block are
+    * unreachable under impvalues (adversarial, jointtests and pretrendpower are each
+    * refused alongside impvalues elsewhere), so falling through them is inert.
     if "`impvalues'" != "" {
-      dis as error "Error: fastnose is not compatible with impvalues; Ibragimov-Muller inference reports standard errors and p-values, which fast mode does not estimate."
-      error 198
+      dis as text "Caution: fastnose is unnecessary with impvalues; impvalues already employs this trick to the maximum amount possible."
+      local fastnose
     }
     * under permute() without permtstat/permanalyticse, fast mode is what wooldid selects
     * below anyway, and the adversarial and joint-test surfaces are permutation quantities
@@ -5645,15 +5704,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * unaffected.
     local fnperm = ("`permute'" != "" & "`permtstat'" == "" & "`permanalyticse'" == "")
     if "`adversarial'" != "" & !`fnperm' {
-      dis as error "Error: fastnose is not compatible with adversarial; the adversarial pre-trends test needs a variance-covariance matrix, which fast mode does not estimate."
+      dis as error "Error: fastnose is not compatible with adversarial."
       error 198
     }
     if "`jointtests'" != "" & !`fnperm' {
-      dis as error "Error: fastnose is not compatible with jointtests; fast mode reports point estimates only."
+      dis as error "Error: fastnose is not compatible with jointtests."
       error 198
     }
     if "`pretrendpower'" != "" {
-      dis as error "Error: fastnose is not compatible with pretrendpower(); the Roth (2022) diagnostics need the event-study variance-covariance matrix, which fast mode does not estimate."
+      dis as error "Error: fastnose is not compatible with pretrendpower()."
       error 198
     }
     * belt-and-braces: joint tests are already off whenever jointtests is absent, and the
@@ -5705,7 +5764,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * the admissible elasticity types; anything else errors rather than falling through to
   * dydx silently
   if !inlist("`contreatelasticitytype'", "dydx", "dyex") {
-    dis as error "Error: contreatelasticitytype() must be dydx or dyex. The eyex and eydx forms have been removed."
+    dis as error "Error: contreatelasticitytype() must be dydx or dyex. "
     error 198
   }
   * syntax's int type rejects fractions and missing but admits 0 and negatives, so the
@@ -5717,13 +5776,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * tested on the raw user value (safetyinput): contreat+contreatwithin rewrites the
   * working copy to off above, which would mask an invalid user token here
   if "`safetyinput'" != "" & !inlist("`safetyinput'", "on", "off") {
-    dis as error "Error: safety() must be on or off."
+    dis as error "Error: safety() must be 'on' or 'off'."
     error 198
   }
   * under esfixedbaseperiod the reference period must lie strictly before onset, so an
   * esrelativeto() above -1 is an error rather than a silent clamp to -1
   if "`esfixedbaseperiod'" != "" & `esrelativeto' > -1 {
-    dis as error "Error: esrelativeto() must be a negative integer (a pre-onset reference period) when esfixedbaseperiod is specified."
+    dis as error "Error: esrelativeto() must be a negative integer."
     error 198
   }
   * altmethod_adversarial is a modifier of adversarial; every gate and work branch keys on the
@@ -6077,7 +6136,7 @@ version 16.0
   }
   * the p-value conventions are mutually exclusive
   if "`side'" != "" & !inlist("`side'", "left", "right") {
-    dis as error "Error: permside() must be permside(left) - the share of replications at or below the observed statistic - or permside(right) - the share at or above it."
+    dis as error "Error: permside() must be permside(left), the share of replications at or below the observed statistic, or permside(right), the share at or above it. Do not specify permside() at all for two-tailed inference."
     error 198
   }
   if ("`side'" != "") + ("`rawp'" != "") + ("`absp'" != "") > 1 {
@@ -6089,7 +6148,7 @@ version 16.0
     error 198
   }
   if "`cw'" != "" {
-    dis as error "Error: permute() is not compatible with contreatwithin: randomization inference reassigns onset timing across clusters, which requires a comparison group."
+    dis as error "Error: permute() is not compatible with contreatwithin: permute() implements randomization inference by reassigning onset timing across clusters, which requires a comparison group."
     error 198
   }
   * untreatedZero's model formulation requires the dose to be zero outside treated cohort-
@@ -6098,7 +6157,7 @@ version 16.0
   * equality suffices: validate already forces untreatedZero to be the sole contreatcontrols
   * token. contreat in general stays allowed - the null is timing-as-if-random given dose
   if `"`cc'"' == "untreatedZero" {
-    dis as error "Error: permute() is not compatible with contreatcontrols(untreatedZero): replications reassign treatment onset while the dose path stays fixed, violating untreatedZero's requirement that the dose be zero outside treated cohort-periods."
+    dis as error "Error: permute() is not compatible with contreatcontrols(untreatedZero)."
     error 198
   }
   if "`os'" == "1" {
@@ -6111,11 +6170,11 @@ version 16.0
   * bootctl - the suppressed subgroup entries are what the replication vectors need in
   * order to permute the subgroup statistics
   if `"`ptp'"' != "" {
-    dis as error "Error: permute() is not compatible with pretrendpower(): the Roth (2022) diagnostics are computed on an event-study variance-covariance matrix, and randomization inference produces none (its p-values and intervals come from the permutation distribution). Run pretrendpower() in a separate call without permute()."
+    dis as error "Error: permute() is not compatible with pretrendpower()."
     error 198
   }
   if "`ssg'" != "" {
-    dis as error "Error: permute() may not be combined with suppresssgprimaryeffects; the suppressed subgroup entries are exactly what the replication vectors need in order to permute the subgroup statistics."
+    dis as error "Error: permute() may not be combined with suppresssgprimaryeffects."
     error 198
   }
   if `level' != 0 & (`level' < 10 | `level' > 99.99) {
@@ -6138,7 +6197,7 @@ version 16.0
     }
   }
   if ("`ts'" != "" | "`tc'" != "") & "`fn'" != "" {
-    dis as error "Error: permtstat/permtci randomize on t-statistics, which fastnose does not compute."
+    dis as error "Error: fastnose is not compatible with permtstat or permtci."
     error 198
   }
   if `permreps' < 0 {
@@ -6146,7 +6205,10 @@ version 16.0
     error 198
   }
   if `permreps' > 0 & `permreps' < 20 {
-    dis as error "Error: permreps() must be at least 20: the engine refuses inference on fewer than 20 completed replications, so a smaller request can only ever burn the run."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Permreps() must be at least 20: the engine refuses inference on fewer than 20 completed
+    *   replications, so a smaller request can only ever burn the run.
+    dis as error "Error: permreps() must be at least 20."
     error 198
   }
   * the sampled-draw p-value has floor 2/(permreps + 1) under the default equal-tailed
@@ -6171,7 +6233,7 @@ version 16.0
   if "`permmethod'" == "probabilities" {
     cap confirm numeric variable `clus'
     if _rc != 0 {
-      dis as error "Error: permute(probabilities) requires a numeric cluster variable (the permprobs() grammar lists clusters by numeric value)."
+      dis as error "Error: permute(probabilities) requires a numeric cluster variable."
       error 198
     }
     if `"`permprobs'"' == "" {
@@ -6202,7 +6264,7 @@ version 16.0
     }
   }
   if wordcount("`clus'") != 1 {
-    dis as error "Error: permute() requires cluster() with a single variable - the unit whose treatment-onset assignment is randomized."
+    dis as error "Error: permute() does not support multi-way clustering. "
     error 198
   }
 
@@ -6221,7 +6283,7 @@ version 16.0
   * plain-missing convention outright
   qui count if `insmp' & `ttrevar' > .
   if r(N) > 0 {
-    dis as error "Error: permute() requires never-treated observations coded as plain missing (.) in the timing variable; `r(N)' in-sample observation(s) carry extended missing codes (.a, .b, ...)."
+    dis as error "Error: permute() requires ttre missing values be coded as plain missing (.), but some observations have extended missing codes (e.g., .a, .b)."
     error 459
   }
 
@@ -6259,9 +6321,23 @@ version 16.0
       qui count if `wdpmix' & missing(`yv')
       local wdpdead = r(N)
     }
-    dis as error "Error: permute() requires clusters to be subsets of treatment-onset groups (levels of the timing variable, with never-treated its own group), but `wdpnmixr' in-sample observation(s) in `wdpnmixc' cluster(s) of `clus' mix onset values or mix treated and never-treated rows (smallest offending `clus': `wdpmixid')."
-    dis as error "This screen runs on the permutation DESIGN sample - every row your if-restriction keeps that has a `clus' value - which is wider than the estimation sample: a row the estimator itself discards for a missing outcome, weight or control still carries an onset here and still counts toward the design and its assignment count. `wdpdead' of the offending observation(s) have a missing `yv'. That is why a specification that runs without permute() can be refused the moment permute() is added."
-    dis as error "Common causes: a unit kept in the panel skeleton by a merge miss, with a missing (or stale) onset inside an otherwise homogeneous cluster; an onset recorded only from the onset period onward; or a cluster that genuinely pools units adopting at different times, in which case permute() must cluster at or above the level at which onset is assigned. Restrict the sample with if, fill in the onset on every row of the offending cluster, or cluster at the assignment level."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Permute() requires clusters to be subsets of treatment-onset groups (levels of the timing
+    *   variable, with never-treated its own group), but `wdpnmixr' in-sample observation(s) in `wdpnmixc'
+    *   cluster(s) of `clus' mix onset values or mix treated and never-treated rows (smallest offending
+    *   `clus': `wdpmixid'). This screen runs on the permutation DESIGN sample - every row your if-
+    *   restriction keeps that has a `clus' value - which is wider than the estimation sample: a row the
+    *   estimator itself discards for a missing outcome, weight or control still carries an onset here and
+    *   still counts toward the design and its assignment count. `wdpdead' of the offending observation(s)
+    *   have a missing `yv'. That is why a specification that runs without permute() can be refused the
+    *   moment permute() is added. Common causes: a unit kept in the panel skeleton by a merge miss, with
+    *   a missing (or stale) onset inside an otherwise homogeneous cluster; an onset recorded only from
+    *   the onset period onward; or a cluster that genuinely pools units adopting at different times, in
+    *   which case permute() must cluster at or above the level at which onset is assigned. Restrict the
+    *   sample with if, fill in the onset on every row of the offending cluster, or cluster at the
+    *   assignment level.
+    dis as error "Error: permute() requires each cluster have at most one treatment onset time period. "
+    dis as error " "
     error 459
   }
   qui drop `wdpmix'
@@ -6291,7 +6367,17 @@ version 16.0
     qui gegen double `wdpinv' = total(missing(`ttrevar')) if `insmp', by(`ivar')
     qui count if `insmp' & ((`wdpitr' > 0 & `wdpinv' > 0) | (`wdpitr' > 0 & `wdpimn' != `wdpimx'))
     if r(N) > 0 {
-      dis as error "Error: permonsetcohorts asserts that `ivar' IS the treatment-onset grouping, but `r(N)' in-sample observation(s) sit in levels of `ivar' that carry more than one onset value (or mix treated and never-treated rows). Drop permonsetcohorts, or define `ivar' as the onset grouping."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Permonsetcohorts asserts that `ivar' IS the treatment-onset grouping - exactly one level of `ivar'
+      *   per distinct onset value, with the never-treated a single level - but `r(N)' in-sample
+      *   observation(s) sit in onset groups that span more than one level of `ivar'. Splitting a cohort (or
+      *   the never-treated) across several levels of `ivar' leaves the per-replication rebuild of `ivar'
+      *   undefined. Collapse `ivar' to the onset grouping, or drop permonsetcohorts.
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Permonsetcohorts asserts that `ivar' IS the treatment-onset grouping, but `r(N)' in-sample
+      *   observation(s) sit in levels of `ivar' that carry more than one onset value (or mix treated and
+      *   never-treated rows). Drop permonsetcohorts, or define `ivar' as the onset grouping.
+      dis as error "Error: permonsetcohorts requires that `ivar' represent treatment-onset groups, but this does not appear to be the case. "
       error 459
     }
     qui drop `wdpimn' `wdpimx'
@@ -6301,7 +6387,7 @@ version 16.0
     qui gegen double `wdpimx' = max(`ivar') if `insmp', by(`ttrevar')
     qui count if `insmp' & `wdpimn' != `wdpimx'
     if r(N) > 0 {
-      dis as error "Error: permonsetcohorts asserts that `ivar' IS the treatment-onset grouping - exactly one level of `ivar' per distinct onset value, with the never-treated a single level - but `r(N)' in-sample observation(s) sit in onset groups that span more than one level of `ivar'. Splitting a cohort (or the never-treated) across several levels of `ivar' leaves the per-replication rebuild of `ivar' undefined. Collapse `ivar' to the onset grouping, or drop permonsetcohorts."
+      dis as error "Error: permonsetcohorts requires that `ivar' represent treatment-onset groups, but this does not appear to be the case. "
       error 459
     }
     qui drop `wdpimn' `wdpimx' `wdpitr' `wdpinv'
@@ -6313,7 +6399,12 @@ version 16.0
     * by replication. the subgroups()-constant-within-i requirement is a real estimand
     * constraint, not an implementation limit
     if "`sg'" != "" {
-      dis as error "Error: permonsetcohorts is not compatible with subgroups(). Each replication rebuilds `ivar' from the onsets it drew, so a rebuilt `ivar'-by-time cell pools clusters from different observed cohorts and the subgroup variable varies inside it - which the estimator refuses (r411) in every replication. Define the subgroup at the onset-grouping level and drop subgroups(), or drop permonsetcohorts and cluster at or above `ivar'."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Each replication rebuilds `ivar' from the onsets it drew, so a rebuilt `ivar'-by-time cell pools
+      *   clusters from different observed cohorts and the subgroup variable varies inside it - which the
+      *   estimator refuses (r411) in every replication. Define the subgroup at the onset-grouping level and
+      *   drop subgroups(), or drop permonsetcohorts and cluster at or above `ivar'.
+      dis as error "Error: permonsetcohorts is not compatible with subgroups()."
       error 198
     }
   }
@@ -6357,7 +6448,13 @@ version 16.0
     qui gegen double `cmax' = max(`cgrp') if `insmp', by(`ivar')
     qui count if `insmp' & `cmin' != `cmax'
     if r(N) > 0 {
-      dis as error "Error: permute() requires the cluster() variable to nest i (every i wholly inside one cluster): each replication assigns one onset per cluster to all of its observations, which is undefined when a unit straddles clusters (`r(N)' in-sample observation(s) do). Cluster at or above the i level, or - if i was constructed as the treatment-onset grouping - assert that with permonsetcohorts, which has each replication rebuild i from the onsets it drew."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Permute() requires the cluster() variable to nest i (every i wholly inside one cluster): each
+      *   replication assigns one onset per cluster to all of its observations, which is undefined when a
+      *   unit straddles clusters (`r(N)' in-sample observation(s) do). Cluster at or above the i level, or
+      *   - if i was constructed as the treatment-onset grouping - assert that with permonsetcohorts, which
+      *   has each replication rebuild i from the onsets it drew.
+      dis as error "Error: permute() requires either that your i variable be specified as strict subsets of your cluster() variable, or (when permonsetcohorts is specified) that your i variable represent treatment onset groups. "
       error 459
     }
   }
@@ -6372,12 +6469,12 @@ version 16.0
   if "`sg'" != "" {
     cap assert `sg' >= 0 | `sg' >= . if `insmp'
     if _rc != 0 {
-      dis as error "Error: permute() with subgroups() requires the subgroup variable to be non-negative (or missing) on every in-sample row, not only on treated units' rows: any cluster can be assigned treatment in a replication, and the replications refuse negative subgroup values on treated rows."
+      dis as error "Error: permute() with subgroups() requires the subgroup variable to be a non-negative integer (or missing) for all observations in the sample. "
       error 411
     }
     cap assert `sg' == int(`sg') if `insmp'
     if _rc != 0 {
-      dis as error "Error: permute() with subgroups() requires integer-valued (or missing) subgroup values on every in-sample row, because any cluster can be assigned treatment in a replication."
+      dis as error "Error: permute() with subgroups() requires the subgroup variable to be a non-negative integer (or missing) for all observations in the sample. "
       error 411
     }
     tempvar sgmin sgmax
@@ -6385,7 +6482,11 @@ version 16.0
     qui gegen double `sgmax' = max(cond(`sg' >= ., ., `sg')) if `insmp', by(`ivar' `tvar')
     cap assert `sgmin' == `sgmax' if `insmp'
     if _rc != 0 & "`si'" != "off" {
-      dis as error "Error: permute() with subgroups(): the subgroup variable `sg' varies within `ivar'-by-`tvar' cells of the sample (over ALL units, because any cluster can be assigned treatment in a replication). Define `ivar' at the finer level over which the subgroup varies, or drop subgroups(). To ignore this error, specify safety(off)."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Permute() with subgroups(): the subgroup variable `sg' varies within `ivar'-by-`tvar' cells of the
+      *   sample (over ALL units, because any cluster can be assigned treatment in a replication). Define
+      *   `ivar' at the finer level over which the subgroup varies, or drop subgroups().
+      dis as error "Error: the subgroup variable varies within i-t cells. This is unlikely to be valid with permute(). To ignore this error, specify safety(off)."
       error 459
     }
     qui drop `sgmin' `sgmax'
@@ -6394,7 +6495,12 @@ version 16.0
     cap assert `sgmin' == `sgmax' if `insmp'
     if _rc != 0 {
       if "`si'" != "off" {
-        dis as error "Error: permute() with subgroups(): the subgroup variable `sg' splits some units of `ivar' across multiple subgroups over time (over ALL units, because any cluster can be assigned treatment in a replication). A unit cannot belong to more than one subgroup. To proceed anyway, specify safety(off); share weighting then applies inside the replications as it does in the observed run."
+        * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+        *   Permute() with subgroups(): the subgroup variable `sg' splits some units of `ivar' across multiple
+        *   subgroups over time (over ALL units, because any cluster can be assigned treatment in a
+        *   replication). A unit cannot belong to more than one subgroup. To proceed anyway, specify
+        *   safety(off); share weighting then applies inside the replications as it does in the observed run.
+        dis as error "Error: some cohorts of the i variable take on multiple subgroup variable levels. "
         error 459
       }
       else dis as text "Caution: the subgroup variable `sg' splits some units of `ivar' across multiple subgroups over time; under safety(off) the replications proceed with share weighting, as the observed run does."
@@ -6426,7 +6532,7 @@ version 16.0
     qui gegen double `smax' = max(`permstrata') if `insmp', by(`clus')
     qui count if `insmp' & (`smin' != `smax' | missing(`permstrata'))
     if r(N) > 0 {
-      dis as error "Error: permstrata() requires every cluster to sit inside a single stratum with no missing stratum values (`r(N)' in-sample observation(s) violate this)."
+      dis as error "Error: permstrata() requires clusters be subsets of strata (with no missing stratum values). "
       error 459
     }
   }
@@ -6440,7 +6546,7 @@ version 16.0
   qui glevelsof `consv' if `ctag' == 1, missing local(permlvls)
   local permnlvl : word count `permlvls'
   if `permnclus' < 2 | `permnlvl' < 2 {
-    dis as error "Error: permute() found `permnclus' cluster(s) across `permnlvl' treatment-onset group(s); there is nothing to randomize."
+    dis as error "Error: too few clusters and/or treatment onset groups for permute()."
     error 459
   }
 
@@ -6483,7 +6589,7 @@ version 16.0
       if mod(`rseed',1) != 0 | `rseed' < 0 | `rseed' > 2147483647 local badseed 1
     }
     if `badseed' {
-      dis as error "Error: rseed() must be an integer between 0 and 2,147,483,647 (it is passed to set seed)."
+      dis as error "Error: rseed() must be an integer between 0 and 2,147,483,647."
       error 198
     }
   }
@@ -6501,7 +6607,7 @@ version 16.0
     if "`bts'" != "" local bootstray `bootstray' boottstat
     if "`bsave'" != "" local bootstray `bootstray' bootsave()
     if "`bootstray'" != "" {
-      dis as error "Error: `bootstray' require(s) the bootstrap() option (dots() and rseed() are also accepted with permute(); level() applies to every run)."
+      dis as error "Error: bootstrap options were specified without bootstrap(). "
       error 198
     }
     exit 0
@@ -6509,7 +6615,10 @@ version 16.0
 
   * master-option token
   if !inlist("`bootstrap'", "standard", "bayes") {
-    dis as error "Error: bootstrap() must be either bootstrap(standard) - cluster resampling with replacement - or bootstrap(bayes) - Bayesian cluster reweighting. Received: bootstrap(`bootstrap')."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Bootstrap() must be either bootstrap(standard) - cluster resampling with replacement - or
+    *   bootstrap(bayes) - Bayesian cluster reweighting.
+    dis as error "Error: bootstrap() must be either bootstrap(standard) or bootstrap(bayes). "
     error 198
   }
 
@@ -6549,7 +6658,7 @@ version 16.0
   * further up, so under permute() a negative dots() passes unvalidated, fails every
   * `if `dots' > 0' test in the engine and silently behaves as dots(0)
   if `dots' != -1 & `dots' < 0 {
-    dis as error "Error: dots() must be a nonnegative integer (0 suppresses the progress display)."
+    dis as error "Error: dots() must be a nonnegative integer."
     error 198
   }
   * bootsave(): the name rules (plain file name, cwd, replace to overwrite) are checked here
@@ -6563,7 +6672,7 @@ version 16.0
       * file name and deliberately does not follow Stata's own saving(f, replace) form, so
       * bootsave(name, replace) would otherwise be swallowed whole and write a file literally called
       * "name, replace.dta" at rc 0.
-      dis as error "Error: bootsave() takes a plain file name and no comma; replace is a separate option of wooldid, so write bootsave(`=subinstr("`wdbfn'", ",", " ", .)') replace."
+      dis as error "Error: bootsave() should only contain a file name."
       error 198
     }
     if strpos("`wdbfn'", "/") | strpos("`wdbfn'", "\") | "`wdbfn'" == "" {
@@ -6578,7 +6687,12 @@ version 16.0
   }
   if "`bootalpha'" != "" {
     if !inlist("`bootalpha'", "size", "equal") {
-      dis as error "Error: bootalpha() must be bootalpha(equal) - Dirichlet(1,...,1) across clusters, the Rubin convention and the default - or bootalpha(size) - per-cluster alpha equal to cluster size, the bayesboot id() convention, whose standard errors understate cluster-level dispersion on multi-observation clusters."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Bootalpha() must be bootalpha(equal) - Dirichlet(1,...,1) across clusters, the Rubin convention
+      *   and the default - or bootalpha(size) - per-cluster alpha equal to cluster size, the bayesboot id()
+      *   convention, whose standard errors understate cluster-level dispersion on multi-observation
+      *   clusters.
+      dis as error "Error: bootalpha() must be either bootalpha(equal) or bootalpha(size)."
       error 198
     }
     if "`bootstrap'" == "standard" {
@@ -6591,7 +6705,7 @@ version 16.0
   * unit is the observation, so it would be N delete-one-observation fits rather than G.
   * refuse, as bootdf(clusters) does
   if "`bdisp'" == "bca" & "`clus'" == "" {
-    dis as error "Error: bootdisplay(bca) requires cluster(): without it the resampling unit is the observation, so the acceleration jackknife would be one delete-one-observation fit per observation (N fits, not G). Give cluster(), or use bootdisplay(bc)."
+    dis as error "Error: bootdisplay(bca) requires cluster()."
     error 198
   }
 
@@ -6604,7 +6718,7 @@ version 16.0
     * without cluster() the resampling unit is the observation, so bootdf(clusters) would resolve
     * silently to t(N-1); refuse rather than substitute
     if "`bootdf'" == "clusters" & "`clus'" == "" {
-      dis as error "Error: bootdf(clusters) requires cluster(): without it the resampling unit is the observation, so the cluster-count degrees of freedom would silently be t(N-1), indistinguishable from the normal. Use bootdf(normal) - the default without cluster() - or give the degrees of freedom as a positive integer."
+      dis as error "Error: bootdf(clusters) requires cluster()."
       error 198
     }
     if !inlist("`bootdf'", "normal", "clusters") {
@@ -6614,7 +6728,11 @@ version 16.0
         if mod(`bootdf',1) != 0 | `bootdf' < 1 local baddf 1
       }
       if `baddf' {
-        dis as error "Error: bootdf() must be bootdf(normal) - standard normal critical values, the default and the convention Stata's own bootstrap prefix uses - or bootdf(clusters) - t with (number of resampling clusters - 1) degrees of freedom - or a positive integer setting the degrees of freedom directly."
+        * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+        *   Bootdf() must be bootdf(normal) - standard normal critical values, the default and the convention
+        *   Stata's own bootstrap prefix uses - or bootdf(clusters) - t with (number of resampling clusters -
+        *   1) degrees of freedom - or a positive integer setting the degrees of freedom directly.
+        dis as error "Error: bootdf() must be bootdf(normal), bootdf(clusters), or bootdf(x) where is is a positive integer. "
         error 198
       }
     }
@@ -6635,16 +6753,35 @@ version 16.0
   * rows for a physical expansion. Refuse boottstat alone - the percentile, bias-corrected
   * and Wald families read only the coefficient draws and are unaffected
   if "`bts'" != "" & "`pois'" != "" {
-    dis as error "Error: boottstat may not be combined with poisson. The Poisson replications are estimated on sampling weights, so a replication's own standard error is not the same functional of the resampled data as the observed standard error, and the studentized bootstrap would be anti-conservative. Drop boottstat; the percentile, bias-corrected and Wald bootstrap families remain available with poisson."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   The Poisson replications are estimated on sampling weights, so a replication's own standard error
+    *   is not the same functional of the resampled data as the observed standard error, and the
+    *   studentized bootstrap would be anti-conservative. Drop boottstat; the percentile, bias-corrected
+    *   and Wald bootstrap families remain available with poisson.
+    dis as error "Error: boottstat may not be combined with poisson. "
     error 198
   }
   if "`bts'" != "" & "`bootstrap'" == "bayes" {
-    dis as error "Error: boottstat may not be combined with bootstrap(bayes). The Bayesian bootstrap reweights clusters by continuous Dirichlet mass, which cannot be expressed as a duplication count, so a replication's own standard error is not the same functional of the reweighted data as the observed standard error. Use bootstrap(standard) for a studentized bootstrap, or drop boottstat; the percentile, bias-corrected and Wald families remain available with bootstrap(bayes)."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   The Bayesian bootstrap reweights clusters by continuous Dirichlet mass, which cannot be expressed
+    *   as a duplication count, so a replication's own standard error is not the same functional of the
+    *   reweighted data as the observed standard error. Use bootstrap(standard) for a studentized
+    *   bootstrap, or drop boottstat; the percentile, bias-corrected and Wald families remain available
+    *   with bootstrap(bayes).
+    dis as error "Error: boottstat may not be combined with bootstrap(bayes)."
     error 198
   }
   if "`bdisp'" != "" {
     if !inlist("`bdisp'", "percentile", "bc", "bca", "wald") {
-      dis as error "Error: bootdisplay() must be bootdisplay(percentile) - the default: the p-value and confidence interval from the percentile ranks of the bootstrap distribution - or bootdisplay(bc) - the bias-corrected percentile method - or bootdisplay(bca) - the bias-corrected and accelerated method, whose acceleration comes from a delete-one-cluster jackknife of G extra fast fits - or bootdisplay(wald) - the p-value and interval from a normal or t approximation, the choice between them governed by bootdf(). The reported standard error is the standard deviation of the bootstrap distribution under all three; every family is computed and stored in e() whichever is displayed. Under boottstat only bootdisplay(percentile) is available: the studentized draws have no Wald or bias-corrected family."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Bootdisplay() must be bootdisplay(percentile) - the default: the p-value and confidence interval
+      *   from the percentile ranks of the bootstrap distribution - or bootdisplay(bc) - the bias-corrected
+      *   percentile method - or bootdisplay(bca) - the bias-corrected and accelerated method, whose
+      *   acceleration comes from a delete-one-cluster jackknife of G extra fast fits - or bootdisplay(wald)
+      *   - the p-value and interval from a normal or t approximation, the choice between them governed by
+      *   bootdf(). The reported standard error is the standard deviation of the bootstrap distribution
+      *   under all three; every family is computed and stored in e() whichever is displayed.
+      dis as error "Error: bootdisplay() must be either percentile, bc, or wald. Under boottstat only bootdisplay(percentile) is available."
       error 198
     }
     * bootdisplay(wald) is meaningless after studentizing: boottstat reports the ANALYTIC
@@ -6652,7 +6789,12 @@ version 16.0
     * in that column), so a normal/t approximation built on a bootstrap standard deviation
     * has no standard error to be built from. Refused rather than silently reinterpreted
     if "`bdisp'" == "wald" & "`bts'" != "" {
-      dis as error "Error: bootdisplay(wald) may not be combined with boottstat. A studentized bootstrap reports the analytic standard error and takes its p-value and confidence interval from the percentile ranks of the studentized distribution; there is no bootstrap standard deviation of a studentized statistic for a normal or t approximation to be built on. Drop boottstat for the Wald package, or drop bootdisplay(wald) for the studentized one."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   A studentized bootstrap reports the analytic standard error and takes its p-value and confidence
+      *   interval from the percentile ranks of the studentized distribution; there is no bootstrap standard
+      *   deviation of a studentized statistic for a normal or t approximation to be built on. Drop
+      *   boottstat for the Wald package, or drop bootdisplay(wald) for the studentized one.
+      dis as error "Error: bootdisplay(wald) may not be combined with boottstat."
       error 198
     }
     * bootdisplay(bc) under boottstat is refused as well. applying Efron's z0 shift to the
@@ -6663,30 +6805,48 @@ version 16.0
     * Efron-Tibshirani or Davison-Hinkley, and percentile-t is already second-order accurate.
     * refused rather than silently shown as percentile-t
     if inlist("`bdisp'", "bc", "bca") & "`bts'" != "" {
-      dis as error "Error: bootdisplay(`bdisp') may not be combined with boottstat. The studentized (percentile-t) bootstrap is already second-order accurate, and applying the bias-corrected shift to the studentized quantiles and then reflecting them moves the interval against the median bias, so there is no bias-corrected (or accelerated) studentized family. Drop boottstat for the bias-corrected percentile interval, or drop bootdisplay(`bdisp') for the studentized one."
+      dis as error "Error: bootdisplay(`bdisp') may not be combined with boottstat. "
       error 198
     }
   }
 
   * interaction refusals
   if "`permute'" != "" {
-    dis as error "Error: bootstrap() may not be combined with permute(); each orchestrates its own replication loop. Run them in separate wooldid calls."
+    dis as error "Error: bootstrap() may not be combined with permute()."
     error 198
   }
   if "`impv'" != "" {
-    dis as error "Error: bootstrap() may not be combined with impvalues; the imputation-method point estimates are cross-cluster means whose replication vector would not correspond to the reported results."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Bootstrap() may not be combined with impvalues; the imputation-method point estimates are cross-
+    *   cluster means whose replication vector would not correspond to the reported results.
+    dis as error "Error: bootstrap() may not be combined with impvalues."
     error 198
   }
+  * ruled 2026-09-21 (author): "convert this into a caution, and only have the blocking
+  * error fire when bootstrapping t-statistics". Without boottstat the replications already
+  * run under fastnose (see the wdb_ro build in the shell), so typing it is redundant and
+  * the shell clears it after this call. Under boottstat the replications must NOT run fast
+  * - the studentized statistic needs each replication's own standard error - so the
+  * refusal stands there.
   if "`fn'" != "" {
-    dis as error "Error: bootstrap() may not be combined with fastnose; fastnose requests point estimates only, leaving nothing for the bootstrap to attach inference to (the replications use it internally)."
-    error 198
+    if "`bts'" != "" {
+      dis as error "Error: fastnose is not compatible with boottstat; the studentized bootstrap needs each replication's own standard error."
+      error 198
+    }
+    dis as text "Caution: fastnose-style speedup tricks are automatically employed with bootstrap() to the maximum extent possible; it need not be specified."
   }
   if "`uncond'" != "" {
-    dis as error "Error: bootstrap() may not be combined with unconditionalse; the reported standard errors would be bootstrap-based, contradicting the unconditional-VCE request."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Bootstrap() may not be combined with unconditionalse; the reported standard errors would be
+    *   bootstrap-based, contradicting the unconditional-VCE request.
+    dis as error "Error: bootstrap() may not be combined with unconditionalse."
     error 198
   }
   if `"`cvce'"' != "" {
-    dis as error "Error: bootstrap() may not be combined with customvce(); the reported standard errors would be bootstrap-based, contradicting the custom-VCE request."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Bootstrap() may not be combined with customvce(); the reported standard errors would be bootstrap-
+    *   based, contradicting the custom-VCE request.
+    dis as error "Error: bootstrap() may not be combined with customvce()."
     error 198
   }
   * oldsyntax arrives NORMALIZED to 0/1 (validate rewrites it early) - gate on "1",
@@ -6696,11 +6856,17 @@ version 16.0
     error 198
   }
   if "`ssg'" != "" {
-    dis as error "Error: bootstrap() may not be combined with suppresssgprimaryeffects; the suppressed subgroup entries are exactly what the replication vectors need in order to bootstrap the subgroup statistics."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Bootstrap() may not be combined with suppresssgprimaryeffects; the suppressed subgroup entries are
+    *   exactly what the replication vectors need in order to bootstrap the subgroup statistics.
+    dis as error "Error: bootstrap() may not be combined with suppresssgprimaryeffects."
     error 198
   }
   if wordcount("`clus'") > 1 {
-    dis as error "Error: bootstrap() supports a single (numeric) cluster() variable; multiway clustering is not available with bootstrap-based standard errors."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Bootstrap() supports a single (numeric) cluster() variable; multiway clustering is not available
+    *   with bootstrap-based standard errors.
+    dis as error "Error: bootstrap() doe not support multi-way clustering. "
     error 198
   }
 
@@ -6710,7 +6876,12 @@ version 16.0
   local cellwtd `attit' `atti' `attitime'
   if "`bootstrap'" == "bayes" & "`cellwtd'" != "" {
     if "`si'" != "off" {
-      dis as error "Error: bootstrap(bayes) with `cellwtd' reweights clusters but cannot resample treatment cells, so those bootstrap standard errors omit the cell-sampling variance component and can be too small when treatment effects vary across clusters. To proceed anyway with a caution, specify safety(off); bootstrap(standard) resamples cells and does not have this limitation."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   Bootstrap(bayes) with `cellwtd' reweights clusters but cannot resample treatment cells, so those
+      *   bootstrap standard errors omit the cell-sampling variance component and can be too small when
+      *   treatment effects vary across clusters. To proceed anyway with a caution, specify safety(off);
+      *   bootstrap(standard) resamples cells and does not have this limitation.
+      dis as error "Error: bootstrap(bayes) is not compatible with non-att estimands; please use bootstrap(standard)."
       error 198
     }
     dis as text "Caution: bootstrap(bayes) standard errors for `cellwtd' omit the cell-sampling variance component and can be too small when treatment effects vary across clusters; the joint tests, pairwise subgroup contrasts and confidence intervals for those estimands inherit the understatement. Read them alongside a bootstrap(standard) run, which does not have this limitation."
@@ -6732,7 +6903,7 @@ version 16.0
     qui gegen double `cgrp' = group(`clus') if `smp2'
     qui gstats sum `cgrp' if `smp2', nod
     if r(max) < 2 {
-      dis as error "Error: bootstrap() requires at least 2 clusters in the estimation sample."
+      dis as error "Error: bootstrap() requires at least 2 clusters."
       error 459
     }
   // placed below every aborting validation - the boottstat nesting check and the two-cluster
@@ -6798,7 +6969,7 @@ version 16.0
   local wdbsrc = _rc
   cap frame drop `bsf'
   if `wdbsrc' != 0 {
-    dis as error "Error: bootsave(`fn') could not build the replication dataset (rc=`wdbsrc')."
+    dis as error "Error: bootsave(`fn') could not produce the replication dataset (rc=`wdbsrc')."
     error `wdbsrc'
   }
   dis as text "bootsave(): the replication draws were written to `fn'.dta (`=`wdbsn'-1' replication rows plus the _rep = 0 observed row)."
@@ -6823,7 +6994,7 @@ version 16.0
   * the accumulator index k pairs with the k-th NAME wooldid_bootrun recorded; a count
   * mismatch would misalign the cell tables silently, so it is an error, not a fallback
   if `ncfx' > 0 & `: word count `names'' != `ncfx' {
-    dis as error "Error: wooldid_bootcellsx received `ncfx' continuous-treatment cell accumulators but `: word count `names'' matrix names; the bootstrap cell rewiring cannot pair them. This is an internal inconsistency - please report it."
+    dis as error "Error: Your data/specification has run into a previously unknown wooldid bug; please report it with information about your set up and the following text:  wooldid_bootcellsx received `ncfx' continuous-treatment cell accumulators but `: word count `names'' matrix names; the bootstrap cell rewiring cannot pair them."
     error 498
   }
   * the shell's level() defaults to 0 (meaning c(level)); resolve it here exactly as the
@@ -7791,7 +7962,7 @@ version 16.0
   * placed before the reps-vs-support cautions so a degenerate run is refused rather than
   * first advised to consider permexact
   if real("`wdp_npd'") == 1 {
-    dis as error "Error: the requested randomization design admits only one possible assignment (every stratum is onset-homogeneous, or every permprobs() row is deterministic); there is nothing to randomize."
+    dis as error "Error: the requested randomization design admits only one possible assignment."
     error 459
   }
   if "`wdp_caut1'" != "" dis as text "Caution: `wdp_caut1'"
@@ -7877,7 +8048,7 @@ version 16.0
     mata: wooldid_permirb("`ttrevar'", "`repi'", "`wdpomap'", `wdp_ncode')
     cap assert `repi' == `i' if `smp'
     if _rc != 0 {
-      dis as error "Error: under permonsetcohorts the per-replication rebuild of `i' does not reproduce `i' at the observed assignment; the onset-to-cohort map is not the identity there. This is unexpected - please report it."
+      dis as error "Error: your data/specification has triggered a previously unknown bug. Please report this bug with information about your setup and the following text: under permonsetcohorts the per-replication rebuild of `i' does not reproduce `i' at the observed assignment; the onset-to-cohort map is not the identity there."
       error 459
     }
     local repcall `y' `repi' `t'
@@ -7922,7 +8093,7 @@ version 16.0
   * message. the shell restores the observed estimation results bit-intact on these error paths
   if _rc == 1 error 1
   if _rc != 0 {
-    dis as error "Error: the rep-0 comparison run of the observed assignment failed (rc `=_rc'); permutation inference is impossible. The observed estimation results are unaffected."
+    dis as error "Error: something about your given data/specification is not compatible with permute() inference as specified (rc `=_rc'). "
     error 459
   }
   local ec 0
@@ -7931,11 +8102,11 @@ version 16.0
     if "`permtstat'" == "" cap scalar `wdpo`ec'' = _b[main_`ee']
     else cap scalar `wdpo`ec'' = _b[main_`ee']/_se[main_`ee']
     if _rc != 0 {
-      dis as error "Error: the observed comparison statistic for `ee' could not be read from the rep-0 run; permutation inference is impossible."
+      dis as error "Error: something about your given data/specification is not compatible with permute(), possibly indicating the specification would also fail without permute()."
       error 459
     }
     if missing(`wdpo`ec'') {
-      dis as error "Error: the observed comparison statistic for `ee' is missing (unidentified observed estimate or standard error); permutation inference is impossible."
+      dis as error "Error: statistic for `ee' is missing (unidentified observed estimate or standard error) in baseline specification."
       error 459
     }
   }
@@ -7960,7 +8131,7 @@ version 16.0
     local wdpnames0 : colfullnames `obsb'
     local wdpnames1 : colfullnames e(b)
     if "`wdpnames0'" != "`wdpnames1'" {
-      dis as error "Error: the rep-0 coefficient vector does not match the observed run's column set; permutation accumulation would be misaligned. This is unexpected - please report it."
+      dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text: the rep-0 coefficient vector does not match the observed run's column set; permutation accumulation would be misaligned.  "
       error 459
     }
     local wdp_K = colsof(`obsb')
@@ -8099,7 +8270,9 @@ version 16.0
   * and what incompleteness costs is resolution, recorded per element in e(perm_n). A sampled
   * run that lost half its draws has no such guarantee, which is why it is refused instead
   if `ndone' < max(20, `wdp_R'/2) & "`permexact'" == "" {
-    dis as error "Error: only `ndone' of `wdp_R' permutation replications estimated successfully; too few for inference. Check whether reassigned onset configurations are frequently inestimable on these data."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Check whether reassigned onset configurations are frequently inestimable on these data.
+    dis as error "Error: only `ndone' of `wdp_R' permutation replications estimated successfully; too few for inference."
     error 459
   }
   * under permexact any failure means the enumeration is incomplete, so the caution fires at
@@ -8203,7 +8376,7 @@ version 16.0
     }
   }
   if `kk' != `K' {
-    dis as error "Error: permutation rewiring found `kk' results-matrix rows against `K' coefficient columns; the inference surfaces cannot be aligned. This is unexpected - please report it."
+    dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text: permutation rewiring found `kk' results-matrix rows against `K' coefficient columns; the inference surfaces cannot be aligned. "
     error 459
   }
 
@@ -9085,7 +9258,7 @@ version 16.0
   local wdpsrc = _rc
   cap frame drop `psf'
   if `wdpsrc' != 0 {
-    dis as error "Error: permsave(`fn') could not build the replication dataset (rc=`wdpsrc')."
+    dis as error "Error: permsave(`fn') could not produce the replication dataset (rc=`wdpsrc')."
     error `wdpsrc'
   }
   dis as text "permsave(): the permutation draws were written to `fn'.dta (`=`wdpsn'-1' replication rows plus the _rep = 0 observed row`=cond("`asg'" != "", "; the onset_* columns hold the onset assigned to each cluster", "")')."
@@ -9164,7 +9337,7 @@ version 16.0
     if r(N) == 0 local wdbesrc 2000
   }
   if `wdbesrc' != 0 {
-    dis as error "Error: bootstrap() could not read the estimation sample from the observed fit. This is an internal inconsistency - please report it."
+    dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text:  bootstrap() could not read the estimation sample from the observed fit. "
     error 459
   }
   * != 1, not == 0: e(sample) is a byte marker on the rows in memory, and this also
@@ -9200,7 +9373,7 @@ version 16.0
     local wdb_C = _N
   }
   if `wdb_C' < 2 {
-    dis as error "Error: bootstrap() requires at least 2 clusters in the estimation sample."
+    dis as error "Error: bootstrap() requires at least 2 clusters."
     error 459
   }
   * the few-cluster cautions, on the live resampling-cluster count. `wdb_C' is the number of
@@ -9356,7 +9529,7 @@ version 16.0
   cap error `wdrepdone'
   if _rc == 1 error 1
   if _rc != 0 {
-    dis as error "Error: the rep-0 comparison run of the observed data failed (rc `=_rc'); bootstrap inference is impossible. The observed estimation results are unaffected."
+    dis as error "Error: something about the given specification/dataset is incompatible with bootstrap(), possibly indicative of a misspecified baseline specification (rc `=_rc')."
     error 459
   }
   if "`compname'" != "" matrix `compname' = e(b)
@@ -9364,7 +9537,7 @@ version 16.0
   local wdbnames0 : colfullnames `obsb'
   local wdbnames1 : colfullnames e(b)
   if "`wdbnames0'" != "`wdbnames1'" {
-    dis as error "Error: the rep-0 coefficient vector does not match the observed run's column set; bootstrap accumulation would be misaligned. This is unexpected - please report it."
+    dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text: the rep-0 coefficient vector does not match the observed run's column set; bootstrap accumulation would be misaligned. "
     error 459
   }
 
@@ -9733,7 +9906,7 @@ version 16.0
             local wdb_nsg = r(max)
             qui drop __wdbnsg __wdbchk
             if `wdb_nsg' != `wdb_ncl' {
-              dis as error "Error: the bootstrap replication reported `wdb_ncl' clusters where the resampled cluster identity has `wdb_nsg' - the replication did not cluster on the resampled identity, so its standard error carries the 2 - 1/G inflation the re-identification leg exists to remove. This is an internal inconsistency - please report it."
+              dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text: the bootstrap replication reported `wdb_ncl' clusters where the resampled cluster identity has `wdb_nsg' - the replication did not cluster on the resampled identity, so its standard error carries the 2 - 1/G inflation factor the re-identification leg should be removing."
               error 459
             }
           }
@@ -9924,7 +10097,9 @@ version 16.0
   frame drop `mbfr'
 
   if `ndone' == 0 {
-    dis as error "Error: none of the `reps' bootstrap replications estimated successfully; bootstrap inference is impossible. The observed estimation results are unaffected."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   The observed estimation results are unaffected.
+    dis as error "Error: none of the `reps' bootstrap replications estimated successfully."
     error 459
   }
   if `nfail' > 0 dis as text "Caution: `nfail' of `reps' bootstrap replications failed to estimate and were excluded (official-bootstrap convention: complete replications only)."
@@ -10062,7 +10237,7 @@ version 16.0
     * structural mismatch between the stacked results matrices and e(b) - should be
     * impossible (suppresssgprimaryeffects is refused with bootstrap); fail loudly
     * rather than rewire misaligned inference
-    dis as error "Error: bootstrap rewiring found `kk' results-matrix rows against `K' coefficient columns; the inference surfaces cannot be aligned. This is unexpected - please report it."
+    dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text:  bootstrap rewiring found `kk' results-matrix rows against `K' coefficient columns; the inference surfaces cannot be aligned. "
     error 459
   }
 
@@ -10758,25 +10933,28 @@ prog def wooldid_ptpcheck
 version 16.0
   syntax , [levels(numlist) esf(string) impv(string) espre(string)]
   if "`impv'" != "" {
-    dis as error "Error: pretrendpower() is not compatible with impvalues (no event-study variance-covariance matrix exists under Ibragimov-Muller inference)."
+    dis as error "Error: pretrendpower() is not compatible with impvalues."
     error 198
   }
   if "`esf'" == "" {
-    dis as error "Error: pretrendpower() requires esfixedbaseperiod. Under the pooled reference the comparison period is a cohort-specific pool of pre-periods, so the single omitted reference period that the Roth (2022) linear-trend normalization requires is not defined."
-    dis as error "Specify esfixedbaseperiod (with esrelativeto() if you want a reference other than -1)."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Under the pooled reference the comparison period is a cohort-specific pool of pre-periods, so the
+    *   single omitted reference period that the Roth (2022) linear-trend normalization requires is not
+    *   defined. Specify esfixedbaseperiod (with esrelativeto() if you want a reference other than -1).
+    dis as error "Error: pretrendpower() requires esfixedbaseperiod."
     error 198
   }
   if `espre' <= 0 {
-    dis as error "Error: pretrendpower() requires esprelength() of at least 1; without pre-treatment event-study coefficients there is nothing to diagnose."
+    dis as error "Error: pretrendpower() requires esprelength() of at least 1."
     error 198
   }
   foreach ptpl of local levels {
     if `ptpl' > 0 & `ptpl' < 1 {
-      dis as error "Error: pretrendpower() takes power levels in percent (for example 80, not .8)."
+      dis as error "Error: pretrendpower() takes power levels in percent terms (for example 80, not .8)."
       error 198
     }
     if `ptpl' != int(`ptpl') | `ptpl' <= 5 | `ptpl' >= 100 {
-      dis as error "Error: pretrendpower() power levels must be integers strictly between 5 and 100 (for example 50, 80, 90, 95)."
+      dis as error "Error: pretrendpower() power levels must be integers in (5,100)."
       error 198
     }
   }
@@ -11172,7 +11350,7 @@ version 16.0
     local rsub `rtok'
     if strpos("`rtok'", ":") > 0 local rsub = substr("`rtok'", strpos("`rtok'", ":") + 1, .)
     if !regexm("`rsub'", "^([0-9]+)(bn|b|o)?\.") {
-      dis as error "Error: wooldid could not parse the CFX matrix row name '`rtok'' into a lattice level; please report this."
+      dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text:  wooldid could not parse the CFX matrix row name '`rtok'' into a lattice level."
       error 498
     }
     local newnames `newnames' lattice_`=regexs(1)'
@@ -11709,7 +11887,11 @@ version 16.0
   * display contract changes; the exact match here refuses cross-version replays
   * instead of misrendering a store this code no longer understands
   if "`e(wdid_replayv)'" != "2" {
-    dis as error "Error: the stored results were posted by a wooldid version without replay support or with a different replay contract (e(wdid_replayv)='`e(wdid_replayv)'', this version requires '2'); nothing can be redisplayed. Refit wooldid."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   The stored results were posted by a wooldid version without replay support or with a different
+    *   replay contract (e(wdid_replayv)='`e(wdid_replayv)'', this version requires '2'); nothing can be
+    *   redisplayed. Refit wooldid.
+    dis as error "Error: compatible stored results not found."
     error 301
   }
   * mirror wooldid_esplots' existence guard - on a corrupt or fabricated store the matlist
@@ -11719,7 +11901,7 @@ version 16.0
   * summarystats/wdidsgresults/pwsgs matlist sites remain fabrication-exposed
   cap confirm matrix e(wdidmainresults)
   if _rc != 0 {
-    dis as error "Error: the stored results no longer contain e(wdidmainresults); rerun wooldid."
+    dis as error "Error: compatible stored results not found."
     error 301
   }
 
@@ -12404,12 +12586,15 @@ version 16.0
               qui count if `_i' == `problem_i' & `_t' == `problem_t' + `min_t' + 1 & `targetflag' == 1 & `esamp' & `ifstatement'
               local wdsep = r(N) == 0
             }
-            if `wdsep' dis as error "Error: ppmlhdfe dropped every observation of the treated cohort-period cell `i' == `problem_i', relative-`t' == `problem_t' (perfect separation: the outcome is zero on all of them, so the cell's coefficient does not exist). This is not multicollinearity. Coarsen `i', drop the cohort, or specify safety(off) to proceed with the separated cells excluded."
+            * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+            *   This is not multicollinearity. Coarsen `i', drop the cohort, or specify safety(off) to proceed
+            *   with the separated cells excluded.
+            if `wdsep' dis as error "Error: ppmlhdfe dropped every observation of the treated i-t cell `i' == `problem_i', relative-`t' == `problem_t'. Specify safety(off) to proceed anyway."
             else dis as error  "Error: a treated cohort-period dummy coefficient was dropped for multicollinearity."
             if "`verbose'" != "" dis as error  "The specific problematic coefficient is: ``testbvar''"
             if "`verbose'" != "" dis as error  "For reference, _i is `_i', _t is `_t', and targetflag is `targetflag'"
             if !`wdsep' dis as error  "The problem seems to be with the treatment dummy for `i' == `problem_i', relative-`t' == `problem_t'"
-            if !`wdsep' & "`contreat'" != "" dis as error  "Specify contreatwithin if you have a continuous treatment intensity variable and wish to partial out any effect of treatment when the treatment intensity is 0."
+            if !`wdsep' & "`contreat'" != "" dis as error  "Specify contreatwithin if you have a continuous treatment intensity variable and wish to partial out any level effect of treatment when the treatment intensity is 0 (e.g., like when including i-t FE in such a specification)."
             dis as error  "You can ignore this check if you specify safety(off), but be careful."
             dis as error  " "
             * verbose not specified triggers error here (rather than later after looping through them all )
@@ -12663,7 +12848,7 @@ version 16.0
   * check that some cohort has a post period and that some has a pre-period
   cap assert `max_t' > 0 & `max_t' < .
   if _rc != 0 {
-    dis as error  "Error: cannot find either a treated time period for any treated units or sufficient untreated periods for treated units."
+    dis as error  "Error: cannot find at least one of a treated time period for any treated units or sufficient untreated periods for treated units."
     error 459
   }
   * produce modified identifiers _i
@@ -12711,12 +12896,12 @@ version 16.0
   * sglist. the integer screen below keeps its own adjudicated t >= ttre domain
   cap assert `subgroups' >= 0 | `subgroups' >= . if `ifstatement' & `ttre' < .
   if _rc != 0 {
-    dis as error "Error: the subgroups() variable contains negative values on in-sample rows of treated units (pre- or post-onset); subgroup values must be non-negative integers (or missing) there."
+    dis as error "Error: the subgroup variable contains negative values."
     error 411
   }
   qui glevelsof(`subgroups') if `ifstatement' & `t' >= `ttre' , clean local(sglist)
   if wordcount("`sglist'") == 0 {
-    dis as error  "Error: subgroups() is specified, but the subgroup variable contains no values within sample during the treatment period."
+    dis as error  "Error: the subgroup variable contains only missing values within the treatment period."
     error 459
   }
   * subgroup values reaching the treated estimation sample must be integer-valued: a non-integer
@@ -12726,7 +12911,7 @@ version 16.0
   * observations) stay tolerated exactly as before, and missing values pass (int(.) == .)
   cap assert `subgroups' == int(`subgroups') if `ifstatement' & `t' >= `ttre'
   if _rc != 0 {
-    dis as error "Error: the subgroup variable contains non-integer values within the treated estimation sample; it must contain only non-negative integers."
+    dis as error "Error: the subgroup variable contains non-integer values; it should take only non-negative integers and missing values."
     error 411
   }
   * subgroup containment. sg never enters the regression - the unit-by-period cell
@@ -12744,10 +12929,22 @@ version 16.0
     qui gegen double `f13sgitmax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i' `t')
     cap assert `f13sgitmin' == `f13sgitmax' if `ifstatement' & `ttre' != .
     if _rc != 0 {
-      dis as error "Error: the subgroup variable `subgroups' varies within `i'-by-`t' cells of the treated estimation sample."
-      dis as error "wooldid estimates effects at the `i'-by-period level, so subgroup estimates built from cells that mix subgroups cannot reflect within-cell subgroup differences - each subgroup only reweights the same pooled cell effects, and subgroup contrasts can come back identical even when true effects differ sharply by subgroup."
-      dis as error "Define `i' at the finer level over which the subgroup varies (e.g., egen newi = group(`i' `subgroups'), missing - the missing option keeps unlabelled rows as their own group instead of blanking newi, which would drop them from the estimation sample), or drop the subgroups() option."
-      dis as error "To ignore this error, specify safety(off)."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   The subgroup variable `subgroups' varies within `i'-by-`t' cells of the treated estimation sample.
+      *   wooldid estimates effects at the `i'-by-period level, so subgroup estimates built from cells that
+      *   mix subgroups cannot reflect within-cell subgroup differences - each subgroup only reweights the
+      *   same pooled cell effects, and subgroup contrasts can come back identical even when true effects
+      *   differ sharply by subgroup. Define `i' at the finer level over which the subgroup varies (e.g.,
+      *   egen newi = group(`i' `subgroups'), missing - the missing option keeps unlabelled rows as their
+      *   own group instead of blanking newi, which would drop them from the estimation sample), or drop the
+      *   subgroups() option.
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   The subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time. A
+      *   unit cannot belong to more than one subgroup. To proceed anyway, specify safety(off): by-subgroup
+      *   att and att_it then weight each observation to its own subgroup as usual, while att_i and
+      *   att_itime enter a split unit into each subgroup weighted by its share of sample weight there,
+      *   rather than with the equal unit weighting those estimands normally imply.
+      dis as error "Error: the subgroup variable varies within i. Treatment effects are estimated at the i-t level, so cross-subgroup variation is mechanically being shut down in this specification. Consider replacing the i variable with an i X subgroup variable. To ignore this error, specify safety(off)."
       error 459
     }
     qui drop `f13sgitmin' `f13sgitmax'
@@ -12762,8 +12959,7 @@ version 16.0
   cap assert `f13sgimin' == `f13sgimax' if `ifstatement' & `ttre' != .
   if _rc != 0 {
     if "`safetyinput'" != "off" {
-      dis as error "Error: the subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time. A unit cannot belong to more than one subgroup."
-      dis as error "To proceed anyway, specify safety(off): by-subgroup att and att_it then weight each observation to its own subgroup as usual, while att_i and att_itime enter a split unit into each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply."
+      dis as error "Error: the subgroup variable varies within i. Treatment effects are estimated at the i-t level, so cross-subgroup variation is mechanically being shut down in this specification. Consider replacing the i variable with an i X subgroup variable. To ignore this error, specify safety(off)."
       error 459
     }
     else dis as text "Caution: the subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time; proceeding under safety(off) using share weighting. att_i and att_itime enter a split unit into each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply; by-subgroup att and att_it results are unaffected."
@@ -12806,10 +13002,19 @@ version 16.0
       qui count if `ifstatement' & `relt' != 0 & `f13sgimin' < . & `subgroups' >= .
       local f13pmn = r(N)
       if "`safetyinput'" != "off" {
-        dis as error "Error: the subgroup variable `subgroups' is missing on `f13pmn' in-sample row(s) of treated units of `i' that carry a subgroup value on their other rows."
-        dis as error "A partially labelled unit is not simply outside the subgroup: att_i, att_it and att_itime divide by denominators built on ALL of the unit's rows, so the unit enters its own subgroup weighted by the share of its sample weight that carries the label rather than with the equal unit (att_i, att_itime) or equal cell (att_it) weighting those estimands name. Where an event-study window is reported, a label missing only on pre-treatment rows distorts the pretreatment and pre-trend rows while the main rows stay exact."
-        dis as error "Blank the subgroup variable on ALL of a unit's rows to leave that unit out of every subgroup, fill the label in within the unit, or restrict the sample with if(). Defining `i' at the finer level over which the label is observed (egen newi = group(`i' `subgroups'), missing) also works, but note that it redefines the estimand: att_i and att_itime then average over the split pseudo-units rather than over units."
-        dis as error "To proceed anyway, specify safety(off): the affected rows are then share-weighted, exactly as a split unit is."
+        * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+        *   A partially labelled unit is not simply outside the subgroup: att_i, att_it and att_itime divide
+        *   by denominators built on ALL of the unit's rows, so the unit enters its own subgroup weighted by
+        *   the share of its sample weight that carries the label rather than with the equal unit (att_i,
+        *   att_itime) or equal cell (att_it) weighting those estimands name. Where an event-study window is
+        *   reported, a label missing only on pre-treatment rows distorts the pretreatment and pre-trend rows
+        *   while the main rows stay exact. Blank the subgroup variable on ALL of a unit's rows to leave that
+        *   unit out of every subgroup, fill the label in within the unit, or restrict the sample with if().
+        *   Defining `i' at the finer level over which the label is observed (egen newi = group(`i'
+        *   `subgroups'), missing) also works, but note that it redefines the estimand: att_i and att_itime
+        *   then average over the split pseudo-units rather than over units. To proceed anyway, specify
+        *   safety(off): the affected rows are then share-weighted, exactly as a split unit is.
+        dis as error "Error: the subgroup variable `subgroups' is missing for some in-sample row(s) of treated units of `i' that carry a subgroup value on their other rows. This plausibly is an error, and is not compatible with non-att estimands. Specify safety(off) to proceed anyway."
         error 459
       }
       else dis as text "Caution: the subgroup variable `subgroups' is missing on `f13pmn' in-sample row(s) of treated units of `i' that carry a subgroup value on their other rows; proceeding under safety(off) using share weighting. Such a unit enters its own subgroup weighted by its labelled share of sample weight rather than with the equal unit (att_i, att_itime) or equal cell (att_it) weighting those estimands normally imply."
@@ -13163,7 +13368,7 @@ prog def wooldid_sglbl
   * consume r() before calling wooldid_sglbl
   if `ok' == 0 | wordcount("`kn'") == 0 qui glevelsof(`tvar') if `fb', clean local(kn)
   if wordcount("`kn'") != wordcount("`keep'") {
-    dis as error "Error: the `kk'event-study margins for subgroup `sg' returned `=wordcount("`keep'")' estimable columns but `=wordcount("`kn'")' relative-period labels could be recovered for them. This is unexpected - please report it."
+    dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text: the `kk'event-study margins for subgroup `sg' returned `=wordcount("`keep'")' estimable columns but `=wordcount("`kn'")' relative-period labels could be recovered for them."
     error 459
   }
   local relcol
@@ -13480,15 +13685,27 @@ version 16.0
       continue, break
     }
     if `fail' {
-      if "`ccrtype'" == "basic" dis as error "Error: the continuous treatment variable `contreat' has no usable variation across the reference-period observations of the estimation sample, so the baseline dose slope that contreatcontrols(basic) inserts cannot be estimated. With the slope unidentified the solver's choice is arbitrary and the reported average marginal effect can be wrong rather than missing, which is why this is an error rather than a caution."
-      if "`ccrtype'" == "byTreated" dis as error "Error: the continuous treatment variable `contreat' has no usable variation across the reference-period observations of `ccrn' of the two treatment-status groups (`=cond(`ccrgrp' == 1, "the never-treated", "the ever-treated")' group is affected), so the baseline dose slope that contreatcontrols(byTreated) fits separately for that group cannot be estimated."
-      if "`ccrtype'" == "byTtre" dis as error "Error: the continuous treatment variable `contreat' has no usable variation across the reference-period observations of `ccrn' treatment-onset group(s) (smallest onset affected: `ccrgrp'), so the onset-specific baseline dose slopes that contreatcontrols(byTtre) fits cannot be estimated for those groups."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   The continuous treatment variable `contreat' has no usable variation across the reference-period
+      *   observations of `ccrn' calendar period(s) - `ccrlist' - so the period-specific baseline dose
+      *   slopes that contreatcontrols(byTime) fits cannot be estimated for those periods. This is not a
+      *   statement that `contreat' lacks variation in your data; it usually does. What matters is the
+      *   comparison pool PRESENT IN EACH PERIOD, and that pool is exhausted in every period at or after the
+      *   last treatment onset whenever the dose is zero or constant for never-treated units. Requesting
+      *   esprelength() moves more periods into treated cells and so affects more periods, though it creates
+      *   no new affected periods on data that was otherwise fine. Two remedies are measured to work: keep
+      *   in the estimation sample units treated AFTER the end of the window, which restores a dosed
+      *   comparison pool in the late periods, or drop byTime from contreatcontrols() and use a coarser
+      *   type.
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   With the slope unidentified the solver's choice is arbitrary and the reported average marginal
+      *   effect can be wrong rather than missing, which is why this is an error rather than a caution.
+      if "`ccrtype'" == "basic" dis as error "Error: the continuous treatment variable `contreat' has no usable variation in the reference period or in the control group, scuppering identification of treatment effects."
+      if "`ccrtype'" == "byTreated" dis as error "Error: the continuous treatment variable `contreat' has no usable variation in the reference period for either the treatment group or the control group. The specification is thus unidentified."
+      if "`ccrtype'" == "byTtre" dis as error "Error: the continuous treatment variable `contreat' has no usable variation in the reference period for at least one treatment onset group (or for the control group). The specification is thus unidentified."
       if "`ccrtype'" == "byTime" {
-        dis as error "Error: the continuous treatment variable `contreat' has no usable variation across the reference-period observations of `ccrn' calendar period(s) - `ccrlist' - so the period-specific baseline dose slopes that contreatcontrols(byTime) fits cannot be estimated for those periods."
-        dis as error "This is not a statement that `contreat' lacks variation in your data; it usually does. What matters is the comparison pool PRESENT IN EACH PERIOD, and that pool is exhausted in every period at or after the last treatment onset whenever the dose is zero or constant for never-treated units. Requesting esprelength() moves more periods into treated cells and so affects more periods, though it creates no new affected periods on data that was otherwise fine."
-        dis as error "Two remedies are measured to work: keep in the estimation sample units treated AFTER the end of the window, which restores a dosed comparison pool in the late periods, or drop byTime from contreatcontrols() and use a coarser type."
+        dis as error "Error: the continuous treatment variable `contreat' has no usable variation in the control group for at least one period, or possibly in the reference period. This specification is not identified."
       }
-      if "`ccrtype'" != "byTime" dis as error "Remedies: use a coarser contreatcontrols() type, or examine and drop the affected group(s) from the estimation sample."
     }
     return scalar fail = `fail'
     return scalar n = `ccrn'
@@ -13537,8 +13754,13 @@ version 16.0
     }
     if `bcmin' < . {
       local fail 1
-      dis as error "Error: the continuous treatment variable `contreat' has no variation across the untreated/reference-period observations of treated cohort `=`bcmin'', so the cohort-specific baseline dose slope required by contreatcontrols(byCohort) cannot be estimated for that cohort."
-      dis as error "Examine this cohort's `contreat' values in its untreated/reference periods, and consider dropping the cohort from the estimation sample before proceeding."
+      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+      *   The continuous treatment variable `contreat' has no variation across the untreated/reference-
+      *   period observations of treated cohort `=`bcmin'', so the cohort-specific baseline dose slope
+      *   required by contreatcontrols(byCohort) cannot be estimated for that cohort. Examine this cohort's
+      *   `contreat' values in its untreated/reference periods, and consider dropping the cohort from the
+      *   estimation sample before proceeding.
+      dis as error "Error: the continuous treatment variable `contreat' has no variation in the reference period for at least one treated cohort, or possibly in the control group. This specification is unidentified."
     }
     else {
       qui count if `bctr' & `bcref' == 1 & `bcsd' > 1e-5*`bcsamp' & `bcsd' < 1e-3*`bcsamp' & `bcsd' < .
@@ -13641,7 +13863,7 @@ version 16.0
     return scalar vzexact = `vzexact'
     exit
   }
-  dis as error "wooldid_amescreen: unknown mode `mode'"
+  dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text: wooldid_amescreen: unknown mode `mode'"
   error 198
 end
 
@@ -13664,7 +13886,7 @@ version 16.0
   * saved the .gph files, and only the plot-data file is left to write
   syntax [, SAVEplots(name) replace dataonly]
   if "`e(wdid_replayv)'" != "2" {
-    dis as error "Error: wooldid_cfxplots is internal to wooldid and needs a stored wooldid estimation in e(); run wooldid first."
+    dis as error "Error: wooldid_cfxplots is internal to wooldid and needs stored wooldid estimation results in e() to function."
     error 301
   }
   local mats `e(wdid_cfxmats)'
@@ -13806,12 +14028,12 @@ version 16.0
   * this directly from a non-default frame in the default frame
   * exact-match on the replay contract version, mirroring the wooldid_display gate
   if "`e(wdid_replayv)'" != "2" {
-    dis as error "Error: wooldid_esplots is internal to wooldid and needs a stored wooldid estimation in e() (e(wdid_replayv)='`e(wdid_replayv)'', this version requires '2'); run wooldid first."
+    dis as error "Error: wooldid_esplots is internal to wooldid and needs stored wooldid estimation results in e() to function."
     error 301
   }
   cap confirm matrix e(wdidmainresults)
   if _rc != 0 {
-    dis as error "Error: the stored results no longer contain e(wdidmainresults); rerun wooldid."
+    dis as error "Error: compatible stored results not found."
     error 301
   }
   qui frame

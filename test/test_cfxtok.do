@@ -67,7 +67,7 @@ if _rc != 198 {
   local ++fails
 }
 
-* ---- C7: F13 message terminology (group defined by i) ----
+* ---- C7: F13 message terminology (onset not constant within i) ----
 clear
 qui set obs 30
 qui gen i = _n
@@ -84,8 +84,8 @@ if `rc7' != 459 {
   dis as error "C7 FAIL: split-onset rc=" `rc7' " (expected 459)"
   local ++fails
 }
-else if strpos(fileread("cfxtok_c7.txt"), "group defined by") == 0 {
-  dis as error "C7 FAIL: F13 message lacks group-defined-by-i terminology"
+else if strpos(fileread("cfxtok_c7.txt"), "is not constant within") == 0 {
+  dis as error "C7 FAIL: F13 message lacks onset-not-constant-within-i terminology"
   local ++fails
 }
 

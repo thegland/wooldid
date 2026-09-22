@@ -65,8 +65,11 @@ cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) pe
 chk 5a 198 _rc
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) impvalues
 chk 5b 198 _rc
+* 5c ruled 2026-09-21: fastnose alongside bootstrap() cautions and is dropped rather than
+* refused (the replications already run fast unless boottstat asks otherwise). The boottstat
+* pairing still refuses - test_bootstrap_tstat T8 pins that leg.
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) fastnose
-chk 5c 198 _rc
+chk 5c 0 _rc
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) unconditionalse
 chk 5d 198 _rc
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) customvce(robust)
@@ -123,7 +126,7 @@ if _rc == 0 {
 
 * G9 CONVERTED 2026-09-16 (T2) the same way, case number kept. i = s (3 coarse groups),
 * cluster = unit (12), so the cluster is STRICTLY FINER than i - unit varies within s.
-* It used to pin r(459), "requires the cluster() variable to nest i". i is an
+* It used to pin r(459), "strict subsets of your cluster() variable". i is an
 * estimand-definition choice and cluster() a claim about dependence and assignment, so
 * the pairing is legitimate and the leg keeps i here rather than splitting a straddling
 * unit in two. The fixture's own shape is asserted first: without it a later change to

@@ -125,7 +125,7 @@ qui log using w3f_w6.txt, text replace name(w3f)
 cap noi wooldid
 local rc6 = _rc
 qui log close w3f
-if `rc6' != 301 | strpos(fileread("w3f_w6.txt"), "no longer contain e(wdidmainresults)") == 0 {
+if `rc6' != 301 | strpos(fileread("w3f_w6.txt"), "compatible stored results not found") == 0 {
   dis as error "W6 FAIL: forged store rc=" `rc6' " (expected loud 301 with the targeted message)"
   local ++fails
 }

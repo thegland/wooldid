@@ -913,7 +913,7 @@ local lg = fileread("perm3_q15.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
 local lg = subinstr(`"`lg'"', char(10), " ", .)
-if strpos(`"`lg'"', "requires the cluster() variable to nest i") == 0 {
+if strpos(`"`lg'"', "strict subsets of your cluster() variable") == 0 {
   dis as error "Q15b FAIL: the finer-than-i refusal does not name the cause"
   global pf = $pf + 1
 }

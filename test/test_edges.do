@@ -226,7 +226,7 @@ qui log using edges_e7.txt, text replace name(ed)
 cap noi wooldid y i t ttre, att cluster(i c2) unconditionalse
 local rc7 = _rc
 qui log close ed
-scanE edges_e7.txt "unconditionalse supports a single cluster() variable"
+scanE edges_e7.txt "does not support multiway clustering"
 local e7a = r(found)
 cap erase edges_e7.txt
 use data/dta_binary.dta, clear
@@ -309,7 +309,7 @@ foreach leg in "cluster(c1)" "cluster(c1) fastnose" "robust" "cluster(c2)" {
   cap noi wooldid y i t ttre, att `leg'
   local rc = _rc
   qui log close ed
-  scanE edges_e10.txt "cluster-robust inference needs at least 2"
+  scanE edges_e10.txt "too few clusters"
   local m = r(found)
   scanE edges_e10.txt "continuous"
   local c = r(found)
@@ -390,7 +390,7 @@ qui log using edges_e12.txt, text replace name(ed)
 cap noi wooldid y i t ttre, att poisson
 local rc12 = _rc
 qui log close ed
-scanE edges_e12.txt "perfect separation"
+scanE edges_e12.txt "dropped every observation of the treated"
 local e12a = r(found)
 scanE edges_e12.txt "dropped for multicollinearity"
 local e12b = r(found)

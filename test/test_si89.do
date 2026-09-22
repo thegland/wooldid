@@ -140,9 +140,9 @@ qui log using si89_t5.txt, text replace name(si89)
 cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(basic)
 qui log close si89
 local rc5 = _rc
-scanlog si89_t5.txt "so estimation would fail with r(907)"
+scanlog si89_t5.txt "breach the current maxvar limit"
 local f5a = r(found)
-scanlog si89_t5.txt "Consider specifying unit-level fixed effects via fe()"
+scanlog si89_t5.txt "consider using your unit variable for fe()"
 if `rc5' == 907 & `f5a' == 1 & r(found) == 1 dis as result "T5 PASS: maxvar preflight -> early r(907) + steer"
 else {
   dis as error "T5 FAIL: rc = `rc5' (wanted 907), demand line = `f5a', steer line = " r(found)

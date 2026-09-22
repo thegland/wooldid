@@ -143,14 +143,36 @@ else {
   }
 }
 
-* ---- T4: the five incompatibility gates ----
-foreach g in "unconditionalse robust" "impvalues" "adversarial" "jointtests" "pretrendpower(80) esfixedbaseperiod esprelength(2)" {
+* ---- T4: the four remaining incompatibility gates ----
+* impvalues left this list on 2026-09-21: the author ruled that fastnose alongside impvalues
+* cautions and is dropped rather than refused, because impvalues already runs every margins
+* call with nose. T4b below pins the new behaviour.
+foreach g in "unconditionalse robust" "adversarial" "jointtests" "pretrendpower(80) esfixedbaseperiod esprelength(2)" {
   use "`DATA'/dta_binary", clear
   cap wooldid y i t ttre, att cluster(i) fastnose `g'
   if _rc != 198 {
     dis as error "T4 FAIL: fastnose + `g' gave rc=" _rc " (expected 198)"
     local ++fails
   }
+}
+
+* ---- T4b: fastnose + impvalues runs, cautions, and drops fast mode ----
+use "`DATA'/dta_binary", clear
+qui log using fn_t4b.txt, text replace name(fn4b)
+cap noi wooldid y i t ttre, att cluster(i) fastnose impvalues
+local rc4b = _rc
+qui log close fn4b
+if `rc4b' != 0 {
+  dis as error "T4b FAIL: fastnose + impvalues gave rc=" `rc4b' " (expected 0)"
+  local ++fails
+}
+else if strpos(fileread("fn_t4b.txt"), "fastnose is unnecessary with impvalues") == 0 {
+  dis as error "T4b FAIL: the redundant-fastnose caution did not print"
+  local ++fails
+}
+else if "`e(wdid_fastnose)'" != "" {
+  dis as error "T4b FAIL: fastnose was carried into the run rather than dropped"
+  local ++fails
 }
 
 * ---- T5: replay of a fast run is byte-identical from the banner onward ----
