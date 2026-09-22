@@ -6299,28 +6299,17 @@ version 16.0
   qui count if `wdpmix'
   if r(N) > 0 {
     * the refusal rests on the documented design: markout-dead rows are in the permutation
-    * design sample, and every design cluster must be onset-homogeneous. The diagnostic has
-    * to be locatable, which a row count is not: that count is the whole offending cluster's
-    * rows, most of which are ordinary live rows, and the rows actually responsible are
-    * typically outside e(sample), so e(N), e(N_clust) and the point estimate of a run that
-    * works are all identical to the run that is refused and the user has nothing to search
-    * on. Name the smallest offending cluster (the idiom the within-i screen at the head of
-    * the worker uses), count the offending clusters rather than their rows, and say that the
-    * screen runs on the wider design sample. All of it is on the error path, so it costs
-    * nothing on any run that proceeds
-    local wdpnmixr = r(N)
-    tempvar wdpmixc wdpmixt
-    qui gegen byte `wdpmixt' = tag(`clus') if `wdpmix'
-    qui count if `wdpmixt' == 1
-    local wdpnmixc = r(N)
-    qui gen double `wdpmixc' = `clus' if `wdpmix'
-    qui gstats sum `wdpmixc', meanonly
-    local wdpmixid = strtrim(string(r(min), "%18.0g"))
-    local wdpdead 0
-    if "`yv'" != "" {
-      qui count if `wdpmix' & missing(`yv')
-      local wdpdead = r(N)
-    }
+    * design sample, and every design cluster must be onset-homogeneous. The screen therefore
+    * runs on the wider design sample, which is why a specification that runs without
+    * permute() can be refused the moment permute() is added.
+    *
+    * This block used to compute four diagnostics for the message - the offending row count,
+    * the offending CLUSTER count, the smallest offending cluster id, and how many of the
+    * offending rows had a missing outcome. The author's 2026-09-21 rewrite made the message
+    * laconic and none of them are displayed any more. They were never part of the trigger
+    * (that is the r(N) test above), so they are removed. They cost nothing either way, since
+    * all of it sat on the error path, but dead code invites the reader to think it matters.
+    * The old wording, which names them, is preserved in the comment below.
     * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
     *   Permute() requires clusters to be subsets of treatment-onset groups (levels of the timing
     *   variable, with never-treated its own group), but `wdpnmixr' in-sample observation(s) in `wdpnmixc'
