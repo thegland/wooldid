@@ -1,4 +1,4 @@
-# TICKET — let safety(off) lift the permexact enumeration cap
+# TICKET — raise the permexact enumeration cap to the Stata matrix ceiling
 
 **Opened 2026-09-21 on the author's instruction,** left as a reviewer note on card #240 of the
 message review page:
@@ -8,34 +8,52 @@ message review page:
 > matrix won't post to e() - converting that other guard to a caution also. Please include a 'Set
 > safety(off) to disable this rep cap.' statement at the end of the error text here."*
 
-**Status: OPEN. Not built, and it should not be built as written.** One measured fact changes the
-design, and four user-facing strings need the author's wording before anything ships, under his own
-rule of the same day.
+**Status: BUILT 2026-09-22, in a narrower form than this ticket proposed. One item remains for
+the author (s3).**
 
-## The fact that changes the instruction
+He ruled: *"For the rep cap, let's just use the matrix cap that you listed out."* That simplifies
+the design away. Instead of threading the safety flag and splitting the test three ways, the cap is
+simply moved to where the machinery actually stops:
 
-**`safety(off)` cannot disable the cap, because a harder ceiling sits underneath it.** Measured, not
-inferred: Stata matrices stop at **65,534 rows**, and a request for one row more fails r(915). The
-replication accumulators are Stata matrices sized by the replication count, so a run with more than
-65,534 assignments dies with an opaque r(915) **after** the full enumeration has already been built
-and paid for.
+    capexact = 65534      (was 10000)
 
-There is a second unliftable case. When the assignment count overflows a double, the count becomes
-missing by design, and then neither the assignment-matrix allocation nor the replication loop can
-run at all.
+That single constant change does everything the three-branch design would have. The `M >= .`
+overflow arm of the existing test is untouched and still catches the other unrunnable case. No
+safety flag is threaded, no program signature changes, and the two refusals that would have been
+"unliftable" are now just the one refusal, which was never liftable.
 
-So the current single test fuses three different situations, and only one of them is about the
-user's patience:
+**The ceiling is measured, not chosen.** `J(65535, 3)` fails r(915) and `J(65534, 3)` does not, and
+the replication accumulators are Stata matrices with one row per replication. One assignment more
+and the run dies r(915) after paying for the whole enumeration.
 
-| Case | Today | Should be |
-|---|---|---|
-| Count overflows to missing | Refused | **Refused, unliftable** |
-| Count above 65,534 | Refused | **Refused, unliftable** |
-| Count between 10,001 and 65,534 | Refused | Refused by default, **downgradable by `safety(off)`** |
+**The draw-matrix caution asked for in his earlier note IS built**, because raising the cap is what
+makes it matter: an exact run between 10,001 and 65,534 assignments is now legal and silently loses
+`e(permdist)`, `e(permdist_b)` and `e(permdist_se)` to the separate 10,000 posting cap. That cap now
+appears three times and they share no storage, so `check_validate_sync.py` gained a static check
+that all three agree.
 
-The sentence the author dictated, "Set safety(off) to disable this rep cap", is therefore accurate
-only on the third row. On the first two it would promise an escape that does not exist and send the
-user to an r(915) they cannot diagnose.
+**What is verified.** `test_permute.do` P12a calls the enumeration routine directly on a synthetic
+8-cluster frame giving 40,320 assignments, above the old cap and below the new one, and asserts it
+enumerates rather than refuses. P12b asserts a 12-cluster design is refused with the NEW ceiling
+named. P12c refuses end to end through the command. The direct-call approach is deliberate: testing
+the opened band through the command would mean actually running 40,320 replications.
+
+## Still for the author
+
+**The wording of the new caution is mine, not his,** and is flagged on the review page. Draft:
+
+> Caution: N completed replications exceeds the 10,000 cap on posting draw matrices, so
+> e(permdist), e(permdist_b) and e(permdist_se) are not posted. Use permsave() to write the draws.
+
+His dictated sentence, *"Set safety(off) to disable this rep cap."*, is **not** used, because under
+this ruling `safety(off)` has nothing to do: the cap is now a machine limit rather than a policy,
+and nothing can lift it. Confirm that is what he intended.
+
+One observation, not built: `e(bootdist)` has the identical 10,000 posting cap on the bootstrap
+side and is still silent. Nothing about this ruling forces a change there, but the asymmetry is now
+deliberate rather than accidental.
+
+## The original design, kept for the record
 
 ## What the work is
 

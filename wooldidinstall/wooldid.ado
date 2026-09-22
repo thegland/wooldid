@@ -247,6 +247,9 @@ version 16.0
     * on the e(perm_stat) scale (the t-ratio under permtstat), where e(bootdist) is the full
     * coefficient-draw matrix stripe-aligned to e(b). the coefficient-draw twin is
     * e(permdist_b), posted by wooldid_permwire
+    * the 10000 here, the one in wooldid_permwire's `done' test, and the one in the caution at
+    * the end of this block are the SAME cap written three times. Keep them in step: if they
+    * drift, the run either announces a loss that did not happen or loses the matrices silently
     if `wdp_r_done' <= 10000 cap ereturn matrix permdist = `wdpdist'
     * the estimand comparators on the e(perm_stat) scale (the full vector is
     * e(perm_comparator_b))
@@ -305,6 +308,13 @@ version 16.0
       }
     }
     wooldid_display , part(perm)
+    * DRAFT WORDING BY CLAUDE 2026-09-22, not the author's - flagged on the review page for his
+    * approval. He asked for this caution when he ruled on the enumeration cap: raising capexact
+    * to 65534 makes an exact run of 10001 to 65534 assignments legal for the first time, and
+    * such a run silently loses its draw matrices to the separate 10000 posting cap. Reachable
+    * through a large permreps() too, where it has always been silent. Keyed on the same
+    * `wdp_r_done' the two posting sites test, so the caution and the omission cannot disagree.
+    if `wdp_r_done' > 10000 dis as text "Caution: `wdp_r_done' completed replications exceeds the 10,000 cap on posting draw matrices, so e(permdist), e(permdist_b) and e(permdist_se) are not posted. Use permsave() to write the draws."
     dis as result " "
     global WOOLDID_LASTRC
   }
@@ -8596,7 +8606,9 @@ version 16.0
   * above 10,000 completed replications the draw matrices are not posted AT ALL (not
   * truncated) - the same cap wooldid_bootwire applies to e(bootdist), and documented in
   * the help. permsave() writes from the accumulators and is NOT subject to it, so a user
-  * who needs the draws from a 50,000-replication run has that route. The `cap's below
+  * who needs the draws from a 50,000-replication run has that route. Since 2026-09-22 the
+  * shell CAUTIONS when this drops the matrices; that caution, the shell's e(permdist) test
+  * and this one are the same cap written three times and must move together. The `cap's below
   * mean a post that fails for any other reason also passes without a message
   if `done' <= 10000 {
     tempname pd pds
@@ -14572,15 +14584,29 @@ void wooldid_permx(string scalar fr, string scalar onsv, string scalar strv,
     else nps = strofreal(exp(lnM - floor(lnM/ln(10))*ln(10)), "%9.4f") + "e+" + strofreal(floor(lnM/ln(10)), "%3.0f")
     st_local("wdp_npd", strofreal(M, "%20.0f"))
     st_local("wdp_nps", strtrim(nps))
-    // TWO OF THESE FIVE NUMBERS ARE ARITHMETIC, THREE ARE POLICY. Arithmetic: 700 is the
+    // THREE OF THESE FIVE NUMBERS ARE ARITHMETIC, TWO ARE POLICY. Arithmetic: 700 is the
     // double-overflow guard (ln of the largest double is about 709.78), which is what makes
     // the count deliberately MISSING rather than +inf; 34 is the exact-integer boundary
     // (exp(34) is about 5.8e14, under 2^53), so below it round() and the %20.0f print are
-    // lossless and above it the code must switch to the mantissa/exponent string. Policy,
-    // and tunable: capexact is the permexact ceiling - it bounds the C x M enumeration
-    // matrix and the length of the rep loop, not just the user's patience - capwarn the
-    // slow-run warning, and the 0.1*M below the sampling-overlap caution
-    capexact = 10000
+    // lossless and above it the code must switch to the mantissa/exponent string; and
+    // capexact is now the machine limit rather than a taste, see below. Policy, and tunable:
+    // capwarn is the slow-run warning and the 0.1*M below the sampling-overlap caution.
+    //
+    // capexact was 10000, a round number chosen for the user's patience. The author ruled on
+    // 2026-09-22 to raise it to the point where the machinery actually stops. That point is
+    // 65534, measured, not inferred: a Stata matrix takes at most 65534 rows and J(65535,3)
+    // fails r(915), and the replication accumulators are Stata matrices with one row per
+    // replication (`res' and `accname' below). So an exact run of 65535 assignments would
+    // die with an opaque r(915) AFTER paying for the whole enumeration. Refusing at 65534 is
+    // therefore not a preference: one more and nothing works. The M >= . arm of the same test
+    // stays, and is the other unrunnable case - an overflowed count leaves R missing, which
+    // neither the J(C, R, .) allocation nor the rep loop can use.
+    //
+    // NOTE the interaction this opens up, which did not exist at 10000: the permutation draw
+    // matrices are posted only up to 10000 COMPLETED replications, a separate constant. An
+    // exact run between 10001 and 65534 assignments is now legal and silently loses them,
+    // which is why the caution at the posting sites was added in the same edit.
+    capexact = 65534
     capwarn = 1000
     if (exact) {
         if (M >= . | M > capexact) {

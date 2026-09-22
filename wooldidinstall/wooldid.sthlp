@@ -440,7 +440,8 @@ when fewer than max(20, half) complete. A caution prints when fewer than 6 clust
 {it:permreps()} exceeds 10 percent of the possible assignments. {p_end}
 
 {phang}{opt permex:act}: Enumerate every distinct assignment instead of sampling. Only with {it:permute(shuffle)}, and not together with {it:permreps()}. A caution prints above 1,000
-assignments and enumeration is refused above 10,000. P-values are then plain shares over the {it:M} assignments, with a floor of 2/{it:M}, or 1/{it:M} under {it:permabsp}. {p_end}
+assignments and enumeration is refused above 65,534, which is the largest number of rows a Stata matrix can hold and so the point at which the replication
+accumulators stop working. Above 10,000 enumerated assignments the draw matrices are not posted and a caution says so; {it:permsave()} writes them regardless. P-values are then plain shares over the {it:M} assignments, with a floor of 2/{it:M}, or 1/{it:M} under {it:permabsp}. {p_end}
 
 {phang}{opt permstr:ata(varname)}: Confine the shuffle to within strata of a numeric variable, so each onset group keeps its composition across strata. Every cluster must sit inside a single
 stratum, with no missing values. Only with {it:permute(shuffle)}; under {it:permute(probabilities)} strata are expressed through {it:permprobs()} instead. {p_end}

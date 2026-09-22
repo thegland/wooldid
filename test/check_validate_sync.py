@@ -187,4 +187,48 @@ if uncovered:
 else:
     print("OK: every syntax option is covered by the c_local blanket")
 
+# ---- the permutation draw-matrix cap, written three times (added 2026-09-22) ----
+# When the author raised the permexact enumeration ceiling to the Stata matrix row limit, an
+# exact run between 10,001 and 65,534 assignments became legal for the first time, and such a
+# run silently loses its draw matrices to a SEPARATE cap of 10,000 completed replications. That
+# cap now appears three times: the shell's e(permdist) test, wooldid_permwire's `done' test, and
+# the caution the shell prints when it bites. They share no storage. If they drift, the run
+# either announces a loss that did not happen or loses the matrices in silence again - which is
+# exactly the defect the caution was added to close. This is not testable at run time without
+# actually completing 10,001 replications, so it is pinned here instead.
+capvals = {}
+joined = "\n".join(src)
+# two of the three are unique one-liners
+for label, pat in [
+    ("shell e(permdist) post", r"if\s+`wdp_r_done'\s*<=\s*(\d+)\s+cap ereturn matrix permdist"),
+    ("shell draw-matrix caution", r"if\s+`wdp_r_done'\s*>\s*(\d+)\s+dis as text"),
+]:
+    hits = re.findall(pat, joined)
+    if len(hits) != 1:
+        print(f"FAIL: expected exactly one '{label}' site for the permutation draw-matrix cap, "
+              f"found {len(hits)}")
+        fail = True
+    else:
+        capvals[label] = hits[0]
+# the third shares its shape with wooldid_bootwire's e(bootdist) twin, so it is identified by
+# the matrices posted inside the block rather than by the test itself
+permwire_hits = []
+for idx, line in enumerate(src):
+    m = re.search(r"if\s+`done'\s*<=\s*(\d+)\s*\{", line)
+    if m and any("permdist" in l for l in src[idx:idx + 14]):
+        permwire_hits.append(m.group(1))
+if len(permwire_hits) != 1:
+    print(f"FAIL: expected exactly one wooldid_permwire draw-matrix cap site, found "
+          f"{len(permwire_hits)}")
+    fail = True
+else:
+    capvals["permwire draw-matrix post"] = permwire_hits[0]
+if len(capvals) == 3:
+    if len(set(capvals.values())) != 1:
+        print("FAIL: the permutation draw-matrix cap disagrees across its three sites: "
+              + ", ".join(f"{k}={v}" for k, v in capvals.items()))
+        fail = True
+    else:
+        print(f"OK: the permutation draw-matrix cap is {next(iter(capvals.values()))} at all three sites")
+
 sys.exit(1 if fail else 0)

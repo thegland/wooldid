@@ -383,6 +383,77 @@ if _rc != 0 {
   global pf = $pf + 1
 }
 
+* ---- P12: the permexact enumeration ceiling is the Stata matrix row limit (2026-09-22) ----
+* Ruled by the author: the cap is no longer a round number chosen for the user's patience but
+* 65,534, the largest number of rows a Stata matrix holds, because the replication accumulators
+* (`res' and `accname' in wooldid_permrun) are Stata matrices with one row per replication. One
+* more and the run dies r(915) after paying for the whole enumeration.
+*
+* These legs call wooldid_permx DIRECTLY. That is deliberate: the band this ruling opened runs
+* from 10,001 to 65,534 assignments, and going through the command would mean actually running
+* 40,320 replications. The routine reads one row per cluster from a frame, so a synthetic frame
+* exercises the cap in milliseconds while still enumerating for real.
+*
+* capP/capL are passed as unset TEMPNAMES, not as "", because the routine's probabilities
+* branch reads `pname != "" & rows(st_matrix(pname)) > 0` and Mata does not short-circuit `&`:
+* an empty pname reaches st_matrix("") and dies r(3300). Production always passes tempnames, so
+* that arm is unreachable there, but a caller must not hand it an empty string.
+tempname capfr capA capP capL
+frame create `capfr'
+frame `capfr' {
+  qui set obs 8
+  qui gen double ons = _n
+  qui gen double str = 1
+}
+* 8 clusters, 8 distinct onsets = 8! = 40,320 assignments: ABOVE the old 10,000 cap and below
+* the new one, so this is the case the ruling admits. It must enumerate, not refuse.
+local wdp_err
+local wdp_R
+mata: wooldid_permx("`capfr'", "ons", "str", 0, 1, "`capA'", "`capP'", "`capL'")
+if "`wdp_err'" != "" {
+  dis as error "P12a FAIL: 40,320 assignments refused: `wdp_err'"
+  global pf = $pf + 1
+}
+else if "`wdp_R'" != "40320" {
+  dis as error "P12a FAIL: wdp_R=`wdp_R' (expected 40320)"
+  global pf = $pf + 1
+}
+else if colsof(`capA') != 40320 | rowsof(`capA') != 8 {
+  dis as error "P12a FAIL: assignment matrix is " rowsof(`capA') " x " colsof(`capA') " (expected 8 x 40320)"
+  global pf = $pf + 1
+}
+* 12 clusters, 12 distinct onsets = 12! assignments, far above the ceiling: refused, and the
+* message must name the NEW ceiling rather than the retired 10,000
+frame `capfr' {
+  qui set obs 12
+  qui replace ons = _n
+  qui replace str = 1
+}
+local wdp_err
+mata: wooldid_permx("`capfr'", "ons", "str", 0, 1, "`capA'", "`capP'", "`capL'")
+if strpos("`wdp_err'", "65534") == 0 {
+  dis as error "P12b FAIL: over-ceiling refusal did not name 65534: [`wdp_err']"
+  global pf = $pf + 1
+}
+frame drop `capfr'
+
+* ---- P12c: end to end, an over-ceiling permexact run is refused by the command ----
+* cheap because the count is computed and tested before anything is enumerated
+clear
+qui set obs 12
+qui gen i = _n
+* 8 treated with distinct onsets and 4 never-treated: 12!/4! = 19,958,400 assignments, far
+* above the ceiling, and the never-treated give the design a control group
+qui gen double ttre = cond(_n <= 8, 3 + _n, .)
+qui expand 18
+qui bysort i: gen t = _n
+qui gen y = 2*(t >= ttre & ttre < .) + 0.1*i + rnormal()
+cap noi qui wooldid y i t ttre, att cluster(i) permute(shuffle) permexact
+if _rc != 198 {
+  dis as error "P12c FAIL: over-ceiling permexact rc=" _rc " (expected 198)"
+  global pf = $pf + 1
+}
+
 if $pf == 0 dis "PERMUTE_ALL_PASS"
 else dis as error "PERMUTE_FAILS=$pf"
 exit, clear
