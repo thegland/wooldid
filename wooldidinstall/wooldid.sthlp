@@ -964,8 +964,8 @@ period omitted, per estimand type ({it:att}; {it:ame} under {it:contreat()}; and
 horizon block), with per-subgroup versions {it:e(b_es_{it:type}_s{it:sgcase})} and {it:e(V_es_{it:type}_s{it:sgcase})}. After {it:ereturn post} these matrices are valid inputs for
 {it:lincom} and {it:test}. A direct positional handoff to {it:honestdid} additionally requires {it:esfixedbaseperiod} with the default {it:esrelativeto(-1)}, no {it:timetrends},
 at least one pre- and one post-treatment coefficient, consecutive horizons, and a covariance with no degenerate rows; other geometries hand {it:honestdid} the wrong event-time
-geometry silently. The covariance is withheld, under a caution, when no horizon has an identified variance ({it:fastnose}, typically {it:timetrends}) and for the ame families
-under the cell-containment caution; the coefficient vector still posts. {it:e(es_ndegen_{it:type})} counts horizons whose variance is degenerate and is posted only when such rows
+geometry silently. The covariance is withheld, under a caution, when no horizon has an identified variance (typically {it:timetrends}) and for the ame families
+under the cell-containment caution; the coefficient vector still posts. Under {it:fastnose} the covariance is never computed, so it is not posted and no caution prints. {it:e(es_ndegen_{it:type})} counts horizons whose variance is degenerate and is posted only when such rows
 exist. {p_end}
 
 {synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument.{p_end}

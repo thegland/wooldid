@@ -238,6 +238,30 @@ else {
   }
 }
 
+* ---- T7: the no-identified-variance caution is silent under fastnose (ruling D1, ----
+* ---- 2026-09-23) and still prints when a real covariance has no identified horizon ----
+use "`DATA'/dta_binary", clear
+qui log using fn_t7a.txt, text replace name(fn7a)
+cap noi wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) subgroups(sg) fastnose
+local rc7a = _rc
+qui log close fn7a
+qui log using fn_t7b.txt, text replace name(fn7b)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) timetrends
+local rc7b = _rc
+qui log close fn7b
+if `rc7a' != 0 | `rc7b' != 0 {
+  dis as error "T7 FAIL: rc fast=" `rc7a' " timetrends=" `rc7b'
+  local ++fails
+}
+else if strpos(fileread("fn_t7a.txt"), "has an identified variance") != 0 {
+  dis as error "T7 FAIL: the no-identified-variance caution printed under fastnose"
+  local ++fails
+}
+else if strpos(fileread("fn_t7b.txt"), "no horizon of the att event study has an identified variance") == 0 {
+  dis as error "T7 FAIL: the caution no longer prints on a timetrends run whose covariance has no identified horizon"
+  local ++fails
+}
+
 if `fails' == 0 dis "FASTNOSE_ALL_PASS"
 else dis as error "FASTNOSE_FAILS=`fails'"
 exit, clear

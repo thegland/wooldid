@@ -4574,7 +4574,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         matrix colnames `f2bm' = `f2rl'
         * fast mode captures b alone (`f2bonly' at the nose switch), so there is nothing
         * to stripe here and nothing to score below: f2ok stays 0 and the family posts its
-        * coefficients under the Caution, which is what sthlp:1295 describes
+        * coefficients without the Caution, since fast mode never asked for a variance and
+        * the help says e(V_es_*) is not posted under it (author's ruling D1, 2026-09-23)
         if "`f2vm'" != "" {
           cap mata: st_matrix("`f2vm'", st_matrix("`f2vm'"))
           matrix colnames `f2vm' = `f2rl'
@@ -4606,7 +4607,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         * withheld along with V_es_ame*; f2ok=0 is not guaranteed to catch this on its own
         if !(`amevoid' & strpos("`f2ky'", "ame") == 1) cap ereturn matrix b_es_`f2ky' = `f2bm'
         cap ereturn scalar numpre_`f2ky' = `f2np'
-        if `f2ok' == 0 & !(`amevoid' & strpos("`f2ky'", "ame") == 1) dis as text "Caution: no horizon of the `f2ky' event study has an identified variance, so e(b_es_`f2ky') posts without e(V_es_`f2ky'). The estimates stand; anything needing their covariance - honestdid, pretrendpower(), a joint test - has no input on this run."
+        if `f2ok' == 0 & "`f2vm'" != "" & !(`amevoid' & strpos("`f2ky'", "ame") == 1) dis as text "Caution: no horizon of the `f2ky' event study has an identified variance, so e(b_es_`f2ky') posts without e(V_es_`f2ky'). The estimates stand; anything needing their covariance - honestdid, pretrendpower(), a joint test - has no input on this run."
         if `f2ok' {
           * AMESE R1: withhold e(V_es_ame*) under cell containment — the captured V is
           * not the sampling covariance of the ame estimates (honestdid/lincom/test
