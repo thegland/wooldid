@@ -671,7 +671,7 @@ Under {it:poisson} results are on the linear index, where {it:dydx} already give
 older {it:eyex} and {it:eydx} forms have been removed. {p_end}
 
 {phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option relaxes the estimability
-checks that would otherwise cause {it:wooldid} to stop estimation in the absence of any untreated cohorts (the data-integrity checks still run unless {it:safety(off)} is given),
+checks that would otherwise cause {it:wooldid} to stop estimation in the absence of any untreated cohorts (the data-integrity checks and the dose-slope check under {it:contreat()} still run unless {it:safety(off)} is given),
 and causes {it:wooldid} to skip sample cleaning routines that drop time periods for which a control cohort is not present. Requires {it:contreat()}. {p_end}
 
 {phang}{opt contreatp:oly(integer)}: Includes polynomial terms in {it:contreat} of the specified degree, a positive integer (the default is 1). Be cautious using higher degree polynomials. {p_end}
@@ -804,7 +804,7 @@ since in the absence of an untreated group, the time period interactions will fo
 {pstd} {ul:Continuous Treatments and Cluster-Robust Standard Errors:} With {it:cluster()} at the level of {it:i} or coarser, every treated cohort-by-period cell lies within a single
 cluster, and the analytic standard errors of the ame-family quantities are then not identified. {it:wooldid} prints a caution, reports those standard errors, the ame joint tests and
 the ame adversarial p-values as missing, withholds {it:e(V_es_ame*)}, and draws the ame continuous treatment effects plots without confidence intervals; the att results are
-unaffected. Valid ame inference under such designs comes from {it:bootstrap()}, {it:permute()}, {it:impvalues}, {it:robust} (when errors are independent across observations), or a
+unaffected. A cell holding a single observation does not trigger this. Valid ame inference under such designs comes from {it:bootstrap()}, {it:permute()}, {it:impvalues}, {it:robust} (when errors are independent across observations), or a
 {it:cluster()} strictly finer than the cohort-by-period cells. {p_end}
 
 {marker controls}{...}

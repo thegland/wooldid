@@ -2,10 +2,13 @@
 * family A; design note review_process/amese/R1_design_note.md).
 * Scenarios: the structural cell-containment predicate fires (demo design, the
 * referee's partial-containment mixed-cluster acid data, subgroups, permute observed
-* run, byCohort-with-R4-refit) and must NOT fire (robust, cluster(unit), impvalues,
-* fastnose, binary-only). Assertions are on the e() surface: fired runs carry missing
+* run, byCohort-with-R4-refit, a two-row cell inside one cluster) and must NOT fire
+* (robust, cluster(unit), impvalues, fastnose, binary-only, a cluster finer than i with a
+* treated cell thinned to one row). Assertions are on the e() surface: fired runs carry missing
 * ame SEs with points intact, e(b_es_ame) WITHOUT e(V_es_ame), and no ame joint/
 * adversarial scalars; unfired runs carry real ame SEs and a posted V_es_ame.
+* Group C is the dose-slope void screen, including under contreatwithin, where it and its
+* interactivecontrols twin run while the dropped-dummy error stays skipped.
 * Run from test/:  "<stata>" -e do test_amescreen.do   -> expect AMESCREEN_ALL_PASS
 clear all
 set more off
@@ -240,6 +243,32 @@ if _rc != 0 {
 }
 else assertfire A10 1
 
+* A11: cluster(unitid) strictly finer than cells, with one treated cell thinned to a
+* single row (cohort 2 keeps one unit at t = 9). That row is fit exactly by its own cell
+* intercept and adds nothing to the cluster-robust meat, so it is not containment: no
+* fire, real ame SEs and a posted V_es_ame
+mkdemo
+drop if i == 2 & t == 9 & unit > 1
+cap noi wooldid y i t ttre, att contreat(dose) contreatcontrols(basic) cluster(unitid) esf espre(2) espost(2)
+if _rc != 0 {
+  dis as error "A11 FAIL rc=" _rc
+  global pf = $pf + 1
+}
+else assertfire A11 0
+
+* A12: the multi-row boundary of A11 - the same cell thinned to TWO rows whose units share
+* one cluster is contained and must still fire
+mkdemo
+drop if i == 2 & t == 9 & unit > 2
+gen pc = unitid
+qui replace pc = 7 if i == 2 & unit == 2
+cap noi wooldid y i t ttre, att contreat(dose) contreatcontrols(basic) cluster(pc) esf espre(2) espost(2)
+if _rc != 0 {
+  dis as error "A12 FAIL rc=" _rc
+  global pf = $pf + 1
+}
+else assertfire A12 1
+
 * ---- GROUP B: the byCohort point-identification screen ----
 
 * B1: a treated cohort reduced to one unit (zero dose variation in its reference
@@ -343,6 +372,89 @@ else {
     dis as error "C2 FAIL: ame b=`ameb' se=`amese' (want real ame under untreatedZero)"
     global pf = $pf + 1
   }
+}
+
+* C3: C1 under contreatwithin. contreatwithin sets the working safety value to off, but the
+* dose-slope screen reads the user's own value, so the ame block is still voided to missing
+* rather than printed as the regression's structural zeros
+mkdemo
+qui replace dose = 0.5 + 0.1*i
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(basic) contreatwithin esf espre(2) espost(2)
+if _rc != 0 {
+  dis as error "C3 FAIL rc=" _rc
+  global pf = $pf + 1
+}
+else {
+  tempname W
+  matrix `W' = e(wdidmainresults)
+  local ra = rownumb(`W', "main:att")
+  local rm = rownumb(`W', "main:ame")
+  local attse = cond(`ra' < ., `W'[`ra', 2], -99)
+  local ameb = cond(`rm' < ., `W'[`rm', 1], -99)
+  if !missing(`attse') & `attse' > 0 & missing(`ameb') dis "C3 ok"
+  else {
+    dis as error "C3 FAIL: attse=`attse' ameb=`ameb' (want ame b missing with att real under contreatwithin)"
+    global pf = $pf + 1
+  }
+}
+
+* C4: C3 with an explicit safety(off) skips the screen: the ame row carries the structural 0
+mkdemo
+qui replace dose = 0.5 + 0.1*i
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(basic) contreatwithin safety(off) esf espre(2) espost(2)
+if _rc != 0 {
+  dis as error "C4 FAIL rc=" _rc
+  global pf = $pf + 1
+}
+else {
+  tempname W
+  matrix `W' = e(wdidmainresults)
+  local rm = rownumb(`W', "main:ame")
+  local ameb = cond(`rm' < ., `W'[`rm', 1], -99)
+  if `ameb' == 0 dis "C4 ok"
+  else {
+    dis as error "C4 FAIL: ameb=`ameb' (want the structural 0 under contreatwithin safety(off))"
+    global pf = $pf + 1
+  }
+}
+
+* C5: the interactivecontrols twin also runs under contreatwithin: a period-level control
+* has no within-cell variation, so every treated-cell slope on it drops and the named
+* caution prints; the dose slopes are live, so the ame stays real
+mkdemo
+bysort t (i unitid): gen xt = 0.2*t + rnormal() if _n == 1
+bysort t (i unitid): replace xt = xt[1]
+sort i unitid t
+qui log using ames_c5.txt, text replace name(ames)
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(basic) contreatwithin interactivecontrols(xt) esf espre(2) espost(2)
+local c5rc = _rc
+qui log close ames
+scana5 ames_c5.txt "slope term for the interactive control xt"
+local c5msg = r(found)
+cap erase ames_c5.txt
+local c5amese .
+if `c5rc' == 0 {
+  tempname W
+  matrix `W' = e(wdidmainresults)
+  local rm = rownumb(`W', "main:ame")
+  local c5amese = cond(`rm' < ., `W'[`rm', 2], .)
+}
+if `c5rc' == 0 & `c5msg' == 1 & !missing(`c5amese') dis "C5 ok"
+else {
+  dis as error "C5 FAIL: rc=`c5rc' caution=`c5msg' amese=`c5amese' (want rc 0, the interactive-control caution, a real ame se)"
+  global pf = $pf + 1
+}
+
+* C6: what contreatwithin relaxes stays relaxed. With no control group from period 9 on,
+* the late treated cohort-period dummies drop for multicollinearity; under contreatwithin
+* the run proceeds rather than stopping at the dropped-dummy error 322
+mkdemo
+qui replace ttre = 9 if ttre >= .
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(basic) contreatwithin esf espre(2) espost(2)
+if _rc == 0 dis "C6 ok"
+else {
+  dis as error "C6 FAIL: rc=" _rc " (want 0: contreatwithin skips the dropped-dummy error)"
+  global pf = $pf + 1
 }
 
 if $pf == 0 dis "AMESCREEN_ALL_PASS"

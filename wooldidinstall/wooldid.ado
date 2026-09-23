@@ -1974,8 +1974,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   local amevoid 0
   local amescrublo 2
   * the collinearity screens live in wooldid_ccscreen (worker compiled-size headroom); the gate
-  * is kept here so safety(off) never enters
-  if "`safety'" != "off" wooldid_ccscreen , iv(`_i') tv(`_t') tf(`targetflag') wt(`w') es(`esamp') ifs(`ifstatement') mint(`min_t') ui(`i') ut(`t') lat(`lattice') ct(`contreat') cc(`contreatcontrols') ics(`interlist') icn(`interactivecontrols') `verbose' `poisson' `fastnose'
+  * reads the user's own safety() value so an explicit safety(off) never enters, and sw()
+  * hands in the working value, which contreatwithin sets to off to skip the dropped-dummy scan
+  if "`safetyinput'" != "off" wooldid_ccscreen , iv(`_i') tv(`_t') tf(`targetflag') wt(`w') es(`esamp') ifs(`ifstatement') mint(`min_t') ui(`i') ut(`t') lat(`lattice') ct(`contreat') cc(`contreatcontrols') ics(`interlist') icn(`interactivecontrols') sw(`safety') `verbose' `poisson' `fastnose'
 
 
 
@@ -12586,8 +12587,11 @@ end
 * (error 322, with its poisson separation branch), the interaction-drop caution, the
 * continuous-treatment dose-slope screen, and the interactivecontrols twin. They sit in
 * their own program rather than inline in wooldid_worker to stay under the per-program
-* compiled-size ceiling; the gate stays at the call site so safety(off) never enters, and
-* the three locals the dose-slope branch sets come back by c_local.
+* compiled-size ceiling; the gate stays at the call site, on the user's own safety() value,
+* so an explicit safety(off) never enters. sw() carries the working value: contreatwithin
+* sets it to off, which skips the dropped-dummy scan and its error 322 while the dose-slope
+* and interactivecontrols screens still run. the three locals the dose-slope branch sets
+* come back by c_local.
 * Deliberately PLAIN (not rclass, not eclass): the screens read colnames e(b) of the
 * still-active stage-1 model, and an rclass return would blank the caller's r(), which must
 * survive this call untouched. `bvars' is recomputed here rather than passed, since colnames
@@ -12596,7 +12600,7 @@ end
 cap prog drop wooldid_ccscreen
 prog def wooldid_ccscreen
 version 16.0
-  syntax , iv(name) tv(name) tf(name) wt(string) es(name) ifs(string asis) mint(real) ui(name) ut(name) [lat(string asis) ct(string) cc(string) ics(string) icn(string) VERbose POISson FASTnose]
+  syntax , iv(name) tv(name) tf(name) wt(string) es(name) ifs(string asis) mint(real) ui(name) ut(name) [lat(string asis) ct(string) cc(string) ics(string) icn(string) sw(string) VERbose POISson FASTnose]
   * re-establish the worker's own names so the screen body below is byte-identical to
   * the code it replaced
   local _i `iv'
@@ -12626,8 +12630,9 @@ version 16.0
   local bigcatastrophe 0
   * "o." appears in e(b) colnames iff some term carries an omission flag (a dot only ever
   * follows a factor operator, and a token cannot straddle whitespace), so when it is
-  * absent the loop below provably cannot fire -- skip the whole interpreted scan
-  if strpos("`bvars'", "o.") != 0 {
+  * absent the loop below provably cannot fire -- skip the whole interpreted scan. it is
+  * also skipped when the working safety value is off (contreatwithin with contreat())
+  if strpos("`bvars'", "o.") != 0 & "`sw'" != "off" {
   tokenize `bvars'
   local maxwordcount = wordcount("`bvars'")
   forval testbvar = 1(1)`maxwordcount' {
@@ -12778,7 +12783,8 @@ version 16.0
   * estimates - unlike the scrub elsewhere, which keeps b, these zeros are fabricated - and
   * continue: the att side is untouched by construction. scoping on targetflag==1 exempts
   * untreatedZero's expected zero-dose reference periods by construction. skipped under
-  * fastnose, and under safety(off) with this whole screen block
+  * fastnose, and under an explicit safety(off) with this whole screen block; it runs under
+  * contreatwithin
   if "`contreat'" != "" & "`fastnose'" == "" & strpos("`bvars'", "o.") != 0 {
     local amelive 0
     local amedrop 0
@@ -13714,16 +13720,18 @@ end
 *   sescan: the belt-and-braces duplicate-standard-error signature. returns r(ndup);
 *     caution only. this is the mode the worker's ame-family call asks for.
 *   detect: the structural predicate - with a cluster-type VCE and contreat() active, if any
-*     treated cohort-by-period cell of the realized estimation sample lies wholly inside a
-*     single cluster, the plug-in CRVE cannot see within-cell dose variation: the ame
+*     treated cohort-by-period cell of the realized estimation sample has two or more rows,
+*     all in a single cluster, the plug-in CRVE cannot see within-cell dose variation: the ame
 *     "standard errors" it would deliver collapse toward the variance of the absorbed
 *     baseline dose control (in the basic/byTime cases they are that variance, identically
 *     across every ame quantity), so they do not measure the sampling variability of the ame
 *     estimates. any-cell semantics is load-bearing: partial containment (a cluster variable
 *     nesting only some cells) still contaminates the V while presenting a full-rank matrix.
 *     rank/eigenvalue guards are deliberately not used (the byTime case posts a full-rank V
-*     that is still 100 percent blind to within-cell noise). returns r(fire), r(ncells) and
-*     prints the explanatory caution once when firing.
+*     that is still 100 percent blind to within-cell noise). a one-row cell is not counted:
+*     it has no within-cell variation, its own intercept fits it exactly, and its zero score
+*     leaves the V untouched. returns r(fire), r(ncells) (the contained cells of two or more
+*     rows) and prints the explanatory caution once when firing.
 *   vzero: detects the estimation VCE arriving as an all-zero matrix - Stata's `ereturn post`
 *     screen zeroes a nonsymmetric/highly-singular VCE wholesale (destroying valid entries
 *     in transit) and the quiet estimation call swallows the only warning. returns r(vzero)
@@ -13739,12 +13747,14 @@ version 16.0
   if "`mode'" == "detect" {
     local fire 0
     local ncells 0
-    tempvar amecl ametag
+    tempvar amecl ametag amerows
+    * rows per treated cell on the same domain; a one-row cell is never counted as contained
+    qui gegen double `amerows' = count(`tflag') if `esamp' & `tflag' == 1, by(`icell' `tcell')
     foreach cv of local clusvars {
       cap drop `amecl'
       qui gegen double `amecl' = nunique(`cv') if `esamp' & `tflag' == 1, by(`icell' `tcell')
       cap drop `ametag'
-      qui gegen byte `ametag' = tag(`icell' `tcell') if `esamp' & `tflag' == 1 & `amecl' == 1
+      qui gegen byte `ametag' = tag(`icell' `tcell') if `esamp' & `tflag' == 1 & `amecl' == 1 & `amerows' >= 2
       qui count if `ametag' == 1
       if r(N) > 0 {
         local fire 1
