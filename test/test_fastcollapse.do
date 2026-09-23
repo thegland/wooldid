@@ -54,9 +54,10 @@
 *    and puts the user's cohort variable in the key. (a) five eligible reads - plain att; all
 *    four estimands with an event study and jointtests; contreatelasticitytype(dyex); poisson
 *    on the default dydx scale; subgroups(); poisson+dyex (since 2026-09-06, F032) - collapse
-*    and agree with nofastcollapse;
-*    (b) each of the six refused reads (contreatpoly(>1), eyex, eydx, lattice(),
-*    poisson+eydx, the dose inside controls()) skips and stays bit-identical to it;
+*    and agree with nofastcollapse, and so do lattice() and makecfxplots, whose dose bin joins
+*    the cell key, across all four estimands under aweights on every e() matrix and scalar;
+*    (b) each of the two refused reads (contreatpoly(>1), the dose inside controls()) skips
+*    and stays bit-identical to it;
 *    (c) each of those skips announces itself in a caution naming its own token, which
 *    safety(off) does not silence, while a plain contreat() run collapses quietly; (d) the two provisos the worker's form exists for -
 *    a customweightmultiplier() of 0 on the pick row (the mean is written onto every row of
@@ -203,7 +204,7 @@ if `rcC' != 0 | `rcF' != 0 | `fcolF' != 1 | `dcf' > 1e-8 {
 * (b) report e(wdid_fcol) = 0, and (c) name its own reason in the caution. safety(off) is
 * carried where the run needs it for an unrelated screen and must not silence the caution.
 * Gate 1 was a bare contreat() run until 2026-09-02, when contreat() itself left the
-* ineligible list (F11); it now carries contreatpoly(2), one of the six contreat reads that
+* ineligible list (F11); it now carries contreatpoly(2), one of the two contreat reads that
 * ARE still gated, so this leg keeps covering the contreat family on dta_cont. The
 * acceptance side of the new contract is pinned in F11c.
 local F4D1 `REPO'/test/data/dta_cont.dta
@@ -218,15 +219,14 @@ local F4D3 `ADMIN'
 local F4V3 y cohid year ttre
 local F4O3 att robust unconditionalse safety(off)
 local F4W3 unconditionalse
-* Gate 4 held semielasticity until 2026-09-20, when that option was removed outright
-* (author ruling). lattice() takes its place: it is one of the seven surviving ineligible
-* reasons and, like contreatpoly(>1), it is a contreat read that is NOT linear in the dose
-* inside a cell. contreatpoly stays at its default of 1 here so that lattice() is the FIRST
-* token in fcbad and the caution test below matches on it.
-local F4D4 `REPO'/test/data/dta_cont.dta
-local F4V4 y i t ttre
-local F4O4 att contreat(intensity) contreatcontrols(basic) lattice(all 3) cluster(i) safety(off)
-local F4W4 lattice()
+* Gate 4 is the treatment variable inside controls(): like contreatpoly(>1), it is a
+* contreat read that is NOT linear in the dose inside a cell. contreatpoly stays at its
+* default of 1 here so that contreat-in-controls is the FIRST token in fcbad and the caution
+* test below matches on it. The path is written out because the CCD local is defined at F11.
+local F4D4 `REPO'/test/suite/data/continuous_control_dense.dta
+local F4V4 y_cont_vary cohort t ttre
+local F4O4 att contreat(dose_vary) contreatcontrols(basic) controls(c.dose_vary#c.x1) cluster(person_id) safety(off)
+local F4W4 contreat-in-controls
 * 2026-09-06 (F062): impvalues left the ineligible list - the cluster variable joins the
 * cell key - so an impvalues run collapses (see F15); the gate count below keeps its shape
 * with customvce() as gate 5's stand-in
@@ -234,10 +234,7 @@ local F4D5 `ADMIN'
 local F4V5 y cohid year ttre
 local F4O5 att customvce(cluster state) safety(off)
 local F4W5 customvce()
-* Gate 6 held poisexpresults, removed 2026-09-20 with semielasticity. The remaining
-* unhosted reasons (makecfxplots, contreat-in-controls) are all contreat reads too, and
-* gates 1 and 4 already cover that family, so this leg now runs five gates rather than
-* padding with a third contreat variant.
+* The five gates are the five reasons on the ineligible list, one each.
 forval g = 1/5 {
   use "`F4D`g''", clear
   qui log using fcol_f4.txt, text replace name(fc)
@@ -252,7 +249,7 @@ forval g = 1/5 {
   local r`g' = strpos(`"`lg'"', "Specify nofastcollapse to silence this") > 0
 }
 cap erase fcol_f4.txt
-di "F4_rcs contreatpoly=" `g1' " interactive=" `g2' " uncond=" `g3' " lattice=" `g4' " customvce=" `g5' " (want 0 x5)"
+di "F4_rcs contreatpoly=" `g1' " interactive=" `g2' " uncond=" `g3' " ctl=" `g4' " customvce=" `g5' " (want 0 x5)"
 di "F4_fcol=" `q1' "/" `q2' "/" `q3' "/" `q4' "/" `q5' " (want 0 x5)  caution=" `c1' "/" `c2' "/" `c3' "/" `c4' "/" `c5' " remedy=" `r1' "/" `r2' "/" `r3' "/" `r4' "/" `r5' " (want 1 x5)"
 forval g = 1/5 {
   if `g`g'' != 0 {
@@ -329,11 +326,9 @@ use "`ADMIN'", clear
 cap qui wooldid y cohid year ttre, att robust unconditionalse
 local s3 = _rc
 local f3 = e(wdid_fcol)
-* option 4 followed F4's gate 4 on 2026-09-20: semielasticity was removed, and lattice()
-* took its place as the ineligible contreat read. The poisexpresults leg that stood between
-* this one and customvce() went with it, so this loop runs five options rather than six.
-use "`REPO'/test/data/dta_cont.dta", clear
-cap qui wooldid y i t ttre, att contreat(intensity) contreatcontrols(basic) lattice(all 3) cluster(i)
+* option 4 is F4's gate 4, the treatment variable inside controls()
+use "`REPO'/test/suite/data/continuous_control_dense.dta", clear
+cap qui wooldid y_cont_vary cohort t ttre, att contreat(dose_vary) contreatcontrols(basic) controls(c.dose_vary#c.x1) cluster(person_id)
 local s4 = _rc
 local f4 = e(wdid_fcol)
 use "`ADMIN'", clear
@@ -635,10 +630,10 @@ if `r10c' != 0 | `r10cu' != 0 | "`g10c'" != "fallback" | "`ja10c'" != "`ja10cu'"
 * read weighted by w_att_it consumes a mean built under w_att - measured: a pre-trend joint p
 * moving .0956 -> .1112), and the surviving row carries the cell's ESTIMAND-WEIGHTED MEAN of
 * the dose and of wooldid's internal ringer copy, written onto every row of the cell before
-* the first-row pick. What stays refused is the reads that are not linear in the dose and the
-* requests that split a cell on a variable outside the key.
-* F11.0 non-vacuity; F11a five eligible reads agree with nofastcollapse; F11b every new
-* gate token skips silently and stays bit-identical; F11c the explicit-request refusals and
+* the first-row pick. What stays refused is the reads that are not linear in the dose. A dose
+* bin - the lattice() variable, and the plot bins makecfxplots reads - joins the cell key.
+* F11.0 non-vacuity; F11a the eligible reads agree with nofastcollapse; F11b every gated
+* contreat token skips and stays bit-identical; F11c the explicit-request refusals and
 * the plain-contreat acceptance; F11d the two provisos (a zero-weight pick row, a float dose).
 local CCD "`REPO'/test/suite/data/continuous_control_dense.dta"
 local DC  "`REPO'/test/data/dta_cont.dta"
@@ -681,7 +676,9 @@ if "`ctftype'" != "float" {
 * (1) a plain att run, (2) all four estimands with an event study and the joint tests,
 * (3) contreatelasticitytype(dyex), (4) poisson on the default dydx scale, (5) subgroups(),
 * (6) poisson with contreatelasticitytype(dyex) (eligible since 2026-09-06, F032: the analytic
-* Jacobian form; the ame rows agree to 6.3e-16, the pretreatment CI bound to 4.5e-12).
+* Jacobian form; the ame rows agree to 6.3e-16, the pretreatment CI bound to 4.5e-12),
+* (7)-(9) lattice() and makecfxplots, whose dose bin joins the cell key (compared on every
+* e() matrix and scalar at 1e-10, see the block before F11b).
 * Residues measured 2026-09-02 sit at 0..9.1e-14, four orders inside the 1e-8 threshold, and
 * the gate-off breakages of F11b's forms run 1e-5 to 0.8 relative - the same headroom F1 has.
 
@@ -878,26 +875,168 @@ if `ra5' != 0 | `ra5u' != 0 | `fa5' != 1 | "`ga5'" != "" | `da5b' > 1e-8 | `da5v
   local ++fails
 }
 
-* ---- F11b: EVERY NEW GATE TOKEN SKIPS, UNDER THE CAUTION F4 ASSERTS. Each of the gated
+* (7)-(9) THE DOSE BIN IN THE CELL KEY. lattice() gives every bin its own intercept and dose
+* slope, and makecfxplots reads margins over() its plot bins, so both split a cohort-by-period
+* cell. The worker puts the bin in the cell key - the lattice variable, and cfxlattice() under
+* makecfxplots - so every read stays linear in the dose inside a cell-by-bin group. Each leg
+* runs all four estimands under aweights and must (a) collapse (e(wdid_fcol) 1, e(wdid_fcskip)
+* empty), (b) print no collapse caution, and (c) agree with nofastcollapse on EVERY posted e()
+* matrix (mreldif, row and column names equal) and e() scalar (reldif) at 1e-10, both runs
+* posting the same names. e(wdid_fcncell) is the collapse's own record and is left out.
+* (7) an auto lattice built within cohort, with an event study and the joint tests;
+* (8) a user-supplied lattice variable read by makecfxplots, safety(off) so that the cfx
+*     matrices of all four estimands, not only att's, enter the comparison;
+* (9) makecfxplots with cfxlattice() and no lattice(), so the plot bin alone splits the cell;
+*     the bin is missing on some treated rows, whose rows must stay in the main reads (their
+*     own cells) while the cfx reads omit them, exactly as on the full data.
+cap program drop fc_esnap
+program define fc_esnap
+  * copies every posted e() matrix to <stub>m<k> and e() scalar to <stub>s<k>, k indexing the
+  * SORTED name lists, which come back in the caller's locals <stub>_mn and <stub>_sn
+  args stub
+  local mn : e(matrices)
+  local mn : list sort mn
+  local sn : e(scalars)
+  local fcx wdid_fcncell
+  local sn : list sn - fcx
+  local sn : list sort sn
+  local k 0
+  foreach m of local mn {
+    local ++k
+    matrix `stub'm`k' = e(`m')
+  }
+  local k 0
+  foreach m of local sn {
+    local ++k
+    scalar `stub's`k' = e(`m')
+  }
+  c_local `stub'_mn `mn'
+  c_local `stub'_sn `sn'
+end
+cap program drop fc_ecmp
+program define fc_ecmp, rclass
+  * r(worst): the largest mreldif/reldif over the matched names, missing when the two name
+  * sets differ or a pair does not conform or differs in its row/column names; r(where) names
+  * the worst item; r(nm)/r(ns) count the matrices and scalars compared
+  syntax , a(name) b(name) amn(string) bmn(string) asn(string) bsn(string)
+  local worst 0
+  local where
+  if "`amn'" != "`bmn'" | "`asn'" != "`bsn'" {
+    return scalar worst = .
+    return local where "e() name sets differ"
+    return scalar nm = 0
+    return scalar ns = 0
+    exit
+  }
+  local k 0
+  foreach m of local amn {
+    local ++k
+    local rna : rowfullnames `a'm`k'
+    local rnb : rowfullnames `b'm`k'
+    local cna : colfullnames `a'm`k'
+    local cnb : colfullnames `b'm`k'
+    local d .
+    if `"`rna'"' == `"`rnb'"' & `"`cna'"' == `"`cnb'"' {
+      cap local d = mreldif(`a'm`k', `b'm`k')
+      if _rc local d .
+    }
+    if missing(`d') | `d' > `worst' {
+      local worst = `d'
+      local where `m'
+    }
+  }
+  return scalar nm = `k'
+  local k 0
+  foreach m of local asn {
+    local ++k
+    local d = reldif(scalar(`a's`k'), scalar(`b's`k'))
+    if missing(`d') | `d' > `worst' {
+      local worst = `d'
+      local where `m'
+    }
+  }
+  return scalar ns = `k'
+  return scalar worst = `worst'
+  return local where `where'
+end
+local CT7 att att_it att_i att_itime contreat(dose_vary) contreatcontrols(basic) lattice(byCohort 3) cluster(person_id) esprelength(2) espostlength(2) jointtests
+local CT8 att att_it att_i att_itime contreat(dose_vary) contreatcontrols(basic) lattice(custom_lattice) makecfxplots cfxplottypes(post pre 1) cluster(person_id) esprelength(2) espostlength(2) safety(off)
+local CT9 att att_it att_i att_itime contreat(dose_vary) contreatcontrols(basic) makecfxplots cfxlattice(cfxb) cluster(person_id) esprelength(2) espostlength(2) safety(off)
+local CN7 lattice(byCohort 3)
+local CN8 lattice(custom_lattice)+makecfxplots
+local CN9 makecfxplots+cfxlattice()
+use "`CCD'", clear
+qui gen cfxb = mod(unit_in_cohort, 3)
+qui replace cfxb = . if ttre < . & mod(person_id, 11) == 0
+tempfile f11bin
+qui save `f11bin'
+forval k = 7/9 {
+  cap matrix drop fcdm* fcum*
+  cap scalar drop fcds* fcus*
+  local fcd_mn
+  local fcu_mn
+  local fcd_sn
+  local fcu_sn
+  local ncfx`k' = 0
+  use `f11bin', clear
+  qui log using fcol_x.txt, text replace name(fc)
+  cap noi wooldid y_cont_vary cohort t ttre [aw=analytic_weight], `CT`k''
+  local rb`k' = _rc
+  local fb`k' = e(wdid_fcol)
+  local sb`k' "`e(wdid_fcskip)'"
+  local nb`k' = e(wdid_fcncell)
+  if `rb`k'' == 0 fc_esnap fcd
+  qui log close fc
+  local lg = fileread("fcol_x.txt")
+  local lg = subinstr(`"`lg'"', char(13), "", .)
+  local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+  local cb`k' = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
+  use `f11bin', clear
+  cap qui wooldid y_cont_vary cohort t ttre [aw=analytic_weight], `CT`k'' nofastcollapse
+  local rbu`k' = _rc
+  local fbu`k' = e(wdid_fcol)
+  if `rbu`k'' == 0 fc_esnap fcu
+  local db`k' = .
+  local wb`k' "a run failed"
+  local mb`k' = 0
+  if `rb`k'' == 0 & `rbu`k'' == 0 {
+    fc_ecmp , a(fcd) b(fcu) amn(`fcd_mn') bmn(`fcu_mn') asn(`fcd_sn') bsn(`fcu_sn')
+    local db`k' = r(worst)
+    local wb`k' "`r(where)'"
+    local mb`k' = r(nm)
+    foreach m of local fcd_mn {
+      if substr("`m'", 1, 3) == "cfx" local ++ncfx`k'
+    }
+  }
+  di "F11a`k' `CN`k'' rc=" `rb`k'' "/" `rbu`k'' " fcol=" `fb`k'' "/" `fbu`k'' " (want 1/0) fcskip=[`sb`k''] cells=" `nb`k'' " caution=" `cb`k'' " (want 0) matrices=" `mb`k'' " cfx=" `ncfx`k'' " worst=" `db`k'' " at [`wb`k''] (want <= 1e-10)"
+  if `rb`k'' != 0 | `rbu`k'' != 0 | `fb`k'' != 1 | `fbu`k'' != 0 | "`sb`k''" != "" | `cb`k'' | missing(`db`k'') | `db`k'' > 1e-10 {
+    di as error "F11a`k' FAIL: `CN`k'' rc `rb`k''/`rbu`k'' fcol `fb`k''/`fbu`k'' fcskip [`sb`k''] caution `cb`k'' worst `db`k'' at [`wb`k''] - the dose bin is in the cell key, so the run must collapse quietly and agree with nofastcollapse"
+    local ++fails
+  }
+}
+cap erase fcol_x.txt
+* the cfx legs must actually carry cfx matrices for all four estimands (safety(off)), or (c)
+* compared nothing the bin changes
+forval k = 8/9 {
+  if `ncfx`k'' < 4 {
+    di as error "F11a`k' FAIL: only `ncfx`k'' cfx matrices posted - the leg does not exercise the plot bins"
+    local ++fails
+  }
+}
+
+* ---- F11b: EVERY GATED CONTREAT READ SKIPS, UNDER THE CAUTION F4 ASSERTS. Each of the gated
 * reads must run normally, report e(wdid_fcol)=0, and - because it then takes the SAME
 * code path as nofastcollapse - reproduce it BIT-IDENTICALLY (mreldif exactly 0, as measured
-* 2026-09-02). Anything else means the gate leaked. THREE tokens remain: contreatpoly(>1),
-* lattice(), and the contreat variable inside controls(). The other three legs this loop used
-* to run were all contreatelasticitytype(eyex)/(eydx) - on their own, and the poisson+eydx
-* BS-6 leg - and those values were removed on 2026-09-20 (author ruling). They were the only
-* legs that divided by the prediction, which is why they alone needed y_positive, and the
-* poisson leg was the only one whose contract was "collapses" rather than "skips"; with it
-* gone every surviving leg is a plain gated read and the loop has no special case left.
+* 2026-09-02). Anything else means the gate leaked. TWO contreat tokens are gated:
+* contreatpoly(>1) and the contreat variable inside controls(). lattice() and makecfxplots
+* are eligible (the dose bin is in the cell key) and are asserted in F11a (7)-(9).
 local BOPT1 att contreat(dose_vary) contreatcontrols(basic) contreatpoly(2) robust esprelength(2) espostlength(2)
-local BOPT2 att contreat(dose_vary) contreatcontrols(basic) lattice(all 2) robust esprelength(2) espostlength(2)
-local BOPT3 att att_it contreat(dose_vary) contreatcontrols(basic) controls(c.dose_vary#c.x1) cluster(person_id) esprelength(2) espostlength(2)
+local BOPT2 att att_it contreat(dose_vary) contreatcontrols(basic) controls(c.dose_vary#c.x1) cluster(person_id) esprelength(2) espostlength(2)
 local BY1 y_cont_vary
 local BY2 y_cont_vary
-local BY3 y_cont_vary
 local BNM1 contreatpoly(2)
-local BNM2 lattice()
-local BNM3 contreat-in-controls
-forval k = 1/3 {
+local BNM2 contreat-in-controls
+forval k = 1/2 {
   * dropped first, so a run that posted nothing is a loud mreldif error rather than a
   * silent comparison of the previous iteration's matrices
   cap matrix drop b11b V11b M11b b11bu V11bu M11bu
@@ -935,16 +1074,15 @@ forval k = 1/3 {
   }
 }
 
-* ---- F11c: each of those three gated reads DISCLOSES its skip in the caution, naming its own
+* ---- F11c: each of those two gated reads DISCLOSES its skip in the caution, naming its own
 * token. Until 2026-09-20 a sixth leg (poisson + eydx, eligible since BS-6) collapsed and said
 * nothing, which is why this loop used to carry a silent case; that leg is gone. This is
 * F4's contract on the continuous-treatment gate tokens: the old blanket contreat() refusal is
 * gone, only the reads above are gated, and each gated one is now announced rather than either
 * silent or fatal. safety(off) is carried as before and must not silence it.
 local CW1 contreatpoly(>1)
-local CW2 lattice()
-local CW3 contreat-in-controls
-forval k = 1/3 {
+local CW2 contreat-in-controls
+forval k = 1/2 {
   use "`CCD'", clear
   qui log using fcol_f11c.txt, text replace name(fc)
   cap noi wooldid `BY`k'' cohort t ttre, `BOPT`k'' safety(off)
@@ -957,9 +1095,9 @@ forval k = 1/3 {
   local cc`k' = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: `CW`k''") > 0
 }
 cap erase fcol_f11c.txt
-di "F11c_rcs poly2=" `cx1' " lattice=" `cx2' " ctl=" `cx3' " (want 0 x3)"
-di "F11c_caution=" `cc1' "/" `cc2' "/" `cc3' " (want 1 x3)"
-forval k = 1/3 {
+di "F11c_rcs poly2=" `cx1' " ctl=" `cx2' " (want 0 x2)"
+di "F11c_caution=" `cc1' "/" `cc2' " (want 1 x2)"
+forval k = 1/2 {
   if `cx`k'' != 0 {
     di as error "F11c FAIL: `BNM`k'' returned rc `cx`k'' (want 0)"
     local ++fails
@@ -1470,9 +1608,9 @@ if `rx15a' != 459 | `rx15b' != 459 {
 
 
 * ---- F16 (bug sweep BS-27, 2026-09-06): cfxlattice() without makecfxplots is ignored, as
-* announced, and no longer disables the default collapse, so that run says nothing; the
-* real bin-readers (makecfxplots with cfxlattice(), lattice()) still gate the collapse and
-* must now announce the skip
+* announced, and does not decide the collapse, so that run collapses and says nothing about
+* it. The real bin-readers (makecfxplots with cfxlattice(), a user lattice() variable) put
+* their bin in the cell key, so they too collapse without a collapse caution
 use "`REPO'/test/data/dta_cont.dta", clear
 gen zbin = mod(i, 3)
 tempfile f16
@@ -1494,24 +1632,26 @@ use `f16', clear
 qui log using fcol_x.txt, text replace name(fc)
 cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) makecfxplots cfxlattice(zbin)
 local f16rcc = _rc
+local f16colc = e(wdid_fcol)
 qui log close fc
 local lg = fileread("fcol_x.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-local f16cc = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: makecfxplots") > 0
+local f16cc = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
 use `f16', clear
 qui log using fcol_x.txt, text replace name(fc)
 cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) att esprelength(1) espostlength(1) lattice(zbin)
 local f16rcd = _rc
+local f16cold = e(wdid_fcol)
 qui log close fc
 local lg = fileread("fcol_x.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-local f16cd = strpos(`"`lg'"', "Caution: the default cell collapse does not apply with: lattice()") > 0
+local f16cd = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
 cap erase fcol_x.txt
-di "F16 cfxlattice alone: rc=`f16rc' fcol=`f16col' fcskip=[`f16skip'] caution=`f16cb' (want 0) | makecfxplots+cfxlattice rc=`f16rcc' caution=`f16cc' | lattice rc=`f16rcd' caution=`f16cd' (want 1 each)"
-if `f16rc' != 0 | `f16col' != 1 | "`f16skip'" != "" | `f16rcb' != 0 | `f16cb' | `f16rcc' != 0 | !`f16cc' | `f16rcd' != 0 | !`f16cd' {
-  di as error "F16 FAIL: cfxlattice() alone must not decide the collapse, and the real bin-readers must skip it under a caution"
+di "F16 cfxlattice alone: rc=`f16rc' fcol=`f16col' fcskip=[`f16skip'] caution=`f16cb' (want 0) | makecfxplots+cfxlattice rc=`f16rcc' fcol=`f16colc' caution=`f16cc' | lattice rc=`f16rcd' fcol=`f16cold' caution=`f16cd' (want fcol 1, caution 0 each)"
+if `f16rc' != 0 | `f16col' != 1 | "`f16skip'" != "" | `f16rcb' != 0 | `f16cb' | `f16rcc' != 0 | `f16colc' != 1 | `f16cc' | `f16rcd' != 0 | `f16cold' != 1 | `f16cd' {
+  di as error "F16 FAIL: cfxlattice() alone must not decide the collapse, and the real bin-readers must collapse with their bin in the cell key, without a collapse caution"
   local ++fails
 }
 

@@ -2181,6 +2181,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`impvalues'" != "" local fckeyx `fckeyx' `cluster'
     if "`contreat'" != "" {
       local fckeyx `fckeyx' `i'
+      * a dose bin splits the cell: lattice() gives each bin its own intercept and slope, and
+      * makecfxplots reads its plot bins (cfxlattice() when given, else the lattice) through
+      * margins over(). the bin joins the key, so every read stays linear in the dose inside a
+      * cell-by-bin group and the surviving row carries its own bin. cfxlattice() without
+      * makecfxplots is never read and stays out of the key
+      if "`latticevar'" != "" local fckeyx `fckeyx' `latticevar'
+      if "`cfxlattice'" != "" & "`makecfxplots'" != "" local fckeyx `fckeyx' `cfxlattice'
       * the ringer (wooldid's double copy of the dose) is averaged the same way: wherever a
       * ringer set is in the model at all - absorbed as `contreatcontrolinserterABS' or
       * carried as an explicit regressor in `contreatcontrolinserterFE' - its level shifts
@@ -5525,13 +5532,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * contreat() itself is eligible: every collapsible read is linear in the dose inside a cell
   * (dydx(targetflag) = delta_g + beta_g*x, dydx(contreat) = beta_g, dyex = beta_g*x), so a
   * summed weight and a weighted mean reproduce it exactly. what is refused is the reads that
-  * are NOT linear in the dose, and the requests that split a cell on a variable outside the key
+  * are NOT linear in the dose. lattice() and makecfxplots are not on the list: they split a
+  * cell on a dose bin, and the worker puts that bin in the cell key
   if "`contreat'" != "" {
     if `contreatpoly' > 1                                                       local fcbad `fcbad' contreatpoly(>1)
-    if `"`lattice'"' != ""                                                      local fcbad `fcbad' lattice()
-    * only makecfxplots reads the bins (from lattice() or cfxlattice()); cfxlattice() on its
-    * own is announced as ignored and must not decide the collapse
-    if "`makecfxplots'" != ""                                                   local fcbad `fcbad' makecfxplots
     * neither elasticity form is on this list: contreatelasticitytype(dydx) and (dyex) are
     * linear in the dose inside a cell, and dyex takes the analytic predict(xb) form under
     * poisson too, where the collapse reproduces the full-data ame rows to 6.3e-16.
@@ -5579,7 +5583,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     dis as text "  The collapse hands margins one row per cohort-by-period-by-treatment cell, which is exact only when the reported quantity is linear in the coefficients and, within a cell, linear in the treatment variable. What is listed above breaks one of those conditions:"
     if strpos("`fcskip'", "interactivecontrols()") dis as text "  interactivecontrols() interacts the treatment dummy with a variable that varies inside a cell, so the effect is no longer cell-constant."
     if strpos("`fcskip'", "contreatpoly(>1)") dis as text "  contreatpoly() above 1 makes the effect a polynomial in the dose, which the cell mean does not reproduce. contreat() itself is eligible: the collapse carries the cell's weighted mean of the dose."
-    if strpos("`fcskip'", "lattice()") | strpos("`fcskip'", "makecfxplots") dis as text "  lattice() and makecfxplots split a cell on a binning of the dose, which is not part of the cell key."
     if strpos("`fcskip'", "contreat-in-controls") dis as text "  contreat-in-controls means the contreat variable also appears inside controls(), coarsecohortcontrols(), fe() or ccc_absorb(); the dose derivative then varies inside the cell on a variable the collapse does not average (measured: the ame rows move by up to 0.6 percent while the att rows stay exact)."
     if strpos("`fcskip'", "unconditionalse") dis as text "  unconditionalse asks margins for a variance built from observation-level influence functions; margins verifies the visible row count against e(N) and errors when it is collapsed."
     if strpos("`fcskip'", "customvce()") dis as text "  customvce() is not verified for the collapse rather than known-broken; it is held out pending measurement."

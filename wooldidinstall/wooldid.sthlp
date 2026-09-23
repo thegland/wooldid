@@ -289,8 +289,8 @@ before reporting results. {p_end}
 cohort-by-period-by-treatment cell rather than on every observation, while the regression itself still runs on the full data. Results agree with an uncollapsed run to
 machine precision but are not bit-identical. It applies to binary and continuous treatments, to poisson, to subgroups and inside {it:bootstrap()} and {it:permute()}
 replications. It is skipped, with a caution naming the option responsible, when the request is ineligible: {it:interactivecontrols()}, {it:contreatpoly()} above 1,
-{it:lattice()}, {it:makecfxplots}, the {it:contreat()} variable also appearing inside {it:controls()}, {it:coarsecohortcontrols()}, {it:fe()} or {it:ccc_absorb()},
-{it:unconditionalse}, and {it:customvce()}. Disable it yourself when you are using controls or fixed effects interacted with treatment in some way {it:wooldid} cannot
+the {it:contreat()} variable also appearing inside {it:controls()}, {it:coarsecohortcontrols()}, {it:fe()} or {it:ccc_absorb()}, {it:unconditionalse}, and
+{it:customvce()}. Disable it yourself when you are using controls or fixed effects interacted with treatment in some way {it:wooldid} cannot
 detect, such as a control built from a renamed copy of the treatment variable, since the collapse assumes the treatment effect is constant within a cell; when your
 analysis is memory constrained, since the collapse preserves the data and so holds an extra copy of it; and when you need byte-for-byte reproduction of an uncollapsed
 result. {p_end}
