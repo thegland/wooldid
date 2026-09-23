@@ -5865,7 +5865,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * below anyway, and the adversarial and joint-test surfaces are permutation quantities
     * the shell builds after the replications. Typing the word that is already in force is
     * therefore not an error, and these two refusals stand down in exactly that case. Every
-    * other fastnose incompatibility (unconditionalse, impvalues, pretrendpower) is
+    * other fastnose incompatibility (unconditionalse, pretrendpower) is
     * unaffected.
     local fnperm = ("`permute'" != "" & "`permtstat'" == "" & "`permanalyticse'" == "")
     if "`adversarial'" != "" & !`fnperm' {
