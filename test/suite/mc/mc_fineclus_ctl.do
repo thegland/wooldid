@@ -47,6 +47,15 @@ prog def fcarm, rclass
 
   dis as text "FCARM=`lbl' cluster=`cv' rcA=`rcA' rcS=`rcS' G=`G'"
   if `rcA' != 0 | `rcS' != 0 exit
+  * a failed bootsave() write is a caution since 2026-09-21, so rc 0 no longer proves the
+  * file exists; check before reading, or the arm would analyse a file that was never written
+  cap confirm file a_`lbl'.dta
+  local fa = _rc
+  cap confirm file s_`lbl'.dta
+  if `fa' != 0 | _rc != 0 {
+    dis as error "FCARM=`lbl' FAIL: a bootsave() file is missing (boot_save_rc active=`e(boot_save_rc)')"
+    exit
+  }
 
   use a_`lbl'.dta, clear
   qui sum se_main_att if _rep > 0

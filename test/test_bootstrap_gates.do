@@ -30,6 +30,27 @@ prog def chk
 end
 global BOOTG_FAILS 0
 
+cap prog drop usegate
+prog def usegate
+  * a saver's failed write is a caution since 2026-09-21, so a run's rc 0 no longer proves
+  * the file exists: name the miss as a FAIL and load an empty stand-in carrying the columns
+  * the checks that follow touch, so they fail on content rather than abort the suite r(601)
+  args file label
+  cap confirm file `file'.dta
+  if _rc {
+    di as error "`label' FAIL: bootsave() wrote no `file'.dta (e(boot_save_rc)=`e(boot_save_rc)')"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+    clear
+    qui set obs 1
+    gen _rep = 0
+    gen w_0 = .
+    gen advW = .
+    gen jointW_0 = .
+    exit
+  }
+  use `file', clear
+end
+
 * G1 stray companions without bootstrap()
 cap qui wooldid y unit t ttre, att cluster(unit) reps(50)
 chk 1 198 _rc
@@ -893,7 +914,7 @@ if strlen("`g31rng'") < 100 | strpos(`"`lg'"', "projected for 8 replications)") 
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 preserve
-use boot_gates_g31, clear
+usegate boot_gates_g31 G31r1
 qui ds w_*
 local g31w : word count `r(varlist)'
 egen double g31s = rowtotal(w_*)
@@ -931,7 +952,7 @@ cap erase boot_gates_g31.dta
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(8) rseed(7) bootsave(boot_gates_g31)
 chk 31e 0 _rc
 preserve
-use boot_gates_g31, clear
+usegate boot_gates_g31 G31r2
 egen double g31s = rowtotal(w_*)
 qui sum g31s if _rep > 0
 local g31bmin = r(min)
@@ -950,7 +971,7 @@ cap erase boot_gates_g31.dta
 cap qui wooldid y unit t ttre, att bootstrap(standard) reps(8) rseed(7) bootsave(boot_gates_g31)
 chk 31g 0 _rc
 preserve
-use boot_gates_g31, clear
+usegate boot_gates_g31 G31r3
 cap ds w_*
 local g31u = _rc
 restore
@@ -959,7 +980,7 @@ cap erase boot_gates_g31.dta
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(2) esfixedbaseperiod adversarial jointtests bootstrap(standard) reps(8) rseed(7) boottstat bootsave(boot_gates_g31)
 chk 31h 0 _rc
 preserve
-use boot_gates_g31, clear
+usegate boot_gates_g31 G31r4
 cap ds jointW*
 local g31j : word count `r(varlist)'
 cap confirm variable advW
@@ -1134,7 +1155,7 @@ cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) bootalpha(size
 local g36rc = _rc
 chk 36 0 `g36rc'
 preserve
-use boot_gates_g36, clear
+usegate boot_gates_g36 G36r
 egen double g36s = rowtotal(w_*)
 qui sum g36s
 local g36min = r(min)
@@ -1266,6 +1287,50 @@ chk 40c 198 _rc
 * already pin them); percentile is the studentized display and must run
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20) boottstat bootdisplay(percentile) rseed(7) dots(0)
 chk 40d 0 _rc
+
+* ---- G38 (2026-09-21 ruling, built ed6a0da; gate added 2026-09-22): a bootsave() write that
+* fails after the loop is a caution, not a refusal. Forced with a read-only target: the run
+* completes rc 0, the results stand, the caution names the file, e(boot_save_rc) carries the
+* code, the previous file is untouched, and a bare wooldid replays
+use `panel', clear
+cap erase boot_gates_g38.dta
+cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(8) rseed(7) bootsave(boot_gates_g38)
+chk 38 0 _rc
+cap confirm file boot_gates_g38.dta
+chk 38a 0 _rc
+! chmod 444 boot_gates_g38.dta
+use `panel', clear
+qui log using boot_gates_g38.txt, text replace name(g38)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(8) rseed(8) bootsave(boot_gates_g38) replace dots(0)
+local g38rc = _rc
+qui log close g38
+chk 38b 0 `g38rc'
+local g38src `e(boot_save_rc)'
+local g38lg = fileread("boot_gates_g38.txt")
+if strpos(`"`g38lg'"', "Caution: bootsave(boot_gates_g38) could not produce the replication dataset") == 0 | "`g38src'" == "" | "`g38src'" == "0" {
+  di as error "G38c FAIL: the failed write did not caution, or did not post e(boot_save_rc) (got `g38src')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap confirm matrix e(bootdist)
+if _rc != 0 | e(boot_completed) != 8 {
+  di as error "G38d FAIL: the results are not intact after the failed write"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap noi wooldid
+chk 38e 0 _rc
+preserve
+usegate boot_gates_g38 G38r
+qui count if _rep > 0
+local g38n = r(N)
+local g38seed `_dta[wooldid_seed]'
+restore
+if `g38n' != 8 | "`g38seed'" != "7" {
+  di as error "G38f FAIL: the read-only file was altered (rows=`g38n' seed=`g38seed'; want 8 and 7)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+! chmod 644 boot_gates_g38.dta
+cap erase boot_gates_g38.dta
+cap erase boot_gates_g38.txt
 
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

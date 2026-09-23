@@ -405,7 +405,7 @@ there. {p_end}
 plain file name, and an existing file is overwritten only with {it:replace}. The file has one row per replication, {it:_rep} = 1 to {it:reps()}, with the
 coefficients under their {it:e(b)} names, and a row {it:_rep} = 0 with the observed estimates; a failed replication keeps its row with every value missing. Under
 {it:boottstat} the replication analytic standard errors are added as {it:se_*}, and with {it:cluster()} one {it:w_} column per cluster records how many times it was
-drawn, or its Dirichlet weight under {it:bootstrap(bayes)}. Its characteristics record the engine, seed and random-number state. {p_end}
+drawn, or its Dirichlet weight under {it:bootstrap(bayes)}. Its characteristics record the engine, seed and random-number state. If the file cannot be written the run still completes, with a caution, and the return code is posted in {it:e(boot_save_rc)}. {p_end}
 
 {phang}{opt ties}: Adjust the bias-corrected intervals' median-bias constant for ties between the replications and the observed statistic, as the {it:ties} option
 of Stata's {help bootstrap} does; refused without {it:bootstrap()}. It has no effect on continuous statistics. {p_end}
@@ -480,7 +480,7 @@ footer; a family whose step-down cannot be formed is silently not posted. {p_end
 
 {phang}{opt permsa:ve(name)}: Write the permutation draws to {it:name}.dta in the working directory; an existing file needs {it:replace}. One row per replication plus a row 0 with the
 observed estimates; one column per coefficient of {it:e(b)}, the replication standard errors under {it:permtstat}, and one {it:onset_clustervalue} column per cluster holding its onset in
-each replication. {p_end}
+each replication. If the file cannot be written the run still completes, with a caution, and the return code is posted in {it:e(perm_save_rc)}. {p_end}
 
 {phang}{opt permonset:cohorts}: Assert that {it:i} is the treatment-onset grouping, one level of {it:i} per distinct onset with the never-treated a single level, and on that assertion accept
 a {it:cluster()} finer than {it:i}; each replication then rebuilds {it:i} from the onsets it drew. The assertion is checked and the run stops if it fails; {it:safety(off)} does not lift the
@@ -1037,7 +1037,7 @@ from the underlying regression estimator, wherever available. {p_end}
 
 {synopt:{it:Bootstrap inference}} When {it:bootstrap()} is used, the reported tables carry the bootstrap inference, and e() additionally holds: run-level scalars and macros
 ({it:e(boot_reps)}, {it:e(boot_completed)}, {it:e(boot_failed)}, {it:e(boot_level)}, {it:e(boot_N_V)}, {it:e(boot_method)}, {it:e(boot_display)}, {it:e(boot_stat)},
-{it:e(boot_df)}, {it:e(boot_seed)}, {it:e(boot_rngstate)}, {it:e(boot_alpha)}, {it:e(boot_ties)}, and {it:e(boot_nstraddle)} with {it:e(boot_reid)}, which record whether the replications re-identified duplicated
+{it:e(boot_df)}, {it:e(boot_seed)}, {it:e(boot_rngstate)}, {it:e(boot_alpha)}, {it:e(boot_ties)}, {it:e(boot_save_rc)} when a {it:bootsave()} write failed, and {it:e(boot_nstraddle)} with {it:e(boot_reid)}, which record whether the replications re-identified duplicated
 units, and {it:e(boot_covsub)}, the number of covariate terms rewritten to the fresh unit code, present only when that happened); the replication covariance
 {it:e(V_boot)} (also posted as {it:e(V)}, with the analytic one preserved as {it:e(V_analytic)}), the replication means {it:e(b_boot)} and bias {it:e(bias_boot)}; the draw
 matrices {it:e(bootdist)} and, under {it:boottstat}, {it:e(bootdist_se)} (up to 10,000 replications); the interval and p-value families aligned to {it:e(b)},
@@ -1061,7 +1061,7 @@ and e() additionally holds, one named column per coefficient of {it:e(b)}: {it:e
 {it:permstepdown}, {it:e(perm_stepdown)} and its family, pre-treatment and subgroup variants; the draw matrices {it:e(permdist_b)} and, under {it:permtstat}, {it:e(permdist_se)}
 (up to 10,000 replications); the test statistics {it:e(perm_jointW)}, {it:e(perm_sgW)}, {it:e(perm_advW)} and their observed twins {it:e(perm_jointWobs)}, {it:e(perm_sgWobs)},
 {it:e(perm_advWobs)}; run-level scalars and macros {it:e(perm_reps)}, {it:e(perm_completed)}, {it:e(perm_failed)}, {it:e(perm_npossible)}, {it:e(perm_level)},
-{it:e(perm_exact)}, {it:e(perm_method)}, {it:e(perm_stat)}, {it:e(perm_pconv)}, {it:e(perm_seed)}, {it:e(perm_rngstate)}, {it:e(perm_analyticse)}, {it:e(perm_absp)},
+{it:e(perm_exact)}, {it:e(perm_method)}, {it:e(perm_stat)}, {it:e(perm_pconv)}, {it:e(perm_seed)}, {it:e(perm_rngstate)}, {it:e(perm_save_rc)} when a {it:permsave()} write failed, {it:e(perm_analyticse)}, {it:e(perm_absp)},
 {it:e(perm_adv)}, {it:e(perm_precaveat)}, {it:e(perm_irebuilt)}, {it:e(perm_blank)}, {it:e(perm_gt_blank)}, {it:e(perm_cfx_blank)}, {it:e(perm_offcentre)},
 {it:e(perm_incomplete)} and {it:e(perm_addone)}; and the pooled-estimand scalars {it:e(perm_p_{it:est})}, {it:e(perm_bandlo_{it:est})}, {it:e(perm_bandhi_{it:est})},
 {it:e(perm_sd_{it:est})} and, under {it:permtci}, {it:e(perm_tlb_{it:est})} and {it:e(perm_tub_{it:est})}, with {it:e(perm_comparator)} and {it:e(permdist)}. Under the fast-mode

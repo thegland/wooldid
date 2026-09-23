@@ -4,8 +4,20 @@
 *"Please explore the feasibility of converting this from an error to a caution, so that if the rest of
 the run succeeded, users can still look at the results."*
 
-**Status: OPEN. Not started. Feasible, with one residual cost the author must accept (s5) and three
-scope decisions (s7).** Line numbers are as of `a9f9997` on `bugfixes`.
+**Status: BUILT.** The conversion itself shipped in `ed6a0da` (2026-09-22) for BOTH savers, on the
+author's page ruling: the write failure is a caution, the success line sits in an else arm,
+permsave's content cautions are gated onto success, and the return code is posted as
+`e(boot_save_rc)` / `e(perm_save_rc)` so a quiet script can still detect the loss (s5's residual
+cost, accepted as posted-not-mitigated). The test fallout in s8 followed on 2026-09-22: the bare
+`use` reads after a saver run in `test_bootstrap_gates`, `test_permute3` and the Monte Carlo
+harness now confirm the file first, and a forced-failure gate exists for each saver (read-only
+target, `replace`, rc 0, the caution text, the posted return code, and a bare `wooldid` replay).
+The help and guide entries for both options carry the failure clause.
+
+**Still for the author (s7, undecided, carried to the ruling document):** Q2, the two in-program
+pre-flight duplicates (the directory-part r(198) and file-exists r(602) checks each saver re-runs
+after the loop) are still fatal, so a file that appears mid-run still throws the finished run
+away; Q3, the caution prints above the deferred display. Line numbers below are as of `a9f9997`.
 
 ## The finding that raises the stakes
 

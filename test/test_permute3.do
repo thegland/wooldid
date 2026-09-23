@@ -27,6 +27,27 @@ end
 
 * fixture: nclus clusters (units), the first ntreat treated at t = 4, 8 periods, a
 * cluster-level subgroup and a unit-level dose; effect eff, larger in subgroup 1
+cap program drop usegate3
+program define usegate3
+  * a permsave() write that fails is a caution since 2026-09-21, so rc 0 no longer proves the
+  * file exists: name the miss as a FAIL and load a stand-in with the columns the checks
+  * touch, so they fail on content rather than abort the suite r(601)
+  args file label
+  cap confirm file `file'.dta
+  if _rc {
+    dis as error "`label' FAIL: permsave() wrote no `file'.dta (e(perm_save_rc)=`e(perm_save_rc)')"
+    global pf = $pf + 1
+    clear
+    qui set obs 1
+    gen _rep = 0
+    gen main_att = .
+    gen onset_1 = .
+    gen onset_8 = .
+    exit
+  }
+  use `file', clear
+end
+
 cap program drop mkperm3
 program define mkperm3
   args nclus ntreat eff
@@ -264,7 +285,7 @@ if `rc' == 0 {
   matrix `PV' = e(perm_p)
   local nrep = e(perm_reps)
   preserve
-  use perm3_q1.dta, clear
+  usegate3 perm3_q1 Q1s
   local bad 0
   if _N != `nrep' + 1 local ++bad
   if _rep[1] != 0 local ++bad
@@ -1129,7 +1150,7 @@ if strlen("`q21st'") < 100 | strpos(`"`lg'"', "projected for 20 replications)") 
   global pf = $pf + 1
 }
 preserve
-use perm3_q21, clear
+usegate3 perm3_q21 Q21s
 local q21eng `_dta[wooldid_engine]'
 local q21rl = strlen("`_dta[wooldid_rngstate]'")
 restore
@@ -1870,6 +1891,49 @@ if `rc36' == 0 {
     else dis as result "Q36 PASS: e(perm_analytic_pwsgs) is the pre-permutation analytic snapshot of e(pwsgs)"
   }
 }
+
+* ================= Q37 (2026-09-21 ruling, built ed6a0da; gate added 2026-09-22): a permsave()
+* write that fails after the loop is a caution, not a refusal. Forced with a read-only target:
+* rc 0, results intact, the caution names the file, e(perm_save_rc) carries the code, the
+* previous file is untouched, and a bare wooldid replays ===============================
+mkperm3 8 4 3
+cap erase perm3_q37.dta
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permsave(perm3_q37) rseed(37)
+xrc Q37a 0 _rc
+cap confirm file perm3_q37.dta
+xrc Q37b 0 _rc
+! chmod 444 perm3_q37.dta
+mkperm3 8 4 3
+qui log using perm3_q37.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permsave(perm3_q37) replace rseed(38)
+local rc = _rc
+qui log close p3
+xrc Q37c 0 `rc'
+local q37src `e(perm_save_rc)'
+local lg = fileread("perm3_q37.txt")
+if strpos(`"`lg'"', "Caution: permsave(perm3_q37) could not produce the replication dataset") == 0 | "`q37src'" == "" | "`q37src'" == "0" {
+  dis as error "Q37d FAIL: the failed write did not caution, or did not post e(perm_save_rc) (got `q37src')"
+  global pf = $pf + 1
+}
+if e(perm_completed) != 20 {
+  dis as error "Q37e FAIL: the results are not intact after the failed write"
+  global pf = $pf + 1
+}
+cap noi wooldid
+xrc Q37f 0 _rc
+preserve
+usegate3 perm3_q37 Q37s
+local q37seed `_dta[wooldid_seed]'
+qui count if _rep > 0
+local q37n = r(N)
+restore
+if `q37n' != 20 | "`q37seed'" != "37" {
+  dis as error "Q37g FAIL: the read-only file was altered (rows=`q37n' seed=`q37seed'; want 20 and 37)"
+  global pf = $pf + 1
+}
+! chmod 644 perm3_q37.dta
+cap erase perm3_q37.dta
+cap erase perm3_q37.txt
 
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"
