@@ -11577,7 +11577,8 @@ end
 * true share; the Wald display's p is a tail probability of the t/normal reference rather
 * than a rank, so it has no floor and exits at the top of the program. The boottstat
 * pass-through in that same gate is vacuous: the studentized family is add-one with floor
-* 2/(n+1) and can never print 0, so the 2/n message would be wrong if it ever fired.
+* 2/(n+1) and can never print 0, so the 2/n message would be wrong if it ever fired. The
+* resolution prints unpadded in %9.2g, so a large n shows .0004 rather than 0.000.
 cap prog drop wooldid_pfloor
 prog def wooldid_pfloor
   args mat
@@ -11610,7 +11611,7 @@ prog def wooldid_pfloor
   if `pc' >= . local pc 4
   if `pc' > colsof(`pm') exit
   mata: st_local("wdp0", strofreal(sum(st_matrix("`pm'")[., `pc'] :== 0)))
-  if `wdp0' > 0 dis as text "  p = 0 above means p < " %5.3f `wdpres' " `wdpmsg'"
+  if `wdp0' > 0 dis as text "  p = 0 above means p < " string(`wdpres', "%9.2g") " `wdpmsg'"
 end
 
 * ============================================================================
@@ -12555,9 +12556,10 @@ version 16.0
    dis as result "  Every family is computed whichever is displayed: intervals in e(boot_ci_normal)/e(boot_ci_percentile)/e(boot_ci_bc), p-values in e(boot_p_percentile)/e(boot_p_bc), and the complete tables in the hidden e(boot_wald_mainresults)/e(boot_pctl_mainresults)/e(boot_bc_mainresults)."
    * the studentized family uses the add-one rank, so its resolution and its floor are both
    * 2/(completed + 1) and it never prints 0; the coefficient-draw families keep the plain
-   * share and can still print 0
-   if "`e(boot_tstat)'" == "1" dis as result "  The studentized coefficient p-values are add-one ranks over " e(boot_completed) " completed replications, so their resolution and their smallest attainable value are both 2/(n + 1) = " %5.3f 2/(e(boot_completed) + 1) ": a studentized p is never exactly 0. The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
-   else if "`wdbdsp'" != "wald" dis as result "  The rank-based coefficient p-values have resolution 2/" e(boot_completed) " = " %5.3f 2/e(boot_completed) ": a p printed as 0 means p below that (no completed replication on the far side of the null); it is stored as 0 in e(). The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
+   * share and can still print 0. Both resolutions print unpadded in %9.2g, as the p = 0 line
+   * under the table does
+   if "`e(boot_tstat)'" == "1" dis as result "  The studentized coefficient p-values are add-one ranks over " e(boot_completed) " completed replications, so their resolution and their smallest attainable value are both 2/(n + 1) = " string(2/(e(boot_completed) + 1), "%9.2g") ": a studentized p is never exactly 0. The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
+   else if "`wdbdsp'" != "wald" dis as result "  The rank-based coefficient p-values have resolution 2/" e(boot_completed) " = " string(2/e(boot_completed), "%9.2g") ": a p printed as 0 means p below that (no completed replication on the far side of the null); it is stored as 0 in e(). The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
    * once any replication has been left without a usable standard error, e(boot_completed) is no
    * longer the n the studentized ranks run over and the resolution printed above is optimistic.
    * This clause sits below the if/else-if pair above, not between them: a bare `if' inserted

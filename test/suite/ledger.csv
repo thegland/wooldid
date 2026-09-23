@@ -1,19 +1,19 @@
 id,config,kind,pattern,rtol,reason
 # Expected old-vs-new divergences. Row order matters (first match wins): documented
 # LARGE rows (empty rtol = any difference) come FIRST; bounded storage-noise tiers come
-# LAST and only explain finite numeric diffs within their bound (never strings
-# codes
-# and are noise-vs-wrong-answer separators
+# LAST and only explain finite numeric diffs within their bound (never strings, missing
+# codes, removals, or NaN). Bounds are ~10x the ceilings measured on the 2026-08-18 runs
+# and are noise-vs-wrong-answer separators, NOT forward tolerance policy (the rtol-0
 # battery guards HEAD regressions). A scoped row that stops firing goes STALE and fails
 # the run. Narrative for every citation: wooldid_solved_issues.md.
 # ---------------- PS-62: the event-study covariance splice into e(V) ----------------
 # The comparer peels these cells into their own kind (mat_esblock) under a strict
-# predicate - off-diagonal
-# column two horizons of the SAME event-study family
-# e(V) cell still goes through the rows below
+# predicate - off-diagonal, exactly 0 on old, finite and nonzero on new, row and
+# column two horizons of the SAME event-study family, stripes identical. Every other
+# e(V) cell still goes through the rows below, so the bounded tiers keep guarding the
 # diagonal; a blanket V row would have masked all of e(V) on 360 configs.
 PS62-esblock,*,mat_esblock,V,,PS-62 a366c46 (author ruling 2026-09-07): the within-family event-study covariance blocks are spliced into e(V) so a test or lincom across one family's horizons is valid; every other off-diagonal stays zero. 18554 cells over 335 configs on the 2026-09-11 dual-build run (main 301b706 vs 14c30d3). e(wdid_vcvstate) and e(wdid_vblocks)/e(wdid_vblockn) record the state and are new-only additions
-# ---------------- documented LARGE fixes (unbounded
+# ---------------- documented LARGE fixes (unbounded, tightly scoped) ----------------
 A1-B1a,basic,mat,summarystats,,B1 015ae88 control-row + B2 0188b8f IQR fixes
 A1-B1b,pw_ss,mat,summarystats,,B1/B2: same
 A1-B1c,cont_ss,mat,summarystats,,B1/B2: same (contreat rows too)
@@ -83,11 +83,11 @@ A12-ttbpois-rss,trig_tt_big_pois_rob,scalar,rss,,old-bug-fixed. tcen f7019c9: as
 A12-ttbpois-b,trig_tt_big_pois_rob,mat,b,,old-bug-fixed. tcen f7019c9: as A12-ttbpois-ll - every estimate moves on the dydx log scale (att .47749714 -> .70217899; worst 51.9 percent relative over the 4 cells)
 A12-ttbpois-V,trig_tt_big_pois_rob,mat,V,,old-bug-fixed. tcen f7019c9: as A12-ttbpois-b - the 4 analytic variances move up to 87.5 percent relative (V[1 1] .00094641943 -> .0075720521)
 A12-ttbpois-w,trig_tt_big_pois_rob,mat,wdidmainresults,,old-bug-fixed. tcen f7019c9: as A12-ttbpois-b - all 24 estimate/se/z/p/ci cells move (worst 1.16 relative)
-# ---- A12/tcen f7019c9
-# (old kept e(V))
+# ---- A12/tcen f7019c9, the OTHER direction (2026-09-13 dual run). Where trig_tt_big's t~5e5 codes made v1.3's trends numerically INERT
+# (old kept e(V)), a 4-digit calendar year instead makes Stata's `ereturn post' screen zero the VCE WHOLESALE - 'warning: variance matrix
 # is nonsymmetric or highly singular' issued once and swallowed by the quiet estimation call - so v1.3 posts no e(V) at all and every
 # wooldid standard error is missing. Reproduced standalone on dta_s_ttyear with no wooldid involved: raw `i.i##c.t' gives trace(e(V))=0
-# while centered `i.i##c.tcen' gives 22.482973 at the SAME rank 61 and k 160
+# while centered `i.i##c.tcen' gives 22.482973 at the SAME rank 61 and k 160, with rss and r2 BIT-IDENTICAL. The variance was identified
 # all along; v1.3 withheld it for a conditioning reason it never reported. ----
 A12-tt-real_tt-p,real_tt,macro,properties,,"old-bug-fixed. tcen f7019c9: v1.3's raw 4-digit-year `i.i##c.t' trend columns tripped Stata's nonsymmetric/highly-singular VCE screen, measured after the reghdfe as trace(e(V))=0 on v1.3 against 261.68452 on HEAD at the same k 140, rank 124 and df_a 31. With the stage-1 VCE identically zero every estimand's standard error is missing, so the worker's b-only ereturn post fallback fires and e(properties) is [b]. The centered `i.i##c.tcen' copy is the same model and its VCE survives. e(V) itself is a new-only object."
 A12-tt-real_tt-w,real_tt,mat,wdidmainresults,,old-bug-fixed. tcen f7019c9: as A12-tt-real_tt-p. All 40 se/t/p/lb/ub cells were MISSING on v1.3 because a zeroed stage-1 VCE gives margins nothing to propagate; HEAD reports them (att se .6504). The estimate and relyr columns are bit-identical. UNBOUNDED because a missing -> finite move cannot be expressed by a bounded row (accepted blind spot - see A12-ttb-m).
@@ -96,10 +96,10 @@ A12-tt-ttyr-w,trig_tt_year_rob,mat,wdidmainresults,,old-bug-fixed. tcen f7019c9:
 A12-tt-ttpois-p,trig_tt_pois_rob,macro,properties,,"old-bug-fixed. tcen f7019c9: as A12-tt-real_tt-p on the poisson x timetrends host - measured after the ppmlhdfe, trace(e(V))=0 on v1.3 against 5.3987936 on HEAD at the same k 239 and rank 195."
 A12-tt-ttpois-w,trig_tt_pois_rob,mat,wdidmainresults,,"old-bug-fixed. tcen f7019c9: as A12-tt-real_tt-w - 20 se/z/p/lb/ub cells missing -> reported (att se .09936). The estimate column moves 4.7e-13, the IRLS reparameterization noise of A12-ttpois-rob-rss."
 # ---- A10 (8c5bfd7 'gen double for _i to stop float pooling of large unit IDs'): v1.3 gen'd the internal cohort/unit copy `_i' at gen's
-# default FLOAT. At unit IDs of 3.0e7 the float grid spacing is 2
+# default FLOAT. At unit IDs of 3.0e7 the float grid spacing is 2, so dta_s_bigcodes' CONSECUTIVE 30000001..30000040 collapse onto 20
 # distinct values and every odd-ID unit is silently pooled with its even neighbour. Measured on trig_bigids_month: stage-1 k 107 (v1.3)
 # against 197 (HEAD) - 90 cell dummies lost - and rowsof(e(histogramestimates)) 14 against 26. The AGGREGATE att survives the pooling
-# (e(b) moves 1.6e-12 and never clears the run screen); the fit
+# (e(b) moves 1.6e-12 and never clears the run screen); the fit, the variance and every per-unit effect do not. All rows unbounded. ----
 A10-bigids-ll,trig_bigids_month,scalar,ll,,old-bug-fixed. A10 8c5bfd7: v1.3's float `_i' pooled 40 units onto 20 float codes and dropped 90 cell dummies from the stage-1 design; ll -231.80603 -> -162.65922 is the fit of the correctly-coded model.
 A10-bigids-rss,trig_bigids_month,scalar,rss,,old-bug-fixed. A10 8c5bfd7: as A10-bigids-ll (rss 73.830172 -> 55.348845).
 A10-bigids-rmse,trig_bigids_month,scalar,rmse,,old-bug-fixed. A10 8c5bfd7: as A10-bigids-ll (rmse .47736 -> .48635 - rss falls but the residual df falls faster once the 90 pooled-away parameters are restored).
@@ -197,40 +197,40 @@ E-B12e,*,esamp,_ppmlhdfe_d,,B12/S6: the leaked variable also appears in old's e(
 C-esfn,adm_svpsg,files,*svpadm_ES.dta*svpadm_ES_att.gph*svpadm_ES_att_sg1.gph*svpadm_ES_att_sg2.gph*svpadm_ES_att_sg3.gph*svpadm_ES_att_sg4.gph*svpadm_ES_region_1.dta*svpadm_ES_region_2.dta*svpadm_ES_region_3.dta*svpadm_ES_region_4.dta*,,saveplots x subgroups: filenames now separate the subgroup variable and value (06e1a5b); the pattern IS the pinned new-build file list in order (fnmatch on the whole files| record - a changed or missing name fails UNEXPLAINED and the row goes STALE); interim form with * between the names tolerates the D-11 quote junk - replace with the plain space-separated list once H-2 (mkrun quote fix) lands
 # ---------------- RETIRED 2026-09-14: 46 rows the degrees-of-freedom fix made stale ----------------
 # The fix that stopped over-counting absorbed degrees of freedom removed the divergence these rows
-# existed to explain
-# file's own contract
+# existed to explain, so every one of them stopped firing. A stale row is a hard failure by this
+# file's own contract, and the convention here is to delete a retired row rather than reword it.
 # 33 carried the clause 'the extra absorbed slope counts as one more parameter'; the other 13 said
-# the same thing in other words (df_r
+# the same thing in other words (df_r, sqrt(df_old/df_new) on the cfx bins, r2adj/rmse).
 #
-# ONE OF THEM WAS ATTRIBUTED TO THE WRONG CAUSE
+# ONE OF THEM WAS ATTRIBUTED TO THE WRONG CAUSE, and the fix is what exposed it. The seven
 # R4W-fitstats-* rows blamed the 2026-09-08 removal of the AMESE R4 explicit-dummies refit for an
-# rmse/r2adj divergence
+# rmse/r2adj divergence, measured at ~6.6e-4 relative on 2026-09-11. After the degrees-of-freedom
 # fix that same cell differs by 3.0e-14 on cont_lat and 2.0e-14 on plot_cont - about ten orders of
-# magnitude smaller
-# degrees-of-freedom over-count was. Nobody predicted this
+# magnitude smaller, and ordinary floating-point noise. The refit removal was not the cause; the
+# degrees-of-freedom over-count was. Nobody predicted this, and it is independent corroboration
 # that the fix was right: it made the two builds agree on a statistic where they had disagreed.
 #
 # 105 rows still carrying that clause DO still fire and were NOT touched by that retirement -
 # their pins were live and rewording them at scale was the author's scope call.
 #
-# THAT CALL WAS MADE 2026-09-14: rewrite all 105. Done
-# clause. Measured against the dumps rather than the commit message
-# exactly equal on every one of the 44 scoped configs
-# dead
+# THAT CALL WAS MADE 2026-09-14: rewrite all 105. Done, and the rewrite went further than the
+# clause. Measured against the dumps rather than the commit message, e(df_r) and e(N) are now
+# exactly equal on every one of the 44 scoped configs, so the whole degrees-of-freedom story was
+# dead, not merely mis-worded; r2adj and rmse were named as movers and no longer move at all; and
 # the att side is now noise only (1e-10 to 1e-8 relative). What still moves is fix 1's ABSORPTION:
-# the ame-family cells and their variances
-# and e(F). Re-judging with the rewritten reasons reproduced the whole comparison byte for byte
-# stale_ledger=0
-# A trap worth recording
+# the ame-family cells and their variances, plus reghdfe's e(ll_0), e(r2_within), e(r2_withinadj)
+# and e(F). Re-judging with the rewritten reasons reproduced the whole comparison byte for byte,
+# stale_ledger=0, so every one of the 105 still fires on exactly what it fired on before.
+# A trap worth recording, because the natural reading is backwards: under a lattice it is the
 # POOLED baseline-dose set that drops out of absorb() and the LATTICE TWIN that survives. The
-# explicit-regressor paths (ccnoabsorb
+# explicit-regressor paths (ccnoabsorb, unconditionalse, customvce, the ppmlhdfe fallback) still
 # carry the full set and were deliberately left alone.
 # Retired ids: R4W-fitstats-lat R4W-fitstats-lat2 R4W-fitstats-plotcont R4W-fitstats-plotcont2 R4W-fitstats-si202 R4W-fitstats-trig R4W-fitstats-trig2 SI20-L-ext_char_cfx_nonatt-df_r SI20-L-ext_char_cfx_nonatt-rmse SI20-L-ext_cont_ext_cfx-df_r SI20-L-ext_cont_ext_cfx-rmse SI20-L-ext_cont_ext_cfx_subgroups-df_r SI20-L-ext_cont_ext_cfx_subgroups-jsg SI20-L-ext_cont_ext_cfx_subgroups-pwsgs SI20-L-ext_cont_ext_cfx_subgroups-rmse SI20-L-ext_cont_ext_custom_lattice-df_r SI20-L-ext_cont_ext_custom_lattice-rmse SI20-L-ext_cont_ext_weighted_lattice-df_r SI20-L-ext_cont_ext_weighted_lattice-rmse SI20-L-ext_cov10_cfx_inference-df_r SI20-L-ext_cov10_cfx_inference-rmse SI20-L-ext_lat_glob-df_r SI20-L-ext_lat_glob-rmse SI20-L-ext_san_input_missing-scal-rmse SI20-L-si20_ic_cont-df_r SI20-L-si20_lat_aw_bt-df_r SI20-L-si20_lat_aw_bt-rmse SI20-L-si20_lat_byt-df_r SI20-L-si20_lat_byt-r2 SI20-L-si20_lat_esf-df_r SI20-L-si20_lat_esf-jC SI20-L-si20_lat_esf-jh SI20-L-si20_lat_esf-rmse SI20-L-si20_lat_poly-df_r SI20-L-si20_lat_poly-rmse SI20-L-si20_lat_pw-df_r SI20-L-si20_lat_pw-jC SI20-L-si20_lat_pw-rmse SI20-L-si20_lat_sg-df_r SI20-L-si20_lat_sg-jsg SI20-L-si20_lat_sg-pwsgs SI20-L-si20_lat_sg-rmse SI20-P-ext_cont_ext_cfx-cfxatt SI20-P-ext_cont_ext_cfx_subgroups-cfxatt SI20-P-ext_cov10_cfx_inference-cfxatt SI20-P-ext_lat_dense_pid-cfxatt
 # ================ SI20-L-MECHANISM ================
 # The shared mechanism behind all 105 SI20-L rows. It lived inline on every one of them
-# until 2026-09-14; at ~1800 characters a row that was ~190KB of duplicated prose
+# until 2026-09-14; at ~1800 characters a row that was ~190KB of duplicated prose, and the
 # reason THIS task existed is that one duplicated sentence went stale across 138 rows. It is
-# stated once here and cited by name
+# stated once here and cited by name, so correcting it touches one place rather than 138.
 # Each row keeps its own config-specific tail inline after the citation.
 #   SI-20 1df8613 fix 1 (lattice + contreatcontrols(basic) now absorbs the baseline dose control and
 #   its lattice twin on the reghdfe path; v1.3 absorbed nothing there): the ame-family cells shift
@@ -362,11 +362,6 @@ SI20-L-si20_lat_cfx_pw-b,si20_lat_cfx_pw,mat,b,,SI-20 1df8613 fix 1 on the batte
 SI20-L-si20_lat_cfx_pw-wdidmainresults,si20_lat_cfx_pw,mat,wdidmainresults,,SI-20 1df8613 fix 1 on the battery's dta_cont under pweights with cfx plots (the AMESE R4 all-zero-VCV refit that once revived V here was removed by b801282 - author ruling 2026-09-08 - so e(properties) is [b] on both builds and no inference cell is recovered): ame point cells of e(b) and wdidmainresults shift by the baseline dose slope (~2.004); ll_0 and r2_within*/r2adj follow reghdfe's absorbed-model accounting with one more absorbed slope
 SI20-L-si20_lat_cfx_pw-ll_0,si20_lat_cfx_pw,scalar,ll_0,,SI-20 1df8613 fix 1 on the battery's dta_cont under pweights with cfx plots (the AMESE R4 all-zero-VCV refit that once revived V here was removed by b801282 - author ruling 2026-09-08 - so e(properties) is [b] on both builds and no inference cell is recovered): ame point cells of e(b) and wdidmainresults shift by the baseline dose slope (~2.004); ll_0 and r2_within*/r2adj follow reghdfe's absorbed-model accounting with one more absorbed slope
 SI20-L-si20_lat_cfx_pw-r2,si20_lat_cfx_pw,scalar,r2*,,SI-20 1df8613 fix 1 on the battery's dta_cont under pweights with cfx plots (the AMESE R4 all-zero-VCV refit that once revived V here was removed by b801282 - author ruling 2026-09-08 - so e(properties) is [b] on both builds and no inference cell is recovered): ame point cells of e(b) and wdidmainresults shift by the baseline dose slope (~2.004); ll_0 and r2_within*/r2adj follow reghdfe's absorbed-model accounting with one more absorbed slope
-SI20-L-si20_lat_byt-wdidmainresults,si20_lat_byt,mat,wdidmainresults,,"SI-20 1df8613 fix 1 on contreatcontrols(basic byTreated) + lattice: the anchor was already zero and the added ringer terms lie in the span of the absorbed byTreated x lattice slopes, so the point estimates agree to 7.1e-8 (reghdfe tol-1e-9 class; SI20-P-si20_lat_byt-b pins that); df_r 1263 -> 1258 (the redundant absorbed slopes are counted) so se/t/p/ci move by the df factor (se 2e-3 rel) and p/t tail cells up to 0.15"
-SI20-L-si20_lat_byt-F,si20_lat_byt,scalar,F,,"SI-20 1df8613 fix 1 on contreatcontrols(basic byTreated) + lattice: the anchor was already zero and the added ringer terms lie in the span of the absorbed byTreated x lattice slopes, so the point estimates agree to 7.1e-8 (reghdfe tol-1e-9 class; SI20-P-si20_lat_byt-b pins that); df_r 1263 -> 1258 (the redundant absorbed slopes are counted) so se/t/p/ci move by the df factor (se 2e-3 rel) and p/t tail cells up to 0.15"
-SI20-L-si20_lat_byt-rmse,si20_lat_byt,scalar,rmse,,"SI-20 1df8613 fix 1 on contreatcontrols(basic byTreated) + lattice: the anchor was already zero and the added ringer terms lie in the span of the absorbed byTreated x lattice slopes, so the point estimates agree to 7.1e-8 (reghdfe tol-1e-9 class; SI20-P-si20_lat_byt-b pins that); df_r 1263 -> 1258 (the redundant absorbed slopes are counted) so se/t/p/ci move by the df factor (se 2e-3 rel) and p/t tail cells up to 0.15"
-SI20-L-si20_lat_byt-joint_horiz,si20_lat_byt,scalar,joint_horiz,,"SI-20 1df8613 fix 1 on contreatcontrols(basic byTreated) + lattice: the anchor was already zero and the added ringer terms lie in the span of the absorbed byTreated x lattice slopes, so the point estimates agree to 7.1e-8 (reghdfe tol-1e-9 class; SI20-P-si20_lat_byt-b pins that); df_r 1263 -> 1258 (the redundant absorbed slopes are counted) so se/t/p/ci move by the df factor (se 2e-3 rel) and p/t tail cells up to 0.15"
-SI20-L-si20_lat_byt-joint_Choriz,si20_lat_byt,scalar,joint_Choriz,,"SI-20 1df8613 fix 1 on contreatcontrols(basic byTreated) + lattice: the anchor was already zero and the added ringer terms lie in the span of the absorbed byTreated x lattice slopes, so the point estimates agree to 7.1e-8 (reghdfe tol-1e-9 class; SI20-P-si20_lat_byt-b pins that); df_r 1263 -> 1258 (the redundant absorbed slopes are counted) so se/t/p/ci move by the df factor (se 2e-3 rel) and p/t tail cells up to 0.15"
 SI20-I-ext_bin_ext_interactive-b,ext_bin_ext_interactive,mat,b,,SI-20 1df8613 fix 2 (interactivecontrols cell slopes built with 1.targetflag: the reference cell no longer carries a slope column that was collinear with i.t#c.x plus the treated-cell slopes; v1.3 and 310fa61 let the engine's collinearity drop pick the parameterisation): horizon estimates and their inference and the pre-trend joint tests move wherever the control varies within cohort over time or the panel is weighted or unbalanced (absorbs the retired bounded XIC-b/XIC-V/XIC-w B21 IC-copy rows: their 1.33e-4 class is now dominated by the fix)
 SI20-I-ext_bin_ext_interactive-V,ext_bin_ext_interactive,mat,V,,SI-20 1df8613 fix 2 (interactivecontrols cell slopes built with 1.targetflag: the reference cell no longer carries a slope column that was collinear with i.t#c.x plus the treated-cell slopes; v1.3 and 310fa61 let the engine's collinearity drop pick the parameterisation): horizon estimates and their inference and the pre-trend joint tests move wherever the control varies within cohort over time or the panel is weighted or unbalanced (absorbs the retired bounded XIC-b/XIC-V/XIC-w B21 IC-copy rows: their 1.33e-4 class is now dominated by the fix)
 SI20-I-ext_bin_ext_interactive-wdidmainresults,ext_bin_ext_interactive,mat,wdidmainresults,,SI-20 1df8613 fix 2 (interactivecontrols cell slopes built with 1.targetflag: the reference cell no longer carries a slope column that was collinear with i.t#c.x plus the treated-cell slopes; v1.3 and 310fa61 let the engine's collinearity drop pick the parameterisation): horizon estimates and their inference and the pre-trend joint tests move wherever the control varies within cohort over time or the panel is weighted or unbalanced (absorbs the retired bounded XIC-b/XIC-V/XIC-w B21 IC-copy rows: their 1.33e-4 class is now dominated by the fix)
@@ -487,9 +482,15 @@ B21-real_pw_uncond-w,real_pw_uncond,mat,wdidmainresults,1e-6,old-bug-fixed. B21 
 # ---------------- SI-20 parity pins and bounded classes on the new configs (measured 2026-09-05) ----
 QR-sgjt-2,cont_sg,scalar,joint_pre_att_allsgssame,1e-9,subgroup cell collapse class (2026-09-01 default; blessed in test/baseline 2026-09-05; the companion QR-sgjt-1 macro row was retired 2026-09-13 when the cross-kind compare put its 4e-12 move inside rtol): a ~1e-19 chi2 tail moves 1.8e-10 relative
 SI20-P-si20_lat_byt-b,si20_lat_byt,mat,b,1e-6,SI-20 parity pin (basic byTreated + lattice: anchor already zero): point estimates agree; measured worst 7.1e-8 (reghdfe tol-1e-9 class with more absorbed slopes)
-SI20-P-si20_lat_byt-V,si20_lat_byt,mat,V,1e-2,SI-20 parity pin: V scales by the df factor 1263/1258 (measured 4.0e-3)
+SI20-P-si20_lat_byt-V,si20_lat_byt,mat,V,2e-7,SI-20 parity pin: as SI20-P-si20_lat_byt-w - e(df_r) is equal on both builds so V carries float drift only; measured 2.6e-8
 SI20-P-si20_lat_byt-ll,si20_lat_byt,scalar,ll,1e-8,SI-20 parity pin: ll measured 3.7e-10
 SI20-P-si20_lat_byt-rss,si20_lat_byt,scalar,rss,1e-8,SI-20 parity pin: rss measured 9.5e-10
+SI20-P-si20_lat_byt-w,si20_lat_byt,mat,wdidmainresults,1e-5,SI-20 parity pin: e(df_r) 1263 and e(N) 1728 are equal on both builds and only the absorb set differs (the added ringer terms lie in the span of the absorbed byTreated x lattice slopes) so every cell moves by reghdfe-tolerance float drift alone; measured worst 8.5e-7 on a ci endpoint (2026-09-23 covars run 301b706 vs c3a8494; the 2026-09-20 dumps give the same figures)
+SI20-P-si20_lat_byt-F,si20_lat_byt,scalar,F,2e-6,SI-20 parity pin: as SI20-P-si20_lat_byt-w; measured 2.5e-7
+SI20-P-si20_lat_byt-rmse,si20_lat_byt,scalar,rmse,5e-9,SI-20 parity pin: as SI20-P-si20_lat_byt-w; measured 4.7e-10 (rmse is sqrt(rss/df_r) with df_r equal so it drifts at half the rss rate)
+SI20-P-si20_lat_byt-jh,si20_lat_byt,scalar,joint_horiz,1e-5,SI-20 parity pin: as SI20-P-si20_lat_byt-w; the joint p sits near 2e-67 where the chi2 tail amplifies the drift - measured 1.1e-6
+SI20-P-si20_lat_byt-jC,si20_lat_byt,scalar,joint_Choriz,1e-6,SI-20 parity pin: as SI20-P-si20_lat_byt-w; measured 1.1e-7
+# Retired ids (unbounded si20_lat_byt rows whose degrees-of-freedom reason no longer held; the bounded SI20-P-si20_lat_byt rows above replace them): SI20-L-si20_lat_byt-wdidmainresults SI20-L-si20_lat_byt-F SI20-L-si20_lat_byt-rmse SI20-L-si20_lat_byt-joint_horiz SI20-L-si20_lat_byt-joint_Choriz
 SI20-P-si20_lat_pois-b,si20_lat_pois,mat,b,1e-6,SI-20 parity pin (poisson path untouched by fix 1 - the guard was already true): v1.3-vs-HEAD ppmlhdfe IRLS class only; measured 2.5e-8
 SI20-P-si20_lat_pois-V,si20_lat_pois,mat,V,1e-4,SI-20 parity pin: IRLS class; measured 5.0e-6
 SI20-P-si20_lat_pois-w,si20_lat_pois,mat,wdidmainresults,1e-3,SI-20 parity pin: IRLS class; t/p cells amplify (measured 1.8e-5)
@@ -526,7 +527,7 @@ BS10-dfr-extbin,ext_bin_ext_impvalues,scalar,df_r,,"BS-10 (batch 4, 92e083b): as
 BS10-dfr-extcont,ext_cov10_cont_impvalues,scalar,df_r,,"BS-10 (batch 4, 92e083b): as BS10-dfr-impv, on the external continuous-treatment impvalues config."
 BS10-dfr-real_impv,real_impv,scalar,df_r,,"intended-change. BS-10 (batch 4, 92e083b): as BS10-dfr-impv, on the realistic state-year impvalues config - e(df_r) 11 -> 8 (the smallest Ibragimov-Muller t(q-1) df across the reported rows) with the stage-1 residual df kept as e(df_r_analytic) = 11, so a hand-run test, lincom or esttab is conservative against the printed table instead of narrower than it. No reported number moved."
 PWZ-real_pois,real_pois,matnames,pwsgs,,"old-bug-fixed. 154d5dc: under poisson the pairwise subgroup table's test statistic is margins' z, but v1.3 set the e(pwsgs) column stripe unconditionally to `estimate se t p lb_95ci ub_95ci' even though its own main-results matrix (e(wdidmainresults)) already branched on poisson. HEAD branches at both sites, so the column is z. real_pois is today's only poisson + subgroups() config, which is why this had never been exposed. Mislabel only: every value in e(pwsgs) is unchanged past the run's 1e-10 screen (worst 4.55e-12)."
-# ---- 2026-09-13 datasets-audit P3 solver/ULP rows (design_fixtures SPEC section 6 authorised the shape "P3-solv-<config> at the A9-svmat precedent"; the OBJECT SETS AND CEILINGS BELOW WERE MEASURED BY THE CONSOLIDATOR with compare_oldnew.py over real mkrun shards on v1.3 301b706 vs HEAD 5e0c10a
+# ---- 2026-09-13 datasets-audit P3 solver/ULP rows (design_fixtures SPEC section 6 authorised the shape "P3-solv-<config> at the A9-svmat precedent"; the OBJECT SETS AND CEILINGS BELOW WERE MEASURED BY THE CONSOLIDATOR with compare_oldnew.py over real mkrun shards on v1.3 301b706 vs HEAD 5e0c10a, because the design dumps covered wdidmainresults only) ----
 P3-solv-cov_aw_disp-b,cov_aw_disp,mat,b,1e-6,"solver/ULP. The dispersed-weight (wdisp, cv 1.86) aw run on dta_s_covars: reghdfe reaches the same solution by a different path on the two builds, so every att cell moves in the last digits. Measured ceiling 4.87e-08 over 6 differing cells (2026-09-13); bound is the A9-svmat/B21 class bound."
 P3-solv-cov_aw_disp-V,cov_aw_disp,mat,V,1e-6,solver/ULP: as P3-solv-cov_aw_disp-b (6 cells; measured ceiling 9.13e-09). The 12 further V cells that go 0 -> nonzero are the PS-62 event-study splice and are peeled to mat_esblock by PS62-esblock.
 P3-solv-cov_aw_disp-w,cov_aw_disp,mat,wdidmainresults,1e-6,solver/ULP: as P3-solv-cov_aw_disp-b; the t and interval cells tail-amplify the b residue (36 cells; measured ceiling 2.19e-07).

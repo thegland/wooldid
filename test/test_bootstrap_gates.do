@@ -868,7 +868,8 @@ if !`: list posof "t_wald" in c29a' | `: list posof "t" in c29a' | "`b29a'" != "
 
 * G30 (F038, 2026-09-06) a rank-based p of exactly 0 gets a line under the table and a
 * footer sentence saying it means p < 2/n; the cell and e() keep the 0; nothing fires
-* under bootdisplay(wald)
+* under bootdisplay(wald). The resolution prints unpadded in %9.2g - .2 at 2/10, .0004 at
+* 2/4999, never 0.000 - and the boottstat footer's 2/(n + 1) prints the same way (G30e/f)
 use `panel', clear
 qui log using boot_gates_g30.txt, text replace name(bg)
 cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7)
@@ -879,7 +880,7 @@ local p30 = e(wdidmainresults)[rowsof(e(wdidmainresults)), 4]
 local lg = fileread("boot_gates_g30.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-if `p30' != 0 | strpos(`"`lg'"', "p = 0 above means p < 0.200 (2/10 completed replications") == 0 | strpos(`"`lg'"', "The rank-based coefficient p-values have resolution 2/10 = 0.200") == 0 {
+if `p30' != 0 | strpos(`"`lg'"', "p = 0 above means p < .2 (2/10 completed replications") == 0 | strpos(`"`lg'"', "The rank-based coefficient p-values have resolution 2/10 = .2:") == 0 {
   di as error "G30b FAIL: the p = 0 resolution line/footer did not print (att p = `p30')"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
@@ -894,6 +895,20 @@ local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
 if strpos(`"`lg'"', "p = 0 above means") > 0 | strpos(`"`lg'"', "have resolution 2/") > 0 {
   di as error "G30d FAIL: the resolution line fired under bootdisplay(wald)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+use `panel', clear
+qui log using boot_gates_g30.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7) boottstat
+local g30rc = _rc
+qui log close bg
+chk 30e 0 `g30rc'
+local n30 = e(boot_completed)
+local lg = fileread("boot_gates_g30.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+if `n30' != 10 | strpos(`"`lg'"', "smallest attainable value are both 2/(n + 1) = .18: a studentized p") == 0 {
+  di as error "G30f FAIL: the boottstat footer does not print 2/(n + 1) as .18 at 10 completed replications (n = `n30')"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 cap erase boot_gates_g30.txt

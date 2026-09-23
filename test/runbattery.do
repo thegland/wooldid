@@ -268,16 +268,17 @@ cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permut
 local rc = _rc
 dumpres perm_basic `rc'
 
-* a cell-weighted estimand under permute(): measured 2026-09-16 as having ZERO coverage - no
-* att_it/att_i/att_itime config anywhere in the deck runs under permute(). This matters for the
-* onset-rebuild feature specifically: permonsetcohorts rebuilds i inside every replication, so
-* att_i is then the equal average over the REBUILT cohorts rather than the observed ones. Under
-* permute(shuffle) the onset labels are permuted, so the level set is preserved by construction
-* and the rebuilt cohort count matches the observed one; this row is the observed-side pin of
-* that, taken with the option absent. Same seed convention as perm_basic (set INSIDE the config).
+* att_i under permute() on the full panel (perm_strata_aw pins att_it under permute() on the
+* 18-cluster subset). This matters for the onset-rebuild feature specifically: permonsetcohorts
+* rebuilds i inside every replication, so att_i is then the equal average over the REBUILT cohorts
+* rather than the observed ones. Under permute(shuffle) the onset labels are permuted, so the
+* level set is preserved by construction and the rebuilt cohort count matches the observed one;
+* this row is the observed-side pin of that, taken with the option absent. permreps(20) because
+* the engine floors it there; the seed is set INSIDE the config and passed as rseed(), with
+* dots(0), as the RULES of the replication block below require.
 freshstart "`DATA'/dta_binary"
 set seed 173205
-cap noi wooldid y i t ttre, att att_i cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(10)
+cap noi wooldid y i t ttre, att att_i cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) rseed(17320) dots(0)
 local rc = _rc
 dumpres perm_atti `rc'
 

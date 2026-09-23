@@ -1,6 +1,7 @@
 * Targeted suite for the subgroup sign-screen domain harmonization (VAL-G15A): the
 * negative-sg check moved from wooldid_validate (raw if-domain, no markout knowledge)
 * into the worker beside the integer screen, on `ifstatement & internal-ttre < .`.
+* S7-S9 pin the partial-labelling screen in wooldid_sgdom.
 * Run from test/: "<stata>" -e do test_sgdomain.do -> SGDOM_ALL_PASS
 clear all
 set more off
@@ -108,6 +109,61 @@ if _rc != 0 {
   dis as error "S6 FAIL: clean sg run rc=" _rc
   local ++fails
 }
+
+* ---- S7-S9: the partial-labelling screen. A treated unit labelled on some of its
+* in-sample rows and missing on others that carry a treatment dummy is refused r(459)
+* under default safety (S7) and proceeds with the caution under safety(off) (S8). Unit 1
+* (onset 2005, sg 2) loses its label on 2005 and 2006, relative periods 0 and 1, so 2 rows.
+* Passing shapes (S9), all under default safety: fully labelled, a wholly unlabelled
+* treated unit, and labels missing on some rows of never-treated units only ----
+cap program drop sglog
+program define sglog, rclass
+  * run wooldid ${SGCMD} on the data in memory under a named log; return the rc, and leave
+  * the log text, batch-wrap continuations removed, in the string scalar SGLOG
+  args logf
+  qui log using `logf', text replace name(sgd)
+  cap noi wooldid ${SGCMD}
+  local rc = _rc
+  qui log close sgd
+  scalar SGLOG = subinstr(subinstr(fileread("`logf'"), char(13), "", .), char(10) + "> ", "", .)
+  cap erase `logf'
+  return scalar rc = `rc'
+end
+local perr "Error: the subgroup variable sg is missing for some in-sample row(s) of treated units of i that carry a subgroup value on their other rows"
+local pcau "Caution: the subgroup variable sg is missing on 2 in-sample row(s) of treated units of i that carry a subgroup value on their other rows; proceeding under safety(off) using share weighting"
+local pany "that carry a subgroup value on their other rows"
+
+mksg
+qui replace sg = . if i == 1 & inlist(t, 2005, 2006)
+global SGCMD y i t ttre, att att_i cluster(i) esprelength(2) espostlength(2) subgroups(sg)
+sglog sgdom_s7.txt
+if r(rc) != 459 | strpos(SGLOG, "`perr'") == 0 {
+  dis as error "S7 FAIL: partially labelled treated unit rc=" r(rc) " (expected 459 with the partial-labelling error)"
+  local ++fails
+}
+
+mksg
+qui replace sg = . if i == 1 & inlist(t, 2005, 2006)
+global SGCMD y i t ttre, att att_i cluster(i) esprelength(2) espostlength(2) subgroups(sg) safety(off)
+sglog sgdom_s8.txt
+if r(rc) != 0 | strpos(SGLOG, "`pcau'") == 0 {
+  dis as error "S8 FAIL: partially labelled treated unit under safety(off) rc=" r(rc) " (expected 0 with the partial-labelling caution on 2 rows)"
+  local ++fails
+}
+
+foreach shape in full unlabelled nevertreated {
+  mksg
+  if "`shape'" == "unlabelled" qui replace sg = . if i == 1
+  if "`shape'" == "nevertreated" qui replace sg = . if ttre >= . & mod(i, 7) == 0 & t >= 2008
+  global SGCMD y i t ttre, att att_i cluster(i) esprelength(2) espostlength(2) subgroups(sg)
+  sglog sgdom_s9.txt
+  if r(rc) != 0 | strpos(SGLOG, "`pany'") > 0 {
+    dis as error "S9 FAIL: passing shape `shape' rc=" r(rc) " (expected 0 with no partial-labelling message)"
+    local ++fails
+  }
+}
+global SGCMD
+scalar drop SGLOG
 
 if `fails' == 0 dis as result "SGDOM_ALL_PASS"
 else dis as error "SGDOM_FAILS=`fails'"
