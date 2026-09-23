@@ -1269,6 +1269,35 @@ if !`g39a' | !`g39a2' | !`g39b' | !`g39c' | `g39d' {
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 
+* G39f (change audit 2026-09-22, U08_bootstrap / bootctl-respcaution-clusteronly): the same
+* caution on runs WITHOUT cluster(). The block sat inside the cluster() branch of
+* wooldid_bootctl, so an unclustered bootstrap at low reps() ran silently on every path. The
+* grid branch is checked and required to print exactly once, and so is the bootdisplay(wald)
+* branch, the one path whose floor no post-table footer discloses.
+use `panel', clear
+qui log using boot_gates_g39.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att bootstrap(standard) reps(20) rseed(3)
+local g39rcf = _rc
+qui log close bg
+chk 39f 0 `g39rcf'
+unwrap boot_gates_g39.txt
+local g39f = strpos(`"`lg'"', "the coefficient p-values fall on a grid of 0.100 (2/reps)") > 0
+local g39fn = (length(`"`lg'"') - length(subinstr(`"`lg'"', "Caution: with reps(", "", .))) / length("Caution: with reps(")
+use `panel', clear
+qui log using boot_gates_g39.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att bootstrap(standard) reps(10) rseed(3) bootdisplay(wald)
+local g39rcg = _rc
+qui log close bg
+chk 39g 0 `g39rcg'
+unwrap boot_gates_g39.txt
+local g39g = strpos(`"`lg'"', "the joint, equality and adversarial p-values - one-sided add-one shares") > 0
+cap erase boot_gates_g39.txt
+di "G39f unclustered grid=`g39f' (printed `g39fn' times) wald-joint=`g39g'"
+if !`g39f' | `g39fn' != 1 | !`g39g' {
+  di as error "G39f FAIL: the reps() resolution caution is missing or repeated on an unclustered bootstrap (grid=`g39f' printed=`g39fn' wald=`g39g')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+
 * G40 (permboot_tracking audit 2026-09-13): the three boottstat refusals that test_bootstrap_joint
 * :140-148 relies on but nothing pins - poisson (its replications are estimated on sampling
 * weights, so a replication's own standard error is not the same functional as the observed

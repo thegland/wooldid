@@ -6936,21 +6936,24 @@ version 16.0
       dis as error "Error: bootstrap() requires at least 2 clusters."
       error 459
     }
-  // placed below every aborting validation - the boottstat nesting check and the two-cluster
-  // check both exit with error 459 - so a run that never executes is not advised about its
-  // p-value resolution. keep it here, above the other bootstrap cautions
-  if `reps' > 0 {
-    local wdbgrid = cond("`bts'" != "", 2/(`reps' + 1), cond("`bdisp'" == "wald", 1/(`reps' + 1), 2/`reps'))
-    if `wdbgrid' > .05 & "`bts'" != "" dis as text "Caution: with reps(`reps') the smallest studentized coefficient p-value this run can produce is " %5.3f `wdbgrid' " (2/(reps + 1)), above .05, so no coefficient p-value can reject at the 5% level; a p-value printed at that value is the resolution limit rather than evidence. Use at least 39 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002); failed replications are excluded, so the realized resolution can be coarser."
-    else if `wdbgrid' > .05 & "`bdisp'" == "wald" dis as text "Caution: with reps(`reps') the joint, equality and adversarial p-values - one-sided add-one shares over their own completed replication counts - cannot fall below " %5.3f `wdbgrid' " (1/(reps + 1)), above .05, so none of them can reject at the 5% level; the coefficient p-values under bootdisplay(wald) are analytic and carry no such limit. Use at least 19 replications for a 5% joint test (roughly 50 for .02, 100 for .01 and 500 for .002); failed replications are excluded, so the realized resolution can be coarser."
-    else if `wdbgrid' > .05 dis as text "Caution: with reps(`reps') the coefficient p-values fall on a grid of " %5.3f `wdbgrid' " (2/reps), so the only value below .05 this run can produce is exactly 0, which records that no completed replication reached the far side of the null rather than strong evidence. Use at least 40 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002); failed replications are excluded, so the realized grid can be coarser. The joint, equality and adversarial p-values have floor 1/(reps + 1)."
-  }
     * the few-cluster cautions live in wooldid_bootrun, not here: this program runs from
     * wooldid_validate before the estimation, so e(sample) does not exist yet and a cluster
     * contributing no rows to the estimation sample would count toward their thresholds and
     * could suppress them. bootrun is the first point at which the live count exists. the
     * two-cluster refusal stays here, because the help pins it to parse time; the wdb_C < 2
     * check in bootrun is its live twin
+  }
+
+  * placed below every aborting validation - the two-cluster refusal above is the last one in
+  * this program and exits with error 459 - so a run that never executes is not advised about
+  * its p-value resolution, and outside the cluster() block so it fires on every bootstrap()
+  * run, clustered or not: the grid is set by reps() alone, not by the resampling unit. keep
+  * it here, above the few-cluster cautions in wooldid_bootrun
+  if `reps' > 0 {
+    local wdbgrid = cond("`bts'" != "", 2/(`reps' + 1), cond("`bdisp'" == "wald", 1/(`reps' + 1), 2/`reps'))
+    if `wdbgrid' > .05 & "`bts'" != "" dis as text "Caution: with reps(`reps') the smallest studentized coefficient p-value this run can produce is " %5.3f `wdbgrid' " (2/(reps + 1)), above .05, so no coefficient p-value can reject at the 5% level; a p-value printed at that value is the resolution limit rather than evidence. Use at least 39 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002); failed replications are excluded, so the realized resolution can be coarser."
+    else if `wdbgrid' > .05 & "`bdisp'" == "wald" dis as text "Caution: with reps(`reps') the joint, equality and adversarial p-values - one-sided add-one shares over their own completed replication counts - cannot fall below " %5.3f `wdbgrid' " (1/(reps + 1)), above .05, so none of them can reject at the 5% level; the coefficient p-values under bootdisplay(wald) are analytic and carry no such limit. Use at least 19 replications for a 5% joint test (roughly 50 for .02, 100 for .01 and 500 for .002); failed replications are excluded, so the realized resolution can be coarser."
+    else if `wdbgrid' > .05 dis as text "Caution: with reps(`reps') the coefficient p-values fall on a grid of " %5.3f `wdbgrid' " (2/reps), so the only value below .05 this run can produce is exactly 0, which records that no completed replication reached the far side of the null rather than strong evidence. Use at least 40 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002); failed replications are excluded, so the realized grid can be coarser. The joint, equality and adversarial p-values have floor 1/(reps + 1)."
   }
 
 end
