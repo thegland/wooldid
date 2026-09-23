@@ -11609,7 +11609,7 @@ version 16.0
     matlist `ptpmat', format(%12.4g)
     dis as text "    note: mdt_wald powers the joint pre-trend test above; mdt_nis powers the test that any"
     dis as text "    pre-period coefficient is individually significant (the convention of Roth's pretrends package)."
-    dis as text "    Both pre-tests are at the 5% level, whatever level() is in force; level() moves the slope CI only."
+    dis as text "    Both pre-tests are at the 5% level under the normal reference, whatever level() is in force; level() moves the slope CI only."
     if "`pois'" == "poisson" dis as text "    note: poisson event-study coefficients are on the linear-index (xb) scale, and so are these diagnostics."
 
     * ereturns (matrix uses copy so the object survives if this block is ever resited)
@@ -12484,7 +12484,7 @@ version 16.0
     matlist e(roth_power_`ptpty'), format(%12.4g)
     dis as text "    note: mdt_wald powers the joint pre-trend test above; mdt_nis powers the test that any"
     dis as text "    pre-period coefficient is individually significant (the convention of Roth's pretrends package)."
-    dis as text "    Both pre-tests are at the 5% level, whatever level() is in force; level() moves the slope CI only."
+    dis as text "    Both pre-tests are at the 5% level under the normal reference, whatever level() is in force; level() moves the slope CI only."
     if "`poisson'" == "poisson" dis as text "    note: poisson event-study coefficients are on the linear-index (xb) scale, and so are these diagnostics."
   }
   }
@@ -18140,10 +18140,13 @@ real scalar wooldid_esrelx(string scalar s)
 // z ~ N(0, R), and take c = the level() quantile of max_h |z_h| (Montiel Olea and
 // Plagborg-Moller 2019). With a finite df - the regression's residual df, which the
 // pointwise margins intervals use - each draw's max_h |z_h| is divided by one common
-// sqrt(chi2_df/df), so c is the sup quantile of a multivariate t with df, and c is floored at
-// the pointwise quantile t_{df,level}; with df missing the law is normal and there is no
-// floor. The band is b_h +/- c*se_h, so it is the pointwise interval widened by one common
-// factor c/t_{df,level} >= 1 (c/z_{level} under the normal law). R is eigen-decomposed with the
+// sqrt(chi2_df/df), so c is the sup quantile of a multivariate t with df; with df missing the
+// law is normal. The band is b_h +/- c*se_h, the pointwise interval scaled by one common
+// factor c/t_{df,level} (c/z_{level} under the normal law). c is the simulated quantile itself,
+// with no floor at the pointwise quantile: the sup over two or more horizons is at least that
+// quantile in the population, but at nd draws the simulated c can land below it when the
+// horizons are almost perfectly correlated, and the band is then shown narrower than the
+// pointwise interval. R is eigen-decomposed with the
 // eigenvalues floored at zero rather than factored by cholesky, because a rank-deficient
 // family - a structurally collinear horizon set - is ordinary here, and cholesky would
 // simply fail on it.
@@ -18203,7 +18206,6 @@ real scalar wooldid_esbanda(string scalar vn, string scalar bn, real scalar lev,
   if (df > 0 & df < .) M = M :/ sqrt(rchi2(nd, 1, df) :/ df)
   M = sort(M, 1)
   c = wooldid_bootqs(M, lev/100)
-  if (df > 0 & df < . & c < .) c = max((c, invttail(df, (100 - lev)/200)))
   if (c >= . | c <= 0) return(0)
   out = J(3, m, .)
   ocs = J(m, 2, "")

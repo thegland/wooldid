@@ -3,14 +3,14 @@
 * Run from test/: stata-mp -e do test_esband.do  -> expect ESBAND_ALL_PASS
 * B1 nothing is posted without the option (it is defaulted off, and no shipped figure or
 *    table changes); B2 the analytic band is b +/- crit*se on the family's own covariance,
-*    with crit the sup-t quantile of the multivariate t with df_r and at or above the
-*    pointwise t(df_r) quantile - a simultaneous band is never narrower than a pointwise
-*    interval; B3 it is reproducible and leaves the caller's
+*    with crit the sup-t quantile of the multivariate t with df_r; B3 it is reproducible
+*    and leaves the caller's
 *    random-number stream where it found it; B4 the bootstrap engine builds the band from
 *    the replications; B5 permute() refuses the combination; B6 a run that cannot build one
 *    says so instead of staying silent; B7 subgroups get their own bands; B8 the plot layer
-*    draws without error; B11 with few clusters (df_r = 6) the analytic band is at least as
-*    wide as the pointwise t interval at every horizon.
+*    draws without error; B11 with few clusters (df_r = 6) the critical value follows the
+*    multivariate t with df_r and not the normal law; B12 the critical value is the
+*    simulated quantile itself, with no floor at the pointwise t quantile.
 clear all
 set more off
 set graphics off
@@ -73,10 +73,8 @@ else {
     vs = st_matrixcolstripe("e(V_es_att)")
     bs = st_matrixcolstripe("B2")
     cc = st_numscalar("e(esband_crit_att)")
-    zc = invttail(st_numscalar("e(df_r)"), (100 - st_numscalar("e(esband_level)"))/200)
     bad = 0
     asym = 0
-    narrow = 0
     for (j = 1; j <= cols(B); j++) {
       a = 0
       for (r = 1; r <= rows(vs); r++) if (vs[r, 2] == bs[j, 2]) a = r
@@ -88,25 +86,24 @@ else {
       if (reldif(B[1, j], b[a] - cc*se) > 1e-12) bad = bad + 1
       if (reldif(B[2, j], b[a] + cc*se) > 1e-12) bad = bad + 1
       if (reldif((B[1, j] + B[2, j])/2, b[a]) > 1e-10) asym = asym + 1
-      if (cc < zc) narrow = narrow + 1
     }
     st_numscalar("b2bad", bad)
     st_numscalar("b2asym", asym)
-    st_numscalar("b2narrow", narrow)
   end
   * independent sup-t: 200k draws from the family correlation, each draw's max|z| divided by
-  * sqrt(chi2(df_r)/df_r) - the multivariate t with the df of the pointwise intervals - and the
-  * quantile floored at the pointwise t quantile, as the engine does. The engine's 10k-draw
-  * quantile has MC sd 0.0215 on this fixture (df_r = 23; 200 seeds, 2026-09-23), so 0.065 is
-  * a ~3-sd band. On that measurement the kernel at 200k draws gives 2.6541, the hand 2.6513,
-  * and the fixed-seed engine 2.6099 (2 sd low); the normal-law value is 2.4694
+  * sqrt(chi2(df_r)/df_r) - the multivariate t with the df of the pointwise intervals - and its
+  * level() quantile taken as it is, as the engine does. The engine's 10k-draw quantile has MC
+  * sd 0.0215 on this fixture (df_r = 23; 200 seeds, 2026-09-23), so 0.065 is a ~3-sd band. On
+  * that measurement the kernel at 200k draws gives 2.6541, the hand 2.6513, and the fixed-seed
+  * engine 2.6099 (2 sd low); the normal-law value is 2.4694, outside the band, so this check
+  * also fails an engine that draws from the normal law
   local b2df = e(df_r)
-  mata: V = st_matrix("e(V_es_att)"); sd = sqrt(diagonal(V)); R = (V :/ (sd*sd')); R = (R + R')/2; rseed(20260912); df = st_numscalar("e(df_r)"); Z = rnormal(200000, rows(R), 0, 1) * cholesky(R)'; ms = sort(rowmax(abs(Z)) :/ sqrt(rchi2(200000, 1, df) :/ df), 1); st_numscalar("b2hand", max((ms[ceil((1 - (100 - st_numscalar("e(esband_level)"))/100)*rows(ms))], invttail(df, (100 - st_numscalar("e(esband_level)"))/200))))
+  mata: V = st_matrix("e(V_es_att)"); sd = sqrt(diagonal(V)); R = (V :/ (sd*sd')); R = (R + R')/2; rseed(20260912); df = st_numscalar("e(df_r)"); Z = rnormal(200000, rows(R), 0, 1) * cholesky(R)'; ms = sort(rowmax(abs(Z)) :/ sqrt(rchi2(200000, 1, df) :/ df), 1); st_numscalar("b2hand", ms[ceil((1 - (100 - st_numscalar("e(esband_level)"))/100)*rows(ms))])
   di "B2 hand sup-t crit=" %8.5f b2hand " Bonferroni bound=" %8.5f invttail(`b2df', (100 - `b2l')/(200*colsof(B2))) " df_r=`b2df'"
   di "B2 engine=`b2e' families=[`b2f'] level=`b2l' draws=`b2d' crit=" %8.5f `b2c' " t=" %8.5f invttail(`b2df', (100 - `b2l')/200) " rows=[`b2rn'] cols=[`b2cn']"
   if "`b2e'" != "analytic-simulated" | "`b2f'" == "" | `b2l' != 95 | `b2d' != 10000 | !(`b2df' > 0 & `b2df' < .) ///
-     | "`b2rn'" != "lb ub relyr" | b2bad != 0 | b2asym != 0 | b2narrow != 0 | `b2c' < invttail(`b2df', (100 - `b2l')/200) | `b2c' > invttail(`b2df', (100 - `b2l')/(200*colsof(B2))) | abs(`b2c' - b2hand) > 0.065 {
-    di as error "B2 FAIL: engine=`b2e' rows=[`b2rn'] mismatched=" b2bad " asymmetric=" b2asym " narrower-than-pointwise=" b2narrow " crit=`b2c'"
+     | "`b2rn'" != "lb ub relyr" | b2bad != 0 | b2asym != 0 | `b2c' > invttail(`b2df', (100 - `b2l')/(200*colsof(B2))) | abs(`b2c' - b2hand) > 0.065 {
+    di as error "B2 FAIL: engine=`b2e' rows=[`b2rn'] mismatched=" b2bad " asymmetric=" b2asym " crit=`b2c' hand=" b2hand
     local ++fails
   }
 }
@@ -332,11 +329,11 @@ if `b10x' >= . | `b10y' >= . | `b10x' != `b10y' | `b10x' != `b10x2' {
 else di as result "B10 PASS: the band's critical value is keyed to the family, not to the draw order (crit_att_it=`b10x' either way, and reproducible)"
 
 * ---- B11 (author ruling 2026-09-23): few clusters. The pointwise intervals are t(df_r)
-* intervals, so the analytic band is drawn from the multivariate t with df_r and its critical
-* value is floored at the pointwise t quantile: at every horizon the band is at least as wide
-* as the pointwise interval printed beside it. 7 clusters, df_r = 6. A normal-law draw on this
-* fixture gives crit 2.2146 against invttail(6, .025) = 2.4469, a band inside the pointwise
-* interval at every horizon.
+* intervals, and the analytic band is drawn from the multivariate t with the same df_r. 7
+* clusters, df_r = 6, horizon correlation .237. The engine's 10k-draw critical value has MC sd
+* 0.036 on this fixture (200 seeds, 2026-09-23), so 0.11 is a ~3-sd band around an independent
+* 200k-draw multivariate-t value (2.8986; the fixed-seed engine gives 2.8812). The normal law
+* gives 2.2320 here (a 10k-draw normal-law engine gave 2.2146), far outside that band.
 cap prog drop mkb7
 prog def mkb7
   clear
@@ -352,35 +349,75 @@ mkb7
 qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) simultaneousbands
 local b11df = e(df_r)
 local b11c = e(esband_crit_att)
-local b11tq = .
-if `b11df' > 0 & `b11df' < . local b11tq = invttail(`b11df', (100 - e(esband_level))/200)
-local b11seen 0
-local b11narrow 0
-cap confirm matrix e(esband_att)
-if _rc == 0 {
-  tempname B11B B11M
-  matrix `B11B' = e(esband_att)
-  matrix `B11M' = e(wdidmainresults)
-  local b11rn : rowfullnames `B11M'
-  forval c = 1/`=colsof(`B11B')' {
-    local b11ry = `B11B'[3, `c']
-    forval r = 1/`=rowsof(`B11M')' {
-      local b11nm : word `r' of `b11rn'
-      if strpos("`b11nm'", "ES_att") == 1 & `B11M'[`r', 7] == `b11ry' {
-        local b11pw = (`B11M'[`r', 6] - `B11M'[`r', 5])/2
-        local b11bw = (`B11B'[2, `c'] - `B11B'[1, `c'])/2
-        local ++b11seen
-        if `b11bw' < `b11pw'*(1 - 1e-12) local ++b11narrow
-      }
-    }
-  }
+local b11l = e(esband_level)
+scalar b11hand = .
+scalar b11norm = .
+cap confirm matrix e(V_es_att)
+if _rc == 0 & `b11df' > 0 & `b11df' < . {
+  mata: V = st_matrix("e(V_es_att)"); sd = sqrt(diagonal(V)); R = (V :/ (sd*sd')); R = (R + R')/2; rseed(20260912); df = st_numscalar("e(df_r)"); Z = rnormal(200000, rows(R), 0, 1) * cholesky(R)'; mz = rowmax(abs(Z)); q = ceil((1 - (100 - st_numscalar("e(esband_level)"))/100)*200000); mt = sort(mz :/ sqrt(rchi2(200000, 1, df) :/ df), 1); mn = sort(mz, 1); st_numscalar("b11hand", mt[q]); st_numscalar("b11norm", mn[q])
 }
-di "B11 df_r=`b11df' crit=" %8.5f `b11c' " t quantile=" %8.5f `b11tq' " horizons checked=`b11seen' narrower-than-pointwise=`b11narrow'"
-if !(`b11df' > 0 & `b11df' < 15) | `b11c' >= . | `b11c' < `b11tq' | `b11seen' < 2 | `b11narrow' != 0 {
-  di as error "B11 FAIL: df_r=`b11df' crit=`b11c' t quantile=`b11tq' horizons checked=`b11seen' narrower-than-pointwise=`b11narrow'"
+di "B11 df_r=`b11df' crit=" %8.5f `b11c' " hand multivariate t=" %8.5f b11hand " normal law=" %8.5f b11norm " pointwise t quantile=" %8.5f invttail(`b11df', (100 - `b11l')/200)
+if !(`b11df' > 0 & `b11df' < 15) | `b11c' >= . | b11hand >= . | abs(`b11c' - b11hand) > 0.11 | abs(`b11c' - b11norm) <= 0.11 {
+  di as error "B11 FAIL: df_r=`b11df' crit=`b11c' hand multivariate t=" b11hand " normal law=" b11norm
   local ++fails
 }
-else di as result "B11 PASS: with df_r=`b11df' the analytic band is at least as wide as the pointwise t interval at all `b11seen' horizons"
+else di as result "B11 PASS: with df_r=`b11df' the analytic band's critical value follows the multivariate t with df_r, not the normal law"
+
+* ---- B12 (author ruling 2026-09-23): the analytic critical value is the simulated level()
+* quantile itself. It is not floored at the pointwise t quantile, so where simulation noise
+* leaves it below that quantile the band is narrower than the pointwise interval, and the run
+* shows it. The kernel is called directly on a rank-one family - two horizons with
+* correlation 1 - where the sup over the horizons is a single |t_6|, so the 10k-draw quantile
+* sits below invttail(6, .025) = 2.4469 for about half of all seeds; seed 7 gives 2.4131. The
+* hand value replays the kernel's own draws on the same seed, so the two must agree, and a
+* floor would have returned 2.4469 instead.
+cap mata: mata drop b12hq()
+mata:
+real scalar b12hq(real matrix V0, real scalar lev, real scalar nd, real scalar df)
+{
+  real matrix V, U, L, Z
+  real rowvector lam
+  real colvector sd, M
+  real scalar m, j, r
+  m = rows(V0)
+  V = V0
+  sd = sqrt(diagonal(V))
+  for (j = 1; j <= m; j++) for (r = 1; r <= m; r++) V[j, r] = V[j, r]/(sd[j]*sd[r])
+  V = (V + V')/2
+  U = .
+  lam = .
+  symeigensystem(V, U, lam)
+  for (j = 1; j <= m; j++) if (lam[j] < 0 | lam[j] >= .) lam[j] = 0
+  L = U * diag(sqrt(lam))
+  Z = L * rnormal(m, nd, 0, 1)
+  M = J(nd, 1, .)
+  for (r = 1; r <= nd; r++) M[r] = max(abs(Z[., r]))
+  if (df > 0 & df < .) M = M :/ sqrt(rchi2(nd, 1, df) :/ df)
+  M = sort(M, 1)
+  return(wooldid_bootqs(M, lev/100))
+}
+end
+matrix B12V = (1, 1 \ 1, 1)
+matrix colnames B12V = pre1 post0
+matrix rownames B12V = pre1 post0
+matrix B12B = (0.5, 1)
+matrix colnames B12B = pre1 post0
+local b12tq = invttail(6, .025)
+local b12c
+local b12m
+set seed 7
+cap mata: st_local("b12m", strofreal(wooldid_esbanda("B12V", "B12B", 95, 10000, "B12O", "b12c", 6)))
+local b12rc = _rc
+set seed 7
+mata: st_numscalar("b12hand", b12hq(st_matrix("B12V"), 95, 10000, 6))
+scalar b12crit = .
+if "`b12c'" != "" scalar b12crit = `b12c'
+di "B12 rc=`b12rc' horizons=`b12m' engine crit=" %21x b12crit " hand=" %21x b12hand " (" %8.5f b12hand ") pointwise t quantile=" %8.5f `b12tq'
+if `b12rc' != 0 | "`b12m'" != "2" | b12hand >= `b12tq' | b12crit >= . | reldif(b12crit, b12hand) > 1e-12 {
+  di as error "B12 FAIL: rc=`b12rc' horizons=`b12m' engine crit=" b12crit " simulated quantile=" b12hand " pointwise t quantile=`b12tq' - the critical value must be the simulated quantile, with no floor"
+  local ++fails
+}
+else di as result "B12 PASS: the critical value is the simulated quantile (" %8.5f b12crit "), below the pointwise t quantile and not floored at it"
 
 if `fails' == 0 di as result "ESBAND_ALL_PASS"
 else di as error "ESBAND_FAILS=`fails'"

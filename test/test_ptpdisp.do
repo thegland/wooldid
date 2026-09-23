@@ -3,6 +3,7 @@
 * - NFPTP-04: below-size NIS power levels report mdt_nis/bias_nis = 0 (boundary answer)
 * - DOC-03: escomp coverage scalars displayed under summarystats
 * - NFADV-07: altmethod_adversarial without adversarial -> r(198), was a silent no-op
+* - T7: the pre-test note names the normal reference, live and on replay
 * Run from test/: "<stata>" -e do test_ptpdisp.do -> PTPDISP_ALL_PASS
 clear all
 set more off
@@ -146,6 +147,17 @@ else {
   cap confirm matrix e(adversarial_line_att)
   if _rc != 0 {
     dis as error "T6c FAIL: adversarial line not returned on the pooled-reference pair"
+    local ++fails
+  }
+}
+
+* ---- T7 (author ruling 2026-09-23): the pre-test note says both pre-tests are under the
+* normal reference, in the live block (wooldid_ptp) and on replay (wooldid_display). Reads
+* T3's two logs, written at linesize 255 so the line is not wrapped ----
+local t7line "Both pre-tests are at the 5% level under the normal reference, whatever level() is in force; level() moves the slope CI only."
+foreach ff in ptpd_t3a ptpd_t3b {
+  if strpos(fileread("`ff'.txt"), "`t7line'") == 0 {
+    dis as error "T7 FAIL: `ff'.txt (" cond("`ff'" == "ptpd_t3a", "live", "replay") ") lacks the pre-test note naming the normal reference"
     local ++fails
   }
 }

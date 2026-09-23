@@ -298,7 +298,7 @@ result. {p_end}
 {phang}{opt simult:aneousbands}: Compute a simultaneous (sup-t) confidence band over each event study's horizons at {it:level()}, which covers every horizon of the
 family at once with that probability. The printed table keeps its pointwise intervals; the band endpoints are stored in {it:e(esband_*)} and drawn as a dashed pair on
 the event study plots. Without {it:bootstrap()} the band is simulated from the family's analytic event study covariance. Where the regression has residual degrees
-of freedom it uses the same t distribution as the pointwise intervals and is never narrower than them. With {it:bootstrap()} it is taken from the replications.
+of freedom it uses the same t distribution as the pointwise intervals. With {it:bootstrap()} it is taken from the replications.
 Refused with {it:permute()}, whose multiplicity tool is {it:permstepdown} instead. No band is built under {it:fastnose} or for a family with fewer than
 two horizons with a usable variance, and a caution says so. {p_end}
 
