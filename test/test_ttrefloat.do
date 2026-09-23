@@ -231,8 +231,17 @@ qui replace ib = 3000000000 + i if i == `f6nt'
 cap noi wooldid y ib t ttre, att cluster(ib) esprelength(1) espostlength(1)
 local rc6c = _rc
 local f6att1 = cond(`rc6c' == 0, e(wdidmainresults)[1,1], .)
-dis "F6 i cap: treated big rc=`rc6a' (safety(off) rc=`rc6b') message=`c6a' | never-treated big rc=`rc6c' att=`f6att1' vs original `f6att0'"
-if `rc6a' == 411 & `rc6b' == 411 & `c6a' == 1 & `rc6c' == 0 & reldif(`f6att1', `f6att0') < 1e-10 {
+* a MISSING i on a treated row is not a code past the cap: it is marked out as before
+qui replace ib = i
+qui gen long f6rn = _n
+qui sum f6rn if ttre < ., meanonly
+qui replace ib = . if f6rn == r(min)
+cap noi wooldid y ib t ttre, att cluster(ib) esprelength(1) espostlength(1)
+local rc6d = _rc
+local n6d = e(N)
+qui drop f6rn
+dis "F6 i cap: treated big rc=`rc6a' (safety(off) rc=`rc6b') message=`c6a' | never-treated big rc=`rc6c' att=`f6att1' vs original `f6att0' | missing i on a treated row rc=`rc6d' N=`n6d'"
+if `rc6a' == 411 & `rc6b' == 411 & `c6a' == 1 & `rc6c' == 0 & reldif(`f6att1', `f6att0') < 1e-10 & `rc6d' == 0 & `n6d' == 959 {
   dis as result "F6 PASS: a treated i past the factor-variable cap is refused by name; a never-treated one runs unchanged"
 }
 else {

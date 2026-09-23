@@ -5497,8 +5497,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * units carry _i = 0 and i itself is only absorbed, which accepts large codes, so only units
   * with a treatment onset are screened. a hard Stata limit that safety(off) cannot lift, so the
   * screen is not gated on it. recoding i changes no estimate: it is an identifier
-  local wdicap `"if `ttre_asgiven' < ."'
-  if `"`if'"' != "" local wdicap `"if (`if') == 1 & `ttre_asgiven' < ."'
+  * a missing i is left to the markout downstream, as the positivity assert above leaves it
+  * (. <= 2147483647 is false in Stata, so without the `i' < . term a missing code would be
+  * refused here under the wrong message)
+  local wdicap `"if `ttre_asgiven' < . & `i' < ."'
+  if `"`if'"' != "" local wdicap `"if (`if') == 1 & `ttre_asgiven' < . & `i' < ."'
   cap assert `i' <= 2147483647 `wdicap'
   if _rc != 0 {
     dis as error "Error: `i' must not exceed 2,147,483,647 on treated units; recode it first (egen newi = group(`i'))."
