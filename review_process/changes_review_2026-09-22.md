@@ -71,6 +71,11 @@ cluster() nests i and a covariate names i. No shipped config takes that path.
 | save order | **Save first, caution last**: the draws file is written before the plots, only its failure caution prints below the tables; #409 moves below the tables to match #408 | built 98ab2fb |
 | pretrendpower() note | **Add the qualifier**: "Both pre-tests are at the 5% level under the normal reference, whatever level() is in force; level() moves the slope CI only." | built c7bad2c |
 | analytic band floor | **REVERSED by the author the same day: no floor on any path.** "Better users see the SB approach isn't working as expected than a more sensible but fundamentally different type of result." The floor 6d8bedd added to the t branch is removed; the multivariate t law stays | built c7bad2c (floor removed) |
+| D1 fastnose-nohorizon-caution-spam (card #52) | **Silence it under fastnose**; it still prints when a real variance is degenerate | built f5cd92b |
+| D2 val-sg-namelength-late-crash | First ruled **dense internal index**; re-ruled **keep the caution** once Claude corrected the size (about forty stored-result names, the ES file names and both engines' resampling carry the value) | no change |
+| D3 val-i-fvcap-unscreened | First ruled **dense internal index**; re-ruled **refuse in validate** once Claude corrected the size; text approved: "Error: `i' must not exceed 2,147,483,647 on treated units; recode it first (egen newi = group(`i'))." | built 5fc3ce5 |
+| D4 permute-pairwise-se-analytic-undisclosed | **Reuse the analytic path's degeneracy detection** under permute(), disclosure only; text approved: the existing caution's first sentence alone | built 189af00 |
+| D5 cfxplotnose-engine-asymmetry | **Extend permute()'s carve-out to bootstrap()**: the cells keep six columns and get bootstrap inference | built 516038c |
 
 ## 3. The audit
 
@@ -104,7 +109,7 @@ battery identical, and the customvce() collapse lift moved no config.
 | adv-boot-remedy-measured-inert | medium | refuted | Help and guide name bootstrap() with boottstat as the remedy for the uncalibrated adversarial p under containment, the one geometry where the author's own MC found the bootstrapped statistic inert (0/40 power, 0/200 size), and bootjnt posts it there without a caution | refuted; nothing to do |
 | bootctl-respcaution-clusteronly | medium | confirmed | reps() resolution caution is nested inside the cluster() block and never fires on an unclustered bootstrap | fixed 2be7e16 |
 | ccscreen-contreatwithin-amevoid | medium | confirmed | The dose-slope (amevoid) screen never runs under contreatwithin, so the ame rows print structural zeros with no caution naming them | built b6f1a54 (ruled) |
-| cfxplotnose-engine-asymmetry | medium | in part | cfxplotnose: permute() keeps the 6-column cfx shape and fills it from replications; bootstrap() truncates to 1 column and the cell rewiring skips it | guide sentence fixed 3b5712a; the asymmetry itself: **open, D5** |
+| cfxplotnose-engine-asymmetry | medium | in part | cfxplotnose: permute() keeps the 6-column cfx shape and fills it from replications; bootstrap() truncates to 1 column and the cell rewiring skips it | guide sentence 3b5712a; carve-out extended to bootstrap(), 516038c (ruled D5) |
 | cfxplots-userlattice-axis | medium | confirmed | Engine-path cfx figures lose the user lattice() variable's name and value labels | fixed 5ab3e0b |
 | containment-remedy-fails-boottstat | medium | confirmed | The cell-containment remedy 'bootstrap()' gives the ame rows no inference under boottstat | guide fixed 6fe9494 (help was already right); caution text: note on card #383 |
 | customvce-collapse-heldout | medium | in part | customvce() is held out of the default cell collapse 'pending measurement'; measured, it is as exact as cluster() | measured, ruled, built cd46002 |
@@ -115,7 +120,7 @@ battery identical, and the customvce() collapse lift moved no config.
 | docs-fastnose-impvalues-refusal | medium | confirmed | Help and guide say fastnose is refused with impvalues; the code cautions and clears it | docs fixed 4a6a5b9 |
 | docs-histogram-caution-claim | medium | confirmed | Help permute() and two guide sites promise a histogram caution that no longer exists, and call the histogram 'analytic' | docs fixed 76f2f38, 4a6a5b9 |
 | docs-version-stamp-stale | medium | in part | The build is stamped version 1.4 / 2026-08-19 in the ado, the help and the pkg, but 401 commits including the bootstrap engine landed after that date | your release step; FYI |
-| fastnose-nohorizon-caution-spam | medium | in part | fastnose prints 'no horizon ... has an identified variance' once per event-study family (2+2*nsg lines) on a run that computed no variance by contract | **open, D1** (card #52) |
+| fastnose-nohorizon-caution-spam | medium | in part | fastnose prints 'no horizon ... has an identified variance' once per event-study family (2+2*nsg lines) on a run that computed no variance by contract | built f5cd92b (ruled D1) |
 | fastnose-sg-binary-vce | medium | in part | Fast mode keeps the full delta-method VCE on the binary subgroup-by-horizon call while the continuous twin synthesizes the estimability marker | no cheap mechanism found; FYI |
 | fcol-customvce-holdout-liftable | medium | confirmed | customvce() is held out of the collapse 'pending measurement'; measured, it is exact | built cd46002 |
 | fcol-lattice-cfx-key-liftable | medium | in part | lattice() and makecfxplots are refused although adding the binning variable to the cell key makes them exact | built f1a2b94 (ruled) |
@@ -124,7 +129,7 @@ battery identical, and the customvce() collapse lift moved no config.
 | perm-esttab-analytic-under-ase | medium | confirmed | esttab reports the permutation p-values under the fast-mode default but the ANALYTIC p-values under permanalyticse and permtstat, against the help's 'p-values and intervals remain permutation-based' | built a45480b (ruled) |
 | perm-save-comma | medium | confirmed | permsave(name, replace) writes a file literally named 'name, replace.dta' at rc 0; bootsave() refuses the same idiom | refused, 8443694 (ruled) |
 | perm-sgeq-uncentred | medium | confirmed | Under permute() without permstrata() the subgroup-equality test and the pairwise contrast of the same two subgroups print p = 1.000 and p = 0.010 on one run; the pairwise row's off-centre flag is set internally but never reported, with or without strata | rows listed a45480b; researched; labelled as the sharp null 66d6680 (ruled) |
-| permute-pairwise-se-analytic-undisclosed | medium | in part | Under permute() with permtstat/permanalyticse the degenerate analytic pairwise se is printed as se_analytic with no disclosure; bootstrap boottstat discloses the same number | **open, D4** |
+| permute-pairwise-se-analytic-undisclosed | medium | in part | Under permute() with permtstat/permanalyticse the degenerate analytic pairwise se is printed as se_analytic with no disclosure; bootstrap boottstat discloses the same number | disclosed under permute(), 189af00 (ruled D4) |
 | pfloor-resolution-format-underflow | medium | confirmed | The p = 0 resolution line and both bootstrap footer sentences print 'p < 0.000' once completed replications exceed 4000 | fixed aae69dd |
 | ptp-nis-tcrit-normal-law | medium | in part | pretrendpower() NIS pre-test uses a t(df_r) critical value inside a normal-law quadrature, so the reported '5%' pre-test size is the size of no test wooldid or Roth runs (2.4% at df 9, k=1); BS-11 ('pin the pre-test at five percent') is half-implemented | ruled, built 6d8bedd; note c7bad2c |
 | sgdeg-inert-under-suppress-small-fix | medium | confirmed | suppresssgprimaryeffects disables the pairwise rank-deficiency screen although the pwcompare pass already computes the level margins it needs | built 637062e |
@@ -136,14 +141,14 @@ battery identical, and the customvce() collapse lift moved no config.
 | u16-si20-lat-byt-df-rows | medium | confirmed | si20_lat_byt: five unbounded ledger rows and a 1e-2 V bound rest on a df-factor mechanism the degrees-of-freedom fix removed | re-bounded aae69dd |
 | uz-cellconstant-dose-refuse-vs-amevoid | medium | in part | A cohort-constant dose is voided-and-continued under basic but hard-refused r(322) under untreatedZero, against the help's unqualified promise | refusal stands under your R5 ruling; help and guide now say so, 3b5712a |
 | val-fastnose-boot-docs | medium | confirmed | Help and guide still say fastnose is refused with bootstrap() and with impvalues; the code cautions and clears it | docs fixed 4a6a5b9 |
-| val-i-fvcap-unscreened | medium | in part | i above 2,147,483,647 passes validate's assert and dies late with Stata's misleading 'noninteger values' message | **open, D3** |
+| val-i-fvcap-unscreened | medium | in part | i above 2,147,483,647 passes validate's assert and dies late with Stata's misleading 'noninteger values' message | refused in validate, 5fc3ce5 (ruled D3) |
 | val-permanalyticse-fastnose | medium | confirmed | permanalyticse with a user-typed fastnose runs, posts e(perm_analyticse)=1 and reports blank analytic SEs | refused, 8443694 (ruled) |
-| val-sg-namelength-late-crash | medium | in part | 8-digit subgroup values: sgdom cautions before estimation, then the finished run dies r(198) building a result name | **open, D2** |
+| val-sg-namelength-late-crash | medium | in part | 8-digit subgroup values: sgdom cautions before estimation, then the finished run dies r(198) building a result name | ruled D2: keep the caution; no change |
 | vzero-double-caution | medium | in part | An all-zero covariance prints two cautions for one event, and the amescreen copy carries mechanism text | caution pass: note on cards #38 and #398 |
 
 ### 3b. Still open
 
-**Decisions (put to the author by multiple choice).**
+**Decisions (put to the author by multiple choice; D1-D5 ruled and settled 2026-09-23, see 2b; D6-D8 are left as they stand unless he asks).**
 
 - **D1, fastnose repeats a caution.** Under fastnose the "no horizon ... has an identified variance"
   caution (card #52) prints once per event-study family, 2 + 2 x (number of subgroups) lines, though
