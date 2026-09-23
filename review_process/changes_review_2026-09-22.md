@@ -74,4 +74,152 @@ cluster() nests i and a covariate names i. No shipped config takes that path.
 
 ## 3. The audit
 
-(filled in when the workflow returns)
+**What it covered.** Sixteen reviewers each took one part of the code at 8965f20 and read our
+changes since v1.3 (main, 301b706), with Stata probes. They filed 152 findings: 11 high, 39 medium,
+102 low. Every high and medium finding went to a separate verifier told to refute it: 29 were
+confirmed, 20 confirmed in part, 1 refuted. The low findings were not verified and nothing was done
+about them; they are in `change_audit_2026-09-22/findings.json` with every reviewer's evidence.
+
+**Numbers that moved.** Only the ruled changes moved a battery config, and 929ae6c re-blessed the
+five of them: band_analytic (the band's t law), ptp_two (the NIS pre-test on the normal reference),
+perm_tstat (e(p), e(ci_l), e(ci_u) now posted), and cont_lat and perm_cfxnose (the collapse now
+covers lattice() and makecfxplots; one coefficient moves by 3.6e-15). Every later commit left the
+battery identical, and the customvce() collapse lift moved no config.
+
+### 3a. What happened to each verified finding
+
+| finding | severity | verdict | what the reviewer found | outcome |
+|---|---|---|---|---|
+| amedetect-onerow-cell | high | confirmed | amescreen detect treats a one-row treated cell as cluster containment and withholds every ame standard error, unliftably | built b6f1a54 (ruled) |
+| ccref-nevergroup-false-refusal | high | in part | ccref screen refuses byTreated/byTtre whenever the never-treated group has a zero or constant dose, though that group's baseline slope is inert | ruled: keep the refusal; no change |
+| esband-normal-law-vs-t-pointwise | high | confirmed | Analytic simultaneous band is simulated from a normal law while the pointwise intervals it is drawn over use t(df_r): with few clusters the band is narrower than the pointwise interval and under-covers | t law 6d8bedd; floor removed c7bad2c (ruled) |
+| fastnose-binary-sg-horizon-vce-cost | high | in part | Fast mode keeps a full delta-method VCE on every binary subgroup-by-horizon margins call (and so does every permute replication) while the contreat twin synthesizes the marker | no cheap mechanism found; FYI |
+| perm-window-labels | high | in part | Onsets beyond the sample window are distinct labels in the permutation design although the estimator recodes them to never-treated: M overstated, permexact refused on a working design, permonsetcohorts refused on standard not-yet-treated coding, the few-treated caution silenced | built 8443694; permonsetcohorts check 66d6680 (ruled) |
+| permctl-partial-label-no-twin | high | confirmed | permute() screens the design population for four subgroup conditions but not partial labelling; replications then share-weight a partially labelled unit silently | refused, 8443694 (ruled) |
+| permtstat-cfxplotnose-blank | high | confirmed | permute() + permtstat + cfxplotnose leaves every cfx cell's inference blank with no message | built a45480b; parser 143e457 (ruled) |
+| saveplots-no-precheck | high | in part | saveplots() is the one saver with no pre-check: a stale file is found after the replications and the run is lost | fixed 54440de (Stata's own r(602) text, ruled) |
+| sgdeg-inert-under-suppresssg | high | in part | The BS-15 degenerate-contrast guard is silently inert under suppresssgprimaryeffects | built 637062e (ruled) |
+| sgdom-safetyoff-withincell-caution-false | high | confirmed | safety(off) skips the within-cell screen and prints the over-time caution, which claims att/att_it are unaffected | help fixed 29b5952; caution text: note on card #368 |
+| u16-perm-atti-r198 | high | in part | Battery pin perm_atti asserts a permreps() refusal, not the att_i-under-permute() run its commit claims | fixed aae69dd |
+| adv-boot-remedy-measured-inert | medium | refuted | Help and guide name bootstrap() with boottstat as the remedy for the uncalibrated adversarial p under containment, the one geometry where the author's own MC found the bootstrapped statistic inert (0/40 power, 0/200 size), and bootjnt posts it there without a caution | refuted; nothing to do |
+| bootctl-respcaution-clusteronly | medium | confirmed | reps() resolution caution is nested inside the cluster() block and never fires on an unclustered bootstrap | fixed 2be7e16 |
+| ccscreen-contreatwithin-amevoid | medium | confirmed | The dose-slope (amevoid) screen never runs under contreatwithin, so the ame rows print structural zeros with no caution naming them | built b6f1a54 (ruled) |
+| cfxplotnose-engine-asymmetry | medium | in part | cfxplotnose: permute() keeps the 6-column cfx shape and fills it from replications; bootstrap() truncates to 1 column and the cell rewiring skips it | guide sentence fixed 3b5712a; the asymmetry itself: **open, D5** |
+| cfxplots-userlattice-axis | medium | confirmed | Engine-path cfx figures lose the user lattice() variable's name and value labels | fixed 5ab3e0b |
+| containment-remedy-fails-boottstat | medium | confirmed | The cell-containment remedy 'bootstrap()' gives the ame rows no inference under boottstat | guide fixed 6fe9494 (help was already right); caution text: note on card #383 |
+| customvce-collapse-heldout | medium | in part | customvce() is held out of the default cell collapse 'pending measurement'; measured, it is as exact as cluster() | measured, ruled, built cd46002 |
+| display-eqtest-bare-dot | medium | confirmed | A withheld across-subgroup equality test prints as 'p-value for joint test that all SGs have the same att: .' | fixed 0e7dc0d |
+| docs-bootstrap-reid-covariate-stale | medium | confirmed | Guide's bootstrap() block says i-named covariates keep their codes and are cautioned; help, guide ch3 and the code re-key them | docs fixed 4a6a5b9 |
+| docs-collapse-ineligible-list | medium | confirmed | Guide's nofastcollapse entry enumerates two ineligible conditions and calls itself the complete list; help, guide ch11 and the code have seven | docs fixed 4a6a5b9; customvce() left the list in cd46002 |
+| docs-fastnose-bootstrap-refusal | medium | in part | Help and guide say fastnose is refused with bootstrap(); the code accepts it with a caution and drops it | docs fixed 4a6a5b9 |
+| docs-fastnose-impvalues-refusal | medium | confirmed | Help and guide say fastnose is refused with impvalues; the code cautions and clears it | docs fixed 4a6a5b9 |
+| docs-histogram-caution-claim | medium | confirmed | Help permute() and two guide sites promise a histogram caution that no longer exists, and call the histogram 'analytic' | docs fixed 76f2f38, 4a6a5b9 |
+| docs-version-stamp-stale | medium | in part | The build is stamped version 1.4 / 2026-08-19 in the ado, the help and the pkg, but 401 commits including the bootstrap engine landed after that date | your release step; FYI |
+| fastnose-nohorizon-caution-spam | medium | in part | fastnose prints 'no horizon ... has an identified variance' once per event-study family (2+2*nsg lines) on a run that computed no variance by contract | **open, D1** (card #52) |
+| fastnose-sg-binary-vce | medium | in part | Fast mode keeps the full delta-method VCE on the binary subgroup-by-horizon call while the continuous twin synthesizes the estimability marker | no cheap mechanism found; FYI |
+| fcol-customvce-holdout-liftable | medium | confirmed | customvce() is held out of the collapse 'pending measurement'; measured, it is exact | built cd46002 |
+| fcol-lattice-cfx-key-liftable | medium | in part | lattice() and makecfxplots are refused although adding the binning variable to the cell key makes them exact | built f1a2b94 (ruled) |
+| help-eb-rownames-sg-suffix | medium | confirmed | The help still says subgroup e(b)/e(V) columns take the suffix _s#; the code names them with the infix _SG<value>_ | docs fixed 4a6a5b9 |
+| jtscreen-domain-nevertreated | medium | confirmed | Joint-test cluster caution tests i-nesting over never-treated rows, so the guide's pooled never-treated coding silences it whenever the treated i levels nest in the cluster | fixed 52fd319 |
+| perm-esttab-analytic-under-ase | medium | confirmed | esttab reports the permutation p-values under the fast-mode default but the ANALYTIC p-values under permanalyticse and permtstat, against the help's 'p-values and intervals remain permutation-based' | built a45480b (ruled) |
+| perm-save-comma | medium | confirmed | permsave(name, replace) writes a file literally named 'name, replace.dta' at rc 0; bootsave() refuses the same idiom | refused, 8443694 (ruled) |
+| perm-sgeq-uncentred | medium | confirmed | Under permute() without permstrata() the subgroup-equality test and the pairwise contrast of the same two subgroups print p = 1.000 and p = 0.010 on one run; the pairwise row's off-centre flag is set internally but never reported, with or without strata | rows listed a45480b; researched; labelled as the sharp null 66d6680 (ruled) |
+| permute-pairwise-se-analytic-undisclosed | medium | in part | Under permute() with permtstat/permanalyticse the degenerate analytic pairwise se is printed as se_analytic with no disclosure; bootstrap boottstat discloses the same number | **open, D4** |
+| pfloor-resolution-format-underflow | medium | confirmed | The p = 0 resolution line and both bootstrap footer sentences print 'p < 0.000' once completed replications exceed 4000 | fixed aae69dd |
+| ptp-nis-tcrit-normal-law | medium | in part | pretrendpower() NIS pre-test uses a t(df_r) critical value inside a normal-law quadrature, so the reported '5%' pre-test size is the size of no test wooldid or Roth runs (2.4% at df 9, k=1); BS-11 ('pin the pre-test at five percent') is half-implemented | ruled, built 6d8bedd; note c7bad2c |
+| sgdeg-inert-under-suppress-small-fix | medium | confirmed | suppresssgprimaryeffects disables the pairwise rank-deficiency screen although the pwcompare pass already computes the level margins it needs | built 637062e |
+| shell-cfxtwin-frame | medium | confirmed | The analytic cfx plot-data twin leaves the user in the default frame when the write fails, with rc 0 | fixed e203b93 |
+| shell-plotfail-vs-savers | medium | in part | After a complete replication loop a plot-file collision is still fatal and refuses replay; the sibling bootsave/permsave collision became a caution with a posted rc on 2026-09-21 | stale files now refused before the loop (54440de); a late plot-write failure is still fatal: **open, D6** |
+| shell-update-stale-cfxsave | medium | confirmed | wooldid, update re-runs the analytic plot-data write on the PREVIOUS run's e() | fixed e203b93 |
+| testgap-partial-label-screen | medium | confirmed | No cert test pins the partial-labelling screen shipped as R16 on 2026-09-20 | pinned aae69dd |
+| u16-ledger-comment-truncation | medium | confirmed | b0a783f truncated 29 ledger comment lines at their first comma, including the bound policy and the mechanism note it introduced | fixed aae69dd |
+| u16-si20-lat-byt-df-rows | medium | confirmed | si20_lat_byt: five unbounded ledger rows and a 1e-2 V bound rest on a df-factor mechanism the degrees-of-freedom fix removed | re-bounded aae69dd |
+| uz-cellconstant-dose-refuse-vs-amevoid | medium | in part | A cohort-constant dose is voided-and-continued under basic but hard-refused r(322) under untreatedZero, against the help's unqualified promise | refusal stands under your R5 ruling; help and guide now say so, 3b5712a |
+| val-fastnose-boot-docs | medium | confirmed | Help and guide still say fastnose is refused with bootstrap() and with impvalues; the code cautions and clears it | docs fixed 4a6a5b9 |
+| val-i-fvcap-unscreened | medium | in part | i above 2,147,483,647 passes validate's assert and dies late with Stata's misleading 'noninteger values' message | **open, D3** |
+| val-permanalyticse-fastnose | medium | confirmed | permanalyticse with a user-typed fastnose runs, posts e(perm_analyticse)=1 and reports blank analytic SEs | refused, 8443694 (ruled) |
+| val-sg-namelength-late-crash | medium | in part | 8-digit subgroup values: sgdom cautions before estimation, then the finished run dies r(198) building a result name | **open, D2** |
+| vzero-double-caution | medium | in part | An all-zero covariance prints two cautions for one event, and the amescreen copy carries mechanism text | caution pass: note on cards #38 and #398 |
+
+### 3b. Still open
+
+**Decisions (put to the author by multiple choice).**
+
+- **D1, fastnose repeats a caution.** Under fastnose the "no horizon ... has an identified variance"
+  caution (card #52) prints once per event-study family, 2 + 2 x (number of subgroups) lines, though
+  fastnose never asked for a variance and the help says so. Silencing it there needs no new text.
+- **D2, 8-digit subgroup values.** sgdom cautions, then some option sets (att_itime with a pre-window,
+  adversarial, makecfxplotsbysg from 7 digits) die r(198) after estimation. A dense internal index
+  for the subgroup values would need no new text.
+- **D3, i codes above 2,147,483,647.** A treated unit's code past Stata's factor-variable cap passes
+  validate and dies r(452) with a message naming a tempvar and non-integer values. A dense index for
+  the internal _i would need no new text; a named refusal would need the author's.
+- **D4, residue pairwise se under permute().** With permtstat or permanalyticse and cluster() at i,
+  e(pwsgs) shows the cancellation-residue analytic se with no disclosure, where the analytic path
+  cautions. Reusing the analytic path's detection and caution needs no new text.
+- **D5, cfxplotnose under bootstrap().** The plot cells carry point estimates only, while permute()
+  keeps the cells and fills them. Extending permute()'s carve-out to bootstrap() would give them
+  bootstrap inference at no cost to the observed run.
+- **D6, a late plot-write failure.** Stale plot files are now refused before the replications, but a
+  plot write that fails after them (a read-only file, a full disk) is still fatal and refuses replay,
+  as the 2026-09-05 ruling set and R-C kept for the savers. Making it a caution needs his text.
+- **D7, the analytic cfx figure on an omitted bin.** marginsplot draws an omitted lattice bin at 0,
+  while e(cfx*) and the _cfx.dta leave it blank (143e457). The all-slopes caution explains the blank.
+- **D8, the guide's two identical "From the help file" blocks** (chapters 4 and 11).
+
+**Text for the caution pass (on the review page).** Cards #38 and #398 (one event, two cautions),
+#368 (a false "unaffected" clause under safety(off) when the subgroup varies within a cell), #383
+(its bootstrap remedy fails under boottstat), and #408 (the permutation draw-cap caution, drafted by
+Claude, still awaiting approval). Each card carries the audit's note.
+
+**For the release step.** The ado, help and .pkg are stamped version 1.4 / 2026-08-19. Fast mode keeps
+a full delta-method VCE on the binary subgroup-by-horizon margins call; no cheap way to skip it was
+found. On the pathological Q33 fixture (one row per cell, every dose slope dropped),
+cfxplotnose without permute() posts the ame cfx cells as zeros rather than blank; left alone under
+the pathological-data cap.
+
+### 3c. What the reviewers checked and found sound
+
+- **Shell and replay (U01).** level() is restored after every engine and every failing call; live
+  and replayed output are byte-identical on the analytic runs; every stored-result name in a
+  245-name inventory over nine configs is documented.
+- **Sample and regression (U02).** anticipation() is bit-exact against shifting ttre by hand; the
+  onset, impvalues-cluster and one-cluster screens behave as documented; the regression calls match
+  v1.3 apart from ledgered changes.
+- **Estimands, event study and subgroups in the worker (U03).** An 11-config dual build against v1.3
+  on the reviewer's own configs shows only ledgered differences; the e(V) splice reproduces the
+  event-study test statistic exactly; IM degrees of freedom are right.
+- **Posting, gteffects and cleanmatrices (U04).** e(gteffects) reproduces the main and event-study
+  rows to 1e-16 on messy unbalanced data; cleanmatrices runs clean before and after every engine;
+  the collapse keeps the realized sample.
+- **Validation (U05).** Worker and validate syntax lines are identical and the hand-off closure
+  holds; every refusal list in the help matches the code; cautions do not print twice under the
+  engines' re-validation.
+- **Cell collapse (U06).** The cell key is exact; nine messy configurations agree with nofastcollapse
+  to 1e-10 in every stored cell; the degeneracy screen stays quiet on healthy designs and falls back
+  where it should.
+- **Permutation engine (U07).** Exact enumeration, strata and probability rows preserve what they
+  should; replications rebuilt by hand under permonsetcohorts match the saved rows bitwise;
+  permtstat's comparator and se columns match their sources bitwise.
+- **Bootstrap engine (U08).** Every documented refusal matches the code; the count and re-id legs
+  agree to 6e-16 under weights; the percentile, BC, BCa and studentized families follow their
+  stated conventions; bootsave's weight columns are right under both modes.
+- **Pre-trend power, adversarial test, bands (U09).** Both adversarial nulls match the help; the
+  Roth pre-test shares the joint test's statistic; bands take the level in force on both engines.
+- **Display (U10).** Table rendering, rules and formats are right on every table; replay is
+  byte-identical; the p-floor lines print only where the convention needs them.
+- **Screens (U11).** The collinearity screen is observationally equivalent to v1.3; the dose,
+  containment and all-zero covariance screens fire on the right domains.
+- **Plots (U12).** Plotted points and bands in the saved datasets equal the posted matrices under
+  both engines; subgroup band plots draw; figure metadata pairs correctly across 12 cfx matrices.
+- **Continuous treatment (U13).** The collapse is exact for dose designs; every control type leaves
+  the att unchanged and moves only the ame reference; untreatedZero's poisson form is now correct
+  (ame .31 against a truth of .30, where v1.3 gave .19).
+- **Subgroups (U14).** Chains, the degeneracy screen, labelling and the collapse chain read sound;
+  both engines permute or resample contrasts as documented; every subgroup number-mover traces to
+  a ledger row.
+- **Documentation (U15).** Every option on the syntax line has a help entry and a guide mention, and
+  every documented e() name is posted; nine refusals and fourteen cautions were run and behave as
+  written.
+- **Tests and claims (U16).** Commit claims with pins assert what the messages say; every ledger row
+  cites a real commit; no bounded row is exceeded.
