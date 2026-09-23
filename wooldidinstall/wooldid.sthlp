@@ -512,8 +512,8 @@ name containing the data used to generate any requested event study plots, one p
 generated have a suffix appended to the name specifying the exact graph/dataset
 generated. Everything is saved to Stata's working directory; the argument is a name, not a path. {p_end}
 
-{phang}{opt replace}: Overwrite any existing files with the names specified in {it:saveplots()}, {it:permsave()}, or {it:bootsave()}. Without it, an existing {it:permsave()} or
-{it:bootsave()} file is an error, raised before the replications run. {p_end}
+{phang}{opt replace}: Overwrite any existing files with the names specified in {it:saveplots()}, {it:permsave()}, or {it:bootsave()}. Without it, an existing file is an error;
+under {it:permute()} and {it:bootstrap()} it is raised before the replications run. {p_end}
 
 {phang}{opt sum:marystats}: Compute and present summary statistics of the outcome variable y and, if present, of the continuous treatment variable contreat.
 Summary statistics are computed overall, within the treatment group by time period (post-treatment vs pre-treatment), and within the control group; {it:contreatwithin} omits the control
