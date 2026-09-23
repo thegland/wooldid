@@ -102,12 +102,12 @@ chk 5g 198 _rc
 cap qui wooldid y unit t ttre, att cluster(unit s) bootstrap(standard) reps(50)
 chk 5h 198 _rc
 
-* G6 bayes + cell-weighted: refuse under default safety, caution + proceed-to-tail under safety(off)
+* G6 bayes + cell-weighted: refused under default safety and under safety(off) alike;
+* safety(off) is not a way past it (6b; message-checked below)
 cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(50)
 chk 6a 198 _rc
 cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off) rseed(70101)
-chk 6b 0 _rc
-* (6b now RUNS: caution printed, then full bayes bootstrap - message-checked below)
+chk 6b 198 _rc
 
 * G7 standard + cell-weighted + nesting cluster (cluster == i) -> RUNS (re-id leg)
 cap qui wooldid y unit t ttre, att_it cluster(unit) bootstrap(standard) reps(20) rseed(70102)
@@ -320,7 +320,7 @@ cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(20) rs
 logh m1 Bootstrap Inference
 qui log using boot_gates_m2.smcl, replace name(m2) smcl
 cap noi wooldid y unit t ttre, att_it cluster(unit) bootstrap(bayes) reps(30) safety(off) rseed(70106)
-logh m2 Caution: bootstrap(bayes) standard errors for att_it
+logh m2 Error: bootstrap(bayes) is not compatible with non-att estimands
 qui log using boot_gates_m3.smcl, replace name(m3) smcl
 * m3 used to pin the nesting refusal's message; T2 (2026-09-16) removed the refusal,
 * so what this leg now pins is that the same request RUNS and prints the bootstrap
@@ -1357,6 +1357,14 @@ local g38src `e(boot_save_rc)'
 local g38lg = fileread("boot_gates_g38.txt")
 if strpos(`"`g38lg'"', "Caution: bootsave(boot_gates_g38) could not produce the replication dataset") == 0 | "`g38src'" == "" | "`g38src'" == "0" {
   di as error "G38c FAIL: the failed write did not caution, or did not post e(boot_save_rc) (got `g38src')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+* G38g the caution prints below the result tables, after the part(boot) footer, with the
+* run's other end-of-run cautions rather than above the deferred display
+local g38pf = strpos(`"`g38lg'"', "Bootstrap Inference (")
+local g38pc = strpos(`"`g38lg'"', "Caution: bootsave(boot_gates_g38) could not produce the replication dataset")
+if `g38pf' == 0 | `g38pc' < `g38pf' {
+  di as error "G38g FAIL: the failed-write caution (at `g38pc') does not print below the bootstrap footer (at `g38pf')"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 cap confirm matrix e(bootdist)

@@ -2,8 +2,8 @@
 * Run from test/: stata-mp -e do test_bootstrap_std.do
 * DO1: rep-by-rep matching proof vs the OFFICIAL bootstrap prefix, same seed (count
 * path; weight-injection == physical resampling ULP class). DO2: count path == re-id
-* path for att (same-seed coherence across the split-engine legs). DO3: the estimand
-* fork is real (re-id att_it se >> bayes reweighting se on heterogeneous effects).
+* path for att (same-seed coherence across the split-engine legs). DO3: att_it under the
+* re-id leg yields a usable se, and bootstrap(bayes) with att_it is refused under safety(off).
 * DO4 failed-rep counting; DO5 observation-level; DO6 weighted + points never move;
 * DO7 subgroups under the re-id leg. Prints BOOTSTD_ALL_PASS iff all pass.
 clear all
@@ -72,16 +72,17 @@ if `w2' > 1e-10 {
   local ++fails
 }
 
-* ---- D-O3: att_it under re-id runs and yields a usable se
+* ---- D-O3: att_it under re-id runs and yields a usable se; bootstrap(bayes) with att_it,
+* whose reweighting cannot resample the cells, is refused, safety(off) included
 mkpan
-qui wooldid y unit t ttre, att_it cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(12) rseed(777) safety(off)
-scalar itse_b = el(e(wdidmainresults),1,2)
+cap qui wooldid y unit t ttre, att_it cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(12) rseed(777) safety(off)
+local do3b = _rc
 mkpan
 qui wooldid y unit t ttre, att_it cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(12) rseed(777)
 scalar itse_s = el(e(wdidmainresults),1,2)
-di "DO3_ATTIT_SE_bayes=" itse_b " standard_reid=" itse_s
-if itse_s >= . | itse_s <= 0 | itse_b >= . | reldif(itse_s, itse_b) < 1e-8 | !(itse_s > itse_b) {
-  di as error "DO3 FAIL: re-id att_it se missing, or the estimand fork is not real (bayes " itse_b " vs re-id " itse_s ")"
+di "DO3_ATTIT_SE_standard_reid=" itse_s " bayes_safetyoff_rc=`do3b'"
+if itse_s >= . | itse_s <= 0 | `do3b' != 198 {
+  di as error "DO3 FAIL: re-id att_it se missing (" itse_s "), or bootstrap(bayes) with att_it under safety(off) was not refused (rc `do3b')"
   local ++fails
 }
 

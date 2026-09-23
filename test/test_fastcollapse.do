@@ -1404,30 +1404,32 @@ if `rc14a' != 0 | `rc14b' != 0 | !`ok14a' | !`ok14b' | !`ok14c' {
 }
 
 * ---- F15 (F062, 2026-09-06): impvalues collapses. With the cluster variable in the cell
-* key the per-cluster reads are exact: (a) a cluster CROSSED with i (state x cohid on the
-* admin panel; the key change is what makes it exact - 2,878 cells instead of 60) and (b)
-* a cluster NESTING i (cohid itself, 60 cells) both agree with nofastcollapse on b, V
-* and the main table at 1e-12; the collapse engages (e(wdid_fcol) = 1) and the run says
-* nothing.
+* key the per-cluster reads are exact: (a) a cluster that differs from i and splits cells -
+* i coded cohort-by-region on treated rows with every never-treated unit pooled under one
+* code, and cluster(region). The treated levels of i nest in the cluster, so the IM screen
+* passes, while the never-treated pool spans the four regions, so the key change splits its
+* cells (240 cells against 195 (i, year) pairs) - and (b) a cluster NESTING i (cohid itself,
+* 60 cells) both agree with nofastcollapse on b, V and the main table at 1e-12; the
+* collapse engages (e(wdid_fcol) = 1) and the run says nothing.
 *
-* The crossed-cluster legs carry safety(off) as of 2026-09-20. state x cohid on this panel is
-* 3 treated cohort levels across 48 states, which is exactly the geometry the new IM screen
-* refuses r(459) - the 48 per-cluster reads are re-weightings of 3 cohorts' coefficients. That
-* refusal is about whether IM INFERENCE is sound on the geometry; this leg is about whether the
-* CELL COLLAPSE reproduces the per-cluster reads exactly once the cluster variable joins the
-* key. The two are orthogonal, and the collapse property is worth keeping under test on the
-* harder geometry, so the screen is stood down here rather than the leg being retired. The
-* nesting legs (cluster(cohid)) need no such thing: cluster == i is what the screen wants.
-* safety(off) does NOT silence the collapse caution, so the cc15 check below is unaffected.
+* (c) A cluster CROSSED with i - state x cohid on this panel, 3 treated cohort levels across
+* 48 states, whose 48 per-cluster reads are re-weightings of 3 cohorts' coefficients - is
+* refused r(459) by the IM screen under every safety() setting, collapsed or not, so the
+* crossed geometry is pinned as a refusal with safety(off) given.
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att cluster(state) impvalues safety(off)
+gen cohreg = cond(ttre == ., 1, (ttre - 2000)*10 + region)
+qui wooldid y cohreg year ttre, att cluster(region) impvalues
 matrix bF15a = e(b)
 matrix VF15a = e(V)
 matrix MF15a = e(wdidmainresults)
 local fc15a = e(wdid_fcol)
 local nc15a = e(wdid_fcncell)
+qui gegen long __f15it = group(cohreg year)
+qui sum __f15it
+local np15a = r(max)
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att cluster(state) impvalues nofastcollapse safety(off)
+gen cohreg = cond(ttre == ., 1, (ttre - 2000)*10 + region)
+qui wooldid y cohreg year ttre, att cluster(region) impvalues nofastcollapse
 local d15a = max(mreldif(bF15a, e(b)), mreldif(VF15a, e(V)), mreldif(MF15a, e(wdidmainresults)))
 use "`ADMIN'", clear
 qui wooldid y cohid year ttre, att cluster(cohid) impvalues
@@ -1440,8 +1442,9 @@ use "`ADMIN'", clear
 qui wooldid y cohid year ttre, att cluster(cohid) impvalues nofastcollapse
 local d15b = max(mreldif(bF15b, e(b)), mreldif(VF15b, e(V)), mreldif(MF15b, e(wdidmainresults)))
 use "`ADMIN'", clear
+gen cohreg = cond(ttre == ., 1, (ttre - 2000)*10 + region)
 qui log using fcol_x.txt, text replace name(fc)
-cap noi wooldid y cohid year ttre, att cluster(state) impvalues safety(off)
+cap noi wooldid y cohreg year ttre, att cluster(region) impvalues
 local rc15c = _rc
 qui log close fc
 local lg = fileread("fcol_x.txt")
@@ -1449,9 +1452,19 @@ local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
 local cc15 = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
 cap erase fcol_x.txt
-di "F15 crossed: fcol=`fc15a' cells=`nc15a' mreldif=`d15a' | nesting: fcol=`fc15b' cells=`nc15b' mreldif=`d15b' | rc=`rc15c' caution=`cc15' (want 0)"
-if `fc15a' != 1 | `fc15b' != 1 | `d15a' > 1e-12 | `d15b' > 1e-12 | `nc15a' <= `nc15b' | `rc15c' != 0 | `cc15' {
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att cluster(state) impvalues safety(off)
+local rx15a = _rc
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att cluster(state) impvalues nofastcollapse safety(off)
+local rx15b = _rc
+di "F15 pooled: fcol=`fc15a' cells=`nc15a' (i,year)=`np15a' mreldif=`d15a' | nesting: fcol=`fc15b' cells=`nc15b' mreldif=`d15b' | rc=`rc15c' caution=`cc15' (want 0) | crossed safety(off) rc=`rx15a'/`rx15b' (want 459)"
+if `fc15a' != 1 | `fc15b' != 1 | `d15a' > 1e-12 | `d15b' > 1e-12 | `nc15a' <= `np15a' | `rc15c' != 0 | `cc15' {
   di as error "F15 FAIL: impvalues under the collapse is not exact or did not engage"
+  local ++fails
+}
+if `rx15a' != 459 | `rx15b' != 459 {
+  di as error "F15c FAIL: impvalues with a cluster crossing i ran under safety(off) (rc `rx15a'/`rx15b', want 459)"
   local ++fails
 }
 

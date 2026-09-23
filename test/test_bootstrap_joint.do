@@ -149,7 +149,8 @@ mkpan
 * degenerate under clustering at or above i on some designs (pre-existing at HEAD)
 qui wooldid y unit t ttre, att esprelength(1) espostlength(1) subgroups(sg) bootstrap(standard) reps(30) rseed(7) safety(off) boottstat
 scalar allsg_B = e(joint_att_allsgssame)
-qui wooldid y unit t ttre, att att_it cluster(unit) esprelength(1) espostlength(1) subgroups(sg) bootstrap(bayes) reps(30) rseed(7) safety(off) bootdisplay(wald)
+* run A carries att alone: bootstrap(bayes) is refused with att_it under every safety() setting
+qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) subgroups(sg) bootstrap(bayes) reps(30) rseed(7) bootdisplay(wald)
 matrix P = e(pwsgs)
 local pc : colnames P
 di "ET3_PWCOLS=[`pc'] se11=" P[1,2] " allsg(boottstat run)=" allsg_B
@@ -331,7 +332,9 @@ foreach nm in ame ame_i ame_itime pre_ame pre_ame_i pre_ame_itime att att_i att_
   if e(joint_`nm'_allsgssame) < . & strpos("`nm'", "ame") > 0 local ++eq_present
 }
 use `fxeq', clear
-cap qui wooldid y grp t ttre [aw=w], `EQB' bootstrap(bayes) reps(12) rseed(101) dots(0)
+* the bootstrap leg runs bootstrap(standard): bootstrap(bayes) is refused with att_i and
+* att_itime whatever safety() is set to, and the blanking loop is the same for both modes
+cap qui wooldid y grp t ttre [aw=w], `EQB' bootstrap(standard) reps(12) rseed(101) dots(0)
 local eq_rc1 = _rc
 * RE-PINNED 2026-09-06 (F034): the equality tests are now PRESENT without boottstat as
 * fixed-metric rank tests; a "leak" is an equality p that EQUALS its analytic baseline

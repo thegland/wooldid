@@ -1915,6 +1915,14 @@ if strpos(`"`lg'"', "Caution: permsave(perm3_q37) could not produce the replicat
   dis as error "Q37d FAIL: the failed write did not caution, or did not post e(perm_save_rc) (got `q37src')"
   global pf = $pf + 1
 }
+* Q37h the caution prints below the result tables, after the part(perm) footer, with the
+* run's other end-of-run cautions rather than above the deferred display
+local q37pf = strpos(`"`lg'"', "Randomization Inference (permute(")
+local q37pc = strpos(`"`lg'"', "Caution: permsave(perm3_q37) could not produce the replication dataset")
+if `q37pf' == 0 | `q37pc' < `q37pf' {
+  dis as error "Q37h FAIL: the failed-write caution (at `q37pc') does not print below the permutation footer (at `q37pf')"
+  global pf = $pf + 1
+}
 if e(perm_completed) != 20 {
   dis as error "Q37e FAIL: the results are not intact after the failed write"
   global pf = $pf + 1

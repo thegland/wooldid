@@ -231,4 +231,44 @@ if len(capvals) == 3:
     else:
         print(f"OK: the permutation draw-matrix cap is {next(iter(capvals.values()))} at all three sites")
 
+# ---- the bootstrap draw-matrix cap and its caution ----
+# wooldid_bootwire posts e(bootdist)/e(bootdist_se) only up to the same kind of cap, and the
+# else arm of that test cautions when the matrices are withheld. The arm cannot disagree with
+# the test, but the caution's text names the cap as a number, so the two can still drift.
+# Pinned here for the permutation twin's reason: exercising it needs 10,001 completed
+# replications. The site is the `done' test with bootdist (not permdist) posted inside it.
+bootwire_sites = []
+for idx, line in enumerate(src):
+    m = re.search(r"if\s+`done'\s*<=\s*(\d+)\s*\{", line)
+    if m and any("ereturn matrix bootdist" in l for l in src[idx:idx + 20]) \
+            and not any("permdist" in l for l in src[idx:idx + 20]):
+        bootwire_sites.append((idx, m.group(1)))
+if len(bootwire_sites) != 1:
+    print(f"FAIL: expected exactly one wooldid_bootwire draw-matrix cap site, found "
+          f"{len(bootwire_sites)}")
+    fail = True
+else:
+    idx, bcap = bootwire_sites[0]
+    # walk to the block's closing brace; the caution must be the else arm on the next line
+    depth = 0
+    close = None
+    for j in range(idx, len(src)):
+        depth += src[j].count("{") - src[j].count("}")
+        if depth == 0:
+            close = j
+            break
+    nxt = src[close + 1] if close is not None and close + 1 < len(src) else ""
+    m = re.match(r"\s*else dis as text \"Caution: `done' completed replications exceeds the "
+                 r"([\d,]+) cap on posting draw matrices, so e\(bootdist\)", nxt)
+    if not m:
+        print("FAIL: the wooldid_bootwire draw-matrix cap has no caution in the else arm of its "
+              "e(bootdist) test")
+        fail = True
+    elif m.group(1).replace(",", "") != bcap:
+        print(f"FAIL: the bootstrap draw-matrix cap disagrees with its caution: test {bcap}, "
+              f"caution text {m.group(1)}")
+        fail = True
+    else:
+        print(f"OK: the bootstrap draw-matrix cap is {bcap} in the e(bootdist) test and its caution")
+
 sys.exit(1 if fail else 0)

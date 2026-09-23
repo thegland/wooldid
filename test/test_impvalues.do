@@ -16,6 +16,10 @@
 * I2b the footer names that, and replay reproduces it
 * I3  the analytic df survives as hidden e(df_r_analytic)
 * I5  e(df_r) is never missing, including on a degeneracy fixture
+* I6  the cluster geometry screen stands under every safety() setting: a cluster finer than i
+*     and one crossing it are refused r(459) with and without safety(off), with the same
+*     message; a cluster that nests the treated levels of i, beside a never-treated code that
+*     spans it, runs
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -121,6 +125,46 @@ local d5 = e(df_r)
 di "I5 BS-10: degeneracy fixture rc=`rc5' df_r=`d5'"
 if `rc5' == 0 & (`d5' >= . | `d5' <= 0) {
   di as error "I5 FAIL: e(df_r) is missing or non-positive on the degeneracy fixture (got `d5')"
+  local ++fails
+}
+
+* ---- I6: the cluster geometry screen. The admin panel's cohid holds 3 treated cohorts and one
+* never-treated code; state (48) crosses it and fips (about 2,000 counties) is finer than it.
+* A cohort-by-region i with the never-treated pooled under one code nests every treated level
+* in cluster(region), so the screen, which counts treated rows only, lets it through
+local ADMIN suite/data/dta_s_admin.dta
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att cluster(fips) impvalues
+local r6a = _rc
+use "`ADMIN'", clear
+qui log using impv_i6.txt, text replace name(iv)
+cap noi wooldid y cohid year ttre, att cluster(fips) impvalues safety(off)
+local r6b = _rc
+qui log close iv
+scanIM impv_i6.txt "Error: impvalues cannot be used with cluster() variables finer than cohid"
+local c6b = r(found)
+cap erase impv_i6.txt
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att cluster(state) impvalues
+local r6c = _rc
+use "`ADMIN'", clear
+cap qui wooldid y cohid year ttre, att cluster(state) impvalues safety(off)
+local r6d = _rc
+use "`ADMIN'", clear
+gen cohreg = cond(ttre == ., 1, (ttre - 2000)*10 + region)
+cap qui wooldid y cohreg year ttre, att cluster(region) impvalues safety(off)
+local r6e = _rc
+di "I6 IM screen: finer rc=`r6a' (safety(off) `r6b', message `c6b') | crossing rc=`r6c' (safety(off) `r6d') | nested treated levels rc=`r6e'"
+if `r6a' != 459 | `r6c' != 459 {
+  di as error "I6a FAIL: a cluster finer than or crossing i was not refused under default safety (rc `r6a'/`r6c')"
+  local ++fails
+}
+if `r6b' != 459 | `r6d' != 459 | `c6b' != 1 {
+  di as error "I6b FAIL: safety(off) lifted the screen, or the refusal lost its message (rc `r6b'/`r6d', message `c6b')"
+  local ++fails
+}
+if `r6e' != 0 {
+  di as error "I6c FAIL: a cluster nesting every treated level of i was refused (rc `r6e')"
   local ++fails
 }
 

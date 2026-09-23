@@ -270,13 +270,6 @@ version 16.0
       }
       wooldid_permcellsx , cell(`wdpcell') cell0(`wdpcell0') ncfx(`wdp_ncfx') names(`wdp_cfxnames') level(`level') m(`wdp_M') orow(`wdp_OR') ts(`wdp_ts') lattype(`latticetype') cfxlat(`cfxlattice') absp(`permabsp') side(`permside') rawp(`permrawp')
     }
-    * permsave(): the replication draws as a .dta in the working directory
-    if "`permsave'" != "" wooldid_permsave , file(`permsave') acc(`wdpacc') obsb(`wdpobsb') seacc(`=cond(`wdp_ts', "`wdpsacc'", "")') aseobs(`=cond(`wdp_ts', "e(perm_ase_obs)", "")') asg(`wdpasg') clusvals(`wdp_clusvals') obsons(`wdp_obsons') seed(`rseed') rng(`wdp_r_rng0') `replace'
-    * a failed permsave() is a caution, not a refusal (2026-09-21), so the run continues and
-    * the rc is posted instead: it is the only signal a quietly-run script has, since the
-    * caution itself is suppressed by quietly while a nonzero rc never was. Posted only on
-    * failure, so its presence is the flag
-    if "`wdp_save_rc'" != "" & "`wdp_save_rc'" != "0" ereturn local perm_save_rc `wdp_save_rc'
     * deferred display: the worker skipped these under permute(); they read only e(),
     * which now carries the permutation inference (identical formatting, free replay)
     wooldid_display , part(1)
@@ -316,6 +309,17 @@ version 16.0
       }
     }
     wooldid_display , part(perm)
+    * permsave(): the replication draws as a .dta in the working directory. Called below the
+    * tables so that its lines, and a write-failure caution above all, print with the run's
+    * other end-of-run cautions rather than scrolling off above the display. Nothing between
+    * the rewiring and here reposts what it reads: the accumulators are this block's
+    * tempnames, and the display, plot and cell programs above only add e() entries of their
+    * own. A failed write is a caution, not a refusal, so the run continues and the rc is
+    * posted instead: it is the only signal a quietly-run script has, since the caution is
+    * suppressed by quietly while a nonzero rc never was. Posted only on failure, so its
+    * presence is the flag
+    if "`permsave'" != "" wooldid_permsave , file(`permsave') acc(`wdpacc') obsb(`wdpobsb') seacc(`=cond(`wdp_ts', "`wdpsacc'", "")') aseobs(`=cond(`wdp_ts', "e(perm_ase_obs)", "")') asg(`wdpasg') clusvals(`wdp_clusvals') obsons(`wdp_obsons') seed(`rseed') rng(`wdp_r_rng0') `replace'
+    if "`wdp_save_rc'" != "" & "`wdp_save_rc'" != "0" ereturn local perm_save_rc `wdp_save_rc'
     * DRAFT WORDING BY CLAUDE 2026-09-22, not the author's - flagged on the review page for his
     * approval. He asked for this caution when he ruled on the enumeration cap: raising capexact
     * to 65534 makes an exact run of 10001 to 65534 assignments legal for the first time, and
@@ -488,18 +492,6 @@ version 16.0
     if "`wdb_r_sesmall'" != "" ereturn scalar boot_sesmall = `wdb_r_sesmall'
     * bootstrapped joint tests, subgroup contrasts and CI flavors (eclass sub)
     wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') bootdf(`bootdf') bts(`boottstat') bdisp(`bootdisplay') nclus(`wdb_r_nclus') clus(`cluster') pwseacc(`=cond("`boottstat'" != "", "`wdb_r_kpwse'", "")') rawpwse(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwacc(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') seacc(`=cond("`boottstat'" != "", "`wdb_r_kse'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")')
-    * bootsave(): the replication draws as a .dta in the working directory. One row per
-    * replication (_rep = 1..reps; a failed replication keeps its row, all missing) plus a
-    * _rep = 0 row carrying the observed estimates, so the file can recentre its own draws;
-    * under boottstat also the replication and observed analytic standard errors (se_*) and,
-    * with subgroups, the replication pairwise-contrast se (pwse_*). Read from the
-    * accumulators, not e(bootdist), so the 10,000-row cap on the posted matrix does not apply
-    * the joint/adversarial accumulators live in e(boot_jointW)/e(boot_advW) by this point -
-    * wooldid_bootjnt's `ereturn matrix' moves its source - so bootsave reads them from e()
-    if "`bootsave'" != "" wooldid_bootsave , file(`bootsave') acc(`wdbacc') obsb(`wdbobsb') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') wmat(`=cond("`cluster'" != "", "`wdbW'", "")') wobs(`=cond("`bootstrap'" == "bayes", cond("`bootalpha'" == "size", 1/max(`wdb_r_nrows', 1), 1/max(`wdb_r_nclus', 1)), 1)') jwacc(`=cond("`boottstat'" != "", "e(boot_jointW)", "")') jobs(`=cond("`boottstat'" != "", "e(boot_jointWobs)", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advW)", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advWobs)", "")') seed(`rseed') rng(`wdb_r_rng0') `replace'
-    * see the permsave twin above: the rc of a failed bootsave() is posted because the
-    * caution replacing the old refusal is invisible under quietly
-    if "`wdb_save_rc'" != "" & "`wdb_save_rc'" != "0" ereturn local boot_save_rc `wdb_save_rc'
     ereturn local boot_rngstate `wdb_r_rng0'
     * deferred display: worker skipped these under bootstrap; they read only e(),
     * which now carries the bootstrap inference (identical formatting, free replay)
@@ -570,6 +562,20 @@ version 16.0
       }
     }
     wooldid_display , part(boot)
+    * bootsave(): the replication draws as a .dta in the working directory. One row per
+    * replication (_rep = 1..reps; a failed replication keeps its row, all missing) plus a
+    * _rep = 0 row carrying the observed estimates, so the file can recentre its own draws;
+    * under boottstat also the replication and observed analytic standard errors (se_*) and,
+    * with subgroups, the replication pairwise-contrast se (pwse_*). Read from the
+    * accumulators, not e(bootdist), so the 10,000-row cap on the posted matrix does not apply
+    * the joint/adversarial accumulators live in e(boot_jointW)/e(boot_advW) by this point -
+    * wooldid_bootjnt's `ereturn matrix' moves its source - so bootsave reads them from e().
+    * Called below the tables, as permsave() is and for the same reasons: nothing between the
+    * rewiring and here reposts what it reads, and its lines print with the end-of-run
+    * cautions. The rc of a failed write is posted because the caution is invisible under
+    * quietly
+    if "`bootsave'" != "" wooldid_bootsave , file(`bootsave') acc(`wdbacc') obsb(`wdbobsb') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') wmat(`=cond("`cluster'" != "", "`wdbW'", "")') wobs(`=cond("`bootstrap'" == "bayes", cond("`bootalpha'" == "size", 1/max(`wdb_r_nrows', 1), 1/max(`wdb_r_nclus', 1)), 1)') jwacc(`=cond("`boottstat'" != "", "e(boot_jointW)", "")') jobs(`=cond("`boottstat'" != "", "e(boot_jointWobs)", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advW)", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advWobs)", "")') seed(`rseed') rng(`wdb_r_rng0') `replace'
+    if "`wdb_save_rc'" != "" & "`wdb_save_rc'" != "0" ereturn local boot_save_rc `wdb_save_rc'
     * the histogram outputs are the one surface not rewired to the bootstrap: the gteffects
     * cells and the cfx matrices go through wooldid_bootcellsx, the adversarial p is
     * bootstrapped under boottstat and absent otherwise, and event-study plots are drawn
@@ -1556,21 +1562,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * linearly independent, but a panel where a couple of units change cluster mid-panel
   * (migration, a crosswalk revision, a firm changing owner) straddles without meaningfully
   * damaging the inference - se ratio 0.968 against the geometry the screen permits - and still
-  * trips it. That false-positive class is real and it is ordinary data, which is why this screen
-  * is gated on safety() rather than being absolute: safety(off) is the documented way past a
-  * screen whose predicate is deliberately conservative. (Most 459 screens are gated this way;
-  * the byCohort screen above is the unconditional alternative, and it detects an actual
-  * identification failure rather than a sufficient condition for one.)
-  *
-  * It reads safetyinput, the user's own safety() value, not the effective `safety'. The
-  * effective value is rewritten to off whenever contreatwithin accompanies contreat(), and
-  * nothing refuses impvalues alongside contreatwithin - so a screen keyed on `safety' would be
-  * silently skipped by adding contreatwithin to the command. The neighbouring safety-gated
-  * screens read safetyinput for the same reason.
+  * trips it. The screen runs under every safety() setting, so that case is refused too.
   * Cost, on the shipping form at 500 i-levels x 50 clusters: 0.100 s at 200k rows, 0.131 s at
   * 1M, 0.785 s at 5M - two gtools tag passes over the treated rows only, and only under
   * impvalues.
-  if "`impvalues'" != "" & "`cluster'" != "" & "`safetyinput'" != "off" {
+  if "`impvalues'" != "" & "`cluster'" != "" {
     tempvar imvtag
     qui gegen byte `imvtag' = tag(`i') if `ifstatement' & `targetflag' == 1
     qui count if `imvtag' == 1
@@ -1595,7 +1591,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       *   the cell-weighted estimands, under boottstat, and under permute() with permonsetcohorts. This
       *   screen is conservative: nesting is sufficient for the per-cluster reads to be independent, not
       *   necessary, so a panel where only a few units change cluster mid-panel trips it without much
-      *   affecting the inference. To ignore this error, specify safety(off).
+      *   affecting the inference.
       dis as error "Error: impvalues cannot be used with cluster() variables finer than `i', or which crosscut `i'.  "
       error 459
     }
@@ -5336,9 +5332,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
   * F-boot: bootstrap-SE screens; deep checks live in the subprogram (wooldid_bootctl)
   * to conserve this program's compiled-size headroom. called UNCONDITIONALLY: with
-  * bootstrap() absent it enforces the stray-companion screen and exits. it sits AFTER
-  * the safetyinput capture above deliberately - the bayes cell-weighted gate keys on
-  * the user's own safety() value (contreatwithin rewrites the working copy later)
+  * bootstrap() absent it enforces the stray-companion screen and exits. si() carries the
+  * user's own safety() value; no bootctl gate reads it
   cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') ttrevar(`ttre_asgiven') `replace'
   if _rc != 0 exit _rc   // exit, not error - the cap noi above already printed it (the shell-header rule)
 
@@ -6631,7 +6626,7 @@ version 16.0
 *** no loop, calls no Mata and returns nothing - the engine is wooldid_bootrun and the
 *** rewiring is wooldid_bootwire. The deep checks live here rather than in wooldid_validate
 *** for compiled-size headroom (wooldid_validate is within ~1 KB of the per-program
-*** ceiling). jt() and ptp() are retained-but-UNREAD option slots: they are parsed and
+*** ceiling). jt(), ptp() and si() are retained-but-UNREAD option slots: they are parsed and
 *** passed by wooldid_validate and are kept so the byte-identical-syntax contract between
 *** the two programs - checked by test/check_validate_sync.py - and the call site need not
 *** change. Do not wire a gate onto them expecting one to already exist, and do not delete
@@ -6928,21 +6923,19 @@ version 16.0
     error 198
   }
 
-  * cell-weighted estimand gates. att_it/att_i/att_itime aggregate with equal weight per
+  * cell-weighted estimand gate. att_it/att_i/att_itime aggregate with equal weight per
   * treatment cell, so a within-cluster weight multiplier cancels out of them: reweighting-based
-  * replications hold the cell set fixed and omit the cell-sampling variance component
+  * replications hold the cell set fixed and omit the cell-sampling variance component. The
+  * refusal stands under every safety() setting
   local cellwtd `attit' `atti' `attitime'
   if "`bootstrap'" == "bayes" & "`cellwtd'" != "" {
-    if "`si'" != "off" {
-      * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
-      *   Bootstrap(bayes) with `cellwtd' reweights clusters but cannot resample treatment cells, so those
-      *   bootstrap standard errors omit the cell-sampling variance component and can be too small when
-      *   treatment effects vary across clusters. To proceed anyway with a caution, specify safety(off);
-      *   bootstrap(standard) resamples cells and does not have this limitation.
-      dis as error "Error: bootstrap(bayes) is not compatible with non-att estimands; please use bootstrap(standard)."
-      error 198
-    }
-    dis as text "Caution: bootstrap(bayes) standard errors for `cellwtd' omit the cell-sampling variance component and can be too small when treatment effects vary across clusters; the joint tests, pairwise subgroup contrasts and confidence intervals for those estimands inherit the understatement. Read them alongside a bootstrap(standard) run, which does not have this limitation."
+    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
+    *   Bootstrap(bayes) with `cellwtd' reweights clusters but cannot resample treatment cells, so those
+    *   bootstrap standard errors omit the cell-sampling variance component and can be too small when
+    *   treatment effects vary across clusters. bootstrap(standard) resamples cells and does not have
+    *   this limitation.
+    dis as error "Error: bootstrap(bayes) is not compatible with non-att estimands; please use bootstrap(standard)."
+    error 198
   }
   * no nesting screen here, deliberately. i is an estimand-definition choice - which cohorts the
   * effects average over - and cluster() is a claim about dependence and assignment, so a cluster
@@ -7083,11 +7076,10 @@ version 16.0
   * has the identical shape and the same constraint
   local wdbsrc = _rc
   cap frame drop `bsf'
-  * CAUTION, NOT FATAL (author, 2026-09-21: "Please convert this to a caution"). This call
-  * sits above the deferred display, so the old error threw away every table the run would
-  * have printed, and it ran inside the post-loop window, so bare `wooldid' then refused to
-  * replay them. The inference in e() was complete and simply unreachable. Falling through
-  * reaches the display and the marker clear, which is the whole fix - no marker change.
+  * CAUTION, NOT FATAL. The caller runs this after the replication loop and the deferred
+  * display, inside the post-loop window: an error here would leave bare `wooldid' refusing
+  * to replay a run whose inference in e() is complete. Falling through reaches the caller's
+  * marker clear, so the run stays replayable - no marker change.
   *
   * The success line MUST stay in the else arm: `wdbsn' is assigned inside the frame block,
   * so on the failure path it is empty and the line would print "-1 replication rows" for a
@@ -11034,7 +11026,8 @@ version 16.0
   * legal under Stata 19 MP - so if it is ever revisited, revisit it on a measurement of
   * e() size rather than on an assumed matrix limit. bootsave() writes from the
   * accumulators and is NOT subject to the cap, which is the route for a user who needs
-  * the draws from a very large run
+  * the draws from a very large run; the else arm below cautions when the cap withholds the
+  * matrices, and its text names the same 10,000 (test/check_validate_sync.py pins the two)
   if `done' <= 10000 {
     tempname bdist
     if `wdbts' {
@@ -11058,6 +11051,7 @@ version 16.0
       cap ereturn matrix bootdist = `bdist'
     }
   }
+  else dis as text "Caution: `done' completed replications exceeds the 10,000 cap on posting draw matrices, so e(bootdist) and e(bootdist_se) are not posted. Use bootsave() to write the draws."
   if `blank' > 0 dis as text "Caution: `blank' replication cell(s) in ame-family columns returned exact structural zeros (resamples without dose variation in some cells) and were excluded from those columns' bootstrap moments."
   if "`wdb_lowav'" != "" dis as text "Caution: the following estimates were available in fewer than half of the completed replications; their bootstrap standard errors rest on the listed counts: `wdb_lowav'"
   if "`wdb_exclnames'" != "" dis as text "Caution: the following estimates have no identified observed value and are excluded from bootstrap inference: `wdb_exclnames'"

@@ -237,8 +237,8 @@ but reweighting observations by w/(W_it * T_iprepost), where w is an observation
 cohort i is observed. If weights are not used, w is taken to have a value of 1 for all observations.{p_end}
 
 {pstd}Under {it:contreat()} each requested estimand is also reported as the average marginal effect of the continuous treatment, labelled {it:ame}, {it:ame_it}, {it:ame_i} and {it:ame_itime}.
-Because {it:att_it}, {it:att_i} and {it:att_itime} weight cells or cohorts equally rather than observations, some options treat them differently. {it:unconditionalse} and
-{it:bootstrap(bayes)} are refused for them unless {it:safety(off)} is specified. {it:makecfxplots} produces its plots and the {it:e(cfx*)} matrices for {it:att} only unless
+Because {it:att_it}, {it:att_i} and {it:att_itime} weight cells or cohorts equally rather than observations, some options treat them differently. {it:unconditionalse} is
+refused for them unless {it:safety(off)} is specified, and {it:bootstrap(bayes)} is refused for them. {it:makecfxplots} produces its plots and the {it:e(cfx*)} matrices for {it:att} only unless
 {it:safety(off)} is specified. A {it:subgroups()} variable that splits a unit across subgroups over time is refused; under {it:safety(off)} such a unit enters each subgroup by its share of
 sample weight, so {it:att_i} and {it:att_itime} then no longer weight units equally.{p_end}
 
@@ -271,7 +271,7 @@ randomize over. It turns the default cell collapse off. {p_end}
 {phang}{opt imp:values}: Implements Ibragimov and Muller (2010) style cluster-robust inference for all estimates. The idea behind the Ibragimov and Muller approach is to compute
 cluster-specific treatment effect estimates, present their average as one's final treatment effect estimate, and conduct inference by t-testing the cluster-specific estimates against 0.
 Using IM-style inference requires specifying a single cluster variable at the level of {it:i} or coarser. A {it:cluster()} finer than {it:i}, or one that cuts across it, is
-refused unless {it:safety(off)} is specified, since the cluster-specific estimates are then re-weightings of the same coefficients and the reported standard error is far too small.
+refused, since the cluster-specific estimates are then re-weightings of the same coefficients and the reported standard error is far too small.
 IM-style inference changes {it:wooldid}'s target estimand: the cluster-specific estimates are averaged with equal weight, so what is reported is the cluster-equally-weighted mean
 whatever estimand was requested. For example, if clustering at the cohort level, {it:att} will yield the same effect estimates as {it:att_i}. Each reported row uses a t
 distribution with degrees of freedom one less than the number of clusters contributing to that row, and {it:e(df_r)} is set to the smallest of these. IM-style inference is not
@@ -355,7 +355,7 @@ the observations when {it:cluster()} is not given, are resampled with replacemen
 Dirichlet weight per cluster and multiplies that cluster's observations by it, so no cluster ever leaves the sample. Requires {it:reps()}. Refused with {it:permute()}, {it:impvalues},
 {it:unconditionalse}, {it:customvce()}, {it:fastnose}, {it:oldsyntax},
 {it:suppresssgprimaryeffects} and multi-way {it:cluster()}. {it:bootstrap(bayes)} with {it:att_it}, {it:att_i} or {it:att_itime} omits the cell-sampling component
-of the variance and is refused unless {it:safety(off)} is given, which makes it a caution. Plots, {it:gteffects} cells, {it:jointtests}
+of the variance and is refused. Plots, {it:gteffects} cells, {it:jointtests}
 and {it:pretrendpower()} all follow the bootstrap. Only the {it:histogramcohorteffects} output is untouched: it draws the observed point estimates, which the bootstrap does not change. Under
 {it:cfxplotnose} the continuous treatment cells receive no bootstrap inference, so drop that option if bands are wanted. {it:wooldid} cautions when fewer than 6
 clusters are treated. Neither mode is a remedy for few treated clusters and no wild cluster bootstrap is offered; use {it:permute()} there, or
@@ -365,7 +365,8 @@ standard errors of the cell-weighted estimands may be understated; the remedies 
 a variable that encodes {it:i} under another name, or was merged in on {it:i}, is not found and keeps its original codes across the copies. {p_end}
 
 {phang}{opt reps(#)}: Number of bootstrap replications. Required with {it:bootstrap()} and refused without it. No minimum is imposed, so a small value can be used to
-time a specification. Replications that fail to estimate are excluded and counted in {it:e(boot_failed)}. The smallest p-value a run can print is set by the number
+time a specification. Replications that fail to estimate are excluded and counted in {it:e(boot_failed)}. Above 10,000 completed replications the draw matrices
+are not posted and a caution says so; {it:bootsave()} writes them regardless. The smallest p-value a run can print is set by the number
 of completed replications {it:n}: 2/{it:n} for the percentile and bias-corrected coefficient p-values, which can print exactly 0, 2/({it:n}+1) under
 {it:boottstat}, and 1/({it:n}+1) for the joint tests, and a caution names the limit whenever it exceeds .05. {p_end}
 
