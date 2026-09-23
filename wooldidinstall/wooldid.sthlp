@@ -669,7 +669,7 @@ fixed effects (i.e., specifying {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}).
 {phang}{opt contreat(varname)}: The continuous treatment variable. Must be defined for all observations (set to 0 if not naturally defined within untreated cohort-periods);
 observations on which it is missing are dropped from the estimation sample. If the continuous treatment carries no identifying variation for any treated cohort-period cell's
 dose slope (for example, a dose constant within each cohort), the within-cell average marginal effects are not identified: under default safety {it:wooldid} names this situation, reports the ame
-results as missing, and continues with the att results. Not available with {it:gteffects}. {p_end}
+results as missing, and continues with the att results; under {it:contreatcontrols(untreatedZero)} the same design is refused instead. Not available with {it:gteffects}. {p_end}
 
 {phang}{opt contreatelas:ticitytype(dydx|dyex)}: Specifies which type of marginal effect of the continuous treatment to compute. {it:dydx} is the default and reports the
 average marginal effect itself (change in y per unit change in the continuous treatment). {it:dyex} reports the change in y per proportional change in the continuous treatment.
