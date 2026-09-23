@@ -233,42 +233,57 @@ if len(capvals) == 3:
 
 # ---- the bootstrap draw-matrix cap and its caution ----
 # wooldid_bootwire posts e(bootdist)/e(bootdist_se) only up to the same kind of cap, and the
-# else arm of that test cautions when the matrices are withheld. The arm cannot disagree with
-# the test, but the caution's text names the cap as a number, so the two can still drift.
-# Pinned here for the permutation twin's reason: exercising it needs 10,001 completed
-# replications. The site is the `done' test with bootdist (not permdist) posted inside it.
+# shell cautions when the matrices are withheld, keyed on the same completed-replication count
+# (bootwire's `done' is the shell's `wdb_r_done'). As in the permutation block the cap is then
+# written three times - bootwire's test, the shell caution's test and the number in its text -
+# and they share no storage, so they can drift. Pinned here for the permutation twin's reason:
+# exercising it needs 10,001 completed replications. The bootwire site is the `done' test with
+# bootdist (not permdist) posted inside it. Also pinned: the caution prints once, from the
+# shell's bootstrap block below its part(boot) display - below the result tables - and before
+# that block clears the replay marker.
 bootwire_sites = []
 for idx, line in enumerate(src):
     m = re.search(r"if\s+`done'\s*<=\s*(\d+)\s*\{", line)
     if m and any("ereturn matrix bootdist" in l for l in src[idx:idx + 20]) \
             and not any("permdist" in l for l in src[idx:idx + 20]):
         bootwire_sites.append((idx, m.group(1)))
+bshell_sites = []
+for idx, line in enumerate(src):
+    m = re.match(r"\s*if\s+`wdb_r_done'\s*>\s*(\d+)\s+dis as text \"Caution: `wdb_r_done' completed "
+                 r"replications exceeds the ([\d,]+) cap on posting draw matrices, so e\(bootdist\)",
+                 line)
+    if m:
+        bshell_sites.append((idx, m.group(1), m.group(2)))
+bcaut_n = sum(1 for l in src if "so e(bootdist) and e(bootdist_se) are not posted" in l)
 if len(bootwire_sites) != 1:
     print(f"FAIL: expected exactly one wooldid_bootwire draw-matrix cap site, found "
           f"{len(bootwire_sites)}")
     fail = True
+elif len(bshell_sites) != 1 or bcaut_n != 1:
+    print(f"FAIL: expected the bootstrap draw-matrix caution exactly once, in the shell keyed on "
+          f"`wdb_r_done'; found {len(bshell_sites)} shell site(s) and {bcaut_n} line(s) with its text")
+    fail = True
 else:
-    idx, bcap = bootwire_sites[0]
-    # walk to the block's closing brace; the caution must be the else arm on the next line
-    depth = 0
-    close = None
-    for j in range(idx, len(src)):
-        depth += src[j].count("{") - src[j].count("}")
-        if depth == 0:
-            close = j
+    widx, bcap = bootwire_sites[0]
+    sidx, scap, tcap = bshell_sites[0]
+    # the nearest display call above the caution must be part(boot), with no marker clear between
+    disp = None
+    for j in range(sidx - 1, -1, -1):
+        if re.match(r"\s*wooldid_display\s*,\s*part\(", src[j]):
+            disp = j
             break
-    nxt = src[close + 1] if close is not None and close + 1 < len(src) else ""
-    m = re.match(r"\s*else dis as text \"Caution: `done' completed replications exceeds the "
-                 r"([\d,]+) cap on posting draw matrices, so e\(bootdist\)", nxt)
-    if not m:
-        print("FAIL: the wooldid_bootwire draw-matrix cap has no caution in the else arm of its "
-              "e(bootdist) test")
+    cleared = disp is not None and any(re.match(r"\s*global WOOLDID_LASTRC\s*$", src[j])
+                                       for j in range(disp, sidx))
+    if disp is None or not re.match(r"\s*wooldid_display\s*,\s*part\(boot\)", src[disp]) or cleared:
+        print("FAIL: the bootstrap draw-matrix caution does not print below the part(boot) display "
+              "inside the shell's bootstrap block")
         fail = True
-    elif m.group(1).replace(",", "") != bcap:
-        print(f"FAIL: the bootstrap draw-matrix cap disagrees with its caution: test {bcap}, "
-              f"caution text {m.group(1)}")
+    elif len({bcap, scap, tcap.replace(",", "")}) != 1:
+        print(f"FAIL: the bootstrap draw-matrix cap disagrees across its three sites: bootwire "
+              f"test {bcap}, shell caution test {scap}, caution text {tcap}")
         fail = True
     else:
-        print(f"OK: the bootstrap draw-matrix cap is {bcap} in the e(bootdist) test and its caution")
+        print(f"OK: the bootstrap draw-matrix cap is {bcap} in the e(bootdist) test, the shell "
+              f"caution's test and its text, and the caution prints below part(boot)")
 
 sys.exit(1 if fail else 0)

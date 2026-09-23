@@ -270,6 +270,15 @@ version 16.0
       }
       wooldid_permcellsx , cell(`wdpcell') cell0(`wdpcell0') ncfx(`wdp_ncfx') names(`wdp_cfxnames') level(`level') m(`wdp_M') orow(`wdp_OR') ts(`wdp_ts') lattype(`latticetype') cfxlat(`cfxlattice') absp(`permabsp') side(`permside') rawp(`permrawp')
     }
+    * permsave(): the replication draws as a .dta in the working directory. Written here,
+    * before the deferred display and plots, so a plot that fails below cannot lose the file.
+    * The saver prints nothing: it hands back its lines (wdp_save_l1-l3), which are printed
+    * below the tables, after part(perm). A failed write is a caution, not a refusal, so the
+    * run continues and the rc is posted instead: it is the only signal a quietly-run script
+    * has, since the caution is suppressed by quietly while a nonzero rc never was. Posted
+    * only on failure, so its presence is the flag
+    if "`permsave'" != "" wooldid_permsave , file(`permsave') acc(`wdpacc') obsb(`wdpobsb') seacc(`=cond(`wdp_ts', "`wdpsacc'", "")') aseobs(`=cond(`wdp_ts', "e(perm_ase_obs)", "")') asg(`wdpasg') clusvals(`wdp_clusvals') obsons(`wdp_obsons') seed(`rseed') rng(`wdp_r_rng0') `replace'
+    if "`wdp_save_rc'" != "" & "`wdp_save_rc'" != "0" ereturn local perm_save_rc `wdp_save_rc'
     * deferred display: the worker skipped these under permute(); they read only e(),
     * which now carries the permutation inference (identical formatting, free replay)
     wooldid_display , part(1)
@@ -309,17 +318,14 @@ version 16.0
       }
     }
     wooldid_display , part(perm)
-    * permsave(): the replication draws as a .dta in the working directory. Called below the
-    * tables so that its lines, and a write-failure caution above all, print with the run's
-    * other end-of-run cautions rather than scrolling off above the display. Nothing between
-    * the rewiring and here reposts what it reads: the accumulators are this block's
-    * tempnames, and the display, plot and cell programs above only add e() entries of their
-    * own. A failed write is a caution, not a refusal, so the run continues and the rc is
-    * posted instead: it is the only signal a quietly-run script has, since the caution is
-    * suppressed by quietly while a nonzero rc never was. Posted only on failure, so its
-    * presence is the flag
-    if "`permsave'" != "" wooldid_permsave , file(`permsave') acc(`wdpacc') obsb(`wdpobsb') seacc(`=cond(`wdp_ts', "`wdpsacc'", "")') aseobs(`=cond(`wdp_ts', "e(perm_ase_obs)", "")') asg(`wdpasg') clusvals(`wdp_clusvals') obsons(`wdp_obsons') seed(`rseed') rng(`wdp_r_rng0') `replace'
-    if "`wdp_save_rc'" != "" & "`wdp_save_rc'" != "0" ereturn local perm_save_rc `wdp_save_rc'
+    * the lines permsave() handed back above - its write-failure caution, or its success line
+    * with any caution on the assignment block - print here, below the tables, with the run's
+    * other end-of-run cautions rather than scrolling off above the display
+    if "`permsave'" != "" {
+      dis as text `"`wdp_save_l1'"'
+      if `"`wdp_save_l2'"' != "" dis as text `"`wdp_save_l2'"'
+      if `"`wdp_save_l3'"' != "" dis as text `"`wdp_save_l3'"'
+    }
     * DRAFT WORDING BY CLAUDE 2026-09-22, not the author's - flagged on the review page for his
     * approval. He asked for this caution when he ruled on the enumeration cap: raising capexact
     * to 65534 makes an exact run of 10001 to 65534 assignments legal for the first time, and
@@ -492,6 +498,20 @@ version 16.0
     if "`wdb_r_sesmall'" != "" ereturn scalar boot_sesmall = `wdb_r_sesmall'
     * bootstrapped joint tests, subgroup contrasts and CI flavors (eclass sub)
     wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') bootdf(`bootdf') bts(`boottstat') bdisp(`bootdisplay') nclus(`wdb_r_nclus') clus(`cluster') pwseacc(`=cond("`boottstat'" != "", "`wdb_r_kpwse'", "")') rawpwse(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwacc(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') seacc(`=cond("`boottstat'" != "", "`wdb_r_kse'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")')
+    * bootsave(): the replication draws as a .dta in the working directory. One row per
+    * replication (_rep = 1..reps; a failed replication keeps its row, all missing) plus a
+    * _rep = 0 row carrying the observed estimates, so the file can recentre its own draws;
+    * under boottstat also the replication and observed analytic standard errors (se_*) and,
+    * with subgroups, the replication pairwise-contrast se (pwse_*). Read from the
+    * accumulators, not e(bootdist), so the 10,000-row cap on the posted matrix does not apply
+    * the joint/adversarial accumulators live in e(boot_jointW)/e(boot_advW) by this point -
+    * wooldid_bootjnt's `ereturn matrix' moves its source - so bootsave reads them from e().
+    * Written here, before the deferred display, the pre-trend power diagnostic and the plots,
+    * so a failure in any of them below cannot lose the file. The saver prints nothing: it
+    * hands back its line (wdb_save_l1), which is printed below the tables, after part(boot).
+    * The rc of a failed write is posted because the caution is invisible under quietly
+    if "`bootsave'" != "" wooldid_bootsave , file(`bootsave') acc(`wdbacc') obsb(`wdbobsb') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') wmat(`=cond("`cluster'" != "", "`wdbW'", "")') wobs(`=cond("`bootstrap'" == "bayes", cond("`bootalpha'" == "size", 1/max(`wdb_r_nrows', 1), 1/max(`wdb_r_nclus', 1)), 1)') jwacc(`=cond("`boottstat'" != "", "e(boot_jointW)", "")') jobs(`=cond("`boottstat'" != "", "e(boot_jointWobs)", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advW)", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advWobs)", "")') seed(`rseed') rng(`wdb_r_rng0') `replace'
+    if "`wdb_save_rc'" != "" & "`wdb_save_rc'" != "0" ereturn local boot_save_rc `wdb_save_rc'
     ereturn local boot_rngstate `wdb_r_rng0'
     * deferred display: worker skipped these under bootstrap; they read only e(),
     * which now carries the bootstrap inference (identical formatting, free replay)
@@ -562,20 +582,16 @@ version 16.0
       }
     }
     wooldid_display , part(boot)
-    * bootsave(): the replication draws as a .dta in the working directory. One row per
-    * replication (_rep = 1..reps; a failed replication keeps its row, all missing) plus a
-    * _rep = 0 row carrying the observed estimates, so the file can recentre its own draws;
-    * under boottstat also the replication and observed analytic standard errors (se_*) and,
-    * with subgroups, the replication pairwise-contrast se (pwse_*). Read from the
-    * accumulators, not e(bootdist), so the 10,000-row cap on the posted matrix does not apply
-    * the joint/adversarial accumulators live in e(boot_jointW)/e(boot_advW) by this point -
-    * wooldid_bootjnt's `ereturn matrix' moves its source - so bootsave reads them from e().
-    * Called below the tables, as permsave() is and for the same reasons: nothing between the
-    * rewiring and here reposts what it reads, and its lines print with the end-of-run
-    * cautions. The rc of a failed write is posted because the caution is invisible under
-    * quietly
-    if "`bootsave'" != "" wooldid_bootsave , file(`bootsave') acc(`wdbacc') obsb(`wdbobsb') seacc(`=cond("`boottstat'" != "", "`wdbsacc'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') pwseacc(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') wmat(`=cond("`cluster'" != "", "`wdbW'", "")') wobs(`=cond("`bootstrap'" == "bayes", cond("`bootalpha'" == "size", 1/max(`wdb_r_nrows', 1), 1/max(`wdb_r_nclus', 1)), 1)') jwacc(`=cond("`boottstat'" != "", "e(boot_jointW)", "")') jobs(`=cond("`boottstat'" != "", "e(boot_jointWobs)", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advW)", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "e(boot_advWobs)", "")') seed(`rseed') rng(`wdb_r_rng0') `replace'
-    if "`wdb_save_rc'" != "" & "`wdb_save_rc'" != "0" ereturn local boot_save_rc `wdb_save_rc'
+    * the line bootsave() handed back above - its write-failure caution or its success line -
+    * prints here, below the tables, with the run's other end-of-run cautions rather than
+    * scrolling off above the display
+    if "`bootsave'" != "" dis as text `"`wdb_save_l1'"'
+    * wooldid_bootwire posts e(bootdist) and e(bootdist_se) only up to 10,000 completed
+    * replications (its `done' is `wdb_r_done' here); above that this caution says so, below the
+    * tables as the permutation block's twin does. The 10000 in this test, the one in its text
+    * and the one in wooldid_bootwire's `done' test are the same cap written three times, and
+    * test/check_validate_sync.py pins them to one number
+    if `wdb_r_done' > 10000 dis as text "Caution: `wdb_r_done' completed replications exceeds the 10,000 cap on posting draw matrices, so e(bootdist) and e(bootdist_se) are not posted. Use bootsave() to write the draws."
     * the histogram outputs are the one surface not rewired to the bootstrap: the gteffects
     * cells and the cfx matrices go through wooldid_bootcellsx, the adversarial p is
     * bootstrapped under boottstat and absent otherwise, and event-study plots are drawn
@@ -7218,13 +7234,17 @@ version 16.0
   * has the identical shape and the same constraint
   local wdbsrc = _rc
   cap frame drop `bsf'
-  * CAUTION, NOT FATAL. The caller runs this after the replication loop and the deferred
-  * display, inside the post-loop window: an error here would leave bare `wooldid' refusing
-  * to replay a run whose inference in e() is complete. Falling through reaches the caller's
-  * marker clear, so the run stays replayable - no marker change.
+  * CAUTION, NOT FATAL. The caller runs this after the replication loop and before the
+  * deferred display, inside the post-loop window: an error here would leave bare `wooldid'
+  * refusing to replay a run whose inference in e() is complete. Falling through reaches the
+  * caller's marker clear, so the run stays replayable - no marker change.
+  *
+  * Nothing is printed here. The line - the caution or the success line - is handed back in
+  * wdb_save_l1 and the caller prints it below the result tables, so the file is written
+  * before the plots while its line still prints with the end-of-run cautions.
   *
   * The success line MUST stay in the else arm: `wdbsn' is assigned inside the frame block,
-  * so on the failure path it is empty and the line would print "-1 replication rows" for a
+  * so on the failure path it is empty and the line would read "-1 replication rows" for a
   * file that does not exist.
   *
   * Residual cost, accepted rather than mitigated: with an unwritable target `save, replace'
@@ -7232,9 +7252,9 @@ version 16.0
   * afterwards gets stale draws where it used to die. The rc is therefore handed back to the
   * caller, which posts it as e(boot_save_rc) so a script can still detect the loss.
   if `wdbsrc' != 0 {
-    dis as text "Caution: bootsave(`fn') could not produce the replication dataset (rc=`wdbsrc')."
+    c_local wdb_save_l1 "Caution: bootsave(`fn') could not produce the replication dataset (rc=`wdbsrc')."
   }
-  else dis as text "bootsave(): the replication draws were written to `fn'.dta (`=`wdbsn'-1' replication rows plus the _rep = 0 observed row)."
+  else c_local wdb_save_l1 "bootsave(): the replication draws were written to `fn'.dta (`=`wdbsn'-1' replication rows plus the _rep = 0 observed row)."
   c_local wdb_save_rc `wdbsrc'
 end
 
@@ -9555,18 +9575,19 @@ version 16.0
   local wdpsrc = _rc
   cap frame drop `psf'
   * CAUTION, NOT FATAL - the twin of the bootsave conversion above, for the reasons given
-  * there. The two content cautions below are re-gated onto the success arm: they describe
-  * what is IN the file, so on a failed save they would be describing a file that was never
-  * written.
+  * there, and like it this prints nothing: its lines are handed back in wdp_save_l1-l3 and
+  * the caller prints them below the result tables. The two content cautions below are gated
+  * onto the success arm: they describe what is IN the file, so on a failed save they would
+  * be describing a file that was never written.
   if `wdpsrc' != 0 {
-    dis as text "Caution: permsave(`fn') could not produce the replication dataset (rc=`wdpsrc')."
+    c_local wdp_save_l1 "Caution: permsave(`fn') could not produce the replication dataset (rc=`wdpsrc')."
   }
   else {
-  dis as text "permsave(): the permutation draws were written to `fn'.dta (`=`wdpsn'-1' replication rows plus the _rep = 0 observed row`=cond("`asg'" != "", "; the onset_* columns hold the onset assigned to each cluster", "")')."
+  c_local wdp_save_l1 "permsave(): the permutation draws were written to `fn'.dta (`=`wdpsn'-1' replication rows plus the _rep = 0 observed row`=cond("`asg'" != "", "; the onset_* columns hold the onset assigned to each cluster", "")')."
   * the assignment block's two failure modes are announced rather than left to be
   * discovered in the saved file
-  if "`wdpsasgerr'" == "1" dis as text "Caution: permsave(`fn') could not write the per-cluster assignment block (the cluster-value and observed-onset lists do not conform to the assignment matrix), so `fn'.dta carries the replication draws but NO onset_* columns."
-  if `=cond("`wdpsasgdrop'" == "", "0", "`wdpsasgdrop'")' > 0 dis as text "Caution: permsave(`fn') omitted `wdpsasgdrop' cluster assignment column(s) from `fn'.dta because their onset_<id> names were already taken (a name collision with another column, or two cluster ids that map to the same Stata name). The file is that many clusters short and nothing in it marks the gap."
+  if "`wdpsasgerr'" == "1" c_local wdp_save_l2 "Caution: permsave(`fn') could not write the per-cluster assignment block (the cluster-value and observed-onset lists do not conform to the assignment matrix), so `fn'.dta carries the replication draws but NO onset_* columns."
+  if `=cond("`wdpsasgdrop'" == "", "0", "`wdpsasgdrop'")' > 0 c_local wdp_save_l3 "Caution: permsave(`fn') omitted `wdpsasgdrop' cluster assignment column(s) from `fn'.dta because their onset_<id> names were already taken (a name collision with another column, or two cluster ids that map to the same Stata name). The file is that many clusters short and nothing in it marks the gap."
   }
   c_local wdp_save_rc `wdpsrc'
 end
@@ -11200,8 +11221,9 @@ version 16.0
   * legal under Stata 19 MP - so if it is ever revisited, revisit it on a measurement of
   * e() size rather than on an assumed matrix limit. bootsave() writes from the
   * accumulators and is NOT subject to the cap, which is the route for a user who needs
-  * the draws from a very large run; the else arm below cautions when the cap withholds the
-  * matrices, and its text names the same 10,000 (test/check_validate_sync.py pins the two)
+  * the draws from a very large run. The shell cautions when the cap withholds the matrices,
+  * below the result tables, keyed on the same count and naming the same 10,000
+  * (test/check_validate_sync.py pins the three)
   if `done' <= 10000 {
     tempname bdist
     if `wdbts' {
@@ -11225,7 +11247,6 @@ version 16.0
       cap ereturn matrix bootdist = `bdist'
     }
   }
-  else dis as text "Caution: `done' completed replications exceeds the 10,000 cap on posting draw matrices, so e(bootdist) and e(bootdist_se) are not posted. Use bootsave() to write the draws."
   if `blank' > 0 dis as text "Caution: `blank' replication cell(s) in ame-family columns returned exact structural zeros (resamples without dose variation in some cells) and were excluded from those columns' bootstrap moments."
   if "`wdb_lowav'" != "" dis as text "Caution: the following estimates were available in fewer than half of the completed replications; their bootstrap standard errors rest on the listed counts: `wdb_lowav'"
   if "`wdb_exclnames'" != "" dis as text "Caution: the following estimates have no identified observed value and are excluded from bootstrap inference: `wdb_exclnames'"

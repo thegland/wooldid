@@ -1474,5 +1474,54 @@ global G41CMD y unit t ttre, att att_it cluster(unit) subgroups(sgv) esprelength
 g41leg c boot_gates_g41c "`panelsg'" boot_method
 global G41CMD
 
+* ---- G42 (author ruling 2026-09-23, save first and caution last): bootsave() writes its file
+* before the deferred display and plots, so a plot that fails after the replication loop does
+* not lose it, while the saver's line still prints below the result tables. A first run writes
+* the draws file and the event-study .gph (G42a: rc 0, and the success line prints below the
+* part(boot) footer). The draws file is then erased and the .gph made read-only, as in G20, so
+* the rerun under replace fails r(608) at the plot save (G42b). The draws file must exist
+* regardless, holding the rerun's replications and seed (G42c)
+use `panel', clear
+foreach f in boot_gates_g42.dta boot_gates_g42p_ES_att.gph boot_gates_g42p_ES.dta boot_gates_g42.txt {
+  cap erase "`f'"
+}
+qui log using boot_gates_g42.txt, text replace name(g42)
+cap noi wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) dots(0) bootsave(boot_gates_g42) makeplots saveplots(boot_gates_g42p)
+local g42rc = _rc
+qui log close g42
+local g42lg = fileread("boot_gates_g42.txt")
+local g42pf = strpos(`"`g42lg'"', "Bootstrap Inference (")
+local g42ps = strpos(`"`g42lg'"', "bootsave(): the replication draws were written to boot_gates_g42.dta")
+if `g42rc' != 0 | `g42pf' == 0 | `g42ps' < `g42pf' {
+  di as error "G42a FAIL: the seed run (rc `g42rc') did not print the bootsave() success line (at `g42ps') below the bootstrap footer (at `g42pf')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g42.dta
+! chmod 444 boot_gates_g42p_ES_att.gph
+use `panel', clear
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(8) dots(0) bootsave(boot_gates_g42) makeplots saveplots(boot_gates_g42p) replace
+chk 42b 608 _rc
+cap confirm file boot_gates_g42.dta
+if _rc {
+  di as error "G42c FAIL: the plot failure lost the bootsave() file"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+else {
+  preserve
+  use boot_gates_g42, clear
+  qui count if _rep > 0
+  local g42n = r(N)
+  local g42seed `_dta[wooldid_seed]'
+  restore
+  if `g42n' != 10 | "`g42seed'" != "8" {
+    di as error "G42c FAIL: the bootsave() file is not the rerun's (rows=`g42n' seed=`g42seed'; want 10 and 8)"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+}
+! chmod 644 boot_gates_g42p_ES_att.gph
+foreach f in boot_gates_g42.dta boot_gates_g42p_ES_att.gph boot_gates_g42p_ES.dta boot_gates_g42.txt {
+  cap erase "`f'"
+}
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

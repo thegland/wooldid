@@ -2274,5 +2274,54 @@ if `rc' == 0 {
 }
 cap erase perm3_q38.txt
 
+* ================= Q39 (author ruling 2026-09-23, save first and caution last): permsave() writes
+* its file before the deferred display and plots, so a plot that fails after the replication loop
+* does not lose it, while the saver's lines still print below the result tables. A first run
+* writes the draws file and the event-study .gph (Q39a: rc 0, and the success line prints below
+* the part(perm) footer). The draws file is then erased and the .gph made read-only, so the rerun
+* under replace fails r(608) at the plot save (Q39b). The draws file must exist regardless,
+* holding the rerun's replications and seed (Q39c) ====
+foreach f in perm3_q39.dta perm3_q39p_ES_att.gph perm3_q39p_ES.dta perm3_q39.txt {
+  cap erase "`f'"
+}
+mkperm3 8 4 3
+qui log using perm3_q39.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20) rseed(39) dots(0) permsave(perm3_q39) makeplots saveplots(perm3_q39p)
+local rc = _rc
+qui log close p3
+local lg = fileread("perm3_q39.txt")
+local q39pf = strpos(`"`lg'"', "Randomization Inference (permute(")
+local q39ps = strpos(`"`lg'"', "permsave(): the permutation draws were written to perm3_q39.dta")
+if `rc' != 0 | `q39pf' == 0 | `q39ps' < `q39pf' {
+  dis as error "Q39a FAIL: the seed run (rc `rc') did not print the permsave() success line (at `q39ps') below the permutation footer (at `q39pf')"
+  global pf = $pf + 1
+}
+cap erase perm3_q39.dta
+! chmod 444 perm3_q39p_ES_att.gph
+mkperm3 8 4 3
+cap qui wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20) rseed(40) dots(0) permsave(perm3_q39) makeplots saveplots(perm3_q39p) replace
+xrc Q39b 608 _rc
+cap confirm file perm3_q39.dta
+if _rc {
+  dis as error "Q39c FAIL: the plot failure lost the permsave() file"
+  global pf = $pf + 1
+}
+else {
+  preserve
+  use perm3_q39, clear
+  qui count if _rep > 0
+  local q39n = r(N)
+  local q39seed `_dta[wooldid_seed]'
+  restore
+  if `q39n' != 20 | "`q39seed'" != "40" {
+    dis as error "Q39c FAIL: the permsave() file is not the rerun's (rows=`q39n' seed=`q39seed'; want 20 and 40)"
+    global pf = $pf + 1
+  }
+}
+! chmod 644 perm3_q39p_ES_att.gph
+foreach f in perm3_q39.dta perm3_q39p_ES_att.gph perm3_q39p_ES.dta perm3_q39.txt {
+  cap erase "`f'"
+}
+
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"
