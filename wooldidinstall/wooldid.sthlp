@@ -356,7 +356,7 @@ Dirichlet weight per cluster and multiplies that cluster's observations by it, s
 {it:unconditionalse}, {it:customvce()}, {it:fastnose}, {it:oldsyntax},
 {it:suppresssgprimaryeffects} and multi-way {it:cluster()}. {it:bootstrap(bayes)} with {it:att_it}, {it:att_i} or {it:att_itime} omits the cell-sampling component
 of the variance and is refused unless {it:safety(off)} is given, which makes it a caution. Plots, {it:gteffects} cells, {it:jointtests}
-and {it:pretrendpower()} all follow the bootstrap. Only the {it:histogramcohorteffects} output remains analytic, and a caution says so. Under
+and {it:pretrendpower()} all follow the bootstrap. Only the {it:histogramcohorteffects} output is untouched: it draws the observed point estimates, which the bootstrap does not change. Under
 {it:cfxplotnose} the continuous treatment cells receive no bootstrap inference, so drop that option if bands are wanted. {it:wooldid} cautions when fewer than 6
 clusters are treated. Neither mode is a remedy for few treated clusters and no wild cluster bootstrap is offered; use {it:permute()} there, or
 {help boottest} on the underlying regression outside {it:wooldid}. When {it:cluster()} does not nest {it:i} and some unit spans two clusters, a caution says the

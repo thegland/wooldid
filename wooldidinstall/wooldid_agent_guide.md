@@ -272,7 +272,7 @@ Use `bootstrap()` when the analytic covariance is not trustworthy for the quanti
 - `boottstat` studentizes: the reported standard error is the analytic one and the p-value and interval come from the replications' t-statistics. It is the route to bootstrapped joint pre-trend, subgroup-equality and adversarial tests; without it the adversarial p-value is absent under `bootstrap()`. It is slower and refuses `poisson`, `bootstrap(bayes)` and the `wald`, `bc` and `bca` displays.
 - `bootdisplay()` chooses which family the tables show (`percentile` by default, `bc`, `bca`, `wald`); every family except `bca` is stored whichever is displayed.
 - With few treated clusters the cluster bootstrap is badly sized and wooldid cautions; use `permute()` there.
-- Refused with `impvalues`, `unconditionalse`, `customvce()`, `fastnose`, `oldsyntax`, `suppresssgprimaryeffects`, multi-way `cluster()` and `permute()`. `histogramcohorteffects` stays analytic.
+- Refused with `impvalues`, `unconditionalse`, `customvce()`, `fastnose`, `oldsyntax`, `suppresssgprimaryeffects`, multi-way `cluster()` and `permute()`. `histogramcohorteffects` is untouched: it draws the observed point estimates and uses no covariance.
 
 The rest of this chapter is the help file's account of the options, the families, and how the bootstrap differs from randomization inference.
 
@@ -368,7 +368,7 @@ Use `permute()` when treated clusters are few, which is the setting where cluste
 - The observed run and the replications are in fast mode by default, so no analytic standard errors are computed and `e(V)` is not posted; `permanalyticse` restores them for reference, and `permtstat` randomizes on t-ratios instead of coefficients (slower; protects against a treated cluster with unusual variance only when the standard error can see that cluster, which at `cluster()` = `i` it cannot).
 - P-value conventions: equal-tailed two-sided by default, `permabsp` for absolute-value, `permside()` for one-sided, `permrawp` for the plain share `ritest` reports. The floor is 1/(permreps+1) (2/(permreps+1) equal-tailed), and wooldid cautions when it exceeds .05. Intervals are shift intervals at `level()` and are calibrated near the null; they widen with the true effect.
 - In staggered designs the reassigned onsets move post-treatment outcomes into the replications' pre-treatment horizons, so pre-period p-values rise toward 1 as the true effect grows; a large pre-period p-value is not by itself evidence of no pre-trend (`e(perm_precaveat)` = 1 records that pre-treatment rows were reported under `permute()`, so the caveat applies; it does not test whether onsets are staggered).
-- Refused with `impvalues`, `unconditionalse`, `customvce()`, `contreatwithin`, `contreatcontrols(untreatedZero)`, `oldsyntax`, `suppresssgprimaryeffects`, `pretrendpower()`, `simultaneousbands` and `bootstrap()`. `gteffects` cells carry no permutation inference, and `histogramcohorteffects` stays analytic.
+- Refused with `impvalues`, `unconditionalse`, `customvce()`, `contreatwithin`, `contreatcontrols(untreatedZero)`, `oldsyntax`, `suppresssgprimaryeffects`, `pretrendpower()`, `simultaneousbands` and `bootstrap()`. `gteffects` cells carry no permutation inference, and `histogramcohorteffects` is untouched: it draws the observed point estimates and uses no covariance.
 
 The rest of this chapter is the help file's account of the options and conventions.
 
@@ -786,7 +786,7 @@ The rest of this chapter is the help file's inventory.
 
 - **`adversarial`** bootstrapped only under `boottstat`; otherwise absent with a caution and *e(boot_adv_absent)* set, never analytic under a bootstrap header / a fixed-metric rank test. 
 
-- **`histogramcohorteffects`** analytic under both, with a caution: it is computed from the stage-1 covariance before the replications run. 
+- **`histogramcohorteffects`** untouched under both: it draws the observed point estimates, which neither engine changes, and uses no covariance.
 
 - **draw count** `reps()` required / `permreps()` required, and `permexact` enumerates instead. 
 
