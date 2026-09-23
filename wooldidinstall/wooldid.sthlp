@@ -360,7 +360,9 @@ and {it:pretrendpower()} all follow the bootstrap. Only the {it:histogramcohorte
 {it:cfxplotnose} the continuous treatment cells receive no bootstrap inference, so drop that option if bands are wanted. {it:wooldid} cautions when fewer than 6
 clusters are treated. Neither mode is a remedy for few treated clusters and no wild cluster bootstrap is offered; use {it:permute()} there, or
 {help boottest} on the underlying regression outside {it:wooldid}. When {it:cluster()} does not nest {it:i} and some unit spans two clusters, a caution says the
-standard errors of the cell-weighted estimands may be understated; the remedies are a finer {it:i} or a {it:cluster()} that nests {it:i}. {p_end}
+standard errors of the cell-weighted estimands may be understated; the remedies are a finer {it:i} or a {it:cluster()} that nests {it:i}. Where {it:cluster()} nests {it:i} and the run carries {it:att_it}, {it:att_i}, {it:att_itime} or {it:boottstat}, each replication gives the drawn copies of a cluster fresh unit codes, and
+{it:i} is replaced by that code wherever its name appears in {it:fe()}, {it:controls()}, {it:interactivecontrols()}, {it:coarsecohortcontrols()} or {it:ccc_absorb()};
+a variable that encodes {it:i} under another name, or was merged in on {it:i}, is not found and keeps its original codes across the copies. {p_end}
 
 {phang}{opt reps(#)}: Number of bootstrap replications. Required with {it:bootstrap()} and refused without it. No minimum is imposed, so a small value can be used to
 time a specification. Replications that fail to estimate are excluded and counted in {it:e(boot_failed)}. The smallest p-value a run can print is set by the number
@@ -1036,7 +1038,7 @@ from the underlying regression estimator, wherever available. {p_end}
 {synopt:{it:Bootstrap inference}} When {it:bootstrap()} is used, the reported tables carry the bootstrap inference, and e() additionally holds: run-level scalars and macros
 ({it:e(boot_reps)}, {it:e(boot_completed)}, {it:e(boot_failed)}, {it:e(boot_level)}, {it:e(boot_N_V)}, {it:e(boot_method)}, {it:e(boot_display)}, {it:e(boot_stat)},
 {it:e(boot_df)}, {it:e(boot_seed)}, {it:e(boot_rngstate)}, {it:e(boot_alpha)}, {it:e(boot_ties)}, and {it:e(boot_nstraddle)} with {it:e(boot_reid)}, which record whether the replications re-identified duplicated
-units); the replication covariance
+units, and {it:e(boot_covsub)}, the number of covariate terms rewritten to the fresh unit code, present only when that happened); the replication covariance
 {it:e(V_boot)} (also posted as {it:e(V)}, with the analytic one preserved as {it:e(V_analytic)}), the replication means {it:e(b_boot)} and bias {it:e(bias_boot)}; the draw
 matrices {it:e(bootdist)} and, under {it:boottstat}, {it:e(bootdist_se)} (up to 10,000 replications); the interval and p-value families aligned to {it:e(b)},
 {it:e(boot_ci_percentile)}, {it:e(boot_ci_normal)}, {it:e(boot_ci_bc)}, {it:e(boot_ci_bca)}, {it:e(boot_p_percentile)}, {it:e(boot_p_bc)}, {it:e(boot_p_bca)}, with

@@ -336,48 +336,68 @@ version 16.0
     * boottstat is requested, in
     * which case each replication also has to produce a VCE so its own standard errors can
     * studentize its coefficients
-    local wdb_ro `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `robust' `ccnoabsorb' `latticeignoreweights' `emptycellsoverride' `contreatwithin'
-    if "`boottstat'" == "" local wdb_ro `wdb_ro' fastnose
-    if "`cluster'" != "" local wdb_ro `wdb_ro' cluster(`cluster')
-    if "`fe'" != "" local wdb_ro `wdb_ro' fe(`fe')
-    if `"`coarsecohortcontrols'"' != "" local wdb_ro `wdb_ro' coarsecohortcontrols(`coarsecohortcontrols')
-    if "`ccc_absorb'" != "" local wdb_ro `wdb_ro' ccc_absorb(`ccc_absorb')
-    if "`controls'" != "" local wdb_ro `wdb_ro' controls(`controls')
-    if "`interactivecontrols'" != "" local wdb_ro `wdb_ro' interactivecontrols(`interactivecontrols')
-    if "`customweightmultiplier'" != "" local wdb_ro `wdb_ro' customweightmultiplier(`customweightmultiplier')
+    local wdb_rohead `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `robust' `ccnoabsorb' `latticeignoreweights' `emptycellsoverride' `contreatwithin'
+    if "`boottstat'" == "" local wdb_rohead `wdb_rohead' fastnose
+    if "`cluster'" != "" local wdb_rohead `wdb_rohead' cluster(`cluster')
+    * the five covariate payloads are emitted twice: as given (wdb_rocov) and with the cohort
+    * variable's name replaced by __wdbnewi (wdb_rocov2), the fresh unit code the physical
+    * re-id leg in wooldid_bootrun mints for each drawn copy of a cluster. Under nesting the
+    * leg hands the second string to the replication, so a covariate keyed to unit identity -
+    * fe(i.unit), fe(unit#c.t), controls(c.x#i.unit) - separates the copies the way the cell
+    * dummies already do. On the percentile paths the copies are exact duplicates and the two
+    * fits coincide to the last bit; under boottstat the replication's cluster-robust
+    * covariance partials the covariate out per copy rather than pooled across them, which is
+    * what moves. Only the name itself is rewritten, on token boundaries (unitx and myunit are
+    * left alone); a variable that encodes i under another name, or was merged in on i,
+    * cannot be found and keeps its codes across the copies, which the help says. The
+    * emission order below is the order the string always had
+    local wdb_rocov
+    local wdb_rocov2
+    local wdb_covsub 0
+    foreach wdbo in fe coarsecohortcontrols ccc_absorb controls interactivecontrols {
+      if `"``wdbo''"' == "" continue
+      local wdb_rocov `wdb_rocov' `wdbo'(``wdbo'')
+      wooldid_isub , ivar(`i') new(__wdbnewi) payload(``wdbo'') `=cond("`wdbo'" == "coarsecohortcontrols", "unab", "")'
+      local wdb_rocov2 `wdb_rocov2' `wdbo'(`r(payload)')
+      local wdb_covsub = `wdb_covsub' + r(n)
+    }
+    local wdb_rotail
+    if "`customweightmultiplier'" != "" local wdb_rotail `wdb_rotail' customweightmultiplier(`customweightmultiplier')
     * a cell-collapse fallback in the observed run (e(wdid_fcguard), see wooldid_fcdeg)
     * extends to the reps: under fastnose the screen has no r(V) to read, so they must be
     * sent to the full data outright or the bootstrap covariance of a degenerate subgroup
     * contrast is built from collapsed replicates while the observed inference is not
     local wdb_fb = cond("`e(wdid_fcguard)'" == "fallback", "fallback", "")
-    if "`nofastcollapse'`wdb_fb'" != "" local wdb_ro `wdb_ro' nofastcollapse
-    if "`contreat'" != "" local wdb_ro `wdb_ro' contreat(`contreat') contreatpoly(`contreatpoly')
-    if `"`contreatcontrols'"' != "" local wdb_ro `wdb_ro' contreatcontrols(`contreatcontrols')
-    if `"`lattice'"' != "" local wdb_ro `wdb_ro' lattice(`lattice')
+    if "`nofastcollapse'`wdb_fb'" != "" local wdb_rotail `wdb_rotail' nofastcollapse
+    if "`contreat'" != "" local wdb_rotail `wdb_rotail' contreat(`contreat') contreatpoly(`contreatpoly')
+    if `"`contreatcontrols'"' != "" local wdb_rotail `wdb_rotail' contreatcontrols(`contreatcontrols')
+    if `"`lattice'"' != "" local wdb_rotail `wdb_rotail' lattice(`lattice')
     * cell-level surfaces are bootstrapped rather than blanked: the replications compute
     * them too, and the loop harvests them by cell key
-    if "`gteffects'" != "" local wdb_ro `wdb_ro' gteffects
+    if "`gteffects'" != "" local wdb_rotail `wdb_rotail' gteffects
     if "`makecfxplots'" != "" {
-      local wdb_ro `wdb_ro' makecfxplots
-      if "`cfxlattice'" != "" local wdb_ro `wdb_ro' cfxlattice(`cfxlattice')
-      if "`cfxplottypes'" != "" local wdb_ro `wdb_ro' cfxplottypes(`cfxplottypes')
-      if "`makecfxplotsbysg'" != "" local wdb_ro `wdb_ro' makecfxplotsbysg
-      if "`cfxplotnose'" != "" local wdb_ro `wdb_ro' cfxplotnose
+      local wdb_rotail `wdb_rotail' makecfxplots
+      if "`cfxlattice'" != "" local wdb_rotail `wdb_rotail' cfxlattice(`cfxlattice')
+      if "`cfxplottypes'" != "" local wdb_rotail `wdb_rotail' cfxplottypes(`cfxplottypes')
+      if "`makecfxplotsbysg'" != "" local wdb_rotail `wdb_rotail' makecfxplotsbysg
+      if "`cfxplotnose'" != "" local wdb_rotail `wdb_rotail' cfxplotnose
     }
-    if "`contreat'" != "" & "`contreatelasticitytype'" != "" local wdb_ro `wdb_ro' contreatelasticitytype(`contreatelasticitytype')
-    if "`subgroups'" != "" local wdb_ro `wdb_ro' subgroups(`subgroups')
+    if "`contreat'" != "" & "`contreatelasticitytype'" != "" local wdb_rotail `wdb_rotail' contreatelasticitytype(`contreatelasticitytype')
+    if "`subgroups'" != "" local wdb_rotail `wdb_rotail' subgroups(`subgroups')
     * A8: emit the RAW user esprelength - validate's esf normalization re-fires on
     * every nested re-parse, so embedding the mutated value widens the window per rep
-    if `esprelengthraw' != 0 local wdb_ro `wdb_ro' esprelength(`esprelengthraw')
-    if "`esposttrip'" == "no" local wdb_ro `wdb_ro' espostlength(-999)
-    else if `espostlength' != 0 local wdb_ro `wdb_ro' espostlength(`espostlength')
-    local wdb_ro `wdb_ro' esrelativeto(`esrelativeto')
+    if `esprelengthraw' != 0 local wdb_rotail `wdb_rotail' esprelength(`esprelengthraw')
+    if "`esposttrip'" == "no" local wdb_rotail `wdb_rotail' espostlength(-999)
+    else if `espostlength' != 0 local wdb_rotail `wdb_rotail' espostlength(`espostlength')
+    local wdb_rotail `wdb_rotail' esrelativeto(`esrelativeto')
     * emit the user's OWN safety value (the post-validate working copy may have been
     * rewritten to off by contreatwithin; the rep re-applies the same rewrite itself)
-    if "`safetyinput'" != "" local wdb_ro `wdb_ro' safety(`safetyinput')
-    if `regtol' != 9 local wdb_ro `wdb_ro' regtol(`regtol')
-    if `oostreatedcontrols' != 0 local wdb_ro `wdb_ro' oostreatedcontrols(`oostreatedcontrols')
-    if `anticipation' != 0 local wdb_ro `wdb_ro' anticipation(`anticipation')
+    if "`safetyinput'" != "" local wdb_rotail `wdb_rotail' safety(`safetyinput')
+    if `regtol' != 9 local wdb_rotail `wdb_rotail' regtol(`regtol')
+    if `oostreatedcontrols' != 0 local wdb_rotail `wdb_rotail' oostreatedcontrols(`oostreatedcontrols')
+    if `anticipation' != 0 local wdb_rotail `wdb_rotail' anticipation(`anticipation')
+    local wdb_ro `wdb_rohead' `wdb_rocov' `wdb_rotail'
+    local wdb_ro2 `wdb_rohead' `wdb_rocov2' `wdb_rotail'
     tempname wdbobs wdbobsb wdbcomp wdbacc wdbsacc wdbpwsacc wdbjwacc wdbjobs wdbaseobs wdbawacc wdbaobs
     * the kernel copies of the two standard-error accumulators. `wdbsacc' and `wdbpwsacc'
     * keep every standard error the replications sampled, untouched, and are what
@@ -412,7 +432,7 @@ version 16.0
     * re-identification)
     local wdb_phys = cond("`bootstrap'" == "standard" & "`boottstat'" != "" & "`cluster'" == "" & "`wdp_wt'" != "" & "`poisson'" == "", "phys", "")
     tempname wdbW wdbjk
-    cap noi wooldid_bootrun , wmat(`wdbW') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")') y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' `wdb_phys' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp') seaccname(`=cond("`boottstat'" != "", "`wdbsacc'", "")') pwseaccname(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') kseaccname(`=cond("`boottstat'" != "", "`wdbksacc'", "")') kpwseaccname(`=cond("`boottstat'" != "", "`wdbkpwsacc'", "")') jwaccname(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobsname(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awaccname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobsname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') advesrel(`esrelativeto') advtt(`timetrends') advalt(`altmethod_adversarial') cellacc(`=cond("`gteffects'`makecfxplots'" != "", "`wdbcell'", "")')
+    cap noi wooldid_bootrun , wmat(`wdbW') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")') y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' `wdb_phys' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') repopts2(`wdb_ro2') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp') seaccname(`=cond("`boottstat'" != "", "`wdbsacc'", "")') pwseaccname(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') kseaccname(`=cond("`boottstat'" != "", "`wdbksacc'", "")') kpwseaccname(`=cond("`boottstat'" != "", "`wdbkpwsacc'", "")') jwaccname(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobsname(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awaccname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobsname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') advesrel(`esrelativeto') advtt(`timetrends') advalt(`altmethod_adversarial') cellacc(`=cond("`gteffects'`makecfxplots'" != "", "`wdbcell'", "")')
     local wdb_rc = _rc
     qui est restore `wdbobs'
     cap est drop `wdbobs'
@@ -420,13 +440,9 @@ version 16.0
     if `wdb_rc' != 0 exit `wdb_rc'
     * post-loop rewiring marker (see the permutation block): cleared at the end of this block
     global WOOLDID_LASTRC postloop
-    * The re-id leg duplicates clusters, and user covariates keyed to unit identity keep
-    * their original codes across the copies (the official idcluster convention shares
-    * this). A caution used to say so here. Deleted 2026-09-21 on the author's ruling: the
-    * right answer is to substitute the re-id'd i into those option payloads rather than to
-    * warn about it, and the scan this caution used was too narrow to be trusted anyway -
-    * fe() and controls() are varlist fv, so fe(i.unit) tokenizes to something that never
-    * string-equals the i name. See review_process/open_ticket_bootreid_covariates_2026-09-21.md.
+    * The re-id leg duplicates clusters. A covariate that names the i variable is re-keyed to
+    * the fresh unit code in each replication (wdb_ro2 above); a caution used to warn about
+    * the pooling instead, deleted 2026-09-21 on the author's ruling in favour of the rewrite
     * bootdf() default, resolved here because it needs the resampling-cluster count that
     * wooldid_bootrun has just returned: standard normal when the run is unclustered, and
     * t with G-1 degrees of freedom when it is clustered, G being the number of resampling
@@ -450,6 +466,9 @@ version 16.0
     if "`wdb_reid'" != "" & "`cluster'" != "" {
       ereturn scalar boot_reid = `wdb_nest'
       ereturn scalar boot_nstraddle = `wdb_nstrad'
+      * how many covariate terms the replications ran with the fresh unit code in place of
+      * i; posted only when that rewrite was live, so an unaffected run's e() is unchanged
+      if `wdb_nest' & `wdb_covsub' > 0 & "${WOOLDID_BOOTNOCOVSUB}" == "" ereturn scalar boot_covsub = `wdb_covsub'
     }
     * R9: the looser of the two draw-viability counts, beside e(boot_novar), which
     * wooldid_bootwire posts for the strict one. Only boottstat harvests replication standard
@@ -6930,6 +6949,60 @@ version 16.0
 
 end
 
+cap prog drop wooldid_isub
+prog def wooldid_isub, rclass
+version 16.0
+*** substitute a variable name inside a covariate payload, on token boundaries only: i.unit,
+*** unit#c.t, c.x#i.unit, i.unit##c.t and a bare unit all rewrite; unitx and myunit do not.
+*** The shell uses it to hand the physical re-id leg (wooldid_bootrun) covariate payloads keyed
+*** to the fresh unit code. ivar is the name to replace, new its replacement, payload the
+*** option payload as typed (factor-variable notation allowed). With unab, each variable piece
+*** of each term is unabbreviated against the data first, because a string-typed option
+*** (coarsecohortcontrols) arrives as typed and i.coh has to find cohort; an abbreviation that
+*** does not resolve is left as it is. Returns r(payload), the rewritten payload, and r(n),
+*** the number of substitutions made
+  syntax , ivar(name) new(name) [payload(string asis) unab]
+  if "`unab'" != "" {
+    local canon
+    foreach term of local payload {
+      local tt : subinstr local term "##" " @@ ", all
+      local tt : subinstr local tt "#" " # ", all
+      local nt
+      foreach tok of local tt {
+        if "`tok'" == "@@" {
+          local nt `nt'##
+          continue
+        }
+        if "`tok'" == "#" {
+          local nt `nt'#
+          continue
+        }
+        local pfx
+        local bare `tok'
+        local dot = strrpos("`tok'", ".")
+        if `dot' > 0 {
+          local pfx = substr("`tok'", 1, `dot')
+          local bare = substr("`tok'", `dot' + 1, .)
+        }
+        cap unab wdisfull : `bare'
+        if _rc == 0 & "`wdisfull'" == "`ivar'" local bare `ivar'
+        local nt `nt'`pfx'`bare'
+      }
+      local canon `canon' `nt'
+    }
+    local payload `canon'
+  }
+  local pat "(^|[ .#(])`ivar'(?=$|[ #)])"
+  local n 0
+  local s `"`payload'"'
+  while ustrregexm(`"`s'"', "`pat'") {
+    local ++n
+    local s = ustrregexrf(`"`s'"', "`pat'", "$1`new'")
+  }
+  return local payload `"`s'"'
+  return scalar n = `n'
+end
+
 cap prog drop wooldid_bootsave
 prog def wooldid_bootsave
 version 16.0
@@ -9315,7 +9388,7 @@ version 16.0
 *** W_c makes a cluster's expected replicate mass its row-count share rather than its weight
 *** share, displacing the replication distribution from the estimate under weights.
 *** The rwgen priorpowers(-n_c) oracle for equal is its weights times n_c.
-  syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) kseaccname(string) kpwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string) wmat(string) jkacc(string)]
+  syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) repopts2(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) kseaccname(string) kpwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string) wmat(string) jkacc(string)]
 
   if `dots' == -1 local dots 1
   if "`bootalpha'" == "" local bootalpha equal
@@ -9876,7 +9949,14 @@ version 16.0
         * them back into one score - the exact m^2-for-m inflation this leg exists to
         * remove. Without boottstat the replication runs under fastnose and has no VCE,
         * so the substitution is inert there and is skipped to keep those runs bitwise
-        local wdb_ropts `repopts'
+        * under nesting the covariate payloads that name i arrive with the fresh unit code in
+        * their place (repopts2, built by the shell; the comment there says why and what it
+        * cannot reach). WOOLDID_BOOTNOCOVSUB is an internal diagnostic global of the same
+        * kind as WOOLDID_BOOTNOSUB below: set, it withholds that rewrite so the same seed
+        * can be run with the covariates pooled across copies, the negative control the
+        * gates suite uses. Not a user option; nothing in wooldid sets it
+        if `wdb_nest' & `"`repopts2'"' != "" & "${WOOLDID_BOOTNOCOVSUB}" == "" local wdb_ropts `repopts2'
+        else local wdb_ropts `repopts'
         * the mechanism is a literal string substitution into an option string built far
         * upstream, so it can silently do nothing. It hits only because that string is
         * rebuilt canonically as `cluster(`cluster')' - no spaces, no abbreviation, never

@@ -9,8 +9,21 @@ review page:
 > some transformation of it) may not work with bootstrap in the cases where physical re-id is used
 > (specifying those cases). Please then delete this caution."*
 
-**Status: OPEN. The caution is already deleted (that part of the instruction is done). The fix and
-the help note are not built.** Anchor on literal text; the file moves.
+**Status: BUILT 2026-09-22.** Parts 1-4 as written below, with one departure and one measurement.
+The departure: the substitution is made in the shell by re-emitting the five payloads (a
+head/covariates/tail split of the option string, so the string the engine gets is the same bytes it
+always was and a second one carries the rewritten payloads), never by surgery on the assembled
+string; a new helper `wooldid_isub` does the boundary-anchored rewrite and unabbreviates the
+string-typed `coarsecohortcontrols()` first. The engine takes it as `repopts2()` and uses it under
+nesting; `e(boot_covsub)` counts the rewritten terms, posted only when a rewrite was live. The
+measurement, made before building: on the percentile paths the substitution is inert to the last
+bit (drawn copies are exact duplicates, so pooled and separate fixed effects give the same fit);
+under boottstat the replication standard errors move, and how much depends on the design and the
+covariate form (a per-unit slope entered as a regressor moved them on both probe designs; an
+absorbed unit trend moved them on one and not the other). The battery is IDENTICAL, because no
+shipped config takes a boottstat run on the nesting regime with an i-named covariate. Tests:
+test_bootstrap_gates m10-m13. The help and guide carry Part 3 and Part 4. Anchor on literal
+text; the file moves.
 
 ## What the caution said, and why deleting it was right
 

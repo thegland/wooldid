@@ -348,6 +348,97 @@ qui log using boot_gates_m8.smcl, replace name(m8) smcl
 cap noi wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(20) fe(s) rseed(70110)
 chk 8m 0 _rc
 qui log close m8
+
+* ---- m10-m13 (open_ticket_bootreid_covariates, built 2026-09-22): a covariate that names
+* i reaches the re-id leg's replications with the fresh unit code in its place.
+*   m10 nesting regime + boottstat + a per-unit slope keyed to i: the same seed with and
+*       without the rewrite (the WOOLDID_BOOTNOCOVSUB negative control). The point
+*       estimates and the draw distribution are the same to the last bit, since drawn
+*       copies are exact duplicates; the studentized inference moves, because each
+*       replication's cluster-robust covariance treats the slope per copy rather than
+*       pooled across copies.
+*       e(boot_covsub) counts the rewritten terms and is absent under the control.
+*   m11 names that merely contain the i name are left alone: a rewrite would make every
+*       replication fail to find the variable.
+*   m12 no rewrite outside the nesting regime (cluster finer than i keeps i whole).
+*   m13 the matcher itself, including the unabbreviation a string-typed option needs.
+* the covariate is a per-unit slope entered as a regressor, controls(c.x#i.unit): measured
+* 2026-09-22, that form moves the studentized results on this panel and on a 24-unit one,
+* whereas an absorbed unit trend fe(unit#c.t) moved nothing here and 0.07 on the other
+use `panel', clear
+set seed 71
+gen x = rnormal()
+cap noi wooldid y unit t ttre, att cluster(s) bootstrap(standard) boottstat reps(20) controls(c.x#i.unit) rseed(70112) dots(0)
+chk 10m 0 _rc
+local m10sub = e(boot_covsub)
+matrix M10B = e(b)
+matrix M10R = e(wdidmainresults)
+matrix M10D = e(bootdist)
+global WOOLDID_BOOTNOCOVSUB 1
+use `panel', clear
+set seed 71
+gen x = rnormal()
+cap noi wooldid y unit t ttre, att cluster(s) bootstrap(standard) boottstat reps(20) controls(c.x#i.unit) rseed(70112) dots(0)
+local m10rc = _rc
+global WOOLDID_BOOTNOCOVSUB
+chk 10n 0 `m10rc'
+local m10nsub = e(boot_covsub)
+di "m10 covsub live=`m10sub' control=`m10nsub' b_reldif=" mreldif(M10B, e(b)) " draws_reldif=" mreldif(M10D, e(bootdist)) " results_reldif=" mreldif(M10R, e(wdidmainresults))
+if "`m10sub'" != "1" | "`m10nsub'" != "." {
+  di as error "m10 FAIL: e(boot_covsub) is `m10sub' with the rewrite and `m10nsub' under the control (want 1 and absent)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+if mreldif(M10B, e(b)) != 0 | mreldif(M10D, e(bootdist)) > 1e-10 {
+  di as error "m10 FAIL: the rewrite moved the point estimates or the draws, which the exact-duplicate argument says it cannot"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+if mreldif(M10R, e(wdidmainresults)) < 1e-6 {
+  di as error "m10 FAIL: the studentized results are the same with and without the rewrite, so the rewrite is not reaching the replications"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+* on this 3-cluster design a draw with no treated or no control cluster is discarded, so
+* the completed count is compared with the same seed run without the controls, not with reps
+use `panel', clear
+cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) rseed(70113) dots(0)
+chk 11l 0 _rc
+local m11ref = e(boot_completed)
+use `panel', clear
+set seed 72
+gen unitx = rnormal()
+gen myunit = rnormal()
+cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) controls(unitx myunit) rseed(70113) dots(0)
+chk 11m 0 _rc
+if "`e(boot_covsub)'" != "" | e(boot_completed) != `m11ref' | `m11ref' == 0 {
+  di as error "m11 FAIL: e(boot_covsub)=`e(boot_covsub)' completed=" e(boot_completed) " vs `m11ref' without the controls (want absent and equal): a name containing the i name was rewritten"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+use `panel', clear
+cap noi wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(20) fe(s#c.t) rseed(70114) dots(0)
+chk 12m 0 _rc
+if "`e(boot_covsub)'" != "" | e(boot_reid) != 0 {
+  di as error "m12 FAIL: e(boot_covsub)=`e(boot_covsub)' reid=" e(boot_reid) " (want absent and 0): a rewrite outside the nesting regime"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+use `panel', clear
+gen unitx = 1
+gen x = 1
+wooldid_isub , ivar(unit) new(__wdbnewi) payload(i.unit#c.t unitx myunit unit c.x#i.unit i.unit##c.t)
+if r(n) != 4 | `"`r(payload)'"' != "i.__wdbnewi#c.t unitx myunit __wdbnewi c.x#i.__wdbnewi i.__wdbnewi##c.t" {
+  di as error `"m13 FAIL: matcher gave n=`r(n)' payload=`r(payload)'"'
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+preserve
+clear
+qui set obs 3
+gen cohort = _n
+gen x = _n
+gen t = _n
+wooldid_isub , ivar(cohort) new(__wdbnewi) payload(i.coh#c.x c.x i.cohort##c.t) unab
+if r(n) != 2 | `"`r(payload)'"' != "i.__wdbnewi#c.x c.x i.__wdbnewi##c.t" {
+  di as error `"m13b FAIL: unabbreviating matcher gave n=`r(n)' payload=`r(payload)'"'
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+restore
 qui log using boot_gates_m9.smcl, replace name(m9) smcl
 cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) rseed(70111)
 chk 9m 0 _rc
