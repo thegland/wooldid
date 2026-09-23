@@ -654,7 +654,8 @@ without inference, under a caution naming the count. With {it:safety(off)} they 
 
 {pstd} Each treated unit of {it:i} should lie wholly within one subgroup: a subgroup variable that varies within a cohort-by-period cell, or over time within a unit, is refused
 with an informative error. With {it:safety(off)} such a run proceeds, entering a split unit into each subgroup weighted by its share of sample weight there, which changes what
-{it:att_i} and {it:att_itime} mean. The usual remedy is to define {it:i} at the finer level over which the subgroup varies, for example {it:egen newi = group(i sg), missing};
+{it:att_i} and {it:att_itime} mean. Where the subgroup varies within a cell, every subgroup estimate also only reweights the same pooled cell
+effects, so contrasts cannot show within-cell differences and can come back identical when the true effects differ. The usual remedy is to define {it:i} at the finer level over which the subgroup varies, for example {it:egen newi = group(i sg), missing};
 the {it:missing} option matters, since without it rows with a missing subgroup value would be dropped from the estimation sample. Note that splitting {it:i} this way makes
 {it:att_i} and {it:att_itime} average over the split pseudo-units rather than over the original units. {p_end}
 
