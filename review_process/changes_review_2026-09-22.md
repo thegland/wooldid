@@ -76,6 +76,8 @@ cluster() nests i and a covariate names i. No shipped config takes that path.
 | D3 val-i-fvcap-unscreened | First ruled **dense internal index**; re-ruled **refuse in validate** once Claude corrected the size; text approved: "Error: `i' must not exceed 2,147,483,647 on treated units; recode it first (egen newi = group(`i'))." | built 5fc3ce5 |
 | D4 permute-pairwise-se-analytic-undisclosed | **Reuse the analytic path's degeneracy detection** under permute(), disclosure only; text approved: the existing caution's first sentence alone | built 189af00 |
 | D5 cfxplotnose-engine-asymmetry | **Extend permute()'s carve-out to bootstrap()**: the cells keep six columns and get bootstrap inference | built 516038c |
+| D5 follow-up: boottstat with cfxplotnose (the carve-out made caution #225 fire on a new path) | **Drop cfxplotnose under boottstat**, the twin of the permtstat ruling; text approved: "Caution: cfxplotnose was dropped; boottstat needs the plot cells' standard errors." | built 7849439 |
+| D3 follow-up (found by Claude's advisor): the cap screen refused a treated row whose i is missing, under the cap text | straight bug: the screen reads only non-missing i, as before 5fc3ce5 | fixed 07f63ae |
 
 ## 3. The audit
 
