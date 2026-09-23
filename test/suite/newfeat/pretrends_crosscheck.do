@@ -12,6 +12,13 @@
 *         any-individual-pre-period-significant convention);
 *   (iii) the package's power evaluated AT wooldid's mdt_nis(80) slope
 *         (pretrends, numpre() b() v() slope()) must land in [.78, .82].
+* Tightened 2026-09-23. The author ruled that pretrendpower()'s NIS pre-test is Roth's
+* convention throughout (normal critical value, normal law), so wooldid and the package now
+* compute the same quantity: (ii) |reldif| <= 2.5e-3 (registered 5e-2), (iii) [.799, .801]
+* (registered [.78, .82]), and a new pass/fail rule (iv): the package's implied pre-test
+* size (its power at slope 0) vs e(roth_nissize_att), |reldif| <= 2e-4. Largest values on
+* that build: (ii) 2.5e-4, (iii) |power - .80| 3.5e-5, (iv) 2.0e-5. With a t critical
+* value inside the normal law they were up to 2.1e-3, .816 and 1.3e-2.
 * Rule (i) — package fitted GLS slope vs e(roth_slope_att) — turned out to be
 * structurally N/A: pretrends v0.5.1 reports NO data-fitted linear-trend slope.
 * Its r(slope) only echoes the hypothesized slope (slope mode) or the power-solved
@@ -26,8 +33,7 @@
 * e(b_es_att) positionally. If that gate fails the design's tolerance checks (ii)
 * and (iii) are SKIPPED and the structural difference reported (per the prereg
 * directive: a convention mismatch is a finding, not something to absorb).
-* Recorded info (not pass/fail): the package's implied pre-test size (its power at
-* slope 0) vs e(roth_nissize_att); its Bayes factor and likelihood ratio at the
+* Recorded info (not pass/fail): the package's Bayes factor and likelihood ratio at the
 * mdt_nis(80) slope; its power at the mdt_nis(50) slope.
 * State management: pretrends is rclass — everything needed from wooldid is captured
 * into locals/matrices BEFORE the first package call; each design refits wooldid.
@@ -199,13 +205,21 @@ program define ptcase
       }
     }
   }
-  dis "`case' info: package implied pre-test size (power at slope 0) = " %9.6f `psize' " vs wooldid e(roth_nissize_att) = " %9.6f `wnis' " (reldif " %12.4e reldif(`psize', `wnis') "; record only)"
+  dis "`case' info: package implied pre-test size (power at slope 0) = " %9.6f `psize' " vs wooldid e(roth_nissize_att) = " %9.6f `wnis' " (reldif " %12.4e reldif(`psize', `wnis') ")"
   if `structok' == 0 {
-    dis as error "`case': structural gate failed — tolerance checks (ii)/(iii) SKIPPED for this design; the package's convention difference reported above is the finding"
+    dis as error "`case': structural gate failed — tolerance checks (ii)/(iii)/(iv) SKIPPED for this design; the package's convention difference reported above is the finding"
     exit
   }
 
-  * ---- C2 (prereg rule ii): package slope-for-power vs wooldid mdt_nis, |reldif| <= 5e-2
+  * ---- C4 (rule iv, 2026-09-23): package implied pre-test size vs e(roth_nissize_att),
+  * |reldif| <= 2e-4 - the same test under the same normal reference on both sides
+  if reldif(`psize', `wnis') > 2e-4 | missing(`wnis') {
+    dis as error "`case' C4 FAIL: package implied pre-test size = " %12.0g `psize' " vs wooldid e(roth_nissize_att) = " %12.0g `wnis' " (reldif " %12.4e reldif(`psize', `wnis') " > 2e-4)"
+    global pf = $pf + 1
+  }
+
+  * ---- C2 (rule ii, tightened 2026-09-23 from the registered 5e-2): package slope-for-power
+  * vs wooldid mdt_nis, |reldif| <= 2.5e-3
   foreach pw in 50 80 {
     local target = cond(`pw' == 50, "0.5", "0.8")
     cap noi pretrends power `target', numpre(`np') b(b) v(V)
@@ -215,14 +229,15 @@ program define ptcase
       continue
     }
     local pslope = r(slope)
-    if reldif(`pslope', `nis`pw'') > 5e-2 {
-      dis as error "`case' C2 FAIL: package slope-for-power-`pw' = " %12.0g `pslope' " vs wooldid mdt_nis(`pw') = " %12.0g `nis`pw'' " (reldif " %12.4e reldif(`pslope', `nis`pw'') " > 5e-2)"
+    if reldif(`pslope', `nis`pw'') > 2.5e-3 {
+      dis as error "`case' C2 FAIL: package slope-for-power-`pw' = " %12.0g `pslope' " vs wooldid mdt_nis(`pw') = " %12.0g `nis`pw'' " (reldif " %12.4e reldif(`pslope', `nis`pw'') " > 2.5e-3)"
       global pf = $pf + 1
     }
     else dis "`case' C2 info: slope-for-power-`pw' = " %12.0g `pslope' " vs mdt_nis(`pw') = " %12.0g `nis`pw'' " (reldif " %12.4e reldif(`pslope', `nis`pw'') ")"
   }
 
-  * ---- C3 (prereg rule iii): package power AT wooldid's mdt_nis(80) in [.78, .82]
+  * ---- C3 (rule iii, tightened 2026-09-23 from the registered [.78, .82]): package power AT
+  * wooldid's mdt_nis(80) in [.799, .801]
   cap noi pretrends, numpre(`np') b(b) v(V) slope(`nis80')
   if _rc != 0 {
     dis as error "`case' C3 FAIL: pretrends slope(mdt_nis80) rc=" _rc
@@ -232,11 +247,11 @@ program define ptcase
     local ppow = r(Power)
     local pbay = r(Bayes)
     local plr  = r(LR)
-    if !(`ppow' >= .78 & `ppow' <= .82) {
-      dis as error "`case' C3 FAIL: package power at wooldid mdt_nis(80) = " %9.6f `ppow' " outside [.78, .82]"
+    if !(`ppow' >= .799 & `ppow' <= .801) {
+      dis as error "`case' C3 FAIL: package power at wooldid mdt_nis(80) = " %9.6f `ppow' " outside [.799, .801]"
       global pf = $pf + 1
     }
-    else dis "`case' C3 info: package power at wooldid mdt_nis(80) = " %9.6f `ppow' " (in [.78, .82])"
+    else dis "`case' C3 info: package power at wooldid mdt_nis(80) = " %9.6f `ppow' " (in [.799, .801])"
     dis "`case' info: at the mdt_nis(80) slope the package reports Bayes factor = " %12.0g `pbay' ", likelihood ratio = " %12.0g `plr' " (record only)"
   }
 

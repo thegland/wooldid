@@ -3,12 +3,14 @@
 * Run from test/: stata-mp -e do test_esband.do  -> expect ESBAND_ALL_PASS
 * B1 nothing is posted without the option (it is defaulted off, and no shipped figure or
 *    table changes); B2 the analytic band is b +/- crit*se on the family's own covariance,
-*    with crit at or above the pointwise normal quantile - a simultaneous band is never
-*    narrower than a pointwise interval; B3 it is reproducible and leaves the caller's
+*    with crit the sup-t quantile of the multivariate t with df_r and at or above the
+*    pointwise t(df_r) quantile - a simultaneous band is never narrower than a pointwise
+*    interval; B3 it is reproducible and leaves the caller's
 *    random-number stream where it found it; B4 the bootstrap engine builds the band from
 *    the replications; B5 permute() refuses the combination; B6 a run that cannot build one
 *    says so instead of staying silent; B7 subgroups get their own bands; B8 the plot layer
-*    draws without error.
+*    draws without error; B11 with few clusters (df_r = 6) the analytic band is at least as
+*    wide as the pointwise t interval at every horizon.
 clear all
 set more off
 set graphics off
@@ -71,7 +73,7 @@ else {
     vs = st_matrixcolstripe("e(V_es_att)")
     bs = st_matrixcolstripe("B2")
     cc = st_numscalar("e(esband_crit_att)")
-    zc = invnormal(1 - (100 - st_numscalar("e(esband_level)"))/200)
+    zc = invttail(st_numscalar("e(df_r)"), (100 - st_numscalar("e(esband_level)"))/200)
     bad = 0
     asym = 0
     narrow = 0
@@ -92,13 +94,18 @@ else {
     st_numscalar("b2asym", asym)
     st_numscalar("b2narrow", narrow)
   end
-  * independent sup-t: 200k draws from the family correlation; the engine's 10k-draw quantile
-  * has MC sd ~0.007, so 0.02 is a ~3-sd band (2026-09-12 smoke: |diff| = 0.0028)
-  mata: V = st_matrix("e(V_es_att)"); sd = sqrt(diagonal(V)); R = (V :/ (sd*sd')); R = (R + R')/2; rseed(20260912); Z = rnormal(200000, rows(R), 0, 1) * cholesky(R)'; ms = sort(rowmax(abs(Z)), 1); st_numscalar("b2hand", ms[ceil((1 - (100 - st_numscalar("e(esband_level)"))/100)*rows(ms))])
-  di "B2 hand sup-t crit=" %8.5f b2hand " Bonferroni bound=" %8.5f invnormal(1 - (100 - `b2l')/(200*colsof(B2)))
-  di "B2 engine=`b2e' families=[`b2f'] level=`b2l' draws=`b2d' crit=" %8.5f `b2c' " z=" %8.5f invnormal(1 - (100 - `b2l')/200) " rows=[`b2rn'] cols=[`b2cn']"
-  if "`b2e'" != "analytic-simulated" | "`b2f'" == "" | `b2l' != 95 | `b2d' != 10000 ///
-     | "`b2rn'" != "lb ub relyr" | b2bad != 0 | b2asym != 0 | b2narrow != 0 | `b2c' <= invnormal(.975) | `b2c' > invnormal(1 - (100 - `b2l')/(200*colsof(B2))) | abs(`b2c' - b2hand) > 0.02 {
+  * independent sup-t: 200k draws from the family correlation, each draw's max|z| divided by
+  * sqrt(chi2(df_r)/df_r) - the multivariate t with the df of the pointwise intervals - and the
+  * quantile floored at the pointwise t quantile, as the engine does. The engine's 10k-draw
+  * quantile has MC sd 0.0215 on this fixture (df_r = 23; 200 seeds, 2026-09-23), so 0.065 is
+  * a ~3-sd band. On that measurement the kernel at 200k draws gives 2.6541, the hand 2.6513,
+  * and the fixed-seed engine 2.6099 (2 sd low); the normal-law value is 2.4694
+  local b2df = e(df_r)
+  mata: V = st_matrix("e(V_es_att)"); sd = sqrt(diagonal(V)); R = (V :/ (sd*sd')); R = (R + R')/2; rseed(20260912); df = st_numscalar("e(df_r)"); Z = rnormal(200000, rows(R), 0, 1) * cholesky(R)'; ms = sort(rowmax(abs(Z)) :/ sqrt(rchi2(200000, 1, df) :/ df), 1); st_numscalar("b2hand", max((ms[ceil((1 - (100 - st_numscalar("e(esband_level)"))/100)*rows(ms))], invttail(df, (100 - st_numscalar("e(esband_level)"))/200))))
+  di "B2 hand sup-t crit=" %8.5f b2hand " Bonferroni bound=" %8.5f invttail(`b2df', (100 - `b2l')/(200*colsof(B2))) " df_r=`b2df'"
+  di "B2 engine=`b2e' families=[`b2f'] level=`b2l' draws=`b2d' crit=" %8.5f `b2c' " t=" %8.5f invttail(`b2df', (100 - `b2l')/200) " rows=[`b2rn'] cols=[`b2cn']"
+  if "`b2e'" != "analytic-simulated" | "`b2f'" == "" | `b2l' != 95 | `b2d' != 10000 | !(`b2df' > 0 & `b2df' < .) ///
+     | "`b2rn'" != "lb ub relyr" | b2bad != 0 | b2asym != 0 | b2narrow != 0 | `b2c' < invttail(`b2df', (100 - `b2l')/200) | `b2c' > invttail(`b2df', (100 - `b2l')/(200*colsof(B2))) | abs(`b2c' - b2hand) > 0.065 {
     di as error "B2 FAIL: engine=`b2e' rows=[`b2rn'] mismatched=" b2bad " asymmetric=" b2asym " narrower-than-pointwise=" b2narrow " crit=`b2c'"
     local ++fails
   }
@@ -323,6 +330,57 @@ if `b10x' >= . | `b10y' >= . | `b10x' != `b10y' | `b10x' != `b10x2' {
   local ++fails
 }
 else di as result "B10 PASS: the band's critical value is keyed to the family, not to the draw order (crit_att_it=`b10x' either way, and reproducible)"
+
+* ---- B11 (author ruling 2026-09-23): few clusters. The pointwise intervals are t(df_r)
+* intervals, so the analytic band is drawn from the multivariate t with df_r and its critical
+* value is floored at the pointwise t quantile: at every horizon the band is at least as wide
+* as the pointwise interval printed beside it. 7 clusters, df_r = 6. A normal-law draw on this
+* fixture gives crit 2.2146 against invttail(6, .025) = 2.4469, a band inside the pointwise
+* interval at every horizon.
+cap prog drop mkb7
+prog def mkb7
+  clear
+  set obs 7
+  gen unit = _n
+  gen ttre = cond(unit <= 3, 5, cond(unit <= 5, 7, .))
+  expand 10
+  bysort unit: gen t = _n
+  set seed 71
+  gen y = 1.4*(t >= ttre & ttre < .) + 0.1*unit + 0.05*t + rnormal()
+end
+mkb7
+qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) simultaneousbands
+local b11df = e(df_r)
+local b11c = e(esband_crit_att)
+local b11tq = .
+if `b11df' > 0 & `b11df' < . local b11tq = invttail(`b11df', (100 - e(esband_level))/200)
+local b11seen 0
+local b11narrow 0
+cap confirm matrix e(esband_att)
+if _rc == 0 {
+  tempname B11B B11M
+  matrix `B11B' = e(esband_att)
+  matrix `B11M' = e(wdidmainresults)
+  local b11rn : rowfullnames `B11M'
+  forval c = 1/`=colsof(`B11B')' {
+    local b11ry = `B11B'[3, `c']
+    forval r = 1/`=rowsof(`B11M')' {
+      local b11nm : word `r' of `b11rn'
+      if strpos("`b11nm'", "ES_att") == 1 & `B11M'[`r', 7] == `b11ry' {
+        local b11pw = (`B11M'[`r', 6] - `B11M'[`r', 5])/2
+        local b11bw = (`B11B'[2, `c'] - `B11B'[1, `c'])/2
+        local ++b11seen
+        if `b11bw' < `b11pw'*(1 - 1e-12) local ++b11narrow
+      }
+    }
+  }
+}
+di "B11 df_r=`b11df' crit=" %8.5f `b11c' " t quantile=" %8.5f `b11tq' " horizons checked=`b11seen' narrower-than-pointwise=`b11narrow'"
+if !(`b11df' > 0 & `b11df' < 15) | `b11c' >= . | `b11c' < `b11tq' | `b11seen' < 2 | `b11narrow' != 0 {
+  di as error "B11 FAIL: df_r=`b11df' crit=`b11c' t quantile=`b11tq' horizons checked=`b11seen' narrower-than-pointwise=`b11narrow'"
+  local ++fails
+}
+else di as result "B11 PASS: with df_r=`b11df' the analytic band is at least as wide as the pointwise t interval at all `b11seen' horizons"
 
 if `fails' == 0 di as result "ESBAND_ALL_PASS"
 else di as error "ESBAND_FAILS=`fails'"

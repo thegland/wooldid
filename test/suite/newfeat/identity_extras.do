@@ -460,8 +460,11 @@ if reldif(`POW'[1, 2]*(`r_hbar' - `esrel'), `POW'[1, 4]) > 1e-10 {
   global pf = $pf + 1
 }
 
-* NIS size and power at the reported mdt_nis, via the same deterministic quadrature
-scalar __crit = `crit'
+* NIS size and power at the reported mdt_nis, via the same deterministic quadrature. The NIS
+* pre-test is Roth's convention throughout - the normal critical value under the normal law -
+* whether or not the regression has residual df, so its critical value is the normal 97.5%
+* quantile (written as the ado writes it) and not the slope interval's `crit' above
+scalar __crit = invnormal(1 - (100 - 95)/200)
 scalar __gnis = `POW'[1, 3]
 mata: sd = sqrt(diagonal(S))'
 mata: cr = st_numscalar("__crit")

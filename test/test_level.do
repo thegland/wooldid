@@ -19,6 +19,8 @@
 *    (bug sweep BS-11): e(roth_nissize_att) and every e(roth_power_att) cell identical at
 *    level(90), the default-level numbers pinned, the slope CI still level-dependent, and
 *    mdt_nis strictly positive at level(50) where it used to print an exact 0
+* L13 pretrendpower: the NIS pre-test is under the normal reference even where the regression
+*    has residual df, so with one pre-period its size is exactly 5%
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -232,13 +234,30 @@ matrix L12C = e(roth_power_att)
 local m12 = L12C[1,3]
 mata: st_local("d12", strofreal(max(abs(st_matrix("L12B") - st_matrix("L12A")))))
 di "L12 nissize " %12.8f `n12a' " vs " %12.8f `n12b' " | mdt_nis " %12.8f L12A[1,3] " vs " %12.8f L12B[1,3] " | mdt_wald " %12.8f L12A[1,2] " | max|roth_power diff|=`d12' | slope_ll " %12.8f `s12a' " vs " %12.8f `s12b' " | level(50) mdt_nis=" %12.8f `m12' " c(level)=" c(level)
-if abs(`n12a' - `n12b') > 1e-12 | `d12' > 1e-12 | abs(`n12a' - .07961397) > 1e-7 ///
-   | abs(L12A[1,3] - .20181734) > 1e-7 | abs(L12A[1,5] - .69718718) > 1e-7 | abs(L12A[1,2] - .22199476) > 1e-7 ///
+* the nissize, mdt_nis and bias_nis pins are under the normal reference (see L13); on the
+* t(79) critical value they were .07961397, .20181734 and .69718718. mdt_wald is unaffected
+if abs(`n12a' - `n12b') > 1e-12 | `d12' > 1e-12 | abs(`n12a' - .08524884) > 1e-7 ///
+   | abs(L12A[1,3] - .19953828) > 1e-7 | abs(L12A[1,5] - .68931407) > 1e-7 | abs(L12A[1,2] - .22199476) > 1e-7 ///
    | abs(`s12a' - `s12b') < 1e-8 | `m12' <= 0 | missing(`m12') {
   di as error "L12 FAIL: the Roth NIS pre-test alpha is not pinned at 5% (or the default-level numbers moved)"
   local ++fails
 }
 set level 95
+
+* ---- L13 the NIS pre-test takes the normal critical value AND is evaluated under the normal
+* law, Roth's convention throughout (author ruling 2026-09-23), also on a run with residual df
+* (df_r = 79 here). With one pre-period its size is then exactly 2*(1 - normal(1.959964)) = .05.
+* A t(79) critical value under the normal law gave .04654136 on this fixture
+use data/dta_binary.dta, clear
+qui wooldid y i t ttre, att cluster(i) esfixedbaseperiod esprelength(1) espostlength(1) pretrendpower(80)
+local n13 = e(roth_nissize_att)
+local k13 = e(roth_npre_att)
+local d13 = e(df_r)
+di "L13 npre=`k13' df_r=`d13' nissize=" %21.0g `n13'
+if `k13' != 1 | !(`d13' > 0 & `d13' < .) | missing(`n13') | abs(`n13' - .05) > 1e-7 {
+  di as error "L13 FAIL: the one-pre-period NIS size is not 5% under the normal reference (npre=`k13', df_r=`d13', nissize=`n13')"
+  local ++fails
+}
 
 if `fails' == 0 di as result "LEVEL_ALL_PASS"
 else di as error "LEVEL_FAILS=`fails'"

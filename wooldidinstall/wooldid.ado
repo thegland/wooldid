@@ -4722,7 +4722,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * bootstrap(), where wooldid_bootwire builds the band from the replications instead and
   * would otherwise overwrite this one; refused outright under permute() in wooldid_validate.
   * Body in a subprogram (worker size ceiling)
-  if "`simultaneousbands'" != "" & "`bootstrap'" == "" wooldid_esband , mode(analytic) level(`wdlvl') sgl(`sglist')
+  if "`simultaneousbands'" != "" & "`bootstrap'" == "" wooldid_esband , mode(analytic) level(`wdlvl') sgl(`sglist') dfr(`df_r')
 
   * post the conventional names alongside wooldid's own, so estout, esttab and anything else
   * keying on Stata's usual cluster and variance entries finds them. pure addition: e(Nclus)
@@ -11291,11 +11291,13 @@ version 16.0
   * level()-independent. ptpcrit above is a confidence level and belongs to the slope
   * interval; the NIS threshold is a test size, and the mdt_wald leg below is hard-coded at
   * .95, so letting level() move one and not the other would power the two detectable-trend
-  * columns of one table at different sizes. written as (100 - 95)/200 rather than .025 so
-  * that at c(level) = 95 the expression is character-identical to ptpcrit's and the
-  * default-level baselines cannot shift by an ulp
-  if `ptpdfok' local ptpniscrit = invttail(`dfr', (100 - 95)/200)
-  else local ptpniscrit = invnormal(1 - (100 - 95)/200)
+  * columns of one table at different sizes. it is the normal critical value whether or not
+  * the regression has residual df: the NIS size, the mdt_nis bisection and the boundary rule
+  * below evaluate it under the normal law (mvnormalcvqp), so the pre-test is under the
+  * normal reference throughout, which is Roth's pretrends convention. written as
+  * (100 - 95)/200 rather than .025 so that with no residual df at c(level) = 95 the
+  * expression is character-identical to ptpcrit's and those baselines cannot shift by an ulp
+  local ptpniscrit = invnormal(1 - (100 - 95)/200)
 
   * hbar: estimand-weighted mean post-treatment relative period over the FULL post
   * support of the estimation sample - the pooled estimands aggregate over all post
@@ -11484,7 +11486,8 @@ version 16.0
     if "`ptpty'" == "att_it" | "`ptpty'" == "ame_it" local ptphbar `ptphbar_it'
 
     * NIS setup: the pre-test Roth's pretrends package powers - reject when any pre
-    * coefficient is individually significant at the 5% level. That 5% is deliberate and
+    * coefficient is individually significant at the 5% level under the normal reference
+    * (normal critical value, normal-law quadrature). That 5% is deliberate and
     * level()-independent: it matches the .95 hard-coded in the mdt_wald leg below and
     * Roth's own pretrends convention, so the two detectable-trend columns power tests of
     * the same size. level() reaches the slope interval (ptpcrit) and nothing here; the
@@ -11826,7 +11829,9 @@ end
 *   bootstrap - the upper quantile over replications of the largest studentized deviation,
 *               one pass over the accumulator that already feeds the joint test. Called
 *               from wooldid_bootwire, after the coefficient tables are rewired.
-*   analytic  - simulated from the family's own covariance e(V_es_*). Called from
+*   analytic  - simulated from the family's own covariance e(V_es_*), as a multivariate t
+*               with the regression's residual df - dfr(), the df of the pointwise margins
+*               intervals - or as a normal when there are none. Called from
 *               wooldid_worker. Deliberately reads e(V_es_*) and not the e(V) blocks the
 *               splice writes: the two hold the same numbers, but reading the family
 *               matrix directly means the band does not depend on whether the splice fired.
@@ -11837,8 +11842,14 @@ end
 cap prog drop wooldid_esband
 prog def wooldid_esband, eclass
 version 16.0
-  syntax , mode(string) [level(real 95) sgl(string) acc(string) obsb(string) nd(integer 10000) seacc(string) aseobs(string)]
+  syntax , mode(string) [level(real 95) sgl(string) acc(string) obsb(string) nd(integer 10000) seacc(string) aseobs(string) dfr(string)]
   if `level' <= 0 | `level' >= 100 local level = 95
+  * the analytic engine's reference distribution: the regression's residual df, the df the
+  * pointwise margins intervals use, or missing (normal) when there are none
+  local wdsdf .
+  if "`dfr'" != "" & "`dfr'" != "." {
+    if real("`dfr'") > 0 & real("`dfr'") < . local wdsdf = real("`dfr'")
+  }
   * bootwire's family list, so the two engines agree on what a family is
   local wdsfl att att_it ame ame_it
   foreach wdss of local sgl {
@@ -11898,7 +11909,7 @@ version 16.0
       matrix `BV' = e(V_es_`wdsk')
       matrix `BB' = e(b_es_`wdsk')
       * cap + continue: see the bootstrap twin above
-      cap mata: st_local("wdsm", strofreal(wooldid_esbanda("`BV'", "`BB'", `level', `nd', "`SB'", "wdscrit")))
+      cap mata: st_local("wdsm", strofreal(wooldid_esbanda("`BV'", "`BB'", `level', `nd', "`SB'", "wdscrit", `wdsdf')))
       if _rc != 0 continue
       * the analytic kernel DROPS a degenerate horizon and bands the rest, so it comes back
       * short only when fewer than two bandable horizons are left. Its two input matrices
@@ -18124,8 +18135,12 @@ real scalar wooldid_esrelx(string scalar s)
 // study for "the effect is zero everywhere before onset" actually needs.
 // Construction: studentize the family's covariance to a correlation matrix R, draw
 // z ~ N(0, R), and take c = the level() quantile of max_h |z_h| (Montiel Olea and
-// Plagborg-Moller 2019). The band is b_h +/- c*se_h, so it is the pointwise interval
-// widened by one common factor c/z_{level} >= 1. R is eigen-decomposed with the
+// Plagborg-Moller 2019). With a finite df - the regression's residual df, which the
+// pointwise margins intervals use - each draw's max_h |z_h| is divided by one common
+// sqrt(chi2_df/df), so c is the sup quantile of a multivariate t with df, and c is floored at
+// the pointwise quantile t_{df,level}; with df missing the law is normal and there is no
+// floor. The band is b_h +/- c*se_h, so it is the pointwise interval widened by one common
+// factor c/t_{df,level} >= 1 (c/z_{level} under the normal law). R is eigen-decomposed with the
 // eigenvalues floored at zero rather than factored by cholesky, because a rank-deficient
 // family - a structurally collinear horizon set - is ordinary here, and cholesky would
 // simply fail on it.
@@ -18140,7 +18155,8 @@ real scalar wooldid_esrelx(string scalar s)
 // gated on impvalues being empty and on marginsdof not being nose, and e(V_es_ame*) is
 // withheld under AMESE containment. PS-45 shows the cost if that invariant ever breaks - on
 // the bootstrap side the band came out NARROWER than the pointwise interval beside it.
-// RNG: this kernel draws with rnormal() on the CALLER's stream. Reproducibility is entirely
+// RNG: this kernel draws with rnormal(), and with a finite df then rchi2(), on the CALLER's
+// stream. Reproducibility is entirely
 // wooldid_esband's doing (it saves c(rngstate), sets the fixed internal seed, and restores),
 // and because that seed is set once for the whole family loop each family consumes
 // successive draws - so a family's critical value depends on how many families preceded it,
@@ -18148,7 +18164,8 @@ real scalar wooldid_esrelx(string scalar s)
 // digits (simulation noise at nd = 10000). The nd >= 100 floor below is a defensive guard on
 // a parameter no user sets.
 real scalar wooldid_esbanda(string scalar vn, string scalar bn, real scalar lev,
-                            real scalar nd, string scalar outn, string scalar critl)
+                            real scalar nd, string scalar outn, string scalar critl,
+                            real scalar df)
 {
   real matrix V0, V, U, L, Z, out
   real rowvector b0, lam
@@ -18180,8 +18197,10 @@ real scalar wooldid_esbanda(string scalar vn, string scalar bn, real scalar lev,
   Z = L * rnormal(m, nd, 0, 1)
   M = J(nd, 1, .)
   for (r = 1; r <= nd; r++) M[r] = max(abs(Z[., r]))
+  if (df > 0 & df < .) M = M :/ sqrt(rchi2(nd, 1, df) :/ df)
   M = sort(M, 1)
   c = wooldid_bootqs(M, lev/100)
+  if (df > 0 & df < . & c < .) c = max((c, invttail(df, (100 - lev)/200)))
   if (c >= . | c <= 0) return(0)
   out = J(3, m, .)
   ocs = J(m, 2, "")

@@ -297,8 +297,9 @@ result. {p_end}
 
 {phang}{opt simult:aneousbands}: Compute a simultaneous (sup-t) confidence band over each event study's horizons at {it:level()}, which covers every horizon of the
 family at once with that probability. The printed table keeps its pointwise intervals; the band endpoints are stored in {it:e(esband_*)} and drawn as a dashed pair on
-the event study plots. Without {it:bootstrap()} the band is simulated from the family's analytic event study covariance; with {it:bootstrap()} it is taken from the
-replications. Refused with {it:permute()}, whose multiplicity tool is {it:permstepdown} instead. No band is built under {it:fastnose} or for a family with fewer than
+the event study plots. Without {it:bootstrap()} the band is simulated from the family's analytic event study covariance. Where the regression has residual degrees
+of freedom it uses the same t distribution as the pointwise intervals and is never narrower than them. With {it:bootstrap()} it is taken from the replications.
+Refused with {it:permute()}, whose multiplicity tool is {it:permstepdown} instead. No band is built under {it:fastnose} or for a family with fewer than
 two horizons with a usable variance, and a caution says so. {p_end}
 
 {phang}{opt level(#)}: Confidence level for every reported confidence interval, including the plots, the {it:gteffects} cells and the {it:bootstrap()} and
@@ -571,9 +572,9 @@ It modifies {it:adversarial} and is an error without it. It requires {it:esfixed
 
 {phang}{opt pretrendpow:er(numlist)}: Reports Roth (2022) style pre-trend power diagnostics for each requested power level, given in percent as integers strictly between 5 and 100
 (for example {it:pretrendpower(50 80)}): a GLS estimate of the linear pre-trend slope with its standard error and confidence interval, the smallest linear pre-trend each pre-test
-would detect with the requested power ({it:mdt_wald} for the joint pre-trend test and {it:mdt_nis} for the test that any pre-period coefficient is individually significant, both
-at the 5% level), and the bias such a trend would imply for the pooled estimand if it continued into the post-treatment period. Requires {it:esfixedbaseperiod} and at least one
-pre-treatment event-study coefficient. Refused with {it:impvalues}, {it:fastnose} and {it:permute()}, none of which produces the event-study covariance the diagnostics use; under
+would detect with the requested power ({it:mdt_wald} for the joint pre-trend test and {it:mdt_nis} for the test that any pre-period coefficient is individually significant
+under the normal reference, both at the 5% level), and the bias such a trend would imply for the pooled estimand if it continued into the post-treatment period.
+Requires {it:esfixedbaseperiod} and at least one pre-treatment event-study coefficient. Refused with {it:impvalues}, {it:fastnose} and {it:permute()}, none of which produces the event-study covariance the diagnostics use; under
 {it:bootstrap()} the diagnostics use the bootstrap covariance. With {it:subgroups()} only the overall event studies are analysed, and when only {it:att_i} or {it:att_itime} is
 requested the reported block is the {it:att_it} event study. The diagnostics are skipped with a caution when the pre-period covariance block is unavailable (as under
 {it:timetrends}) or ill-conditioned. The {it:mdt_nis} column is computed for up to 4 pre-periods; for larger designs, pass {it:e(b_es_type)}, {it:e(V_es_type)} and
