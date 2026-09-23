@@ -205,6 +205,41 @@ else {
   global s6f = $s6f + 1
 }
 
+* ---- F6 (ruling D3, 2026-09-23): a treated unit whose i code exceeds 2,147,483,647, the
+* factor-variable cap, is refused in validate with wooldid's own error (r(411)) at any safety(),
+* where it used to die r(452) after the checks naming a tempvar; a never-treated unit with such
+* a code still runs, and its att equals the run on the original codes
+use "data/dta_binary", clear
+qui sum i if ttre < .
+local f6tr = r(max)
+qui sum i if ttre >= .
+local f6nt = r(max)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1)
+local f6att0 = cond(_rc == 0, e(wdidmainresults)[1,1], .)
+qui gen double ib = i
+qui replace ib = 3000000000 + i if i == `f6tr'
+qui log using ttf_f6a.txt, text replace name(ttf)
+cap noi wooldid y ib t ttre, att cluster(ib) esprelength(1) espostlength(1)
+local rc6a = _rc
+cap noi wooldid y ib t ttre, att cluster(ib) esprelength(1) espostlength(1) safety(off)
+local rc6b = _rc
+qui log close ttf
+local c6a = strpos(fileread("ttf_f6a.txt"), "Error: ib must not exceed 2,147,483,647 on treated units") > 0
+cap erase ttf_f6a.txt
+qui replace ib = i
+qui replace ib = 3000000000 + i if i == `f6nt'
+cap noi wooldid y ib t ttre, att cluster(ib) esprelength(1) espostlength(1)
+local rc6c = _rc
+local f6att1 = cond(`rc6c' == 0, e(wdidmainresults)[1,1], .)
+dis "F6 i cap: treated big rc=`rc6a' (safety(off) rc=`rc6b') message=`c6a' | never-treated big rc=`rc6c' att=`f6att1' vs original `f6att0'"
+if `rc6a' == 411 & `rc6b' == 411 & `c6a' == 1 & `rc6c' == 0 & reldif(`f6att1', `f6att0') < 1e-10 {
+  dis as result "F6 PASS: a treated i past the factor-variable cap is refused by name; a never-treated one runs unchanged"
+}
+else {
+  dis as error "F6 FAIL: treated-i factor-variable cap"
+  global s6f = $s6f + 1
+}
+
 if $s6f == 0 dis "TTREFLOAT_ALL_PASS"
 else dis as error "TTREFLOAT_FAILS=$s6f"
 global s6f

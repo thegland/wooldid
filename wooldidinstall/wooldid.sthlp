@@ -64,7 +64,7 @@ Weights may be aweights or pweights; frequency weights (fw) are not accepted. {p
 
 {synoptset 22 tabbed}{...}
 {synopt : {it:y}}Outcome variable. {p_end}
-{synopt : {it:i}}Cohort identifier; must consist of integers greater than 0. Cohorts can be fine (i = individual units) or coarse (i = collections of individual units), but should be no coarser
+{synopt : {it:i}}Cohort identifier; must consist of integers greater than 0, and at most 2,147,483,647 on treated units. Cohorts can be fine (i = individual units) or coarse (i = collections of individual units), but should be no coarser
 than to consist of treatment onset cohorts. Coarser cohort definitions tend to enable much faster estimation, so do not default {it:i} to the finest level: coarsen it and specify unit-level
 fixed effects in {opt fe()}, which a coarse {it:i} also needs when the panel is unbalanced within cohorts. {p_end}
 {synopt : {it:t}}Time period identifier; must be numeric and on the same grid as {it:ttre}. Zero, negative and non-consecutive values are fine on the default path. With {opt uncond:itionalse},

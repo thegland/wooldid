@@ -5490,6 +5490,21 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     }
   }
 
+  * the factor-variable level cap (the author's ruling D3, 2026-09-23). the worker builds the
+  * cohort code _i from i on treated rows and enters it as a factor variable, so a treated unit
+  * whose i exceeds 2,147,483,647 passed the assert above and then died inside Stata's
+  * factor-variable machinery with r(452), naming a tempvar and non-integer values. never-treated
+  * units carry _i = 0 and i itself is only absorbed, which accepts large codes, so only units
+  * with a treatment onset are screened. a hard Stata limit that safety(off) cannot lift, so the
+  * screen is not gated on it. recoding i changes no estimate: it is an identifier
+  local wdicap `"if `ttre_asgiven' < ."'
+  if `"`if'"' != "" local wdicap `"if (`if') == 1 & `ttre_asgiven' < ."'
+  cap assert `i' <= 2147483647 `wdicap'
+  if _rc != 0 {
+    dis as error "Error: `i' must not exceed 2,147,483,647 on treated units; recode it first (egen newi = group(`i'))."
+    error 411
+  }
+
   * float storage cannot represent consecutive integers above 2^24 = 16,777,216, so an 8-digit
   * calendar code, a %tc datetime or a large ID held in float was rounded before wooldid saw it:
   * adjacent periods, cohorts or IDs merge with no other symptom and the run completes with a
