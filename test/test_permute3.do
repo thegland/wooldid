@@ -1699,54 +1699,86 @@ if `q31rca' != 0 | `q31rcb' != 0 | `q31a_def' != 1 | `q31a_ts' != 0 | `q31a_few'
 }
 else dis as result "Q31 PASS: the coefficient-statistic caution and the permtstat one are alternatives, and the few-treated-cluster line stays silent on an 80-cluster fixture"
 
-* ---- Q32 PS-46 (author ruling 2026-09-10): under the fast-mode default the run posts its
+* ---- Q32 PS-46 (author rulings 2026-09-10 and 2026-09-23): every permute() run posts its
 * permutation inference under the derivable names estout reads AHEAD of any covariance, so a
-* coefficient table built with the standard tools carries this run's real numbers. The
-* contract, both halves: e(p) and e(ci_l)/e(ci_u) are posted and EQUAL the perm_ matrices;
-* and nothing is invented - no e(V), no e(se), so test/lincom/_se[] still refuse. Under
-* permanalyticse an e(V) exists and the tools work from it, so the derivable names are not
-* posted there and the two routes cannot disagree. ----
-use "`DATA'/dta_binary", clear
-qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) rseed(32) dots(0)
-local q32bad 0
-foreach nm in p ci_l ci_u {
-  cap confirm matrix e(`nm')
-  if _rc != 0 local ++q32bad
-}
-foreach nm in V se {
-  cap confirm matrix e(`nm')
-  if _rc == 0 local ++q32bad
-}
-if `q32bad' == 0 {
-  tempname Q32P Q32L Q32U Q32PP Q32CI
-  matrix `Q32P' = e(p)
-  matrix `Q32L' = e(ci_l)
-  matrix `Q32U' = e(ci_u)
-  matrix `Q32PP' = e(perm_p)
-  matrix `Q32CI' = e(perm_ci)
-  if colsof(`Q32P') != colsof(`Q32PP') local ++q32bad
-  else {
-    forval c = 1/`=colsof(`Q32P')' {
-      if `Q32P'[1,`c'] != `Q32PP'[1,`c'] local ++q32bad
-      if `Q32L'[1,`c'] != `Q32CI'[1,`c'] local ++q32bad
-      if `Q32U'[1,`c'] != `Q32CI'[2,`c'] local ++q32bad
+* coefficient table built with the standard tools carries this run's real permutation p-values
+* and intervals - in fast mode, and under permanalyticse and permtstat, where the analytic e(V)
+* is posted beside them and estout would otherwise derive analytic p-values, intervals and
+* stars from it. The contract: on all three runs e(p) and e(ci_l)/e(ci_u) are posted and EQUAL
+* the perm_ matrices, name for name, and no e(se) is posted; in fast mode nothing is invented -
+* no e(V), so test still refuses; and where estout is installed, the p it tables under
+* permanalyticse is the permutation p. ----
+cap program drop q32chk
+program define q32chk
+  * hands back in `q32b' the number of failed checks on the derivable names
+  local bad 0
+  foreach nm in p ci_l ci_u perm_p perm_ci {
+    cap confirm matrix e(`nm')
+    if _rc != 0 local ++bad
+  }
+  cap confirm matrix e(se)
+  if _rc == 0 local ++bad
+  if `bad' == 0 {
+    tempname P L U PP CI
+    matrix `P' = e(p)
+    matrix `L' = e(ci_l)
+    matrix `U' = e(ci_u)
+    matrix `PP' = e(perm_p)
+    matrix `CI' = e(perm_ci)
+    if "`: colfullnames `P''" != "`: colfullnames `PP''" local ++bad
+    if colsof(`P') != colsof(`PP') | colsof(`L') != colsof(`PP') | colsof(`U') != colsof(`PP') local ++bad
+    else {
+      forval c = 1/`=colsof(`P')' {
+        if `P'[1,`c'] != `PP'[1,`c'] local ++bad
+        if `L'[1,`c'] != `CI'[1,`c'] local ++bad
+        if `U'[1,`c'] != `CI'[2,`c'] local ++bad
+      }
     }
   }
-}
+  c_local q32b `bad'
+end
+use "`DATA'/dta_binary", clear
+qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) rseed(32) dots(0)
+q32chk
+local q32bad = `q32b'
+cap confirm matrix e(V)
+if _rc == 0 local ++q32bad
 cap test main_att = 0
 local q32trc = _rc
 if `q32trc' == 0 local ++q32bad
-qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) rseed(32) permanalyticse dots(0)
-cap confirm matrix e(p)
-local q32ase = (_rc == 0)
-cap confirm matrix e(V)
-local q32asev = (_rc == 0)
-if `q32ase' != 0 | `q32asev' != 1 local ++q32bad
+local q32rep fast=`q32bad'
+foreach q32m in permanalyticse permtstat {
+  qui wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) rseed(32) `q32m' dots(0)
+  q32chk
+  cap confirm matrix e(V)
+  if _rc != 0 local ++q32b
+  local q32rep `q32rep' `q32m'=`q32b'
+  local q32bad = `q32bad' + `q32b'
+  if "`q32m'" == "permanalyticse" {
+    * estout's own reading: the p it tables for main_att must be the permutation p, where e(V)
+    * alone would give the analytic one
+    local q32est skipped (estout not installed)
+    cap which estout
+    if _rc == 0 {
+      tempname Q32E Q32PP
+      matrix `Q32PP' = e(perm_p)
+      qui estout ., cells(p)
+      matrix `Q32E' = r(coefs)
+      local q32r = rownumb(`Q32E', "main_att")
+      local q32k = colnumb(`Q32PP', "main_att")
+      if `q32r' >= . | `q32k' >= . local ++q32bad
+      else {
+        local q32est = `Q32E'[`q32r', 1]
+        if `Q32E'[`q32r', 1] != `Q32PP'[1, `q32k'] local ++q32bad
+      }
+    }
+  }
+}
 if `q32bad' != 0 {
-  dis as error "Q32 FAIL: fast-mode posting bad=`q32bad' (test rc=`q32trc'; permanalyticse e(p)=`q32ase' e(V)=`q32asev')"
+  dis as error "Q32 FAIL: derivable-name posting bad=`q32bad' (`q32rep'; fast-mode test rc=`q32trc'; estout p under permanalyticse=`q32est')"
   global pf = $pf + 1
 }
-else dis as result "Q32 PASS: fast mode posts e(p)/e(ci_l)/e(ci_u) equal to the perm_ matrices, posts no e(V) or e(se), and test still refuses (rc=`q32trc')"
+else dis as result "Q32 PASS: fast mode, permanalyticse and permtstat all post e(p)/e(ci_l)/e(ci_u) equal to the perm_ matrices and no e(se); fast mode posts no e(V) and test refuses (rc=`q32trc'); estout's p under permanalyticse=`q32est'"
 
 * ------------------------------------------- Q33: D-1, cfxplotnose under permute() (2026-09-11)
 * cfxplotnose used to truncate the cfx matrices to one column unconditionally, while
@@ -1780,6 +1812,137 @@ if "`q33nm'" == "" | `q33c' != 6 | `q33pd' != 1 | `q33p' >= . {
   global pf = $pf + 1
 }
 else dis as result "Q33 PASS: cfxplotnose no longer truncates under permute() - `q33nm' has `q33c' columns, a permutation p (`q33p') and its own permdist_"
+
+* ================= Q33b-e (author ruling 2026-09-23): cfxplotnose under permute() + permtstat.
+* Under permtstat each plot cell is studentized by its own standard error, in the observed run
+* and in every replication, so cfxplotnose used to leave every cfx cell with its estimate alone
+* (se, t, p and interval all missing) with nothing said. With permute(), permtstat (or permtci)
+* and makecfxplots, wooldid_validate now drops cfxplotnose with the approved caution, and the
+* cells are then computed and permuted exactly as under permtstat alone. The Q33 fixture cannot
+* carry this: permtstat on it stops r(498) on a CFX row name, a separate matter. This fixture
+* has i = onset cohort under permonsetcohorts and cluster(unit), so the cell standard errors
+* are live; one permtstat replication fails on it, so permreps(40) clears the floor ====
+cap program drop mkcfxc
+program define mkcfxc
+  clear
+  set type double
+  set seed 20260914
+  set sortseed 20260914
+  qui set obs 4
+  qui gen coh = _n
+  qui gen ttre = cond(coh == 1, 5, cond(coh == 2, 7, cond(coh == 3, 9, .)))
+  qui expand 30
+  qui bysort coh: gen u = _n
+  qui gen unit = coh*1000 + u
+  sort unit
+  qui gen alpha = rnormal()
+  qui gen sig = 0.5*exp(0.4*rnormal())
+  qui gen ud = 0.3*rnormal()
+  qui expand 12
+  qui bysort unit: gen t = _n
+  qui bysort unit (t): gen e = sig*rnormal()/sqrt(1 - .36) if _n == 1
+  qui bysort unit (t): replace e = .6*e[_n-1] + sig*rnormal() if _n > 1
+  qui gen dose_it = exp(ud + 0.55*rnormal())
+  qui gen post = (ttre < . & t >= ttre)
+  qui gen y = 3 + alpha + 0.04*t + 0.45*dose_it*post + 0.15*dose_it + e
+  drop u alpha sig ud e post
+  sort unit t
+  set type float
+end
+local q33opt att contreat(dose_it) contreatcontrols(basic) cluster(unit) permonsetcohorts lattice(all 3) esprelength(1) espostlength(1) makecfxplots permute(shuffle) permreps(40) permtstat rseed(77) dots(0)
+local q33caut "Caution: cfxplotnose was dropped; permtstat needs the plot cells' standard errors."
+mkcfxc
+qui log using perm3_q33b.txt, text replace name(p3)
+cap noi wooldid y coh t ttre, `q33opt' cfxplotnose
+local rc = _rc
+qui log close p3
+xrc Q33b 0 `rc'
+local q33bn 0
+if `rc' == 0 {
+  local lg = fileread("perm3_q33b.txt")
+  local bad 0
+  local q33hascaut = strpos(`"`lg'"', "`q33caut'") > 0
+  if !`q33hascaut' local ++bad
+  local q33mats `e(wdid_cfxmats)'
+  foreach nm of local q33mats {
+    local ++q33bn
+    tempname Q33B`q33bn'
+    matrix `Q33B`q33bn'' = e(`nm')
+    cap confirm matrix e(permdistse_`nm')
+    if _rc != 0 local ++bad
+    if colsof(`Q33B`q33bn'') != 6 local ++bad
+    else {
+      forval r = 1/`=rowsof(`Q33B`q33bn'')' {
+        * the analytic cell se is there, and so is the permutation p it studentized
+        if `Q33B`q33bn''[`r', 2] >= . | `Q33B`q33bn''[`r', 2] <= 0 | `Q33B`q33bn''[`r', 4] >= . local ++bad
+      }
+    }
+  }
+  if `q33bn' == 0 local ++bad
+  if `bad' {
+    dis as error "Q33b FAIL: permtstat + cfxplotnose - caution printed=`q33hascaut', matrices=[`q33mats'], bad=`bad' (se, p or permdistse_ missing)"
+    global pf = $pf + 1
+  }
+  else dis as result "Q33b PASS: permtstat + cfxplotnose drops cfxplotnose with the caution, and every cell of [`q33mats'] carries its se and a permutation p"
+}
+* Q33c: the same run without cfxplotnose - no caution, and the cells bit-identical to Q33b's
+mkcfxc
+qui log using perm3_q33c.txt, text replace name(p3)
+cap noi wooldid y coh t ttre, `q33opt'
+local rc = _rc
+qui log close p3
+xrc Q33c 0 `rc'
+if `rc' == 0 & `q33bn' > 0 {
+  local lg = fileread("perm3_q33c.txt")
+  local bad 0
+  if strpos(`"`lg'"', "cfxplotnose was dropped") > 0 local ++bad
+  local k 0
+  tempname Q33C
+  foreach nm in `e(wdid_cfxmats)' {
+    local ++k
+    if `k' > `q33bn' continue
+    matrix `Q33C' = e(`nm')
+    if mreldif(`Q33C', `Q33B`k'') != 0 local ++bad
+  }
+  if `k' != `q33bn' local ++bad
+  if `bad' {
+    dis as error "Q33c FAIL: permtstat alone does not reproduce the permtstat + cfxplotnose cells bit for bit, or printed the caution (bad=`bad')"
+    global pf = $pf + 1
+  }
+  else dis as result "Q33c PASS: permtstat + cfxplotnose gives the permtstat-alone cells bit for bit"
+}
+* Q33d-e: the gate, on the option validator alone (no estimation): permtci implies permtstat,
+* so it drops cfxplotnose too; without makecfxplots, or without permtstat, cfxplotnose is
+* kept and nothing is said. The wrapper keeps the validator's returned locals out of this
+* do-file's scope
+cap program drop q33val
+program define q33val
+  wooldid_validate `0'
+  c_local q33vnose `cfxplotnose'
+end
+local q33vopt att contreat(dose_it) contreatcontrols(basic) cluster(unit) permonsetcohorts lattice(all 3) esprelength(1) espostlength(1) permute(shuffle) permreps(40) cfxplotnose
+local bad 0
+local q33vrep
+foreach q33v in "permtci makecfxplots" "permtstat" "makecfxplots" {
+  mkcfxc
+  qui log using perm3_q33v.txt, text replace name(p3)
+  cap noi q33val y coh t ttre, `q33vopt' `q33v'
+  local rc = _rc
+  qui log close p3
+  local lg = fileread("perm3_q33v.txt")
+  local cau = strpos(`"`lg'"', "`q33caut'") > 0
+  local want = ("`q33v'" == "permtci makecfxplots")
+  if `rc' != 0 | `cau' != `want' | ("`q33vnose'" == "") != `want' local ++bad
+  local q33vrep `q33vrep' [`q33v': rc=`rc' caution=`cau' cfxplotnose=`q33vnose']
+}
+if `bad' {
+  dis as error "Q33d FAIL: the cfxplotnose drop is not gated on permute() + permtstat/permtci + makecfxplots: `q33vrep'"
+  global pf = $pf + 1
+}
+else dis as result "Q33d PASS: permtci drops cfxplotnose with the caution; without makecfxplots or without permtstat it is kept silently"
+cap erase perm3_q33b.txt
+cap erase perm3_q33c.txt
+cap erase perm3_q33v.txt
 
 * ================= Q34: aweights under permute() - the recon identity on a weighted
 * replication fit (nothing in the tree runs this pair; mc_ri R7 last did on 2026-08-24).
@@ -1976,6 +2139,82 @@ if `q37n' != 20 | "`q37seed'" != "37" {
 ! chmod 644 perm3_q37.dta
 cap erase perm3_q37.dta
 cap erase perm3_q37.txt
+
+* ================= Q38 (author ruling 2026-09-23): a pairwise subgroup contrast whose null
+* draws are not centred at zero has its shift interval blanked by the kernel (row 10 of
+* e(perm_pwsgs_kernel) = 1). Its e(pwsgs) row name must be appended to e(perm_offcentre),
+* which wooldid_permwire posts for the e(b) columns alone, so the footer line that prints that
+* macro names it. Fixture: subgroups at the cluster (state) level, a common effect of 1.5 and
+* no permstrata(), so the shuffle re-randomizes which subgroups the treated states fall in and
+* the contrast's null draws centre near the effect. Asserted both ways: every flagged row is
+* listed (and printed, with a blank interval), and no unflagged row is listed ====
+cap program drop mkstate3
+program define mkstate3
+  args eff nsg1
+  clear
+  set seed 4321
+  set sortseed 4321
+  qui set obs 10
+  qui gen st = _n
+  qui gen ttre = cond(_n <= 3, 5, cond(_n <= 5, 7, .))
+  qui gen sg = (st <= `nsg1')
+  qui gen sshock = rnormal()
+  qui expand 4
+  qui bysort st: gen cty = _n
+  qui gen i = st*100 + cty
+  qui gen a = rnormal()
+  qui expand 10
+  qui bysort i: gen t = _n
+  qui gen y = a + 0.5*sshock + 0.1*t + rnormal() + `eff'*(t >= ttre & ttre < .)
+  drop a sshock
+  sort i t
+end
+mkstate3 1.5 4
+qui log using perm3_q38.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(st) esprelength(1) espostlength(1) subgroups(sg) permute(shuffle) permreps(50) rseed(11) dots(0)
+local rc = _rc
+qui log close p3
+xrc Q38a 0 `rc'
+if `rc' == 0 {
+  tempname K38 PW38
+  matrix `K38' = e(perm_pwsgs_kernel)
+  matrix `PW38' = e(pwsgs)
+  local cn38 : colfullnames `K38'
+  local off38 `e(perm_offcentre)'
+  local lg = fileread("perm3_q38.txt")
+  local ph38 "Shift intervals left blank because the permutation distribution is not centred at zero (the p-values stand): "
+  local ln38
+  local at38 = strpos(`"`lg'"', "`ph38'")
+  if `at38' > 0 {
+    local ln38 = substr(`"`lg'"', `at38' + strlen("`ph38'"), .)
+    local nl38 = strpos(`"`ln38'"', char(10))
+    if `nl38' > 0 local ln38 = substr(`"`ln38'"', 1, `nl38' - 1)
+  }
+  local nflag 0
+  local bad 0
+  forval c = 1/`=colsof(`K38')' {
+    local nm : word `c' of `cn38'
+    local listed : list nm in off38
+    local printed : list nm in ln38
+    if `K38'[10, `c'] == 1 {
+      local ++nflag
+      if !`listed' | !`printed' local ++bad
+      if `PW38'[`c', 5] < . | `PW38'[`c', 6] < . local ++bad
+    }
+    else if `listed' local ++bad
+  }
+  dis "Q38 flagged contrast rows=`nflag' of " colsof(`K38') "; e(perm_offcentre)=[`off38']; footer=[`ln38']"
+  if `nflag' == 0 {
+    dis as error "Q38b FAIL (VACUOUS): no pairwise contrast is flagged off-centre on this fixture, so nothing was asserted - change the fixture"
+    global pf = $pf + 1
+  }
+  else if `bad' {
+    dis as error "Q38b FAIL: `bad' check(s) - a flagged contrast row is missing from e(perm_offcentre) or the footer, keeps an interval, or an unflagged row is listed"
+    global pf = $pf + 1
+  }
+  else dis as result "Q38b PASS: every off-centre pairwise contrast row is listed in e(perm_offcentre) and named by the footer"
+}
+cap erase perm3_q38.txt
 
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

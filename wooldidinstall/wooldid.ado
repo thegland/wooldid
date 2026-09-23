@@ -5385,6 +5385,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * further down sees the implied value: permtci alone must not send the observed run down
   * the no-SE path it is about to be studentized against
   if "`permtci'" != "" & "`permtstat'" == "" local permtstat permtstat
+  * under permtstat each plot cell is studentized by its own standard error, in the observed run
+  * and in every replication, so cfxplotnose would leave every cell without inference: it is
+  * dropped here, which reaches both the observed run and the replication option string the
+  * shell builds from these returned locals
+  if "`permute'" != "" & "`permtstat'" != "" & "`makecfxplots'" != "" & "`cfxplotnose'" != "" {
+    local cfxplotnose
+    dis as text "Caution: cfxplotnose was dropped; permtstat needs the plot cells' standard errors."
+  }
   * note which safety() value each screen gets, because the two calls differ. permctl is handed
   * si(`safety') - the effective value, already rewritten to off above when contreatwithin is
   * combined with contreat() - while bootctl below is handed si(`safetyinput'), the user's own.
@@ -8872,6 +8880,8 @@ version 16.0
   * the elements that actually take the add-one form - their reference set does not contain the
   * observed statistic
   ereturn local perm_addone `wdp_addone'
+  * the e(b) elements only; wooldid_permjnt, which runs next, appends the flagged pairwise
+  * subgroup contrast rows
   ereturn local perm_offcentre `wdpoff'
   ereturn scalar perm_blank = `blank'
   if "`ase'" != "" ereturn scalar perm_analyticse = 1
@@ -8900,38 +8910,37 @@ version 16.0
     ereturn local vce
     ereturn local vcetype
   }
-  * with no e(V) posted, esttab and estout do not refuse: they print an empty inference row
-  * beneath a footer asserting the numbers are there, and write that assertion into .tex and
-  * .csv. estout reads posted e(p)/e(ci_l)/e(ci_u) ahead of anything derived from e(V) (its own
-  * bVs2 list), so posting them under those derivable names makes a coefficient table carry this
-  * run's real permutation p-values and shift intervals - which is the point: a user should be
-  * able to table the coefficients with the standard tools even where there is no standard error
-  * to report.
-  * Nothing is invented. No covariance is posted, so test, lincom, _se[] and estat vce still
-  * refuse; and no e(se) is posted, because a permutation run has no standard error - the shift
-  * se is a different object and naming it se would be the fabrication this route exists to
-  * avoid.
-  * Fast mode only: under permanalyticse an e(V) exists and the tools already work from it.
+  * estout reads posted e(p)/e(ci_l)/e(ci_u) ahead of anything derived from e(V) (its own bVs2
+  * list), so posting them under those derivable names makes a coefficient table carry this run's
+  * real permutation p-values and shift intervals, on every permute() run. Without them esttab
+  * and estout do not refuse: with no e(V) posted (the fast-mode default) they print an empty
+  * inference row beneath a footer asserting the numbers are there, and with the analytic e(V)
+  * posted (permanalyticse, permtstat) they derive analytic p-values, intervals and stars from it,
+  * beside a table whose p_perm column says otherwise. Where e(V) exists their se and t columns
+  * still come from it - the se_analytic column of the run's own table - as do test, lincom,
+  * estimates table and r(table).
+  * Nothing is invented. No e(se) is posted, because a permutation run has no standard error -
+  * the shift se is a different object and naming it se would be the fabrication this route
+  * exists to avoid; and in fast mode no covariance is posted, so test, lincom, _se[] and estat
+  * vce still refuse.
   * Read back from e() rather than reused: `pv' and `ci' were moved by their own posts.
-  if !`wdphasv' {
-    tempname psp psc psl psu
-    cap confirm matrix e(perm_p)
-    if _rc == 0 {
-      matrix `psp' = e(perm_p)
-      * e(perm_p) is row 3 of the kernel and carries its "r3" rowname; a 1 x K matrix posted
-      * under the name p should say p, since a user reads it with matrix list
-      matrix rownames `psp' = p
-      ereturn matrix p = `psp'
-    }
-    cap confirm matrix e(perm_ci)
-    if _rc == 0 {
-      matrix `psc' = e(perm_ci)
-      if rowsof(`psc') >= 2 {
-        matrix `psl' = `psc'[1, 1...]
-        matrix `psu' = `psc'[2, 1...]
-        ereturn matrix ci_l = `psl'
-        ereturn matrix ci_u = `psu'
-      }
+  tempname psp psc psl psu
+  cap confirm matrix e(perm_p)
+  if _rc == 0 {
+    matrix `psp' = e(perm_p)
+    * e(perm_p) is row 3 of the kernel and carries its "r3" rowname; a 1 x K matrix posted
+    * under the name p should say p, since a user reads it with matrix list
+    matrix rownames `psp' = p
+    ereturn matrix p = `psp'
+  }
+  cap confirm matrix e(perm_ci)
+  if _rc == 0 {
+    matrix `psc' = e(perm_ci)
+    if rowsof(`psc') >= 2 {
+      matrix `psl' = `psc'[1, 1...]
+      matrix `psu' = `psc'[2, 1...]
+      ereturn matrix ci_l = `psl'
+      ereturn matrix ci_u = `psu'
     }
   }
   ereturn hidden local wdid_fastnose ""
@@ -9308,6 +9317,7 @@ version 16.0
     local rr 0
     local pwunmapped 0
     local pwmiss 0
+    local pwoff
     foreach rn of local prn {
       local ++rr
       gettoken eqn nmn : rn, parse(":")
@@ -9340,13 +9350,15 @@ version 16.0
       * prints the analytic header layout unchanged
       matrix `pw'[`rr', 3] = .
       * `pk' is read by RAW ROW INDEX: 13 is the liveness flag, 3 is p, 7 and 8 are the
-      * interval endpoints. The layout is defined by wooldid_permtail (rows 1-13 in its
-      * header, rows 14-18 where they are appended); the J(18, ...) allocation above and
-      * the eighteen-name `matrix rownames `pk'' below must track that kernel
+      * interval endpoints, 10 the off-centre flag. The layout is defined by wooldid_permtail
+      * (rows 1-13 in its header, rows 14-18 where they are appended); the J(18, ...)
+      * allocation above and the eighteen-name `matrix rownames `pk'' below must track that
+      * kernel
       if `ok' & `pk'[13, `rr'] == 1 {
         matrix `pw'[`rr', 4] = `pk'[3, `rr']
         matrix `pw'[`rr', 5] = `pk'[7, `rr']
         matrix `pw'[`rr', 6] = `pk'[8, `rr']
+        if `pk'[10, `rr'] == 1 local pwoff `pwoff' `rn'
       }
       else {
         forval cc = 4/6 {
@@ -9372,6 +9384,15 @@ version 16.0
     matrix rownames `pk' = n s_obs p qlo qhi sd lb ub se_shift offcentre bandlo bandhi live p_lo p_hi se_p cp_lo cp_hi
     matrix colnames `pk' = `prn'
     ereturn matrix perm_pwsgs_kernel = `pk'
+    * a contrast whose null draws are not centred at zero has had its shift interval blanked
+    * (wooldid_permtail), as an e(b) element does in wooldid_permwire; its full e(pwsgs) row
+    * name (eq:JvsK) is appended to the e(perm_offcentre) that wooldid_permwire has already
+    * posted, so the footer line that reads that macro names it too
+    if "`pwoff'" != "" {
+      local wdpoffall `e(perm_offcentre)' `pwoff'
+      local wdpoffall : list retokenize wdpoffall
+      ereturn local perm_offcentre `wdpoffall'
+    }
     if `pwunmapped' > 0 {
       local ++ncaut
       local wdpc`ncaut' `pwunmapped' pairwise subgroup contrast row(s) could not be mapped to replication columns; their inference is left blank
@@ -9423,12 +9444,13 @@ version 16.0
     cap confirm matrix e(`nm')
     if _rc != 0 continue
     * six columns is the transposed r(table) layout (1 b, 2 se, 3 t, 4 pvalue, 5 ll,
-    * 6 ul) that the 1, 2, 4, 5, 6 arguments to wooldid_permcellwire below index. Fewer
-    * than six means cfxmatendpoint was 1, which under permute() means cfxplotnose -
-    * fastnose is carved out of that truncation precisely so this rewiring has columns to
-    * fill. CAUTION: this skip is silent. permute() + cfxplotnose leaves ndone at 0, so
-    * the caution at the foot of this program never prints and e(perm_cfx_blank) is never
-    * posted, and the cfx cells stay analytic under a permutation header with nothing said
+    * 6 ul) that the 1, 2, 4, 5, 6 arguments to wooldid_permcellwire below index. Under
+    * permute() the worker keeps that shape even under cfxplotnose or fastnose (missing-padded)
+    * precisely so this rewiring has columns to fill, and under permtstat wooldid_validate drops
+    * cfxplotnose, so the cell standard errors the studentized fill divides by are there.
+    * CAUTION: this skip is silent. A matrix skipped here leaves ndone short, so the caution at
+    * the foot of this program and e(perm_cfx_blank) do not cover it, and its cells would stay
+    * analytic under a permutation header with nothing said
     if colsof(e(`nm')) < 6 continue
     cap confirm matrix `cell'_cfx`c'
     if _rc != 0 continue

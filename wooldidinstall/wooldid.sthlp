@@ -728,7 +728,8 @@ dropped without a message; with {it:esfixedbaseperiod} any integer is accepted e
 {phang}{opt makecfxplotsbysg}: Produce continuous treatment effects plots for each group specified in the subgroup variable. Has no effect, and prints nothing, without both {it:makecfxplots} and {it:subgroups()}.
 Each subgroup's plot data is returned in {it:e(cfxitem_type_sgN)}, where N is the subgroup value. {p_end}
 
-{phang}{opt cfxplotnose}: Do not estimate standard errors for the cfxplots; speeds estimation. {p_end}
+{phang}{opt cfxplotnose}: Do not estimate standard errors for the cfxplots; speeds estimation. Dropped, with a caution, under {it:permute()} with {it:permtstat} or
+{it:permtci}, which need them. {p_end}
 
 {phang}{opt contreatc:ontrols(controltype)}: Specifies what controls for {it:contreat} will be added: the specified controls are always equal to f(Contreat_jt) (the function used to capture
   the effect of contreat within treated i-t cells) interacted with a set of fixed effects-like indicator variables (time period, cohort, etc.). The specified controls will partial out
@@ -1068,8 +1069,9 @@ and e() additionally holds, one named column per coefficient of {it:e(b)}: {it:e
 {it:e(perm_exact)}, {it:e(perm_method)}, {it:e(perm_stat)}, {it:e(perm_pconv)}, {it:e(perm_seed)}, {it:e(perm_rngstate)}, {it:e(perm_save_rc)} when a {it:permsave()} write failed, {it:e(perm_analyticse)}, {it:e(perm_absp)},
 {it:e(perm_adv)}, {it:e(perm_precaveat)}, {it:e(perm_irebuilt)}, {it:e(perm_blank)}, {it:e(perm_gt_blank)}, {it:e(perm_cfx_blank)}, {it:e(perm_offcentre)},
 {it:e(perm_incomplete)} and {it:e(perm_addone)}; and the pooled-estimand scalars {it:e(perm_p_{it:est})}, {it:e(perm_bandlo_{it:est})}, {it:e(perm_bandhi_{it:est})},
-{it:e(perm_sd_{it:est})} and, under {it:permtci}, {it:e(perm_tlb_{it:est})} and {it:e(perm_tub_{it:est})}, with {it:e(perm_comparator)} and {it:e(permdist)}. Under the fast-mode
-default, {it:e(p)}, {it:e(ci_l)} and {it:e(ci_u)} are also posted for {it:esttab}. Further records: {it:e(perm_npossible_str)}, {it:e(perm_comparator_se)} (under
+{it:e(perm_sd_{it:est})} and, under {it:permtci}, {it:e(perm_tlb_{it:est})} and {it:e(perm_tub_{it:est})}, with {it:e(perm_comparator)} and {it:e(permdist)}. {it:e(p)}, {it:e(ci_l)}
+and {it:e(ci_u)} are also posted, so {it:esttab} reports the permutation p-values and intervals; where {it:e(V)} is posted, the standard errors and t statistics it reports are the
+analytic ones. Further records: {it:e(perm_npossible_str)}, {it:e(perm_comparator_se)} (under
 {it:permtstat}), the hidden {it:e(perm_kernel)} and {it:e(perm_pwsgs_kernel)}, and behind each cfx matrix the hidden {it:e(perm_analytic_{it:cfxname})},
 {it:e(permdist_{it:cfxname})}, {it:e(permcmp_{it:cfxname})} and, under {it:permtstat}, {it:e(permdistse_{it:cfxname})} and {it:e(permcmpse_{it:cfxname})}. The ame
 step-down tables are {it:e(perm_Cstepdown)} and {it:e(perm_Cstepdown_i)}. {it:e(perm_lb_{it:est})} and {it:e(perm_ub_{it:est})} are deprecated aliases of the band
