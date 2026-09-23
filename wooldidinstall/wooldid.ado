@@ -12336,16 +12336,19 @@ version 16.0
         else dis as text "Caution: the analytic covariance of the subgroup effects is numerically rank-deficient in the contrast direction for `e(wdid_sgdegen)' pairwise row(s) (largest implied correlation between two subgroups' estimates `e(wdid_sgdegenr)'), so those contrast standard errors are cancellation residue rather than estimated variances. safety(off) was specified, so they and the across-subgroup equality tests are reported rather than withheld; read them as the residue they are. permute(), bootstrap() without boottstat, or a cluster() strictly finer than the cohort-by-period cells that leaves many clusters inside each cell gives inference that is valid under this design."
       }
       dis as result " "
+      * the equality lines gate on the NUMERIC value, as the adversarial lines do: a test
+      * withheld by wooldid_sgdeg, wooldid_bootjnt or wooldid_permjnt is posted as missing, and
+      * the string of a missing scalar is "." (non-empty), which printed a bare dot
       foreach item in `estimandlist' {
-        if "`e(joint_`item'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same `item': " %-6.4f e(joint_`item'_allsgssame)
-        if "`e(joint_pre_`item'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same pre-treatment `item': " %-6.4f e(joint_pre_`item'_allsgssame)
+        if e(joint_`item'_allsgssame) < . dis as result  "p-value for joint test that all SGs have the same `item': " %-6.4f e(joint_`item'_allsgssame)
+        if e(joint_pre_`item'_allsgssame) < . dis as result  "p-value for joint test that all SGs have the same pre-treatment `item': " %-6.4f e(joint_pre_`item'_allsgssame)
       }
       dis as result  " "
       if "`contreat'" != "" {
         foreach item in `estimandlist' {
           local itemtext = subinstr("`item'","att","ame",.)
-          if "`e(joint_`itemtext'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same `itemtext': " %-6.4f e(joint_`itemtext'_allsgssame)
-          if "`e(joint_pre_`itemtext'_allsgssame)'" != "" dis as result  "p-value for joint test that all SGs have the same pre-treatment `itemtext': " %-6.4f e(joint_pre_`itemtext'_allsgssame)
+          if e(joint_`itemtext'_allsgssame) < . dis as result  "p-value for joint test that all SGs have the same `itemtext': " %-6.4f e(joint_`itemtext'_allsgssame)
+          if e(joint_pre_`itemtext'_allsgssame) < . dis as result  "p-value for joint test that all SGs have the same pre-treatment `itemtext': " %-6.4f e(joint_pre_`itemtext'_allsgssame)
         }
         dis as result  " "
       }

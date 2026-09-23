@@ -15,6 +15,8 @@
 * G4 the BS-15 and jointtests cautions stand side by side, and jointtests still computes
 * G5 no false flag on a healthy continuous-treatment subgroup run
 * G6 replay reproduces the caution from e()
+* G7 display-eqtest-bare-dot: a withheld equality test prints nothing, a reported one prints
+*    its value (the string gate printed a bare dot for a scalar posted as missing)
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -63,6 +65,10 @@ scanSG sgd_g1.txt "`needle15'"
 local c1 = r(found)
 * the caution has to appear on the fit AND on the replay
 local c1n = r(hits)
+* display-eqtest-bare-dot: both equality tests are withheld here, so no "have the same" line
+* may print on the fit or on the replay
+scanSG sgd_g1.txt "have the same"
+local d1 = r(hits)
 cap erase sgd_g1.txt
 di "G1 BS-15: rc=`rc1' flagged=`n1' act=`a1' rho=`r1' allsgssame=`j1' pre=`jp1' pw se=" G1P[1,2] "/" G1P[2,2] " b=" G1P[1,1] " caution hits=`c1n' (replay rc `rc6')"
 if `rc1' != 0 | `n1' != 2 | "`a1'" != "blank" | `j1' < . | `jp1' < . | G1P[1,1] >= . | G1P[1,2] < . | G1P[1,4] < . | G1P[1,6] < . | G1P[2,2] < . | `c1' != 1 {
@@ -104,6 +110,9 @@ local j3 = e(joint_att_allsgssame)
 matrix G3P = e(pwsgs)
 scanSG sgd_g3.txt "`needle15'"
 local c3 = r(found)
+* display-eqtest-bare-dot control: the reported test still prints its value
+scanSG sgd_g3.txt "have the same att: "
+local d3 = r(hits)
 cap erase sgd_g3.txt
 di "G3 BS-15: rc=`rc3' act=[`a3'] caution=`c3' allsgssame=`j3' pw se=" G3P[1,2]
 if `rc3' != 0 | "`a3'" != "report" | `c3' != 1 | `j3' >= . | G3P[1,2] >= . {
@@ -143,6 +152,14 @@ cap erase sgd_g5.txt
 di "G5 BS-15: rc=`rc5' act=[`a5'] caution=`c5'"
 if `rc5' != 0 | "`a5'" != "" | `c5' != 0 {
   di as error "G5 FAIL: rc `rc5', act [`a5'], caution `c5' - a false flag (or a broken fixture) on a healthy continuous-treatment subgroup run"
+  local ++fails
+}
+
+* ---- G7 display-eqtest-bare-dot: the withheld equality tests print nothing (G1, fit and
+* replay), the reported ones under safety(off) still print (G3)
+di "G7 display-eqtest-bare-dot: withheld have-the-same lines=`d1' (expect 0) reported att lines=`d3' (expect >= 1)"
+if `d1' != 0 | `d3' < 1 {
+  di as error "G7 FAIL: a withheld equality test printed (`d1' line(s)) or the reported one did not (`d3')"
   local ++fails
 }
 
