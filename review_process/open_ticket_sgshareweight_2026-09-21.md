@@ -6,7 +6,9 @@ open a ticket to delete this feature."* Rescoped the same day once the survey sh
 feature to delete: *"don't worry about removing features, let's just update the ticket to harden
 our guards for this behavior to always fire."*
 
-**Status: PARTIALLY BUILT 2026-09-21, and the remaining scope is now in doubt.**
+**Status: CLOSED 2026-09-23 as S3-only.** The author ruled (multiple choice, 2026-09-23) that S1 and S2 stay liftable by safety(off), consistent with the text he wrote for them; the within-cell guards are unchanged. What follows is the record.
+
+**Earlier status: PARTIALLY BUILT 2026-09-21, and the remaining scope is now in doubt.**
 
 The author ruled on the message-review page rather than on this file, and the ruling is narrower
 than this ticket assumed. He unsilenced exactly ONE of the three containment guards, S3, the
