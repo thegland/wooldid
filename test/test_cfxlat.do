@@ -334,5 +334,122 @@ foreach f in l9probe_cfx.dta l9probe_cfxatt_cfxpost.gph l9probe_cfxame_cfxpost.g
   cap erase "`f'"
 }
 
+* ---- L10 cfx-omitted-rows (author ruling 2026-09-23): on a run that computes the plot cells'
+* standard errors, margins marks a lattice level whose every dose-slope term was dropped as
+* omitted in the row name (1bno. on the first level, 2o. on a later one) and carries a structural
+* 0 as its estimate. wooldid_cfxstripe keeps such a row under its lattice_# key with every column
+* missing. L10a: i = unit with one observation per cell, so every treated dose-slope term drops
+* and the all-slopes-dropped caution prints - the run completes, both figures are saved, the ame
+* matrix is blank, the att matrix keeps its estimates and standard errors, and the plot-data file
+* carries the blank ame rows. L10b/L10c: the level-1 (L10b) or level-2 (L10c) units each form
+* their own i, one observation per cell, so only that lattice level is omitted - its ame row is
+* blank and the other two keep their estimates ----
+cap program drop mkq33c
+program define mkq33c
+  clear
+  qui set obs 20
+  qui gen i = _n
+  qui gen ttre = cond(i <= 8, 5, cond(i <= 15, 7, .))
+  qui expand 10
+  qui bysort i: gen t = _n
+  set seed 4411
+  qui gen dose = runiform() + 0.5
+  qui gen y = 1.1*(t >= ttre & ttre < .)*dose + 0.08*i + 0.04*t + rnormal()
+end
+* l10chk: bad = number of failed shape checks on e(cfxame_cfxpost)/e(cfxatt_cfxpost); blank =
+* the ame lattice levels expected all-missing, every other row must carry b and a positive se
+cap program drop l10chk
+program define l10chk
+  syntax , [blank(numlist)]
+  local bad 0
+  if "`e(wdid_cfxmats)'" != "cfxame_cfxpost cfxatt_cfxpost" local ++bad
+  foreach nm in cfxame_cfxpost cfxatt_cfxpost {
+    cap confirm matrix e(`nm')
+    if _rc != 0 {
+      local ++bad
+      continue
+    }
+    tempname M
+    matrix `M' = e(`nm')
+    if rowsof(`M') != 3 | colsof(`M') != 6 | "`: rowfullnames `M''" != "lattice_1 lattice_2 lattice_3" local ++bad
+    else {
+      forval r = 1/3 {
+        local isblank = ("`nm'" == "cfxame_cfxpost" & `: list r in blank')
+        forval c = 1/6 {
+          if `isblank' & `M'[`r', `c'] < . local ++bad
+        }
+        if !`isblank' & (`M'[`r', 1] >= . | `M'[`r', 2] >= . | `M'[`r', 2] <= 0) local ++bad
+      }
+    }
+  }
+  c_local l10bad `bad'
+end
+foreach f in l10probe_cfx.dta l10probe_cfxatt_cfxpost.gph l10probe_cfxame_cfxpost.gph l10probe_log.txt {
+  cap erase "`f'"
+}
+mkq33c
+qui log using l10probe_log.txt, text replace name(l10)
+cap noi wooldid y i t ttre, att cluster(i) contreat(dose) contreatcontrols(basic) makecfxplots lattice(all 3) esprelength(1) espostlength(1) saveplots(l10probe) replace
+local l10arc = _rc
+qui log close l10
+local l10bad 1
+if `l10arc' == 0 l10chk , blank(1 2 3)
+local l10abad = `l10bad'
+local l10caut = strpos(fileread("l10probe_log.txt"), "every treated cohort-period dose-slope term") > 0
+local l10gph 0
+foreach f in l10probe_cfxatt_cfxpost.gph l10probe_cfxame_cfxpost.gph {
+  cap confirm file "`f'"
+  if _rc == 0 local ++l10gph
+}
+local l10dame .
+local l10datt .
+cap confirm file "l10probe_cfx.dta"
+if _rc == 0 {
+  preserve
+  qui use "l10probe_cfx.dta", clear
+  qui count if matname == "cfxame_cfxpost" & b >= .
+  local l10dame = r(N)
+  qui count if matname == "cfxatt_cfxpost" & b < .
+  local l10datt = r(N)
+  restore
+}
+if `l10arc' != 0 | `l10abad' != 0 | `l10caut' != 1 | `l10gph' != 2 | "`l10dame'" != "3" | "`l10datt'" != "3" {
+  dis as error "L10a FAIL: all dose slopes dropped, makecfxplots with standard errors rc=`l10arc' (r(498) = the row-name parse) shape_bad=`l10abad' caution=`l10caut' gph=`l10gph' dta_blank_ame=`l10dame' dta_att=`l10datt'"
+  local ++fails
+}
+else dis as result "L10a PASS: every dose slope dropped - the run completes, the ame cells are blank under lattice_1-3, the att cells and both figures stand"
+cap program drop mkpartl
+program define mkpartl
+  args lconst
+  clear
+  set seed 9031
+  set sortseed 9031
+  qui set obs 45
+  qui gen u = _n
+  qui gen ttre = cond(u <= 15, 5, cond(u <= 30, 7, .))
+  qui gen L = 1 + mod(u, 3)
+  qui expand 10
+  qui bysort u: gen t = _n
+  qui gen dose = runiform() + 1
+  qui gen i = cond(L == `lconst', u, cond(ttre == 5, 1001, cond(ttre == 7, 1002, u)))
+  qui gen y = 1.1*(t >= ttre & ttre < .)*dose + 0.08*u + 0.04*t + rnormal()
+end
+foreach lc in 1 2 {
+  local l10lg = cond(`lc' == 1, "L10b", "L10c")
+  mkpartl `lc'
+  cap noi wooldid y i t ttre, att cluster(u) contreat(dose) contreatcontrols(basic) makecfxplots lattice(L) esprelength(1) espostlength(1)
+  local l10rc = _rc
+  local l10bad 1
+  if `l10rc' == 0 l10chk , blank(`lc')
+  if `l10rc' != 0 | `l10bad' != 0 {
+    dis as error "`l10lg' FAIL: lattice level `lc' omitted rc=`l10rc' (r(498) = the row-name parse) shape_bad=`l10bad' (its ame row must be blank, every other row carry b and se)"
+    local ++fails
+  }
+  else dis as result "`l10lg' PASS: lattice level `lc' omitted - its ame row is blank, the other levels keep their estimates"
+}
+foreach f in l10probe_cfx.dta l10probe_cfxatt_cfxpost.gph l10probe_cfxame_cfxpost.gph l10probe_log.txt {
+  cap erase "`f'"
+}
+
 if `fails' == 0 dis as result "CFXLAT_ALL_PASS"
 else dis as error "CFXLAT_FAILS=`fails'"

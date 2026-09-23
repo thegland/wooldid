@@ -1024,7 +1024,7 @@ versions of the same three. {p_end}
 pattern: e(cfx[item]_[type]), where [item] is either one of att, att_i, att_it, or att_itime (for overall average treatment effects) or one of ame, ame_i, ame_it, or ame_itime (for marginal
 effects of the continuous treatment). Meanwhile, [type] is either cfxpost (estimated in the post-treatment period), cfxpre (estimated in the pre-treatment period), or relyrZ (estimated in
 relative time period Z, where the letter n represents a negative sign). Under {it:makecfxplotsbysg} each matrix carries the further suffix {it:_sg[sgcase]}. {it:e(wdid_cfxmats)}
-lists every cfx matrix a run posted. {p_end}
+lists every cfx matrix a run posted. When the plot standard errors are estimated, a bin whose dose-slope terms were all dropped for collinearity has missing entries. {p_end}
 
 {synopt:{it:e(sample)}} A function characterizing the estimation sample used; useful for identifying which observations are dropped by {it:wooldid} during its sample formation and sanitation
 procedures.{p_end}

@@ -11654,21 +11654,31 @@ end
 * equations. it lives outside wooldid_worker (compiled-size ceiling). the lattice level is read
 * from the matrix's own row subnames - no r() capture (margins' r(by#) is not a documented
 * stored result). validation guarantees nonnegative integer levels, so the generated names are
-* always valid; a parse failure is loud, never silent
+* always valid; a parse failure is loud, never silent.
+* between the level and the dot the subname can carry margins' markers: b or bn on the base
+* level, and o on a level margins marks omitted - one whose every dose-slope term was dropped,
+* spelled 1bno. on the first level and 2o. on a later one. margins marks omitted levels only
+* when it computes standard errors; under nose the level comes back unmarked with its 0. an
+* omitted row's 0 is a structural zero, not an estimate, so every column of that row is set to
+* missing. the row itself is kept under its lattice_# key: the ame and att matrices, the plot
+* axis and the replication cell accumulators all key on the same row set
 cap prog drop wooldid_cfxstripe
 prog def wooldid_cfxstripe
 version 16.0
   args cfxm
   local rn : rowfullnames `cfxm'
   local newnames
+  local rix 0
   foreach rtok of local rn {
+    local ++rix
     local rsub `rtok'
     if strpos("`rtok'", ":") > 0 local rsub = substr("`rtok'", strpos("`rtok'", ":") + 1, .)
-    if !regexm("`rsub'", "^([0-9]+)(bn|b|o)?\.") {
+    if !regexm("`rsub'", "^([0-9]+)(bn|b)?(o)?\.") {
       dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text:  wooldid could not parse the CFX matrix row name '`rtok'' into a lattice level."
       error 498
     }
     local newnames `newnames' lattice_`=regexs(1)'
+    if regexs(3) == "o" matrix `cfxm'[`rix', 1] = J(1, colsof(`cfxm'), .)
   }
   matrix rownames `cfxm' = `newnames'
   matrix roweq `cfxm' = _

@@ -1819,9 +1819,9 @@ else dis as result "Q33 PASS: cfxplotnose no longer truncates under permute() - 
 * (se, t, p and interval all missing) with nothing said. With permute(), permtstat (or permtci)
 * and makecfxplots, wooldid_validate now drops cfxplotnose with the approved caution, and the
 * cells are then computed and permuted exactly as under permtstat alone. The Q33 fixture cannot
-* carry this: permtstat on it stops r(498) on a CFX row name, a separate matter. This fixture
-* has i = onset cohort under permonsetcohorts and cluster(unit), so the cell standard errors
-* are live; one permtstat replication fails on it, so permreps(40) clears the floor ====
+* carry this: every treated dose-slope term drops on it, so its ame cells are blank (Q33f). This
+* fixture has i = onset cohort under permonsetcohorts and cluster(unit), so the cell standard
+* errors are live; one permtstat replication fails on it, so permreps(40) clears the floor ====
 cap program drop mkcfxc
 program define mkcfxc
   clear
@@ -1943,6 +1943,64 @@ else dis as result "Q33d PASS: permtci drops cfxplotnose with the caution; witho
 cap erase perm3_q33b.txt
 cap erase perm3_q33c.txt
 cap erase perm3_q33v.txt
+* ---- Q33f (author ruling 2026-09-23): permute() + permtstat + makecfxplots + cfxplotnose on the
+* Q33 fixture. cfxplotnose is dropped, so the observed run and every replication compute the plot
+* cells' standard errors, and margins then marks each ame lattice level omitted (every treated
+* dose-slope term drops here: i = unit, one observation per cell). The run completes: the ame
+* cells are blank under lattice_1-3, and the att cells carry their analytic se and a permutation
+* p with the se draws posted ----
+clear
+set obs 20
+gen i = _n
+gen ttre = cond(i <= 8, 5, cond(i <= 15, 7, .))
+expand 10
+bysort i: gen t = _n
+set seed 4411
+gen dose = runiform() + 0.5
+gen y = 1.1*(t >= ttre & ttre < .)*dose + 0.08*i + 0.04*t + rnormal()
+qui log using perm3_q33f.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) contreat(dose) contreatcontrols(basic) ///
+  makecfxplots lattice(all 3) cfxplotnose permute(shuffle) permreps(20) permtstat rseed(77) ///
+  esprelength(1) espostlength(1) dots(0)
+local rc = _rc
+qui log close p3
+xrc Q33f 0 `rc'
+if `rc' == 0 {
+  local bad 0
+  local lg = fileread("perm3_q33f.txt")
+  local q33fcaut = strpos(`"`lg'"', "`q33caut'") > 0
+  if !`q33fcaut' local ++bad
+  local q33fdone = e(perm_completed)
+  if `q33fdone' != 20 local ++bad
+  if "`e(wdid_cfxmats)'" != "cfxame_cfxpost cfxatt_cfxpost" local ++bad
+  cap confirm matrix e(permdistse_cfxatt_cfxpost)
+  if _rc != 0 local ++bad
+  foreach nm in cfxame_cfxpost cfxatt_cfxpost {
+    tempname Q33F
+    cap matrix `Q33F' = e(`nm')
+    if _rc != 0 {
+      local ++bad
+      continue
+    }
+    if rowsof(`Q33F') != 3 | colsof(`Q33F') != 6 | "`: rowfullnames `Q33F''" != "lattice_1 lattice_2 lattice_3" local ++bad
+    else {
+      forval r = 1/3 {
+        if "`nm'" == "cfxame_cfxpost" {
+          forval c = 1/6 {
+            if `Q33F'[`r', `c'] < . local ++bad
+          }
+        }
+        else if `Q33F'[`r', 1] >= . | `Q33F'[`r', 2] >= . | `Q33F'[`r', 2] <= 0 | `Q33F'[`r', 4] >= . local ++bad
+      }
+    }
+  }
+  if `bad' {
+    dis as error "Q33f FAIL: permtstat + cfxplotnose on the all-slopes-dropped fixture - caution=`q33fcaut', completed=`q33fdone', matrices=[`e(wdid_cfxmats)'], bad=`bad' (ame rows must be blank, att rows carry se and a permutation p)"
+    global pf = $pf + 1
+  }
+  else dis as result "Q33f PASS: the all-slopes-dropped fixture completes under permtstat - blank ame cells, permuted att cells, `q33fdone' replications"
+}
+cap erase perm3_q33f.txt
 
 * ================= Q34: aweights under permute() - the recon identity on a weighted
 * replication fit (nothing in the tree runs this pair; mc_ri R7 last did on 2026-08-24).
