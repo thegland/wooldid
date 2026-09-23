@@ -1722,9 +1722,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if r(N) > 0 dis as text "Caution: ppmlhdfe excluded `r(N)' treated observation(s) from the estimation sample (separation, or a singleton fixed-effect group), so their cohort-period cells contribute nothing to the reported effects."
   }
   * one cluster leaves e(df_r) = 0, and margins then dies r(125) under a caution blaming
-  * continuous treatment; stop here with the reason instead. fast mode asks margins for no
-  * variance and may proceed
-  if "`fastnose'" == "" & `df_r' < 1 {
+  * continuous treatment; stop here with the reason instead. ppmlhdfe and poisson post no
+  * e(df_r) at all (missing, which `< 1' reads as false), so on those engines the cluster
+  * count is the test: e(N_clust) is unposted on an unclustered run and that clause is then
+  * false too. fast mode asks margins for no variance and may proceed
+  if "`fastnose'" == "" & (`df_r' < 1 | e(N_clust) < 2) {
     * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
     *   Cluster(`cluster') leaves `=e(N_clust)' cluster(s) in the estimation sample; cluster-robust
     *   inference needs at least 2. Use a finer cluster variable, robust, or fastnose.
