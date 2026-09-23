@@ -182,7 +182,7 @@ version 16.0
     tempname wdpobs wdpdist wdpcomp wdpobsb wdpacc wdpsacc wdpcmpb wdpcmpse wdpcell wdpcell0 wdpasg
     qui est sto `wdpobs'
     matrix `wdpobsb' = e(b)
-    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist') compname(`wdpcomp') obsb(`wdpobsb') accname(`wdpacc') seaccname(`=cond(`wdp_ts', "`wdpsacc'", "")') cmpbname(`wdpcmpb') cmpsename(`=cond(`wdp_ts', "`wdpcmpse'", "")') cellacc(`=cond("`makecfxplots'" != "", "`wdpcell'", "")') cell0(`wdpcell0') dots(`dots') rseed(`rseed') asgname(`=cond("`permsave'" != "", "`wdpasg'", "")') onc(`permonsetcohorts')
+    cap noi wooldid_permrun , y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') clus(`cluster') permute(`permute') permreps(`permreps') `permexact' permstrata(`permstrata') permprobs(`permprobs') `permtstat' repopts(`wdp_ro') estimands(`wdp_est') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') distname(`wdpdist') compname(`wdpcomp') obsb(`wdpobsb') accname(`wdpacc') seaccname(`=cond(`wdp_ts', "`wdpsacc'", "")') cmpbname(`wdpcmpb') cmpsename(`=cond(`wdp_ts', "`wdpcmpse'", "")') cellacc(`=cond("`makecfxplots'" != "", "`wdpcell'", "")') cell0(`wdpcell0') dots(`dots') rseed(`rseed') asgname(`=cond("`permsave'" != "", "`wdpasg'", "")') onc(`permonsetcohorts') oostreatedcontrols(`oostreatedcontrols') anticipation(`anticipation')
     local wdp_rc = _rc
     qui est restore `wdpobs'
     cap est drop `wdpobs'
@@ -5395,7 +5395,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * safetyinput split exists to prevent. Pass si(`safetyuser') at that point, as bootctl already
   * does
   if "`permute'" != "" {
-    cap noi wooldid_permctl , yv(`y') permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safety') psave(`permsave') level(`level') onc(`permonsetcohorts') `replace'
+    cap noi wooldid_permctl , yv(`y') permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safety') psave(`permsave') level(`level') onc(`permonsetcohorts') ase(`permanalyticse') oostreatedcontrols(`oostreatedcontrols') anticipation(`anticipation') `replace'
     if _rc != 0 exit _rc   // exit, not error - the cap noi above already printed it
   }
 
@@ -6260,7 +6260,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) yv(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) side(string) rawp(string) onc(string) replace]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) yv(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) side(string) rawp(string) onc(string) ase(string) oostreatedcontrols(integer 0) anticipation(integer 0) replace]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -6323,6 +6323,14 @@ version 16.0
   if "`psave'" != "" {
     local wdpfn `psave'
     if lower(substr("`wdpfn'", -4, 4)) == ".dta" local wdpfn = substr("`wdpfn'", 1, strlen("`wdpfn'") - 4)
+    if strpos("`wdpfn'", ",") {
+      * a comma is caught on its own, ahead of the directory check below, as in bootsave():
+      * permsave() takes a plain file name and does not follow Stata's own saving(f, replace)
+      * form, so permsave(name, replace) would otherwise be swallowed whole and write a file
+      * literally called "name, replace.dta" at rc 0.
+      dis as error "Error: permsave() should only contain a file name."
+      error 198
+    }
     if strpos("`wdpfn'", "/") | strpos("`wdpfn'", "\") | "`wdpfn'" == "" {
       dis as error "Error: permsave() takes a plain file name (no directory part); the file is written to the current working directory."
       error 198
@@ -6333,8 +6341,10 @@ version 16.0
       error 602
     }
   }
-  if ("`ts'" != "" | "`tc'" != "") & "`fn'" != "" {
-    dis as error "Error: fastnose is not compatible with permtstat or permtci."
+  * permtstat and permtci need the replications' standard errors, and permanalyticse exists to
+  * compute the analytic ones, so a user-typed fastnose contradicts all three
+  if ("`ts'" != "" | "`tc'" != "" | "`ase'" != "") & "`fn'" != "" {
+    dis as error "Error: fastnose is not compatible with permtstat, permtci or permanalyticse."
     error 198
   }
   if `permreps' < 0 {
@@ -6424,13 +6434,30 @@ version 16.0
     error 459
   }
 
+  * the design onset. The worker makes an onset after the last period, plus
+  * oostreatedcontrols() and net of anticipation(), never-treated for the estimation, and the
+  * design does the same: every check below, the ever-treated count, the freedom check and the
+  * permprobs() level set read `wdpons', and wooldid_permrun builds its cluster map by the same
+  * rule. The value kept is the onset as given, not shifted, because each replication hands it
+  * to the worker, which applies anticipation() itself. The last period is max(t) over the
+  * design sample, which contains the estimation sample, so the design never recodes an onset
+  * that the estimation keeps in the window. The extended-missing screen above reads the raw
+  * variable because this rule would fold .a into . The storage type is the timing variable's
+  * own, so every onset the rule keeps is the same value, and prints the same, as before
+  tempvar wdpons
+  qui gstats sum `tvar' if `insmp', meanonly
+  local wdpmaxt = r(max)
+  local wdptyp : type `ttrevar'
+  qui gen `wdptyp' `wdpons' = `ttrevar' if `insmp' & `ttrevar' - `anticipation' <= `wdpmaxt' + `oostreatedcontrols'
+
   * nesting (author's brief): each cluster must sit inside exactly one treatment-onset
-  * level - onset constant within cluster, and treated/never-treated rows never mixed
+  * level of the design onset - onset constant within cluster, and treated/never-treated rows
+  * never mixed
   tempvar tmin tmax ntr nnv
-  qui gegen double `tmin' = min(`ttrevar') if `insmp', by(`clus')
-  qui gegen double `tmax' = max(`ttrevar') if `insmp', by(`clus')
-  qui gegen double `ntr' = total(!missing(`ttrevar')) if `insmp', by(`clus')
-  qui gegen double `nnv' = total(missing(`ttrevar')) if `insmp', by(`clus')
+  qui gegen double `tmin' = min(`wdpons') if `insmp', by(`clus')
+  qui gegen double `tmax' = max(`wdpons') if `insmp', by(`clus')
+  qui gegen double `ntr' = total(!missing(`wdpons')) if `insmp', by(`clus')
+  qui gegen double `nnv' = total(missing(`wdpons')) if `insmp', by(`clus')
   tempvar wdpmix
   qui gen byte `wdpmix' = `insmp' & ((`ntr' > 0 & `nnv' > 0) | (`ntr' > 0 & `tmin' != `tmax'))
   qui count if `wdpmix'
@@ -6484,13 +6511,15 @@ version 16.0
   * Both directions are checked on the design sample: onset constant within i (with treated and
   * never-treated rows never mixed, exactly as for clusters), and i constant within onset level
   * (never-treated, i.e. plain missing, being one level - so an i that splits the never-treated
-  * by region fails here, and must)
+  * by region fails here, and must). The onset is the design onset, the one the replications
+  * draw and the rebuild keys on, so a unit first treated after the last period belongs to the
+  * never-treated level of i
   if "`onc'" != "" {
     tempvar wdpimn wdpimx wdpitr wdpinv
-    qui gegen double `wdpimn' = min(`ttrevar') if `insmp', by(`ivar')
-    qui gegen double `wdpimx' = max(`ttrevar') if `insmp', by(`ivar')
-    qui gegen double `wdpitr' = total(!missing(`ttrevar')) if `insmp', by(`ivar')
-    qui gegen double `wdpinv' = total(missing(`ttrevar')) if `insmp', by(`ivar')
+    qui gegen double `wdpimn' = min(`wdpons') if `insmp', by(`ivar')
+    qui gegen double `wdpimx' = max(`wdpons') if `insmp', by(`ivar')
+    qui gegen double `wdpitr' = total(!missing(`wdpons')) if `insmp', by(`ivar')
+    qui gegen double `wdpinv' = total(missing(`wdpons')) if `insmp', by(`ivar')
     qui count if `insmp' & ((`wdpitr' > 0 & `wdpinv' > 0) | (`wdpitr' > 0 & `wdpimn' != `wdpimx'))
     if r(N) > 0 {
       * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
@@ -6509,8 +6538,8 @@ version 16.0
     qui drop `wdpimn' `wdpimx'
     * gegen's by() puts the plain-missing onsets in their own group, so this direction also
     * requires every never-treated row to sit in ONE level of i
-    qui gegen double `wdpimn' = min(`ivar') if `insmp', by(`ttrevar')
-    qui gegen double `wdpimx' = max(`ivar') if `insmp', by(`ttrevar')
+    qui gegen double `wdpimn' = min(`ivar') if `insmp', by(`wdpons')
+    qui gegen double `wdpimx' = max(`ivar') if `insmp', by(`wdpons')
     qui count if `insmp' & `wdpimn' != `wdpimx'
     if r(N) > 0 {
       dis as error "Error: permonsetcohorts requires that `ivar' represent treatment-onset groups, but this does not appear to be the case. "
@@ -6561,6 +6590,16 @@ version 16.0
   * the set of distinct assignments small, a limit no replication count can lift because the
   * draws repeat
   if "`ts'" == "" & "`clus'" == "`ivar'" dis as text "Caution: cluster() is at the i level and the permuted statistic is the coefficient itself. Randomization inference presumes clusters are exchangeable in assignment, not alike in variance, so the coefficient statistic carries no protection against a treated cluster whose errors are unusually dispersed; permtstat protects only when the cluster-robust standard error can see the treated clusters' own variance, which at cluster() = i with one observation per i-period it cannot."
+  * the clusters whose onset the design recoded to never-treated (an onset as given, missing
+  * as the design onset), counted once each
+  tempvar wdpltag
+  qui gegen byte `wdpltag' = tag(`clus') if `insmp' & !missing(`ttrevar') & missing(`wdpons')
+  qui count if `wdpltag' == 1
+  local n = r(N)
+  cap drop `wdpltag'
+  if `n' > 0 dis as text "Caution: `n' cluster(s) with onsets after the last period are permuted as never treated."
+  * the ever-treated count reads the design onset through `ntr', so a cluster the design
+  * recoded is not counted
   tempvar wdpttag
   qui gegen byte `wdpttag' = tag(`clus') if `insmp' & `ntr' > 0
   qui count if `wdpttag' == 1
@@ -6588,10 +6627,10 @@ version 16.0
   * subgroups() under permute(): every cluster can become treated in a replication, so the
   * worker's subgroup screens - which run on the observed treated units only - must hold on the
   * whole design population, or a replication fails by a rule that is correlated with the
-  * assignment it drew, which silently biases the reference distribution. The four screens below
-  * are the worker's (negative values, integer values, cell containment, unit splitting) with
-  * their onset clauses dropped; the sample is the design sample (the user's if and a nonmissing
-  * cluster value), slightly wider than the estimation sample
+  * assignment it drew, which silently biases the reference distribution. The five screens below
+  * are the worker's (negative values, integer values, cell containment, unit splitting, partial
+  * labelling) with their onset clauses dropped; the sample is the design sample (the user's if
+  * and a nonmissing cluster value), slightly wider than the estimation sample
   if "`sg'" != "" {
     cap assert `sg' >= 0 | `sg' >= . if `insmp'
     if _rc != 0 {
@@ -6625,11 +6664,22 @@ version 16.0
     * that belongs to two subgroups has no well-defined subgroup in a replication that treats
     * it, so the share-weighted fallback the observed run offers has no counterpart here.
     * The worker's own split-unit and partial-labelling screens keep their safety(off) escape;
-    * only this one is absolute. Old escape text, kept for reference: "To proceed anyway,
-    * specify safety(off); share weighting then applies inside the replications as it does in
-    * the observed run."
+    * this one and the partial-labelling screen below are absolute. Old escape text, kept for
+    * reference: "To proceed anyway, specify safety(off); share weighting then applies inside
+    * the replications as it does in the observed run."
     if _rc != 0 {
       dis as error "Error: some cohorts of the i variable take on multiple subgroup variable levels. "
+      error 459
+    }
+    * partial labelling, the worker's screen with no relative-period clause: any row can carry a
+    * treatment dummy in some replication. `sgmin' (by i over the design sample) is missing
+    * exactly when the unit has no labelled row, so a wholly unlabelled unit passes, and a
+    * unit labelled on some rows and missing on others is refused. UNLIFTABLE by safety(off),
+    * like the split-unit screen above: a replication that treats such a unit would enter it
+    * into its subgroup by its labelled share of sample weight, with nothing printed
+    cap assert `sg' < . if `insmp' & `sgmin' < .
+    if _rc != 0 {
+      dis as error "Error: the subgroup variable `sg' is missing for some in-sample row(s) of units of `ivar' that carry a subgroup value on their other rows. This plausibly is an error, and is not compatible with non-att estimands."
       error 459
     }
     qui drop `sgmin' `sgmax'
@@ -6664,7 +6714,8 @@ version 16.0
     }
   }
 
-  * enough freedom to randomize: at least 2 clusters and 2 distinct onset groups
+  * enough freedom to randomize: at least 2 clusters and 2 distinct onset groups of the design
+  * onset (`ntr' and `tmin' read it)
   tempvar ctag consv
   qui gegen byte `ctag' = tag(`clus') if `insmp'
   qui count if `ctag' == 1
@@ -6677,11 +6728,12 @@ version 16.0
     error 459
   }
 
-  * permute(probabilities): validate the permprobs() grammar against the data's actual
-  * onset levels and cluster values (the same mata parser the engine uses, run in
-  * check-only mode, so the two can never drift)
+  * permute(probabilities): validate the permprobs() grammar against the design onset's
+  * levels and the cluster values (the same mata parser the engine uses, run in check-only
+  * mode, so the two can never drift). The parser is still handed the timing variable's own
+  * name, which the first group must name
   if "`permmethod'" == "probabilities" {
-    qui glevelsof `ttrevar' if `insmp', missing local(permonslvls)
+    qui glevelsof `wdpons' if `insmp', missing local(permonslvls)
     qui glevelsof `clus' if `insmp', local(permclusvals)
     local permperr
     mata: wooldid_permp(st_local("permprobs"), "`ttrevar'", "`permonslvls'", "`permclusvals'", "", "")
@@ -8078,7 +8130,7 @@ end
 cap prog drop wooldid_permrun
 prog def wooldid_permrun
 version 16.0
-  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis) compname(string) obsb(string) accname(string) seaccname(string) cmpbname(string) cmpsename(string) cellacc(string) cell0(string) dots(integer 1) asgname(string) rseed(string) onc(string)]
+  syntax , y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) permute(string) estimands(string) distname(string) [permreps(integer 0) PERMEXact permstrata(varname numeric) permprobs(string asis) PERMTStat repopts(string asis) wtype(string) wexp(string) ifr(string asis) compname(string) obsb(string) accname(string) seaccname(string) cmpbname(string) cmpsename(string) cellacc(string) cell0(string) dots(integer 1) asgname(string) rseed(string) onc(string) oostreatedcontrols(integer 0) anticipation(integer 0)]
   if `dots' == -1 local dots 1
   * rseed(): seeds the assignment draws (Mata's jumble/runiform share Stata's RNG
   * state), set before anything random runs
@@ -8098,9 +8150,24 @@ version 16.0
   }
   else qui gen byte `smp' = 1
   qui replace `smp' = 0 if missing(`clus')
+  * the design onset, by wooldid_permctl's rule: an onset after the last period of the design
+  * sample, plus oostreatedcontrols() and net of anticipation(), is never-treated, as the worker
+  * makes it for the estimation. The cluster map below carries it in place of the onset as given,
+  * so the assignment count and draws, the permprobs() levels, permsave()'s onset columns and the
+  * permonsetcohorts rebuild all read it. The rep-0 run still passes the timing variable as given,
+  * which the worker recodes by the same rule
+  tempvar wdpons
+  qui gstats sum `t' if `smp', meanonly
+  local wdpmaxt = r(max)
+  local wdptyp : type `ttrevar'
+  qui gen `wdptyp' `wdpons' = `ttrevar' if `smp' & `ttrevar' - `anticipation' <= `wdpmaxt' + `oostreatedcontrols'
   tempname mpfr
-  frame put `clus' `ttrevar' `permstrata' if `smp', into(`mpfr')
+  frame put `clus' `ttrevar' `permstrata' `wdpons' if `smp', into(`mpfr')
   frame `mpfr' {
+    * the map keeps the timing variable's own name, which the permprobs() parser checks against
+    * the name the user wrote
+    qui replace `ttrevar' = `wdpons'
+    qui drop `wdpons'
     qui bysort `clus': keep if _n == 1
     if "`permstrata'" == "" {
       tempvar onestr
@@ -8187,7 +8254,7 @@ version 16.0
   * a subset of i and the only two cases are equal (skip) and strictly finer (rebuild).
   *
   * What it builds. `repi' takes, for each row, the observed i code of the cohort whose
-  * observed onset equals the onset this replication drew for the row's cluster. Reusing
+  * observed design onset equals the onset this replication drew for the row's cluster. Reusing
   * the observed codes rather than minting fresh ones is deliberate on three counts: at
   * the observed assignment the rebuilt i is the observed i exactly (so rep 0 reproduces
   * the observed run, and the colfullnames tripwire below is a live check of the map);
@@ -8217,16 +8284,17 @@ version 16.0
   }
   tempvar repi
   if `wdp_rebuild' {
-    * the onset -> i-code table, one row per distinct NON-MISSING onset level; the
-    * bijection permctl verified makes the i code on the tagged row the cohort's code
+    * the onset -> i-code table, one row per distinct NON-MISSING level of the design onset
+    * (the onset the replications draw); the bijection permctl verified on that onset makes
+    * the i code on the tagged row the cohort's code
     tempvar wdpotag
     tempname wdpomap
-    qui gegen byte `wdpotag' = tag(`ttrevar') if `smp' & !missing(`ttrevar')
-    mata: st_matrix("`wdpomap'", select(st_data(., ("`ttrevar'", "`i'")), st_data(., "`wdpotag'") :== 1))
+    qui gegen byte `wdpotag' = tag(`wdpons') if `smp' & !missing(`wdpons')
+    mata: st_matrix("`wdpomap'", select(st_data(., ("`wdpons'", "`i'")), st_data(., "`wdpotag'") :== 1))
     qui drop `wdpotag'
-    qui count if `smp' & missing(`ttrevar')
+    qui count if `smp' & missing(`wdpons')
     if r(N) > 0 {
-      qui gstats sum `i' if `smp' & missing(`ttrevar'), meanonly
+      qui gstats sum `i' if `smp' & missing(`wdpons'), meanonly
       local wdp_ncode = r(min)
     }
     else {
@@ -8239,8 +8307,9 @@ version 16.0
     * wrong map, because no accumulated e(b) column name embeds an i code (relabelling i leaves
     * colfullnames identical), so a map that hands cohort A the code of cohort B would produce
     * the right column set and the wrong numbers. This assertion is the only mechanical check of
-    * the map itself; exactness (the sharp-null readout) is the only inferential one
-    mata: wooldid_permirb("`ttrevar'", "`repi'", "`wdpomap'", `wdp_ncode')
+    * the map itself; exactness (the sharp-null readout) is the only inferential one. The
+    * observed assignment is the design onset
+    mata: wooldid_permirb("`wdpons'", "`repi'", "`wdpomap'", `wdp_ncode')
     cap assert `repi' == `i' if `smp'
     if _rc != 0 {
       dis as error "Error: your data/specification has triggered a previously unknown bug. Please report this bug with information about your setup and the following text: under permonsetcohorts the per-replication rebuild of `i' does not reproduce `i' at the observed assignment; the onset-to-cohort map is not the identity there."
@@ -9424,7 +9493,8 @@ version 16.0
   * permsave(): write the replication accumulator to <file>.dta in the working directory
   * (the bootsave() layout: _rep 0 = observed estimates, 1..R = replications, failed ones
   * all-missing; se_* under permtstat) plus one onset_<cluster> column per cluster holding
-  * the onset that cluster carried in each replication (row 0: the observed onset)
+  * the onset that cluster carried in each replication (row 0: the observed onset, as the
+  * design reads it, so an onset after the last period is missing there)
   syntax , file(string) acc(string) obsb(string) [seacc(string) aseobs(string) asg(string) clusvals(string) obsons(string) seed(string) rng(string) replace]
   local fn `file'
   if lower(substr("`fn'", -4, 4)) == ".dta" local fn = substr("`fn'", 1, strlen("`fn'") - 4)

@@ -544,6 +544,40 @@ if strpos(fileread("perm3_q7b.txt"), "Permutation replications") != 0 {
 * from the analytic clustered-SE screen (cluster at i)
 cap wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(30) permtstat fastnose
 xrc Q7j 198 _rc
+* a user-typed fastnose with permanalyticse is refused as well: permanalyticse exists to
+* compute the analytic standard errors that fastnose drops
+mkperm3 8 4 3
+qui log using perm3_q7k.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(30) permanalyticse fastnose
+local rc = _rc
+qui log close p3
+xrc Q7k 198 `rc'
+if strpos(fileread("perm3_q7k.txt"), "Error: fastnose is not compatible with permtstat, permtci or permanalyticse.") == 0 {
+  dis as error "Q7k2 FAIL: the permanalyticse fastnose refusal did not name itself"
+  global pf = $pf + 1
+}
+cap erase perm3_q7k.txt
+* permsave() takes a file name only: permsave(name, replace) is refused before the loop,
+* where it used to write a file literally called "name, replace.dta"
+cap erase "perm3_q7l, replace.dta"
+cap erase perm3_q7l.dta
+qui log using perm3_q7l.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(30) permsave(perm3_q7l, replace)
+local rc = _rc
+qui log close p3
+xrc Q7l 198 `rc'
+if strpos(fileread("perm3_q7l.txt"), "Error: permsave() should only contain a file name.") == 0 | strpos(fileread("perm3_q7l.txt"), "Permutation replications") != 0 {
+  dis as error "Q7l2 FAIL: the permsave() comma refusal did not name itself before the replication loop"
+  global pf = $pf + 1
+}
+cap confirm file "perm3_q7l, replace.dta"
+if _rc == 0 {
+  dis as error "Q7l3 FAIL: permsave(perm3_q7l, replace) wrote a file named with the comma"
+  global pf = $pf + 1
+}
+cap erase "perm3_q7l, replace.dta"
+cap erase perm3_q7l.dta
+cap erase perm3_q7l.txt
 
 * ================= Q8: gteffects blanked; level(90) column names, plots at level 90 ====
 mkperm3 8 4 3

@@ -427,10 +427,12 @@ clusters, re-estimates every requested quantity under each reassignment, and ran
 across clusters, holding the count at each onset fixed; {it:probabilities} draws each cluster's onset from the probabilities in {it:permprobs()}. Requires a single {it:cluster()} variable,
 the randomization unit, that nests {it:i} unless {it:permonsetcohorts} is specified; every cluster must sit inside one treatment-onset group, with the never-treated their own group and coded
 as plain missing. That screen runs on every row the {it:if} expression keeps, including rows the estimator later drops for a missing outcome or weight, so a specification that runs without
-{it:permute()} can be refused once {it:permute()} is added; restrict the sample with {it:if}. Also requires {it:permreps()} or, for shuffle only, {it:permexact}. Not compatible with
+{it:permute()} can be refused once {it:permute()} is added; restrict the sample with {it:if}. An onset more than {it:oostreatedcontrols()} periods after the last period, net of
+{it:anticipation()}, is permuted as never-treated, as the estimation treats it, and a caution counts the clusters affected. Also requires {it:permreps()} or, for shuffle only,
+{it:permexact}. Not compatible with
 {it:impvalues}, {it:unconditionalse}, {it:contreatwithin}, {it:contreatcontrols(untreatedZero)}, {it:oldsyntax}, {it:suppresssgprimaryeffects}, {it:pretrendpower()}, {it:simultaneousbands}
 or {it:bootstrap()}. A design that admits only one possible assignment is refused. With {it:subgroups()} the subgroup screens apply over the whole sample, since any cluster can be treated in
-a replication. Every p-value and interval the run reports is permutation-based, including the subgroup contrasts, the joint pre-trend, subgroup equality and adversarial tests, and the
+a replication, and a unit labelled on some rows and missing on others is refused whatever {it:safety()} is. Every p-value and interval the run reports is permutation-based, including the subgroup contrasts, the joint pre-trend, subgroup equality and adversarial tests, and the
 continuous-treatment plot cells. P-values are two-sided equal-tailed, using the add-one form for sampled draws. Intervals are shift intervals at {it:level()}: the estimate minus the
 equal-tailed quantiles of the permutation distribution. By default the run and the replications are in fast mode, without analytic standard errors, so the {it:se_analytic} column is blank
 and {it:e(V)}, {it:e(b_es_*)} and {it:e(V_es_*)} are not posted; {it:permanalyticse} restores them. Quantities with no permutation distribution are left blank rather than filled
@@ -450,7 +452,7 @@ accumulators stop working. Above 10,000 enumerated assignments the draw matrices
 stratum, with no missing values. Only with {it:permute(shuffle)}; under {it:permute(probabilities)} strata are expressed through {it:permprobs()} instead. {p_end}
 
 {phang}{opt permpr:obs(spec)}: The assignment-probability design for {it:permute(probabilities)}, written as {it:(onsetvar level level ...)} followed by one {it:(clustervalue p p ...)} group
-per cluster. The first group names the timing variable and lists every in-sample onset level, with never-treated as {it:.}; each later group gives one cluster's probabilities over those
+per cluster. The first group names the timing variable and lists every in-sample onset level, with never-treated, including onsets after the last period, as {it:.}; each later group gives one cluster's probabilities over those
 levels, nonnegative and summing to 1. Every cluster value must appear exactly once. Requires {it:permreps()}; {it:permexact} is refused. A caution prints if the observed assignment has zero
 probability under the design. {p_end}
 
@@ -463,7 +465,7 @@ sees that cluster's own variance, which at {it:cluster()} equal to {it:i} it doe
 times the observed standard error. Implies {it:permtstat}. {p_end}
 
 {phang}{opt perman:alyticse}: Without {it:permtstat}, compute the analytic standard errors anyway and show them in the {it:se_analytic} column for reference; the p-values and intervals
-remain permutation-based, and the posted {it:e(V)} is analytic. {p_end}
+remain permutation-based, and the posted {it:e(V)} is analytic. {it:fastnose} is refused. {p_end}
 
 {phang}{opt permab:sp}: Report absolute-value permutation p-values instead of equal-tailed ones: the share of replications whose absolute statistic is at or above the observed absolute
 statistic. Intervals become the estimate plus or minus the {it:level()} quantile of the permuted absolute statistics, so p-value and interval keep agreeing. The joint, equality and
@@ -479,11 +481,12 @@ draw reached the observed statistic; intervals are those of {it:permabsp}. {p_en
 family-wise error rate across the horizons. Post-treatment and pre-treatment horizons are adjusted as separate families. Results are stored in {it:e(perm_stepdown*)} and summarised in the
 footer; a family whose step-down cannot be formed is silently not posted. {p_end}
 
-{phang}{opt permsa:ve(name)}: Write the permutation draws to {it:name}.dta in the working directory; an existing file needs {it:replace}. One row per replication plus a row 0 with the
+{phang}{opt permsa:ve(name)}: Write the permutation draws to {it:name}.dta in the working directory; {it:name} is a plain file name, and an existing file needs {it:replace}. One row per replication plus a row 0 with the
 observed estimates; one column per coefficient of {it:e(b)}, the replication standard errors under {it:permtstat}, and one {it:onset_clustervalue} column per cluster holding its onset in
 each replication. If the file cannot be written the run still completes, with a caution, and the return code is posted in {it:e(perm_save_rc)}. {p_end}
 
-{phang}{opt permonset:cohorts}: Assert that {it:i} is the treatment-onset grouping, one level of {it:i} per distinct onset with the never-treated a single level, and on that assertion accept
+{phang}{opt permonset:cohorts}: Assert that {it:i} is the treatment-onset grouping, one level of {it:i} per distinct onset with the never-treated, including onsets after the last period,
+a single level, and on that assertion accept
 a {it:cluster()} finer than {it:i}; each replication then rebuilds {it:i} from the onsets it drew. The assertion is checked and the run stops if it fails; {it:safety(off)} does not lift the
 check. Compatible with {it:permstrata()} and {it:permute(probabilities)}, not with {it:subgroups()}. {p_end}
 

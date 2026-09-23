@@ -1,6 +1,6 @@
 * Targeted suite for F6 permutation inference: validation gates (P6*), the engine's
 * exact/sampled/strata inference (P1-P4), its e() surface and additivity (P7, P11),
-* cautions (P8), replay (P9), and determinism (P10).
+* cautions (P8), replay (P9), and determinism (P10); onsets after the last period (P13).
 * Run from test/:  "<stata>" -e do test_permute.do   -> expect PERMUTE_ALL_PASS
 clear all
 set more off
@@ -452,6 +452,177 @@ cap noi qui wooldid y i t ttre, att cluster(i) permute(shuffle) permexact
 if _rc != 198 {
   dis as error "P12c FAIL: over-ceiling permexact rc=" _rc " (expected 198)"
   global pf = $pf + 1
+}
+
+* ---- P13: an onset after the last period is never-treated in the permutation design ----
+* The worker makes an onset after max(t) + oostreatedcontrols(), net of anticipation(),
+* never-treated for the estimation, and the permutation design does the same: the cluster
+* map, the level accounting and nesting screen, the ever-treated count, the freedom check, the
+* permprobs() level set and the assignment count all read that design onset, and a caution
+* counts the clusters recoded. Fixture: 12 units x t = 1..10, units 1-2 first treated at 6,
+* units 3-6 never treated, units 7-12 at the onset(s) passed. The outcome is drawn before the
+* onsets of units 7-12 are set, so a late fixture and its hand-recoded twin (onset set to .)
+* differ only in ttre.
+cap program drop mklate
+program define mklate
+  args late
+  clear
+  set seed 1313
+  set sortseed 1313
+  qui set obs 12
+  qui gen i = _n
+  qui gen double ttre = cond(_n <= 2, 6, .)
+  qui expand 10
+  qui bysort i: gen t = _n
+  qui gen y = 1.5*(t >= ttre & ttre < .) + 0.1*i + 0.05*t + rnormal()
+  if "`late'" == "distinct" qui replace ttre = 4 + i if i >= 7
+  else if "`late'" == "oos" qui replace ttre = cond(i <= 9, 12, 13) if i >= 7
+  else if "`late'" != "" qui replace ttre = `late' if i >= 7
+end
+
+* P13a: six late adopters at onset 12 under shuffle. The design has 2 treated clusters and 10
+* never treated, so C(12,2) = 66 assignments (13,860 when the late label counted as a level);
+* the recode caution, the few-treated caution and the 10% caution all print. The p-values are
+* those of the hand-recoded twin, and bitwise those of the build before the design onset
+* existed (the %21x pin), because shuffle permutes positions rather than labels
+tempname p13p p13b p13c
+mklate 12
+qui log using perm_p13a.txt, text replace name(p13)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) rseed(1313) dots(0)
+local rc13 = _rc
+qui log close p13
+xrc P13a1 0 `rc13'
+if `rc13' == 0 {
+  matrix `p13p' = e(perm_p)
+  matrix `p13b' = e(b)
+  matrix `p13c' = e(perm_ci)
+  if e(perm_npossible) != 66 {
+    dis as error "P13a2 FAIL: e(perm_npossible)=" e(perm_npossible) " (expected 66)"
+    global pf = $pf + 1
+  }
+  if strpos(fileread("perm_p13a.txt"), "Caution: 6 cluster(s) with onsets after the last period are permuted as never treated.") == 0 {
+    dis as error "P13a3 FAIL: the recode caution did not print"
+    global pf = $pf + 1
+  }
+  if strpos(fileread("perm_p13a.txt"), "Caution: only 2 of the resampling clusters are ever treated") == 0 {
+    dis as error "P13a4 FAIL: the few-treated caution did not count the design's 2 treated clusters"
+    global pf = $pf + 1
+  }
+  if strpos(fileread("perm_p13a.txt"), "exceeds 10% of the 66 possible assignments") == 0 {
+    dis as error "P13a5 FAIL: the 10% caution was not judged on the design's 66 assignments"
+    global pf = $pf + 1
+  }
+  local p13hex
+  forval k = 1/`=colsof(`p13p')' {
+    local p13h : di %21x el(`p13p', 1, `k')
+    local p13hex `p13hex' `p13h'
+  }
+  dis "P13a p hex: `p13hex'"
+  if "`p13hex'" != "+1.8618618618618X-004 +1.8618618618618X-001 +1.e79e79e79e79eX-002 +1.e79e79e79e79eX-001 +1.5555555555555X-001 +1.e79e79e79e79eX-002" {
+    dis as error "P13a6 FAIL: e(perm_p) moved against the pre-change build"
+    global pf = $pf + 1
+  }
+}
+mklate 12
+qui replace ttre = . if ttre > 10
+qui log using perm_p13a2.txt, text replace name(p13)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(20) rseed(1313) dots(0)
+local rc13b = _rc
+qui log close p13
+xrc P13a7 0 `rc13b'
+if `rc13' == 0 & `rc13b' == 0 {
+  if mreldif(`p13p', e(perm_p)) != 0 | mreldif(`p13c', e(perm_ci)) != 0 | mreldif(`p13b', e(b)) != 0 | e(perm_npossible) != 66 {
+    dis as error "P13a8 FAIL: the late run differs from its hand-recoded twin (p " mreldif(`p13p', e(perm_p)) ", ci " mreldif(`p13c', e(perm_ci)) ", b " mreldif(`p13b', e(b)) ", M " e(perm_npossible) ")"
+    global pf = $pf + 1
+  }
+  if strpos(fileread("perm_p13a2.txt"), "with onsets after the last period") != 0 {
+    dis as error "P13a9 FAIL: the recode caution printed on data with no late onset"
+    global pf = $pf + 1
+  }
+}
+
+* P13b: the six late adopters at distinct onsets 11..16. As labels they made 12!/(2!4!) =
+* 9,979,200 assignments and permexact was refused above its 65,534 ceiling; as the
+* never-treated they are, the design has P13a's 66 and enumerates them, with the exact
+* p-values of the hand-recoded twin
+mklate distinct
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact dots(0)
+local rc13 = _rc
+xrc P13b1 0 `rc13'
+if `rc13' == 0 {
+  matrix `p13p' = e(perm_p)
+  if e(perm_reps) != 66 | e(perm_completed) != 66 {
+    dis as error "P13b2 FAIL: permexact enumerated " e(perm_reps) " assignments, completed " e(perm_completed) " (expected 66)"
+    global pf = $pf + 1
+  }
+  mklate distinct
+  qui replace ttre = . if ttre > 10
+  cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact dots(0)
+  local rc13b = _rc
+  xrc P13b3 0 `rc13b'
+  if `rc13b' == 0 {
+    if mreldif(`p13p', e(perm_p)) != 0 {
+      dis as error "P13b4 FAIL: exact p-values differ from the hand-recoded twin by " mreldif(`p13p', e(perm_p))
+      global pf = $pf + 1
+    }
+  }
+}
+
+* P13c: anticipation() moves the window with the onset. Onset 11 under anticipation(1) is an
+* effective onset of 10, inside the window, so the six units stay a treated level: no recode
+* caution and 12!/(2!6!4!) = 13,860 assignments
+mklate 11
+qui log using perm_p13c.txt, text replace name(p13)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) anticipation(1) rseed(1313) dots(0)
+local rc13 = _rc
+qui log close p13
+xrc P13c1 0 `rc13'
+if `rc13' == 0 {
+  if e(perm_npossible) != 13860 {
+    dis as error "P13c2 FAIL: e(perm_npossible)=" e(perm_npossible) " (expected 13860)"
+    global pf = $pf + 1
+  }
+  if strpos(fileread("perm_p13c.txt"), "with onsets after the last period") != 0 {
+    dis as error "P13c3 FAIL: an onset inside the anticipation window was recoded"
+    global pf = $pf + 1
+  }
+}
+
+* P13d: oostreatedcontrols(2) keeps onset 12 (units 7-9) a treated level and recodes onset 13
+* (units 10-12): 12!/(2!3!7!) = 7,920 assignments where the labels gave 12!/(2!4!3!3!) =
+* 277,200, and the caution counts 3 clusters
+mklate oos
+qui log using perm_p13d.txt, text replace name(p13)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) oostreatedcontrols(2) rseed(1313) dots(0)
+local rc13 = _rc
+qui log close p13
+xrc P13d1 0 `rc13'
+if `rc13' == 0 {
+  if e(perm_npossible) != 7920 {
+    dis as error "P13d2 FAIL: e(perm_npossible)=" e(perm_npossible) " (expected 7920)"
+    global pf = $pf + 1
+  }
+  if strpos(fileread("perm_p13d.txt"), "Caution: 3 cluster(s) with onsets after the last period are permuted as never treated.") == 0 {
+    dis as error "P13d3 FAIL: the recode caution did not count the 3 clusters past oostreatedcontrols(2)"
+    global pf = $pf + 1
+  }
+}
+
+* P13e: the permprobs() level set is the design's. With the late adopters at 12 the levels are
+* 6 and never-treated, so (ttre 6 .) validates and (ttre 6 12 .) is refused r(198)
+mklate 12
+local PP2 (ttre 6 .)
+local PP3 (ttre 6 12 .)
+forval c = 1/12 {
+  local PP2 `PP2' (`c' .5 .5)
+  local PP3 `PP3' (`c' .4 .3 .3)
+}
+cap noi wooldid y i t ttre, att cluster(i) permute(probabilities) permprobs(`PP2') permreps(30) rseed(1313) dots(0)
+xrc P13e1 0 `=_rc'
+cap noi wooldid y i t ttre, att cluster(i) permute(probabilities) permprobs(`PP3') permreps(30) rseed(1313) dots(0)
+xrc P13e2 198 `=_rc'
+foreach f in perm_p13a perm_p13a2 perm_p13c perm_p13d {
+  cap erase `f'.txt
 }
 
 if $pf == 0 dis "PERMUTE_ALL_PASS"

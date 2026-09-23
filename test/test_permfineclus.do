@@ -6,7 +6,8 @@
 * bijection), the subgroups() and stray-companion refusals, that the refusal of finer
 * clustering STILL stands without the option, the declared-no-op property at cluster() = i
 * (bitwise), the column-set/denominator integrity of the accumulator, and that the exact
-* test's observed-is-a-member property survives the rebuild path. What is NOT here, said so
+* test's observed-is-a-member property survives the rebuild path, and that the assertion reads
+* an onset after the last period as never-treated (Q7). What is NOT here, said so
 * the file does not imply coverage it has not got: the check that the onset-to-cohort map is
 * right. That one lives in wooldid_permrun (rep 0's rebuilt i must equal the observed i) and
 * is measured to fire; Q5 below says why nothing in this file can do it instead.
@@ -281,6 +282,41 @@ if _rc == 0 {
   dis "Q6c columns=" colsof(`PN6c') " short=`bad' completed=" e(perm_completed) " blank=" e(perm_blank)
   xok "Q6c2 probabilities: a shrinking level set of i costs no accumulator column" `=(`bad' == 0)'
 }
+
+*=============================================================== Q7 onsets after the last period
+* The permutation design reads an onset after the last period as never-treated
+* (test_permute.do P13), and the assertion is checked on that design onset, so i must pool
+* the late adopters with the never-treated. Fixture: 16 units x t = 1..10, units 1-4 first
+* treated at 6, 5-8 at 12, 9-16 never treated; cluster() is the unit, finer than i.
+*   icoha = 1 for onset 6, 2 for the late adopters and the never-treated together
+*   icohb = 1 for onset 6, 2 for the late adopters, 3 for the never-treated
+cap program drop mkfclate
+program define mkfclate
+  clear
+  set seed 2468
+  set sortseed 2468
+  qui set obs 16
+  qui gen i = _n
+  qui gen double ttre = cond(_n <= 4, 6, cond(_n <= 8, 12, .))
+  qui gen icoha = cond(ttre == 6, 1, 2)
+  qui gen icohb = cond(ttre == 6, 1, cond(ttre == 12, 2, 3))
+  qui expand 10
+  qui bysort i: gen t = _n
+  qui gen y = 1.5*(t >= ttre & ttre < .) + 0.1*i + rnormal()
+end
+
+* Q7a: icoha is the design's onset grouping, so it runs, the rebuild engages, and the count is
+* the design's 16!/(4!12!) = 1,820
+mkfclate
+cap noi qui wooldid y icoha t ttre, att cluster(i) permute(shuffle) permreps(20) rseed(71) dots(0) permonsetcohorts
+local rc7 = _rc
+xrc "Q7a late adopters pooled with the never-treated in i" 0 `rc7'
+if `rc7' == 0 xok "Q7a2 rebuild engaged over the 1,820 design assignments" `=(e(perm_irebuilt) == 1 & e(perm_npossible) == 1820 & e(perm_completed) == 20)'
+
+* Q7b: icohb splits the design's never-treated level across two levels of i: refused
+mkfclate
+cap noi qui wooldid y icohb t ttre, att cluster(i) permute(shuffle) permreps(20) rseed(71) dots(0) permonsetcohorts
+xrc "Q7b late adopters in their own level of i" 459 `=_rc'
 
 if $pf == 0 dis as result "PERMFINECLUS_ALL_PASS"
 else dis as error "PERMFINECLUS_FAILS=$pf"

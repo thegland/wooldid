@@ -1,7 +1,8 @@
 * Targeted suite for the subgroup-split gate (author directive 2026-07-28): a unit
 * split across subgroups over time is refused under default safety, and proceeds with
 * share weighting plus a caution under safety(off) on the analytic path - while under
-* permute() the same split is refused at BOTH safety settings (G5). Also pins the numeric-only
+* permute() the same split is refused at BOTH safety settings (G5), as is a unit labelled on
+* some rows and missing on others, never-treated units included (G6). Also pins the numeric-only
 * cluster() syntax. Run from test/: "<stata>" -e do test_sgsplit.do -> SGSPLIT_ALL_PASS
 clear all
 set more off
@@ -115,6 +116,60 @@ else if strpos(fileread("sgsp_g5.txt"), "multiple subgroup variable levels") == 
   local ++fails
 }
 cap erase sgsp_g5.txt
+
+* ---- G6: under permute() a unit labelled on some rows and missing on others is refused over
+* the whole design sample, never-treated units included, and safety(off) does not lift it. The
+* observed run's own screen reads treated units only, so a never-treated unit's partial label
+* is legal there; a replication that treated the unit would enter it into its subgroup by its
+* labelled share of sample weight. Refused in wooldid_permctl before any replication runs.
+cap program drop mkpartial
+program define mkpartial
+  clear
+  set seed 24680
+  set sortseed 24680
+  qui set obs 30
+  qui gen i = _n
+  qui gen ttre = cond(_n <= 10, 5, .)
+  qui expand 10
+  qui bysort i: gen t = _n
+  qui gen y = 2*(t >= ttre & ttre < .) + 0.1*i + rnormal()
+  qui gen sg = mod(i, 2)
+  qui replace sg = . if i == 25 & t >= 6
+end
+mkpartial
+cap wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg)
+if _rc != 0 {
+  dis as error "G6 FAIL: a never-treated unit's partial label refused without permute(), rc=" _rc " (expected 0)"
+  local ++fails
+}
+mkpartial
+cap wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) permute(shuffle) permreps(20)
+if _rc != 459 {
+  dis as error "G6 FAIL: permute + partially labelled never-treated unit rc=" _rc " (expected 459)"
+  local ++fails
+}
+mkpartial
+qui log using sgsp_g6.txt, text replace name(sgsp6)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) permute(shuffle) permreps(20) safety(off)
+local rc6 = _rc
+qui log close sgsp6
+if `rc6' != 459 {
+  dis as error "G6 FAIL: safety(off) lifted the permute partial-label refusal, rc=" `rc6' " (expected 459)"
+  local ++fails
+}
+else if strpos(fileread("sgsp_g6.txt"), "Error: the subgroup variable sg is missing for some in-sample row(s) of units of i that carry a subgroup value on their other rows.") == 0 {
+  dis as error "G6 FAIL: the permute partial-label refusal did not name itself"
+  local ++fails
+}
+cap erase sgsp_g6.txt
+* the same unit labelled on every row runs
+mkpartial
+qui replace sg = mod(i, 2)
+cap wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) permute(shuffle) permreps(20)
+if _rc != 0 {
+  dis as error "G6 FAIL: permute with the unit fully labelled rc=" _rc " (expected 0)"
+  local ++fails
+}
 
 if `fails' == 0 dis "SGSPLIT_ALL_PASS"
 else dis as error "SGSPLIT_FAILS=`fails'"
