@@ -675,5 +675,52 @@ else {
   else di as result "T13 PASS: bootstrap e(V_es_att) is the covariance of the " t13n " complete ES draws (mreldif " t13d "), and differs from the analytic one (" t13an ")"
 }
 
+* ---- T14 (ruling D5, 2026-09-23): under bootstrap() cfxplotnose keeps the six-column cfx shape, so the
+* plot cells get bootstrap inference: with the same seed every cell equals the run without cfxplotnose
+* (the replications run in fast mode either way, so the draws are the same). Under boottstat the cells
+* stay blank, having no standard error to studentize by
+mkcfx11
+cap qui wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) makecfxplots cfxlattice(clat) bootstrap(standard) reps(20) rseed(7)
+local rc14a = _rc
+local mats14 `e(wdid_cfxmats)'
+foreach nm of local mats14 {
+  cap matrix T14A_`nm' = e(`nm')
+}
+mkcfx11
+cap qui wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) makecfxplots cfxlattice(clat) cfxplotnose bootstrap(standard) reps(20) rseed(7)
+local rc14b = _rc
+local t14n 0
+local t14live 0
+local t14max 0
+local t14shape 0
+foreach nm of local mats14 {
+  cap confirm matrix e(`nm')
+  if _rc != 0 continue
+  local ++t14n
+  if colsof(e(`nm')) != 6 local ++t14shape
+  else {
+    matrix T14B = e(`nm')
+    mata: A = st_matrix("T14A_`nm'"); B = st_matrix("T14B"); st_numscalar("t14d", mreldif(editmissing(A, -9), editmissing(B, -9))); st_numscalar("t14l", sum(rownonmissing(B[., (2, 4, 5, 6)]) :== 4))
+    if t14d > `t14max' local t14max = t14d
+    local t14live = `t14live' + t14l
+  }
+}
+mkcfx11
+cap qui wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) makecfxplots cfxlattice(clat) cfxplotnose bootstrap(standard) reps(20) rseed(7) boottstat
+local rc14c = _rc
+local t14ts 0
+foreach nm of local mats14 {
+  cap confirm matrix e(`nm')
+  if _rc != 0 continue
+  matrix T14C = e(`nm')
+  mata: st_numscalar("t14c", sum(rownonmissing(st_matrix("T14C")[., (2, 4, 5, 6)])))
+  local t14ts = `t14ts' + t14c
+}
+di "T14 cfxplotnose under bootstrap: rc=`rc14a'/`rc14b'/`rc14c' mats=`t14n' not-6-wide=`t14shape' live rows=`t14live' max reldif vs no-cfxplotnose=`t14max' boottstat filled cells=`t14ts'"
+if `rc14a' != 0 | `rc14b' != 0 | `rc14c' != 0 | `t14n' == 0 | `t14shape' > 0 | `t14live' == 0 | `t14max' > 1e-10 | `t14ts' != 0 {
+  di as error "T14 FAIL: cfxplotnose under bootstrap() must keep six columns with the same bootstrap inference as the run without it, and leave the cells blank under boottstat"
+  local ++fails
+}
+
 if `fails' == 0 di as result "BOOTDF_ALL_PASS"
 else di as error "BOOTDF_FAILS=`fails'"

@@ -360,7 +360,7 @@ Dirichlet weight per cluster and multiplies that cluster's observations by it, s
 mode; with {it:boottstat} it is refused. {it:bootstrap(bayes)} with {it:att_it}, {it:att_i} or {it:att_itime} omits the cell-sampling component
 of the variance and is refused. Plots, {it:gteffects} cells, {it:jointtests}
 and {it:pretrendpower()} all follow the bootstrap. Only the {it:histogramcohorteffects} output is untouched: it draws the observed point estimates, which the bootstrap does not change. Under
-{it:cfxplotnose} the continuous treatment cells receive no bootstrap inference, so drop that option if bands are wanted. {it:wooldid} cautions when fewer than 6
+{it:cfxplotnose} the continuous treatment cells still get bootstrap inference, except under {it:boottstat}, which has no cell standard error to studentize by. {it:wooldid} cautions when fewer than 6
 clusters are treated. Neither mode is a remedy for few treated clusters and no wild cluster bootstrap is offered; use {it:permute()} there, or
 {help boottest} on the underlying regression outside {it:wooldid}. When {it:cluster()} does not nest {it:i} and some unit spans two clusters, a caution says the
 standard errors of the cell-weighted estimands may be understated; the remedies are a finer {it:i} or a {it:cluster()} that nests {it:i}. Where {it:cluster()} nests {it:i} and the run carries {it:att_it}, {it:att_i}, {it:att_itime} or {it:boottstat}, each replication gives the drawn copies of a cluster fresh unit codes, and
@@ -734,7 +734,7 @@ dropped without a message; with {it:esfixedbaseperiod} any integer is accepted e
 Each subgroup's plot data is returned in {it:e(cfxitem_type_sgN)}, where N is the subgroup value. {p_end}
 
 {phang}{opt cfxplotnose}: Do not estimate standard errors for the cfxplots; speeds estimation. Dropped, with a caution, under {it:permute()} with {it:permtstat} or
-{it:permtci}, which need them. {p_end}
+{it:permtci}, which need them. Under {it:bootstrap()} and {it:permute()} the plot cells otherwise keep their replication inference. {p_end}
 
 {phang}{opt contreatc:ontrols(controltype)}: Specifies what controls for {it:contreat} will be added: the specified controls are always equal to f(Contreat_jt) (the function used to capture
   the effect of contreat within treated i-t cells) interacted with a set of fixed effects-like indicator variables (time period, cohort, etc.). The specified controls will partial out

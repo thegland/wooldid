@@ -2715,15 +2715,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       if "`makecfxplots'" != "" & ("`item'" == "att" | "`safety'" == "off") {
 
         local cfxmatendpoint 6
-        * the permute() carve-out below applies to cfxplotnose too. Truncating
-        * unconditionally would leave every cfx matrix one column wide under permute(),
-        * wooldid_permcellsx would skip all of them on its six-column test, ndone would stay
-        * 0, the drift caution would never print and e(perm_cfx_blank) would never be
-        * posted - analytic plot cells under a permutation header with nothing said. The
-        * 6-column shape is missing-padded here (r(table) is short under nose and the
-        * padding below fills it), which is exactly what the cell rewiring needs to fill
-        * p/ll/ul from the replications
-        if "`cfxplotnose'" != "" & "`permute'" == "" local cfxmatendpoint 1
+        * the permute() carve-out below applies to cfxplotnose too, and so does bootstrap()
+        * (the author's ruling D5, 2026-09-23). Truncating unconditionally would leave every
+        * cfx matrix one column wide under either engine, and wooldid_permcellsx /
+        * wooldid_bootcellsx would skip all of them on their six-column test - under permute()
+        * ndone would stay 0, the drift caution would never print and e(perm_cfx_blank) would
+        * never be posted; under bootstrap() the cells kept their point estimates and nothing
+        * else. The 6-column shape is missing-padded here (r(table) is short under nose and
+        * the padding below fills it), which is exactly what the cell rewiring needs to fill
+        * se/p/ll/ul from the replications. The replications themselves still run nose and
+        * return one column: the harvest reads only their point estimates (under boottstat
+        * the cells then stay blank, having no standard error to studentize by)
+        if "`cfxplotnose'" != "" & "`permute'`bootstrap'" == "" local cfxmatendpoint 1
         * fast mode keeps the cfx matrices in the 1-column (point estimates only) shape that
         * cfxplotnose produces, rather than minting a 6-column-with-missings shape.
         * under permute() the 6-column shape is kept (missing-padded) so the shell's cell
@@ -7363,8 +7366,9 @@ version 16.0
     cap confirm matrix `cell'_cfx`c'
     if _rc != 0 continue
     * a cfx matrix has exactly two legal shapes: 6 columns (rows 1..6 of r(table)
-    * transposed) or 1 column (b alone), the latter under cfxplotnose, where there are no
-    * inference columns to fill - nothing in between is ever produced, which is what makes
+    * transposed) or 1 column (b alone), the latter only outside the two engines (the worker
+    * keeps 6 missing-padded columns under cfxplotnose when bootstrap() or permute() is
+    * given), where there are no inference columns to fill - nothing in between is ever produced, which is what makes
     * the hard-coded 1, 2, 4, 5, 6 below safe. wooldid_bootrun still built an accumulator
     * for the skipped matrices (it counts every e(wdid_cfxmats) entry), so this leaves an
     * unused accumulator rather than a mismatch - which is why the ncfx/names pairing check
