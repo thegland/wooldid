@@ -582,17 +582,26 @@ version 16.0
     dis as result " "
     global WOOLDID_LASTRC
   }
-  * the analytic twin of the engine branches' own wooldid_cfxplots call. runs only when the
-  * worker recorded a stem, which it does only on an analytic makecfxplots run with saveplots(),
-  * so neither engine reaches this and a run that asked for no plot data is untouched. cap, but
-  * not silent: a failure to write the data file must not lose an estimation that has already
-  * succeeded and printed - which is not true of the engine branches, where the same call also
-  * draws the figures - and equally must not be swallowed, since no accepted option may be a
-  * silent no-op and a saveplots() that quietly produced the .gph files and not the .dta would
-  * be exactly that
-  if "`e(wdid_cfxsave)'" != "" {
+  * the analytic twin of the engine branches' own wooldid_cfxplots call. runs only when THIS
+  * call's worker handed back a stem (wdsh_cfxsave, by c_local), which it does only on an
+  * analytic makecfxplots run with saveplots(), so neither engine reaches this and a run that
+  * asked for no plot data is untouched. gated on the local and not on e(wdid_cfxsave), which
+  * outlives a worker exit that posts nothing (update) and would fire this on a stale stem. cap,
+  * but not silent: a failure to write the data file must not lose an estimation that has
+  * already succeeded and printed - which is not true of the engine branches, where the same
+  * call also draws the figures - and equally must not be swallowed, since no accepted option
+  * may be a silent no-op and a saveplots() that quietly produced the .gph files and not the
+  * .dta would be exactly that
+  if "`wdsh_cfxsave'" != "" {
     cap noi wooldid_cfxplots , saveplots(`e(wdid_cfxsave)') dataonly `e(wdid_cfxrepl)'
     local wdsh_dc = _rc
+    * a refused save dies inside wooldid_cfxplots's tempname frame, which stata auto-drops,
+    * leaving the session in default rather than the caller's frame (as after a worker
+    * failure, above). restored before the caution prints, as the engine branches restore
+    if `wdsh_dc' != 0 {
+      qui frame
+      if "`r(currentframe)'" != "`wdsh_frame'" cap frame change `wdsh_frame'
+    }
     if `wdsh_dc' != 0 dis as text "Caution: the continuous-treatment plot-data file `e(wdid_cfxsave)'_cfx.dta could not be written (r(`wdsh_dc')), usually because a file of that name exists and replace was not specified."
   }
 end
@@ -4780,9 +4789,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * record the saveplots() stem so the analytic path can write the <name>_cfx.dta of plotted
   * points: on that path the cfx figures come from marginsplot, which saves only the .gph
   * files. the shell writes the file after e() is posted, since the writer reads e(). posted
-  * only when there is something to write
+  * only when there is something to write. the stem also goes back to the shell by c_local,
+  * and the shell's twin gates on that local, not on e(wdid_cfxsave): the local exists only
+  * when THIS call's worker posted a stem, whereas the e() local survives a worker exit that
+  * posts nothing (update) and would re-fire the twin on the previous run's stem
   if "`saveplots'" != "" & "`makecfxplots'" != "" & "`wdrepmode'" == "" & "`bootstrap'`permute'" == "" & "`cfxmatricestoreturn'" != "" ereturn hidden local wdid_cfxsave "`saveplots'"
   if "`e(wdid_cfxsave)'" != "" & "`replace'" != "" ereturn hidden local wdid_cfxrepl replace
+  if "`e(wdid_cfxsave)'" != "" c_local wdsh_cfxsave `e(wdid_cfxsave)'
   foreach matrix in `cfxmatricestoreturn' {
     wooldid_cfxstripe ``matrix''
     ereturn matrix `matrix' = ``matrix''

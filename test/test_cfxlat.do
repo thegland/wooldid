@@ -238,5 +238,101 @@ foreach l7f of local l7files {
   cap erase `l7f'
 }
 
+* ---- L8 shell-cfxtwin-frame (change audit 2026-09-22): when the analytic plot-data write is
+* refused (a <stem>_cfx.dta exists and replace was not given), wooldid_cfxplots dies inside its
+* tempname frame and the shell prints the caution with rc 0 - and must hand the caller back the
+* frame they called from, as the engine branches do after the same failure. It used to leave the
+* session in default, silently, rc 0. The caution must actually have printed (checked through a
+* named log), else a twin that never fires would pass this vacuously ----
+foreach f in l8probe_cfx.dta l8probe_cfxatt_cfxpost.gph l8probe_cfxame_cfxpost.gph {
+  cap erase "`f'"
+}
+cap frame drop l8fr
+frame create l8fr
+frame change l8fr
+use "`DATA'/dta_cont", clear
+cap noi wooldid y i t ttre, att cluster(i) contreat(intensity) contreatcontrols(basic) lattice(all 3) esprelength(1) espostlength(1) makecfxplots saveplots(l8probe) replace
+local l8rc1 = _rc
+cap confirm file "l8probe_cfx.dta"
+local l8dta = (_rc == 0)
+* the .gph files go, so marginsplot's own save succeeds and only the plot-data write collides
+foreach f in l8probe_cfxatt_cfxpost.gph l8probe_cfxame_cfxpost.gph {
+  cap erase "`f'"
+}
+cap frame change l8fr
+qui log using l8probe_log.txt, text replace name(l8)
+cap noi wooldid y i t ttre, att cluster(i) contreat(intensity) contreatcontrols(basic) lattice(all 3) esprelength(1) espostlength(1) makecfxplots saveplots(l8probe)
+local l8rc2 = _rc
+qui log close l8
+qui frame
+local l8frame "`r(currentframe)'"
+* a short fragment: the log line may wrap
+local l8caut = strpos(fileread("l8probe_log.txt"), "plot-data file l8probe_cfx.dta") > 0
+if `l8rc1' != 0 | `l8dta' != 1 | `l8rc2' != 0 | `l8caut' != 1 | "`l8frame'" != "l8fr" | "`e(cmd)'" != "wooldid" {
+  dis as error "L8 FAIL: refused plot-data write rc1=`l8rc1' dta=`l8dta' rc2=`l8rc2' caution=`l8caut' frame=[`l8frame'] (expected l8fr) ecmd=[`e(cmd)']"
+  local ++fails
+}
+else dis as result "L8 PASS: the refused plot-data write printed its caution with rc 0 and handed back frame l8fr"
+frame change default
+cap frame drop l8fr
+foreach f in l8probe_cfx.dta l8probe_cfxatt_cfxpost.gph l8probe_cfxame_cfxpost.gph l8probe_log.txt {
+  cap erase "`f'"
+}
+
+* ---- L9 shell-update-stale-cfxsave (change audit 2026-09-22): wooldid, update exits without
+* posting e(), so after an analytic makecfxplots saveplots() run the previous run's
+* e(wdid_cfxsave) is still set - and the shell's plot-data twin, gated on it, used to re-write
+* that run's <stem>_cfx.dta on update (silently under replace, clobbering anything the user had
+* done to the file; with a spurious caution without it). The twin must fire only on a stem THIS
+* call's worker handed back. Run under a copy of the ado whose one net install line is commented
+* out, so the leg can never reach the network or the installed build: the copy must differ in
+* exactly that line, else update is not called at all. Non-vacuous by construction: the stale
+* stem must still be in e() after update and the update message must have printed ----
+foreach f in l9probe_cfx.dta l9probe_cfxatt_cfxpost.gph l9probe_cfxame_cfxpost.gph l9probe_log.txt l9probe_stub.do {
+  cap erase "`f'"
+}
+local l9rc2 .
+local l9stale ""
+filefilter "../wooldidinstall/wooldid.ado" "l9probe_stub.do", from("net install wooldid,") to("*net install wooldid,") replace
+local l9occ = r(occurrences)
+* loaded whatever the count - a copy with no line changed is the real build, harmless to load -
+* and only the update call is gated on the count. a second do of the ado in one session dies
+* r(3000) (measured: wooldid_sg1live() has no mata drop guard, and the earlier legs' reghdfe
+* calls leave matastrict on, which the ado's mata does not compile under), hence the clear all
+* (macros survive it) and matastrict off before each load
+clear all
+mata: mata set matastrict off
+qui do "l9probe_stub.do"
+use "`DATA'/dta_cont", clear
+cap noi wooldid y i t ttre, att cluster(i) contreat(intensity) contreatcontrols(basic) lattice(all 3) esprelength(1) espostlength(1) makecfxplots saveplots(l9probe) replace
+local l9rc1 = _rc
+cap confirm file "l9probe_cfx.dta"
+local l9dta = (_rc == 0)
+* the file goes, so a re-write by update would be visible as its return
+cap erase "l9probe_cfx.dta"
+qui log using l9probe_log.txt, text replace name(l9)
+if `l9occ' == 1 {
+  cap noi wooldid, update
+  local l9rc2 = _rc
+}
+qui log close l9
+local l9stale "`e(wdid_cfxsave)'"
+cap confirm file "l9probe_cfx.dta"
+local l9back = (_rc == 0)
+local l9upd = strpos(fileread("l9probe_log.txt"), "Update complete") > 0
+local l9caut = strpos(fileread("l9probe_log.txt"), "plot-data file") > 0
+if `l9occ' != 1 | `l9rc1' != 0 | `l9dta' != 1 | `l9rc2' != 0 | `l9upd' != 1 | "`l9stale'" != "l9probe" | "`e(cmd)'" != "wooldid" | `l9back' != 0 | `l9caut' != 0 {
+  dis as error "L9 FAIL: update after a saveplots() cfx run stub=`l9occ' rc1=`l9rc1' dta=`l9dta' rc2=`l9rc2' updmsg=`l9upd' stale=[`l9stale'] ecmd=[`e(cmd)'] rewritten=`l9back' (expected 0) caution=`l9caut' (expected 0)"
+  local ++fails
+}
+else dis as result "L9 PASS: update left the previous run's plot-data file alone and printed no plot-data caution"
+* back to the real build
+clear all
+mata: mata set matastrict off
+qui do "../wooldidinstall/wooldid.ado"
+foreach f in l9probe_cfx.dta l9probe_cfxatt_cfxpost.gph l9probe_cfxame_cfxpost.gph l9probe_log.txt l9probe_stub.do {
+  cap erase "`f'"
+}
+
 if `fails' == 0 dis as result "CFXLAT_ALL_PASS"
 else dis as error "CFXLAT_FAILS=`fails'"

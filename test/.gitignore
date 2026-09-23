@@ -29,9 +29,11 @@ fnplot_ES*
 # (nothing tracked in this repo is .smcl or .gph, so these are always run artifacts):
 *.smcl
 *.gph
-# Scratch datasets/transcripts test_permute3.do and the L6 probe write into test/:
+# Scratch datasets/transcripts test_permute3.do and the L6-L8 probes of test_cfxlat.do write into test/:
 perm3_*
 l6probe_*
+l7probe_*
+l8probe_*
 # Shard scheduling and log scratch under the TRACKED suite/mc/out2 result tree
 # (the .csv/.md results there are tracked on purpose; these are not):
 suite/mc/out2/*/logs/
@@ -43,3 +45,4 @@ suite/mc/out3/**/*.log
 suite/mc/out3/*_runner.log
 .DS_Store
 suite/mc/out3/smoke_*/
+l9probe_*
