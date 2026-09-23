@@ -4789,14 +4789,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   }
   * per-plot metadata for wooldid_cfxplots, indexed by position in e(wdid_cfxmats): the
   * titles the worker composed, the x-axis title option verbatim, and the user's lattice
-  * variable (empty under an auto lattice, whose tempvar does not outlive the worker)
+  * variable the plots ran over: cfxlattice() when given, else a one-word lattice() (empty
+  * under an auto lattice, whose tempvar does not outlive the worker)
   if `cfxnp' > 0 {
     forval wdk = 1/`cfxnp' {
       ereturn hidden local wdid_cfxttl`wdk' `"`cfxttl`wdk''"'
       ereturn hidden local wdid_cfxytx`wdk' `"`cfxytx`wdk''"'
     }
     ereturn hidden local wdid_cfxxt `"`cfxxt_meta'"'
-    ereturn hidden local wdid_cfxlatvar "`cfxlattice'"
+    local wdcfxlatvar `cfxlattice'
+    if "`wdcfxlatvar'" == "" & wordcount("`lattice'") == 1 local wdcfxlatvar `lattice'
+    ereturn hidden local wdid_cfxlatvar "`wdcfxlatvar'"
   }
 
   * display-state macros consumed by wooldid_display / wooldid_esplots (and by replay).
@@ -14025,12 +14028,23 @@ version 16.0
   qui frame
   local defaultframe `r(currentframe)'
   * the x-axis labels: the lattice variable's value labels when it has them (marginsplot
-  * shows those), read here in the caller's frame before we leave it
+  * shows those), read here in the caller's frame before we leave it. the x-axis title is
+  * the worker's when it posted one; when it posted none (a one-word lattice() and no
+  * cfxlattice()), marginsplot titles the axis with the variable's label, else its name, so
+  * that is read here too
   local latvar `e(wdid_cfxlatvar)'
   local vl
+  local xt `"`e(wdid_cfxxt)'"'
   if "`latvar'" != "" {
     cap confirm variable `latvar'
-    if _rc == 0 local vl : value label `latvar'
+    if _rc == 0 {
+      local vl : value label `latvar'
+      if `"`xt'"' == "" {
+        local xtl : variable label `latvar'
+        if `"`xtl'"' == "" local xtl `latvar'
+        local xt xtitle(`"`xtl'"')
+      }
+    }
   }
   local levels
   foreach nm of local mats {
@@ -14060,7 +14074,6 @@ version 16.0
     }
     local xlab `xlab')
   }
-  local xt `"`e(wdid_cfxxt)'"'
   tempname pf af
   frame create `pf'
   frame create `af'
