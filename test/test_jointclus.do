@@ -113,6 +113,26 @@ runjc T7 "cluster(i)" 0 0 0
 * T8: customvce cluster-type at the i level counts as clustered
 runjc T8 "customvce(cluster i) jointtests" 0 0 1
 
+* T9 (jtscreen-domain-nevertreated): the guide's idiom pools every never-treated unit under
+* ONE i code, which then has a row in every cluster; every treated cohort still nests in
+* cluster(state), so the caution must fire. The screen's nesting counts run over the treated
+* event-window rows that carry the cell dummies (as the impvalues screen's do); counted over
+* all rows the pooled code gives 9 i levels in 10 (i, state) pairs and the screen stays silent.
+mkjc
+qui replace i = 9999 if ttre == .
+qui log using jc_T9.txt, text replace name(jc)
+cap noi wooldid y i t ttre, att esprelength(2) espostlength(2) cluster(state) jointtests
+local rc9 = _rc
+qui log close jc
+scanlog jc_T9.txt "Caution: jointtests was combined with analytic clustered SEs clustered at the level"
+local fc9 = r(found)
+cap erase jc_T9.txt
+if `rc9' == 0 & `fc9' == 1 dis as result "T9 PASS"
+else {
+  dis as error "T9 FAIL: rc=`rc9' (want 0) cau=`fc9' (want 1)"
+  global pf = $pf + 1
+}
+
 if $pf == 0 dis as result "JOINTCLUS_ALL_PASS"
 else dis as error "JOINTCLUS_FAILURES: $pf"
 exit, clear

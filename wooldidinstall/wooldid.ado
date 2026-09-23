@@ -1589,6 +1589,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * safety(off) - so it gates on safetyinput, not safety (contreatwithin overwrites the
   * latter internally). customvce cluster-type counts as clustered, by the containment
   * screen's convention; adversarial is deliberately not gated here.
+  * The two nesting counts run over targetflag == 1, the treated event-window rows that carry
+  * the cell dummies, as the impvalues screen's counts above do: the never-treated pool coded
+  * as one i level (the help's and the guide's idiom) sits in every cluster, so counted over
+  * all of `ifstatement' it hides a design in which every treated cohort nests in the cluster.
   * bootstrap carve-out: under bootstrap the analytic joint tests are never computed
   * (their p-values are Wald tests on the bootstrap covariance, which this screen's own
   * error text recommends), so the screen does not apply. permute() is the same - there the
@@ -1613,11 +1617,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       cap confirm variable `jtcv'
       if _rc != 0 continue
       tempvar jtt
-      qui gegen byte `jtt' = tag(`i') if `ifstatement'
+      qui gegen byte `jtt' = tag(`i') if `ifstatement' & `targetflag' == 1
       qui count if `jtt' == 1
       local jtni = r(N)
       cap drop `jtt'
-      qui gegen byte `jtt' = tag(`i' `jtcv') if `ifstatement'
+      qui gegen byte `jtt' = tag(`i' `jtcv') if `ifstatement' & `targetflag' == 1
       qui count if `jtt' == 1
       local jtnic = r(N)
       cap drop `jtt'
