@@ -4979,6 +4979,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * rather than left to the missing-standard-error test because under fastnose those cells
   * are "." by contract
   if "`bootstrap'`permute'" == "" & "`fastnose'" == "" & wordcount("`sglist'") > 1 wooldid_sgdeg , si(`safetyinput')
+  * under permute() the same detection runs on the observed fit in report-only mode (the
+  * author's ruling D4, 2026-09-23): the pairwise contrasts are permuted as coefficient
+  * differences, so the p-values and intervals stand, but with permtstat or permanalyticse
+  * the se_analytic column carries the analytic contrast standard error, which is the same
+  * cancellation residue here. nothing is blanked and the equality tests are untouched. the
+  * replications skip it (`wdrepmode'); under the fast-mode default the level standard errors
+  * are missing and nothing is flagged
+  if "`permute'" != "" & "`bootstrap'" == "" & "`fastnose'" == "" & "`wdrepmode'" == "" & wordcount("`sglist'") > 1 wooldid_sgdeg , si(`safetyinput') perm
   if "`bootstrap'`permute'" == "" wooldid_display , part(1)
   * F7: Roth (2022) pre-trend power diagnostics (compute + display + ereturns live in a
   * subprogram; cap noi so a failure here cannot abort an otherwise-complete run)
@@ -12104,7 +12112,8 @@ version 16.0
   * numerically rank-deficient in the contrast direction. the bootstrap, boottstat and
   * permtstat paths carry the same policy.
   *
-  * ANALYTIC PATH ONLY (see the gate at the call site). Under bootstrap() wooldid_bootjnt takes
+  * BLANKING ON THE ANALYTIC PATH ONLY (see the gates at the call site); under permute() the
+  * `perm' option runs the detection and posts the disclosure without blanking. Under bootstrap() wooldid_bootjnt takes
   * `pw0' = e(pwsgs) and reads column 2 as boottstat's studentization denominator and as
   * wooldid_bootsgw's observed comparator; under permute() wooldid_permwire keeps column 2 and
   * renames it se_analytic. Blanking it here would delete THEIR inference, not wooldid's.
@@ -12127,7 +12136,7 @@ version 16.0
   * half the range away from a healthy design; a cut at 1 - 1e-3 leaves rows reporting a
   * contrast standard error twenty times too small. It is a judgment call, and lives in ONE
   * local below so it can be moved.
-  syntax , [si(string)]
+  syntax , [si(string) perm]
   cap confirm matrix e(pwsgs)
   if _rc != 0 exit
   local sgl `e(wdid_sglist)'
@@ -12229,6 +12238,12 @@ version 16.0
   * the disclosure state, read back by wooldid_display so replay reproduces the caution
   ereturn hidden scalar wdid_sgdegen = `wdsgdn'
   ereturn hidden local wdid_sgdegenr = strofreal(`wdsgdmax', "%6.4f")
+  * permute(): disclose only. the permutation inference is formed from coefficient differences
+  * and does not read the flagged column, so there is nothing to withhold
+  if "`perm'" != "" {
+    ereturn hidden local wdid_sgdegenact perm
+    exit
+  }
   * safety(off): caution and report, do not blank. gates on the USER's safety() value
   * (safetyinput), never on `safety', which contreatwithin overwrites internally
   if "`si'" == "off" {
@@ -12604,11 +12619,13 @@ version 16.0
       wooldid_mlfmt , mat(e(pwsgs))
       matlist e(pwsgs), cspec(`wdmlfmt') rspec(`wdmlfmtr')
       wooldid_pfloor e(pwsgs)
-      * the realized-degeneracy disclosure, posted by wooldid_sgdeg on the analytic path and read
+      * the realized-degeneracy disclosure, posted by wooldid_sgdeg (on the analytic path, and
+      * disclosure-only under permute(), whose variant is the shared first sentence) and read
       * from e() so replay reproduces it. Written as the sibling of the jointtests caution: same
       * mechanism, same remedies
       if "`e(wdid_sgdegenact)'" != "" {
         if "`e(wdid_sgdegenact)'" == "blank" dis as text "Caution: the analytic covariance of the subgroup effects is numerically rank-deficient in the contrast direction for `e(wdid_sgdegen)' pairwise row(s) (largest implied correlation between two subgroups' estimates `e(wdid_sgdegenr)'), so those contrast standard errors are cancellation residue rather than estimated variances. The standard error, statistic, p-value and interval of those rows, and the across-subgroup equality test(s) covering them, are reported as absent; the point estimates are unaffected. permute(), bootstrap() without boottstat, or a cluster() strictly finer than the cohort-by-period cells that leaves many clusters inside each cell gives inference that is valid under this design."
+        else if "`e(wdid_sgdegenact)'" == "perm" dis as text "Caution: the analytic covariance of the subgroup effects is numerically rank-deficient in the contrast direction for `e(wdid_sgdegen)' pairwise row(s) (largest implied correlation between two subgroups' estimates `e(wdid_sgdegenr)'), so those contrast standard errors are cancellation residue rather than estimated variances."
         else dis as text "Caution: the analytic covariance of the subgroup effects is numerically rank-deficient in the contrast direction for `e(wdid_sgdegen)' pairwise row(s) (largest implied correlation between two subgroups' estimates `e(wdid_sgdegenr)'), so those contrast standard errors are cancellation residue rather than estimated variances. safety(off) was specified, so they and the across-subgroup equality tests are reported rather than withheld; read them as the residue they are. permute(), bootstrap() without boottstat, or a cluster() strictly finer than the cohort-by-period cells that leaves many clusters inside each cell gives inference that is valid under this design."
       }
       dis as result " "

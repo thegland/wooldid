@@ -25,6 +25,10 @@
 * G10 on a healthy continuous-treatment run under suppresssgprimaryeffects nothing fires, and
 *    e(wdid_sglev) carries the level standard errors the unsuppressed run posts in
 *    e(wdidsgresults_*), for the att and ame rows alike
+* G11 under permute() with permanalyticse the screen discloses without blanking (the author's
+*    ruling D4, 2026-09-23): act=perm, the caution prints on the fit and on the replay, the
+*    se_analytic column is the same residue the safety(off) run reports (G3), and the
+*    equality tests still post; under the fast-mode default nothing is flagged
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -272,6 +276,43 @@ if _rc == 0 {
 di "G10 BS-15 contreat suppress robust: rc=`rc10' act=[`a10'] caution=`c10' level rows matched=`nlev' (expect 8) max reldif=`lvmax' off=[`lvbad']"
 if `rc10' != 0 | "`a10'" != "" | `c10' != 0 | `nlev' != 8 | "`lvbad'" != "" {
   di as error "G10 FAIL: a flag on a healthy run, or e(wdid_sglev) does not carry the unsuppressed level standard errors for att, pre_att, ame and pre_ame of both subgroups"
+  local ++fails
+}
+
+* ---- G11 permute(): disclose, never blank
+use data/dta_binary.dta, clear
+qui log using sgd_g11.txt, text replace name(sd)
+cap noi wooldid y i t ttre, att cluster(i) subgroups(sg) esprelength(2) espostlength(2) permute(shuffle) permreps(20) permanalyticse rseed(11) dots(0)
+local rc11 = _rc
+cap noi wooldid
+local rc11r = _rc
+qui log close sd
+local a11 = "`e(wdid_sgdegenact)'"
+local n11 = e(wdid_sgdegen)
+local j11 = e(joint_att_allsgssame)
+matrix G11P = e(pwsgs)
+scanSG sgd_g11.txt "`needle15'"
+local c11 = r(hits)
+scanSG sgd_g11.txt "safety(off) was specified"
+local s11 = r(hits)
+cap erase sgd_g11.txt
+local d11 = reldif(G11P[1,2], G3P[1,2])
+use data/dta_binary.dta, clear
+qui log using sgd_g11b.txt, text replace name(sd)
+cap noi wooldid y i t ttre, att cluster(i) subgroups(sg) esprelength(2) espostlength(2) permute(shuffle) permreps(20) rseed(11) dots(0)
+local rc11b = _rc
+qui log close sd
+local a11b = "`e(wdid_sgdegenact)'"
+scanSG sgd_g11b.txt "`needle15'"
+local c11b = r(found)
+cap erase sgd_g11b.txt
+di "G11 D4 permute: rc=`rc11' act=[`a11'] flagged=`n11' caution hits=`c11' (replay rc `rc11r') safety-text hits=`s11' allsgssame=`j11' se_analytic vs G3 reldif=`d11'; fast default rc=`rc11b' act=[`a11b'] caution=`c11b'"
+if `rc11' != 0 | "`a11'" != "perm" | `n11' != 2 | `c11' < 2 | `rc11r' != 0 | `s11' != 0 | `j11' >= . | `d11' > 1e-10 | G11P[1,1] >= . {
+  di as error "G11 FAIL: under permute() the screen must disclose on the fit and the replay without blanking or naming safety(off)"
+  local ++fails
+}
+if `rc11b' != 0 | "`a11b'" != "" | `c11b' != 0 {
+  di as error "G11 FAIL: the fast-mode default flagged a row it has no standard error for"
   local ++fails
 }
 
