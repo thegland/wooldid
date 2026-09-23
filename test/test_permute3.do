@@ -2,7 +2,8 @@
 * reported p-value and interval under permute() is a permutation quantity, coverage by
 * subtraction (blank, never analytic), the shift intervals, the fast-mode default and its
 * opt-out, the fixed-metric joint/equality/adversarial tests, contrasts, cells, plots,
-* permsave(), level(), refusals, replay. Every kernel number is reconstructed in Mata
+* permsave(), level(), refusals, replay, and the sharp-null labels of the equality lines and
+* the contrast footer (Q40); the save-first order (Q39). Every kernel number is reconstructed in Mata
 * from the posted draws (never through a local: a decimal round-trip loses bits).
 * Run from test/:  "<stata>" -e do test_permute3.do   -> expect PERMUTE3_ALL_PASS
 clear all
@@ -2322,6 +2323,113 @@ else {
 foreach f in perm3_q39.dta perm3_q39p_ES_att.gph perm3_q39p_ES.dta perm3_q39.txt {
   cap erase "`f'"
 }
+
+* ================= Q40 (author ruling 2026-09-23): under permute() the across-subgroup
+* equality lines and the footer line on the pairwise contrasts state that they test the sharp
+* null of no effect at any horizon, in the approved text, on the run and on its replay; the ame
+* twins carry the same label; an analytic run keeps its own label. Q38's fixture, the shape
+* where the equality p-value and the pairwise p-value of the same two subgroups disagree. Each
+* log is read with its line breaks collapsed, since a footer line can wrap at linesize ====
+local q40eq "permutation p-value (sharp null of no effect at any horizon) for joint test that all SGs have the same"
+local q40pw "Pairwise subgroup contrasts are permuted as coefficient differences (in both modes) and, like the equality tests, test the sharp null of no effect at any horizon, so a common nonzero effect alone can reject them; their kernel is e(perm_pwsgs_kernel)."
+mkstate3 1.5 4
+qui log using perm3_q40.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(st) esprelength(1) espostlength(1) subgroups(sg) permute(shuffle) permreps(20) rseed(39) dots(0)
+local rc = _rc
+qui log close p3
+xrc Q40a 0 `rc'
+if `rc' == 0 {
+  local q40pre = (e(joint_pre_att_allsgssame) < .)
+  local q40post = (e(joint_att_allsgssame) < .)
+  qui log using perm3_q40r.txt, text replace name(p3)
+  cap noi wooldid
+  local rcr = _rc
+  qui log close p3
+  xrc Q40a2 0 `rcr'
+  if !`q40pre' | !`q40post' {
+    dis as error "Q40b FAIL (VACUOUS): an equality test is not posted on this fixture (post `q40post', pre `q40pre'), so its label was not checked - change the fixture"
+    global pf = $pf + 1
+  }
+  foreach f in q40 q40r {
+    local lg = fileread("perm3_`f'.txt")
+    local lg = subinstr(`"`lg'"', char(13), "", .)
+    local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+    local lg = subinstr(`"`lg'"', char(10), " ", .)
+    local bad 0
+    if strpos(`"`lg'"', "`q40eq' att: ") == 0 local ++bad
+    if strpos(`"`lg'"', "`q40eq' pre-treatment att: ") == 0 local ++bad
+    if strpos(`"`lg'"', "p-value for joint test that all SGs have the same") > 0 local ++bad
+    if strpos(`"`lg'"', "`q40pw'") == 0 local ++bad
+    if strpos(`"`lg'"', "(in both modes); their kernel") > 0 local ++bad
+    if `bad' {
+      dis as error "Q40b FAIL (`f'): `bad' check(s) - an equality line or the pairwise footer line does not carry the sharp-null text, or the old text still prints"
+      global pf = $pf + 1
+    }
+    else dis as result "Q40b PASS (`f'): the equality lines and the pairwise footer line carry the sharp-null text"
+  }
+}
+cap erase perm3_q40.txt
+cap erase perm3_q40r.txt
+
+* Q40c: the analytic run on the same data keeps the plain label and prints no footer
+mkstate3 1.5 4
+qui log using perm3_q40a.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(st) esprelength(1) espostlength(1) subgroups(sg)
+local rc = _rc
+qui log close p3
+xrc Q40c 0 `rc'
+if `rc' == 0 {
+  local lg = fileread("perm3_q40a.txt")
+  if e(joint_att_allsgssame) >= . {
+    dis as error "Q40c FAIL (VACUOUS): the analytic equality test is not posted on this fixture"
+    global pf = $pf + 1
+  }
+  else if strpos(`"`lg'"', "p-value for joint test that all SGs have the same att: ") == 0 | strpos(`"`lg'"', "sharp null of no effect at any horizon) for joint test") > 0 | strpos(`"`lg'"', "Pairwise subgroup contrasts are permuted") > 0 {
+    dis as error "Q40c FAIL: the analytic run does not keep its own equality label"
+    global pf = $pf + 1
+  }
+}
+cap erase perm3_q40a.txt
+
+* Q40d: the ame twins under a continuous treatment. The dose varies across the five units of
+* each i-by-period cell, so the ame is estimable within the cell and its equality tests are
+* posted
+clear
+qui set obs 12
+qui gen i = _n
+qui gen ttre = cond(i <= 4, 5, cond(i <= 8, 7, .))
+qui gen sg = mod(i, 2)
+qui expand 5
+qui bysort i: gen u = _n
+qui expand 10
+qui bysort i u: gen t = _n
+set seed 4411
+set sortseed 4411
+qui gen dose = runiform() + 0.5
+qui gen y = 1.1*(t >= ttre & ttre < .)*dose + 0.08*i + 0.04*t + rnormal()
+qui log using perm3_q40c.txt, text replace name(p3)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) contreat(dose) contreatcontrols(basic) subgroups(sg) permute(shuffle) permreps(20) rseed(39) dots(0)
+local rc = _rc
+qui log close p3
+xrc Q40d 0 `rc'
+if `rc' == 0 {
+  local lg = fileread("perm3_q40c.txt")
+  local lg = subinstr(`"`lg'"', char(13), "", .)
+  local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+  local lg = subinstr(`"`lg'"', char(10), " ", .)
+  local bad 0
+  if e(joint_ame_allsgssame) >= . | e(joint_pre_ame_allsgssame) >= . local ++bad
+  if strpos(`"`lg'"', "`q40eq' ame: ") == 0 local ++bad
+  if strpos(`"`lg'"', "`q40eq' pre-treatment ame: ") == 0 local ++bad
+  if strpos(`"`lg'"', "p-value for joint test that all SGs have the same") > 0 local ++bad
+  dis "Q40d ame posted: post=" e(joint_ame_allsgssame) " pre=" e(joint_pre_ame_allsgssame)
+  if `bad' {
+    dis as error "Q40d FAIL: `bad' check(s) - an ame equality test is not posted, or its line does not carry the sharp-null text, or the old text still prints"
+    global pf = $pf + 1
+  }
+  else dis as result "Q40d PASS: the ame equality lines carry the sharp-null text"
+}
+cap erase perm3_q40c.txt
 
 if $pf == 0 dis as result "PERMUTE3_ALL_PASS"
 else dis as error "PERMUTE3_FAILS=$pf"

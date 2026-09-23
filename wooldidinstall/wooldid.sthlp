@@ -435,7 +435,7 @@ as plain missing. That screen runs on every row the {it:if} expression keeps, in
 {it:impvalues}, {it:unconditionalse}, {it:contreatwithin}, {it:contreatcontrols(untreatedZero)}, {it:oldsyntax}, {it:suppresssgprimaryeffects}, {it:pretrendpower()}, {it:simultaneousbands}
 or {it:bootstrap()}. A design that admits only one possible assignment is refused. With {it:subgroups()} the subgroup screens apply over the whole sample, since any cluster can be treated in
 a replication, and a unit labelled on some rows and missing on others is refused whatever {it:safety()} is. Every p-value and interval the run reports is permutation-based, including the subgroup contrasts, the joint pre-trend, subgroup equality and adversarial tests, and the
-continuous-treatment plot cells. P-values are two-sided equal-tailed, using the add-one form for sampled draws. Intervals are shift intervals at {it:level()}: the estimate minus the
+continuous-treatment plot cells. The subgroup equality tests and contrasts test the sharp null of no effect at any horizon, not equality of effects. P-values are two-sided equal-tailed, using the add-one form for sampled draws. Intervals are shift intervals at {it:level()}: the estimate minus the
 equal-tailed quantiles of the permutation distribution. By default the run and the replications are in fast mode, without analytic standard errors, so the {it:se_analytic} column is blank
 and {it:e(V)}, {it:e(b_es_*)} and {it:e(V_es_*)} are not posted; {it:permanalyticse} restores them. Quantities with no permutation distribution are left blank rather than filled
 analytically: the {it:gteffects} cells, whose keys are the onsets the replications reassign, and the continuous-treatment plot cells of the {it:baseTreated}, {it:byTreated} and {it:byTtre}
@@ -487,9 +487,9 @@ footer; a family whose step-down cannot be formed is silently not posted. {p_end
 observed estimates; one column per coefficient of {it:e(b)}, the replication standard errors under {it:permtstat}, and one {it:onset_clustervalue} column per cluster holding its onset in
 each replication. If the file cannot be written the run still completes, with a caution, and the return code is posted in {it:e(perm_save_rc)}. {p_end}
 
-{phang}{opt permonset:cohorts}: Assert that {it:i} is the treatment-onset grouping, one level of {it:i} per distinct onset with the never-treated, including onsets after the last period,
-a single level, and on that assertion accept
-a {it:cluster()} finer than {it:i}; each replication then rebuilds {it:i} from the onsets it drew. The assertion is checked and the run stops if it fails; {it:safety(off)} does not lift the
+{phang}{opt permonset:cohorts}: Assert that {it:i} is the treatment-onset grouping, one level of {it:i} per distinct onset with the never-treated a single level, and on that assertion accept
+a {it:cluster()} finer than {it:i}; each replication then rebuilds {it:i} from the onsets it drew. Onsets after the last period belong to the never-treated level under a {it:cluster()} finer
+than {it:i}, and to a level of their own at {it:cluster()} equal to {it:i}, where nothing is rebuilt. The assertion is checked and the run stops if it fails; {it:safety(off)} does not lift the
 check. Compatible with {it:permstrata()} and {it:permute(probabilities)}, not with {it:subgroups()}. {p_end}
 
 {pstd} {ul: Discussion of Permutation Intervals and Pre-Treatment Tests:}

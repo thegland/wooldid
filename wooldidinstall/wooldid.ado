@@ -6468,10 +6468,11 @@ version 16.0
 
   * the design onset. The worker makes an onset after the last period, plus
   * oostreatedcontrols() and net of anticipation(), never-treated for the estimation, and the
-  * design does the same: every check below, the ever-treated count, the freedom check and the
-  * permprobs() level set read `wdpons', and wooldid_permrun builds its cluster map by the same
-  * rule. The value kept is the onset as given, not shifted, because each replication hands it
-  * to the worker, which applies anticipation() itself. The last period is max(t) over the
+  * design does the same: every check below (the permonsetcohorts check only under a cluster()
+  * finer than i), the ever-treated count, the freedom check and the permprobs() level set read
+  * `wdpons', and wooldid_permrun builds its cluster map by the same rule. The value kept is the
+  * onset as given, not shifted, because each replication hands it to the worker, which applies
+  * anticipation() itself. The last period is max(t) over the
   * design sample, which contains the estimation sample, so the design never recodes an onset
   * that the estimation keeps in the window. The extended-missing screen above reads the raw
   * variable because this rule would fold .a into . The storage type is the timing variable's
@@ -6543,15 +6544,18 @@ version 16.0
   * Both directions are checked on the design sample: onset constant within i (with treated and
   * never-treated rows never mixed, exactly as for clusters), and i constant within onset level
   * (never-treated, i.e. plain missing, being one level - so an i that splits the never-treated
-  * by region fails here, and must). The onset is the design onset, the one the replications
-  * draw and the rebuild keys on, so a unit first treated after the last period belongs to the
-  * never-treated level of i
+  * by region fails here, and must). Under a cluster() finer than i the onset checked is the
+  * design onset, the one the replications draw and the rebuild keys on, so a unit first treated
+  * after the last period belongs to the never-treated level of i. At cluster() = i nothing is
+  * rebuilt (wooldid_permrun's gate) and the option changes no number, so the check reads the
+  * onset as given there, and such a unit is a level of i of its own, as any other onset is
   if "`onc'" != "" {
+    local wdponcv = cond("`clus'" == "`ivar'", "`ttrevar'", "`wdpons'")
     tempvar wdpimn wdpimx wdpitr wdpinv
-    qui gegen double `wdpimn' = min(`wdpons') if `insmp', by(`ivar')
-    qui gegen double `wdpimx' = max(`wdpons') if `insmp', by(`ivar')
-    qui gegen double `wdpitr' = total(!missing(`wdpons')) if `insmp', by(`ivar')
-    qui gegen double `wdpinv' = total(missing(`wdpons')) if `insmp', by(`ivar')
+    qui gegen double `wdpimn' = min(`wdponcv') if `insmp', by(`ivar')
+    qui gegen double `wdpimx' = max(`wdponcv') if `insmp', by(`ivar')
+    qui gegen double `wdpitr' = total(!missing(`wdponcv')) if `insmp', by(`ivar')
+    qui gegen double `wdpinv' = total(missing(`wdponcv')) if `insmp', by(`ivar')
     qui count if `insmp' & ((`wdpitr' > 0 & `wdpinv' > 0) | (`wdpitr' > 0 & `wdpimn' != `wdpimx'))
     if r(N) > 0 {
       * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
@@ -6570,8 +6574,8 @@ version 16.0
     qui drop `wdpimn' `wdpimx'
     * gegen's by() puts the plain-missing onsets in their own group, so this direction also
     * requires every never-treated row to sit in ONE level of i
-    qui gegen double `wdpimn' = min(`ivar') if `insmp', by(`wdpons')
-    qui gegen double `wdpimx' = max(`ivar') if `insmp', by(`wdpons')
+    qui gegen double `wdpimn' = min(`ivar') if `insmp', by(`wdponcv')
+    qui gegen double `wdpimx' = max(`ivar') if `insmp', by(`wdponcv')
     qui count if `insmp' & `wdpimn' != `wdpimx'
     if r(N) > 0 {
       dis as error "Error: permonsetcohorts requires that `ivar' represent treatment-onset groups, but this does not appear to be the case. "
@@ -12609,17 +12613,31 @@ version 16.0
       dis as result " "
       * the equality lines gate on the NUMERIC value, as the adversarial lines do: a test
       * withheld by wooldid_sgdeg, wooldid_bootjnt or wooldid_permjnt is posted as missing, and
-      * the string of a missing scalar is "." (non-empty), which printed a bare dot
+      * the string of a missing scalar is "." (non-empty), which printed a bare dot. Under
+      * permute() the label names the sharp null the permutation statistic tests, as the
+      * adversarial lines do; the analytic and bootstrap labels are the plain ones
       foreach item in `estimandlist' {
-        if e(joint_`item'_allsgssame) < . dis as result  "p-value for joint test that all SGs have the same `item': " %-6.4f e(joint_`item'_allsgssame)
-        if e(joint_pre_`item'_allsgssame) < . dis as result  "p-value for joint test that all SGs have the same pre-treatment `item': " %-6.4f e(joint_pre_`item'_allsgssame)
+        if e(joint_`item'_allsgssame) < . {
+          if "`e(perm_method)'" == "" dis as result  "p-value for joint test that all SGs have the same `item': " %-6.4f e(joint_`item'_allsgssame)
+          else dis as result  "permutation p-value (sharp null of no effect at any horizon) for joint test that all SGs have the same `item': " %-6.4f e(joint_`item'_allsgssame)
+        }
+        if e(joint_pre_`item'_allsgssame) < . {
+          if "`e(perm_method)'" == "" dis as result  "p-value for joint test that all SGs have the same pre-treatment `item': " %-6.4f e(joint_pre_`item'_allsgssame)
+          else dis as result  "permutation p-value (sharp null of no effect at any horizon) for joint test that all SGs have the same pre-treatment `item': " %-6.4f e(joint_pre_`item'_allsgssame)
+        }
       }
       dis as result  " "
       if "`contreat'" != "" {
         foreach item in `estimandlist' {
           local itemtext = subinstr("`item'","att","ame",.)
-          if e(joint_`itemtext'_allsgssame) < . dis as result  "p-value for joint test that all SGs have the same `itemtext': " %-6.4f e(joint_`itemtext'_allsgssame)
-          if e(joint_pre_`itemtext'_allsgssame) < . dis as result  "p-value for joint test that all SGs have the same pre-treatment `itemtext': " %-6.4f e(joint_pre_`itemtext'_allsgssame)
+          if e(joint_`itemtext'_allsgssame) < . {
+            if "`e(perm_method)'" == "" dis as result  "p-value for joint test that all SGs have the same `itemtext': " %-6.4f e(joint_`itemtext'_allsgssame)
+            else dis as result  "permutation p-value (sharp null of no effect at any horizon) for joint test that all SGs have the same `itemtext': " %-6.4f e(joint_`itemtext'_allsgssame)
+          }
+          if e(joint_pre_`itemtext'_allsgssame) < . {
+            if "`e(perm_method)'" == "" dis as result  "p-value for joint test that all SGs have the same pre-treatment `itemtext': " %-6.4f e(joint_pre_`itemtext'_allsgssame)
+            else dis as result  "permutation p-value (sharp null of no effect at any horizon) for joint test that all SGs have the same pre-treatment `itemtext': " %-6.4f e(joint_pre_`itemtext'_allsgssame)
+          }
         }
         dis as result  " "
       }
@@ -12728,7 +12746,7 @@ version 16.0
         }
         dis as result "    `wdpsdl'"
       }
-      if wordcount("`e(wdid_sglist)'") > 1 dis as result "  Pairwise subgroup contrasts are permuted as coefficient differences (in both modes); their kernel is e(perm_pwsgs_kernel)."
+      if wordcount("`e(wdid_sglist)'") > 1 dis as result "  Pairwise subgroup contrasts are permuted as coefficient differences (in both modes) and, like the equality tests, test the sharp null of no effect at any horizon, so a common nonzero effect alone can reject them; their kernel is e(perm_pwsgs_kernel)."
   * the reassigned onsets place actual post-treatment outcomes into the draws' pre-treatment
   * horizons, so the null distribution widens with the true effect while the observed
   * pre-period statistics do not - the null SD can grow severalfold, and with a single onset

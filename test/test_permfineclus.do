@@ -7,7 +7,8 @@
 * clustering STILL stands without the option, the declared-no-op property at cluster() = i
 * (bitwise), the column-set/denominator integrity of the accumulator, and that the exact
 * test's observed-is-a-member property survives the rebuild path, and that the assertion reads
-* an onset after the last period as never-treated (Q7). What is NOT here, said so
+* an onset after the last period as never-treated under a finer cluster() (Q7) and as given at
+* cluster() = i (Q8). What is NOT here, said so
 * the file does not imply coverage it has not got: the check that the onset-to-cohort map is
 * right. That one lives in wooldid_permrun (rep 0's rebuilt i must equal the observed i) and
 * is measured to fire; Q5 below says why nothing in this file can do it instead.
@@ -285,8 +286,9 @@ if _rc == 0 {
 
 *=============================================================== Q7 onsets after the last period
 * The permutation design reads an onset after the last period as never-treated
-* (test_permute.do P13), and the assertion is checked on that design onset, so i must pool
-* the late adopters with the never-treated. Fixture: 16 units x t = 1..10, units 1-4 first
+* (test_permute.do P13), and under a cluster() finer than i, where the rebuild keys on that
+* design onset, the assertion is checked on it, so i must pool the late adopters with the
+* never-treated. Fixture: 16 units x t = 1..10, units 1-4 first
 * treated at 6, 5-8 at 12, 9-16 never treated; cluster() is the unit, finer than i.
 *   icoha = 1 for onset 6, 2 for the late adopters and the never-treated together
 *   icohb = 1 for onset 6, 2 for the late adopters, 3 for the never-treated
@@ -317,6 +319,53 @@ if `rc7' == 0 xok "Q7a2 rebuild engaged over the 1,820 design assignments" `=(e(
 mkfclate
 cap noi qui wooldid y icohb t ttre, att cluster(i) permute(shuffle) permreps(20) rseed(71) dots(0) permonsetcohorts
 xrc "Q7b late adopters in their own level of i" 459 `=_rc'
+
+*=============================================================== Q8 onsets after the last period at cluster() = i
+* At cluster() = i nothing is rebuilt and the option changes no number, so the assertion is
+* checked on the onsets as given there: a late adopter is a level of its own, as at any other
+* onset. Q7's fixture with cluster() at i, so each cluster is one cohort.
+tempname B8a P8a D8a B8b P8b D8b
+* Q8a: icohb gives the late adopters their own level of i: it runs, nothing is rebuilt, and
+* the run is bitwise the run without the option
+mkfclate
+cap noi qui wooldid y icohb t ttre, att cluster(icohb) permute(shuffle) permreps(20) rseed(71) dots(0)
+local rc8a = _rc
+xrc "Q8a setup (option absent)" 0 `rc8a'
+if `rc8a' == 0 {
+  matrix `B8a' = e(b)
+  matrix `P8a' = e(perm_p)
+  matrix `D8a' = e(permdist_b)
+}
+mkfclate
+cap noi qui wooldid y icohb t ttre, att cluster(icohb) permute(shuffle) permreps(20) rseed(71) dots(0) permonsetcohorts
+local rc8b = _rc
+xrc "Q8a late adopters in their own level of i at cluster() = i" 0 `rc8b'
+if `rc8a' == 0 & `rc8b' == 0 {
+  matrix `B8b' = e(b)
+  matrix `P8b' = e(perm_p)
+  matrix `D8b' = e(permdist_b)
+  local bad 0
+  foreach m in B P D {
+    mata: st_local("eq", strofreal(st_matrix("``m'8a'") == st_matrix("``m'8b'")))
+    if "`eq'" != "1" local bad 1
+  }
+  xok "Q8a2 nothing rebuilt, and option present == option absent, bitwise" `=(`bad' == 0 & e(perm_irebuilt) == 0)'
+}
+
+* Q8b: icoha pools the late adopters with the never-treated in one level of i, which the onsets
+* as given split in two: refused at cluster() = i by the assertion's check, while the same
+* run without the option runs
+mkfclate
+cap noi qui wooldid y icoha t ttre, att cluster(icoha) permute(shuffle) permreps(20) rseed(71) dots(0)
+xrc "Q8b setup (option absent)" 0 `=_rc'
+mkfclate
+qui log using pfc_q8b.txt, text replace name(q8)
+cap noi wooldid y icoha t ttre, att cluster(icoha) permute(shuffle) permreps(20) rseed(71) dots(0) permonsetcohorts
+local rc8 = _rc
+qui log close q8
+xrc "Q8b late adopters pooled with the never-treated in i at cluster() = i" 459 `rc8'
+xok "Q8b2 the refusal is the assertion's" `=(strpos(fileread("pfc_q8b.txt"), "Error: permonsetcohorts requires that icoha represent treatment-onset groups") > 0)'
+cap erase pfc_q8b.txt
 
 if $pf == 0 dis as result "PERMFINECLUS_ALL_PASS"
 else dis as error "PERMFINECLUS_FAILS=$pf"
