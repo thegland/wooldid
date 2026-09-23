@@ -586,17 +586,20 @@ cap est drop _all
 
 
 * G20 a failure after the replication loop is an error of the call (review 2026-09-05):
-* the event-study plot save is refused without replace (602), the rc propagates (it was
-* swallowed: rc 0 with a stale saved file), the caller's frame is restored, and the
-* replay branch refuses until a wooldid call completes
+* the event-study plot save fails, the rc propagates (it was swallowed: rc 0 with a stale
+* saved file), the caller's frame is restored, and the replay branch refuses until a
+* wooldid call completes. The failure is forced with a read-only .gph under replace
+* (r(608)): a file that merely exists without replace is refused before the loop since
+* 2026-09-23 (G41), so it no longer reaches the plot stage
 use `panel', clear
 foreach f in boot_gates_g20_ES_att.gph boot_gates_g20_ES.dta {
   cap erase "`f'"
 }
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20)
 chk 20 0 _rc
-cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20)
-chk 20b 602 _rc
+! chmod 444 boot_gates_g20_ES_att.gph
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20) replace
+chk 20b 608 _rc
 qui frame
 if "`r(currentframe)'" != "default" {
   di as error "G20c FAIL: current frame is `r(currentframe)' after the plot failure"
@@ -605,6 +608,7 @@ if "`r(currentframe)'" != "default" {
 }
 cap qui wooldid
 chk 20d 198 _rc
+! chmod 644 boot_gates_g20_ES_att.gph
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20) replace
 chk 20e 0 _rc
 cap qui wooldid
@@ -1360,6 +1364,92 @@ if `g38n' != 8 | "`g38seed'" != "7" {
 ! chmod 644 boot_gates_g38.dta
 cap erase boot_gates_g38.dta
 cap erase boot_gates_g38.txt
+
+* ---- G41 saveplots-no-precheck (U12 plots review, 2026-09-23): under bootstrap() and permute()
+* the plots are drawn after the replication loop, from the rewired e(), so a saveplots() file
+* that already existed without replace was found only once every replication had run - r(602)
+* after the loop, the run lost - where bootsave() and permsave() refuse a clash before it. It is
+* refused before the loop now (wooldid_plotpre). A seed run lists the files a call writes; then,
+* for each one alone, a stand-in of that name must make the rerun without replace fail r(602)
+* with no replication run (e(boot_method)/e(perm_method) empty: e() holds the observed results)
+* and nothing else written, and the observed results must replay, as after a failed loop. With
+* the files gone the same call without replace must still run and write the same files (a check
+* that refused it would be a regression). The three calls cover every naming rule the check
+* mirrors: the cfx .gph files and _cfx.dta, the event-study families and _ES.dta, and the
+* subgroup _sg<case>.gph and _ES_<sgvar>_<case>.dta twins
+cap prog drop g41leg
+prog def g41leg
+  args lab stem dataset key
+  local cmd $G41CMD
+  local W : dir . files "`stem'_*"
+  local W : subinstr local W `"""' "", all
+  foreach f of local W {
+    cap erase "`f'"
+  }
+  use "`dataset'", clear
+  cap qui wooldid `cmd' saveplots(`stem') replace
+  local rc = _rc
+  local W : dir . files "`stem'_*"
+  local W : subinstr local W `"""' "", all
+  local W : list sort W
+  if `rc' != 0 | "`W'" == "" {
+    di as error "G41`lab' FAIL: the seed run failed (rc `rc') or wrote no `stem'_* file"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+    exit
+  }
+  foreach f of local W {
+    foreach g of local W {
+      cap erase "`g'"
+    }
+    * a stand-in for the stale file: the check is on existence
+    tempname fh
+    file open `fh' using "`f'", write replace
+    file close `fh'
+    use "`dataset'", clear
+    cap qui wooldid `cmd' saveplots(`stem')
+    local rc = _rc
+    local eng `e(`key')'
+    local left : dir . files "`stem'_*"
+    local left : subinstr local left `"""' "", all
+    if `rc' != 602 | "`eng'" != "" | "`left'" != "`f'" {
+      di as error "G41`lab' FAIL: with `f' present, rc `rc' (want 602), e(`key')=[`eng'] (want empty: refused before the loop), `stem'_* files [`left'] (want only `f')"
+      global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+    }
+    cap qui wooldid
+    if _rc != 0 {
+      di as error "G41`lab' FAIL: the observed results do not replay after the refusal of `f'"
+      global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+    }
+  }
+  foreach g of local W {
+    cap erase "`g'"
+  }
+  use "`dataset'", clear
+  cap qui wooldid `cmd' saveplots(`stem')
+  local rc = _rc
+  local eng `e(`key')'
+  local W2 : dir . files "`stem'_*"
+  local W2 : subinstr local W2 `"""' "", all
+  local W2 : list sort W2
+  if `rc' != 0 | "`eng'" == "" | "`W2'" != "`W'" {
+    di as error "G41`lab' FAIL: the clean run without replace: rc `rc' (want 0), e(`key')=[`eng'], files [`W2'] (want [`W'])"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+  foreach g of local W2 {
+    cap erase "`g'"
+  }
+end
+global G41CMD y i t ttre, att cluster(i) contreat(intensity) contreatcontrols(basic) lattice(all 3) esprelength(1) espostlength(1) makecfxplots makeplots bootstrap(standard) reps(10) rseed(7) dots(0)
+g41leg a boot_gates_g41a "data/dta_cont" boot_method
+global G41CMD y i t ttre, att cluster(i) contreat(intensity) contreatcontrols(basic) lattice(all 3) esprelength(1) espostlength(1) makecfxplots makeplots permute(shuffle) permreps(20) rseed(7) dots(0)
+g41leg b boot_gates_g41b "data/dta_cont" perm_method
+use `panel', clear
+gen sgv = mod(unit, 2)
+tempfile panelsg
+save `panelsg'
+global G41CMD y unit t ttre, att att_it cluster(unit) subgroups(sgv) esprelength(1) espostlength(1) makeplots bootstrap(standard) reps(10) rseed(7) dots(0)
+g41leg c boot_gates_g41c "`panelsg'" boot_method
+global G41CMD
 
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

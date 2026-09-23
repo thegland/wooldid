@@ -30,7 +30,9 @@ version 16.0
     * stage or anywhere later - and cleared there on any successful completion.
     * (one deliberate exception: a post-estimation permutation-phase failure restores
     * the still-valid observed results and clears the marker on its way out, so those
-    * results remain replayable.)
+    * results remain replayable. a saveplots() file refused before either engine's
+    * replication loop, by wooldid_plotpre, is the same case: the marker was cleared when
+    * the worker succeeded and is left clear.)
     * while it is set, the stored e() results predate the user's latest (failed)
     * attempt, so redisplaying them silently would be misleading. exiting here
     * leaves the marker set: replay stays refused until a wooldid call completes
@@ -124,6 +126,10 @@ version 16.0
   * the observed run is a fast (no-SE) run unless permtstat or permanalyticse
   if "`wdp_on'" == "1" {
     qui wooldid_validate `0'
+    * saveplots(): every file the deferred plot calls below will write is checked here, before
+    * the replication loop, as permsave() is (wooldid_plotpre). A refusal leaves the replay
+    * marker clear, as a failed loop does below, so the observed results stay replayable
+    if "`saveplots'" != "" & "`replace'" == "" wooldid_plotpre , stem(`saveplots') cfx(`makecfxplots') es(`makeplots')
     * permtci implies permtstat (resolved in validate as well; kept for the rep string)
     if "`permtci'" != "" & "`permtstat'" == "" local permtstat permtstat
     * rep option string: keep everything that shapes the point estimates - including
@@ -290,7 +296,9 @@ version 16.0
     * event-study plots, deferred from the worker so they read the rewired tables: their
     * bands are the permutation shift intervals the table prints. A plot failure is an
     * error of this call (its rc propagates, the caller's frame is restored and the
-    * replay marker is set), as it is on a plain run.
+    * replay marker is set), as it is on a plain run. A file that already exists without
+    * replace was refused before the loop (wooldid_plotpre, at the top of this block), so
+    * what fails here is a write that fails for another reason.
     * The worker draws the event-study plot only when horizons exist (esprelength /
     * espostlength > 0 after the panel clips them), and this deferred call must apply the
     * same guard, else wooldid_esplots runs on an empty frame, dies r(2000) and loses the
@@ -328,6 +336,9 @@ version 16.0
   * display prints the rewired tables plus part(boot)
   if "`wdb_on'" == "1" {
     qui wooldid_validate `0'
+    * saveplots(): the deferred plot files are checked before the loop, as bootsave() is; see
+    * the permutation block above
+    if "`saveplots'" != "" & "`replace'" == "" wooldid_plotpre , stem(`saveplots') cfx(`makecfxplots') es(`makeplots')
     * rep option string: keep everything that shapes point estimates - INCLUDING
     * subgroups (their estimands get bootstrapped) and contreatwithin (R2 finding 5:
     * omitting it silently runs the non-within model in reps because validate's
@@ -540,7 +551,8 @@ version 16.0
     wooldid_display , part(2)
     * event-study plots, deferred from the worker so they read the rewired tables. the
     * bands are therefore whichever family bootdisplay() selected - percentile, BC or wald
-    * - and match the printed table exactly. a plot failure is an error of this call.
+    * - and match the printed table exactly. a plot failure is an error of this call (a file
+    * that already exists without replace was refused before the loop, by wooldid_plotpre).
     * the ES_ guard mirrors the worker's: the plot is drawn only when horizons exist
     * (esprelength/espostlength > 0 after the panel clips them), else wooldid_esplots runs
     * on an empty frame, dies r(2000) and loses the whole run. the horizons are visible
@@ -14436,6 +14448,73 @@ version 16.0
 
     frame change `defaultframe'
     frame drop `__wooldidframe'
+end
+
+* saveplots() files checked before the replication loop, for the two engine branches of the
+* shell. Under bootstrap() and permute() the plots are drawn only after the loop, from the
+* rewired e(), so a file they cannot write used to surface only once every replication had run,
+* and the run was lost to a name clash that permsave() and bootsave() refuse up front. Called on
+* the observed results, only when saveplots() is given without replace. It lists exactly the
+* files the deferred wooldid_cfxplots and wooldid_esplots calls will write, by the rules those
+* two programs name them with (keep the three in step), and runs Stata's own confirm new file on
+* each, so the refusal is the same r(602) "file ... already exists" the late graph save or save
+* printed, only before the replications. Listing the files rather than refusing any <stem>_*
+* file keeps an unrelated file that merely shares the prefix from refusing a run that would
+* succeed. The rewiring changes the cells of these matrices, not their rows, row equations or
+* relyr column, and replaces a cfx matrix only where one exists, so the list read here from the
+* observed results is the list written after the loop. cfx() and es() carry the shell's
+* makecfxplots and makeplots locals
+cap prog drop wooldid_plotpre
+prog def wooldid_plotpre
+version 16.0
+  syntax , stem(name) [cfx(string) es(string)]
+  * wooldid_cfxplots: <stem>_<nm>.gph for each e(wdid_cfxmats) matrix that is posted, then
+  * <stem>_cfx.dta
+  if "`cfx'" != "" & "`e(wdid_cfxmats)'" != "" {
+    foreach nm in `e(wdid_cfxmats)' {
+      cap confirm matrix e(`nm')
+      if _rc == 0 confirm new file "`stem'_`nm'.gph"
+    }
+    confirm new file "`stem'_cfx.dta"
+  }
+  * wooldid_esplots, under the shell's own guard (horizons exist): <stem>_<family>.gph for each
+  * event-study family, then <stem>_ES.dta, and per subgroup case the _sg<case>.gph and
+  * _ES_<sgvar>_<case>.dta twins. A family is a row equation of the results matrix on a row
+  * whose relyr is not ., which is what esplots' drop if relyr == . leaves it to draw. A matrix
+  * or relyr column that is not there is skipped: esplots then fails after the loop as before
+  if "`es'" == "makeplots" & strpos("`: colfullnames e(b)'", "ES_") > 0 {
+    local sgs
+    if "`e(wdid_sgvar)'" != "" & "`e(wdid_suppresssgpe)'" == "" local sgs `e(wdid_sglist)'
+    tempname M
+    forval k = 0/`: word count `sgs'' {
+      if `k' == 0 {
+        local mat wdidmainresults
+        local gsfx
+        local dta `stem'_ES.dta
+      }
+      else {
+        local sg : word `k' of `sgs'
+        local mat wdidsgresults_`sg'
+        local gsfx _sg`sg'
+        local dta `stem'_ES_`e(wdid_sgvar)'_`sg'.dta
+      }
+      cap confirm matrix e(`mat')
+      if _rc != 0 continue
+      matrix `M' = e(`mat')
+      local c = colnumb(`M', "relyr")
+      if `c' == . continue
+      local eqs : roweq `M'
+      local fams
+      forval r = 1/`=rowsof(`M')' {
+        if `M'[`r', `c'] != . local fams `fams' `: word `r' of `eqs''
+      }
+      local fams : list uniq fams
+      foreach f of local fams {
+        confirm new file "`stem'_`f'`gsfx'.gph"
+      }
+      confirm new file "`dta'"
+    }
+  }
 end
 
 
