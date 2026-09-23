@@ -30,11 +30,12 @@
 *    poisson + gteffects (~19s full leg) instead.
 *
 * Refusal contract (also preregistered): fastnose x each of {unconditionalse,
-* adversarial, jointtests, pretrendpower(80), impvalues, permtstat, permtci} must be
-* refused loudly. Every rc was pinned empirically at 198 on this build and is
+* adversarial, jointtests, pretrendpower(80), permtstat, permtci, permanalyticse} must be
+* refused loudly. impvalues left this list on 2026-09-21 (author's ruling): fastnose is
+* cleared there with a caution, and the leg asserts that instead. Every rc was pinned empirically at 198 on this build and is
 * asserted exactly below. Each base call is valid without fastnose, so the fastnose
 * gate is the screen that fires (probe-verified message texts):
-*  - unconditionalse/impvalues/adversarial/jointtests/pretrendpower: the F9 gates in
+*  - unconditionalse/adversarial/jointtests/pretrendpower: the F9 gates in
 *    wooldid.ado (~line 4225 block), each "Error: fastnose is not compatible with ...".
 *    pretrendpower() itself requires esfixedbaseperiod (wooldid_ptpcheck screen), so
 *    that call carries esfixedbaseperiod — without it the ptpcheck screen fires first
@@ -385,9 +386,38 @@ use `"`DATA'/dta_binary.dta"', clear
 cap noi wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(3) esfixedbaseperiod pretrendpower(80) fastnose
 fgref pretrendpower `=_rc'
 
+* impvalues: not a refusal since 2026-09-21 (the author's ruling). fastnose with impvalues
+* prints a caution and is cleared, so the run must complete and post exactly what the same
+* call without fastnose posts (impvalues already skips the margins variance fastnose would)
 use `"`DATA'/dta_binary.dta"', clear
+qui log using fgrid_imp.txt, text replace name(fgimp)
 cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) impvalues fastnose
-fgref impvalues `=_rc'
+local fgirc = _rc
+qui log close fgimp
+local fgicau = strpos(fileread("fgrid_imp.txt"), "Caution: fastnose is unnecessary with impvalues") > 0
+cap erase fgrid_imp.txt
+tempname FGIB FGIR
+if `fgirc' == 0 {
+  matrix `FGIB' = e(b)
+  matrix `FGIR' = e(wdidmainresults)
+}
+use `"`DATA'/dta_binary.dta"', clear
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) impvalues
+local fgirc0 = _rc
+local fgibad 1
+if `fgirc' == 0 & `fgirc0' == 0 {
+  local fgibad = (mreldif(`FGIB', e(b)) != 0) | (mreldif(`FGIR', e(wdidmainresults)) != 0)
+}
+if `fgirc' != 0 | `fgicau' != 1 | `fgibad' {
+  dis as error "FGRID caution_impvalues FAIL: rc=`fgirc' caution=`fgicau' differs_from_plain_impvalues=`fgibad' (want 0 1 0)"
+  global pf = $pf + 1
+}
+else dis "FGRID caution_impvalues ok: rc=0, caution printed, e() identical to plain impvalues"
+
+* permanalyticse: refused with fastnose since 2026-09-23, beside permtstat/permtci
+use `"`DATA'/dta_binary.dta"', clear
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permanalyticse fastnose
+fgref permanalyticse `=_rc'
 
 * permtstat/permtci: refusal fires at parse time in wooldid_permctl, before any
 * permute mechanics/RNG, with the fastnose-specific message (see header notes)
