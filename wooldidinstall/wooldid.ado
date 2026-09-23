@@ -3348,6 +3348,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * is followed by est restore, and the pre-period pass is capture-wrapped because
     * pwcompare hard-errors (r111) where contrast(overjoint) merely no-ops when only one
     * subgroup level is realized in the pre-period subpopulation
+    * wdsglev collects, under suppresssgprimaryeffects only, the subgroup level rows of these
+    * passes and of the continuous-treatment passes below
+    tempname wdsglev
     if wordcount("`sglist'") > 1 {
       * F9: under fast mode the pairwise table keeps its point estimates ("." SE cells)
       * but no joint test runs: the pass is not posted (a chain test after a nose post
@@ -3383,6 +3386,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             matrix rownames `f9tab' = b se t pvalue ll ul
           }
           matrix `___`item'_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
+        }
+        * under suppresssgprimaryeffects no level table is built, and wooldid_sgdeg reads these
+        * level rows instead: the same slice, stacked under this pass's e(pwsgs) equation and
+        * posted hidden as e(wdid_sglev)
+        if "`suppresssgprimaryeffects'" != "" {
+          matrix `f9tab' = r(table)
+          if rowsof(`f9tab') < 6 {
+            matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
+            matrix rownames `f9tab' = b se t pvalue ll ul
+          }
+          matrix `f9tab' = `f9tab'[1..6,floor(`=colsof(r(b))'/2)+1..`=colsof(r(b))']'
+          matrix rownames `f9tab' = `item':
+          matrix `wdsglev' = nullmat(`wdsglev') \ `f9tab'
         }
         if "`sgpost'" != "" {
           wooldid_sgchain, half
@@ -3469,6 +3485,18 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 matrix rownames `f9tab' = b se t pvalue ll ul
               }
               matrix `___`item'_pre_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
+            }
+            * the level rows for wooldid_sgdeg under suppresssgprimaryeffects (see the
+            * posttreatment twin)
+            if "`suppresssgprimaryeffects'" != "" {
+              matrix `f9tab' = r(table)
+              if rowsof(`f9tab') < 6 {
+                matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
+                matrix rownames `f9tab' = b se t pvalue ll ul
+              }
+              matrix `f9tab' = `f9tab'[1..6,floor(`=colsof(r(b))'/2)+1..`=colsof(r(b))']'
+              matrix rownames `f9tab' = pre_`item':
+              matrix `wdsglev' = nullmat(`wdsglev') \ `f9tab'
             }
             * the pairwise rows are stacked into e(pwsgs) iff THIS flag is set - not iff
             * the joint p exists - so a chain-test failure after a successful pwcompare
@@ -3790,6 +3818,25 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               }
             }
           }
+          * the level rows for wooldid_sgdeg under suppresssgprimaryeffects (see the binary
+          * twin), all of r(table) as in the level tables, and scrubbed as they are
+          if "`suppresssgprimaryeffects'" != "" {
+            matrix `f9tab' = r(table)
+            if rowsof(`f9tab') < 6 {
+              matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
+              matrix rownames `f9tab' = b se t pvalue ll ul
+            }
+            matrix `f9tab' = `f9tab'[1..6,1..`=colsof(r(b))']'
+            if `amescrub' {
+              forval amer = 1/`=rowsof(`f9tab')' {
+                forval amej = `amescrublo'/6 {
+                  matrix `f9tab'[`amer', `amej'] = .
+                }
+              }
+            }
+            matrix rownames `f9tab' = `=subinstr("`item'","att","ame",.)':
+            matrix `wdsglev' = nullmat(`wdsglev') \ `f9tab'
+          }
           if "`sgpost'" != "" {
             wooldid_sgchain
             * rank guard: see the binary twin
@@ -3833,6 +3880,25 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                     matrix `prepwsgs_C`item''[`amer', `amej'] = .
                   }
                 }
+              }
+              * the level rows for wooldid_sgdeg under suppresssgprimaryeffects (see the
+              * posttreatment twin)
+              if "`suppresssgprimaryeffects'" != "" {
+                matrix `f9tab' = r(table)
+                if rowsof(`f9tab') < 6 {
+                  matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
+                  matrix rownames `f9tab' = b se t pvalue ll ul
+                }
+                matrix `f9tab' = `f9tab'[1..6,1..`=colsof(r(b))']'
+                if `amescrub' {
+                  forval amer = 1/`=rowsof(`f9tab')' {
+                    forval amej = `amescrublo'/6 {
+                      matrix `f9tab'[`amer', `amej'] = .
+                    }
+                  }
+                }
+                matrix rownames `f9tab' = pre_`=subinstr("`item'","att","ame",.)':
+                matrix `wdsglev' = nullmat(`wdsglev') \ `f9tab'
               }
               * see the binary twin: stacking is gated on this flag, not the joint p
               local prepwok_C`item' 1
@@ -4774,6 +4840,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     foreach sgcase in `sglist' {
       ereturn matrix wdidsgresults_`sgcase'  = `wdid_sg`sgcase''
     }
+  }
+  * in their place under suppresssgprimaryeffects, the subgroup level rows of the pairwise
+  * passes, which wooldid_sgdeg reads. hidden and separately named: display, esplots and the
+  * replication shells key on e(wdidsgresults_*) existing
+  if "`subgroups'" != "" & "`suppresssgprimaryeffects'" != "" & wordcount("`sglist'") > 1 {
+    cap confirm matrix `wdsglev'
+    if _rc == 0 ereturn hidden matrix wdid_sglev = `wdsglev'
   }
 
   ereturn matrix wdidmainresults = `wdidpooled'
@@ -11917,15 +11990,42 @@ version 16.0
   tempname pw
   matrix `pw' = e(pwsgs)
   * the per-subgroup level tables, read once. their rows are "main:att", "pretreatment:ame",
-  * ... - the same (eq, item) keys wooldid_bootjnt's positional walk builds. ABSENT under
-  * suppresssgprimaryeffects, where the level margins are never computed at all: every row is
-  * then skipped and the screen is inert (documented in the help)
+  * ... - the same (eq, item) keys wooldid_bootjnt's positional walk builds.
   foreach sg of local sgl {
     cap confirm matrix e(wdidsgresults_`sg')
     if _rc != 0 continue
     tempname wsg`sg'
     matrix `wsg`sg'' = e(wdidsgresults_`sg')
     local wsgn`sg' : rowfullnames `wsg`sg''
+  }
+  * suppresssgprimaryeffects posts no level tables. The pairwise passes return the level
+  * margins beside the contrasts, and the worker then posts those rows as the hidden
+  * e(wdid_sglev), named by e(pwsgs) equation and margins level (pre_att:2.sg), with the
+  * continuous-treatment rows scrubbed as the level tables are. Each subgroup's rows are rebuilt
+  * here under the (eq, item) keys, the subgroup read off the level name rather than taken by
+  * position (a pre-period pass can realize only some subgroups), so the lookup below reads
+  * either source alike
+  cap confirm matrix e(wdid_sglev)
+  if _rc == 0 {
+    tempname lv lvr
+    matrix `lv' = e(wdid_sglev)
+    local lvn : rowfullnames `lv'
+    foreach sg of local sgl {
+      if "`wsgn`sg''" != "" continue
+      local kk 0
+      foreach wn of local lvn {
+        local ++kk
+        if !regexm("`wn'", "^([^:]+):([0-9]+)(bn?)?[.]") continue
+        if regexs(2) != "`sg'" continue
+        local weq = regexs(1)
+        local wit = subinstr("`weq'", "pre_", "", 1)
+        matrix `lvr' = `lv'[`kk', 1..2]
+        matrix rownames `lvr' = `=cond("`wit'" != "`weq'", "pretreatment", "main")':`wit'
+        if "`wsgn`sg''" == "" tempname wsg`sg'
+        matrix `wsg`sg'' = nullmat(`wsg`sg'') \ `lvr'
+        local wsgn`sg' : rowfullnames `wsg`sg''
+      }
+    }
   }
   local wdsgdn 0
   local wdsgdrows

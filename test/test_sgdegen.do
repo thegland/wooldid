@@ -17,6 +17,14 @@
 * G6 replay reproduces the caution from e()
 * G7 display-eqtest-bare-dot: a withheld equality test prints nothing, a reported one prints
 *    its value (the string gate printed a bare dot for a scalar posted as missing)
+* G8 under suppresssgprimaryeffects the screen fires exactly as in G1: it reads the subgroup
+*    level rows of the pairwise passes, posted hidden as e(wdid_sglev)
+* G9 the continuous-treatment twin under suppresssgprimaryeffects: the att rows are flagged as
+*    on the unsuppressed run, and the ame rows, whose standard errors the cell-containment
+*    scrub blanks, are skipped rather than counted
+* G10 on a healthy continuous-treatment run under suppresssgprimaryeffects nothing fires, and
+*    e(wdid_sglev) carries the level standard errors the unsuppressed run posts in
+*    e(wdidsgresults_*), for the att and ame rows alike
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -145,6 +153,9 @@ qui log using sgd_g5.txt, text replace name(sd)
 cap noi wooldid y i t ttre, att robust subgroups(sg) contreat(intensity) contreatcontrols(basic) esprelength(2) espostlength(2)
 local rc5 = _rc
 qui log close sd
+* G10 compares its suppressed twin's level rows against these
+cap matrix G5S1 = e(wdidsgresults_1)
+cap matrix G5S2 = e(wdidsgresults_2)
 local a5 = "`e(wdid_sgdegenact)'"
 scanSG sgd_g5.txt "`needle15'"
 local c5 = r(found)
@@ -160,6 +171,107 @@ if `rc5' != 0 | "`a5'" != "" | `c5' != 0 {
 di "G7 display-eqtest-bare-dot: withheld have-the-same lines=`d1' (expect 0) reported att lines=`d3' (expect >= 1)"
 if `d1' != 0 | `d3' < 1 {
   di as error "G7 FAIL: a withheld equality test printed (`d1' line(s)) or the reported one did not (`d3')"
+  local ++fails
+}
+
+* ---- G8 the G1 call under suppresssgprimaryeffects: same flag count, same largest implied
+* correlation, same blanking, same caution on the fit and on the replay
+use data/dta_binary.dta, clear
+qui log using sgd_g8.txt, text replace name(sd)
+cap noi wooldid y i t ttre, att cluster(i) subgroups(sg) esprelength(2) espostlength(2) suppresssgprimaryeffects
+local rc8 = _rc
+cap noi wooldid
+local rc8r = _rc
+qui log close sd
+local n8 = e(wdid_sgdegen)
+local a8 = "`e(wdid_sgdegenact)'"
+local r8 = "`e(wdid_sgdegenr)'"
+local j8 = e(joint_att_allsgssame)
+local jp8 = e(joint_pre_att_allsgssame)
+matrix G8P = e(pwsgs)
+scanSG sgd_g8.txt "`needle15'"
+local c8n = r(hits)
+cap erase sgd_g8.txt
+di "G8 BS-15 suppress: rc=`rc8' flagged=`n8' act=`a8' rho=`r8' (G1 `r1') allsgssame=`j8' pre=`jp8' pw se=" G8P[1,2] "/" G8P[2,2] " b=" G8P[1,1] " caution hits=`c8n' (replay rc `rc8r')"
+if `rc8' != 0 | `rc8r' != 0 | `n8' != 2 | "`a8'" != "blank" | "`r8'" != "`r1'" | `j8' < . | `jp8' < . | G8P[1,1] != G1P[1,1] | G8P[2,1] != G1P[2,1] | G8P[1,2] < . | G8P[1,4] < . | G8P[1,6] < . | G8P[2,2] < . | G8P[2,4] < . | `c8n' < 2 {
+  di as error "G8 FAIL: under suppresssgprimaryeffects the screen did not blank both rows and both equality tests as G1 does"
+  local ++fails
+}
+
+* ---- G9 the continuous-treatment fixture of G5 clustered at i, with and without
+* suppresssgprimaryeffects. Clustering at i fires the cell-containment scrub, which blanks the
+* ame standard errors, level and contrast alike: the screen skips those rows on both runs and
+* flags the att and pre_att rows on both
+use data/dta_cont.dta, clear
+qui gen sg = mod(i, 2) + 1
+cap noi wooldid y i t ttre, att cluster(i) subgroups(sg) contreat(intensity) contreatcontrols(basic) esprelength(2) espostlength(2)
+local rc9u = _rc
+local n9u = e(wdid_sgdegen)
+local r9u = "`e(wdid_sgdegenr)'"
+qui log using sgd_g9.txt, text replace name(sd)
+cap noi wooldid y i t ttre, att cluster(i) subgroups(sg) contreat(intensity) contreatcontrols(basic) esprelength(2) espostlength(2) suppresssgprimaryeffects
+local rc9 = _rc
+qui log close sd
+local n9 = e(wdid_sgdegen)
+local a9 = "`e(wdid_sgdegenact)'"
+local r9 = "`e(wdid_sgdegenr)'"
+local j9 = e(joint_att_allsgssame)
+matrix G9P = e(pwsgs)
+local g9rn : rowfullnames G9P
+scanSG sgd_g9.txt "`needle15'"
+local c9 = r(found)
+cap erase sgd_g9.txt
+di "G9 BS-15 contreat suppress: rc=`rc9' (unsuppressed rc `rc9u' flagged `n9u' rho `r9u') flagged=`n9' act=`a9' rho=`r9' allsgssame=`j9' caution=`c9' rows=`g9rn'"
+if `rc9u' != 0 | `n9u' != 2 | `rc9' != 0 | `n9' != 2 | "`a9'" != "blank" | "`r9'" != "`r9u'" | `j9' < . | `c9' != 1 | G9P[1,2] < . | G9P[2,2] < . | G9P[3,1] >= . {
+  di as error "G9 FAIL: under suppresssgprimaryeffects the continuous-treatment run did not flag exactly the att rows its unsuppressed twin flags"
+  local ++fails
+}
+
+* ---- G10 the healthy G5 fixture under suppresssgprimaryeffects: no flag, and the hidden level
+* rows match the unsuppressed run's level tables. The att rows there come from the same pairwise
+* pass; the ame rows from a separate margins call over the same subpopulation, so they are held
+* to the 1e-10 relative threshold rather than bit for bit
+use data/dta_cont.dta, clear
+qui gen sg = mod(i, 2) + 1
+qui log using sgd_g10.txt, text replace name(sd)
+cap noi wooldid y i t ttre, att robust subgroups(sg) contreat(intensity) contreatcontrols(basic) esprelength(2) espostlength(2) suppresssgprimaryeffects
+local rc10 = _rc
+qui log close sd
+local a10 = "`e(wdid_sgdegenact)'"
+scanSG sgd_g10.txt "`needle15'"
+local c10 = r(found)
+cap erase sgd_g10.txt
+local nlev 0
+local lvmax 0
+local lvbad
+cap matrix G10L = e(wdid_sglev)
+if _rc == 0 {
+  local lvn : rowfullnames G10L
+  local kk 0
+  foreach wn of local lvn {
+    local ++kk
+    if !regexm("`wn'", "^([^:]+):([0-9]+)(bn?)?[.]") continue
+    local weq = regexs(1)
+    local wsg = regexs(2)
+    local wit = subinstr("`weq'", "pre_", "", 1)
+    local wkey = cond("`wit'" != "`weq'", "pretreatment", "main") + ":`wit'"
+    local sn
+    cap local sn : rowfullnames G5S`wsg'
+    local ss 0
+    foreach s of local sn {
+      local ++ss
+      if "`s'" != "`wkey'" continue
+      local ++nlev
+      local dd = reldif(G10L[`kk', 2], G5S`wsg'[`ss', 2])
+      if `dd' >= . | G10L[`kk', 2] >= . local dd 1
+      if `dd' > `lvmax' local lvmax = `dd'
+      if `dd' > 1e-10 local lvbad `lvbad' `wn'
+    }
+  }
+}
+di "G10 BS-15 contreat suppress robust: rc=`rc10' act=[`a10'] caution=`c10' level rows matched=`nlev' (expect 8) max reldif=`lvmax' off=[`lvbad']"
+if `rc10' != 0 | "`a10'" != "" | `c10' != 0 | `nlev' != 8 | "`lvbad'" != "" {
+  di as error "G10 FAIL: a flag on a healthy run, or e(wdid_sglev) does not carry the unsuppressed level standard errors for att, pre_att, ame and pre_ame of both subgroups"
   local ++fails
 }
 
