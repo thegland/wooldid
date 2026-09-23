@@ -275,14 +275,14 @@ refused, since the cluster-specific estimates are then re-weightings of the same
 IM-style inference changes {it:wooldid}'s target estimand: the cluster-specific estimates are averaged with equal weight, so what is reported is the cluster-equally-weighted mean
 whatever estimand was requested. For example, if clustering at the cohort level, {it:att} will yield the same effect estimates as {it:att_i}. Each reported row uses a t
 distribution with degrees of freedom one less than the number of clusters contributing to that row, and {it:e(df_r)} is set to the smallest of these. IM-style inference is not
-allowed with the use of subgroups, or with the options {it:jointtests}, {it:makecfxplots}, {it:adversarial}, {it:customvce()}, {it:unconditionalse}, {it:fastnose},
-{it:pretrendpower()}, {it:bootstrap()} and {it:permute()}. No event study covariance is returned under {it:impvalues}, so {it:e(V_es_*)} is absent and the {it:honestdid} handoff is unavailable. {p_end}
+allowed with the use of subgroups, or with the options {it:jointtests}, {it:makecfxplots}, {it:adversarial}, {it:customvce()}, {it:unconditionalse},
+{it:pretrendpower()}, {it:bootstrap()} and {it:permute()}. {it:fastnose} is accepted with a caution and has no effect. No event study covariance is returned under {it:impvalues}, so {it:e(V_es_*)} is absent and the {it:honestdid} handoff is unavailable. {p_end}
 
 {phang}{opt fast:nose}: Fast exploratory mode, for specification search on large panels. Every {it:margins} call runs without variance estimation, so only point estimates
 are produced: standard errors, test statistics, p-values, confidence intervals, joint tests and plot confidence bands are omitted, and the corresponding table cells display
 as missing. {it:e(V)} is not posted, so {it:test} and {it:lincom} will refuse, while {it:esttab} prints an empty inference row. Refused with {it:unconditionalse},
-{it:impvalues}, {it:pretrendpower()}, {it:bootstrap()}, {it:permtstat}, {it:permtci}, {it:adversarial} and {it:jointtests}; the last two are accepted under
-{it:permute()}, where fast mode is already the default. {it:simultaneousbands} is accepted but no band is built. Re-run the chosen specification without {it:fastnose}
+{it:pretrendpower()}, {it:boottstat}, {it:permtstat}, {it:permtci}, {it:permanalyticse}, {it:adversarial} and {it:jointtests}; the last two are accepted under
+{it:permute()}, where fast mode is already the default. With {it:impvalues} or {it:bootstrap()} it is accepted with a caution and has no effect: {it:impvalues} already runs {it:margins} without variance estimation, and the bootstrap replications already run in fast mode. {it:simultaneousbands} is accepted but no band is built. Re-run the chosen specification without {it:fastnose}
 before reporting results. {p_end}
 
 {phang}{opt nofastcollapse}: Turns off the default cell collapse, which exists to significantly speed up {it:wooldid}: the {it:margins} calls are evaluated on one row per
@@ -355,8 +355,9 @@ and subgroup contrasts become bootstrap quantities. Point estimates are unchange
 replication re-estimates the full model. {it:bootstrap(standard)} is the pairs cluster bootstrap: the {it:cluster()} groups, or
 the observations when {it:cluster()} is not given, are resampled with replacement. {it:bootstrap(bayes)} is the Bayesian bootstrap: each replication draws one
 Dirichlet weight per cluster and multiplies that cluster's observations by it, so no cluster ever leaves the sample. Requires {it:reps()}. Refused with {it:permute()}, {it:impvalues},
-{it:unconditionalse}, {it:customvce()}, {it:fastnose}, {it:oldsyntax},
-{it:suppresssgprimaryeffects} and multi-way {it:cluster()}. {it:bootstrap(bayes)} with {it:att_it}, {it:att_i} or {it:att_itime} omits the cell-sampling component
+{it:unconditionalse}, {it:customvce()}, {it:oldsyntax},
+{it:suppresssgprimaryeffects} and multi-way {it:cluster()}. {it:fastnose} is accepted with a caution and has no effect, since the replications already run in fast
+mode; with {it:boottstat} it is refused. {it:bootstrap(bayes)} with {it:att_it}, {it:att_i} or {it:att_itime} omits the cell-sampling component
 of the variance and is refused. Plots, {it:gteffects} cells, {it:jointtests}
 and {it:pretrendpower()} all follow the bootstrap. Only the {it:histogramcohorteffects} output is untouched: it draws the observed point estimates, which the bootstrap does not change. Under
 {it:cfxplotnose} the continuous treatment cells receive no bootstrap inference, so drop that option if bands are wanted. {it:wooldid} cautions when fewer than 6
@@ -439,7 +440,7 @@ continuous-treatment plot cells. The subgroup equality tests and contrasts test 
 equal-tailed quantiles of the permutation distribution. By default the run and the replications are in fast mode, without analytic standard errors, so the {it:se_analytic} column is blank
 and {it:e(V)}, {it:e(b_es_*)} and {it:e(V_es_*)} are not posted; {it:permanalyticse} restores them. Quantities with no permutation distribution are left blank rather than filled
 analytically: the {it:gteffects} cells, whose keys are the onsets the replications reassign, and the continuous-treatment plot cells of the {it:baseTreated}, {it:byTreated} and {it:byTtre}
-lattice types. The {it:histogramcohorteffects} output stays analytic, with a caution. Replications that fail to estimate are excluded and counted in {it:e(perm_failed)}; the run is refused
+lattice types. The {it:histogramcohorteffects} output is untouched: it draws the observed point estimates, which the permutations do not change. Replications that fail to estimate are excluded and counted in {it:e(perm_failed)}; the run is refused
 when fewer than max(20, half) complete. A caution prints when fewer than 6 clusters are ever treated, since the set of distinct assignments is then small whatever {it:permreps()} is. {p_end}
 
 {phang}{opt permreps(#)}: Number of sampled reassignments, drawn with replacement; at least 20. Required unless {it:permexact} is specified. A sampled-draw p-value cannot fall below
@@ -504,7 +505,7 @@ onset date this does not arise. {p_end}
 
 {phang}{opt hist:ogramcohorteffects}: Produce a histogram of cohort i-specific treatment effects; return those effects in {it:e(histogramestimates)} for the user to manipulate. Under
 {it:att_it} or {it:att_itime}, the column averages each cohort's cell effects. With {it:contreat()}, average marginal effects are histogrammed and appended to the matrix. Under
-{it:bootstrap()} and {it:permute()}, the histogram estimates come from the initial analytic fit, not the replications. {p_end}
+{it:bootstrap()} and {it:permute()}, the histogram draws the observed point estimates, which neither engine changes, and uses no covariance. {p_end}
 
 {phang}{opt save:plots(string)}: Save all graphs generated to .gph files beginning with the name specified in the option. Also saves .dta files beginning with the same
 name containing the data used to generate any requested event study plots, one per subgroup, and, with {it:makecfxplots}, one {it:name}_cfx.dta of the plotted points. Graphs and datasets
@@ -941,7 +942,9 @@ some {it:wooldid} call completes successfully. {p_end}
 {pstd} The coefficient vector {it:e(b)} and its covariance {it:e(V)} carry these column names, which are what {it:esttab}, {it:coefplot}, {it:lincom} and {it:test} address a
 coefficient by: {it:main_att} (the headline average treatment effect on the treated), {it:pretreatment_att} (the pooled pre-treatment average), {it:ES_att_pre#} and
 {it:ES_att_post#} (the event-study horizons, numbered outward from the reference period), and for the other estimand types the same names with {it:att} replaced by
-{it:att_it}, {it:att_i}, {it:att_itime} or {it:ame}. Under {it:subgroups()} each subgroup's rows take the suffix {it:_s#}. {p_end}
+{it:att_it}, {it:att_i}, {it:att_itime} or {it:ame}. Under {it:subgroups()} each subgroup's rows carry the infix {it:_SG{it:sgcase}_}, where {it:sgcase} is the
+value of the subgroup, as in {it:main_SG1_att}, {it:pretreatment_SG1_att} and {it:ES_att_SG1_post0}. The suffix {it:_s{it:sgcase}} names per-subgroup {it:e()}
+matrices such as {it:e(b_es_att_s1)}, not these columns. {p_end}
 
 {pstd} The primary results are stored in the following matrices: {p_end}
 {synoptset 30 tabbed}{...}
