@@ -2724,8 +2724,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         * else. The 6-column shape is missing-padded here (r(table) is short under nose and
         * the padding below fills it), which is exactly what the cell rewiring needs to fill
         * se/p/ll/ul from the replications. The replications themselves still run nose and
-        * return one column: the harvest reads only their point estimates (under boottstat
-        * the cells then stay blank, having no standard error to studentize by)
+        * return one column: the harvest reads only their point estimates. boottstat, which
+        * needs the cells' standard errors, drops cfxplotnose in wooldid_validate instead
         if "`cfxplotnose'" != "" & "`permute'`bootstrap'" == "" local cfxmatendpoint 1
         * fast mode keeps the cfx matrices in the 1-column (point estimates only) shape that
         * cfxplotnose produces, rather than minting a 6-column-with-missings shape.
@@ -5427,6 +5427,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`permute'" != "" & "`permtstat'" != "" & "`makecfxplots'" != "" & "`cfxplotnose'" != "" {
     local cfxplotnose
     dis as text "Caution: cfxplotnose was dropped; permtstat needs the plot cells' standard errors."
+  }
+  * the bootstrap twin (the author's ruling on the D5 follow-up, 2026-09-23): since 516038c the
+  * bootstrap() observed run keeps the six-column cfx shape under cfxplotnose, and boottstat
+  * studentizes each plot cell by its own standard error, observed and per replication, so
+  * cfxplotnose would leave every cell blank there. it is dropped the same way
+  if "`bootstrap'" != "" & "`boottstat'" != "" & "`makecfxplots'" != "" & "`cfxplotnose'" != "" {
+    local cfxplotnose
+    dis as text "Caution: cfxplotnose was dropped; boottstat needs the plot cells' standard errors."
   }
   * note which safety() value each screen gets, because the two calls differ. permctl is handed
   * si(`safety') - the effective value, already rewritten to off above when contreatwithin is

@@ -677,8 +677,7 @@ else {
 
 * ---- T14 (ruling D5, 2026-09-23): under bootstrap() cfxplotnose keeps the six-column cfx shape, so the
 * plot cells get bootstrap inference: with the same seed every cell equals the run without cfxplotnose
-* (the replications run in fast mode either way, so the draws are the same). Under boottstat the cells
-* stay blank, having no standard error to studentize by
+* (the replications run in fast mode either way, so the draws are the same)
 mkcfx11
 cap qui wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) makecfxplots cfxlattice(clat) bootstrap(standard) reps(20) rseed(7)
 local rc14a = _rc
@@ -705,20 +704,35 @@ foreach nm of local mats14 {
     local t14live = `t14live' + t14l
   }
 }
+* boottstat: cfxplotnose is dropped with a caution (ruling on the D5 follow-up), so the cells carry the same
+* studentized inference as the boottstat run without it
 mkcfx11
-cap qui wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) makecfxplots cfxlattice(clat) cfxplotnose bootstrap(standard) reps(20) rseed(7) boottstat
+cap qui wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) makecfxplots cfxlattice(clat) bootstrap(standard) reps(20) rseed(7) boottstat
 local rc14c = _rc
-local t14ts 0
+foreach nm of local mats14 {
+  cap matrix T14C_`nm' = e(`nm')
+}
+mkcfx11
+qui log using bdf_t14.txt, text replace name(bdf14)
+cap noi wooldid y i t ttre, contreat(intensity) contreatcontrols(basic) cluster(i) esprelength(2) espostlength(2) makecfxplots cfxlattice(clat) cfxplotnose bootstrap(standard) reps(20) rseed(7) boottstat
+local rc14d = _rc
+qui log close bdf14
+* the needle stops short of column 80: Stata wraps the text log there, splitting the full line
+local t14cau = strpos(fileread("bdf_t14.txt"), "Caution: cfxplotnose was dropped; boottstat needs the plot cells'") > 0
+cap erase bdf_t14.txt
+local t14tsmax 0
+local t14tslive 0
 foreach nm of local mats14 {
   cap confirm matrix e(`nm')
   if _rc != 0 continue
-  matrix T14C = e(`nm')
-  mata: st_numscalar("t14c", sum(rownonmissing(st_matrix("T14C")[., (2, 4, 5, 6)])))
-  local t14ts = `t14ts' + t14c
+  matrix T14D = e(`nm')
+  mata: A = st_matrix("T14C_`nm'"); B = st_matrix("T14D"); st_numscalar("t14e", mreldif(editmissing(A, -9), editmissing(B, -9))); st_numscalar("t14m", sum(rownonmissing(B[., (2, 4, 5, 6)]) :== 4))
+  if t14e > `t14tsmax' local t14tsmax = t14e
+  local t14tslive = `t14tslive' + t14m
 }
-di "T14 cfxplotnose under bootstrap: rc=`rc14a'/`rc14b'/`rc14c' mats=`t14n' not-6-wide=`t14shape' live rows=`t14live' max reldif vs no-cfxplotnose=`t14max' boottstat filled cells=`t14ts'"
-if `rc14a' != 0 | `rc14b' != 0 | `rc14c' != 0 | `t14n' == 0 | `t14shape' > 0 | `t14live' == 0 | `t14max' > 1e-10 | `t14ts' != 0 {
-  di as error "T14 FAIL: cfxplotnose under bootstrap() must keep six columns with the same bootstrap inference as the run without it, and leave the cells blank under boottstat"
+di "T14 cfxplotnose under bootstrap: rc=`rc14a'/`rc14b'/`rc14c'/`rc14d' mats=`t14n' not-6-wide=`t14shape' live rows=`t14live' max reldif vs no-cfxplotnose=`t14max' | boottstat: caution=`t14cau' live rows=`t14tslive' max reldif=`t14tsmax'"
+if `rc14a' != 0 | `rc14b' != 0 | `rc14c' != 0 | `rc14d' != 0 | `t14n' == 0 | `t14shape' > 0 | `t14live' == 0 | `t14max' > 1e-10 | `t14cau' != 1 | `t14tslive' == 0 | `t14tsmax' > 1e-10 {
+  di as error "T14 FAIL: cfxplotnose under bootstrap() must keep six columns with the same inference as the run without it, and under boottstat be dropped with its caution"
   local ++fails
 }
 
