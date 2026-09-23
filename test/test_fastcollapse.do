@@ -79,6 +79,9 @@
 * fallback after a deferred pwcompare, now sit inside the same two-pass wooldid_fcdeg
 * screen the pwcompare pass uses. All three legs assert the guard did NOT fire and the
 * numbers match nofastcollapse: a spurious fire on a healthy run is the risk here.
+* F17 customvce() is eligible: customvce(cluster) and customvce(robust) runs collapse
+*    quietly and agree with nofastcollapse, and the weighted controls()+timetrends+event-study
+*    form agrees to the accuracy the help states for margins itself
 * Prints FASTCOLLAPSE_ALL_PASS iff all pass.
 clear all
 local REPO ..
@@ -227,14 +230,13 @@ local F4D4 `REPO'/test/suite/data/continuous_control_dense.dta
 local F4V4 y_cont_vary cohort t ttre
 local F4O4 att contreat(dose_vary) contreatcontrols(basic) controls(c.dose_vary#c.x1) cluster(person_id) safety(off)
 local F4W4 contreat-in-controls
-* 2026-09-06 (F062): impvalues left the ineligible list - the cluster variable joins the
-* cell key - so an impvalues run collapses (see F15); the gate count below keeps its shape
-* with customvce() as gate 5's stand-in
+* Gate 5 is unconditionalse again, in its clustered form: the ineligible list holds four
+* reasons, gates 1-4, and the loop keeps its five-gate shape with this second spelling of
+* gate 3's (impvalues and customvce() are eligible; see F15 and F17)
 local F4D5 `ADMIN'
 local F4V5 y cohid year ttre
-local F4O5 att customvce(cluster state) safety(off)
-local F4W5 customvce()
-* The five gates are the five reasons on the ineligible list, one each.
+local F4O5 att cluster(state) unconditionalse safety(off)
+local F4W5 unconditionalse
 forval g = 1/5 {
   use "`F4D`g''", clear
   qui log using fcol_f4.txt, text replace name(fc)
@@ -249,7 +251,7 @@ forval g = 1/5 {
   local r`g' = strpos(`"`lg'"', "Specify nofastcollapse to silence this") > 0
 }
 cap erase fcol_f4.txt
-di "F4_rcs contreatpoly=" `g1' " interactive=" `g2' " uncond=" `g3' " ctl=" `g4' " customvce=" `g5' " (want 0 x5)"
+di "F4_rcs contreatpoly=" `g1' " interactive=" `g2' " uncond=" `g3' " ctl=" `g4' " uncond_clus=" `g5' " (want 0 x5)"
 di "F4_fcol=" `q1' "/" `q2' "/" `q3' "/" `q4' "/" `q5' " (want 0 x5)  caution=" `c1' "/" `c2' "/" `c3' "/" `c4' "/" `c5' " remedy=" `r1' "/" `r2' "/" `r3' "/" `r4' "/" `r5' " (want 1 x5)"
 forval g = 1/5 {
   if `g`g'' != 0 {
@@ -331,8 +333,9 @@ use "`REPO'/test/suite/data/continuous_control_dense.dta", clear
 cap qui wooldid y_cont_vary cohort t ttre, att contreat(dose_vary) contreatcontrols(basic) controls(c.dose_vary#c.x1) cluster(person_id)
 local s4 = _rc
 local f4 = e(wdid_fcol)
+* option 5 is unconditionalse in its clustered form (F4's gate 5)
 use "`ADMIN'", clear
-cap qui wooldid y cohid year ttre, att customvce(cluster state)
+cap qui wooldid y cohid year ttre, att cluster(state) unconditionalse
 local s5 = _rc
 local f5 = e(wdid_fcol)
 use "`ADMIN'", clear
@@ -1504,11 +1507,11 @@ use "`ADMIN'", clear
 qui wooldid y cohid year ttre, att robust nofastcollapse
 local nc13s = e(wdid_fcncell)
 use "`ADMIN'", clear
-qui wooldid y cohid year ttre, att customvce(cluster state)
+qui wooldid y cohid year ttre, att cluster(state) unconditionalse
 local nc13i = e(wdid_fcncell)
 local fs13i "`e(wdid_fcskip)'"
-di "F13 fcncell default=`nc13' slow=`nc13s' customvce=`nc13i' (rows `n13') fcskip default=[`fs13'] customvce=[`fs13i']"
-if `nc13' >= . | `nc13' < 1 | `nc13' >= `n13' | `nc13s' < . | `nc13i' < . | "`fs13'" != "" | "`fs13i'" != "customvce()" {
+di "F13 fcncell default=`nc13' slow=`nc13s' unconditionalse=`nc13i' (rows `n13') fcskip default=[`fs13'] unconditionalse=[`fs13i']"
+if `nc13' >= . | `nc13' < 1 | `nc13' >= `n13' | `nc13s' < . | `nc13i' < . | "`fs13'" != "" | "`fs13i'" != "unconditionalse" {
   di as error "F13 FAIL: e(wdid_fcncell)/e(wdid_fcskip) do not record the collapse outcome"
   local ++fails
 }
@@ -1526,16 +1529,16 @@ local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
 local ok14a = strpos(`"`lg'"', "on the full data (nofastcollapse).") > 0
 use "`ADMIN'", clear
 qui log using fcol_f14.txt, text replace name(fc)
-cap noi wooldid y cohid year ttre, att customvce(cluster state) nofastcollapse verbose
+cap noi wooldid y cohid year ttre, att cluster(state) unconditionalse nofastcollapse verbose
 local rc14b = _rc
 qui log close fc
 local lg = fileread("fcol_f14.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-local ok14b = strpos(`"`lg'"', "(nofastcollapse; the default cell collapse would not apply with customvce() either)") > 0
-local ok14c = strpos(`"`lg'"', "does not apply with customvce() (see nofastcollapse") == 0
+local ok14b = strpos(`"`lg'"', "(nofastcollapse; the default cell collapse would not apply with unconditionalse either)") > 0
+local ok14c = strpos(`"`lg'"', "does not apply with unconditionalse (see nofastcollapse") == 0
 cap erase fcol_f14.txt
-di "F14 rcs=`rc14a'/`rc14b' alone=`ok14a' with_impvalues=`ok14b' old_text_absent=`ok14c'"
+di "F14 rcs=`rc14a'/`rc14b' alone=`ok14a' with_unconditionalse=`ok14b' old_text_absent=`ok14c'"
 if `rc14a' != 0 | `rc14b' != 0 | !`ok14a' | !`ok14b' | !`ok14c' {
   di as error "F14 FAIL: the verbose collapse line does not name nofastcollapse as the reason"
   local ++fails
@@ -1737,6 +1740,144 @@ if `rc13c' != 0 | `rc13cs' != 0 | `nsg13c' != 2 | "`g13c'" != "" | "`g13cs'" != 
   di as error "F13c FAIL: rc `rc13c'/`rc13cs' sglist n=`nsg13c' guard [`g13c']/[`g13cs'] mreldif `d13c1'/`d13c2'"
   local ++fails
 }
+
+* ---- F17: customvce() IS ELIGIBLE. customvce() only fills the vce() of regress/poisson, and
+* the margins calls read e(b) and e(V) by the delta method whichever command produced them,
+* so nothing in the variance depends on the row count margins sees. Each customvce() run must
+* collapse (e(wdid_fcol) = 1, empty e(wdid_fcskip)) without the skip caution, and agree with
+* nofastcollapse on every e(b)/e(b_es_*) at F1's 1e-8.
+* (a) customvce(cluster state) and customvce(robust) on the admin panel, each with att
+* att_it, an event study and jointtests: every e(V)/e(V_es_*) and the main table also at
+* 1e-8, the joint p at F2's 1e-6. No regressor varies inside a cell here, so the two runs
+* differ only in summation order (measured at 1e-12 and below).
+* (b) the case the help's accuracy sentence names - [pw], controls(), timetrends and an event
+* window - under customvce(cluster unit), plain and with subgroups(), on a small balanced
+* panel built below: every standard error (the square roots of the diagonals of e(V) and
+* e(V_es_*)) within 1e-6 relative, the bound the help states. There margins' finite-
+* difference Jacobian carries a rounding residue that depends on the control values of the
+* rows it is handed, and the collapse redraws it: on this panel the standard errors move by
+* 1.8e-8 (plain) and 1.6e-7 (subgroups) relative, the order of the largest measured under
+* customvce(); the eligible reghdfe path reaches about 1e-6 on the same kind of
+* specification. The
+* ineligible options break results by 7e-4 and more, so 1e-6 still separates the two.
+preserve
+clear
+set seed 20260923
+set sortseed 20260923
+qui set obs 6
+gen cohort = _n
+gen ttre = cond(cohort==1, 2004, cond(cohort==2, 2005, cond(cohort==3, 2006, cond(cohort==4, 2007, .))))
+qui expand 40
+bysort cohort: gen unit = (cohort-1)*40 + _n
+gen double ufe = rnormal()
+gen double dosev = cond(ttre<., 0.5+runiform(), 0)
+qui expand 10
+bysort unit: gen t = 2000 + _n
+gen double x1 = rnormal() + 0.2*(t-2005)
+gen double x2 = runiform()
+gen double pw = 0.5 + rgamma(2,1)
+gen double y = ufe + 0.1*(t-2000) + 0.4*x1 - 0.3*x2 + cond(ttre < . & t >= ttre, 1 + 0.2*(t-ttre), 0)*(1+dosev) + rnormal()
+gen sg = 1 + mod(unit, 2)
+gen cg = cohort*10 + sg
+drop ufe dosev
+sort unit t
+tempfile F17P
+qui save "`F17P'"
+restore
+cap mata: mata drop wd17sed()
+mata:
+real scalar wd17sed(real matrix A, real matrix B)
+{
+  real colvector a, b
+  a = sqrt(diagonal(A))
+  b = sqrt(diagonal(B))
+  return(max(abs(a - b) :/ (abs(b) + (b :== 0))))
+}
+end
+local F17D1 `ADMIN'
+local F17V1 y cohid year ttre
+local F17C1 att att_it customvce(cluster state) esprelength(2) espostlength(2) jointtests
+local F17D2 `ADMIN'
+local F17V2 y cohid year ttre
+local F17C2 att att_it customvce(robust) esprelength(2) espostlength(2) jointtests
+local F17D3 `F17P'
+local F17V3 y cohort t ttre [pw=pw]
+local F17C3 att att_it controls(x1 x2) timetrends esprelength(2) espostlength(2) jointtests customvce(cluster unit)
+local F17D4 `F17P'
+local F17V4 y cg t ttre [pw=pw]
+local F17C4 att subgroups(sg) controls(x1 x2) timetrends esprelength(2) espostlength(2) jointtests customvce(cluster unit)
+forval k = 1/4 {
+  use "`F17D`k''", clear
+  qui log using fcol_f17.txt, text replace name(fc)
+  cap noi wooldid `F17V`k'', `F17C`k''
+  local rc17 = _rc
+  qui log close fc
+  local fc17 = e(wdid_fcol)
+  local fs17 "`e(wdid_fcskip)'"
+  local lg = fileread("fcol_f17.txt")
+  local lg = subinstr(`"`lg'"', char(13), "", .)
+  local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+  local cv17 = strpos(`"`lg'"', "Caution: the default cell collapse does not apply") > 0
+  local m17 : e(matrices)
+  foreach m of local m17 {
+    cap matrix F17D_`m' = e(`m')
+  }
+  cap scalar F17jD = e(joint_horiz)
+  use "`F17D`k''", clear
+  cap qui wooldid `F17V`k'', `F17C`k'' nofastcollapse
+  local rs17 = _rc
+  local fn17 = e(wdid_fcol)
+  cap scalar F17jS = e(joint_horiz)
+  * b: every e(b)/e(b_es_*); V: every e(V)/e(V_es_*) by mreldif; se: the largest relative
+  * difference on any standard error those carry; bad: a matrix missing or reshaped
+  local db 0
+  local dv 0
+  local dse 0
+  local dw 0
+  local bad
+  foreach m of local m17 {
+    local fam
+    if "`m'" == "b" | substr("`m'", 1, 5) == "b_es_" local fam b
+    if "`m'" == "V" | substr("`m'", 1, 5) == "V_es_" local fam V
+    if "`m'" == "wdidmainresults" local fam w
+    if "`fam'" != "" {
+      cap matrix F17S = e(`m')
+      local rcm = _rc
+      if !`rcm' cap scalar F17d = mreldif(F17D_`m', F17S)
+      if `rcm' | _rc local bad `bad' `m'
+      else {
+        if "`fam'" == "b" local db = max(`db', F17d)
+        if "`fam'" == "w" local dw = max(`dw', F17d)
+        if "`fam'" == "V" {
+          local dv = max(`dv', F17d)
+          mata: st_local("d1", strofreal(wd17sed(st_matrix("F17D_`m'"), st_matrix("F17S")), "%21.0g"))
+          if `d1' >= . local bad `bad' `m'
+          else local dse = max(`dse', `d1')
+        }
+      }
+    }
+    cap matrix drop F17D_`m'
+  }
+  local dj = reldif(F17jD, F17jS)
+  di "F17_`k' rc=`rc17'/`rs17' fcol=`fc17'/`fn17' (want 1/0) fcskip=[`fs17'] caution=`cv17' (want 0) b=`db' V=`dv' main=`dw' joint=`dj' max_se_rel=`dse' bad=[`bad']"
+  if `rc17' != 0 | `rs17' != 0 | `fc17' != 1 | `fn17' != 0 | "`fs17'" != "" | `cv17' {
+    di as error "F17 FAIL: customvce() run `k' (`F17C`k'') rc `rc17'/`rs17', fcol `fc17'/`fn17', fcskip [`fs17'], skip caution `cv17' - it must collapse quietly"
+    local ++fails
+  }
+  if "`bad'" != "" | `db' > 1e-8 {
+    di as error "F17 FAIL: customvce() run `k' point estimates differ from nofastcollapse by `db' (want <=1e-8), or these matrices are missing or reshaped: [`bad']"
+    local ++fails
+  }
+  if `k' <= 2 & (`dv' > 1e-8 | `dw' > 1e-8 | `dj' > 1e-6) {
+    di as error "F17a FAIL: customvce() run `k' differs from nofastcollapse: V `dv', main `dw' (want <=1e-8), joint p `dj' (want <=1e-6)"
+    local ++fails
+  }
+  if `k' >= 3 & `dse' > 1e-6 {
+    di as error "F17b FAIL: a standard error of customvce() run `k' differs from nofastcollapse by `dse' relative (want <=1e-6, the bound the help states)"
+    local ++fails
+  }
+}
+cap erase fcol_f17.txt
 
 if `fails' == 0 di as result "FASTCOLLAPSE_ALL_PASS"
 else di as error "FASTCOLLAPSE_FAILS=`fails'"

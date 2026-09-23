@@ -266,7 +266,7 @@ and then passes the user specified text without modification into the {it:vce()}
 standard error calculation methods than allowed by the default high dimensional fixed effects estimation packages used by {it:wooldid}. Not compatible with
 {it:robust} or {it:cluster()}: specify the clustering or robustness desired inside the {it:vce()} text itself. Like {it:unconditionalse}, it cannot absorb {it:fe()}
 or {it:ccc_absorb()}, which are entered as written under a caution. Refused with {it:impvalues} and {it:bootstrap()}, and it cannot be combined with {it:permute()}, which needs a {it:cluster()} variable to
-randomize over. It turns the default cell collapse off. {p_end}
+randomize over. {p_end}
 
 {phang}{opt imp:values}: Implements Ibragimov and Muller (2010) style cluster-robust inference for all estimates. The idea behind the Ibragimov and Muller approach is to compute
 cluster-specific treatment effect estimates, present their average as one's final treatment effect estimate, and conduct inference by t-testing the cluster-specific estimates against 0.
@@ -287,10 +287,11 @@ before reporting results. {p_end}
 
 {phang}{opt nofastcollapse}: Turns off the default cell collapse, which exists to significantly speed up {it:wooldid}: the {it:margins} calls are evaluated on one row per
 cohort-by-period-by-treatment cell rather than on every observation, while the regression itself still runs on the full data. Results agree with an uncollapsed run to
-machine precision but are not bit-identical. It applies to binary and continuous treatments, to poisson, to subgroups and inside {it:bootstrap()} and {it:permute()}
+{it:margins}' own accuracy: typically machine precision, but up to about 1e-6 relative on standard errors with sampling weights, controls and an event-study window,
+where neither run is exact. It applies to binary and continuous treatments, to poisson, to subgroups and inside {it:bootstrap()} and {it:permute()}
 replications. It is skipped, with a caution naming the option responsible, when the request is ineligible: {it:interactivecontrols()}, {it:contreatpoly()} above 1,
-the {it:contreat()} variable also appearing inside {it:controls()}, {it:coarsecohortcontrols()}, {it:fe()} or {it:ccc_absorb()}, {it:unconditionalse}, and
-{it:customvce()}. Disable it yourself when you are using controls or fixed effects interacted with treatment in some way {it:wooldid} cannot
+the {it:contreat()} variable also appearing inside {it:controls()}, {it:coarsecohortcontrols()}, {it:fe()} or {it:ccc_absorb()}, and {it:unconditionalse}.
+Disable it yourself when you are using controls or fixed effects interacted with treatment in some way {it:wooldid} cannot
 detect, such as a control built from a renamed copy of the treatment variable, since the collapse assumes the treatment effect is constant within a cell; when your
 analysis is memory constrained, since the collapse preserves the data and so holds an extra copy of it; and when you need byte-for-byte reproduction of an uncollapsed
 result. {p_end}
@@ -923,7 +924,7 @@ coarsening {it:i} works there. {it:lattice()} is the most expensive option, so p
 
 {pstd} Nearly all of a run is spent inside {help margins}, most of it in the delta-method variance calculation. {it:fastnose} skips that calculation entirely and is worth
 several times over when standard errors are not needed, and the default cell collapse (see {it:nofastcollapse}) shrinks the data each {it:margins} call sees; the two compose.
-Runs that must be evaluated on the full data ({it:unconditionalse}, {it:customvce()}, {it:interactivecontrols()}, and the continuous-treatment forms listed under
+Runs that must be evaluated on the full data ({it:unconditionalse}, {it:interactivecontrols()}, and the continuous-treatment forms listed under
 {it:nofastcollapse}) pay the full per-row cost. {it:emptycellsoverride} roughly doubles runtime and is rarely wanted. {p_end}
 
 {marker output}{...}

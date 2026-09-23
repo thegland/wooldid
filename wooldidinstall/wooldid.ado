@@ -5568,12 +5568,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   }
   if "`interactivecontrols'" != ""          local fcbad `fcbad' interactivecontrols()
   if "`unconditionalse'" != ""              local fcbad `fcbad' unconditionalse
-  if `"`customvce'"' != ""                  local fcbad `fcbad' customvce()
+  * customvce() is not on this list: it only fills the vce() of regress/poisson, and the
+  * margins calls read e(b) and e(V) by the delta method whichever command produced them,
+  * so the collapse is as exact there as on the reghdfe/ppmlhdfe path
   local fcon 0
   local fcskip `fcbad'
   if "`nofastcollapse'" == "" & "`fcbad'" == "" local fcon 1
   * The disclosure. Only the reasons that actually fired are printed: this runs on every
-  * unconditionalse or customvce() call, where nine paragraphs about
+  * unconditionalse call, where nine paragraphs about
   * options the user did not type would be noise. Nothing is said under nofastcollapse -
   * the collapse is off because the user asked for that. Replications re-parse under
   * `cap qui wooldid', and the shell's own re-validation under `qui', so a permute() or
@@ -5585,7 +5587,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if strpos("`fcskip'", "contreatpoly(>1)") dis as text "  contreatpoly() above 1 makes the effect a polynomial in the dose, which the cell mean does not reproduce. contreat() itself is eligible: the collapse carries the cell's weighted mean of the dose."
     if strpos("`fcskip'", "contreat-in-controls") dis as text "  contreat-in-controls means the contreat variable also appears inside controls(), coarsecohortcontrols(), fe() or ccc_absorb(); the dose derivative then varies inside the cell on a variable the collapse does not average (measured: the ame rows move by up to 0.6 percent while the att rows stay exact)."
     if strpos("`fcskip'", "unconditionalse") dis as text "  unconditionalse asks margins for a variance built from observation-level influence functions; margins verifies the visible row count against e(N) and errors when it is collapsed."
-    if strpos("`fcskip'", "customvce()") dis as text "  customvce() is not verified for the collapse rather than known-broken; it is held out pending measurement."
     dis as text "  Specify nofastcollapse to silence this and evaluate every run on the full data."
   }
 
@@ -6074,7 +6075,11 @@ end
 * The cancellation is algebraic, not bitwise: (S+c1)-(S+c0) keeps a residue of order
 * ULP(|xb|), where S is the retained row's shared partial sum. Results therefore agree
 * with the uncollapsed path to machine precision but are not bit-identical - measured to
-* move no more than permuting the input rows moves the uncollapsed path itself.
+* move no more than permuting the input rows moves the uncollapsed path itself. The one
+* looser case is margins' own: its finite-difference Jacobian carries a rounding residue
+* that depends on the retained row's control values, so with sampling weights, controls()
+* and an event-study window the two paths agree only to margins' accuracy (up to about 1e-6
+* relative on standard errors) and neither is exact.
 *
 * preserve/restore are NOT here on purpose: preserve is scoped to the program that issues
 * it, so a preserve here would unwind the instant this program returned and every margins
