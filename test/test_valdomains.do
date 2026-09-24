@@ -175,5 +175,38 @@ if `d8fact' != 1 | `d8advice' != 0 {
 }
 else dis as result "D8 PASS: safety(off) suppresses the advice, not the disclosure that the estimand window changed"
 
+* ---- D9 (change audit 2026-09-22, val-i-assert-domain): the two i-domain screens run on the
+* rows estimation can use. an i of 0, or a treated i past 2,147,483,647, confined to rows the
+* markout drops (here: a missing outcome) is not refused, and the run equals the one that drops
+* the same rows with if(); the same code on a kept row is still refused r(411). the screens
+* used to read only the if() domain and refused the first two runs ----
+use "`DATA'/dta_binary", clear
+qui sum i if ttre < .
+local d9tr = r(max)
+cap noi wooldid y i t ttre if i != `d9tr', att cluster(i) esprelength(1) espostlength(1)
+local rc9r = _rc
+local n9r = e(N)
+local a9r = e(b)[1,1]
+qui gen double ymo = y
+qui replace ymo = . if i == `d9tr'
+qui gen double izero = i
+qui replace izero = 0 if i == `d9tr'
+qui gen double ibig = i
+qui replace ibig = 3000000000 + i if i == `d9tr'
+foreach d9v in izero ibig {
+  cap noi wooldid ymo `d9v' t ttre, att cluster(`d9v') esprelength(1) espostlength(1)
+  local rc9`d9v' = _rc
+  local n9`d9v' = cond(_rc == 0, e(N), .)
+  local a9`d9v' = cond(_rc == 0, e(b)[1,1], .)
+  cap noi wooldid y `d9v' t ttre, att cluster(`d9v') esprelength(1) espostlength(1)
+  local rk9`d9v' = _rc
+}
+dis "D9: reference rc=`rc9r' N=`n9r' att=`a9r' | i=0 on dropped rows rc=`rc9izero' N=`n9izero' att=`a9izero', on kept rows rc=`rk9izero' | big i on dropped rows rc=`rc9ibig' N=`n9ibig' att=`a9ibig', on kept rows rc=`rk9ibig'"
+if `rc9r' != 0 | `rc9izero' != 0 | `rc9ibig' != 0 | `n9izero' != `n9r' | `n9ibig' != `n9r' | reldif(`a9izero', `a9r') > 1e-10 | reldif(`a9ibig', `a9r') > 1e-10 | `rk9izero' != 411 | `rk9ibig' != 411 {
+  dis as error "D9 FAIL: the i-domain screens must read the estimation domain (markout folded in)"
+  local ++fails
+}
+else dis as result "D9 PASS: an invalid i on markout-dropped rows runs; on a kept row it is refused"
+
 if `fails' == 0 dis as result "VALDOMAINS_ALL_PASS"
 else dis as error "VALDOMAINS_FAILS=`fails'"

@@ -832,6 +832,41 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
   local ifstatement `ifvar' == 1
 
+  * check that i is specified acceptably, on the rows estimation can use: `ifstatement' folds
+  * the markout above, so a bad code confined to rows it drops (a missing outcome, a missing
+  * control) is not refused, as it was when this sat in wooldid_validate on the if() domain.
+  * gated on `safetyinput', the user's own safety() value, not on the working `safety' that is
+  * rewritten to off whenever contreatwithin accompanies contreat(). the relaxation
+  * contreatwithin needs is of the estimability screens, and an identifier-domain assert is no
+  * more an estimability screen than the variable count at the maxvar preflight is. without it
+  * an `i' of 0 completes with rc 0 and no message of any kind, while 1.5 or -1 dies inside
+  * Stata's factor-variable machinery with r(452) rather than wooldid's own named error.
+  * skipped inside replications: a bootstrap draw keeps i or re-codes it to consecutive positive
+  * integers, and a permutation keeps it, so the observed run's check covers every replication
+  if "`safetyinput'" != "off" & "`wdrepmode'" == "" {
+    cap assert `i' > 0  & int(`i') == `i' if `ifstatement'
+    if _rc != 0 {
+      dis as error  "Error: `i' must consist of positive, non-zero integers, but does not."
+      error 411
+    }
+  }
+
+  * the factor-variable level cap (the author's ruling D3, 2026-09-23). the worker builds the
+  * cohort code _i from i on treated rows and enters it as a factor variable, so a treated unit
+  * whose i exceeds 2,147,483,647 passed the assert above and then died inside Stata's
+  * factor-variable machinery with r(452), naming a tempvar and non-integer values. never-treated
+  * units carry _i = 0 and i itself is only absorbed, which accepts large codes, so only units
+  * with a treatment onset are screened. a hard Stata limit that safety(off) cannot lift, so the
+  * screen is not gated on it. recoding i changes no estimate: it is an identifier. a missing i
+  * never reaches it (the markout drops the row). skipped inside replications for the reason above
+  if "`wdrepmode'" == "" {
+    cap assert `i' <= 2147483647 if `ifstatement' & `ttre_asgiven' < .
+    if _rc != 0 {
+      dis as error "Error: `i' must not exceed 2,147,483,647 on treated units; recode it first (egen newi = group(`i'))."
+      error 411
+    }
+  }
+
   * customweightmultiplier() has domain >= 0 and it is enforced here: a negative value
   * silently corrupts weight masses, estimates and the escomp shares under the default
   * iweight plumbing (rc 0, no message). checked on the estimation-aware domain
@@ -5499,38 +5534,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   local ifassert
   if `"`if'"' != "" local ifassert if (`if') == 1
 
-  * check that i is specified acceptably.
-  * gated on `safetyinput', the user's own safety() value, not on the working `safety' that is
-  * rewritten to off above whenever contreatwithin accompanies contreat(). the relaxation
-  * contreatwithin needs is of the estimability screens, and an identifier-domain assert is no
-  * more an estimability screen than the variable count at the maxvar preflight is. without it
-  * an `i' of 0 completes with rc 0 and no message of any kind, while 1.5 or -1 dies inside
-  * Stata's factor-variable machinery with r(452) rather than wooldid's own named error
-  if "`safetyinput'" != "off" {
-    cap assert `i' > 0  & int(`i') == `i' `ifassert'
-    if _rc != 0 {
-      dis as error  "Error: `i' must consist of positive, non-zero integers, but does not."
-      error 411
-    }
-  }
-
-  * the factor-variable level cap (the author's ruling D3, 2026-09-23). the worker builds the
-  * cohort code _i from i on treated rows and enters it as a factor variable, so a treated unit
-  * whose i exceeds 2,147,483,647 passed the assert above and then died inside Stata's
-  * factor-variable machinery with r(452), naming a tempvar and non-integer values. never-treated
-  * units carry _i = 0 and i itself is only absorbed, which accepts large codes, so only units
-  * with a treatment onset are screened. a hard Stata limit that safety(off) cannot lift, so the
-  * screen is not gated on it. recoding i changes no estimate: it is an identifier
-  * a missing i is left to the markout downstream, as the positivity assert above leaves it
-  * (. <= 2147483647 is false in Stata, so without the `i' < . term a missing code would be
-  * refused here under the wrong message)
-  local wdicap `"if `ttre_asgiven' < . & `i' < ."'
-  if `"`if'"' != "" local wdicap `"if (`if') == 1 & `ttre_asgiven' < . & `i' < ."'
-  cap assert `i' <= 2147483647 `wdicap'
-  if _rc != 0 {
-    dis as error "Error: `i' must not exceed 2,147,483,647 on treated units; recode it first (egen newi = group(`i'))."
-    error 411
-  }
+  * the two i-domain screens (positive integers; the factor-variable cap on treated units) live
+  * in wooldid_worker, right after the markout, as the negative-subgroup screen does (VAL-G15A):
+  * here they could only see the if() domain, and refused an invalid code confined to rows the
+  * markout drops (a missing outcome, a missing control) that safety(off) or an explicit
+  * "if y < ." runs on the same sample.
 
   * float storage cannot represent consecutive integers above 2^24 = 16,777,216, so an 8-digit
   * calendar code, a %tc datetime or a large ID held in float was rounded before wooldid saw it:

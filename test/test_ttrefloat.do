@@ -206,7 +206,7 @@ else {
 }
 
 * ---- F6 (ruling D3, 2026-09-23): a treated unit whose i code exceeds 2,147,483,647, the
-* factor-variable cap, is refused in validate with wooldid's own error (r(411)) at any safety(),
+* factor-variable cap, is refused before estimation with wooldid's own error (r(411)) at any safety(),
 * where it used to die r(452) after the checks naming a tempvar; a never-treated unit with such
 * a code still runs, and its att equals the run on the original codes
 use "data/dta_binary", clear
