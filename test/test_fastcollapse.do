@@ -82,6 +82,10 @@
 * F17 customvce() is eligible: customvce(cluster) and customvce(robust) runs collapse
 *    quietly and agree with nofastcollapse, and the weighted controls()+timetrends+event-study
 *    form agrees to the accuracy the help states for margins itself
+* F18 four eligible reads no other leg covered (aweights + customweightmultiplier() + four
+*    estimands + adversarial + histogramcohorteffects; if() + anticipation() +
+*    oostreatedcontrols() + controls(); contreat() + impvalues; fastnose + subgroups()) collapse
+*    and agree with nofastcollapse at 1e-10 on messy, unbalanced data
 * Prints FASTCOLLAPSE_ALL_PASS iff all pass.
 clear all
 local REPO ..
@@ -1878,6 +1882,108 @@ forval k = 1/4 {
   }
 }
 cap erase fcol_f17.txt
+
+* ---- F18 (change audit 2026-09-22, fcol-cert-gaps): FOUR ELIGIBLE READS NO LEG COVERED, on
+* purpose-built messy data (the change audit's sweep generator): 24 cohorts with admin-style
+* codes, two of them three units deep, 8 states, 12 periods, 15% of rows dropped at random and
+* two periods dropped for two cohorts, a binary subgroup, positive weights and a
+* customweightmultiplier() variable.
+* (1) aweights + customweightmultiplier() + all four estimands + an event study + jointtests +
+*     adversarial + histogramcohorteffects;
+* (2) a user if() + anticipation() + oostreatedcontrols() + controls() under robust;
+* (3) contreat() + impvalues (safety(off), clustered at the cohort);
+* (4) fastnose + subgroups() under aweights.
+* Each must collapse (e(wdid_fcol) 1 against nofastcollapse's 0) and agree with nofastcollapse
+* on every posted e() matrix and scalar at 1e-10, both runs posting the same names, as F11a
+* does; e(wdid_fcncell) is the collapse's own record and is left out. The sweep this comes
+* from found every difference at or below 1e-10 bar that record and the command line.
+preserve
+clear
+set seed 20260922
+set sortseed 20260922
+qui set obs 24
+gen double cohort = 100003 + 7*_n
+gen state = ceil(_n/3)
+gen onset = .
+qui replace onset = 2004 if inrange(_n,1,4)
+qui replace onset = 2006 if inrange(_n,5,9)
+qui replace onset = 2008 if inrange(_n,10,14)
+qui replace onset = 2010 if inrange(_n,15,19)
+gen nunits = 25
+qui replace nunits = 3 if inlist(_n, 4, 14)
+qui expand nunits
+bys cohort: gen double unit = cohort*100 + _n
+gen dose = runiform(0.2, 3)
+gen byte sg = runiform() < 0.45
+gen ufe = rnormal()
+gen w = exp(rnormal(0,0.5))
+gen cwm = runiform(0.5,1.5)
+qui expand 12
+bys unit: gen t = 2000 + _n
+gen ttre = onset
+gen x1 = rnormal()
+gen x2 = runiform()
+gen rel = t - ttre
+gen byte post = rel >= 0 & ttre < .
+gen eff = cond(post==1, 0.8 + 0.1*rel + 0.3*sg + 0.4*dose, 0)
+gen y = ufe + 0.05*(t-2000) + eff + 0.5*x1 + rnormal()
+gen ycount = rpoisson(exp(0.2 + 0.15*ufe + 0.02*(t-2000) + 0.3*post*(1+0.2*dose) + 0.1*x1))
+qui drop if runiform() < 0.15
+qui drop if inlist(t, 2003, 2009) & inlist(cohort, 100017, 100080)
+gen clus = state
+gen double cohsg = cohort*10 + sg
+drop nunits onset rel eff ufe post
+sort unit t
+tempfile F18M
+qui save "`F18M'"
+restore
+local F18V1 y cohort t ttre [aw=w]
+local F18C1 att att_it att_i att_itime customweightmultiplier(cwm) cluster(clus) esprelength(3) espostlength(3) jointtests adversarial histogramcohorteffects
+local F18N1 aw+cwm+four estimands+adversarial+histogramcohorteffects
+local F18V2 y cohort t ttre if x1 > -1.5
+local F18C2 att anticipation(1) oostreatedcontrols(2) robust esprelength(2) espostlength(2) controls(x1 x2)
+local F18N2 if()+anticipation+oostreatedcontrols+controls
+local F18V3 y cohort t ttre
+local F18C3 att contreat(dose) contreatcontrols(basic) impvalues cluster(cohort) safety(off)
+local F18N3 contreat+impvalues
+local F18V4 y cohsg t ttre [aw=w]
+local F18C4 att att_it esprelength(2) espostlength(2) cluster(clus) fastnose subgroups(sg)
+local F18N4 fastnose+subgroups
+forval k = 1/4 {
+  cap matrix drop fcdm* fcum*
+  cap scalar drop fcds* fcus*
+  local fcd_mn
+  local fcu_mn
+  local fcd_sn
+  local fcu_sn
+  use "`F18M'", clear
+  cap noi wooldid `F18V`k'', `F18C`k''
+  local rd18 = _rc
+  local fd18 = e(wdid_fcol)
+  local sd18 "`e(wdid_fcskip)'"
+  if `rd18' == 0 fc_esnap fcd
+  use "`F18M'", clear
+  cap qui wooldid `F18V`k'', `F18C`k'' nofastcollapse
+  local ru18 = _rc
+  local fu18 = e(wdid_fcol)
+  if `ru18' == 0 fc_esnap fcu
+  local d18 = .
+  local w18 "a run failed"
+  local m18 = 0
+  if `rd18' == 0 & `ru18' == 0 {
+    fc_ecmp , a(fcd) b(fcu) amn(`fcd_mn') bmn(`fcu_mn') asn(`fcd_sn') bsn(`fcu_sn')
+    local d18 = r(worst)
+    local w18 "`r(where)'"
+    local m18 = r(nm)
+  }
+  di "F18_`k' `F18N`k'' rc=`rd18'/`ru18' fcol=`fd18'/`fu18' (want 1/0) fcskip=[`sd18'] matrices=`m18' worst=`d18' at [`w18'] (want <= 1e-10)"
+  if `rd18' != 0 | `ru18' != 0 | `fd18' != 1 | `fu18' != 0 | "`sd18'" != "" | `m18' == 0 | missing(`d18') | `d18' > 1e-10 {
+    di as error "F18 FAIL: `F18N`k'' must collapse and agree with nofastcollapse on every e() matrix and scalar (worst `d18' at [`w18'])"
+    local ++fails
+  }
+}
+cap matrix drop fcdm* fcum*
+cap scalar drop fcds* fcus*
 
 if `fails' == 0 di as result "FASTCOLLAPSE_ALL_PASS"
 else di as error "FASTCOLLAPSE_FAILS=`fails'"
