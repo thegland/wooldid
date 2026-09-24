@@ -3370,16 +3370,23 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               * can find glevelsof's r() instead whenever the single-relyr-level fallback
               * fired
               if "`finaladvtest'" == ""  | "`finaladvtest'" == "." local finaladvtest 0
-              if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose"   {
-                * if any horizon was dropped as not estimable, refuse the line test for
-                * this subgroup. The adversarial null is that the coefficients lie on a
-                * single line in relative time; with a horizon missing the fit is run on an
-                * incomplete - and possibly interior-holed - grid, so the statistic would
-                * not mean what its name says. Other subgroups are unaffected.
-                if `sgndrop' > 0 {
-                  dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': `sgndrop' relative period effect(s) were dropped as not estimable, so its coefficients no longer span a complete relative-time grid and a line fit through them would not be interpretable."
-                }
-                else if  `finaladvtest' > 2  {
+              * if any horizon was dropped as not estimable, refuse the line test for this
+              * subgroup. The adversarial null is that the coefficients lie on a single line in
+              * relative time; with a horizon missing the fit is run on an incomplete - and
+              * possibly interior-holed - grid, so the statistic would not mean what its name
+              * says. Other subgroups are unaffected. This branch is deliberately outside the
+              * marginsdof gate: the drop count exists in fast mode too, and permute()'s
+              * fast-mode observed run must skip the subgroup as the analytic run does (author
+              * ruling 2026-09-23). The skipped family is recorded in wdadvsgskip, posted as
+              * e(wdid_advsgskip), which wooldid_permjnt reads so it computes no permutation p
+              * or line for it. adversarial with a nose observed run is reachable only under
+              * permute() (fastnose refuses adversarial otherwise)
+              if "`adversarial'" == "adversarial" & `sgndrop' > 0 {
+                dis as text "Caution: the adversarial pre-trend test was skipped for subgroup `sgcase': `sgndrop' relative period effect(s) were dropped as not estimable, so its coefficients no longer span a complete relative-time grid and a line fit through them would not be interpretable."
+                local wdadvsgskip `wdadvsgskip' `horizitem'_s`sgcase'
+              }
+              else if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose"   {
+                if  `finaladvtest' > 2  {
                   wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm')
                   local advstatus `r(status)'
                   if "`advstatus'" == "ok" {
@@ -5036,6 +5043,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   ereturn hidden local wdid_suppressjt "`suppressjointtests'"
   ereturn hidden local wdid_suppresssgpe "`suppresssgprimaryeffects'"
   ereturn hidden local wdid_adversarial "`adversarial'"
+  * the (family, subgroup) adversarial tests skipped for a dropped horizon, for
+  * wooldid_permjnt; posted only when one was skipped
+  if "`wdadvsgskip'" != "" ereturn hidden local wdid_advsgskip "`wdadvsgskip'"
   if "`summarystats'" != "" ereturn hidden local wdid_sumstats "summarystats"
   ereturn hidden local wdid_espre "`espre'"
   ereturn hidden local wdid_nptb "`Npre_trebase'"
@@ -9384,6 +9394,10 @@ version 16.0
   if "`adv'" != "" {
     local alt = ("`advalt'" != "")
     local esfflag = ("`esf'" != "")
+    * (family, subgroup) pairs the observed run skipped because the subgroup lost a horizon
+    * as not estimable (the worker printed the caution): no permutation p and no line for
+    * them, as on the analytic run (author ruling 2026-09-23)
+    local wdpadvskip `e(wdid_advsgskip)'
     foreach fk in att att_it ame ame_it {
       foreach sgtag in "" `sgl' {
         local sgw = cond("`sgtag'" == "", ".", "`sgtag'")
@@ -9394,6 +9408,7 @@ version 16.0
           if "`wdpeq`k''" == "ES_`fk'" & "`wdpsg`k''" == "`sgw'" & `wdprl`k'' < . local rels `rels' `wdprl`k''
         }
         if `: word count `cols'' < 1 continue
+        if "`sgtag'" != "" & `: list posof "`fk'_s`sgtag'" in wdpadvskip' > 0 continue
         local ename adversarial_pval_`fk'`=cond("`sgtag'" == "", "", "_s`sgtag'")'
         local lname adversarial_line_`fk'`=cond("`sgtag'" == "", "", "_s`sgtag'")'
         if `esfflag' {

@@ -363,6 +363,45 @@ else {
   global pf = $pf + 1
 }
 
+* ---- T12 (change audit round 2, U09 perm-adv-sg-dropped-horizon; author ruling 2026-09-23):
+* under permute() a subgroup whose horizons were dropped as not estimable gets no adversarial
+* p-value and no line, as the analytic run (T1) skips it with its caution. Before the ruling the
+* permutation engine computed both for sg1 from its remaining horizons (p .0476 and a line
+* fitted through post0/post1 alone) with no caution naming it. The fixture is T1's with the
+* round-2 probe's window, ES(2,2), where sg1 drops two horizons. T12a is the default fast
+* mode (the observed run's own adversarial block never runs there, so the skip and its caution
+* now run outside it); T12b is permanalyticse, whose observed run is analytic. sg2 and the
+* pooled family still get their permutation p-value and line
+foreach leg in "" "permanalyticse" {
+  local lt = cond("`leg'" == "", "T12a", "T12b")
+  use suite/data/survey_rcs.dta, clear
+  qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+  qui log using si7_t12.txt, text replace name(si7)
+  cap noi wooldid y_rcs state_group t ttre [pw=survey_weight], att subgroups(group) ///
+      fe(i.group##i.t) esfixedbaseperiod esprelength(2) espostlength(2) cluster(state) ///
+      safety(off) adversarial nofastcollapse permute(shuffle) permreps(20) rseed(3) dots(0) `leg'
+  local rc12 = _rc
+  qui log close si7
+  scanlog si7_t12.txt "adversarial pre-trend test was skipped for subgroup 1"
+  local sk12 = r(found)
+  cap erase si7_t12.txt
+  local p1 = "`e(adversarial_pval_att_s1)'" != "" & "`e(adversarial_pval_att_s1)'" != "."
+  cap confirm matrix e(adversarial_line_att_s1)
+  local l1 = _rc == 0
+  local p2 = "`e(adversarial_pval_att_s2)'" != "" & "`e(adversarial_pval_att_s2)'" != "."
+  cap confirm matrix e(adversarial_line_att_s2)
+  local l2 = _rc == 0
+  local p0 = "`e(adversarial_pval_att)'" != "" & "`e(adversarial_pval_att)'" != "."
+  local skr `e(wdid_advsgskip)'
+  local rec : list posof "att_s1" in skr
+  dis "`lt' `leg': rc=`rc12' caution=`sk12' sg1 p=`p1' line=`l1' | sg2 p=`p2' line=`l2' | pooled p=`p0' | skip record=[`e(wdid_advsgskip)']"
+  if `rc12' != 0 | !`sk12' | `p1' | `l1' | !`p2' | !`l2' | !`p0' | `rec' == 0 {
+    dis as error "`lt' FAIL: under permute() `leg' sg1 (dropped horizons) must get no adversarial p or line, with the skip caution, while sg2 and the pooled family keep theirs"
+    global pf = $pf + 1
+  }
+  else dis as result "`lt' PASS"
+}
+
 if $pf == 0 dis as result "SI7_ALL_PASS"
 else dis as error "SI7_FAILURES: $pf"
 exit, clear
