@@ -6155,11 +6155,14 @@ end
 * xb(tf=1) - xb(tf=0). Every regressor that does not interact with targetflag contributes
 * identically to both terms and cancels, so the derivative is the cell coefficient and is
 * constant within the cell. That is exactly the condition wooldid_validate's F-collapse
-* gate enforces; outside it (interactivecontrols(), a non-dydx operator, the exponentiated
-* poisson scale) the derivative varies observation by observation and the retained row would
-* BE the estimand rather than an irrelevant carrier - which is why those combinations skip
-* the collapse, under a caution naming the option responsible, rather than collapsing and
-* reporting the wrong number. contreat() is inside the condition rather than outside it: the retained row
+* gate enforces; outside it (interactivecontrols(), contreatpoly() above 1, or the dose
+* inside controls(), coarsecohortcontrols(), fe() or ccc_absorb()) the derivative varies
+* observation by observation and the retained row would BE the estimand rather than an
+* irrelevant carrier - which is why those combinations skip the collapse, under a caution
+* naming the option responsible, rather than collapsing and reporting the wrong number.
+* unconditionalse skips it too, for a different reason: margins checks the visible row
+* count against e(N). poisson is not a skip: every read there is on the linear index.
+* contreat() is inside the condition rather than outside it: the retained row
 * carries the cell's weighted mean of the dose (below), which reproduces every read that is
 * linear in the dose.
 *
