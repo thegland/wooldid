@@ -86,7 +86,7 @@ with an informative error unless {opt safety(off)}. Store large onset codes, suc
 {synopt : {help wooldid##permute:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt permreps(int)} {opt permstr:ata(variable)} {opt permpr:obs(spec)} {opt permex:act}
 {opt permts:tat} {opt permt:ci} {opt perman:alyticse} {opt permab:sp} {opt permsi:de(left|right)} {opt permraw:p} {opt permstep:down} {opt permonset:cohorts} {opt permsa:ve(name)} {p_end}
 
-{synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem)} {opt replace} {opt sum:marystats}
+{synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(name)} {opt replace} {opt sum:marystats}
 {opt pois:son} {p_end}
 
 {synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt espre:length(int>=0)} {opt espost:length(int>=0)} {opt esr:elativeto(-int)}
@@ -507,10 +507,11 @@ onset date this does not arise. {p_end}
 {it:att_it} or {it:att_itime}, the column averages each cohort's cell effects. With {it:contreat()}, average marginal effects are histogrammed and appended to the matrix. Under
 {it:bootstrap()} and {it:permute()}, the histogram draws the observed point estimates, which neither engine changes, and uses no covariance. {p_end}
 
-{phang}{opt save:plots(string)}: Save all graphs generated to .gph files beginning with the name specified in the option. Also saves .dta files beginning with the same
+{phang}{opt save:plots(name)}: Save all graphs generated to .gph files beginning with {it:name}. Also saves .dta files beginning with the same
 name containing the data used to generate any requested event study plots, one per subgroup, and, with {it:makecfxplots}, one {it:name}_cfx.dta of the plotted points. Graphs and datasets
 generated have a suffix appended to the name specifying the exact graph/dataset
-generated. Everything is saved to Stata's working directory; the argument is a name, not a path. {p_end}
+generated. {it:name} must be a Stata name, so it takes no directory part and at most 32 characters; it begins the name of every graph and dataset
+file written, and everything is saved to Stata's working directory. {p_end}
 
 {phang}{opt replace}: Overwrite any existing files with the names specified in {it:saveplots()}, {it:permsave()}, or {it:bootsave()}. Without it, an existing file is an error;
 under {it:permute()} and {it:bootstrap()} it is raised before the replications run. {p_end}
