@@ -24,6 +24,8 @@
 * P4 non-poisson runs are untouched by the gate entirely
 * P5 one cluster stops under poisson (rc 459) as it does under reghdfe: the too-few-clusters
 *    guard reads e(N_clust) as well as e(df_r), because ppmlhdfe never posts e(df_r)
+* P6 under poisson the dose effects are titled for what they are on the linear index: dyex
+*    "Elasticities (dyex)", dydx "Semi-elasticities (dydx)" (author ruling 2026-09-23)
 *
 * The retired option NAMES are pinned in test_si89.do (T1/T2), which is their cert host:
 * test/suite/configs_ext.csv cannot carry them, because coverage_check.py treats an option
@@ -118,6 +120,75 @@ if _rc == 0 local p5cse = P5[1,2]
 di "P5c_pois_robust_rc=" `p5crc' " se=" `p5cse'
 if `p5crc' != 0 | `p5cse' >= . | `p5cse' <= 0 {
   di as error "P5c FAIL: unclustered poisson rc " `p5crc' " or non-finite SE (the cluster-count clause must not fire when e(N_clust) is unposted)"
+  local ++fails
+}
+
+* ---- P6: poisson-dyex-title-semielasticity (change audit round 2, U13/S3; author ruling
+* 2026-09-23, text approved). The contreat labels keyed on contreatelasticitytype alone, so under
+* poisson a dyex figure was titled "Semi-elasticities (dyex)" and a dydx one "Effects", the
+* reverse of the help: on the linear index dydx is the semi-elasticity of E[y] and dyex the
+* elasticity. Under poisson with contreat() dyex is now "Elasticities (dyex)" and dydx
+* "Semi-elasticities (dydx)" in the cfx titles (e(wdid_cfxttl1)), the ES plot's AME title, the
+* ame histogram's axis title and the table header; linear runs and binary poisson runs keep
+* their labels. The plots are read from the saved .gph files, the header from a log (none of
+* the needles is in the echoed command). Each check is taken as the file is read, so no file's
+* contents ever pass through a macro
+local p6ls = c(linesize)
+set linesize 255
+local p6n 0
+* case: poisson flag, operator, then the needles that must be present in the cfx title, the
+* header log, the ES ame plot and the ame_i histogram ("-" = no check), then a needle that must
+* be ABSENT from the header log
+local p6c1 pdyex poisson dyex "Post-treatment Elasticities (dyex) Across" "Presented as Elasticities (dyex)" "AME Elasticities (dyex)" "Treatment Elasticities (dyex)" "Semi-elasticities"
+local p6c2 pdydx poisson dydx "Post-treatment Semi-elasticities (dydx) Across" "Presented as Semi-elasticities (dydx)" "AME Semi-elasticities (dydx)" "Treatment Semi-elasticities (dydx)" "Presented as Elasticities"
+local p6c3 ldyex "" dyex "Post-treatment Semi-elasticities (dyex) Across" "Presented as Semi-elasticities (dyex)" "AME Semi-elasticities (dyex)" "Treatment Semi-elasticities (dyex)" "Presented as Elasticities"
+local p6c4 ldydx "" dydx "Post-treatment Effects Across" "-" "AME Effects" "Treatment Effects" "Presented as"
+local p6c5 pbin poisson "" "-" "-" "-" "-" "Presented as"
+forval k = 1/5 {
+  local c : word 1 of `p6c`k''
+  local p6opt : word 2 of `p6c`k''
+  local p6cet : word 3 of `p6c`k''
+  local nt : word 4 of `p6c`k''
+  local nh : word 5 of `p6c`k''
+  local ne : word 6 of `p6c`k''
+  local ni : word 7 of `p6c`k''
+  local nx : word 8 of `p6c`k''
+  use "`REPO'/test/data/dta_cont.dta", clear
+  qui xtile p6bin = intensity, nq(3)
+  local p6ct contreat(intensity) contreatcontrols(basic) contreatelasticitytype(`p6cet') makecfxplots cfxlattice(p6bin)
+  if "`p6cet'" == "" local p6ct
+  cap erase p6_`c'.txt
+  qui log using p6_`c'.txt, text replace name(p6log)
+  cap noi wooldid y i t ttre, att att_i `p6ct' cluster(i) `p6opt' safety(off) esprelength(1) espostlength(1) makeplots histogramcohorteffects saveplots(p6`c') replace
+  local p6rc = _rc
+  qui log close p6log
+  local p6t `"`e(wdid_cfxttl1)'"'
+  local miss
+  if `p6rc' != 0 local miss `miss' rc`p6rc'
+  if "`nt'" != "-" & strpos(`"`p6t'"', "`nt'") == 0 local miss `miss' cfxtitle
+  if "`nh'" != "-" & strpos(fileread("p6_`c'.txt"), "`nh'") == 0 local miss `miss' header
+  if strpos(fileread("p6_`c'.txt"), "`nx'") > 0 local miss `miss' header-absent
+  if "`ne'" != "-" {
+    cap confirm file p6`c'_ES_ame.gph
+    if _rc != 0 local miss `miss' esfile
+    else if strpos(fileread("p6`c'_ES_ame.gph"), "`ne'") == 0 local miss `miss' esplot
+  }
+  if "`ni'" != "-" {
+    cap confirm file p6`c'_hist_ame_i.gph
+    if _rc != 0 local miss `miss' histfile
+    else if strpos(fileread("p6`c'_hist_ame_i.gph"), "`ni'") == 0 local miss `miss' hist
+  }
+  di `"P6_`c' rc=`p6rc' cfxttl1=[`p6t'] misses=[`miss']"'
+  if "`miss'" != "" local ++p6n
+  local p6f : dir . files "p6`c'*"
+  foreach f of local p6f {
+    cap erase "`f'"
+  }
+  cap erase p6_`c'.txt
+}
+set linesize `p6ls'
+if `p6n' > 0 {
+  di as error "P6 FAIL: `p6n' of 5 poisson/linear dose-effect label cases missed a title check"
   local ++fails
 }
 

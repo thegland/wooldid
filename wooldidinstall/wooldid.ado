@@ -2291,10 +2291,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   }
 
   * plot titles name the quantity. The binary effect is always a plain marginal effect;
-  * only the continuous-treatment operator still has a second form to announce
+  * only the continuous-treatment operator still has a second form to announce. Under poisson
+  * both operators act on the linear index, where dydx is the semi-elasticity of E[y] and dyex
+  * the elasticity, so both are named that way there (author ruling 2026-09-23); the display
+  * header and the ES plots' AME titles follow the same rule
   local effecttype Effects
   local Ceffecttype Effects
   if "`contreatelasticitytype'" == "dyex" local Ceffecttype Semi-elasticities (dyex)
+  if "`poisson'" == "poisson" & "`contreat'" != "" local Ceffecttype = cond("`contreatelasticitytype'" == "dyex", "Elasticities (dyex)", "Semi-elasticities (dydx)")
 
   * for histograms of i-level effects, we do the following:
   * ask for a margins estimation to give us treated cohort specific effects without SEs
@@ -12442,6 +12446,9 @@ version 16.0
   if "`poisson'" == "poisson" local poistext " Poisson Regression"
   local elasinj
   if "`contreatelasticitytype'" == "dyex" local elasinj Marginal Treatment Effects Presented as Semi-elasticities (dyex)
+  * under poisson the dose operator is named for what it is on the linear index (see the
+  * worker's Ceffecttype); a binary poisson run has no dose operator and keeps no label
+  if "`poisson'" == "poisson" & "`contreat'" != "" local elasinj Marginal Treatment Effects Presented as `=cond("`contreatelasticitytype'" == "dyex", "Elasticities (dyex)", "Semi-elasticities (dydx)")'
 
   if "`part'" == "1" {
   dis as result  " "
@@ -14591,6 +14598,7 @@ version 16.0
   local esrelativeto `e(wdid_esrel)'
   local timetrends `e(wdid_timetrends)'
   local contreatelasticitytype `e(wdid_cetype)'
+  local poisson `e(wdid_poisson)'
   local subgroups `e(wdid_sgvar)'
   local sglist `e(wdid_sglist)'
   local suppresssgprimaryeffects `e(wdid_suppresssgpe)'
@@ -14716,10 +14724,12 @@ version 16.0
     qui   gstats sum relyr, meanonly
     if r(min) < 0 local xlineinserter xline(-0.5,   lpattern(dash) lcolor(black))
 
-    * inject elasticity info
+    * inject elasticity info (elasinj2 titles the AME plots only, so it needs no contreat()
+    * test; under poisson it follows the worker's Ceffecttype rule)
     local elasinj Effects
     local elasinj2 Effects
     if "`contreatelasticitytype'" == "dyex" local elasinj2 Semi-elasticities (dyex)
+    if "`poisson'" == "poisson" local elasinj2 = cond("`contreatelasticitytype'" == "dyex", "Elasticities (dyex)", "Semi-elasticities (dydx)")
 
     * generate and save the actual graphs; then save the data
     foreach graph in `graphtypes' {
