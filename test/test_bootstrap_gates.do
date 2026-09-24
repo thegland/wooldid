@@ -453,6 +453,35 @@ if mreldif(M10R, e(wdidmainresults)) < 1e-6 {
   di as error "m10 FAIL: the studentized results are the same with and without the rewrite, so the rewrite is not reaching the replications"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
+* ---- m14 (change audit round 2, S1 debug-globals-silent; the author's ruling 2026-09-23): a
+* diagnostic switch does not outlive the call it was set for. The call the user types clears
+* WOOLDID_REPMODE, WOOLDID_BOOTNOSUB, WOOLDID_BOOTNOCOVSUB and WOOLDID_BOOTDEBUG when it exits,
+* so a switch set just before a call still reaches that call's replications (m10's control, and
+* the first run here), but a switch nobody clears no longer changes the next call: the second,
+* identical run must be m10's live run, e(boot_covsub) = 1 and the results equal to the bit.
+* m14b: the three switches that can be set around an engine run are gone after a call that
+* fails at an exit the shell's own epilogue never reached (G20's post-loop plot failure)
+global WOOLDID_BOOTNOCOVSUB 1
+use `panel', clear
+set seed 71
+gen x = rnormal()
+cap noi wooldid y unit t ttre, att cluster(s) bootstrap(standard) boottstat reps(20) controls(c.x#i.unit) rseed(70112) dots(0)
+local m14rc = _rc
+local m14ctl = e(boot_covsub)
+local m14glob "${WOOLDID_BOOTNOCOVSUB}"
+use `panel', clear
+set seed 71
+gen x = rnormal()
+cap noi wooldid y unit t ttre, att cluster(s) bootstrap(standard) boottstat reps(20) controls(c.x#i.unit) rseed(70112) dots(0)
+local m14rc2 = _rc
+local m14sub = e(boot_covsub)
+local m14rel = mreldif(M10R, e(wdidmainresults))
+global WOOLDID_BOOTNOCOVSUB
+di "m14 first run rc=`m14rc' covsub=`m14ctl' switch after=[`m14glob'] | next run rc=`m14rc2' covsub=`m14sub' reldif to the live run=`m14rel'"
+if `m14rc' != 0 | `m14rc2' != 0 | "`m14ctl'" != "." | "`m14glob'" != "" | "`m14sub'" != "1" | `m14rel' != 0 {
+  di as error "m14 FAIL: the switch did not reach its own call (covsub `m14ctl', want absent), survived it (`m14glob', want empty) or changed the next call (covsub `m14sub', reldif `m14rel'; want 1 and 0)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
 * on this 3-cluster design a draw with no treated or no control cluster is discarded, so
 * the completed count is compared with the same seed run without the controls, not with reps
 use `panel', clear
@@ -634,8 +663,16 @@ foreach f in boot_gates_g20_ES_att.gph boot_gates_g20_ES.dta {
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20)
 chk 20 0 _rc
 ! chmod 444 boot_gates_g20_ES_att.gph
+global WOOLDID_BOOTNOSUB 1
+global WOOLDID_BOOTNOCOVSUB 1
+global WOOLDID_BOOTDEBUG 1
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20) replace
 chk 20b 608 _rc
+if "${WOOLDID_BOOTNOSUB}${WOOLDID_BOOTNOCOVSUB}${WOOLDID_BOOTDEBUG}" != "" {
+  di as error "m14b FAIL: a diagnostic switch survived a call that failed after the loop (NOSUB=[${WOOLDID_BOOTNOSUB}] NOCOVSUB=[${WOOLDID_BOOTNOCOVSUB}] DEBUG=[${WOOLDID_BOOTDEBUG}])"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+macro drop WOOLDID_BOOTNOSUB WOOLDID_BOOTNOCOVSUB WOOLDID_BOOTDEBUG
 qui frame
 if "`r(currentframe)'" != "default" {
   di as error "G20c FAIL: current frame is `r(currentframe)' after the plot failure"

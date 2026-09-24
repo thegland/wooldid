@@ -18,6 +18,36 @@ cap prog drop wooldid
 * remains unsupported and fails loudly (measured: svy: wooldid -> r(101)).
 prog def wooldid, eclass properties(svyr)
 version 16.0
+  * outermost-call wrapper. wooldid reads four internal diagnostic globals: WOOLDID_REPMODE (the
+  * engines' replication marker), WOOLDID_BOOTNOSUB and WOOLDID_BOOTNOCOVSUB (the bootstrap
+  * negative controls) and WOOLDID_BOOTDEBUG. Left set, the first three change a later run's
+  * numbers with nothing printed, so none may outlive the call it was set for (the author's
+  * ruling 2026-09-23): the call the user typed clears all four when it exits, however it exits.
+  * They are cleared at exit and not at entry, because the gates suite sets a switch just
+  * before the call it diagnoses; and only by the user's own call, because the replications
+  * nested inside it must still see the settings the engines give them. That call is found
+  * by an in-call marker: WOOLDID_INCALL names a tempname scalar that only the outermost call
+  * creates. Stata drops a tempname scalar when the program that made it ends, however it ends,
+  * so a marker whose scalar is gone is stale and is ignored. The outermost call runs the rest
+  * of this program as a nested call of itself, under capture inside nobreak (the pattern help
+  * break documents), so the clearing runs on success, on error and on Break alike. The inner
+  * call prints its own output and errors; exit passes the rc on without reprinting it
+  local wdsh_top 1
+  if "${WOOLDID_INCALL}" != "" {
+    cap confirm scalar ${WOOLDID_INCALL}
+    if _rc == 0 local wdsh_top 0
+  }
+  if `wdsh_top' {
+    tempname wdsh_live
+    nobreak {
+      scalar `wdsh_live' = 1
+      global WOOLDID_INCALL `wdsh_live'
+      capture noisily break wooldid `0'
+      local wdsh_trc = _rc
+      macro drop WOOLDID_INCALL WOOLDID_REPMODE WOOLDID_BOOTNOSUB WOOLDID_BOOTNOCOVSUB WOOLDID_BOOTDEBUG
+    }
+    exit `wdsh_trc'
+  }
   * replay: wooldid typed alone after a successful wooldid estimation redisplays the
   * stored results from e() (tables and diagnostics; plots are not redrawn, and no
   * options are accepted on replay; after Stata's bootstrap or jackknife prefix it prints the
@@ -661,7 +691,8 @@ version 16.0
   * nested call (inside nobreak, so it is always cleared) and consumed READ-ONCE here.
   * Replication results are read for their coefficients alone, so blocks that only fill
   * diagnostic e() returns can be skipped there. Read-once means even a leaked marker -
-  * which the setters' nobreak discipline already prevents - affects at most one run.
+  * which the setters' nobreak discipline already prevents - affects at most one run, and the
+  * outermost call's wrapper at the top of the shell clears it again when that call ends.
   local wdrepmode "${WOOLDID_REPMODE}"
   global WOOLDID_REPMODE
   * the same discipline for the replicate's multiplicity variable, which wooldid_bootrun sets
