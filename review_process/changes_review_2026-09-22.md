@@ -283,6 +283,14 @@ and #304's DELETE proposal to #301's second line. 17 cards got round-2 notes.
 | adversarial test reported as a line without a p-value (card #25 and siblings) | **Eliminate the line-only cases**: e(adversarial_line_*) is not posted when no p-value can be had; texts approved: "Caution: the adversarial pre-trend test failed: it needs esfixedbaseperiod.", "Caution: the adversarial pre-trend test failed[ for subgroup `sg']: its covariance is degenerate.", "Caution: the adversarial pre-trend test failed: under bootstrap() it needs boottstat." | to build |
 | stale WOOLDID_* globals change numbers silently | **Overwrite them**: the outermost call clears the switches when it exits, so none outlives a call; replications keep the engine's settings | to build |
 | ledger X-est-b and X-est-w bounds | **Widen both to 1e-3** (the ledger's 10x rule) | to build |
+| ppmlhdfe investigation result (no absorb() spelling passes ppmlhdfe 2.3.0's preconditioner; v5 builds the explicit ringer spelling where the spec is built) | **Build v5** | to build |
+| ccc_absorb() on the plain-basic poisson path posts an all-zero V | **Keep ccc_absorb() absorbed** (SEs restored; e(chi2) moves on ccc runs) | to build |
+| new crash: poisson + contreatpoly(2) with lattice()/byX, or ccc_absorb() of 2+ variables, stops r(3201) (the same ppmlhdfe bug) | **Fix now**, keeping the same model (absorbed where it can be) | to build |
+| failed replication loop: previous e() or the loop's own observed run | **Previous e() on every failure** (the 2026-09-05 loop exception is retired) | to build |
+| bootstrap footer sentence once e(p)/e(ci_*) carry the displayed family | **Name esttab separately**; text approved: "... rather than the columns printed above - and so do coefplot and honestdid, which read e(V) without being asked. esttab reports the p-values and intervals printed above, from e(p), e(ci_l) and e(ci_u)." | to build |
+| two more line-only adversarial paths | **Approved**: "Caution: the adversarial pre-trend test failed: too few usable bootstrap replications." and "Caution: the adversarial pre-trend test failed: too few usable permutations."; no line posted | to build |
+| p-floor line under bootdisplay(bca) | **Omit it too** | to build |
+| poisson + untreatedZero: ppmlhdfe posts an all-zero V for the correct model | **Investigate a fix now**; build only if point estimates are unchanged and SEs match Stata's poisson | to investigate |
 
 **Straight fixes (no number moves, no new text):** applied as 47 commits, ea11d36..a0c9bf3, with guide
 chapter 14 regenerated in afe9e37. Held: the poisson 3200 fallback skip (the author asked for an
