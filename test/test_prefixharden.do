@@ -1,7 +1,8 @@
 * test_prefixharden.do - commit-A hardening: worker coeftabresults defense +
 * shell properties(svyr) display routing. Run from test/: stata-mp -e do test_prefixharden.do
 * Gates: T1 plain run + replay unchanged; T2 coeftabresults-off cure (parent r503);
-* T3 naked bootstrap prefix end-to-end; T4 failure-marker semantics unchanged;
+* T3 naked bootstrap prefix end-to-end; T4 failure-marker semantics (a complete store replays
+* after a failed call);
 * T5 svy remains a loud failure; T6 a bare wooldid after the bootstrap or jackknife prefix
 * prints the prefix's own table. Prints PREFIXHARDEN_ALL_PASS on column 1 iff all pass.
 clear all
@@ -78,19 +79,44 @@ else {
   }
 }
 
-* T4: failure-marker semantics unchanged - a failing call sets the marker and
-* blocks replay; the next successful call clears it
+* T4: the failure marker. A failing call still sets it and the next successful call clears it
+* (T4a, T4c). Since the author's round-2 rulings (2026-09-23: a failed call keeps the caller's
+* e(); "replay a restored store") it no longer blocks the replay of a complete store: the bare
+* replay after a failed call shows the earlier results (T4b, which used to require a refusal),
+* an option typed on the replay line, itself a failed call, does not block the next bare replay
+* (T4d), and a store selected with estimates restore after a failure replays (T4e)
 use `panel', clear
+qui wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1)
+est sto t4good
 cap qui wooldid y i t, att
 if "${WOOLDID_LASTRC}" == "" {
   di as error "T4a FAIL: failed call did not set WOOLDID_LASTRC"
   local fails = `fails' + 1
 }
-cap qui wooldid
-if _rc == 0 {
-  di as error "T4b FAIL: replay after failure did not refuse"
+qui log using prefixharden_t4.txt, text replace name(ph4)
+cap noi wooldid
+local t4rc = _rc
+qui log close ph4
+if `t4rc' != 0 | strpos(fileread("prefixharden_t4.txt"), "Wooldid Estimation") == 0 {
+  di as error "T4b FAIL: the replay after a failed call did not show the earlier results (rc `t4rc')"
   local fails = `fails' + 1
 }
+cap qui wooldid, level(90)
+local t4drc = _rc
+cap qui wooldid
+if `t4drc' == 0 | _rc != 0 {
+  di as error "T4d FAIL: an option typed on the replay line (rc `t4drc') blocked the next bare replay (rc " _rc ")"
+  local fails = `fails' + 1
+}
+cap qui wooldid y i t, att
+qui est restore t4good
+cap qui wooldid
+if _rc != 0 {
+  di as error "T4e FAIL: a store selected with estimates restore after a failed call did not replay (rc " _rc ")"
+  local fails = `fails' + 1
+}
+cap erase prefixharden_t4.txt
+cap est drop t4good
 cap qui wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1)
 if _rc != 0 | "${WOOLDID_LASTRC}" != "" {
   di as error "T4c FAIL: successful call did not clear the marker (rc " _rc ")"

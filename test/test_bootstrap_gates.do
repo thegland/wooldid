@@ -652,8 +652,9 @@ cap est drop _all
 
 * G20 a failure after the replication loop is an error of the call (review 2026-09-05):
 * the event-study plot save fails, the rc propagates (it was swallowed: rc 0 with a stale
-* saved file), the caller's frame is restored, and the replay branch refuses until a
-* wooldid call completes. The failure is forced with a read-only .gph under replace
+* saved file), the caller's frame is restored, e() is the seed run's again (G20h) and, since
+* the author's round-2 ruling ("replay a restored store"), a bare wooldid replays it where it
+* used to refuse until a wooldid call completed. The failure is forced with a read-only .gph under replace
 * (r(608)): a file that merely exists without replace is refused before the loop since
 * 2026-09-23 (G41), so it no longer reaches the plot stage
 use `panel', clear
@@ -687,7 +688,7 @@ if "`r(currentframe)'" != "default" {
   frame change default
 }
 cap qui wooldid
-chk 20d 198 _rc
+chk 20d 0 _rc
 ! chmod 644 boot_gates_g20_ES_att.gph
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20) replace
 chk 20e 0 _rc

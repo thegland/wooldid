@@ -83,25 +83,31 @@ version 16.0
   * other invocation - including "wooldid, update" and an option typo like "wooldid,
   * att" - falls through to the worker
   if `"`0'"' == "" & "`e(cmd)'" == "wooldid" {
-    * refuse to replay across a failed wooldid call: WOOLDID_LASTRC is a session
-    * global (namespaced like WOOLDID_CLEANUP) set to the failing rc in the shell's
-    * rc-gated epilogue below whenever a wooldid invocation fails - at the parse
-    * stage or anywhere later - and cleared there on any successful completion.
-    * (one deliberate exception: a failure inside either engine's replication loop clears
-    * the marker on its way out, so the results in e() remain replayable. a saveplots() file
-    * refused before either engine's replication loop, by wooldid_plotpre, is the same case:
-    * the marker was cleared when the worker succeeded and is left clear.) whatever the
-    * failure, the outermost-call wrapper at the top has put the caller's e() back by now,
-    * so e() holds the results from before the failed call.
-    * while it is set, the stored e() results predate the user's latest (failed)
-    * attempt, so redisplaying them silently would be misleading. exiting here
-    * leaves the marker set: replay stays refused until a wooldid call completes
-    * successfully. shell-level state only: never posted to e(), invisible to the
-    * c_local closure, and this check lives strictly inside the empty-line branch,
-    * so "wooldid, update" and every other non-empty call is untouched
+    * the failed-call marker: WOOLDID_LASTRC is a session global (namespaced like
+    * WOOLDID_CLEANUP) set to the failing rc in the shell's rc-gated epilogue below whenever a
+    * wooldid invocation fails - at the parse stage or anywhere later - and cleared there on
+    * any successful completion (a failure inside either engine's replication loop, and a
+    * saveplots() file refused before it by wooldid_plotpre, leave it clear). It used to refuse
+    * every replay while set, because e() could then hold the failed call's own partial or
+    * half-rewired results. Since the outermost-call wrapper at the top puts the caller's e()
+    * back on any failure, e() after a failed call is a complete earlier store, and the author
+    * ruled (2026-09-23, "replay a restored store") that such a store replays even after a
+    * failed call, as does one selected with estimates restore, and that an option typed on
+    * the replay line (a normal call, which fails) no longer blocks the next bare replay. So
+    * the marker refuses only a store that fails the replay contract: the two conditions
+    * wooldid_display gates on (e(wdid_replayv) and e(wdidmainresults)), checked here first so
+    * the refusal names the failed call. That leaves the one case the wrapper cannot cover, a
+    * failure when the caller's e() could not be set aside, to the display's own gate.
+    * shell-level state only: never posted to e(), invisible to the c_local closure, and
+    * this check lives strictly inside the empty-line branch, so "wooldid, update" and every
+    * other non-empty call is untouched (a failed update still sets the marker, and a valid
+    * store still replays after it)
     if "${WOOLDID_LASTRC}" != "" {
-      dis as error "Error: the last wooldid call failed; refit wooldid before replaying."
-      exit 198
+      cap confirm matrix e(wdidmainresults)
+      if _rc != 0 | "`e(wdid_replayv)'" != "2" {
+        dis as error "Error: the last wooldid call failed; refit wooldid before replaying."
+        exit 198
+      }
     }
     * after Stata's bootstrap or jackknife prefix (bootstrap _b: wooldid ...), e() is the
     * prefix's post: e(cmd) stays wooldid, e(prefix) names the prefix, and e(V) is the prefix's
@@ -200,8 +206,8 @@ version 16.0
     qui wooldid_validate `0'
     * saveplots(): every file the deferred plot calls below will write is checked here, before
     * the replication loop, as permsave() is (wooldid_plotpre). A refusal leaves the replay
-    * marker clear, as a failed loop does below, so the results the wrapper at the top puts
-    * back in e() (the caller's, from before this call) stay replayable
+    * marker clear, as a failed loop does below; the wrapper at the top then puts the caller's
+    * e() back, as after any failure
     if "`saveplots'" != "" & "`replace'" == "" wooldid_plotpre , stem(`saveplots') cfx(`makecfxplots') es(`makeplots')
     * permtci implies permtstat (resolved in validate as well; kept for the rep string)
     if "`permtci'" != "" & "`permtstat'" == "" local permtstat permtstat
@@ -263,9 +269,8 @@ version 16.0
     if `wdp_rc' != 0 exit `wdp_rc'
     * from here until the display completes, e() is being rewired to the permutation
     * inference: an uncaught failure in between leaves a half-rewired e(), which the wrapper
-    * at the top replaces with the caller's e(), and the marker set here makes the replay
-    * branch refuse (it is cleared at the end of this block; a plot failure records its rc
-    * the same way)
+    * at the top replaces with the caller's e(). The marker set here records the failure (it is
+    * cleared at the end of this block; a plot failure records its rc the same way)
     global WOOLDID_LASTRC postloop
     * run-level permutation results on the restored observed results
     ereturn local perm_method `permute'

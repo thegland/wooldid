@@ -286,14 +286,18 @@ local rc9b = _rc
 qui log close ed
 scanE edges_e9.txt "refit wooldid before replaying"
 local e9r = r(found)
+scanE edges_e9.txt "Wooldid Estimation"
+local e9w = r(found)
 cap erase edges_e9.txt
 local e9files : dir . files "v1*"
 foreach f of local e9files {
   cap erase "`f'"
 }
-di "E9 second saveplots(v1) rc=`rc9' e(cmd)=[`e9cmd'] replay rc=`rc9b' refusal named=`e9r'"
-if `rc9' == 0 | "`e9cmd'" != "wooldid" | `rc9b' != 198 | `e9r' != 1 {
-  di as error "E9 FAIL: e(cmd) must survive a post-estimation failure so replay refuses by name"
+di "E9 second saveplots(v1) rc=`rc9' e(cmd)=[`e9cmd'] replay rc=`rc9b' refusal named=`e9r' replayed=`e9w'"
+* since the author's round-2 ruling ("replay a restored store") the earlier run's results, back
+* in e(), replay after the failure; the replay used to refuse by name
+if `rc9' == 0 | "`e9cmd'" != "wooldid" | `rc9b' != 0 | `e9r' != 0 | `e9w' != 1 {
+  di as error "E9 FAIL: after a post-estimation failure the earlier results must be back in e() and replay"
   local ++fails
 }
 * a fresh successful call clears the refusal
