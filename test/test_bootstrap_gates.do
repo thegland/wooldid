@@ -242,6 +242,28 @@ if `g15cells' == 0 | `g15moved' == 0 {
   di as error "G15b FAIL: pretrendpower under bootstrap did not consume the bootstrap covariance"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
+* G15c hbar, the weighted mean post-treatment relative period, is a property of the data and not
+* of the covariance: the worker computes it once and the shell hands it back to the power algebra
+* after the rewiring, so a bootstrap run must report the analytic run's hbar. Not read off the
+* G15/G15b pair, whose hbar is 1.625: that is exactly representable, so it survives the hand-back
+* whatever the precision. On dta_binary hbar is 27/11, and the hand-back goes through string(),
+* which keeps 7 significant digits, so today the two differ at about 1.3e-7 relative (change
+* audit 2026-09-23, U09 ptp-boot-hbar-string-precision: a number-moving fix held for the
+* author). This leg allows 1e-6 until that fix lands and should then be tightened to bitwise
+* equality; it already fails a bootstrap run that loses hbar or takes it from the draws
+use "data/dta_binary", clear
+cap qui wooldid y i t ttre, att cluster(i) esfixedbaseperiod esprelength(2) espostlength(2) pretrendpower(80)
+local g15crc1 = _rc
+scalar G15c_anl = e(roth_hbar_att)
+use "data/dta_binary", clear
+cap qui wooldid y i t ttre, att cluster(i) esfixedbaseperiod esprelength(2) espostlength(2) pretrendpower(80) bootstrap(standard) reps(10) rseed(1) dots(0)
+local g15crc2 = _rc
+scalar G15c_boot = e(roth_hbar_att)
+di "G15c rc=`g15crc1'/`g15crc2' hbar analytic=" %21x G15c_anl " bootstrap=" %21x G15c_boot " reldif=" reldif(G15c_anl, G15c_boot)
+if `g15crc1' != 0 | `g15crc2' != 0 | G15c_anl >= . | G15c_boot >= . | reldif(G15c_anl, G15c_boot) > 1e-6 {
+  di as error "G15c FAIL: the bootstrap run's hbar (" G15c_boot ") is not the analytic run's (" G15c_anl "), rc=`g15crc1'/`g15crc2'"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
 use `panel', clear
 * G13 plain run untouched
 use `panel', clear

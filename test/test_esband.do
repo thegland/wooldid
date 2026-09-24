@@ -8,7 +8,7 @@
 *    random-number stream where it found it; B4 the bootstrap engine builds the band from
 *    the replications; B5 permute() refuses the combination; B6 a run that cannot build one
 *    says so instead of staying silent; B7 subgroups get their own bands; B8 the plot layer
-*    draws without error; B11 with few clusters (df_r = 6) the critical value follows the
+*    draws without error and puts the band on each subgroup figure; B11 with few clusters (df_r = 6) the critical value follows the
 *    multivariate t with df_r and not the normal law; B12 the critical value is the
 *    simulated quantile itself, with no floor at the pointwise t quantile; B13 the dashed
 *    band on the figure pinches to 0 at the reference period, as the shading does.
@@ -219,13 +219,29 @@ if `b7n' != 2 | strpos("`b7f'", "att_s0") == 0 | strpos("`b7f'", "att_s1") == 0 
 }
 
 * ------------------------------------------------------ B8: the plot layer runs cleanly
+* and draws: rc 0 alone passes a subgroup figure with no band, because wooldid_esbandv returns an
+* empty layer with no error when the subgroup's stored band (key att_s<case>) matches no plot row
+* (see the comment on its row match). The saved figures' own command lines show the layer
 mkb
-cap noi wooldid y unit t ttre, `SPEC' subgroups(sg) simultaneousbands makeplots
+local b8f : dir . files "esband_b8_*"
+foreach f of local b8f {
+  cap erase "`f'"
+}
+cap noi wooldid y unit t ttre, `SPEC' subgroups(sg) simultaneousbands makeplots saveplots(esband_b8) replace
 local b8rc = _rc
-di "B8 makeplots rc=`b8rc'"
-if `b8rc' != 0 {
-  di as error "B8 FAIL: the simultaneous-band plot layer errored (rc=`b8rc')"
+local b8lay 0
+foreach s in 0 1 {
+  cap graph describe esband_b8_ES_att_sg`s'.gph
+  if _rc == 0 & strpos(`"`r(command)'"', "rline __wdsblo __wdsbhi") > 0 local ++b8lay
+}
+di "B8 makeplots rc=`b8rc' subgroup figures with a band layer=`b8lay' of 2"
+if `b8rc' != 0 | `b8lay' != 2 {
+  di as error "B8 FAIL: the simultaneous-band plot layer errored or left a subgroup figure without its band (rc=`b8rc', figures with the layer=`b8lay' of 2)"
   local ++fails
+}
+local b8f : dir . files "esband_b8_*"
+foreach f of local b8f {
+  cap erase "`f'"
 }
 
 * ---- B9 PS-45 (author ruling 2026-09-10): under boottstat the band is a genuine
