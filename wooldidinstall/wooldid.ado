@@ -639,6 +639,10 @@ version 16.0
   * which the setters' nobreak discipline already prevents - affects at most one run.
   local wdrepmode "${WOOLDID_REPMODE}"
   global WOOLDID_REPMODE
+  * the same discipline for the replicate's multiplicity variable, which wooldid_bootrun sets
+  * beside the marker on its count and bayes legs only; read by the lattice block below
+  local wdreplw "${WOOLDID_REPLATW}"
+  global WOOLDID_REPLATW
   * the stored full model. Replications (nested wooldid calls under bootstrap() or
   * permute()) store theirs under a separate name and always drop it at exit, so they
   * never overwrite - or, at their exit, delete - the observed run's ___wooldidfullmodel
@@ -1193,6 +1197,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         * ignore weights in lattice percentile computation - useful in some situations where weights are not very uniform
         local latticeweightinserter `weightinserter'
         if "`latticeignoreweights'" == "latticeignoreweights" local latticeweightinserter
+        * a bootstrap replication on the count or bayes leg carries its resample as a weight, the
+        * base weight times the multiplicity. only the base weight is ignored: the bins are the
+        * quantiles of the resample, so the multiplicity (a count or the Dirichlet mass) stays in
+        if "`latticeignoreweights'" != "" & "`wdrepmode'" != "" & "`wdreplw'" != "" local latticeweightinserter [aw=`wdreplw']
 
         * begin specifying commands to construct the different types of lattice variables / create ancillary supporting variables
         tempvar latticevar
@@ -10441,11 +10449,18 @@ version 16.0
     qui frget `drawv' = __wdbdraw, from(`lnk')
     cap drop `repw'
     qui gen double `repw' = `basew' * `drawv'
+    * WOOLDID_REPLATW names the multiplicity alone, for latticeignoreweights: its lattice drops
+    * the base weight but must keep the multiplicity, or every replication would bin the
+    * distinct drawn rows (bayes: the original sample) instead of the resample the re-id leg
+    * bins. read once by the worker and cleared here with the marker. not set for the
+    * jackknife below, whose 0/1 draws already reach the lattice through the markout
     nobreak {
       global WOOLDID_REPMODE 1
+      global WOOLDID_REPLATW `drawv'
     cap qui wooldid `repcall' [`wtype2'=`repw'] , `repopts'
       local wdrepdone = _rc
       global WOOLDID_REPMODE
+      global WOOLDID_REPLATW
     }
     cap error `wdrepdone'
     if _rc == 1 {

@@ -714,7 +714,8 @@ for the rest of the sample. {p_end}
 {synopt : {it:baseTreatedPre}} Quantiles are formed within the full pre-treatment period for the treatment group. These quantile range definitions are then used to define lattice
 points for the rest of the sample. {p_end}
 
-{phang}{opt latticeig:noreweights}: When constructing a lattice, this option forces {it:wooldid} to ignore sample weights when computing quantiles for lattice production. {p_end}
+{phang}{opt latticeig:noreweights}: When constructing a lattice, this option forces {it:wooldid} to ignore sample weights when computing quantiles for lattice production.
+Under {it:bootstrap()} each replication's resampling multiplicity is kept, so its lattice is formed on the resample. {p_end}
 
 {phang}{opt makec:fxplots}: Produce plots presenting the average marginal effect of {it:contreat} and the average treatment effect within each bin specified by either the lattice
 variable or, if specified, the variable in {it:cfxlattice()}; one of the two must be present. These plots are only sure to be valid for the ATT estimand type, but may be valid for others if lattice groupings

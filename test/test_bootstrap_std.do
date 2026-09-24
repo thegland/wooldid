@@ -5,7 +5,8 @@
 * path for att (same-seed coherence across the split-engine legs). DO3: att_it under the
 * re-id leg yields a usable se, and bootstrap(bayes) with att_it is refused under safety(off).
 * DO4 failed-rep counting; DO5 observation-level; DO6 weighted + points never move;
-* DO7 subgroups under the re-id leg. Prints BOOTSTD_ALL_PASS iff all pass.
+* DO7 subgroups under the re-id leg; DO8 latticeignoreweights bins each replication's
+* resample on the count and bayes legs. Prints BOOTSTD_ALL_PASS iff all pass.
 clear all
 local REPO ..
 do "`REPO'/wooldidinstall/wooldid.ado"
@@ -135,6 +136,48 @@ if _rc != 0 {
   di as error "DO7 FAIL"
   local ++fails
 }
+
+* ---- D-O8 (change audit round 2, S4 liw-countleg-bins-not-resampled; the author's ruling
+* 2026-09-23): latticeignoreweights ignores the SAMPLE weight, not the resample. The count leg
+* and bayes carry a replicate as [aw = base weight x multiplicity], and the lattice under
+* latticeignoreweights used to drop the whole weight, so each replication binned the distinct
+* drawn rows (bayes: the original sample) rather than the resample. It now keeps the
+* multiplicity. On unweighted data the option is then a no-op on both legs, draw for draw, as
+* it is analytically; with a sample weight the count leg equals the re-id leg (which bins the
+* physically expanded resample) as DO2's att column does
+use "data/dta_cont", clear
+local do8L contreat(intensity) contreatcontrols(basic) cluster(i) lattice(all 3)
+qui wooldid y i t ttre, `do8L' bootstrap(standard) reps(12) rseed(4242) dots(0)
+matrix D8CN = e(bootdist)
+qui wooldid y i t ttre, `do8L' latticeignoreweights bootstrap(standard) reps(12) rseed(4242) dots(0)
+matrix D8CL = e(bootdist)
+qui wooldid y i t ttre, `do8L' bootstrap(bayes) reps(12) rseed(4242) dots(0)
+matrix D8BN = e(bootdist)
+qui wooldid y i t ttre, `do8L' latticeignoreweights bootstrap(bayes) reps(12) rseed(4242) dots(0)
+matrix D8BL = e(bootdist)
+qui wooldid y i t ttre [aw=w], `do8L' latticeignoreweights bootstrap(standard) reps(12) rseed(4242) dots(0)
+matrix D8WC = e(bootdist)
+qui wooldid y i t ttre [aw=w], `do8L' att att_it latticeignoreweights bootstrap(standard) reps(12) rseed(4242) dots(0)
+matrix D8WR = e(bootdist)
+local w8c = mreldif(D8CN, D8CL)
+local w8b = mreldif(D8BN, D8BL)
+local w8w 0
+foreach nm in main_att main_ame {
+  local kc = colnumb(D8WC, "`nm'")
+  local kr = colnumb(D8WR, "`nm'")
+  if `kc' >= . | `kr' >= . local w8w = 1
+  else {
+    forval r = 1/12 {
+      local w8w = max(`w8w', reldif(D8WC[`r', `kc'], D8WR[`r', `kr']))
+    }
+  }
+}
+di "DO8_LIW count noLIW-vs-LIW=" `w8c' " bayes noLIW-vs-LIW=" `w8b' " weighted count-vs-reid=" `w8w'
+if `w8c' != 0 | `w8b' != 0 | `w8w' > 1e-10 {
+  di as error "DO8 FAIL: under latticeignoreweights a replication did not bin its own resample"
+  local ++fails
+}
+matrix drop D8CN D8CL D8BN D8BL D8WC D8WR
 
 if `fails' == 0 di as result "BOOTSTD_ALL_PASS"
 else di as error "BOOTSTD_FAILS=`fails'"
