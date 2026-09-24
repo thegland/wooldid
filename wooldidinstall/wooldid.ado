@@ -1547,7 +1547,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`contreat'" != "" & "`contreatcontrols'" != "" {
     tempvar ccrtouse
     qui gen byte `ccrtouse' = (`ifstatement')
-    wooldid_amescreen , mode(ccref) tcell(`_t') esamp(`ccrtouse') contreat(`contreat') tvar(`ttre') timevar(`t') types(`contreatcontrols') ccrtol(1e-5) ccrwithin(`contreatwithin')
+    wooldid_amescreen , mode(ccref) tcell(`_t') esamp(`ccrtouse') contreat(`contreat') tvar(`ttre') timevar(`t') types(`contreatcontrols') ccrtol(1e-5)
     if r(fail) == 1 error 459
     cap drop `ccrtouse'
   }
@@ -14061,7 +14061,7 @@ end
 cap prog drop wooldid_amescreen
 prog def wooldid_amescreen, rclass
 version 16.0
-  syntax , mode(string) [icell(string) tcell(string) tflag(string) esamp(string) clusvars(string) contreat(string) sgnote(string) semat(string) iorig(string) tvar(string) r1fired(string) timevar(string) types(string) ccrtol(string) ccrwithin(string) latflag(string)]
+  syntax , mode(string) [icell(string) tcell(string) tflag(string) esamp(string) clusvars(string) contreat(string) sgnote(string) semat(string) iorig(string) tvar(string) r1fired(string) timevar(string) types(string) ccrtol(string) latflag(string)]
   if "`mode'" == "detect" {
     local fire 0
     local ncells 0
