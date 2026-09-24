@@ -278,10 +278,10 @@ and #304's DELETE proposal to #301's second line. 17 cards got round-2 notes.
 | within-cell screen a subset of the split-unit screen | **Keep both** | no change |
 | gteffects table formatting | **Apply PS-3 formatting**; no floor line | to build |
 | p-floor line under bootdisplay(bc) | **Omit it under bc** | to build |
-| poisson + contreat() basic: the first ppmlhdfe fit fails on wooldid's own one-level term and the 3200 fallback caution prints | **Investigate** specifications that do not fail, benchmarked against today's results, with a 10-15 agent workflow (the diff that only skipped to the fallback is held) | to investigate |
+| poisson + contreat() basic: the first ppmlhdfe fit fails on wooldid's own one-level term and the 3200 fallback caution prints | **Investigate** specifications that do not fail, benchmarked against today's results, with a 10-15 agent workflow. If one works, implement it; if not, change nothing and leave the caution | investigating |
 | lattice() run with an all-zero VCE: following the bootstrap() advice posts no e(V) | **Leave it** | no change |
-| adversarial test reported as a line without a p-value (card #25 and siblings) | **Eliminate the line-only cases**: when no p-value can be had, say the adversarial test failed (final texts to the author before they ship) | to build |
-| stale WOOLDID_* globals change numbers silently | **Overwrite them** at the start of a user's call; replications keep the engine's settings | to build |
+| adversarial test reported as a line without a p-value (card #25 and siblings) | **Eliminate the line-only cases**: e(adversarial_line_*) is not posted when no p-value can be had; texts approved: "Caution: the adversarial pre-trend test failed: it needs esfixedbaseperiod.", "Caution: the adversarial pre-trend test failed[ for subgroup `sg']: its covariance is degenerate.", "Caution: the adversarial pre-trend test failed: under bootstrap() it needs boottstat." | to build |
+| stale WOOLDID_* globals change numbers silently | **Overwrite them**: the outermost call clears the switches when it exits, so none outlives a call; replications keep the engine's settings | to build |
 | ledger X-est-b and X-est-w bounds | **Widen both to 1e-3** (the ledger's 10x rule) | to build |
 
 **Straight fixes (no number moves, no new text):** applied as 47 commits, ea11d36..a0c9bf3, with guide
