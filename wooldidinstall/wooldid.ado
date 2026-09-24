@@ -12040,7 +12040,8 @@ end
 * family and hands back the twoway layer that draws them, empty when the family has no band -
 * so the figure is untouched on a run that did not ask for a band, and on replay of a store
 * that holds none. Reading the endpoints from e() rather than recomputing them is what makes
-* replay work.
+* replay work. The planted reference row(s) get a 0/0 band, the zero-width point the shading
+* draws there.
 cap prog drop wooldid_esbandv
 prog def wooldid_esbandv
 version 16.0
@@ -12076,7 +12077,16 @@ version 16.0
     qui replace __wdsbhi = `WSB'[2, `wsbc'] if rownamesvar == "ES_`fam'" & relyr == `WSB'[3, `wsbc']
   }
   qui count if __wdsblo < . & __wdsbhi < .
-  if r(N) > 0 c_local wdsblayer (rline __wdsblo __wdsbhi relyr, lpattern(dash) lcolor(navy))
+  if r(N) > 0 {
+    * the reference row(s) the caller planted carry the shading's 0/0 and no band column, and
+    * rline joins across a missing value by default: left missing, the dashed pair ran straight
+    * across the reference at full width while the shading pinched to 0 there. The band pinches
+    * with it. Set only when the family has a band, so a band-less family still returns an
+    * empty layer, and never counted above, so a reference row alone cannot make a layer
+    qui replace __wdsblo = 0 if rownamesvar == "reference"
+    qui replace __wdsbhi = 0 if rownamesvar == "reference"
+    c_local wdsblayer (rline __wdsblo __wdsbhi relyr, lpattern(dash) lcolor(navy))
+  }
 end
 
 cap prog drop wooldid_vsplice

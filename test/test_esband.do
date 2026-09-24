@@ -10,7 +10,8 @@
 *    says so instead of staying silent; B7 subgroups get their own bands; B8 the plot layer
 *    draws without error; B11 with few clusters (df_r = 6) the critical value follows the
 *    multivariate t with df_r and not the normal law; B12 the critical value is the
-*    simulated quantile itself, with no floor at the pointwise t quantile.
+*    simulated quantile itself, with no floor at the pointwise t quantile; B13 the dashed
+*    band on the figure pinches to 0 at the reference period, as the shading does.
 clear all
 set more off
 set graphics off
@@ -418,6 +419,86 @@ if `b12rc' != 0 | "`b12m'" != "2" | b12hand >= `b12tq' | b12crit >= . | reldif(b
   local ++fails
 }
 else di as result "B12 PASS: the critical value is the simulated quantile (" %8.5f b12crit "), below the pointwise t quantile and not floored at it"
+
+* ---- B13 esband-rline-across-reference (change audit 2026-09-23): the pointwise shading draws
+* the reference period as a zero-width point, and the dashed band must pinch to it there too.
+* The stored band holds the estimated horizons only, so the plot layer left the reference row
+* missing and twoway's line joined the two neighbouring horizons straight across it: on an
+* esfixedbaseperiod figure the dashed pair crossed the reference at full width while the
+* shading closed to 0. The figure is read back from its saveplots() .gph, whose serset holds
+* every plotted point (the band pair comes back as its last two variables, renamed). A row
+* whose relyr is a band column must carry that column's endpoints; any other row is a
+* reference row and must be 0/0. B13a the fixed base period (reference -1, between pre2 and
+* post0); B13b the pooled reference (the * point at the left end)
+cap prog drop b13chk
+prog def b13chk, rclass
+  args stem
+  local bad 0
+  local nref 0
+  local nhit 0
+  local ncol 0
+  cap confirm matrix e(esband_att)
+  if _rc == 0 {
+    tempname B
+    matrix `B' = e(esband_att)
+    local ncol = colsof(`B')
+    cap graph drop _all
+    serset clear
+    cap graph use "`stem'_ES_att.gph", name(b13g, replace)
+    if _rc == 0 {
+      serset set 0
+      serset use, clear
+      qui ds
+      local sv `r(varlist)'
+      if wordcount("`sv'") == 6 {
+        local lo : word 5 of `sv'
+        local hi : word 6 of `sv'
+        forval r = 1/`=_N' {
+          local m 0
+          forval c = 1/`ncol' {
+            if relyr[`r'] == `B'[3, `c'] {
+              local m 1
+              local ++nhit
+              if reldif(`lo'[`r'], `B'[1, `c']) > 1e-6 | reldif(`hi'[`r'], `B'[2, `c']) > 1e-6 local ++bad
+            }
+          }
+          if !`m' {
+            local ++nref
+            if `lo'[`r'] != 0 | `hi'[`r'] != 0 local ++bad
+          }
+        }
+      }
+      else local bad = `bad' + 100
+    }
+    else local bad = `bad' + 1000
+    cap graph drop _all
+  }
+  return scalar bad = `bad'
+  return scalar nref = `nref'
+  return scalar nhit = `nhit'
+  return scalar ncol = `ncol'
+end
+foreach b13v in a b {
+  local b13opt = cond("`b13v'" == "a", "esfixedbaseperiod", "")
+  local b13f : dir . files "esband_b13`b13v'_*"
+  foreach f of local b13f {
+    cap erase "`f'"
+  }
+  mkb
+  cap noi wooldid y unit t ttre, `SPEC' `b13opt' simultaneousbands makeplots saveplots(esband_b13`b13v') replace
+  local b13rc = _rc
+  b13chk esband_b13`b13v'
+  di "B13`b13v' [`b13opt'] rc=`b13rc' band columns=" r(ncol) " matched rows=" r(nhit) " reference rows=" r(nref) " bad=" r(bad)
+  if `b13rc' != 0 | r(ncol) == 0 | r(nhit) != r(ncol) | r(nref) != 1 | r(bad) != 0 {
+    di as error "B13`b13v' FAIL: the dashed band does not pinch to 0 at the reference period [`b13opt'] (rc=`b13rc' columns=" r(ncol) " matched=" r(nhit) " reference rows=" r(nref) " bad=" r(bad) ")"
+    local ++fails
+  }
+  else di as result "B13`b13v' PASS: the dashed band carries the stored endpoints and pinches to 0 at the reference [`b13opt']"
+  local b13f : dir . files "esband_b13`b13v'_*"
+  foreach f of local b13f {
+    cap erase "`f'"
+  }
+}
 
 if `fails' == 0 di as result "ESBAND_ALL_PASS"
 else di as error "ESBAND_FAILS=`fails'"
