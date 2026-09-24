@@ -3,7 +3,8 @@
 * geometry, bitwise slope invariance vs the parent build, the intercept_rt0
 * re-expression, esf scoping (pooled Caution, no p and no line), the degenerate
 * covariance Caution under timetrends (overall and per subgroup, no line either), the
-* pooled regime under permute() (T8), per-subgroup reconstruction, and a null Monte
+* pooled regime under permute() (T8), no usable permutation p under esfixedbaseperiod
+* (T9), per-subgroup reconstruction, and a null Monte
 * Carlo documenting the primary statistic's calibration (and the old frozen-line
 * statistic's miscalibration) on a heteroskedastic covariance.
 * Run from test/:  "<stata>" -e do test_advstat.do   -> expect ADVSTAT_ALL_PASS
@@ -453,6 +454,48 @@ else {
   }
 }
 cap erase advstat_t8.txt
+
+* ---- T9 (the author's ruling 2026-09-24, the permute() twin of the line-only rule): under
+* esfixedbaseperiod a test with no usable permutation p-value has failed too. permexact on
+* dta_tiny with permstrata() admitting exactly two assignments (units 1 and 4 share a stratum;
+* every other stratum is onset-homogeneous) gives a rank-one permutation covariance, so the line
+* statistic has no testable residual dimension and the permutation p is unavailable. In fast
+* mode no V-free line is built; under permanalyticse and permtstat the analytic line the
+* observed run posted is dropped; each run prints the approved caution once and no longer the
+* old "unavailable" one (on 7647081 every run returned the line beside no p-value) ----
+use "`DATA'/dta_tiny", clear
+gen st = cond(inlist(i,1,4), 1, cond(inlist(i,2,3), 2, 3))
+tempfile t9tiny
+save `t9tiny'
+local t9need "Caution: the adversarial pre-trend test failed: too few usable permutations."
+foreach m in fast permanalyticse permtstat {
+  use `t9tiny', clear
+  local mo = cond("`m'" == "fast", "", "`m'")
+  local t9ls = c(linesize)
+  set linesize 255
+  qui log using advstat_t9.txt, text replace name(advst)
+  cap noi wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(2) esfixedbaseperiod adversarial permute(shuffle) permexact permstrata(st) `mo' rseed(5) dots(0)
+  local rc9 = _rc
+  qui log close advst
+  set linesize `t9ls'
+  if `rc9' != 0 {
+    dis as error "T9 FAIL (`m'): rc=" `rc9'
+    local ++fails
+    continue
+  }
+  cap confirm matrix e(adversarial_line_att)
+  local t9l = _rc == 0
+  local t9p = "`e(adversarial_pval_att)'" != "" & "`e(adversarial_pval_att)'" != "."
+  local t9txt = fileread("advstat_t9.txt")
+  local t9c = (strlen(`"`t9txt'"') - strlen(subinstr(`"`t9txt'"', "`t9need'", "", .))) / strlen("`t9need'")
+  local t9o = strpos(`"`t9txt'"', "permutation adversarial line test") > 0
+  dis "T9 (`m'): line=`t9l' p=`t9p' failed-caution count=`t9c' old-caution=`t9o'"
+  if `t9l' | `t9p' | `t9c' != 1 | `t9o' {
+    dis as error "T9 FAIL (`m'): with no usable permutation p the test must return no line and no p-value, with the failed-test caution once"
+    local ++fails
+  }
+}
+cap erase advstat_t9.txt
 
 if `fails' == 0 dis "ADVSTAT_ALL_PASS"
 else dis as error "ADVSTAT_FAILS=`fails'"

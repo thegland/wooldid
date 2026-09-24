@@ -1380,6 +1380,53 @@ if `g38a' | "`g38adv'" != "1" | `g38rc2' != 0 | `g38b' | !`g38c' {
   di as error "G38d FAIL: the absent adversarial bootstrap p prints as a bare dot or is not disclosed on replay"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
+* G38f (the author's ruling 2026-09-24, the boottstat twin of G38e): under boottstat a test
+* whose replications leave no usable statistic has failed too. On this panel, with
+* espostlength(2) and reps(3), the bootstrapped adversarial p is unavailable: the p stays posted
+* as missing with e(boot_adv_absent) = 1, the line the observed run posted beside its analytic
+* p is dropped, and the approved caution replaces the old count-bearing one (on 7647081 the
+* line stood beside the missing p). The subgroups() run checks the _s<sg> twins the same way
+use `panel', clear
+qui log using boot_gates_g38f.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) esfixedbaseperiod esprelength(2) espostlength(2) adversarial bootstrap(standard) boottstat reps(3) rseed(7) dots(0)
+local g38rc = _rc
+qui log close bg
+chk 38f 0 `g38rc'
+unwrap boot_gates_g38f.txt
+cap confirm matrix e(adversarial_line_att)
+local g38fl = _rc == 0
+local g38fp absent
+cap confirm scalar e(adversarial_pval_att)
+if _rc == 0 local g38fp = cond(e(adversarial_pval_att) >= ., "missing", "finite")
+local g38ft = strpos(`"`lg'"', "Caution: the adversarial pre-trend test failed: too few usable bootstrap replications.") > 0
+local g38fo = strpos(`"`lg'"', "line-test p-value(s) are unavailable") > 0
+local g38fb `e(boot_adv_absent)'
+di "G38f line=`g38fl' p=`g38fp' boot_adv_absent=`g38fb' failed-caution=`g38ft' old-caution=`g38fo'"
+if `g38fl' | "`g38fp'" != "missing" | "`g38fb'" != "1" | !`g38ft' | `g38fo' {
+  di as error "G38f FAIL: under boottstat with no usable replication statistic the adversarial line must not be posted and the caution must say the test failed"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+use `panel', clear
+gen sgv = 1 + mod(unit, 2)
+cap noi wooldid y unit t ttre, att cluster(unit) esfixedbaseperiod esprelength(2) espostlength(2) adversarial subgroups(sgv) bootstrap(standard) boottstat reps(3) rseed(7) dots(0)
+local g38rc = _rc
+chk 38f2 0 `g38rc'
+local g38fsg
+foreach nm in att att_s1 att_s2 {
+  cap confirm scalar e(adversarial_pval_`nm')
+  local g38fq = _rc == 0
+  if `g38fq' local g38fq = e(adversarial_pval_`nm') < .
+  cap confirm matrix e(adversarial_line_`nm')
+  local g38fsg `g38fsg' `nm':p=`g38fq',line=`=_rc == 0'
+  * a line may stand only beside a finite p
+  if _rc == 0 & !`g38fq' {
+    di as error "G38f FAIL: subgroups() run posts e(adversarial_line_`nm') beside no bootstrapped p"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+}
+di "G38f subgroups: `g38fsg'"
+cap erase boot_gates_g38f.txt
+
 
 * G39 (CS-20, author ruling 2026-09-07 "caution, no floor"): reps() gains permreps()'s
 * resolution caution and keeps its absence of a minimum. Which number binds depends on the

@@ -7921,7 +7921,15 @@ version 16.0
         if `jp' < . ereturn scalar `ename' = `jp'
         else {
           ereturn scalar `ename' = .
-          if `wdb_advok' local ++wdb_advmiss
+          if `wdb_advok' {
+            local ++wdb_advmiss
+            * boottstat with no usable replication statistic: the test failed, so the line the
+            * worker posted beside its analytic p goes too (author ruling 2026-09-24: no
+            * line-only results). st_matrix() with a 0 x 0 matrix drops the e() matrix and
+            * leaves every other e() entry as it was (measured, Stata 19 MP)
+            cap confirm matrix e(adversarial_line_`fk')
+            if _rc == 0 mata: st_matrix("e(adversarial_line_`fk')", J(0, 0, .))
+          }
           else local ++wdb_advblank
         }
       }
@@ -7938,7 +7946,11 @@ version 16.0
     if `wdb_advmiss' > 0 {
       ereturn local boot_adv_absent 1
       local ++wdbncaut
-      local wdbc`wdbncaut' `wdb_advmiss' bootstrapped adversarial line-test p-value(s) are unavailable (no usable replication statistic - degenerate replication covariances, or a horizon missing from the replications)
+      * message detail replaced 2026-09-24 (author ruling, approved text), kept for reference:
+      * `wdb_advmiss' bootstrapped adversarial line-test p-value(s) are unavailable (no usable
+      * replication statistic - degenerate replication covariances, or a horizon missing from
+      * the replications). The lines of those tests are dropped above
+      local wdbc`wdbncaut' the adversarial pre-trend test failed: too few usable bootstrap replications
     }
     if `wdb_advok' {
       cap ereturn matrix boot_advW = `awacc'
@@ -9515,6 +9527,7 @@ version 16.0
   if "`adv'" != "" {
     local alt = ("`advalt'" != "")
     local esfflag = ("`esf'" != "")
+    local wdpadvmiss 0
     * (family, subgroup) pairs the observed run skipped because the subgroup lost a horizon
     * as not estimable (the worker printed the caution): no permutation p and no line for
     * them, as on the analytic run (author ruling 2026-09-23)
@@ -9554,29 +9567,42 @@ version 16.0
               matrix `awall' = `awall', `Wr'
               matrix `awobs' = `awobs', `Wo'
             }
+            * the V-free line is posted only beside a permutation p, where the fast-mode
+            * observed run left none: under the pooled reference, or with no usable
+            * permutation p, the test failed and nothing is returned (author rulings
+            * 2026-09-23 and 2026-09-24: no line-only results)
+            cap confirm matrix e(`lname')
+            if _rc != 0 {
+              tempname ln
+              mata: wooldid_permadvline("`cmpb'", "`cols'", "`rels'", `advesrel', ("`advtt'" != ""), `esfflag', `alt', "`ln'")
+              if `ln'[1, 1] < . {
+                matrix colnames `ln' = slope intercept_rt0
+                matrix rownames `ln' = y1
+                ereturn matrix `lname' = `ln'
+              }
+            }
           }
           else {
             if "`e(`ename')'" != "" ereturn scalar `ename' = .
-            local ++ncaut
-            local wdpc`ncaut' the permutation adversarial line test `ename' is unavailable (fewer than 2 complete replications carry every horizon, or the permutation-covariance metric leaves no testable residual dimension); it is absent rather than analytic
+            * no usable permutation p: the test failed, so the analytic line the observed run
+            * posted under permtstat or permanalyticse goes too (st_matrix() with a 0 x 0
+            * matrix drops it and leaves every other e() entry as it was), and the fast-mode
+            * V-free line is not built. One caution per run, after the loop. Message detail
+            * replaced 2026-09-24 (author ruling, approved text), kept for reference: the
+            * permutation adversarial line test `ename' is unavailable (fewer than 2 complete
+            * replications carry every horizon, or the permutation-covariance metric leaves
+            * no testable residual dimension); it is absent rather than analytic
+            local ++wdpadvmiss
+            cap confirm matrix e(`lname')
+            if _rc == 0 mata: st_matrix("e(`lname')", J(0, 0, .))
           }
         }
         else if "`e(`ename')'" != "" ereturn scalar `ename' = .
-        * the V-free line is posted only where a p-value can be had (esfixedbaseperiod):
-        * under the pooled reference the test failed and nothing is returned (author ruling
-        * 2026-09-23; the worker printed the caution). With esfixedbaseperiod and no usable
-        * permutation p the line is still posted - that path was left for the author
-        cap confirm matrix e(`lname')
-        if _rc != 0 & `esfflag' {
-          tempname ln
-          mata: wooldid_permadvline("`cmpb'", "`cols'", "`rels'", `advesrel', ("`advtt'" != ""), `esfflag', `alt', "`ln'")
-          if `ln'[1, 1] < . {
-            matrix colnames `ln' = slope intercept_rt0
-            matrix rownames `ln' = y1
-            ereturn matrix `lname' = `ln'
-          }
-        }
       }
+    }
+    if `wdpadvmiss' > 0 {
+      local ++ncaut
+      local wdpc`ncaut' the adversarial pre-trend test failed: too few usable permutations
     }
     if "`wdpaw'" != "" {
       ereturn matrix perm_advW = `awall'
