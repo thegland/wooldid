@@ -797,7 +797,23 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     local processtemp = subinstr("`processtemp'","#"," ",.)
     local processtemp = subinstr("`processtemp'","i."," ",.)
     local processtemp = subinstr("`processtemp'","c."," ",.)
-    local loopablecontrols `loopablecontrols' `processtemp'
+    * a term still carrying a factor-variable operator the three strips above do not know
+    * (ib2.g, ibn.g, b2.g) is not a valid expression, so the markout below would die on it
+    * with Stata's bare r(198); mark such a term out on its base variable, as reghdfe does.
+    * a term that already evaluates (a plain name, o.x, a time-series operator on tsset
+    * data) is left exactly as it was, so no spelling that ran before changes its sample
+    local wdmoterms
+    foreach wdmot of local processtemp {
+      if strpos("`wdmot'", ".") {
+        cap count if `wdmot' >= .
+        if _rc {
+          cap fvrevar `wdmot', list
+          if _rc == 0 local wdmot `r(varlist)'
+        }
+      }
+      local wdmoterms `wdmoterms' `wdmot'
+    }
+    local loopablecontrols `loopablecontrols' `wdmoterms'
   }
 
   local checkclus

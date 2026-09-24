@@ -15,6 +15,9 @@
 *    keeps only the flag == 1 rows, now with a caution naming the count and those rows
 *    folded into e(N_dropped); "if flag != 0" and "if flag == 1" draw no caution; a
 *    missing-valued flag leaves the sample and is deliberately NOT counted
+* E15 the worker's markout on factor-variable terms: controls(ib2.g) and fe(ib2.g) run (they
+*    used to die on Stata's bare "ib2:  operator invalid", r(198)), mark out the rows where g
+*    is missing exactly as controls(i.g) and fe(i.g) do, and give the same att
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -535,6 +538,31 @@ if `rc14d' != 0 | `c14d' != 1 | `n14d' != 54 | `d14d' != 12 {
   di as error "E14d FAIL: missing-valued rows must leave the sample and stay out of the count"
   local ++fails
 }
+
+* ---- E15 (change audit 2026-09-22, markout-fv-prefix): a factor-variable term whose operator
+* the markout's three strips do not know (ib2.g) is marked out on its base variable ----
+use "data/dta_binary", clear
+qui gen g = 1 + mod(i, 3)
+qui replace g = . in 1/40
+local e15ok 1
+foreach e15opt in controls fe {
+  cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) `e15opt'(i.g)
+  local rc15i = _rc
+  local n15i = e(N)
+  local a15i = e(b)[1,1]
+  cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) `e15opt'(ib2.g)
+  local rc15b = _rc
+  local n15b = e(N)
+  local a15b = e(b)[1,1]
+  if `rc15b' != 0 local a15b = .
+  di "E15 `e15opt': i.g rc=`rc15i' N=`n15i' att=`a15i' | ib2.g rc=`rc15b' N=`n15b' att=`a15b'"
+  if `rc15i' != 0 | `rc15b' != 0 | `n15i' != 920 | `n15b' != 920 | reldif(`a15i', `a15b') > 1e-10 {
+    di as error "E15 FAIL: `e15opt'(ib2.g) must run on the same sample and give the same att as `e15opt'(i.g)"
+    local ++fails
+    local e15ok 0
+  }
+}
+if `e15ok' di as result "E15 PASS: ib2.g is marked out on g in controls() and fe()"
 
 if `fails' == 0 di as result "EDGES_ALL_PASS"
 else di as error "EDGES_FAILS=`fails'"
