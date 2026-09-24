@@ -1893,5 +1893,153 @@ if `g45ok1' != 1 | `g45ok2' != 1 | `g45ok3' != 1 | `g45ok4' != 1 | `g45str' != 1
 }
 matrix drop G45O G45A G45W G45JW G45J G45C_gt
 
+* G46 (the author's ruling 2026-09-24, as a45480b did for permute()): every bootstrap() run
+* posts e(p), e(ci_l) and e(ci_u) from the displayed family, so esttab, which reads them ahead of
+* e(V), reports the printed p-values and intervals. Under each display (percentile, bc, bca,
+* wald) and under boottstat, and with subgroups(): the three exist with e(b)'s stripe; each
+* column equals, bitwise, columns 4-6 of the printed table row it belongs to (main rows, then
+* e(wdid_sglist)'s subgroup tables, read back after the whole run); where e(p) is finite it
+* equals the named family matrix (e(boot_p_percentile), e(boot_p_bc), e(boot_p_bca), row p_pctl
+* of e(boot_tstud)) and its interval that family's e(boot_ci_*); where estout is installed its p
+* for main_att is e(p)'s; and the footer names esttab apart from coefplot and honestdid, in the
+* approved text. On 7647081 no e(p) is posted and the footer says esttab exports the
+* standard-deviation family
+cap prog drop g46chk
+prog def g46chk
+  args tag fam
+  local bad 0
+  local why
+  foreach nm in p ci_l ci_u {
+    cap confirm matrix e(`nm')
+    if _rc != 0 {
+      local ++bad
+      local why `why' no_e(`nm')
+    }
+  }
+  if `bad' == 0 {
+    tempname P L U B T
+    matrix `P' = e(p)
+    matrix `L' = e(ci_l)
+    matrix `U' = e(ci_u)
+    matrix `B' = e(b)
+    local K = colsof(`B')
+    if colsof(`P') != `K' | colsof(`L') != `K' | colsof(`U') != `K' {
+      local ++bad
+      local why `why' width
+    }
+    else {
+      foreach M in P L U {
+        if "`: colfullnames ``M'''" != "`: colfullnames `B''" {
+          local ++bad
+          local why `why' stripe_`M'
+        }
+      }
+      * the printed tables, main then subgroups, walked as e(b) is stacked
+      local kk 0
+      local tabs wdidmainresults
+      foreach sg in `e(wdid_sglist)' {
+        local tabs `tabs' wdidsgresults_`sg'
+      }
+      foreach tb of local tabs {
+        cap confirm matrix e(`tb')
+        if _rc != 0 continue
+        matrix `T' = e(`tb')
+        forval rr = 1/`=rowsof(`T')' {
+          local ++kk
+          if `kk' > `K' continue
+          if !(`P'[1, `kk'] == `T'[`rr', 4]) | !(`L'[1, `kk'] == `T'[`rr', 5]) | !(`U'[1, `kk'] == `T'[`rr', 6]) {
+            local ++bad
+            local why `why' table_`tb'_`rr'
+          }
+        }
+      }
+      if `kk' != `K' {
+        local ++bad
+        local why `why' rows`kk'_vs_K`K'
+      }
+      * the named family where the table is live
+      local nlive 0
+      if "`fam'" != "wald" {
+        tempname FP FC
+        if "`fam'" == "tstat" {
+          matrix `FP' = e(boot_tstud)
+          matrix `FP' = `FP'[rownumb(`FP', "p_pctl"), 1...]
+        }
+        else matrix `FP' = e(boot_p_`fam')
+        if "`fam'" != "tstat" matrix `FC' = e(boot_ci_`fam')
+        forval k = 1/`K' {
+          if `P'[1, `k'] >= . continue
+          local ++nlive
+          if `P'[1, `k'] != `FP'[1, `k'] {
+            local ++bad
+            local why `why' famp_`k'
+          }
+          if "`fam'" != "tstat" {
+            if `L'[1, `k'] != `FC'[1, `k'] | `U'[1, `k'] != `FC'[2, `k'] {
+              local ++bad
+              local why `why' famci_`k'
+            }
+          }
+        }
+        if `nlive' == 0 {
+          local ++bad
+          local why `why' nolive
+        }
+      }
+      * estout's own reading of the p for main_att
+      cap which estout
+      if _rc == 0 {
+        tempname E
+        qui estout ., cells(p)
+        matrix `E' = r(coefs)
+        local er = rownumb(`E', "main_att")
+        local pk = colnumb(`P', "main_att")
+        if `er' >= . | `pk' >= . {
+          local ++bad
+          local why `why' estout_rows
+        }
+        else if `E'[`er', 1] != `P'[1, `pk'] {
+          local ++bad
+          local why `why' estout_p
+        }
+        local why `why' estout_checked
+      }
+    }
+  }
+  di "G46 `tag': bad=`bad' `why'"
+  if `bad' > 0 {
+    di as error "G46 FAIL (`tag'): e(p)/e(ci_l)/e(ci_u) must be posted from the displayed family and match the printed table"
+    global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+  }
+end
+foreach g46d in percentile bc bca wald tstat {
+  use `panel', clear
+  local g46o = cond("`g46d'" == "tstat", "boottstat", "bootdisplay(`g46d')")
+  qui log using boot_gates_g46.txt, text replace name(bg)
+  cap noi wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) `g46o'
+  local g46rc = _rc
+  qui log close bg
+  chk 46_`g46d' 0 `g46rc'
+  g46chk `g46d' `g46d'
+  * the footer (printed on every display except wald) names esttab apart, in the approved text
+  if "`g46d'" != "wald" {
+    unwrap boot_gates_g46.txt
+    local g46new = strpos(`"`lg'"', "and so do coefplot and honestdid, which read e(V) without being asked. esttab reports the p-values and intervals printed above, from e(p), e(ci_l) and e(ci_u).") > 0
+    local g46old = strpos(`"`lg'"', "export the standard-deviation family") > 0
+    if !`g46new' | `g46old' {
+      di as error "G46 FAIL (`g46d'): the bootstrap footer must name esttab apart in the approved text (new `g46new', old `g46old')"
+      global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+    }
+  }
+}
+* subgroups(): the subgroup tables' rows follow the main rows in e(b)
+use `panel', clear
+gen sgv = 1 + mod(unit, 2)
+cap noi wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) subgroups(sgv) bootstrap(standard) reps(10) rseed(7)
+local g46rc = _rc
+chk 46_sg 0 `g46rc'
+g46chk sg percentile
+cap erase boot_gates_g46.txt
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

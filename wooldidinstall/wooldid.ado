@@ -11114,6 +11114,21 @@ version 16.0
     matrix `wm' = `wmtp'
     ereturn hidden matrix boot_tpctl_mainresults = `wmtp'
   }
+  * the displayed family's p-value and interval by e(b) column, posted below as e(p), e(ci_l)
+  * and e(ci_u) for esttab (the author's ruling 2026-09-24). They are read from the final table,
+  * the one printed, so under every bootdisplay() and under boottstat (the studentized family)
+  * they are the printed numbers, blank where the table is blank. Main-table row rr is e(b)
+  * column rr; the subgroup rows follow from kk0`sg' below. Copied by matrix reference, never
+  * through a local, which would round the doubles
+  tempname wdbep wdbel wdbeu
+  matrix `wdbep' = J(1, `K', .)
+  matrix `wdbel' = J(1, `K', .)
+  matrix `wdbeu' = J(1, `K', .)
+  forval rr = 1/`nmain' {
+    matrix `wdbep'[1, `rr'] = `wm'[`rr', 4]
+    matrix `wdbel'[1, `rr'] = `wm'[`rr', 5]
+    matrix `wdbeu'[1, `rr'] = `wm'[`rr', 6]
+  }
   ereturn matrix wdidmainresults = `wm'
   foreach sg of local sgl {
     cap confirm matrix `wsg`sg''
@@ -11249,6 +11264,13 @@ version 16.0
       matrix `wsg`sg'' = `wstp`sg''
       if strlen("boot_tpctl_sgresults_`sg'") <= 32 ereturn hidden matrix boot_tpctl_sgresults_`sg' = `wstp`sg''
       matrix colnames `wsg`sg'' = `wsc2'
+    }
+    local kkE = `kk0`sg''
+    forval rr = 1/`=rowsof(`wsg`sg'')' {
+      local ++kkE
+      matrix `wdbep'[1, `kkE'] = `wsg`sg''[`rr', 4]
+      matrix `wdbel'[1, `kkE'] = `wsg`sg''[`rr', 5]
+      matrix `wdbeu'[1, `kkE'] = `wsg`sg''[`rr', 6]
     }
     ereturn matrix wdidsgresults_`sg' = `wsg`sg''
   }
@@ -11398,6 +11420,22 @@ version 16.0
     if `wdbbcamiss' > 0 & "`bdisp'" == "bca" dis as text "Caution: `wdbbcamiss' reported coefficient(s) had no usable BCa family (no acceleration could be computed, or an acceleration-adjusted endpoint level fell outside (0,1)); their p-value and interval are left blank rather than filled from another family. The standard-error column is unaffected."
   }
   if "`ties'" != "" ereturn local boot_ties ties
+  * e(p), e(ci_l), e(ci_u): the displayed family, harvested above from the printed tables.
+  * estout reads posted e(p)/e(ci_l)/e(ci_u) ahead of anything derived from e(V) (its own bVs2
+  * list), so esttab tables this run's printed p-values and intervals rather than deriving the
+  * Wald family from e(V), on every bootstrap() run, as wooldid_permwire does under permute().
+  * e(V) is unchanged: esttab's se and t columns, coefplot, honestdid, test and lincom still read
+  * the standard-deviation family from it (the footer says so). Under bootdisplay(wald) the
+  * numbers are those esttab would derive from e(V) and e(df_r) anyway
+  matrix colnames `wdbep' = `obn'
+  matrix colnames `wdbel' = `obn'
+  matrix colnames `wdbeu' = `obn'
+  matrix rownames `wdbep' = p
+  matrix rownames `wdbel' = ll
+  matrix rownames `wdbeu' = ul
+  ereturn matrix p = `wdbep'
+  ereturn matrix ci_l = `wdbel'
+  ereturn matrix ci_u = `wdbeu'
 
   * the bootstrap simultaneous band, opt-in. built from the same accumulator the joint test
   * uses, after the tables are rewired, so the band and the printed pointwise intervals come
@@ -13158,11 +13196,13 @@ version 16.0
    * e(V) and e(df_r) carry the sd-family inference whichever family is displayed, so a
    * hand-run test/lincom reproduces the sd package and not a displayed percentile p
    * the exporters are named here too. test and lincom are the commands a user runs
-   * deliberately; esttab, coefplot and honestdid read the same e(V) without being asked to, so
-   * a table or a figure built from this run carries the standard-deviation family even though
-   * the printed table does not. the stored family itself is unchanged: an interval-implied
-   * standard error is not a standard error.
-   if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  e(V) and e(df_r) carry the standard-deviation family referred to the `wdbrefd' distribution, so test and lincom run by hand reproduce the bootdisplay(wald) numbers rather than the columns printed above - and so do the tools that read e(V) without being asked: esttab, coefplot and honestdid export the standard-deviation family, not the columns above."
+   * deliberately; coefplot and honestdid read the same e(V) without being asked to, so a figure
+   * built from this run carries the standard-deviation family even though the printed table
+   * does not. esttab is named apart: wooldid_bootwire posts the displayed family as e(p),
+   * e(ci_l) and e(ci_u), which estout reads ahead of e(V), so its p-values and intervals are the
+   * printed ones (the author's ruling and text 2026-09-24). the stored family itself is
+   * unchanged: an interval-implied standard error is not a standard error.
+   if "`wdbdsp'" != "wald" | "`e(boot_tstat)'" == "1" dis as result "  e(V) and e(df_r) carry the standard-deviation family referred to the `wdbrefd' distribution, so test and lincom run by hand reproduce the bootdisplay(wald) numbers rather than the columns printed above - and so do coefplot and honestdid, which read e(V) without being asked. esttab reports the p-values and intervals printed above, from e(p), e(ci_l) and e(ci_u)."
    if "`e(boot_jt_family)'" == "fixedmetric" dis as result "  The joint pre-trend tests (and the across-subgroup equality tests, when subgroups are present) are rank tests of the replication draws recentred at the observed estimates on the fixed bootstrap-covariance metric, p = add-one share of replications at or beyond the observed statistic (e(boot_jt_family) = fixedmetric; the replication statistics are in e(boot_jointW) and e(boot_sgW)). Under boottstat they would instead be bootstrapped test statistics."
    if "`e(boot_jt_absent)'" != "" | "`e(boot_sgjt_absent)'" != "" | "`e(boot_adv_absent)'" != "" dis as result "  Some joint tests, across-subgroup equality tests and/or adversarial line tests are NOT reported for this run (no usable replication statistic - too few complete replications or a rank-deficient bootstrap covariance of the tested columns). They are absent rather than shown as analytic tests, which would not be bootstrap quantities."
    if "`e(boot_tstat)'" == "1" dis as result "  Subgroup contrasts, when requested, are studentized by their own analytic pairwise standard error in every replication (boottstat) and carry the same package as the coefficient rows."

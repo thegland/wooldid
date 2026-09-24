@@ -1077,7 +1077,8 @@ with no, or a very small, standard error under {it:boottstat}), {it:e(boot_tstat
 {it:e(boot_sgjt_reason)} (tests withheld and why), {it:e(boot_sgW)} and {it:e(boot_sgWobs)} (the subgroup-equality statistics), {it:e(bootdist_pwse)} (up to 10,000 replications), the hidden
 {it:e(boot_ptails)}, {it:e(boot_comparator)}, {it:e(boot_ase_obs)}, {it:e(V_es_analytic_{it:type})} and {it:e(df_r_analytic)}, and the per-family cfx twins
 {it:e(boot_{it:family}_{it:cfxname})}. {it:e(df_r)} is aligned to the reported reference distribution, and {it:e(boot_percentile_mainresults)} is an alias of
-{it:e(boot_pctl_mainresults)}. {p_end}
+{it:e(boot_pctl_mainresults)}. {it:e(p)}, {it:e(ci_l)} and {it:e(ci_u)} hold the displayed family, so {it:esttab} reports the p-values and intervals printed in the
+tables; the standard errors and statistics it reports come from {it:e(V)}. {p_end}
 
 {synopt:{it:Permutation inference}} When {it:permute()} is used, the reported tables carry the permutation inference (columns {it:se_analytic}, {it:t_perm}, {it:p_perm} and the
 interval), the observed analytic tables are preserved hidden as {it:e(perm_analytic_mainresults)}, {it:e(perm_analytic_sgresults_{it:sgcase})} and {it:e(perm_analytic_pwsgs)},
