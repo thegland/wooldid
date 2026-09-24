@@ -881,7 +881,7 @@ with variables being inappropriately dropped from the regression. {p_end}
 a high dimensional fixed effects estimator. This is often less efficient than the alternative approach in terms of computation time, but can be important in terms of memory
 efficiency in the main regression or under certain other circumstances. Be extra careful to ensure that specifications featuring {it:ccc_absorb()} are identified; not all cases
 of identification failure are detected. In particular, with an event-study window, variables that are constant within cohort-by-period cells (a unit-level variable with a
-unit-level {it:i}, for example) absorb the treatment interactions themselves and the run stops with an error naming this option. Under {it:contreat()}, naming the treatment
+unit-level {it:i}, for example) absorb the treatment interactions themselves and the run stops with an error. Under {it:contreat()}, naming the treatment
 variable itself here turns the default cell collapse off (see {it:nofastcollapse}). {p_end}
 
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses and prints progress reports throughout the estimation process; the regression itself is run quietly.
