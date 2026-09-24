@@ -278,9 +278,17 @@ and #304's DELETE proposal to #301's second line. 17 cards got round-2 notes.
 | within-cell screen a subset of the split-unit screen | **Keep both** | no change |
 | gteffects table formatting | **Apply PS-3 formatting**; no floor line | to build |
 | p-floor line under bootdisplay(bc) | **Omit it under bc** | to build |
+| poisson + contreat() basic: the first ppmlhdfe fit fails on wooldid's own one-level term and the 3200 fallback caution prints | **Investigate** specifications that do not fail, benchmarked against today's results, with a 10-15 agent workflow (the diff that only skipped to the fallback is held) | to investigate |
+| lattice() run with an all-zero VCE: following the bootstrap() advice posts no e(V) | **Leave it** | no change |
+| adversarial test reported as a line without a p-value (card #25 and siblings) | **Eliminate the line-only cases**: when no p-value can be had, say the adversarial test failed (final texts to the author before they ship) | to build |
+| stale WOOLDID_* globals change numbers silently | **Overwrite them** at the start of a user's call; replications keep the engine's settings | to build |
+| ledger X-est-b and X-est-w bounds | **Widen both to 1e-3** (the ledger's 10x rule) | to build |
 
-**Straight fixes (no number moves, no new text)** are being built in five groups (engines and shell,
-worker and validate, plots, docs, ledger); their commits are listed here when applied.
+**Straight fixes (no number moves, no new text):** applied as 47 commits, ea11d36..a0c9bf3, with guide
+chapter 14 regenerated in afe9e37. Held: the poisson 3200 fallback skip (the author asked for an
+investigation instead) and the help's 'returned' wording for the adversarial line (superseded by the
+line-only ruling). Not built: the lattice e(V) re-post (ruled leave); the ccref band twin leg waits for
+the ccref caution build.
 
 **Left as they stand (FYI).** Fast mode's full VCE on the binary subgroup-by-horizon call (no cheap
 mechanism); the NIS k <= 4 cap (documented); the contreat subgroup reads without the fcdeg screen (no
