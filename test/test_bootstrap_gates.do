@@ -1014,6 +1014,31 @@ if `p30g' != 0 | `g30line' | `g30res' | !`g30jt' {
   di as error "G30g FAIL: under bootdisplay(bc) the p = 0 line and the resolution clause must be omitted and the joint-test sentence kept (att p `p30g', line `g30line', clause `g30res', joint `g30jt')"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
+* G30h (the author's ruling 2026-09-24, the bca twin of G30g): the BCa p inverts the
+* acceleration-adjusted interval and is off the 2/n grid too, so under bootdisplay(bca) the
+* p = 0 line and the resolution clause are omitted as under bc; the joint-test sentence stays.
+* Same panel and seed, whose att BCa p is 0, with a live acceleration (e(boot_accel) nonmissing
+* for att), so the run is not the no-acceleration branch (on 7647081 both lines printed)
+use `panel', clear
+qui log using boot_gates_g30.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7) bootdisplay(bca)
+local g30rc = _rc
+qui log close bg
+chk 30h 0 `g30rc'
+local p30h = e(wdidmainresults)[rowsof(e(wdidmainresults)), 4]
+local a30h = .
+cap local a30h = e(boot_accel)[1, colnumb(e(boot_accel), "main_att")]
+local lg = fileread("boot_gates_g30.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local g30line = strpos(`"`lg'"', "p = 0 above means") > 0
+local g30res = strpos(`"`lg'"', "have resolution 2/") > 0
+local g30jt = strpos(`"`lg'"', "The joint, equality and adversarial p-values are add-one") > 0
+di "G30h bca: att p = `p30h', accel = `a30h', p = 0 line `g30line', resolution clause `g30res', joint-test sentence `g30jt'"
+if `p30h' != 0 | `a30h' >= . | `g30line' | `g30res' | !`g30jt' {
+  di as error "G30h FAIL: under bootdisplay(bca) the p = 0 line and the resolution clause must be omitted and the joint-test sentence kept (att p `p30h', accel `a30h', line `g30line', clause `g30res', joint `g30jt')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
 cap erase boot_gates_g30.txt
 
 * G31 (F059/F063/F066, 2026-09-06) the reproducibility record and the resample columns:
