@@ -28,6 +28,9 @@
 *    "Elasticities (dyex)", dydx "Semi-elasticities (dydx)" (author ruling 2026-09-23)
 * P7 poisson + unconditionalse + cluster() posts e(ll_0) and e(r2pseud) and prints the
 *    pseudo-R2: the stage-1 command spells vce(cluster ...) (author ruling 2026-09-23)
+* P8 poisson runs whose absorbed terms carry two or more slopes complete instead of stopping
+*    r(3201): the dose polynomial enters explicitly, ccc_absorb() is split one slope per term
+*    (author ruling 2026-09-23)
 *
 * The retired option NAMES are pinned in test_si89.do (T1/T2), which is their cert host:
 * test/suite/configs_ext.csv cannot carry them, because coverage_check.py treats an option
@@ -221,6 +224,62 @@ if !`p7ok' {
   di as error "P7 FAIL: poisson + unconditionalse + cluster() must post e(ll_0) and e(r2pseud) (= 1 - ll/ll_0) and print the pseudo-R2, with e(wdid_vcespec) still cluster(i)"
   local ++fails
 }
+
+* ---- P8: ppml-multislope-3201 (author ruling 2026-09-23). ppmlhdfe 2.3.0's slope
+* preconditioner stops r(3201) on any absorbed factor carrying two or more slopes, and wooldid
+* built two such terms itself: the dose polynomial under contreatpoly(2+) with a lattice or a
+* byX control, and ccc_absorb() of two or more variables. Both runs stopped r(3201) and posted
+* nothing. The dose polynomial now enters the regression explicitly with the ccnoabsorb spelling
+* (splitting it across copies of its factor converged far too slowly), so P8a must equal its
+* ccnoabsorb twin bit for bit. ccc_absorb() is split into one absorbed term per variable, so
+* P8b's point estimates must equal the explicit coarsecohortcontrols(c.x1 c.x2) twin to 1e-8,
+* and its standard error, which the explicit twin loses here (all-zero VCE), must match Stata's
+* own poisson on the explicit terms (customvce(robust)) to that command's convergence floor
+local CCD "`REPO'/test/suite/data/continuous_control_dense.dta"
+local p8n 0
+use "`CCD'", clear
+cap qui wooldid y_count cohort t ttre, contreat(dose) contreatcontrols(byTreated) contreatpoly(2) poisson robust
+local p8arc = _rc
+tempname p8ab p8bb p8bv p8cb p8ob p8ov
+if `p8arc' == 0 matrix `p8ab' = e(b)
+use "`CCD'", clear
+cap qui wooldid y_count cohort t ttre, contreat(dose) contreatcontrols(byTreated) contreatpoly(2) poisson robust ccnoabsorb
+local p8anrc = _rc
+local p8ad .
+if `p8arc' == 0 & `p8anrc' == 0 local p8ad = mreldif(`p8ab', e(b))
+di "P8a_poly_bytreated rc=`p8arc' twin_rc=`p8anrc' mreldif_b_vs_ccnoabsorb=`p8ad'"
+if `p8arc' != 0 | `p8ad' != 0 {
+  di as error "P8a FAIL: poisson + byTreated + contreatpoly(2) must run and equal its ccnoabsorb twin bit for bit"
+  local ++p8n
+}
+use "`CCD'", clear
+cap qui wooldid y_count cohort t ttre, poisson robust ccc_absorb(x1 x2)
+local p8brc = _rc
+local p8bse .
+if `p8brc' == 0 {
+  matrix `p8bb' = e(b)
+  cap matrix `p8bv' = e(V)
+  if _rc == 0 local p8bse = sqrt(`p8bv'[1,1])
+}
+use "`CCD'", clear
+cap qui wooldid y_count cohort t ttre, poisson robust coarsecohortcontrols(c.x1 c.x2)
+local p8crc = _rc
+local p8bd .
+if `p8brc' == 0 & `p8crc' == 0 local p8bd = mreldif(`p8bb', e(b))
+use "`CCD'", clear
+cap qui wooldid y_count cohort t ttre, poisson customvce(robust) ccc_absorb(x1 x2)
+local p8orc = _rc
+local p8sd .
+if `p8orc' == 0 & `p8bse' < . {
+  matrix `p8ov' = e(V)
+  local p8sd = reldif(`p8bse', sqrt(`p8ov'[1,1]))
+}
+di "P8b_ccc_two rc=`p8brc' se=`p8bse' mreldif_b_vs_explicit=`p8bd' reldif_se_vs_poisson=`p8sd'"
+if `p8brc' != 0 | `p8bd' > 1e-8 | `p8sd' > 1e-4 {
+  di as error "P8b FAIL: poisson + ccc_absorb(x1 x2) must run, match the explicit spelling to 1e-8 and Stata's poisson SE to 1e-4"
+  local ++p8n
+}
+if `p8n' > 0 local ++fails
 
 if `fails' == 0 di as result "POISMARGINS_ALL_PASS"
 else di as error "POISMARGINS_FAILS=`fails'"

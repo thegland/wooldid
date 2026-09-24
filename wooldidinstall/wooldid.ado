@@ -1608,6 +1608,72 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       local ccc_absorbinserter
     }
   }
+  * the same preconditioner fails r(3201) ("vector required") on any absorbed factor that
+  * carries two or more slopes: it indexes the levels-by-slopes matrix of per-level sums as
+  * if it were a vector. wooldid builds such terms itself: under contreatpoly(2+) with a
+  * lattice or a byX control (i.lat##c.(r r2), i.byx#c.(r r2)), and under ccc_absorb() of
+  * two or more variables (i._i#i._t#c.(x1 x2)). one slope on a factor of two or more levels
+  * passes, so the author's first choice was to split such a term into one term per slope,
+  * i.f##c.x1 i.fcopy#c.x2, the same columns (ruling 2026-09-23, with entering the slopes
+  * explicitly where the split does not work). the two classes came out differently.
+  * the dose polynomial: r and r^2 are nearly collinear inside a lattice bin or byX group
+  * (correlation .9998 on the test data), and two separate absorbed slope sets on the same
+  * factor send the fixed-effect solver into alternating projections that barely converge.
+  * runs whose explicit spelling takes 1-9 seconds took 19 seconds to 15 minutes, and the
+  * slowest returned an ame about 47 times the explicit one. so the dose-control set goes in
+  * explicitly, as under ccnoabsorb and with the same spelling, and absorb() takes nothing
+  * from it. nothing else about ccnoabsorb applies (the local itself is untouched). a
+  * one-level lattice with contreatpoly(2+) used to fail r(3200) and recover through the
+  * fallback below with this same explicit command; it now takes it up front, uncautioned.
+  * ccc_absorb(): the split takes at most a few times the explicit spelling's time, points
+  * agree with Stata's poisson on the explicit spelling to its convergence floor, and it
+  * keeps standard errors that the explicit ccc columns lose on some designs (ppmlhdfe
+  * returns an all-zero covariance there), so it is split. a pair as collinear as the dose
+  * polynomial (a narrow age range and its square, correlation .9997) still defeats the
+  * solver and stops at the treated-cell collinearity screen. the copies are clones of the
+  * term's first factor variable. the split feeds the first ppmlhdfe call only: the rc-3200
+  * fallback below reads the explicit spelling, which stays as it was. a term with one slope
+  * is never rewritten. user fe() terms need none of this: fe() is a factor varlist, so Stata
+  * has already expanded i.f#c.(x1 x2) into one term per slope
+  local ccc_absorbinserterPPML `ccc_absorbinserter'
+  if "`poisson'" == "poisson" & "`unconditionalse'" == "" & "`customvce'" == "" {
+    foreach wdsl in contreatcontrolinserterABS ccc_absorbinserterPPML {
+      if strpos(`"``wdsl''"', "c.(") == 0 continue
+      local wdslin ``wdsl''
+      local wdslout
+      local wdslhit 0
+      while `"`wdslin'"' != "" {
+        gettoken wdslt wdslin : wdslin, bind
+        local wdslp = strpos(`"`wdslt'"', "c.(")
+        local wdslv
+        if `wdslp' > 3 local wdslv = substr(`"`wdslt'"', `wdslp' + 3, strlen(`"`wdslt'"') - `wdslp' - 3)
+        local wdslhead = substr(`"`wdslt'"', 1, max(`wdslp' - 1, 0))
+        if `: word count `wdslv'' < 2 | substr(`"`wdslhead'"', 1, 2) != "i." | strpos(`"`wdslhead'"', "#") == 0 {
+          local wdslout `wdslout' `wdslt'
+          continue
+        }
+        local wdslhit 1
+        if "`wdsl'" == "contreatcontrolinserterABS" continue
+        local wdslf = substr(`"`wdslhead'"', 3, strpos(`"`wdslhead'"', "#") - 3)
+        local wdslrest = subinstr(substr(`"`wdslhead'"', strpos(`"`wdslhead'"', "#"), .), "##", "#", 1)
+        gettoken wdslx wdslv : wdslv
+        local wdslout `wdslout' `wdslhead'c.`wdslx'
+        foreach wdslx of local wdslv {
+          tempvar wdslcp
+          qui clonevar `wdslcp' = `wdslf'
+          local wdslout `wdslout' i.`wdslcp'`wdslrest'c.`wdslx'
+        }
+      }
+      if `wdslhit' & "`wdsl'" == "contreatcontrolinserterABS" {
+        * the ccnoabsorb spelling. inserter is empty here: only untreatedZero, ccnoabsorb and
+        * the plain-basic block above fill it, and each of them empties the absorb spelling
+        local contreatcontrolinserter `contreatcontrolinserterFE'
+        local contreatcontrolinserterFE
+        local contreatcontrolinserterABS
+      }
+      else if `wdslhit' local `wdsl' `wdslout'
+    }
+  }
 
 
 
@@ -1868,8 +1934,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * ppmlhdfe specification is different from reghdfe b/c it is more hostile to partialling out continuous variables
     * ppmlhdfe requires d for predict, which margins requires
     if "`poisson'" == "poisson" {
-      if "`verbose'" != "" dis "ppmlhdfe `y' `contreatcontrolinserter' `trendinjector'    i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'   `contreatcontrolinserterABS'     `ccc_absorbinserter'  ) `vcespecifier' tol(1e-`regtol') d "
-      qui cap ppmlhdfe `y' `contreatcontrolinserter' `trendinjector'    i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'    `contreatcontrolinserterABS'  `ccc_absorbinserter' ) `vcespecifier' tol(1e-`regtol') d
+      if "`verbose'" != "" dis "ppmlhdfe `y' `contreatcontrolinserter' `trendinjector'    i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'   `contreatcontrolinserterABS'     `ccc_absorbinserterPPML'  ) `vcespecifier' tol(1e-`regtol') d "
+      qui cap ppmlhdfe `y' `contreatcontrolinserter' `trendinjector'    i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'    `contreatcontrolinserterABS'  `ccc_absorbinserterPPML' ) `vcespecifier' tol(1e-`regtol') d
       if _rc == 3200 {
         dis as text "Caution: initial estimation of ppmlhdfe failed, possibly due to inclusion of an absorbed categorical fixed effect with only 1 level."
         dis as text "Falling back to estimation with ppmlhdfe, but with any included time-trend controls, ccc_absorb controls, and/or continuous treatment controls pulled out of the absorb() statement and placed in the main regression."

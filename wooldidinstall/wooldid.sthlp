@@ -527,7 +527,9 @@ pre-treatment period is also shown. When event study horizons are requested, the
 are presented in terms of differences in linear predictions (the poisson {it:predict(xb)} option). Poisson regression is useful when one would like to use
 log(y) as an outcome but y contains natural 0s, or when treatment and control groups are only on parallel trends in proportions.
 Poisson accepts pweights but not aweights, refuses a negative outcome, and may not be combined with {it:boottstat}. If {it:ppmlhdfe} fails with r(3200), {it:wooldid} retries once with the
-{it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. A treated cohort-period cell whose outcome is zero on every row is perfect separation rather than
+{it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. {it:ppmlhdfe} cannot absorb a factor with two or more
+slopes, so with {it:contreatpoly()} above 1 and {it:lattice()} or a byTreated, byTtre, byCohort or byTime control the continuous treatment controls
+enter the regression as under {it:ccnoabsorb}, and {it:ccc_absorb()} of two or more variables is absorbed one variable per term. A treated cohort-period cell whose outcome is zero on every row is perfect separation rather than
 multicollinearity; {it:wooldid} names the cell and exits. Coarsen {it:i}, drop the cohort, or specify {it:safety(off)}, which excludes the separated cells from the estimated effects. The
 variable name {it:_ppmlhdfe_d} is reserved on poisson runs. {p_end}
 
