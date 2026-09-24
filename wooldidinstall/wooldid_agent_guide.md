@@ -334,17 +334,17 @@ Where a difference does **not** trace to one of the three facts - a threshold nu
 
 - **`impvalues`** A *t* tail on *G*-1 degrees of freedom (Ibragimov-Muller). Same: no draw-count floor. 
 
-- **`permute()`, coefficient rows** **Add-one, equal-tailed**: min(1, 2 min(*P_lo*, *P_hi*)) with *P_lo* = (1 + # *s(r)* **<** *s_obs* )/(*n* + 1) and *P_hi* its mirror. **Floor 2/(*n* + 1)**; it cannot print 0. 
+- **`permute()`, coefficient rows** **Add-one, equal-tailed**: min(1, 2 min(*P_lo*, *P_hi*)) with *P_lo* = (1 + # *s(r)* **<=** *s_obs* )/(*n* + 1) and *P_hi* its mirror. **Floor 2/(*n* + 1)**; it cannot print 0. 
 
-- **`permute()` + `permabsp`** The same add-one rule on absolute values: (1 + # |*s(r)*| **>** |*s_obs*| )/(*n* + 1). **Floor 1/(*n* + 1)**; it cannot print 0. 
+- **`permute()` + `permabsp`** The same add-one rule on absolute values: (1 + # |*s(r)*| **>=** |*s_obs*| )/(*n* + 1). **Floor 1/(*n* + 1)**; it cannot print 0. 
 
 - **`permute()` + `permside()`** The one-sided add-one tail, *P_lo* or *P_hi* alone. **Floor 1/(*n* + 1)**; it cannot print 0. 
 
 - **`permute()` + `permrawp`** **The plain share**, # . /*n*, which is what *ritest* and `permute` report. It **can** print exactly 0, and 0 there means "no draw was this extreme", not "p is zero". 
 
-- **`permute()` + `permexact`** Plain shares over the *M* enumerated assignments, because under a complete enumeration the observed assignment **is** one of the *M* - the add-one is already there. **Floor 1/*M***. An element absent from the observed assignment's own replication falls back to the add-one form, and the run says which. 
+- **`permute()` + `permexact`** Plain shares over the *M* enumerated assignments, because under a complete enumeration the observed assignment **is** one of the *M* - the add-one is already there. **Floor 2/*M*** under the default equal-tailed rule, **1/*M*** under `permabsp`, `permside()` and `permrawp`. An element absent from the observed assignment's own replication falls back to the add-one form, and the run says which. 
 
-- **`permute()`, joint and equality tests** One-sided upper tail, add-one: (1 + # *W(r)* **>** *W_obs* )/(*n* + 1) on a fixed metric. **Floor 1/(*n* + 1)**. 
+- **`permute()`, joint and equality tests** One-sided upper tail, add-one: (1 + # *W(r)* **>=** *W_obs* )/(*n* + 1) on a fixed metric. **Floor 1/(*n* + 1)**. 
 
 - **`bootstrap()`, `bootdisplay(percentile)` and `(bc)`/`(bca)` coefficient rows** **The plain share**, min(1, 2 min(*m0*, *m1*)/*n*) - no add-one. **Floor 2/*n***, and it **can** print exactly 0. 
 
@@ -352,7 +352,7 @@ Where a difference does **not** trace to one of the three facts - a threshold nu
 
 - **`bootstrap()` + `boottstat` coefficient rows** **Add-one**, 2(1 + min(*m0*, *m1*))/(*n* + 1) on the studentized draws. **Floor 2/(*n* + 1)**; it cannot print 0. 
 
-- **`bootstrap()`, joint, equality and adversarial tests** One-sided upper tail, add-one, under either the fixed-metric or the studentized form: (1 + # *W(r)* **>** *W_obs* )/(*n* + 1). **Floor 1/(*n* + 1)**. 
+- **`bootstrap()`, joint, equality and adversarial tests** One-sided upper tail, add-one, under either the fixed-metric or the studentized form: (1 + # *W(r)* **>=** *W_obs* )/(*n* + 1). **Floor 1/(*n* + 1)**. 
 
 **Why the split, and why it is not an inconsistency.** Under a permutation null the observed assignment is exchangeable with the permuted ones, so it belongs in the reference set and counts itself. The same argument carries to every statistic whose draws are null draws: the fixed-metric joint tests under both engines, and the studentized bootstrap tail, whose draws are recentred at the observed estimate and so form a null reference set the observed statistic is a member of. It does **not** carry to the bootstrap percentile and bias-corrected coefficient rows: that distribution is centred at the **estimate**, not at the null, so adding the observed value to it would be a conservatism choice rather than an exactness result. There the plain share stands, which is also what `bootstrap`'s own *estat bootstrap* reports. 
 
