@@ -1590,5 +1590,55 @@ if `g43same' != 1 {
 cap erase boot_gates_g43a.txt
 cap erase boot_gates_g43b.txt
 
+* G44 (change audit round 2, U08 test-gap-straddle-unclustered): a PARTIAL straddle. The
+* baselines pin e(boot_nstraddle) only at 0 (re-id runs) and at every unit; nothing pinned the
+* case in between, 0 < e(boot_nstraddle) < units with e(boot_reid) 0, or its caution. 24 units
+* in 6 states; unit 4 moves to state 2 after t 4, so under cluster(cs) it alone straddles two
+* clusters, the run keeps every unit's identity (no re-id), and the straddle caution prints
+* once. The twin at cluster(s), which nests unit, re-identifies and stays silent
+clear
+set seed 2026
+set sortseed 2026
+qui set obs 24
+gen unit = _n
+gen s = ceil(unit/4)
+gen ttre = cond(unit<=8, 4, cond(unit<=16, 6, .))
+qui expand 8
+bysort unit: gen t = _n
+gen y = 2*(t>=ttre & ttre<.) + 0.1*unit + 0.05*t + 0.5*(t>=ttre & ttre<.)*mod(unit,4) + rnormal()
+gen cs = s
+qui replace cs = 2 if unit == 4 & t > 4
+tempfile strad
+save `strad'
+qui log using boot_gates_g44.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att_i cluster(cs) esprelength(1) espostlength(1) bootstrap(standard) reps(8) rseed(5) dots(0)
+local g44rc = _rc
+qui log close bg
+chk 44a 0 `g44rc'
+local g44ns = e(boot_nstraddle)
+local g44ri = e(boot_reid)
+unwrap boot_gates_g44.txt
+local g44n = (length(`"`lg'"') - length(subinstr(`"`lg'"', "straddle two or more", "", .))) / length("straddle two or more")
+use `strad', clear
+qui log using boot_gates_g44.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att_i cluster(s) esprelength(1) espostlength(1) bootstrap(standard) reps(8) rseed(5) dots(0)
+local g44rcb = _rc
+qui log close bg
+chk 44b 0 `g44rcb'
+local g44nsb = e(boot_nstraddle)
+local g44rib = e(boot_reid)
+unwrap boot_gates_g44.txt
+local g44nb = (length(`"`lg'"') - length(subinstr(`"`lg'"', "straddle two or more", "", .))) / length("straddle two or more")
+cap erase boot_gates_g44.txt
+di "G44 partial: nstraddle=`g44ns' reid=`g44ri' caution printed `g44n' time(s) | nesting twin: nstraddle=`g44nsb' reid=`g44rib' printed `g44nb'"
+if "`g44ns'" != "1" | "`g44ri'" != "0" | `g44n' != 1 {
+  di as error "G44c FAIL: a one-unit straddle should post e(boot_nstraddle) 1 and e(boot_reid) 0 and caution once (got `g44ns', `g44ri', `g44n')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+if "`g44nsb'" != "0" | "`g44rib'" != "1" | `g44nb' != 0 {
+  di as error "G44d FAIL: the nesting twin should post e(boot_nstraddle) 0 and e(boot_reid) 1 and stay silent (got `g44nsb', `g44rib', `g44nb')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
