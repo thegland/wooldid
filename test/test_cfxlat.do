@@ -451,5 +451,99 @@ foreach f in l10probe_cfx.dta l10probe_cfxatt_cfxpost.gph l10probe_cfxame_cfxpos
   cap erase "`f'"
 }
 
+* ---- L11 makecfxplotsbysg under the engines (change audit 2026-09-23, a test gap): under
+* bootstrap() and permute() the per-subgroup cfx figures are drawn after the replication loop by
+* wooldid_cfxplots from the rewired e(), as the pooled ones L7b/L7c pin are, but no leg ran
+* makecfxplotsbysg under either engine. On dta_cont with a two-valued subgroup each engine run
+* must post the four subgroup matrices (ame and att, cfxpost, for sgv 0 and 1) in
+* e(wdid_cfxmats), write one <stem>_<name>.gph per subgroup matrix, and write rows of
+* <stem>_cfx.dta for each equal to it (b, p, ll, ul). The matrices must be the engine's and not
+* the analytic ones passed through: this fixture's analytic covariance is all zero, so every
+* analytic cfx standard error is missing. The bootstrap run must fill se on every subgroup row;
+* the permute run blanks se and must post a p on every row and the matrix's own draws
+* e(permdist_<name>). L11a bootstrap, L11b permute ----
+cap program drop l11leg
+program define l11leg
+  args stem isperm eng
+  local l11f : dir . files "`stem'_*"
+  foreach f of local l11f {
+    cap erase "`f'"
+  }
+  use "data/dta_cont", clear
+  qui gen byte sgv = mod(i, 2)
+  cap noi wooldid y i t ttre, att cluster(i) contreat(intensity) contreatcontrols(basic) lattice(all 3) esprelength(1) espostlength(1) subgroups(sgv) makecfxplots makecfxplotsbysg saveplots(`stem') replace `eng'
+  local rc = _rc
+  local bad 0
+  local sgn
+  foreach nm in `e(wdid_cfxmats)' {
+    if regexm("`nm'", "_sg[0-9]+$") local sgn `sgn' `nm'
+  }
+  local want cfxame_cfxpost_sg0 cfxatt_cfxpost_sg0 cfxame_cfxpost_sg1 cfxatt_cfxpost_sg1
+  if !`: list sgn === want' local ++bad
+  local ngph 0
+  local nrow 0
+  cap confirm file "`stem'_cfx.dta"
+  local hasdta = (_rc == 0)
+  if !`hasdta' local ++bad
+  foreach nm of local want {
+    cap confirm file "`stem'_`nm'.gph"
+    if _rc == 0 local ++ngph
+    else local ++bad
+    cap confirm matrix e(`nm')
+    if _rc != 0 {
+      local ++bad
+      continue
+    }
+    tempname M
+    matrix `M' = e(`nm')
+    if rowsof(`M') != 3 | colsof(`M') != 6 local ++bad
+    else {
+      forval r = 1/3 {
+        if `M'[`r', 1] >= . local ++bad
+        if !`isperm' & `M'[`r', 2] >= . local ++bad
+        if `isperm' & (`M'[`r', 2] < . | `M'[`r', 4] >= .) local ++bad
+      }
+      if `isperm' {
+        cap confirm matrix e(permdist_`nm')
+        if _rc != 0 local ++bad
+      }
+      if `hasdta' {
+        preserve
+        qui use "`stem'_cfx.dta", clear
+        qui keep if matname == "`nm'"
+        local nrow = `nrow' + _N
+        if _N != rowsof(`M') local ++bad
+        else {
+          forval r = 1/`=_N' {
+            if b[`r'] != `M'[`r', 1] | p[`r'] != `M'[`r', 4] | ll[`r'] != `M'[`r', 5] | ul[`r'] != `M'[`r', 6] local ++bad
+          }
+        }
+        restore
+      }
+    }
+  }
+  local l11f : dir . files "`stem'_*"
+  foreach f of local l11f {
+    cap erase "`f'"
+  }
+  c_local l11rc `rc'
+  c_local l11bad `bad'
+  c_local l11sgn `sgn'
+  c_local l11gph `ngph'
+  c_local l11rows `nrow'
+end
+local l11a_eng bootstrap(standard) reps(10) rseed(7) dots(0)
+local l11b_eng permute(shuffle) permreps(20) rseed(7)
+foreach l11 in a b {
+  local l11isp = ("`l11'" == "b")
+  l11leg l11probe `l11isp' "`l11`l11'_eng'"
+  dis "L11`l11' [`l11`l11'_eng'] rc=`l11rc' subgroup matrices=[`l11sgn'] gph=`l11gph' dta rows=`l11rows' bad=`l11bad'"
+  if `l11rc' != 0 | `l11bad' != 0 | `l11gph' != 4 | `l11rows' != 12 {
+    dis as error "L11`l11' FAIL: makecfxplotsbysg under [`l11`l11'_eng'] rc=`l11rc' subgroup matrices=[`l11sgn'] gph=`l11gph' (want 4) dta rows=`l11rows' (want 12) bad=`l11bad'"
+    local ++fails
+  }
+  else dis as result "L11`l11' PASS: makecfxplotsbysg under [`l11`l11'_eng'] posts, draws and saves the four subgroup cfx plots from the engine's matrices"
+}
+
 if `fails' == 0 dis as result "CFXLAT_ALL_PASS"
 else dis as error "CFXLAT_FAILS=`fails'"

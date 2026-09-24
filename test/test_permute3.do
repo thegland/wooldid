@@ -627,6 +627,71 @@ if _rc == 0 {
     global pf = $pf + 1
   }
 }
+* Q8c the subgroup event-study files at level(90) (change audit 2026-09-23, a test gap): Q8b
+* reads the pooled <stem>_ES.dta only. The subgroup branch of wooldid_esplots renames its own
+* interval columns back, so each <stem>_ES_<sgvar>_<case>.dta must carry lb_90ci/ub_90ci equal
+* to e(wdidsgresults_<case>) at every horizon, and no lb_95ci/ub_95ci
+mkperm3 8 4 3
+local q8cf : dir . files "perm3_q8c_*"
+foreach f of local q8cf {
+  cap erase "`f'"
+}
+set seed 108
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) permute(shuffle) permreps(30) level(90) makeplots saveplots(perm3_q8c) replace
+local q8crc = _rc
+xrc Q8c 0 `q8crc'
+if `q8crc' == 0 {
+  local bad 0
+  local nhit 0
+  foreach s in 0 1 {
+    tempname W
+    cap matrix `W' = e(wdidsgresults_`s')
+    if _rc != 0 {
+      local ++bad
+      continue
+    }
+    local cn : colnames `W'
+    if "`: word 5 of `cn''" != "lb_90ci" | "`: word 6 of `cn''" != "ub_90ci" | "`: word 7 of `cn''" != "relyr" local ++bad
+    cap confirm file perm3_q8c_ES_sg_`s'.dta
+    if _rc != 0 {
+      local ++bad
+      continue
+    }
+    preserve
+    qui use perm3_q8c_ES_sg_`s'.dta, clear
+    qui drop if rownamesvar == "reference"
+    cap confirm variable lb_90ci ub_90ci
+    if _rc != 0 | _N == 0 local ++bad
+    else {
+      local nm 0
+      forval r = 1/`=_N' {
+        local rl = relyr[`r']
+        forval j = 1/`=rowsof(`W')' {
+          if `W'[`j', 7] == `rl' {
+            local ++nm
+            if lb_90ci[`r'] != `W'[`j', 5] | ub_90ci[`r'] != `W'[`j', 6] local ++bad
+          }
+        }
+      }
+      if `nm' != _N local ++bad
+      local nhit = `nhit' + `nm'
+    }
+    foreach v in lb_95ci ub_95ci {
+      cap confirm variable `v'
+      if _rc == 0 local ++bad
+    }
+    restore
+  }
+  if `bad' | `nhit' == 0 {
+    dis as error "Q8c FAIL: `bad' subgroup level(90) plot-data check(s), `nhit' horizon row(s) matched"
+    global pf = $pf + 1
+  }
+  else dis as result "Q8c PASS: both subgroup plot-data files carry lb_90ci/ub_90ci equal to e(wdidsgresults_*) (`nhit' horizon rows) and no 95 columns"
+}
+local q8cf : dir . files "perm3_q8c_*"
+foreach f of local q8cf {
+  cap erase "`f'"
+}
 
 * ================= Q9: continuous treatment: cfx cells permuted for latticetype all,
 * blanked for baseTreated; plots redrawn from the rewired matrices =====================
