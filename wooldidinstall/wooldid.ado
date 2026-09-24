@@ -16033,12 +16033,12 @@ void wooldid_bootgrab(string scalar accname, real scalar r, string scalar obsbna
     // `seaccname != ""', NOT on `dose', so it pushes S back unconditionally - and it is
     // only safe because S was already populated by the time dose flipped. Restructure this
     // the natural way (test conformability first, skip the read when the rep's e(V) does
-    // not conform) and S stays Mata's default 0 x 0 matrix, which then overwrites the
-    // accumulator and wipes every replication's standard errors gathered so far. The
-    // failure is silent in the way that matters: later replications refill into whatever
-    // the accumulator became and the studentized columns merely report fewer usable draws.
-    // The pairwise path below is structured the safe way (its read and its writeback sit
-    // inside the same test); this one is not
+    // not conform) and S stays Mata's default 0 x 0 matrix. The writeback is
+    // st_replacematrix(), which refuses a matrix of the wrong shape, so that mistake now
+    // stops the run with a conformability error; while the writeback was st_matrix() it
+    // silently replaced the accumulator and wiped every replication's standard errors
+    // gathered so far. The pairwise path below is structured the safe way (its read and its
+    // writeback sit inside the same test); this one is not
     S = st_matrix(seaccname)
     rV = st_matrix("e(V)")
     if (rows(rV) != rows(rn)) dose = 0
@@ -16069,11 +16069,14 @@ void wooldid_bootgrab(string scalar accname, real scalar r, string scalar obsbna
       }
     }
   }
-  st_matrix(accname, A)
-  st_matrixcolstripe(accname, an)
+  // every accumulator written back below is preallocated at its final R x K shape and
+  // striped when it is allocated, so the row is written back with st_replacematrix(),
+  // which keeps the stripes. st_matrix() would rebuild the default r1..rR row stripe on
+  // every call, a cost quadratic in R paid once per replication (cubic over the run:
+  // about 0.2 s a call at R = 8,000)
+  st_replacematrix(accname, A)
   if (args() >= 4 && seaccname != "") {
-    st_matrix(seaccname, S)
-    st_matrixcolstripe(seaccname, an)
+    st_replacematrix(seaccname, S)
   }
   // boottstat: this rep's own pairwise-contrast standard errors, matched to the OBSERVED
   // contrast rows by full row name (eq:JvsK) - never by position, since a resample can
@@ -16095,8 +16098,7 @@ void wooldid_bootgrab(string scalar accname, real scalar r, string scalar obsbna
           if (v > 0 & v < .) P[r, k] = v
         }
       }
-      st_matrix(pwseaccname, P)
-      st_matrixcolstripe(pwseaccname, pn)
+      st_replacematrix(pwseaccname, P)
     }
   }
   st_local("wdb_gblank", strofreal(nb))
@@ -16455,11 +16457,11 @@ void wooldid_bootcells(string scalar prefix, real scalar r, real scalar ncfx, re
         if (M[j, 6] > 0 & M[j, 6] < .) S[r, k] = M[j, 6]
       }
     }
-    st_matrix(prefix + "_gt", A)
-    st_matrixcolstripe(prefix + "_gt", cs)
+    // written back in place, as in wooldid_bootgrab: the accumulators were allocated at
+    // their final shape and striped by wooldid_bootcellkeys
+    st_replacematrix(prefix + "_gt", A)
     if (dose) {
-      st_matrix(prefix + "_gtse", S)
-      st_matrixcolstripe(prefix + "_gtse", cs)
+      st_replacematrix(prefix + "_gtse", S)
     }
   }
   // cfx matrices, by the names recorded in the observed e(wdid_cfxmats) order
@@ -16483,11 +16485,9 @@ void wooldid_bootcells(string scalar prefix, real scalar r, real scalar ncfx, re
         if (M[j, 2] > 0 & M[j, 2] < .) S[r, k] = M[j, 2]
       }
     }
-    st_matrix(prefix + "_cfx" + strofreal(c), A)
-    st_matrixcolstripe(prefix + "_cfx" + strofreal(c), cs)
+    st_replacematrix(prefix + "_cfx" + strofreal(c), A)
     if (dose) {
-      st_matrix(prefix + "_cfx" + strofreal(c) + "se", S)
-      st_matrixcolstripe(prefix + "_cfx" + strofreal(c) + "se", cs)
+      st_replacematrix(prefix + "_cfx" + strofreal(c) + "se", S)
     }
   }
 }
@@ -16586,13 +16586,11 @@ void wooldid_bootwnames(string scalar wmat, string scalar clusv)
 void wooldid_bootwrow(string scalar wmat, real scalar r, string scalar drawv)
 {
   real matrix W
-  string matrix cs
   W = st_matrix(wmat)
-  cs = st_matrixcolstripe(wmat)
   W[r, .] = st_data(., drawv)'
-  // st_matrix() resets the stripes; put the w_<cluster> names back
-  st_matrix(wmat, W)
-  st_matrixcolstripe(wmat, cs)
+  // written back in place: st_replacematrix() keeps the w_<cluster> stripes set at allocation
+  // and costs nothing in R, where st_matrix() rebuilt the stripes at a cost quadratic in R
+  st_replacematrix(wmat, W)
 }
 void wooldid_bootwrowx(string scalar wmat, real scalar r, string scalar clusv, string scalar nsv)
 {
@@ -16611,8 +16609,7 @@ void wooldid_bootwrowx(string scalar wmat, real scalar r, string scalar clusv, s
     k = asarray(t, strtoname("w_" + strofreal(D[c, 1], "%20.0g")))
     if (k > 0) W[r, k] = W[r, k] + 1
   }
-  st_matrix(wmat, W)
-  st_matrixcolstripe(wmat, cs)
+  st_replacematrix(wmat, W)
 }
 
 // per-cell bootstrap inference for the gteffects and cfx surfaces: percentile, or
@@ -16805,8 +16802,7 @@ void wooldid_bootadvr(string scalar accname, real scalar r, string scalar aobsn,
     W = wooldid_advW(d, Vs, rel, esrel, tt, alt, q)
     if (W < .) Wacc[r, k] = W
   }
-  st_matrix(accname, Wacc)
-  st_matrixcolstripe(accname, wn)
+  st_replacematrix(accname, Wacc)
 }
 void wooldid_bootadvobs(string scalar fk, real scalar alt, string scalar aobsn,
                         real scalar esrel, real scalar tt, string scalar outloc)
@@ -16934,8 +16930,7 @@ void wooldid_bootjwr(string scalar accname, real scalar r, string scalar obsn)
     if (W < 0 | W >= .) continue
     Wacc[r, k] = W
   }
-  st_matrix(accname, Wacc)
-  st_matrixcolstripe(accname, wn)
+  st_replacematrix(accname, Wacc)
 }
 
 // observed comparator for one family: W_obs = b' V^+ b on the pre block, from the OBSERVED

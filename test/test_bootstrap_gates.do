@@ -1640,5 +1640,86 @@ if "`g44nsb'" != "0" | "`g44rib'" != "1" | `g44nb' != 0 {
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 
+* G45 (change audit round 2, S5 accum-writeback-cubic-cost): the per-replication write-back of
+* the R-row accumulators must not scale with R. Each replication wrote its row back with
+* st_matrix() + st_matrixcolstripe(), and st_matrix() rebuilds the default r1..rR row stripe on
+* every call, so one call cost about 0.2 s at R = 8,000 and a run about R^3. The kernels are
+* called here directly (as test_permute calls wooldid_permx), 20 times each against 8,000-row
+* accumulators: bootgrab (every replication of both engines), bootwrow (the resample counts
+* under bootsave()), bootcells (the gteffects cells) and bootjwr (the boottstat joint W).
+* Each must take well under a second in all, write its row, and keep the stripes it was
+* allocated with. The 1-second bar sits about 4x below the old cost and far above the new
+use `panel', clear
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(1) gteffects
+chk 45a 0 _rc
+local g45R 8000
+matrix G45O = e(b)
+local g45cn : colfullnames e(b)
+matrix G45A = J(`g45R', colsof(G45O), .)
+matrix colnames G45A = `g45cn'
+mata: wooldid_bootcellkeys("e(gteffects)", "G45C_gt", `g45R', 1)
+mata: wooldid_bootjobs("att", "G45J")
+matrix G45JW = J(`g45R', 1, .)
+matrix colnames G45JW = att
+local g45rn0 : rownames G45A
+local g45gcn0 : colfullnames G45C_gt
+timer clear 45
+timer clear 46
+timer clear 47
+timer clear 48
+forval r = 1/20 {
+  timer on 45
+  mata: wooldid_bootgrab("G45A", `r', "G45O")
+  timer off 45
+  timer on 47
+  mata: wooldid_bootcells("G45C", `r', 0, 0)
+  timer off 47
+  timer on 48
+  mata: wooldid_bootjwr("G45JW", `r', "G45J")
+  timer off 48
+}
+preserve
+clear
+qui set obs 12
+gen d = _n
+matrix G45W = J(`g45R', 12, .)
+local g45wn
+forval c = 1/12 {
+  local g45wn `g45wn' w_`c'
+}
+matrix colnames G45W = `g45wn'
+forval r = 1/20 {
+  timer on 46
+  mata: wooldid_bootwrow("G45W", `r', "d")
+  timer off 46
+}
+restore
+qui timer list
+local g45t1 = r(t45)
+local g45t2 = r(t46)
+local g45t3 = r(t47)
+local g45t4 = r(t48)
+* the rows landed and the stripes survived
+mata: st_local("g45ok1", strofreal(mreldif(st_matrix("G45A")[20, .], st_matrix("G45O")) == 0 & missing(st_matrix("G45A")[21, .]) == cols(st_matrix("G45O"))))
+mata: st_local("g45ok2", strofreal(st_matrix("G45W")[20, .] == (1..12) & missing(st_matrix("G45W")[21, .]) == 12))
+mata: st_local("g45ok3", strofreal(!missing(st_matrix("G45C_gt")[20, 1]) & missing(st_matrix("G45C_gt")[21, 1])))
+mata: st_local("g45ok4", strofreal(st_matrix("G45JW")[20, 1] < . & st_matrix("G45JW")[21, 1] >= .))
+local g45cn1 : colfullnames G45A
+local g45rn1 : rownames G45A
+local g45wn1 : colfullnames G45W
+local g45gcn1 : colfullnames G45C_gt
+local g45jn1 : colfullnames G45JW
+local g45str = ("`g45cn1'" == "`g45cn'") & ("`g45rn1'" == "`g45rn0'") & ("`: list retokenize g45wn1'" == "`: list retokenize g45wn'") & ("`g45gcn1'" == "`g45gcn0'") & ("`g45jn1'" == "att")
+di "G45 20 calls at R=`g45R': bootgrab `g45t1' s, bootwrow `g45t2' s, bootcells `g45t3' s, bootjwr `g45t4' s | rows ok `g45ok1'`g45ok2'`g45ok3'`g45ok4', stripes kept `g45str'"
+if !(`g45t1' < 1) | !(`g45t2' < 1) | !(`g45t3' < 1) | !(`g45t4' < 1) {
+  di as error "G45b FAIL: a per-replication accumulator write-back still scales with the replication count (`g45t1' / `g45t2' / `g45t3' / `g45t4' s for 20 calls at R = `g45R')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+if `g45ok1' != 1 | `g45ok2' != 1 | `g45ok3' != 1 | `g45ok4' != 1 | `g45str' != 1 {
+  di as error "G45c FAIL: a write-back lost its row or its stripes (rows `g45ok1'`g45ok2'`g45ok3'`g45ok4', stripes `g45str')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+matrix drop G45O G45A G45W G45JW G45J G45C_gt
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"
