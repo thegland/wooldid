@@ -3252,8 +3252,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             local horizitem att
             if "`item'" != "att" local horizitem att_it
             cap confirm  matrix `___`horizitem'_horiz_s`sgcase''
-            * this prevents estimating horizons if done already for a non att
-            if _rc != 0 {
+            * this prevents estimating horizons if done already for a non att. a subgroup whose
+            * event study is skipped entirely (below) leaves no matrix, so the skip is recorded
+            * beside it: without the record every later estimand sharing this horizitem re-ran
+            * the margins call and printed both cautions again
+            if _rc != 0 & "`wdsgskip_`horizitem'_s`sgcase''" == "" {
               * re: estimability by sg. given each sg is composed of cohorts, if the sg exists in sample, then
               *     then this margins should be estimable since we would have seen the sg's cohorts dropped earlier
               *     if there was no post period or an insufficient pre-period
@@ -3320,7 +3323,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               if "`marginsdof'" != "nose" local f2opt b(`f2bmat') v(`f2vmat')
               else if `f2bonly' local f2opt b(`f2bmat')
               wooldid_sglbl , names(`names') tab(`f9tab') first(`matrixstartgrab') mint(`min_t') old(`oldsyntax') sg(`sgcase') tvar(`_t') strip(1.`targetflag') fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_s`sgcase'') lbl(relyrlist_s`sgcase'_`horizitem') f2l(f2rl_`horizitem'_s`sgcase') `f2opt'
-              if `wdsg_skip' continue
+              if `wdsg_skip' {
+                local wdsgskip_`horizitem'_s`sgcase' 1
+                continue
+              }
               local sgndrop `wdsg_ndrop'
               local finaladvtest = `finaladvtest' - `sgndrop'
               local relyrlist_s`sgcase' `relyrlist_s`sgcase'_`horizitem''
@@ -3659,8 +3665,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
             foreach sgcase in `sglist' {
               cap confirm  matrix `___`horizitem'_Choriz_s`sgcase''
-              * this prevents estimating horizons if done already for a non att
-              if _rc != 0 {
+              * this prevents estimating horizons if done already for a non att; a skipped subgroup
+              * is recorded beside the matrix, as at the binary site
+              if _rc != 0 & "`wdsgskipC_`horizitem'_s`sgcase''" == "" {
                 qui margins [`weight'=`w_`horizitem''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' ) noestimcheck   over(`_t') `poismarginstextC' `marginsdof' `fcnoes'
                 tempname ___`horizitem'_Choriz_s`sgcase'
                 matrix `f9tab' = r(table)
@@ -3793,7 +3800,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 }
                 * ---- end of the synthesized estimability marker ---------------------------
                 wooldid_sglbl , names(`namesC') tab(`f9tab') mint(`min_t') old(`oldsyntax') sg(`sgcase') tvar(`_t') kind(continuous-treatment) fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_Cs`sgcase'') lbl(relyrlist_s`sgcase'_`f2kC') f2l(f2rl_`f2kC'_s`sgcase') `f2optC'
-                if `wdsg_skip' continue
+                if `wdsg_skip' {
+                  local wdsgskipC_`horizitem'_s`sgcase' 1
+                  continue
+                }
                 local finaladvtest = `finaladvtest' - `wdsg_ndrop'
                 matrix `___`horizitem'_Choriz_s`sgcase'' = ( `f9tab'', `relyrcolumn_Cs`sgcase'')
                 * AMESE R1 scrub: null se/t/p/ci columns of the per-sg ame ES rows

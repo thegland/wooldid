@@ -310,6 +310,59 @@ foreach leg in "att" "att att_it" {
   }
 }
 
+* ---- T11 (change audit 2026-09-22, sg-skip-reissued-per-estimand): T8's fixture with two
+* estimands that share the att_it horizon weights (att_it att_itime). a subgroup whose contreat
+* event study is skipped entirely leaves no matrix, and the guard that stops the second estimand
+* re-running the subgroup's horizon margins only looked for the matrix, so both subgroups' skip
+* cautions printed twice. each must now print once, with the ES_ame_it blocks still empty ----
+cap program drop cntlog
+program define cntlog, rclass
+  args lf needle
+  * count lines carrying the needle, rejoining the log's "> " continuations first
+  tempname fh
+  local n 0
+  local acc
+  file open `fh' using "`lf'", read text
+  file read `fh' line
+  while r(eof) == 0 {
+    if substr(`"`macval(line)'"', 1, 2) == "> " {
+      local acc `"`macval(acc)'`=substr(`"`macval(line)'"', 3, .)'"'
+    }
+    else {
+      if strpos(`"`macval(acc)'"', `"`needle'"') != 0 local ++n
+      local acc `"`macval(line)'"'
+    }
+    file read `fh' line
+  }
+  if strpos(`"`macval(acc)'"', `"`needle'"') != 0 local ++n
+  file close `fh'
+  return scalar n = `n'
+end
+use suite/data/survey_rcs.dta, clear
+qui replace y_rcs = y_rcs - rcs_cell_shock if y_rcs < .
+qui gen double dose = 1 + 0.2*mod(state,7) + 0.05*t
+qui log using si7_t11.txt, text replace name(si7)
+cap noi wooldid y_rcs state_group t ttre [pw=survey_weight], att_it att_itime subgroups(group) contreat(dose) ///
+    contreatcontrols(basic) fe(i.group##i.t) esfixedbaseperiod esprelength(1) espostlength(1) cluster(state)
+local rc11 = _rc
+qui log close si7
+cntlog si7_t11.txt "treatment relative period effect is estimable for subgroup 1"
+local sk11a = r(n)
+cntlog si7_t11.txt "treatment relative period effect is estimable for subgroup 2"
+local sk11b = r(n)
+cap erase si7_t11.txt
+ameblock 1 ES_ame_it
+local n111 = r(n)
+ameblock 2 ES_ame_it
+local n112 = r(n)
+if `rc11' == 0 & `sk11a' == 1 & `sk11b' == 1 & `n111' == 0 & `n112' == 0 {
+  dis as result "T11 PASS: att_it att_itime -> each subgroup's skip caution prints once (sg1 `sk11a', sg2 `sk11b'), ES_ame_it empty"
+}
+else {
+  dis as error "T11 FAIL: att_it att_itime -> rc=`rc11' skip cautions sg1=`sk11a' sg2=`sk11b' (want 1 each) ES_ame_it n1=`n111' n2=`n112'"
+  global pf = $pf + 1
+}
+
 if $pf == 0 dis as result "SI7_ALL_PASS"
 else dis as error "SI7_FAILURES: $pf"
 exit, clear
