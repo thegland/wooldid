@@ -2,7 +2,8 @@
 * split across subgroups over time is refused under default safety, and proceeds with
 * share weighting plus a caution under safety(off) on the analytic path - while under
 * permute() the same split is refused at BOTH safety settings (G5), as is a unit labelled on
-* some rows and missing on others, never-treated units included (G6). Also pins the numeric-only
+* some rows and missing on others, never-treated units included (G6). G7 is the within-cell
+* case: a subgroup that varies inside an i-t cell rather than over time. Also pins the numeric-only
 * cluster() syntax. Run from test/: "<stata>" -e do test_sgsplit.do -> SGSPLIT_ALL_PASS
 clear all
 set more off
@@ -168,6 +169,49 @@ qui replace sg = mod(i, 2)
 cap wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) permute(shuffle) permreps(20)
 if _rc != 0 {
   dis as error "G6 FAIL: permute with the unit fully labelled rc=" _rc " (expected 0)"
+  local ++fails
+}
+
+* ---- G7 (change audit 2026-09-22, screens-test-gaps): a subgroup that varies WITHIN an i-t
+* cell (i = grp, four subunits per grp, sg = sub > 2), the case wooldid_sgdom's within-cell
+* guard exists for; G1-G6 are all time splits or partial labels. default safety: r(459) with the
+* varies-within-i error. safety(off): the run completes with both subgroups' results. the
+* caution it prints there is not pinned: its wording is open on the author's review page
+* (card #368) ----
+cap program drop mkwc
+program define mkwc
+  clear
+  set seed 24680
+  set sortseed 24680
+  qui set obs 20
+  qui gen grp = _n
+  qui gen ttre = cond(_n <= 8, 5, .)
+  qui expand 4
+  qui bysort grp: gen sub = _n
+  qui gen sg = sub > 2
+  qui expand 10
+  qui bysort grp sub: gen t = _n
+  qui gen y = (1 + 2*sg)*(t >= ttre & ttre < .) + 0.1*grp + 0.05*sub + 0.01*t + 0.05*rnormal()
+end
+mkwc
+qui log using sgsp_g7.txt, text replace name(sgsp)
+cap noi wooldid y grp t ttre, att att_it cluster(grp) esprelength(1) espostlength(1) subgroups(sg)
+local rc7a = _rc
+qui log close sgsp
+local e7a = strpos(fileread("sgsp_g7.txt"), "the subgroup variable varies within i") > 0
+mkwc
+cap noi wooldid y grp t ttre, att att_it cluster(grp) esprelength(1) espostlength(1) subgroups(sg) safety(off)
+local rc7b = _rc
+local m7b 0
+if `rc7b' == 0 {
+  cap confirm matrix e(wdidsgresults_0)
+  local m7b0 = _rc == 0
+  cap confirm matrix e(wdidsgresults_1)
+  local m7b = `m7b0' & _rc == 0
+}
+dis "G7: within-cell default rc=`rc7a' error=`e7a' | safety(off) rc=`rc7b' sg results=`m7b'"
+if `rc7a' != 459 | `e7a' != 1 | `rc7b' != 0 | `m7b' != 1 {
+  dis as error "G7 FAIL: a within-cell subgroup must be refused r(459) at default safety and run under safety(off)"
   local ++fails
 }
 
