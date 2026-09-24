@@ -291,12 +291,13 @@ and #304's DELETE proposal to #301's second line. 17 cards got round-2 notes.
 | two more line-only adversarial paths | **Approved**: "Caution: the adversarial pre-trend test failed: too few usable bootstrap replications." and "Caution: the adversarial pre-trend test failed: too few usable permutations."; no line posted | built 7c32fdb |
 | p-floor line under bootdisplay(bca) | **Omit it too** | built 6adca1b |
 | poisson + untreatedZero: ppmlhdfe posts an all-zero V for the correct model | **Investigate a fix now**; build only if point estimates are unchanged and SEs match Stata's poisson | investigated: no fix within the bar (Stata ereturn post zeroes a 3.3e-16-asymmetric singular V; fixture has 45 of 63 constant cells); nothing built |
+| pooled dose slope silently dropped by ppmlhdfe on a large-level dose (found by the v5 probe; predates v5) | **Detect and warn**; text approved: "Caution: ppmlhdfe dropped the pooled `contreat' slope as collinear with the fixed effects, so the ame is wrong; subtract its mean from `contreat' and rerun." | built efc0671 (keyed on the linear pooled term; a second check spares a correct drop under a unit fe()) |
 
 **Straight fixes (no number moves, no new text):** applied as 47 commits, ea11d36..a0c9bf3, with guide
 chapter 14 regenerated in afe9e37. Held: the poisson 3200 fallback skip (the author asked for an
 investigation instead) and the help's 'returned' wording for the adversarial line (superseded by the
-line-only ruling). Not built: the lattice e(V) re-post (ruled leave); the ccref band twin leg waits for
-the ccref caution build.
+line-only ruling). Not built: the lattice e(V) re-post (ruled leave). The ccref band legs came with the
+ccref caution build (test_amescreen B2c and B2d, 2d3621e).
 
 **Left as they stand (FYI).** Fast mode's full VCE on the binary subgroup-by-horizon call (no cheap
 mechanism); the NIS k <= 4 cap (documented); the contreat subgroup reads without the fcdeg screen (no
@@ -305,7 +306,6 @@ cited sha (housekeeping); the reg-path maxvar preflight false positive (left on 
 jointmarginsdof reaching only two sites (no effect); unconditionalse's small-sample factor (it is
 regress + margins' own); a gtools that is present but cannot load (optional); the debug globals (a help
 sentence is in the docs group).
-| pooled dose slope silently dropped by ppmlhdfe on a large-level dose (found by the v5 probe; predates v5) | **Detect and warn**; text approved: "Caution: ppmlhdfe dropped the pooled `contreat' slope as collinear with the fixed effects, so the ame is wrong; subtract its mean from `contreat' and rerun." | to apply (keyed on the linear pooled term; a second check spares a correct drop under a unit fe()) |
 
 **The v5 probe (the author asked for extra certainty).** Six angles compared v5 with Stata's official
 poisson and glm: v5 is bit-identical to the old fallback everywhere tested and matches official poisson
@@ -320,3 +320,10 @@ dropped-slope caution also prints on byTime + lattice(all 2) + ccnoabsorb on a s
 ame moves only 6e-4 SE and zero-VCV cautions already print (left under the pathological-data cap).
 Under boottstat esttab's se and t still come from e(V). ppmlhdfe posting an all-zero V on some designs
 where Stata's poisson gives finite SEs is an ereturn-post accident inside ppmlhdfe (ticket only).
+
+**Review page synced 2026-09-24 (efc0671).** Eight cards took their new built text (#25, #179, #229, #230,
+#264, #381, #382, and #409's renamed count); eight took corrected triggers where a ruling changed when a
+message prints (#1, #34, #46, #100, #192, #236, #277, #415); two new cards carry the approved texts (#417 the
+dropped-slope caution, #418 the ccref band caution). The page itself was republished (Version 7): its
+embedded card list had stopped at #408, so #409-#416 had never shown on it, and it now also adds any card
+the shared record holds that the embedded list lacks.
