@@ -5504,17 +5504,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     local cfxplotnose
     dis as text "Caution: cfxplotnose was dropped; boottstat needs the plot cells' standard errors."
   }
-  * note which safety() value each screen gets, because the two calls differ. permctl is handed
-  * si(`safety') - the effective value, already rewritten to off above when contreatwithin is
-  * combined with contreat() - while bootctl below is handed si(`safetyinput'), the user's own.
-  * They coincide on every run that reaches permctl's subgroup screens only because permctl
-  * refuses contreatwithin outright at its top. If that refusal is ever lifted, a contreatwithin
-  * run would arrive here with si(off) and the subgroup cell-containment and unit-splitting
-  * screens would silently downgrade from error 459 to a caution - the exact failure the
-  * safetyinput split exists to prevent. Pass si(`safetyuser') at that point, as bootctl already
-  * does
+  * both screens get the user's own safety() value: permctl is handed si(`safetyuser') here
+  * and bootctl below si(`safetyinput'), a copy of it, never the working `safety', which is
+  * rewritten to off above when contreatwithin is combined with contreat(). permctl refuses
+  * contreatwithin at its top, so today the two values cannot differ on a run that reaches its
+  * subgroup screens; the user's value keeps the cell-containment and unit-splitting screens at
+  * error 459 if that refusal is ever lifted, rather than silently downgrading them to a
+  * caution - the failure the safetyinput split exists to prevent
   if "`permute'" != "" {
-    cap noi wooldid_permctl , yv(`y') permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safety') psave(`permsave') level(`level') onc(`permonsetcohorts') ase(`permanalyticse') oostreatedcontrols(`oostreatedcontrols') anticipation(`anticipation') `replace'
+    cap noi wooldid_permctl , yv(`y') permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safetyuser') psave(`permsave') level(`level') onc(`permonsetcohorts') ase(`permanalyticse') oostreatedcontrols(`oostreatedcontrols') anticipation(`anticipation') `replace'
     if _rc != 0 exit _rc   // exit, not error - the cap noi above already printed it
   }
 
