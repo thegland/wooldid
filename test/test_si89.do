@@ -153,6 +153,42 @@ ereturn clear
 estimates clear
 matrix drop _all
 clear mata
+
+* ---- T5b (change audit 2026-09-22, val-test-gaps): the absorbing path's bound, both sides, at
+* maxvar 2048. the preflight charges 2 per treated cell plus 200 there, a lower bound on the
+* real demand, so it must never refuse a run that completes. on this design the real break at
+* maxvar 2048 sits between 800 cells (runs) and 850 (reghdfe's own r(907)), measured
+* 2026-09-23. 160 treated cohorts x 5 post cells = 800 cells, demand 1800: the run must
+* complete with no preflight refusal. 190 x 5 = 950 cells, demand 2100 > 2048: refused early.
+* the regress-based path (unconditionalse, customvce) has no positive case here: its bound
+* carries a recorded false positive near the limit that awaits a ruling ----
+set maxvar 2048
+mkgran 320
+qui log using si89_t5b.txt, text replace name(si89)
+cap noi wooldid y i t ttre, att robust
+local rc5b = _rc
+qui log close si89
+scanlog si89_t5b.txt "breach the current maxvar limit"
+local f5b = r(found)
+cap erase si89_t5b.txt
+mkgran 380
+qui log using si89_t5b.txt, text replace name(si89)
+cap noi wooldid y i t ttre, att robust
+local rc5c = _rc
+qui log close si89
+scanlog si89_t5b.txt "breach the current maxvar limit"
+local f5c = r(found)
+cap erase si89_t5b.txt
+if `rc5b' == 0 & `f5b' == 0 & `rc5c' == 907 & `f5c' == 1 dis as result "T5b PASS: absorbing path at maxvar 2048 - 800 cells run, 950 cells refused early"
+else {
+  dis as error "T5b FAIL: 800 cells rc = `rc5b' (wanted 0), preflight line = `f5b' (wanted 0); 950 cells rc = `rc5c' (wanted 907), preflight line = `f5c' (wanted 1)"
+  global pf = $pf + 1
+}
+clear
+ereturn clear
+estimates clear
+matrix drop _all
+clear mata
 set maxvar 20000
 
 * ---- verdict ----
