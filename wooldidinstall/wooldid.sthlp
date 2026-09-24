@@ -946,6 +946,11 @@ rather than with {it:confirm scalar}. Typing {it:wooldid} by itself after a succ
 the stored results, including after {it:estimates restore}; it does not redraw plots or repeat estimation-time cautions. A call that fails, at any stage, leaves
 {it:e()} as it was before the call, so typing {it:wooldid} alone afterwards redisplays the earlier {it:wooldid} results. {p_end}
 
+{pstd} Stata's {help bootstrap} and {help jackknife} prefixes can be used with {it:_b}, as in {it:bootstrap _b, reps(200) cluster(i): wooldid y i t ttre, att cluster(i)};
+the point estimates are those of the plain run. If {it:wooldid} is given {it:cluster()}, it must name the variable in the prefix's {it:cluster()}; the prefix refuses any other,
+including its {it:idcluster()} variable. The {it:bootstrap} prefix does not allow weights, and {it:svy} is not supported. After a prefix, typing {it:wooldid} alone shows the
+prefix's table. The {it:bootstrap()} option is the supported route to bootstrap inference. {p_end}
+
 {pstd} The coefficient vector {it:e(b)} and its covariance {it:e(V)} carry these column names, which are what {it:esttab}, {it:coefplot}, {it:lincom} and {it:test} address a
 coefficient by: {it:main_att} (the headline average treatment effect on the treated), {it:pretreatment_att} (the pooled pre-treatment average), {it:ES_att_pre#} and
 {it:ES_att_post#} (the event-study horizons, numbered outward from the reference period), and for the other estimand types the same names with {it:att} replaced by
