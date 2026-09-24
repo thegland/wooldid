@@ -947,6 +947,28 @@ if `n30' != 10 | strpos(`"`lg'"', "smallest attainable value are both 2/(n + 1) 
   di as error "G30f FAIL: the boottstat footer does not print 2/(n + 1) as .18 at 10 completed replications (n = `n30')"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
+* G30g (change audit round 2, U10 pfloor-bc-rank-wording; the author's ruling 2026-09-23): the
+* BC p is the inverted BC interval and is off the 2/n grid, so under bootdisplay(bc) the p = 0
+* line and the footer's resolution clause are omitted, here on a run whose att BC p is 0 (on
+* 8d8b324 both printed); the footer keeps its joint-test sentence
+use `panel', clear
+qui log using boot_gates_g30.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(10) rseed(7) bootdisplay(bc)
+local g30rc = _rc
+qui log close bg
+chk 30g 0 `g30rc'
+local p30g = e(wdidmainresults)[rowsof(e(wdidmainresults)), 4]
+local lg = fileread("boot_gates_g30.txt")
+local lg = subinstr(`"`lg'"', char(13), "", .)
+local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+local g30line = strpos(`"`lg'"', "p = 0 above means") > 0
+local g30res = strpos(`"`lg'"', "have resolution 2/") > 0
+local g30jt = strpos(`"`lg'"', "The joint, equality and adversarial p-values are add-one") > 0
+di "G30g bc: att p = `p30g', p = 0 line `g30line', resolution clause `g30res', joint-test sentence `g30jt'"
+if `p30g' != 0 | `g30line' | `g30res' | !`g30jt' {
+  di as error "G30g FAIL: under bootdisplay(bc) the p = 0 line and the resolution clause must be omitted and the joint-test sentence kept (att p `p30g', line `g30line', clause `g30res', joint `g30jt')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
 cap erase boot_gates_g30.txt
 
 * G31 (F059/F063/F066, 2026-09-06) the reproducibility record and the resample columns:

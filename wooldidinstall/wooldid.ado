@@ -11952,11 +11952,15 @@ end
 * pass-through in that same gate is vacuous: the studentized family is add-one with floor
 * 2/(n+1) and can never print 0, so the 2/n message would be wrong if it ever fired. The
 * resolution prints unpadded in %9.2g, so a large n shows .0004 rather than 0.000.
+* bootdisplay(bc) exits too (the author's ruling 2026-09-23): the BC p inverts the BC interval,
+* 2 min(q, 1 - q) with q = normal(invnormal(r0) - 2*z0), which is off the 2/n grid, so "the
+* resolution of the rank-based p" does not describe it; it still reaches 0 when r0 is 0 or 1,
+* and no line says so
 cap prog drop wooldid_pfloor
 prog def wooldid_pfloor
   args mat
   if "`e(boot_completed)'" != "" {
-    if "`e(boot_display)'" == "wald" & "`e(boot_tstat)'" != "1" exit
+    if inlist("`e(boot_display)'", "wald", "bc") & "`e(boot_tstat)'" != "1" exit
     local wdpn = e(boot_completed)
     local wdpres = 2/`wdpn'
     local wdpmsg (2/`wdpn' completed replications, the resolution of the rank-based p): no completed replication fell on the far side of the null. The cell and e() keep the 0.
@@ -13010,9 +13014,12 @@ version 16.0
    * the studentized family uses the add-one rank, so its resolution and its floor are both
    * 2/(completed + 1) and it never prints 0; the coefficient-draw families keep the plain
    * share and can still print 0. Both resolutions print unpadded in %9.2g, as the p = 0 line
-   * under the table does
+   * under the table does. Under bootdisplay(bc) the coefficient p is the inverted BC interval,
+   * off the 2/n grid, so the resolution clause is omitted and only the joint-test sentence prints
+   * (the author's ruling 2026-09-23; wooldid_pfloor exits there too)
    if "`e(boot_tstat)'" == "1" dis as result "  The studentized coefficient p-values are add-one ranks over " e(boot_completed) " completed replications, so their resolution and their smallest attainable value are both 2/(n + 1) = " string(2/(e(boot_completed) + 1), "%9.2g") ": a studentized p is never exactly 0. The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
-   else if "`wdbdsp'" != "wald" dis as result "  The rank-based coefficient p-values have resolution 2/" e(boot_completed) " = " string(2/e(boot_completed), "%9.2g") ": a p printed as 0 means p below that (no completed replication on the far side of the null); it is stored as 0 in e(). The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
+   else if "`wdbdsp'" != "wald" & "`wdbdsp'" != "bc" dis as result "  The rank-based coefficient p-values have resolution 2/" e(boot_completed) " = " string(2/e(boot_completed), "%9.2g") ": a p printed as 0 means p below that (no completed replication on the far side of the null); it is stored as 0 in e(). The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
+   else if "`wdbdsp'" == "bc" dis as result "  The joint, equality and adversarial p-values are add-one shares over their own listwise-complete replication counts (their smallest value is 1/(n + 1), never 0)."
    * once any replication has been left without a usable standard error, e(boot_completed) is no
    * longer the n the studentized ranks run over and the resolution printed above is optimistic.
    * This clause sits below the if/else-if pair above, not between them: a bare `if' inserted

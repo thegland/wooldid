@@ -392,7 +392,7 @@ and accelerated method, whose acceleration comes from a delete-one-cluster jackk
 or t approximation governed by {it:bootdf()}. Every family except {it:bca} is computed and stored in {it:e()} on every run; this option chooses only what is displayed
 and never changes the reported standard error, which is the standard deviation of the bootstrap distribution. The percentile and bias-corrected intervals are not
 symmetric about the estimate, and the statistic column beside them, labelled {it:t_wald} or {it:z_wald}, is kept for reference only. Those two p-values can print
-exactly 0, meaning no completed replication fell beyond the null; a line under the table gives the resolution. Under
+exactly 0, meaning no completed replication fell beyond the null; under {it:percentile} a line under the table gives the resolution. Under
 {it:bootdisplay(bca)} the {it:gteffects} and continuous treatment cells carry the {it:bc} family. With {it:boottstat} only {it:percentile} is available. {p_end}
 
 {phang}{opt bootts:tat}: A studentized, or percentile-t, bootstrap; refused without {it:bootstrap()}. The object bootstrapped is each replication's t statistic on
