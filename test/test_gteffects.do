@@ -270,6 +270,90 @@ if `rc12a' != 0 | `rc12b' != 0 | `nc12a' >= . | `nc12a' < 1 | `nc12b' != `nc12a'
   local ++fails
 }
 
+* ---- G13 (round 2, gteffects-table-format-and-floor; author ruling 2026-09-23): the printed
+* gteffects table takes the PS-3 per-column formats of the main, subgroup and pairwise tables
+* (wooldid_mlfmt), so p prints to three decimals and relyr as an integer. It used
+* format(%9.0g) on every column, so a p printed as .8122894 or 5.64e-34 (and a bootstrap 0 as
+* 0). No p-floor line goes under this table (ruled): its cells rest on per-cell draw counts, so
+* the "p = 0 above means" line stays under the tables whose floor it states. gt13scan reads
+* every printed row of the table back from the log. linesize 255 keeps each row on one line ----
+cap program drop gt13scan
+program define gt13scan, rclass
+  args fn
+  local seen 0
+  local rows 0
+  local badp 0
+  local badr 0
+  local firstbad
+  local flbefore 0
+  local flafter 0
+  tempname fh
+  file open `fh' using `fn', read text
+  file read `fh' ln
+  while r(eof) == 0 {
+    if strpos(`"`macval(ln)'"', "Cohort-by-Relative-Period Effects") > 0 local seen 1
+    if strpos(`"`macval(ln)'"', "p = 0 above means") > 0 {
+      if `seen' local ++flafter
+      else local ++flbefore
+    }
+    if `seen' & regexm(`"`macval(ln)'"', "^ +r[0-9]+ [|]") {
+      local ++rows
+      local rest = substr(`"`macval(ln)'"', strpos(`"`macval(ln)'"', "|") + 1, .)
+      local pt : word 7 of `rest'
+      local rt : word 4 of `rest'
+      if !regexm("`pt'", "^[0-9][.][0-9][0-9][0-9]$") & "`pt'" != "." {
+        local ++badp
+        if "`firstbad'" == "" local firstbad `pt'
+      }
+      if !regexm("`rt'", "^-?[0-9]+$") local ++badr
+    }
+    file read `fh' ln
+  }
+  file close `fh'
+  return scalar rows = `rows'
+  return scalar badp = `badp'
+  return scalar badr = `badr'
+  return scalar flbefore = `flbefore'
+  return scalar flafter = `flafter'
+  return local firstbad `firstbad'
+end
+set linesize 255
+use "`DATA'/dta_simple1", clear
+qui log using gt_g13.txt, text replace name(gt13)
+cap noi wooldid y i t ttre, att att_it robust esprelength(2) espostlength(2) gteffects
+local rc13a = _rc
+qui log close gt13
+local nr13a = cond(`rc13a' == 0, rowsof(e(gteffects)), .)
+gt13scan gt_g13.txt
+local rows13a = r(rows)
+local badp13a = r(badp)
+local badr13a = r(badr)
+local fb13a `r(firstbad)'
+cap erase gt_g13.txt
+dis "G13a: rc=`rc13a' e() rows=`nr13a' printed rows=`rows13a' bad p=`badp13a' (first `fb13a') bad relyr=`badr13a'"
+if `rc13a' != 0 | `nr13a' >= . | `rows13a' != `nr13a' | `badp13a' != 0 | `badr13a' != 0 {
+  dis as error "G13a FAIL: the gteffects table must print p to three decimals and relyr as an integer"
+  local ++fails
+}
+use "`DATA'/dta_simple1", clear
+qui log using gt_g13.txt, text replace name(gt13)
+cap noi wooldid y i t ttre, att att_it cluster(i) esprelength(2) espostlength(2) gteffects bootstrap(standard) reps(12) rseed(5) dots(0)
+local rc13b = _rc
+qui log close gt13
+local nr13b = cond(`rc13b' == 0, rowsof(e(gteffects)), .)
+gt13scan gt_g13.txt
+local rows13b = r(rows)
+local badp13b = r(badp)
+local fb13b `r(firstbad)'
+local flb13b = r(flbefore)
+local fla13b = r(flafter)
+cap erase gt_g13.txt
+dis "G13b: rc=`rc13b' e() rows=`nr13b' printed rows=`rows13b' bad p=`badp13b' (first `fb13b') floor lines before/after the table=`flb13b'/`fla13b'"
+if `rc13b' != 0 | `nr13b' >= . | `rows13b' != `nr13b' | `badp13b' != 0 | `flb13b' < 1 | `fla13b' != 0 {
+  dis as error "G13b FAIL: under bootstrap() the gteffects p prints to three decimals, with no floor line of its own"
+  local ++fails
+}
+
 if `fails' == 0 dis "GTEFFECTS_ALL_PASS"
 else dis as error "GTEFFECTS_FAILS=`fails'"
 exit, clear

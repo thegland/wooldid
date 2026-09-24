@@ -12765,9 +12765,15 @@ version 16.0
       * w_att_itime). 9 is the boundary between the printed block and the export-only
       * columns, not a count of anything, and it must move if that stripe does - the slice
       * is positional, so a restripe prints the wrong columns silently. The 200-row cap keeps
-      * a cohort-by-period table on high-cardinality i from burying the rest of the output
+      * a cohort-by-period table on high-cardinality i from burying the rest of the output.
+      * The slice keeps the stripe's names, so wooldid_mlfmt gives it the PS-3 formats of the
+      * main, subgroup and pairwise tables (p three decimals, relyr an integer, the rest
+      * general; author ruling 2026-09-23). No wooldid_pfloor line goes under it, by the same
+      * ruling: a cell's bootstrap p rests on that cell's own usable draws (2/7 on a cell
+      * with seven), not on e(boot_completed), so the run-level 2/n line would misstate it
       matrix `gtds' = `gtd'[1..., 1..9]
-      matlist `gtds', format(%9.0g)
+      wooldid_mlfmt , mat(`gtds')
+      matlist `gtds', cspec(`wdmlfmt') rspec(`wdmlfmtr')
     }
     else dis as text "  (`gtrows' rows; table not printed - see e(gteffects))"
   }
