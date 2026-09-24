@@ -13431,8 +13431,18 @@ version 16.0
   * only ACROSS periods leaves by-sg att/att_it correct (row-weighted) but makes
   * att_i/att_itime weight a straddling unit by its weight share rather than equally ->
   * caution. domains: missing sg rows belong to no subgroup by design and never-treated
-  * units never enter any sg subpop, so both are excluded (cond() folds extended missings)
-  if "`safetyinput'" != "off" {
+  * units never enter any sg subpop, so both are excluded (cond() folds extended missings).
+  * this screen and the split-unit screen below run on the observed run only, not in
+  * replication mode (`rm'), like the partial-labelling screen further down and the worker's
+  * onset and si8 screens: a replication is read for its coefficients, and it cannot newly
+  * trip either one. the bootstrap reweights or duplicates the observed rows, and its re-id
+  * leg rebuilds `i' finer than the original, so every replication cell and unit nests in a
+  * screened one. under permute() wooldid_permctl has already run both screens over every
+  * design unit, never-treated ones included: a subgroup varying within `i' is refused
+  * whatever safety() is, and within an `i'-by-period cell unless safety(off), which skips
+  * the within-cell screen here too; permonsetcohorts, which rebuilds `i', is refused with
+  * subgroups(). skipping them saves up to four gegen passes per replication
+  if "`safetyinput'" != "off" & "`rm'" != "1" {
     tempvar f13sgitmin f13sgitmax
     qui gegen double `f13sgitmin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i' `t')
     qui gegen double `f13sgitmax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i' `t')
@@ -13461,17 +13471,20 @@ version 16.0
   * a unit split across multiple subgroups over time (subgroup varies within i across periods)
   * is refused under default safety - a unit cannot belong to more than one subgroup, and the
   * share-weighted fallback deserves an explicit opt-in. under safety(off) the run proceeds with
-  * share weighting and a caution; the check itself runs regardless of the safety setting
-  tempvar f13sgimin f13sgimax
-  qui gegen double `f13sgimin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
-  qui gegen double `f13sgimax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
-  cap assert `f13sgimin' == `f13sgimax' if `ifstatement' & `ttre' != .
-  if _rc != 0 {
-    if "`safetyinput'" != "off" {
-      dis as error "Error: the subgroup variable varies within i. Treatment effects are estimated at the i-t level, so cross-subgroup variation is mechanically being shut down in this specification. Consider replacing the i variable with an i X subgroup variable. To ignore this error, specify safety(off)."
-      error 459
+  * share weighting and a caution; the check itself runs regardless of the safety setting, but
+  * not in replication mode (see the within-cell screen above)
+  if "`rm'" != "1" {
+    tempvar f13sgimin f13sgimax
+    qui gegen double `f13sgimin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
+    qui gegen double `f13sgimax' = max(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i')
+    cap assert `f13sgimin' == `f13sgimax' if `ifstatement' & `ttre' != .
+    if _rc != 0 {
+      if "`safetyinput'" != "off" {
+        dis as error "Error: the subgroup variable varies within i. Treatment effects are estimated at the i-t level, so cross-subgroup variation is mechanically being shut down in this specification. Consider replacing the i variable with an i X subgroup variable. To ignore this error, specify safety(off)."
+        error 459
+      }
+      else dis as text "Caution: the subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time; proceeding under safety(off) using share weighting. att_i and att_itime enter a split unit into each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply; by-subgroup att and att_it results are unaffected."
     }
-    else dis as text "Caution: the subgroup variable `subgroups' splits some units of `i' across multiple subgroups over time; proceeding under safety(off) using share weighting. att_i and att_itime enter a split unit into each subgroup weighted by its share of sample weight there, rather than with the equal unit weighting those estimands normally imply; by-subgroup att and att_it results are unaffected."
   }
   * ---- partial labelling ----
   * Both subgroup screens above fold missing through cond(sg >= ., ., sg), and gegen's min/max
@@ -13529,7 +13542,7 @@ version 16.0
       else dis as text "Caution: the subgroup variable `subgroups' is missing on `f13pmn' in-sample row(s) of treated units of `i' that carry a subgroup value on their other rows; proceeding under safety(off) using share weighting. Such a unit enters its own subgroup weighted by its labelled share of sample weight rather than with the equal unit (att_i, att_itime) or equal cell (att_it) weighting those estimands normally imply."
     }
   }
-  qui drop `f13sgimin' `f13sgimax'
+  if "`rm'" != "1" qui drop `f13sgimin' `f13sgimax'
   * long subgroup values overflow stata's 31/32-character name limits when embedded in
   * constructed local/matrix/rowname/graph/e() names (the worst prefixes reach 24-25
   * characters: the makecfxplotsbysg tempnames, the adversarial-by-sg ereturns, and the

@@ -165,5 +165,46 @@ foreach shape in full unlabelled nevertreated {
 global SGCMD
 scalar drop SGLOG
 
+* ---- S10: the within-cell and split-unit screens run once, on the observed run, not in every
+* replication (change audit round 2, U11 sgdom-guards-per-replication). Like the onset and si8
+* screens (f8b4a64) and the partial-labelling screen above, they now skip replication mode
+* (`rm'): a replication cannot newly trip them (the bootstrap re-id leg makes i finer, and
+* permute()'s own screen refuses every design unit whose subgroup varies within a cluster).
+* wooldid_sgdom is called directly, as the worker calls it, on a split unit (unit 1 moves from
+* its subgroup to another from 2007) and on a within-cell split (unit 1's post-onset rows
+* doubled with the copy in another subgroup): r(459) on the observed run (S10a, S10c), rc 0
+* in replication mode (S10b, S10d). S10e-f: end to end, both engines still refuse the
+* split-unit data on the observed run
+mksg
+qui gen relt = cond(ttre < ., t - ttre, 0)
+qui replace sg = cond(sg == 1, 2, 1) if i == 1 & t >= 2007
+cap noi wooldid_sgdom , sg(sg) ivar(i) tvar(t) ttrevar(ttre) ifs(1) relt(relt)
+local s10a = _rc
+cap noi wooldid_sgdom , sg(sg) ivar(i) tvar(t) ttrevar(ttre) ifs(1) relt(relt) rm(1)
+local s10b = _rc
+mksg
+qui gen relt = cond(ttre < ., t - ttre, 0)
+qui expand 2 if i == 1 & t >= ttre, generate(s10dup)
+qui replace sg = cond(sg == 1, 2, 1) if s10dup
+cap noi wooldid_sgdom , sg(sg) ivar(i) tvar(t) ttrevar(ttre) ifs(1) relt(relt)
+local s10c = _rc
+cap noi wooldid_sgdom , sg(sg) ivar(i) tvar(t) ttrevar(ttre) ifs(1) relt(relt) rm(1)
+local s10d = _rc
+mksg
+qui replace sg = cond(sg == 1, 2, 1) if i == 1 & t >= 2007
+cap wooldid y i t ttre, att cluster(i) subgroups(sg) bootstrap(standard) reps(5) rseed(1) dots(0)
+local s10e = _rc
+cap wooldid y i t ttre, att cluster(i) subgroups(sg) permute(shuffle) permreps(20) rseed(1) dots(0)
+local s10f = _rc
+dis "S10 info: split unit observed=`s10a' replication=`s10b'; within-cell observed=`s10c' replication=`s10d'; bootstrap=`s10e' permute=`s10f'"
+if `s10a' != 459 | `s10c' != 459 | `s10e' != 459 | `s10f' != 459 {
+  dis as error "S10 FAIL: a subgroup screen no longer refuses on the observed run"
+  local ++fails
+}
+if `s10b' != 0 | `s10d' != 0 {
+  dis as error "S10 FAIL: the within-cell or split-unit screen still runs in replication mode"
+  local ++fails
+}
+
 if `fails' == 0 dis as result "SGDOM_ALL_PASS"
 else dis as error "SGDOM_FAILS=`fails'"
