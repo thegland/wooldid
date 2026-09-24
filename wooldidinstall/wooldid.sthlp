@@ -939,7 +939,8 @@ The commands {it:est restore} and {it:est save} are compatible with {it:wooldid}
 {it:ereturn list}; a number of results are posted hidden (the preserved analytic covariances, the per-family bootstrap and permutation tables, and the {it:e(wdid_*)} state that
 replay uses) and appear only under {it:ereturn list, all}, though each can be read by name either way. Typing {it:wooldid} by itself after a successful estimation redisplays
 the stored results, including after {it:estimates restore}; it does not redraw plots or repeat estimation-time cautions, and it refuses with an error after a failed call until
-some {it:wooldid} call completes successfully. {p_end}
+some {it:wooldid} call completes successfully. The exception is a failure inside the {it:permute()} or {it:bootstrap()} replication loop, which restores that
+call's own observed estimation and leaves it replayable. {p_end}
 
 {pstd} The coefficient vector {it:e(b)} and its covariance {it:e(V)} carry these column names, which are what {it:esttab}, {it:coefplot}, {it:lincom} and {it:test} address a
 coefficient by: {it:main_att} (the headline average treatment effect on the treated), {it:pretreatment_att} (the pooled pre-treatment average), {it:ES_att_pre#} and

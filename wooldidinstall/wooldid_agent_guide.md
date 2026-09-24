@@ -807,7 +807,7 @@ The rest of this chapter is the help file's inventory.
 - `e(escomp)`: composition by horizon (cohorts, units, clusters, observations, weight shares), the first thing to read when an event-study profile jumps.
 - Test results: `e(joint_horiz*)`, `e(adversarial_pval_*)` and `e(adversarial_line_*)`, `e(joint_*_allsgssame)`, `e(roth_*)`, `e(esband_*)`.
 - Engine records: `e(boot_*)`, `e(bootdist)`; `e(perm_*)`, `e(permdist_b)`. Under `permute()` `e(p)`, `e(ci_l)` and `e(ci_u)` are posted for `esttab` and there is no `e(se)`.
-- Replay: `wooldid` alone redisplays the stored tables from `e()` (not the plots or the estimation-time cautions), also after `estimates restore`; it refuses after a failed call until a call completes.
+- Replay: `wooldid` alone redisplays the stored tables from `e()` (not the plots or the estimation-time cautions), also after `estimates restore`; it refuses after a failed call until a call completes, except after a failure inside the `permute()` or `bootstrap()` replication loop, which leaves that call's observed results replayable.
 
 Recipes:
 
