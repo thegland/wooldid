@@ -1778,8 +1778,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`customvce'" != "" local vcespecifier vce(`customvce')
     local regtype reg
     if "`poisson'" == "poisson" local regtype poisson
-    if "`verbose'" != "" dis "`regtype' `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `vcespecifier'  "
-    qui `regtype' `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `vcespecifier'
+    * the command spells clustering vce(cluster ...), not the legacy cluster(): under the
+    * legacy spelling Stata's poisson posts e(ll_0) and e(r2_p) as missing, so the header read
+    * "pseudo-R2 = ." (author ruling 2026-09-23). e(b), e(V) and every reported estimate and
+    * standard error are the same under either spelling (measured bitwise on regress and
+    * poisson, weighted and unweighted). A separate local, because vcespecifier is also what
+    * e(wdid_vcespec) records, and that keeps the user's spelling
+    local wdregvce `vcespecifier'
+    if "`cluster'" != "" & "`customvce'" == "" local wdregvce vce(cluster `cluster')
+    if "`verbose'" != "" dis "`regtype' `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `wdregvce'  "
+    qui `regtype' `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `wdregvce'
   }
 
   * save the model; will be useful later

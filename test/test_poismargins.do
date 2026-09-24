@@ -26,6 +26,8 @@
 *    guard reads e(N_clust) as well as e(df_r), because ppmlhdfe never posts e(df_r)
 * P6 under poisson the dose effects are titled for what they are on the linear index: dyex
 *    "Elasticities (dyex)", dydx "Semi-elasticities (dydx)" (author ruling 2026-09-23)
+* P7 poisson + unconditionalse + cluster() posts e(ll_0) and e(r2pseud) and prints the
+*    pseudo-R2: the stage-1 command spells vce(cluster ...) (author ruling 2026-09-23)
 *
 * The retired option NAMES are pinned in test_si89.do (T1/T2), which is their cert host:
 * test/suite/configs_ext.csv cannot carry them, because coverage_check.py treats an option
@@ -189,6 +191,34 @@ forval k = 1/5 {
 set linesize `p6ls'
 if `p6n' > 0 {
   di as error "P6 FAIL: `p6n' of 5 poisson/linear dose-effect label cases missed a title check"
+  local ++fails
+}
+
+* ---- P7: poisson-uncondse-pseudor2-dot (change audit round 2, S3; author ruling 2026-09-23).
+* On the unconditionalse path the stage-1 poisson got the legacy cluster() spelling, under which
+* Stata's poisson posts e(ll_0) and e(r2_p) as missing, so the header printed "pseudo-R2 = ."
+* while robust and customvce(cluster ...) runs printed a value. The command now spells
+* vce(cluster ...). e(b) and e(V) do not move (measured bitwise when the change was made, on
+* regress and poisson, weighted and unweighted); what moves is that e(ll_0) and e(r2pseud) are
+* posted and the header prints the number. e(wdid_vcespec), the header's "Standard Errors"
+* label, keeps the user's spelling
+use `b', clear
+cap erase p7.txt
+qui log using p7.txt, text replace name(p7log)
+cap noi wooldid ycount i t ttre, att cluster(i) poisson unconditionalse esprelength(1) espostlength(1)
+local p7rc = _rc
+qui log close p7log
+scalar p7r2 = e(r2pseud)
+scalar p7ll0 = e(ll_0)
+local p7ok 0
+if `p7rc' == 0 & p7r2 < . & p7ll0 < . {
+  local p7lbl = strpos(fileread("p7.txt"), "pseudo-R2 = " + string(p7r2, "%-6.4f")) > 0
+  if reldif(p7r2, 1 - e(ll)/p7ll0) < 1e-12 & `p7lbl' & "`e(wdid_vcespec)'" == "cluster(i)" local p7ok 1
+}
+cap erase p7.txt
+di "P7_uncond_cluster_rc=" `p7rc' " r2pseud=" p7r2 " ll_0=" p7ll0 " vcespec=`e(wdid_vcespec)'"
+if !`p7ok' {
+  di as error "P7 FAIL: poisson + unconditionalse + cluster() must post e(ll_0) and e(r2pseud) (= 1 - ll/ll_0) and print the pseudo-R2, with e(wdid_vcespec) still cluster(i)"
   local ++fails
 }
 
