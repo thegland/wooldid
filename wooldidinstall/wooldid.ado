@@ -429,6 +429,13 @@ version 16.0
     * accumulators themselves
     tempname wdbksacc wdbkpwsacc
     tempname wdbcell
+    * boottstat studentizes each pairwise contrast by its analytic se; whether that se is the
+    * cancellation residue wooldid_sgdeg flags on the analytic path is read here, on the observed
+    * fit, before the loop, and handed to wooldid_bootjnt, which prints its pairwise caution only
+    * then. detect mode posts nothing and blanks nothing; with fewer than two subgroups or no
+    * pairwise table it returns without setting the count
+    local wdsgd_n 0
+    if "`boottstat'" != "" & "`cluster'" != "" & "`subgroups'" != "" wooldid_sgdeg , detect
     qui est sto `wdbobs'
     matrix `wdbobsb' = e(b)
     * the physical re-id leg is taken for the cell-weighted estimands (their bootstrap is
@@ -498,7 +505,7 @@ version 16.0
     * scalar is posted, which is the same convention e(boot_novar) follows
     if "`wdb_r_sesmall'" != "" ereturn scalar boot_sesmall = `wdb_r_sesmall'
     * bootstrapped joint tests, subgroup contrasts and CI flavors (eclass sub)
-    wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') bootdf(`bootdf') bts(`boottstat') bdisp(`bootdisplay') nclus(`wdb_r_nclus') clus(`cluster') pwseacc(`=cond("`boottstat'" != "", "`wdb_r_kpwse'", "")') rawpwse(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwacc(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') seacc(`=cond("`boottstat'" != "", "`wdb_r_kse'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")')
+    wooldid_bootjnt , level(`level') acc(`wdbacc') obsb(`wdbobsb') comp(`wdbcomp') jt(`jointtests') `ties' done(`wdb_r_done') pwdeg(`wdsgd_n') bootdf(`bootdf') bts(`boottstat') bdisp(`bootdisplay') nclus(`wdb_r_nclus') clus(`cluster') pwseacc(`=cond("`boottstat'" != "", "`wdb_r_kpwse'", "")') rawpwse(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') jwacc(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobs(`=cond("`boottstat'" != "", "`wdbjobs'", "")') aseobs(`=cond("`boottstat'" != "", "`wdbaseobs'", "")') seacc(`=cond("`boottstat'" != "", "`wdb_r_kse'", "")') awacc(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobs(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")')
     * bootsave(): the replication draws as a .dta in the working directory. One row per
     * replication (_rep = 1..reps; a failed replication keeps its row, all missing) plus a
     * _rep = 0 row carrying the observed estimates, so the file can recentre its own draws;
@@ -7526,7 +7533,7 @@ version 16.0
 *** plus a caution, never a residual-rank p. Joint-test e() names and the per-subgroup
 *** macro-vs-scalar split mirror the analytic surface exactly, so the display's joint-test
 *** lines need no bootstrap branch.
-  syntax , [level(real 0) acc(string) obsb(string) comp(string) jt(string) ties done(string) bootdf(string) bts(string) bdisp(string) nclus(integer 0) pwseacc(string) rawpwse(string) jwacc(string) jobs(string) aseobs(string) seacc(string) awacc(string) aobs(string) adv(string) advalt(string) advesrel(string) advtt(string) clus(varlist) jkacc(string)]
+  syntax , [level(real 0) acc(string) obsb(string) comp(string) jt(string) ties done(string) pwdeg(integer 0) bootdf(string) bts(string) bdisp(string) nclus(integer 0) pwseacc(string) rawpwse(string) jwacc(string) jobs(string) aseobs(string) seacc(string) awacc(string) aobs(string) adv(string) advalt(string) advesrel(string) advtt(string) clus(varlist) jkacc(string)]
   * a pre-rewrite copy of the observed pairwise table: column 2 is the analytic margins se,
   * which the polarisation route needs as its observed comparator. Taken before anything
   * below touches e(pwsgs)
@@ -8278,8 +8285,11 @@ version 16.0
     * design), and boottstat studentizes by exactly that se in every replication. cluster() need
     * not nest i, so the text says "at or above" as the case it applies to rather than as a fact
     * about the run; a finer cluster() is in fact the remedy. gated on cluster() itself: nclus()
-    * is the observation count unclustered
-    if "`bts'" != "" & "`clus'" != "" {
+    * is the observation count unclustered. and, since the author's ruling of 2026-09-23 (card
+    * m236), on the degeneracy being realized: `pwdeg' is the number of pairwise rows the analytic
+    * path's detection (wooldid_sgdeg, detect mode, run by the shell on the observed fit) flags, so
+    * a design whose contrast standard errors are usable prints nothing, whatever cluster() is
+    if "`bts'" != "" & "`clus'" != "" & `pwdeg' > 0 {
       local ++wdbncaut
       local wdbc`wdbncaut' where cluster() sits at or above the i level the analytic pairwise-contrast standard errors can be degenerate, and boottstat studentizes each contrast by that standard error in every replication, so the studentized contrasts and the across-subgroup equality test can be absent or numerically unstable there; a cluster() finer than i is the remedy, and bootstrap() without boottstat forms the contrasts from the coefficient draws instead
     }
@@ -12292,7 +12302,7 @@ version 16.0
   * half the range away from a healthy design; a cut at 1 - 1e-3 leaves rows reporting a
   * contrast standard error twenty times too small. It is a judgment call, and lives in ONE
   * local below so it can be moved.
-  syntax , [si(string) perm]
+  syntax , [si(string) perm detect]
   cap confirm matrix e(pwsgs)
   if _rc != 0 exit
   local sgl `e(wdid_sglist)'
@@ -12389,6 +12399,14 @@ version 16.0
     if `rho' > `wdsgdmax' local wdsgdmax = `rho'
     local wdsgds = cond(`ispre', "joint_pre_`item'_allsgssame", "joint_`item'_allsgssame")
     if strpos(" `wdsgdfam' ", " `wdsgds' ") == 0 local wdsgdfam `wdsgdfam' `wdsgds'
+  }
+  * detect: hand the flagged-row count back to the caller and post nothing. The shell runs this
+  * on the observed fit of a boottstat run under cluster(), where the count gates wooldid_bootjnt's
+  * pairwise caution (the author's ruling 2026-09-23, card m236, as D4 did for permute()); posting
+  * the disclosure there would print this program's own caution on a path that has none
+  if "`detect'" != "" {
+    c_local wdsgd_n `wdsgdn'
+    exit
   }
   if `wdsgdn' == 0 exit
   * the disclosure state, read back by wooldid_display so replay reproduces the caution

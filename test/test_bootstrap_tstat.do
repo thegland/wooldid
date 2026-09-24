@@ -418,5 +418,68 @@ if `t12rc' != 0 | `t12n' < 2 | `t12zero' != 0 | `t12min' < `t12floor' - 1e-12 {
 }
 else di as result "T12 PASS: F033 reaches the cells - `t12n' studentized cell p-values, none zero, none below 2/(completed+1)=`t12floor'"
 
+* ------------------------------------------ T13: the pairwise caution needs a realized degeneracy
+* (change audit round 2, U08 bootjnt-pwcaution-ungated; the author's ruling 2026-09-23, card
+* m236). boottstat studentizes each subgroup contrast by its analytic se, and the caution that
+* this se can be degenerate used to print on every clustered boottstat run with subgroups. It now
+* prints only when the analytic path's detection (wooldid_sgdeg) flags a pairwise row of the
+* observed fit, as the permute() disclosure does (D4). (a) a finer cluster on the package's
+* binary panel: the contrast standard errors are usable (.016/.023 against robust .085), so
+* nothing prints - on 8d8b324 it printed. (b) the same kind of finer cluster on a 24-unit panel
+* where the contrast se is residue (about 4e-9): it prints, once. (c) cluster(i) on the binary
+* panel (rho near .998): it prints. Neither run posts the analytic path's disclosure scalars nor
+* prints its caution
+cap prog drop t13run
+prog def t13run
+  * the log is written at linesize 255 so that both needles sit on the first physical line of
+  * their caution: the negative one must not be able to pass by straddling a wrap
+  gettoken tag 0 : 0
+  local ls0 = c(linesize)
+  set linesize 255
+  qui log using boot_ts_t13.txt, text replace name(t13)
+  cap noi wooldid `0'
+  local rc = _rc
+  qui log close t13
+  set linesize `ls0'
+  local lg = fileread("boot_ts_t13.txt")
+  local lg = subinstr(`"`lg'"', char(13), "", .)
+  local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
+  local nd "sits at or above the i level"
+  local n = (length(`"`lg'"') - length(subinstr(`"`lg'"', "`nd'", "", .))) / length("`nd'")
+  local nr = strpos(`"`lg'"', "rank-deficient in the contrast direction") > 0
+  c_local t13rc_`tag' `rc'
+  c_local t13n_`tag' `n'
+  c_local t13r_`tag' `nr'
+  c_local t13s_`tag' = e(wdid_sgdegen)
+  cap erase boot_ts_t13.txt
+end
+use "data/dta_binary", clear
+gen long cfine = i*10 + (t > 2005)
+t13run a y i t ttre, att cluster(cfine) esprelength(1) espostlength(1) subgroups(sg) bootstrap(standard) reps(10) rseed(13) dots(0) boottstat
+clear
+set seed 2026
+set sortseed 2026
+qui set obs 24
+gen unit = _n
+gen s = ceil(unit/4)
+gen sg = mod(unit, 2)
+gen ttre = cond(unit<=8, 4, cond(unit<=16, 6, .))
+qui expand 8
+bysort unit: gen t = _n
+gen y = 2*(t>=ttre & ttre<.) + 0.3*(t>=ttre & ttre<.)*sg + 0.1*unit + 0.05*t + 0.5*(t>=ttre & ttre<.)*mod(unit,4) + rnormal()
+gen cfine = unit*10 + (t > 4)
+t13run b y unit t ttre, att cluster(cfine) esprelength(1) espostlength(1) subgroups(sg) bootstrap(standard) reps(10) rseed(13) dots(0) boottstat
+use "data/dta_binary", clear
+t13run c y i t ttre, att cluster(i) esprelength(1) espostlength(1) subgroups(sg) bootstrap(standard) reps(10) rseed(13) dots(0) boottstat
+di "T13 usable finer: rc=`t13rc_a' printed `t13n_a' | residue finer: rc=`t13rc_b' printed `t13n_b' | cluster(i): rc=`t13rc_c' printed `t13n_c' | D4 text `t13r_a'`t13r_b'`t13r_c' sgdegen [`t13s_a'][`t13s_b'][`t13s_c']"
+if `t13rc_a' != 0 | `t13rc_b' != 0 | `t13rc_c' != 0 | `t13n_a' != 0 | `t13n_b' != 1 | `t13n_c' != 1 {
+  di as error "T13 FAIL: the pairwise caution should print only on a realized degeneracy (usable finer cluster 0, residue finer cluster 1, cluster(i) 1)"
+  local ++fails
+}
+if `t13r_a' | `t13r_b' | `t13r_c' | "`t13s_a'`t13s_b'`t13s_c'" != "..." {
+  di as error "T13b FAIL: the detection must post nothing and print no caution of its own under bootstrap()"
+  local ++fails
+}
+
 if `fails' == 0 di as result "BOOTTS_ALL_PASS"
 else di as error "BOOTTS_FAILS=`fails'"

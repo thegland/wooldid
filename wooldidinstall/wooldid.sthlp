@@ -651,7 +651,8 @@ for subgroup-specific estimates can fail when using clustered standard errors in
 the level of the cohort variable {it:i} or above, the analytic standard error of a pairwise contrast can be degenerate (its standard error is rounding residue rather than an estimated
 variance); {it:wooldid} then reports that contrast, and the across-subgroup equality test covering it,
 without inference, under a caution naming the count. With {it:safety(off)} they are reported as computed. Under {it:permute()} the contrasts are
-permuted as coefficient differences and stand; the caution then names the rows whose {it:se_analytic} is residue. The remedies are {it:permute()}, {it:bootstrap()} without
+permuted as coefficient differences and stand; the caution then names the rows whose {it:se_analytic} is residue. Under {it:boottstat} each contrast is studentized by
+that standard error, and a caution says so when it is residue. The remedies are {it:permute()}, {it:bootstrap()} without
 {it:boottstat}, or a {it:cluster()} strictly finer than the cohort-by-period cells. {p_end}
 
 {pstd} Each treated unit of {it:i} should lie wholly within one subgroup: a subgroup variable that varies within a cohort-by-period cell, or over time within a unit, is refused
