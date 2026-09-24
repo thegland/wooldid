@@ -528,10 +528,12 @@ version 16.0
     * with the bootstrap version, so running the diagnostic here feeds Roth's own formula
     * a bootstrap covariance rather than an analytic one. the two hbar scalars were
     * computed at worker level (they need tempvars that exist only inside the worker) and are handed
-    * back in. placed between part(1) and part(2) to match the ordering the non-bootstrap
-    * path uses
+    * back in, written in %21x, which real() reads back bit for bit: string()'s default %9.0g kept
+    * seven significant digits, so e(roth_hbar_*) came back about 1e-7 relative off the analytic
+    * run's (the author's ruling 2026-09-23). placed between part(1) and part(2) to match the
+    * ordering the non-bootstrap path uses
     if "`pretrendpower'" != "" {
-      cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`=cond(e(df_r) < ., string(e(df_r)), ".")') pois(`poisson') hba(`=cond(e(wdid_ptphbar_att) < ., string(e(wdid_ptphbar_att)), ".")') hbi(`=cond(e(wdid_ptphbar_it) < ., string(e(wdid_ptphbar_it)), ".")') level(`=cond(`level' == 0, c(level), `level')')
+      cap noi wooldid_ptp , levels(`pretrendpower') esrel(`esrelativeto') dfr(`=cond(e(df_r) < ., string(e(df_r)), ".")') pois(`poisson') hba(`=cond(e(wdid_ptphbar_att) < ., string(e(wdid_ptphbar_att), "%21x"), ".")') hbi(`=cond(e(wdid_ptphbar_it) < ., string(e(wdid_ptphbar_it), "%21x"), ".")') level(`=cond(`level' == 0, c(level), `level')')
       local wdsh_prc = _rc
       if `wdsh_prc' != 0 {
         qui frame
