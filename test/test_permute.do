@@ -654,6 +654,40 @@ foreach f in perm_p13a perm_p13a2 perm_p13c perm_p13d {
   cap erase `f'.txt
 }
 
+* ---- P14: replications that fail to estimate (change audit round 2, U07 perm-test-gaps) ----
+* Every e(perm_failed) assertion elsewhere is == 0, so the badrep path was never driven. Six
+* clusters, one treated at t 4, and clusters 5 and 6 carry no outcome: they stay in the design,
+* so a draw that hands them the onset leaves the replication with no treated observation and it
+* fails. The run must complete (30 of 40 succeed here, above the max(20, half) floor), count the
+* failures in e(perm_failed), print one x per failure on the dots line, and print the
+* above-10% caution once
+clear
+set seed 4242
+set sortseed 4242
+qui set obs 6
+qui gen i = _n
+qui gen ttre = cond(_n <= 1, 4, .)
+qui expand 8
+qui bysort i: gen t = _n
+qui gen y = 3*(t >= ttre & ttre < .) + 0.1*i + rnormal()
+qui replace y = . if i >= 5
+qui log using perm_p14.txt, text replace name(pm)
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(1414)
+local rc14 = _rc
+qui log close pm
+local p14f = e(perm_failed)
+local p14c = e(perm_completed)
+mata: l_ = cat("perm_p14.txt"); k_ = selectindex(strpos(l_, "Permutation replications (") :== 1)
+mata: d_ = (rows(k_) ? l_[k_[1]] : ""); st_local("p14x", strofreal(strlen(d_) - strlen(subinstr(d_, "x", ""))))
+local lg14 = fileread("perm_p14.txt")
+local p14n = (length(`"`lg14'"') - length(subinstr(`"`lg14'"', "replications failed to estimate and were excluded", "", .))) / length("replications failed to estimate and were excluded")
+dis "P14 info: rc=`rc14' completed=`p14c' failed=`p14f' x-marks=`p14x' caution printed `p14n' time(s)"
+if `rc14' != 0 | !(`p14f' > 4 & `p14f' < .) | `p14c' + `p14f' != 40 | `p14x' != `p14f' | `p14n' != 1 {
+  dis as error "P14 FAIL: failed replications are not counted, marked or cautioned as documented"
+  global pf = $pf + 1
+}
+cap erase perm_p14.txt
+
 if $pf == 0 dis "PERMUTE_ALL_PASS"
 else dis as error "PERMUTE_FAILS=$pf"
 exit, clear
