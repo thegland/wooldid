@@ -18,6 +18,8 @@
 * S7  CS-4: e(wdid_vcvstate) reports what e(V) actually is - analytic-blocks once an event
 *     study exists (PS-62), analytic-diagonal on the
 *     analytic path, bootstrap under bootstrap(), absent when no e(V) was posted
+* S10 e(histogramestimates): one row per treated cohort i, columns att_i (att) and att_itime
+*     (att_it), and the att_i column reaggregates to the att with post-period row counts
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -264,6 +266,56 @@ if `s8brc' != 0 | reldif(`s8bse', s8b_se) > 1e-12 | reldif(`s8best', s8b_est) > 
   local ++fails
 }
 else dis as result "S8b PASS: lincom post0 - post1 on the spliced e(V) reproduces the family covariance (se " %10.8f `s8bse' ", diagonal-only would be " %10.8f s8b_diag ")"
+
+* ---- S10 (change audit 2026-09-22, cleanmatrices-cert-gap): histogramcohorteffects' stored
+* result, which no cert suite read. i = unit here, so the treated cohorts are the 8 treated units
+* (onset 4 or 6 on t = 1..8). att alone gives one column, att_i; att att_it gives att_i and
+* att_itime. the rows come in ascending i, so the att_i column, weighted by each unit's
+* post-period row count (5 for onset 4, 3 for onset 6), reaggregates to e(b)'s att ----
+use `panel', clear
+cap noi wooldid y unit t ttre, att histogramcohorteffects
+local rc10a = _rc
+local r10a = .
+local c10a
+local id10 = .
+if `rc10a' == 0 {
+  tempname H10 B10
+  matrix `H10' = e(histogramestimates)
+  local r10a = rowsof(`H10')
+  local c10a : colnames `H10'
+  matrix `B10' = e(b)
+  local att10 = `B10'[1,1]
+  * treated units in ascending order: unit mod 4 == 1 has onset 4 (5 post rows), == 2 onset 6 (3)
+  local num 0
+  local den 0
+  local k 0
+  forval u = 1/16 {
+    if mod(`u', 4) == 1 | mod(`u', 4) == 2 {
+      local ++k
+      local n = cond(mod(`u', 4) == 1, 5, 3)
+      local num = `num' + `n'*`H10'[`k', 1]
+      local den = `den' + `n'
+    }
+  }
+  local id10 = reldif(`num'/`den', `att10')
+}
+use `panel', clear
+cap noi wooldid y unit t ttre, att att_it histogramcohorteffects
+local rc10b = _rc
+local r10b = .
+local c10b
+if `rc10b' == 0 {
+  tempname H10b
+  matrix `H10b' = e(histogramestimates)
+  local r10b = rowsof(`H10b')
+  local c10b : colnames `H10b'
+}
+dis "S10: att rc=`rc10a' rows=`r10a' cols=[`c10a'] reaggregation reldif=`id10' | att att_it rc=`rc10b' rows=`r10b' cols=[`c10b']"
+if `rc10a' != 0 | `r10a' != 8 | "`c10a'" != "att_i" | `id10' > 1e-10 | `rc10b' != 0 | `r10b' != 8 | "`c10b'" != "att_i att_itime" {
+  dis as error "S10 FAIL: e(histogramestimates) shape, columns or reaggregation"
+  local ++fails
+}
+else dis as result "S10 PASS: e(histogramestimates) has one row per treated cohort, the requested columns, and reaggregates to att"
 
 * ---- S9 PS-62 follow-through: cleanmatrices must not take the splice down with it ----
 * cleanmatrices runs `clear mata' inside the worker, which drops wooldid's OWN Mata kernels
