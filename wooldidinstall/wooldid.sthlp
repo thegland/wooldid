@@ -1067,7 +1067,7 @@ cell table; the test statistics {it:e(boot_jointW)}, {it:e(boot_jointWobs)}, {it
 formed and which were withheld. Further records: {it:e(boot_navail)} (replications available per estimate), {it:e(boot_novar)} and {it:e(boot_sesmall)} (replications
 with no, or a very small, standard error under {it:boottstat}), {it:e(boot_tstat)}, {it:e(boot_jk_completed)}, {it:e(boot_v_posted)}, {it:e(boot_V_shortfall)} and
 {it:e(boot_ves_failed)} (whether the covariance and the event-study covariances were rebuilt from the replications), {it:e(boot_jt_absent)}, {it:e(boot_sgjt_absent)} and
-{it:e(boot_sgjt_reason)} (tests withheld and why), {it:e(boot_sgW)} and {it:e(boot_sgWobs)} (the subgroup-equality statistics), {it:e(bootdist_pwse)}, the hidden
+{it:e(boot_sgjt_reason)} (tests withheld and why), {it:e(boot_sgW)} and {it:e(boot_sgWobs)} (the subgroup-equality statistics), {it:e(bootdist_pwse)} (up to 10,000 replications), the hidden
 {it:e(boot_ptails)}, {it:e(boot_comparator)}, {it:e(boot_ase_obs)}, {it:e(V_es_analytic_{it:type})} and {it:e(df_r_analytic)}, and the per-family cfx twins
 {it:e(boot_{it:family}_{it:cfxname})}. {it:e(df_r)} is aligned to the reported reference distribution, and {it:e(boot_percentile_mainresults)} is an alias of
 {it:e(boot_pctl_mainresults)}. {p_end}

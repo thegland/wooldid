@@ -8249,11 +8249,17 @@ version 16.0
       tempname pwsed
       * as with e(bootdist_se), the pairwise standard errors are reported as sampled.
       * `pwseacc' may be the kernel copy with a non-viable replication's row blanked;
-      * `rawpwse' is the harvest itself and is what is reported here
-      local wdbpwdist = cond("`rawpwse'" != "", "`rawpwse'", "`pwseacc'")
-      mata: wooldid_bootdist("`acc'", "`pwsed'", "`wdbpwdist'", "`pwsed'")
-      cap matrix colnames `pwsed' = `prn'
-      cap ereturn matrix bootdist_pwse = `pwsed'
+      * `rawpwse' is the harvest itself and is what is reported here.
+      * and under the same cap as e(bootdist): above 10,000 completed replications it is not
+      * posted, so it is never posted without the matrix whose rows it pairs with. `done' is the
+      * shell's `wdb_r_done', the count wooldid_bootwire's cap and the shell caution read, and
+      * test/check_validate_sync.py pins this 10000 to theirs
+      if `done' <= 10000 {
+        local wdbpwdist = cond("`rawpwse'" != "", "`rawpwse'", "`pwseacc'")
+        mata: wooldid_bootdist("`acc'", "`pwsed'", "`wdbpwdist'", "`pwsed'")
+        cap matrix colnames `pwsed' = `prn'
+        cap ereturn matrix bootdist_pwse = `pwsed'
+      }
       if `pwtmiss' > 0 {
         local ++wdbncaut
         local wdbc`wdbncaut' `pwtmiss' pairwise subgroup contrast row(s) had no usable studentized bootstrap distribution; their statistic, p-value and interval are left blank rather than filled from the coefficient-draw families
