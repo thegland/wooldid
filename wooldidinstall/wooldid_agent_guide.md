@@ -574,7 +574,7 @@ The rest of this chapter is the help file's account, including the fuller discus
 
 - ***byTtre*** Controls for the effect of contreat are interacted with indicators for membership in each treatment onset group and in the control group. 
 
-- ***byCohort*** Controls for the effect of contreat are interacted with cohort (i) membership indicators. Each treated cohort must therefore have variation in *contreat* across its untreated/reference-period observations; a cohort that does not is named and the run stops, with no *safety(off)* escape. 
+- ***byCohort*** Controls for the effect of contreat are interacted with cohort (i) membership indicators. Each treated cohort must therefore have variation in *contreat* across its untreated/reference-period observations; if any cohort does not, the run stops, with no *safety(off)* escape. 
 
 - ***byTime*** Controls for the effect of contreat are interacted with time period (t) indicator variables. 
 

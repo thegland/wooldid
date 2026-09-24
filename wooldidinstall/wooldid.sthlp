@@ -754,7 +754,7 @@ of treated cohort-periods. If this option is specified when the always 0 conditi
 
 {pstd} Each control type requires variation in {it:contreat} across the reference-period observations of every group for which it fits a baseline dose slope: the whole
 sample under {it:basic}, each treatment-status group under {it:byTreated}, each onset group under {it:byTtre}, each cohort under {it:byCohort} and each calendar period under
-{it:byTime}. A group without it is named and the run stops; under {it:byTime} this happens whenever never-treated units carry a zero or constant dose in the periods after the
+{it:byTime}. If any group lacks it the run stops; under {it:byTime} this happens whenever never-treated units carry a zero or constant dose in the periods after the
 last onset. {p_end}
 
 {pstd} {ul:On Specifying contreatcontrols() and lattice:} As discussed {help wooldid##description:here}, the regression equation {it:wooldid} adopts when estimating
