@@ -5035,8 +5035,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * would be discarded inside a non-eclass subprogram)
   * deferred display: under bootstrap the shell rewires e() to the bootstrap covariance
   * first and then calls the (e()-driven) display itself - printing here would show analytic
-  * inference that is about to be replaced. pretrendpower is refused with bootstrap at
-  * parse, so the ptp call needs no gate
+  * inference that is about to be replaced. pretrendpower runs with bootstrap and is split
+  * the same way: the two gated ptp calls below run its data half here, and the shell runs
+  * the power algebra after the rewiring
   * the realized-degeneracy screen on the subgroup pairwise covariance rewrites e(pwsgs) and
   * the allsgssame scalars, so it must run AFTER they are posted and BEFORE anything
   * displays them. analytic path only: from here the bootstrap and permutation shells own
