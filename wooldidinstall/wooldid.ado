@@ -18,11 +18,12 @@ cap prog drop wooldid
 * remains unsupported and fails loudly (measured: svy: wooldid -> r(101)).
 prog def wooldid, eclass properties(svyr)
 version 16.0
-  * outermost-call wrapper. wooldid reads four internal diagnostic globals: WOOLDID_REPMODE (the
-  * engines' replication marker), WOOLDID_BOOTNOSUB and WOOLDID_BOOTNOCOVSUB (the bootstrap
-  * negative controls) and WOOLDID_BOOTDEBUG. Left set, the first three change a later run's
+  * outermost-call wrapper. wooldid reads five internal globals: WOOLDID_REPMODE (the
+  * engines' replication marker), WOOLDID_REPLATW (the latticeignoreweights resample multiplicity, set
+  * and read once like WOOLDID_REPMODE), WOOLDID_BOOTNOSUB and WOOLDID_BOOTNOCOVSUB (the bootstrap
+  * negative controls) and WOOLDID_BOOTDEBUG. Left set, the first four change a later run's
   * numbers with nothing printed, so none may outlive the call it was set for (the author's
-  * ruling 2026-09-23): the call the user typed clears all four when it exits, however it exits.
+  * ruling 2026-09-23): the call the user typed clears all five when it exits, however it exits.
   * They are cleared at exit and not at entry, because the gates suite sets a switch just
   * before the call it diagnoses; and only by the user's own call, because the replications
   * nested inside it must still see the settings the engines give them. That call is found
@@ -72,7 +73,7 @@ version 16.0
         if "`c(frame)'" != "`wdsh_cfr'" cap frame change `wdsh_cfr'
         cap _estimates unhold `wdsh_hold'
       }
-      macro drop WOOLDID_INCALL WOOLDID_REPMODE WOOLDID_BOOTNOSUB WOOLDID_BOOTNOCOVSUB WOOLDID_BOOTDEBUG
+      macro drop WOOLDID_INCALL WOOLDID_REPMODE WOOLDID_REPLATW WOOLDID_BOOTNOSUB WOOLDID_BOOTNOCOVSUB WOOLDID_BOOTDEBUG
     }
     exit `wdsh_trc'
   }
