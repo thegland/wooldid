@@ -1997,6 +1997,49 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     qui count if `esamp' == 0 & `targetflag' == 1 & `w' > 0 & `ifstatement'
     if r(N) > 0 dis as text "Caution: ppmlhdfe excluded `r(N)' treated observation(s) from the estimation sample (separation, or a singleton fixed-effect group), so their cohort-period cells contribute nothing to the reported effects."
   }
+  * the pooled dose slope can vanish on the ppmlhdfe path. wherever the pooled ringer set
+  * i.`null'##c.(ringer) is an explicit regressor (plain basic, ccnoabsorb, contreatpoly(2+)
+  * with a lattice or a byX, the rc-3200 retry), ppmlhdfe zeroes a regressor whose sum of
+  * squares after partialling out the fixed effects is at most 1e-6 of its RAW, uncentred sum
+  * of squares (reghdfe5.mata, collinear_tol). a dose whose level is large next to its spread
+  * within the fixed effects trips that test; the c.`contreat' twin is the same column and goes
+  * too, so the model silently loses the pooled slope, the cell slopes take it up, and ame
+  * comes out 5-7 standard errors off (dose + 300 on a dose of 0.5-1.5; Stata's poisson keeps
+  * the slope). author ruling 2026-09-24: detect it and caution, with the approved text.
+  * stage 1 reads the stripe: the linear pooled ringer term, which is the pooled slope, is
+  * omitted (under contreatpoly() above 1 the square can survive while the linear term goes,
+  * and ame is then just as wrong, so the higher powers are not required). colnumb() on the
+  * bare name finds the FIRST column of that name whatever its operator, and on "o.name" the
+  * first omitted one, so the two agree exactly when the first is omitted; the first is the
+  * pooled one, and a lattice twin repeats the name later as a duplicate that is always
+  * omitted. no tempname is taken before a hit, so ordinary runs keep their tempvar names.
+  * stage 2 runs only on a hit, because a dose that really is collinear with the fixed
+  * effects (a unit-level dose under fe(unit)) is dropped for the right reason: the fixed
+  * effects carry the pooled slope there and ame is correct. the dose is partialled on the
+  * same absorbed set with reghdfe, and a residual of at most 1e-6 of its CENTRED sum of
+  * squares is that case and prints nothing. above it, centring the dose (the caution's
+  * remedy) keeps the slope. a failed check cautions, as stage 1 alone would. e() is held
+  * around the call and restored exactly, and the data are untouched. skipped inside
+  * replications, whose output is quiet and read for coefficients alone
+  if "`poisson'" == "poisson" & "`unconditionalse'" == "" & "`customvce'" == "" & "`contreat'" != "" & "`wdrepmode'" == "" {
+    local wdrgc = colnumb(e(b), "`ringer'")
+    local wdrghit = (`wdrgc' < . & colnumb(e(b), "o.`ringer'") == `wdrgc')
+    if `wdrghit' {
+      tempname wdrgh
+      local wdrgabs `e(absvars)'
+      _estimates hold `wdrgh'
+      cap qui reghdfe `ringer' if `esamp', absorb(`wdrgabs')
+      local wdrgrc = _rc
+      local wdrgfire 1
+      if `wdrgrc' == 0 {
+        if e(tss) >= . | e(tss) <= 0 local wdrgfire 0
+        else if e(rss)/e(tss) <= 1e-6 local wdrgfire 0
+      }
+      _estimates unhold `wdrgh'
+      if `wdrgrc' == 1 error 1
+      if `wdrgfire' dis as text "Caution: ppmlhdfe dropped the pooled `contreat' slope as collinear with the fixed effects, so the ame is wrong; subtract its mean from `contreat' and rerun."
+    }
+  }
   * one cluster leaves e(df_r) = 0, and margins then dies r(125) under a caution blaming
   * continuous treatment; stop here with the reason instead. ppmlhdfe and poisson post no
   * e(df_r) at all (missing, which `< 1' reads as false), so on those engines the cluster

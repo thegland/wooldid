@@ -34,6 +34,9 @@
 * P10 plain basic poisson fits first time with the explicit pooled dose control: no r(3200)
 *    caution, and the results pinned from the pre-7647081 re-fit; a one-level fe() slope of the
 *    user's still cautions and stops r(3200) (author ruling 2026-09-23)
+* P11 a dose with a large level next to its spread within the fixed effects makes ppmlhdfe drop
+*    the pooled dose control; the run now cautions, and stays silent on an ordinary run and where
+*    the fixed effects really do carry the pooled slope (author ruling 2026-09-24)
 *
 * The retired option NAMES are pinned in test_si89.do (T1/T2), which is their cert host:
 * test/suite/configs_ext.csv cannot carry them, because coverage_check.py treats an option
@@ -345,6 +348,83 @@ set linesize `p10ls'
 di "P10a_plainbasic rc=`p10arc' caution=`p10acau' pin_misses=[`p10miss'] | P10b_user_onelevel rc=`p10urc' caution=`p10ucau'"
 if `p10arc' != 0 | `p10acau' | "`p10miss'" != "" | `p10urc' != 3200 | !`p10ucau' {
   di as error "P10 FAIL: plain basic poisson must fit first time with the old re-fit's results, and a one-level fe() slope must still caution and stop r(3200)"
+  local ++fails
+}
+
+* ---- P11: ppml-dropped-pooled-slope (author ruling 2026-09-24, text approved). Wherever the
+* pooled dose control i.null##c.(ringer) is an explicit regressor, ppmlhdfe zeroes it when its sum
+* of squares after the fixed effects is at most 1e-6 of its raw, uncentred sum of squares, and the
+* c.dose twin goes with it, so a dose whose level is large next to its spread within the fixed
+* effects silently loses the pooled slope. On P11a's panel (the 2026-09-24 probe's sweep panel,
+* seed 505, dose + 300) ame comes out .5196 against .2373 unshifted, 6.5 standard errors off, with
+* no caution under robust. The run now cautions. P11a: that panel prints the caution. P11b: P10's
+* ordinary plain basic design does not. P11d: the shifted panel under contreatpoly(2), where only the
+* linear pooled term is dropped, prints it too. P11c: the same panel unshifted under fe(pid), where the
+* dose is constant within pid, so ppmlhdfe drops the control for the right reason (the fixed
+* effects carry the pooled slope and ame is correct): no caution. P11a is the leg that fails on
+* the unpatched build. The needle is read from logs closed before it is used, and appears in no
+* command echoed while they are open
+local p11ls = c(linesize)
+set linesize 255
+local p11needle "dropped the pooled"
+clear
+set seed 505
+set obs 200
+gen int i = ceil(_n/20)
+gen int pid = _n
+gen double base = 0.5 + runiform()
+bys i: egen double cb = mean(base)
+gen double dose = cb + (base - cb)
+drop base cb
+expand 8
+bys pid: gen int t = _n
+gen ttre = cond(i <= 2, 4, cond(i <= 4, 5, cond(i <= 6, 6, .)))
+gen byte D = t >= ttre & ttre < .
+gen double mu = exp(1.5 + 0.05*i + 0.04*t + 0.3*dose + D*(0.2 + 0.25*dose))
+gen long y = rpoisson(mu)
+tempfile p11d
+save `p11d'
+replace dose = dose + 300
+cap erase p11a.txt
+qui log using p11a.txt, text replace name(p11log)
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) poisson robust
+local p11arc = _rc
+qui log close p11log
+local p11acau = strpos(fileread("p11a.txt"), "`p11needle'") > 0
+cap erase p11a.txt
+use "`CCD'", clear
+cap erase p11b.txt
+qui log using p11b.txt, text replace name(p11log)
+cap noi wooldid y_count cohort t ttre, contreat(dose) contreatcontrols(basic) poisson robust esprelength(1) espostlength(1)
+local p11brc = _rc
+qui log close p11log
+local p11bcau = strpos(fileread("p11b.txt"), "`p11needle'") > 0
+cap erase p11b.txt
+use `p11d', clear
+cap erase p11c.txt
+qui log using p11c.txt, text replace name(p11log)
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) poisson robust fe(pid)
+local p11crc = _rc
+qui log close p11log
+local p11ccau = strpos(fileread("p11c.txt"), "`p11needle'") > 0
+cap erase p11c.txt
+* P11d: under contreatpoly(2) ppmlhdfe can drop the linear pooled term and keep the square;
+* the pooled slope is gone all the same, so the caution must print
+use `p11d', clear
+replace dose = dose + 300
+cap drop _ppmlhdfe_d
+cap erase p11dd.txt
+qui log using p11dd.txt, text replace name(p11log)
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) contreatpoly(2) poisson robust
+local p11drc = _rc
+qui log close p11log
+local p11dcau = strpos(fileread("p11dd.txt"), "`p11needle'") > 0
+cap erase p11dd.txt
+cap drop _ppmlhdfe_d
+set linesize `p11ls'
+di "P11a_shifted rc=`p11arc' caution=`p11acau' | P11b_ordinary rc=`p11brc' caution=`p11bcau' | P11c_fe_unit rc=`p11crc' caution=`p11ccau' | P11d_poly2_shifted rc=`p11drc' caution=`p11dcau'"
+if `p11arc' != 0 | !`p11acau' | `p11brc' != 0 | `p11bcau' | `p11crc' != 0 | `p11ccau' | `p11drc' != 0 | !`p11dcau' {
+  di as error "P11 FAIL: the shifted-dose runs (linear and contreatpoly(2)) must print the dropped-slope caution, and the ordinary and fe(pid) runs must not"
   local ++fails
 }
 

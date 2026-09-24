@@ -531,7 +531,9 @@ one-level factor or a factor with two or more slopes. Under plain {it:contreatco
 control, the pooled dose control and any {it:ccc_absorb()} controls therefore enter the regression explicitly, as the retry below enters them; so do the continuous
 treatment controls under {it:contreatpoly()} above 1 with {it:lattice()} or one of those controls, as under {it:ccnoabsorb}. Elsewhere {it:ccc_absorb()} stays absorbed,
 one variable per term when it has two or more. If {it:ppmlhdfe} still fails with r(3200), as a one-level term in {it:fe()} or a one-level {it:lattice()} can make it, {it:wooldid}
-retries once with the {it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. A treated cohort-period cell whose outcome is zero on every row is perfect separation rather than
+retries once with the {it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. {it:ppmlhdfe} can drop an explicit pooled dose control
+as collinear with the fixed effects when the dose's mean is large relative to its spread; {it:wooldid} then prints a caution, and subtracting the mean from the dose avoids it.
+A treated cohort-period cell whose outcome is zero on every row is perfect separation rather than
 multicollinearity; {it:wooldid} names the cell and exits. Coarsen {it:i}, drop the cohort, or specify {it:safety(off)}, which excludes the separated cells from the estimated effects. The
 variable name {it:_ppmlhdfe_d} is reserved on poisson runs. {p_end}
 
