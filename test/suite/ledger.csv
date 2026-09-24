@@ -58,7 +58,6 @@ A17-sgv-1,cont_sg_tidose,macro,properties,,e(V)-preserve 47defa0: old silently p
 A17-sgv-2,cont_sg_gap,macro,properties,,e(V)-preserve 47defa0: same
 A17-uz,ext_cont_ext_untreatedzero,macro,properties,,e(V)-preserve 47defa0: plain-continuous missing *_ame SEs — old silent b-only
 A17-cd,ext_path10_cont_constant_dose,macro,properties,,e(V)-preserve 47defa0: same (constant-dose degenerate shape)
-A17-part-w,trig_imdeg_part,mat,wdidmainresults,,e(V)-preserve 47defa0: partial degeneracy rows (old silent b-only)
 A17-part-p,trig_imdeg_part,macro,properties,,e(V)-preserve 47defa0: e(properties) b -> b V
 A16-imd-V,trig_imdegen,mat,V,,IM guard 16263da: full degeneracy -> new drops e(V) (old posted zero-diag V)
 A16-imd-Vn,trig_imdegen,matnames,V,,IM guard 16263da: matnames side of the V drop
@@ -414,6 +413,7 @@ A9-svmat-b,impv,mat,b,1e-6,svmat 6267522: ~4e-8 rel on IM estimates
 A9-svmat-V,impv,mat,V,1e-6,svmat 6267522; ceiling 2.4e-8 (2026-09-11)
 A9-svmat-w,impv,mat,wdidmainresults,1e-6,svmat 6267522; ceiling 2.1e-7 (2026-09-11)
 A17-part-b,trig_imdeg_part,mat,b,1e-4,svmat class amplified on single-cluster far horizons (ceiling 2.4e-6)
+A17-part-w,trig_imdeg_part,mat,wdidmainresults,1e-4,svmat class as A17-part-b: the 7 missing cells are the same cells on both builds (0 missing-vs-finite flips on the 2026-09-20 dual build 301b706 vs 06df5b6) and 73 finite cells differ with ceiling 2.43e-6. Unbounded until 2026-09-23 as 'e(V)-preserve 47defa0: partial degeneracy rows (old silent b-only)'; that fix's visible move on this config is posting e(V) (a new-only object) with e(properties) b -> b V which A17-part-p pins
 A16-imd-b,trig_imdegen,mat,b,1e-6,svmat class on the impvalues path (ceiling 3.0e-8)
 A8-B21-b,allest_aw,mat,b,1e-6,B21 3cb0c41 + svmat: att_i/att_itime storage noise (~1e-8 rel)
 A8-B21-V,allest_aw,mat,V,1e-6,B21 as A8-B21-b; ceiling 4.7e-9 (2026-09-11)
