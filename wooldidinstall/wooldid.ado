@@ -6877,8 +6877,10 @@ version 16.0
 *** them while the call site still passes them.
   syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ttrevar(varname) ifr(string asis) jt(string) ptp(string asis) replace]
 
-  * rseed() is validated before the stray screen: it is shared with permute(), whose runs
-  * leave this program at the screen's exit below
+  * rseed() and dots() are validated before the stray screen: both are shared with permute(),
+  * whose runs leave this program at the screen's exit below. with neither engine given, an
+  * invalid value is therefore refused here rather than by the stray screen, with the same
+  * r(198)
   if "`rseed'" != "" {
     cap confirm number `rseed'
     local badseed = _rc != 0
@@ -6889,6 +6891,15 @@ version 16.0
       dis as error "Error: rseed() must be an integer between 0 and 2,147,483,647."
       error 198
     }
+  }
+  * the "not given" sentinels differ by program and are worth stating once: dots() uses -1
+  * because dots(0) is a legal user value meaning "suppress" (wooldid_permrun then remaps
+  * -1 back to 1), while permctl's permreps() uses 0, which cannot be a legal count. until
+  * 2026-09-23 this check sat below the permute() exit, so under permute() a negative dots()
+  * passed unvalidated and silently behaved as dots(0) while bootstrap() refused it
+  if `dots' != -1 & `dots' < 0 {
+    dis as error "Error: dots() must be a nonnegative integer."
+    error 198
   }
   * stray-companion screen: every companion requires the master option; level(),
   * dots() and rseed() are shared with permute()
@@ -6946,16 +6957,6 @@ version 16.0
   * companion-value validation
   if `level' != 0 & (`level' < 10 | `level' > 99.99) {
     dis as error "Error: level() must be between 10 and 99.99."
-    error 198
-  }
-  * the "not given" sentinels differ by program and are worth stating once: dots() uses -1
-  * because dots(0) is a legal user value meaning "suppress" (wooldid_permrun then remaps
-  * -1 back to 1), while permctl's permreps() uses 0, which cannot be a legal count.
-  * CAUTION: unlike rseed(), this range check was not hoisted above the permute() exit
-  * further up, so under permute() a negative dots() passes unvalidated, fails every
-  * `if `dots' > 0' test in the engine and silently behaves as dots(0)
-  if `dots' != -1 & `dots' < 0 {
-    dis as error "Error: dots() must be a nonnegative integer."
     error 198
   }
   * bootsave(): the name rules (plain file name, cwd, replace to overwrite) are checked here

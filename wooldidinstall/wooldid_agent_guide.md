@@ -1209,11 +1209,11 @@ Errors stop the run with a return code. A condition mentioning `safety` or `safe
 | `wooldid_permctl` | ``permnclus' < 2 \| `permnlvl' < 2` | Error: too few clusters and/or treatment onset groups for permute(). |
 | `wooldid_permctl` | `"`permmethod'" == "probabilities" & "`permperr'" != ""` | `permperr' |
 | `wooldid_bootctl` | `"`rseed'" != "" & `badseed'` | Error: rseed() must be an integer between 0 and 2,147,483,647. |
+| `wooldid_bootctl` | ``dots' != -1 & `dots' < 0` | Error: dots() must be a nonnegative integer. |
 | `wooldid_bootctl` | `"`bootstrap'" == "" & "`bootstray'" != ""` | Error: bootstrap options were specified without bootstrap().  |
 | `wooldid_bootctl` | `!inlist("`bootstrap'", "standard", "bayes")` | Error: bootstrap() must be either bootstrap(standard) or bootstrap(bayes).  |
 | `wooldid_bootctl` | ``reps' <= 0` | Error: bootstrap() requires reps(#) with a positive number of replications. |
 | `wooldid_bootctl` | ``level' != 0 & (`level' < 10 \| `level' > 99.99)` | Error: level() must be between 10 and 99.99. |
-| `wooldid_bootctl` | ``dots' != -1 & `dots' < 0` | Error: dots() must be a nonnegative integer. |
 | `wooldid_bootctl` | `"`bsave'" != "" & strpos("`wdbfn'", ",")` | Error: bootsave() should only contain a file name. |
 | `wooldid_bootctl` | `"`bsave'" != "" & (strpos("`wdbfn'", "/") \| strpos("`wdbfn'", "\") \| "`wdbfn'" == "")` | Error: bootsave() takes a plain file name (no directory part); the file is written to the current working directory. |
 | `wooldid_bootctl` | `"`bsave'" != "" & (_rc == 0 & "`replace'" == "")` | Error: bootsave(`wdbfn') - `wdbfn'.dta already exists in the working directory; add the replace option to overwrite it. |

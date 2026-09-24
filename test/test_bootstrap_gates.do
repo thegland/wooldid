@@ -80,6 +80,20 @@ cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(50) boota
 chk 4e 198 _rc
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) bootalpha(equal)
 chk 4f 198 _rc
+* G4g (change audit round 2, U08/U07 dots-negative): dots() is shared with permute(), and its
+* range check sat below wooldid_bootctl's permute() exit, so a negative dots() under permute()
+* ran silently as dots(0) while bootstrap() refused it (4b). Both engines refuse it now, with
+* the same message
+qui log using boot_gates_g4g.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) permute(shuffle) permreps(20) rseed(7) dots(-2)
+local g4grc = _rc
+qui log close bg
+chk 4g 198 `g4grc'
+if strpos(fileread("boot_gates_g4g.txt"), "dots() must be a nonnegative integer") == 0 {
+  di as error "G4g FAIL: a negative dots() under permute() is not refused by the dots() range check"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g4g.txt
 
 * G5 interaction refusals
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) permute(shuffle) permreps(20)
