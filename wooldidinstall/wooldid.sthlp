@@ -409,7 +409,7 @@ there. {p_end}
 plain file name, and an existing file is overwritten only with {it:replace}. The file has one row per replication, {it:_rep} = 1 to {it:reps()}, with the
 coefficients under their {it:e(b)} names, and a row {it:_rep} = 0 with the observed estimates; a failed replication keeps its row with every value missing. Under
 {it:boottstat} the replication analytic standard errors are added as {it:se_*}, and with {it:cluster()} one {it:w_} column per cluster records how many times it was
-drawn, or its Dirichlet weight under {it:bootstrap(bayes)}. Its characteristics record the engine, seed and random-number state. If the file cannot be written the run still completes, with a caution, and the return code is posted in {it:e(boot_save_rc)}. {p_end}
+drawn, or its Dirichlet weight under {it:bootstrap(bayes)}, divided by the cluster's observation count under {it:bootalpha(size)}. Its characteristics record the engine, seed and random-number state. If the file cannot be written the run still completes, with a caution, and the return code is posted in {it:e(boot_save_rc)}. {p_end}
 
 {phang}{opt ties}: Adjust the bias-corrected intervals' median-bias constant for ties between the replications and the observed statistic, as the {it:ties} option
 of Stata's {help bootstrap} does; refused without {it:bootstrap()}. It has no effect on continuous statistics. {p_end}
@@ -1049,7 +1049,7 @@ from the underlying regression estimator, wherever available. {p_end}
 
 {synopt:{it:Bootstrap inference}} When {it:bootstrap()} is used, the reported tables carry the bootstrap inference, and e() additionally holds: run-level scalars and macros
 ({it:e(boot_reps)}, {it:e(boot_completed)}, {it:e(boot_failed)}, {it:e(boot_level)}, {it:e(boot_N_V)}, {it:e(boot_method)}, {it:e(boot_display)}, {it:e(boot_stat)},
-{it:e(boot_df)}, {it:e(boot_seed)}, {it:e(boot_rngstate)}, {it:e(boot_alpha)}, {it:e(boot_ties)}, {it:e(boot_save_rc)} when a {it:bootsave()} write failed, and {it:e(boot_nstraddle)} with {it:e(boot_reid)}, which record whether the replications re-identified duplicated
+{it:e(boot_df)} when the reference distribution is a t, {it:e(boot_seed)}, {it:e(boot_rngstate)}, {it:e(boot_alpha)}, {it:e(boot_ties)}, {it:e(boot_save_rc)} when a {it:bootsave()} write failed, and {it:e(boot_nstraddle)} with {it:e(boot_reid)}, which record whether the replications re-identified duplicated
 units, and {it:e(boot_covsub)}, the number of covariate terms rewritten to the fresh unit code, present only when that happened); the replication covariance
 {it:e(V_boot)} (also posted as {it:e(V)}, with the analytic one preserved as {it:e(V_analytic)}), the replication means {it:e(b_boot)} and bias {it:e(bias_boot)}; the draw
 matrices {it:e(bootdist)} and, under {it:boottstat}, {it:e(bootdist_se)} (up to 10,000 replications); the interval and p-value families aligned to {it:e(b)},
