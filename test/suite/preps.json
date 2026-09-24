@@ -196,5 +196,28 @@
  ],
  "icoh_onsetgroup": [
   "qui egen long icoh = group(ttre), missing"
+ ],
+ "uzpois_panel": [
+  "set seed 1101",
+  "set sortseed 1101",
+  "set obs 6",
+  "gen i = _n",
+  "gen ttre = cond(i <= 4, 4 + i, .)",
+  "expand 8",
+  "bysort i: gen k = _n",
+  "gen unit = (i-1)*8 + k",
+  "gen dose_u = cond(ttre < ., 1 + 2*runiform(), 0)",
+  "gen jit = rnormal(0, 1e-3*0.577)*(ttre >= .)",
+  "expand 10",
+  "bysort unit: gen t = _n",
+  "gen post = (t >= ttre)",
+  "gen e = rnormal(0, 0.05)",
+  "gen dose_it = max(0.1, dose_u + rnormal(0, 0.3)) if ttre < .",
+  "replace dose_it = 0 if ttre >= .",
+  "gen dose_uz = dose_it*post",
+  "gen ycount = rpoisson(exp(0.05*i + 0.03*t + post*(0.2 + 0.3*dose_it)))",
+  "drop k dose_u jit e post dose_it",
+  "sort unit t",
+  "ereturn clear"
  ]
 }

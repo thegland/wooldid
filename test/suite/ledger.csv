@@ -58,6 +58,9 @@ A17-sgv-1,cont_sg_tidose,macro,properties,,e(V)-preserve 47defa0: old silently p
 A17-sgv-2,cont_sg_gap,macro,properties,,e(V)-preserve 47defa0: same
 A17-uz,ext_cont_ext_untreatedzero,macro,properties,,e(V)-preserve 47defa0: plain-continuous missing *_ame SEs — old silent b-only
 A17-cd,ext_path10_cont_constant_dose,macro,properties,,e(V)-preserve 47defa0: same (constant-dose degenerate shape)
+R5-uzpois-b,trig_uz_pois,mat,b,,"old-bug-fixed. R5 Form B 1c09efa (untreatedZero clears the ringer inserters): v1.3 kept the pooled ringer in the ppmlhdfe fit under untreatedZero, where it is exactly collinear with the #-joined dose terms, so 5 treated-cell dose slopes were dropped and the survivors absorbed the rest. main_ame .19184407 -> .31197381 (DGP slope .30), main_att .68796360 -> .93611292, ES_att_post0 .62384505 -> .86038802; 4 of 8 cells move (measured 2026-09-24, v1.3 301b706 vs 998154a+G2 stack, uzpois_panel prep)"
+R5-uzpois-w,trig_uz_pois,mat,wdidmainresults,,"old-bug-fixed. R5 Form B 1c09efa: the same move on the main table (24 cells: the R5-uzpois-b estimates and their se, z, p and intervals)"
+A17-uzpois-p,trig_uz_pois,macro,properties,,"e(V)-preserve 47defa0: e(properties) b -> b V. The pre-treatment ame row has no variance under untreatedZero (zero dose before onset), which v1.3 answered by posting b alone, as A17-uz"
 A17-part-p,trig_imdeg_part,macro,properties,,e(V)-preserve 47defa0: e(properties) b -> b V
 A16-imd-V,trig_imdegen,mat,V,,IM guard 16263da: full degeneracy -> new drops e(V) (old posted zero-diag V)
 A16-imd-Vn,trig_imdegen,matnames,V,,IM guard 16263da: matnames side of the V drop
