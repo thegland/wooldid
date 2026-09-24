@@ -784,7 +784,7 @@ The rest of this chapter is the help file's inventory.
 
 - **the studentizing switch** `boottstat` / `permtstat`. Both studentize, for different reasons - see fact 2 above. 
 
-- **`cluster()` nesting *i*** not required / required unless `permonsetcohorts`. The bootstrap re-identifies on the drawn cluster, so a cluster finer than *i* simply resamples inside the cohort. The permutation draws one onset per cluster and writes it to every row, so a unit spanning two clusters carries two onsets and is undefined. `permonsetcohorts` resolves that by rebuilding *i* from the drawn onsets. 
+- **`cluster()` nesting *i*** not required / required unless `permonsetcohorts`. The bootstrap gives drawn copies fresh unit codes only where `cluster()` nests *i*; under a finer or cross-cutting `cluster()` it keeps *i*, and a twice-drawn cluster arrives as duplicate rows in its unit's cells (*e(boot_reid)* records which rule was taken). The permutation draws one onset per cluster and writes it to every row, so a unit spanning two clusters carries two onsets and is undefined. `permonsetcohorts` resolves that by rebuilding *i* from the drawn onsets. 
 
 - **`jointtests`** fixed-metric rank test, or the bootstrap of the statistic under `boottstat` / fixed-metric rank test. Neither is a Wald test on *e(V)*. 
 
