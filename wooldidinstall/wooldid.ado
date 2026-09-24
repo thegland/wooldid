@@ -1597,6 +1597,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 		* regressor, so nothing is left for absorb() to take
 		local contreatcontrolinserterABS
 	}
+  * poisson on plain basic: ppmlhdfe's slope preconditioner fails r(3200) on the one-level
+  * pooled i.`null'## set inside absorb(), so pass it, and ccc_absorb() with it, as the
+  * explicit regressors the rc-3200 fallback below uses, in the same order
+  if "`poisson'" == "poisson" & "`unconditionalse'" == "" & "`customvce'" == "" & "`null'" != "" {
+    if trim(itrim(`"`contreatcontrolinserterABS'"')) == trim(itrim("i.`null'##`ringerpoly'")) {
+      local contreatcontrolinserter `contreatcontrolinserterFE' `ccc_absorbinserter'
+      local contreatcontrolinserterFE
+      local contreatcontrolinserterABS
+      local ccc_absorbinserter
+    }
+  }
 
 
 
