@@ -526,10 +526,12 @@ pre-treatment period is also shown. When event study horizons are requested, the
 {it:regress} to Stata's {it:poisson} under {it:unconditionalse} or {it:customvce()}. Treatment effects
 are presented in terms of differences in linear predictions (the poisson {it:predict(xb)} option). Poisson regression is useful when one would like to use
 log(y) as an outcome but y contains natural 0s, or when treatment and control groups are only on parallel trends in proportions.
-Poisson accepts pweights but not aweights, refuses a negative outcome, and may not be combined with {it:boottstat}. If {it:ppmlhdfe} fails with r(3200), {it:wooldid} retries once with the
-{it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. {it:ppmlhdfe} cannot absorb a factor with two or more
-slopes, so with {it:contreatpoly()} above 1 and {it:lattice()} or a byTreated, byTtre, byCohort or byTime control the continuous treatment controls
-enter the regression as under {it:ccnoabsorb}, and {it:ccc_absorb()} of two or more variables is absorbed one variable per term. A treated cohort-period cell whose outcome is zero on every row is perfect separation rather than
+Poisson accepts pweights but not aweights, refuses a negative outcome, and may not be combined with {it:boottstat}. {it:ppmlhdfe} cannot absorb a slope on a
+one-level factor or a factor with two or more slopes. Under plain {it:contreatcontrols(basic)}, with no {it:lattice()} and no byTreated, byTtre, byCohort or byTime
+control, the pooled dose control and any {it:ccc_absorb()} controls therefore enter the regression explicitly, as the retry below enters them; so do the continuous
+treatment controls under {it:contreatpoly()} above 1 with {it:lattice()} or one of those controls, as under {it:ccnoabsorb}. Elsewhere {it:ccc_absorb()} stays absorbed,
+one variable per term when it has two or more. If {it:ppmlhdfe} still fails with r(3200), as a one-level term in {it:fe()} or a one-level {it:lattice()} can make it, {it:wooldid}
+retries once with the {it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. A treated cohort-period cell whose outcome is zero on every row is perfect separation rather than
 multicollinearity; {it:wooldid} names the cell and exits. Coarsen {it:i}, drop the cohort, or specify {it:safety(off)}, which excludes the separated cells from the estimated effects. The
 variable name {it:_ppmlhdfe_d} is reserved on poisson runs. {p_end}
 
@@ -887,7 +889,8 @@ a high dimensional fixed effects estimator. This is often less efficient than th
 efficiency in the main regression or under certain other circumstances. Be extra careful to ensure that specifications featuring {it:ccc_absorb()} are identified; not all cases
 of identification failure are detected. In particular, with an event-study window, variables that are constant within cohort-by-period cells (a unit-level variable with a
 unit-level {it:i}, for example) absorb the treatment interactions themselves and the run stops with an error. Under {it:contreat()}, naming the treatment
-variable itself here turns the default cell collapse off (see {it:nofastcollapse}). {p_end}
+variable itself here turns the default cell collapse off (see {it:nofastcollapse}). With {it:poisson} on the {it:ppmlhdfe} path the controls stay absorbed, except under plain
+{it:contreatcontrols(basic)} and in the r(3200) retry, where they enter the regression explicitly (see {it:poisson}). {p_end}
 
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses and prints progress reports throughout the estimation process; the regression itself is run quietly.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}, though only for

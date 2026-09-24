@@ -31,6 +31,9 @@
 * P8 poisson runs whose absorbed terms carry two or more slopes complete instead of stopping
 *    r(3201): the dose polynomial enters explicitly, ccc_absorb() is split one slope per term
 *    (author ruling 2026-09-23)
+* P10 plain basic poisson fits first time with the explicit pooled dose control: no r(3200)
+*    caution, and the results pinned from the pre-7647081 re-fit; a one-level fe() slope of the
+*    user's still cautions and stops r(3200) (author ruling 2026-09-23)
 *
 * The retired option NAMES are pinned in test_si89.do (T1/T2), which is their cert host:
 * test/suite/configs_ext.csv cannot carry them, because coverage_check.py treats an option
@@ -280,6 +283,70 @@ if `p8brc' != 0 | `p8bd' > 1e-8 | `p8sd' > 1e-4 {
   local ++p8n
 }
 if `p8n' > 0 local ++fails
+
+* ---- P10: ppml-plainbasic-first-call (commit 7647081, author ruling 2026-09-23). On plain basic
+* poisson the pooled dose control i.null##c.(ringer) is a slope on a one-level factor, which
+* ppmlhdfe 2.3.0's slope preconditioner cannot absorb: every such run failed its first fit
+* r(3200), printed the four-line fallback caution and reported the re-fit with the control as
+* an explicit regressor. That spelling is now built up front. P10a: no caution prints and the
+* results are the old re-fit's, e(b) and the diagonal of e(V) pinned at %21x from a run of
+* 7647081^ (bfbaa81) in its own Stata session. P10b: a one-level slope of the user's own in fe()
+* still prints the caution and stops r(3200), as before. The needle is read from logs closed
+* before it is used, and appears in no command echoed while they are open
+local p10ls = c(linesize)
+set linesize 255
+local p10needle "initial estimation of ppmlhdfe failed"
+local p10pin main_att +1.6029ba44662f0X-003 +1.c1b42ebbbbe6aX-013 pretreatment_att -1.85401f6bde400X-009 +1.349c47b0b6b2aX-013 ///
+  main_ame +1.3df4d64decd86X-005 +1.65ba10d9a9715X-00e pretreatment_ame -1.48c44fcd7c90eX-005 +1.06bcda5ae0e79X-00e ///
+  ES_att_pre1 -1.85401f6bde400X-009 +1.349c47b0b6b2aX-013 ES_att_post0 +1.c1c9585e38ae0X-004 +1.1412fc44a2574X-012 ///
+  ES_ame_pre1 -1.48c44fcd7c90eX-005 +1.06bcda5ae0e79X-00e ES_ame_post0 +1.095c60902dbb9X-004 +1.44e79eef59917X-00d
+use "`CCD'", clear
+cap erase p10a.txt
+qui log using p10a.txt, text replace name(p10log)
+cap noi wooldid y_count cohort t ttre, contreat(dose) contreatcontrols(basic) poisson robust esprelength(1) espostlength(1)
+local p10arc = _rc
+qui log close p10log
+local p10acau = strpos(fileread("p10a.txt"), "`p10needle'") > 0
+cap erase p10a.txt
+local p10miss
+tempname p10b p10v
+if `p10arc' == 0 {
+  matrix `p10b' = e(b)
+  cap matrix `p10v' = e(V)
+  if _rc != 0 local p10miss noV
+  else {
+    tokenize `p10pin'
+    local j 1
+    while "``j''" != "" {
+      local jb = `j' + 1
+      local jv = `j' + 2
+      local c = colnumb(`p10b', "``j''")
+      local hb .
+      local hv .
+      if `c' < . {
+        local hb : di %21x `p10b'[1, `c']
+        local hv : di %21x `p10v'[`c', `c']
+      }
+      if "`hb'" != "``jb''" | "`hv'" != "``jv''" local p10miss `p10miss' ``j''
+      local j = `j' + 3
+    }
+  }
+}
+use "`CCD'", clear
+gen byte one = 1
+cap erase p10u.txt
+qui log using p10u.txt, text replace name(p10log)
+cap noi wooldid y_count cohort t ttre, contreat(dose) contreatcontrols(basic) poisson robust fe(i.one#c.x1)
+local p10urc = _rc
+qui log close p10log
+local p10ucau = strpos(fileread("p10u.txt"), "`p10needle'") > 0
+cap erase p10u.txt
+set linesize `p10ls'
+di "P10a_plainbasic rc=`p10arc' caution=`p10acau' pin_misses=[`p10miss'] | P10b_user_onelevel rc=`p10urc' caution=`p10ucau'"
+if `p10arc' != 0 | `p10acau' | "`p10miss'" != "" | `p10urc' != 3200 | !`p10ucau' {
+  di as error "P10 FAIL: plain basic poisson must fit first time with the old re-fit's results, and a one-level fe() slope must still caution and stop r(3200)"
+  local ++fails
+}
 
 if `fails' == 0 di as result "POISMARGINS_ALL_PASS"
 else di as error "POISMARGINS_FAILS=`fails'"
