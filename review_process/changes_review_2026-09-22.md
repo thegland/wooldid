@@ -256,41 +256,41 @@ and #304's DELETE proposal to #301's second line. 17 cards got round-2 notes.
 
 | item | ruling | state |
 |---|---|---|
-| latticeignoreweights bins frozen on bootstrap's count leg and bayes | **Fix it**: replications re-bin on the resampled data; bootstrap SEs on those runs move | to build |
+| latticeignoreweights bins frozen on bootstrap's count leg and bayes | **Fix it**: replications re-bin on the resampled data; bootstrap SEs on those runs move | built a977d58; REPLATW cleared bfbaa81 |
 | contreatpoly(2) all-zero VCE on an uncentred dose (v1.3 the same) | **Leave it** | no change |
 | band covers 0.90 at 10 clusters (measurement) | **Leave the docs** | no change |
-| bootstrap esttab posts the Wald SD family | **Same as permute()**: post the displayed family | to build |
-| ccref passes the 1e-5..1e-3 fragility band silently | **Caution, as bycoh does**; text approved: "Caution: under contreatcontrols(`ccrtype'), `n' group(s) have reference-period or control-group variation in `contreat' below 1/1000 of its sample standard deviation, so their baseline dose slopes are nearly unidentified and the reported effects may be wrong rather than noisy; examine or drop those group(s)." | to build |
-| bare wooldid after Stata's bootstrap/jackknife prefix replays the analytic tables | **Show the prefix's table** (hand off to Stata's prefix display, as regress does) | to build |
-| e() after a call that fails past the stage-1 fit | **Keep the promise**: hold the caller's e() and restore it on failure | to build |
-| replay refusal marker after a failed call | **Replay a restored store**; a mistyped replay line no longer blocks the next | to build |
-| adversarial p under permute() for a subgroup whose pre horizons were dropped | **Skip it**, as the analytic run does | to build |
-| hbar passed through string() under bootstrap() | **Full precision** | to build |
-| poisson + unconditionalse + cluster() prints pseudo-R2 '.' | **Spell vce(cluster)** | to build |
-| straddle caution (#277) on att-only boottstat runs | **Print only with a cell-weighted estimand** | to build |
-| #236 under boottstat with any cluster() | **Print only on realized pairwise degeneracy**, as D4 | to build |
-| analytic cfx plot-data write failure posts no return code | **Post e(wdid_cfxsave_rc)** | to build |
-| e(bootdist_pwse) above 10,000 replications | **Cap it** like e(bootdist) | to build |
-| #179's dead safety(off) escape | **Drop the gate and the escape**; text approved: "Error: the subgroup variable varies within i-t cells. This is unlikely to be valid with permute()." | to build |
-| saveplots() takes a name | **Keep names; fix the help** | to build |
-| poisson dyex/dydx titles reversed | **Relabel under poisson**: dyex "Elasticities (dyex)", dydx "Semi-elasticities (dydx)" | to build |
+| bootstrap esttab posts the Wald SD family | **Same as permute()**: post the displayed family | built 1f11d5b (footer text approved) |
+| ccref passes the 1e-5..1e-3 fragility band silently | **Caution, as bycoh does**; text approved: "Caution: under contreatcontrols(`ccrtype'), `n' group(s) have reference-period or control-group variation in `contreat' below 1/1000 of its sample standard deviation, so their baseline dose slopes are nearly unidentified and the reported effects may be wrong rather than noisy; examine or drop those group(s)." | built 2d3621e |
+| bare wooldid after Stata's bootstrap/jackknife prefix replays the analytic tables | **Show the prefix's table** (hand off to Stata's prefix display, as regress does) | built 23ea9e9; docs a3e2ce0 |
+| e() after a call that fails past the stage-1 fit | **Keep the promise**: hold the caller's e() and restore it on failure | built 7e150db |
+| replay refusal marker after a failed call | **Replay a restored store**; a mistyped replay line no longer blocks the next | built 4130833 |
+| adversarial p under permute() for a subgroup whose pre horizons were dropped | **Skip it**, as the analytic run does | built b86b08b |
+| hbar passed through string() under bootstrap() | **Full precision** | built 1a66218 |
+| poisson + unconditionalse + cluster() prints pseudo-R2 '.' | **Spell vce(cluster)** | built 9e22cfb |
+| straddle caution (#277) on att-only boottstat runs | **Print only with a cell-weighted estimand** | built 9d841dc |
+| #236 under boottstat with any cluster() | **Print only on realized pairwise degeneracy**, as D4 | built 8884e44 |
+| analytic cfx plot-data write failure posts no return code | **Post e(wdid_cfxsave_rc)** | built 0d44407 |
+| e(bootdist_pwse) above 10,000 replications | **Cap it** like e(bootdist) | built fb27352 |
+| #179's dead safety(off) escape | **Drop the gate and the escape**; text approved: "Error: the subgroup variable varies within i-t cells. This is unlikely to be valid with permute()." | built 402b324 |
+| saveplots() takes a name | **Keep names; fix the help** | built d7f3500 |
+| poisson dyex/dydx titles reversed | **Relabel under poisson**: dyex "Elasticities (dyex)", dydx "Semi-elasticities (dydx)" | built 066b6d1 |
 | permtci redundant with permtstat permabsp | **Keep it** | no change |
 | within-cell screen a subset of the split-unit screen | **Keep both** | no change |
-| gteffects table formatting | **Apply PS-3 formatting**; no floor line | to build |
-| p-floor line under bootdisplay(bc) | **Omit it under bc** | to build |
-| poisson + contreat() basic: the first ppmlhdfe fit fails on wooldid's own one-level term and the 3200 fallback caution prints | **Investigate** specifications that do not fail, benchmarked against today's results, with a 10-15 agent workflow. If one works, implement it; if not, change nothing and leave the caution | investigating |
+| gteffects table formatting | **Apply PS-3 formatting**; no floor line | built a49499b |
+| p-floor line under bootdisplay(bc) | **Omit it under bc** | built 27e277d |
+| poisson + contreat() basic: the first ppmlhdfe fit fails on wooldid's own one-level term and the 3200 fallback caution prints | **Investigate** specifications that do not fail, benchmarked against today's results, with a 10-15 agent workflow. If one works, implement it; if not, change nothing and leave the caution | investigated (13 agents, scratchpad ppml/REPORT.md): no absorb() spelling passes ppmlhdfe 2.3.0; v5 built 7647081, leg and docs b6301b0 |
 | lattice() run with an all-zero VCE: following the bootstrap() advice posts no e(V) | **Leave it** | no change |
-| adversarial test reported as a line without a p-value (card #25 and siblings) | **Eliminate the line-only cases**: e(adversarial_line_*) is not posted when no p-value can be had; texts approved: "Caution: the adversarial pre-trend test failed: it needs esfixedbaseperiod.", "Caution: the adversarial pre-trend test failed[ for subgroup `sg']: its covariance is degenerate.", "Caution: the adversarial pre-trend test failed: under bootstrap() it needs boottstat." | to build |
-| stale WOOLDID_* globals change numbers silently | **Overwrite them**: the outermost call clears the switches when it exits, so none outlives a call; replications keep the engine's settings | to build |
-| ledger X-est-b and X-est-w bounds | **Widen both to 1e-3** (the ledger's 10x rule) | to build |
-| ppmlhdfe investigation result (no absorb() spelling passes ppmlhdfe 2.3.0's preconditioner; v5 builds the explicit ringer spelling where the spec is built) | **Build v5** | to build |
-| ccc_absorb() on the plain-basic poisson path posts an all-zero V | **Keep ccc_absorb() absorbed** (SEs restored; e(chi2) moves on ccc runs) | to build |
-| new crash: poisson + contreatpoly(2) with lattice()/byX, or ccc_absorb() of 2+ variables, stops r(3201) (the same ppmlhdfe bug) | **Fix now**, keeping the same model (absorbed where it can be) | to build |
-| failed replication loop: previous e() or the loop's own observed run | **Previous e() on every failure** (the 2026-09-05 loop exception is retired) | to build |
-| bootstrap footer sentence once e(p)/e(ci_*) carry the displayed family | **Name esttab separately**; text approved: "... rather than the columns printed above - and so do coefplot and honestdid, which read e(V) without being asked. esttab reports the p-values and intervals printed above, from e(p), e(ci_l) and e(ci_u)." | to build |
-| two more line-only adversarial paths | **Approved**: "Caution: the adversarial pre-trend test failed: too few usable bootstrap replications." and "Caution: the adversarial pre-trend test failed: too few usable permutations."; no line posted | to build |
-| p-floor line under bootdisplay(bca) | **Omit it too** | to build |
-| poisson + untreatedZero: ppmlhdfe posts an all-zero V for the correct model | **Investigate a fix now**; build only if point estimates are unchanged and SEs match Stata's poisson | to investigate |
+| adversarial test reported as a line without a p-value (card #25 and siblings) | **Eliminate the line-only cases**: e(adversarial_line_*) is not posted when no p-value can be had; texts approved: "Caution: the adversarial pre-trend test failed: it needs esfixedbaseperiod.", "Caution: the adversarial pre-trend test failed[ for subgroup `sg']: its covariance is degenerate.", "Caution: the adversarial pre-trend test failed: under bootstrap() it needs boottstat." | built bab1f93; paths D and E 7c32fdb; ledger reasons f647cc1 |
+| stale WOOLDID_* globals change numbers silently | **Overwrite them**: the outermost call clears the switches when it exits, so none outlives a call; replications keep the engine's settings | built 029b96c |
+| ledger X-est-b and X-est-w bounds | **Widen both to 1e-3** (the ledger's 10x rule) | built e62a949 |
+| ppmlhdfe investigation result (no absorb() spelling passes ppmlhdfe 2.3.0's preconditioner; v5 builds the explicit ringer spelling where the spec is built) | **Build v5** | built 7647081, b6301b0 |
+| ccc_absorb() on the plain-basic poisson path posts an all-zero V | **Keep ccc_absorb() absorbed**, then **reverted to explicit** once the mechanism was corrected | REVERSED 2026-09-24 to explicit, once the all-zero V was found to be an ereturn-post rounding accident; not built |
+| new crash: poisson + contreatpoly(2) with lattice()/byX, or ccc_absorb() of 2+ variables, stops r(3201) (the same ppmlhdfe bug) | **Fix now**, keeping the same model (absorbed where it can be) | built 0126d32 (poly explicit as ccnoabsorb; ccc 2+ split per variable) |
+| failed replication loop: previous e() or the loop's own observed run | **Previous e() on every failure** (the 2026-09-05 loop exception is retired) | built 7e150db |
+| bootstrap footer sentence once e(p)/e(ci_*) carry the displayed family | **Name esttab separately**; text approved: "... rather than the columns printed above - and so do coefplot and honestdid, which read e(V) without being asked. esttab reports the p-values and intervals printed above, from e(p), e(ci_l) and e(ci_u)." | built 1f11d5b |
+| two more line-only adversarial paths | **Approved**: "Caution: the adversarial pre-trend test failed: too few usable bootstrap replications." and "Caution: the adversarial pre-trend test failed: too few usable permutations."; no line posted | built 7c32fdb |
+| p-floor line under bootdisplay(bca) | **Omit it too** | built 6adca1b |
+| poisson + untreatedZero: ppmlhdfe posts an all-zero V for the correct model | **Investigate a fix now**; build only if point estimates are unchanged and SEs match Stata's poisson | investigated: no fix within the bar (Stata ereturn post zeroes a 3.3e-16-asymmetric singular V; fixture has 45 of 63 constant cells); nothing built |
 
 **Straight fixes (no number moves, no new text):** applied as 47 commits, ea11d36..a0c9bf3, with guide
 chapter 14 regenerated in afe9e37. Held: the poisson 3200 fallback skip (the author asked for an
@@ -305,3 +305,18 @@ cited sha (housekeeping); the reg-path maxvar preflight false positive (left on 
 jointmarginsdof reaching only two sites (no effect); unconditionalse's small-sample factor (it is
 regress + margins' own); a gtools that is present but cannot load (optional); the debug globals (a help
 sentence is in the docs group).
+| pooled dose slope silently dropped by ppmlhdfe on a large-level dose (found by the v5 probe; predates v5) | **Detect and warn**; text approved: "Caution: ppmlhdfe dropped the pooled `contreat' slope as collinear with the fixed effects, so the ame is wrong; subtract its mean from `contreat' and rerun." | to apply (keyed on the linear pooled term; a second check spares a correct drop under a unit fe()) |
+
+**The v5 probe (the author asked for extra certainty).** Six angles compared v5 with Stata's official
+poisson and glm: v5 is bit-identical to the old fallback everywhere tested and matches official poisson
+on ordinary data (points about 1e-10, SEs about 1e-9; the larger gaps are solver tolerance). Report:
+scratchpad v5probe/REPORT.md, summarised in the change-audit doc.
+
+**New findings, filed, not built.** A failed customvce() call can leave state that moves the next call's
+V by about 1e-7 in the same session (predates round 2). A near-collinear ccc_absorb() pair now stops at
+the treated-cell collinearity screen, r(322), whose message does not name ccc_absorb(). fe(pid) with
+contreatpoly(2) on a large-level dose drops half the cell polynomial slopes (a caution prints). The
+dropped-slope caution also prints on byTime + lattice(all 2) + ccnoabsorb on a shifted dose, where the
+ame moves only 6e-4 SE and zero-VCV cautions already print (left under the pathological-data cap).
+Under boottstat esttab's se and t still come from e(V). ppmlhdfe posting an all-zero V on some designs
+where Stata's poisson gives finite SEs is an ereturn-post accident inside ppmlhdfe (ticket only).
