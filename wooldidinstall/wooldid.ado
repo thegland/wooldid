@@ -14187,6 +14187,14 @@ version 16.0
     * failing one: the reported estimate stays pinned to the collinear wrong answer out to a
     * relative sd of about 1e-5 and only becomes correct above it, so `sd == 0` alone would pass
     * through a band of runs that are just as wrong.
+    *
+    * THE FRAGILITY BAND ABOVE THE CUT. Groups whose reference-pool sd sits between the cut and
+    * 1e-3 of the sample sd get the byCohort screen's caution instead (author ruling
+    * 2026-09-23): the run completes, but the slope is nearly unidentified and the answer can be
+    * grossly wrong rather than noisy - byTime on a never-treated pool of unit jitter at 4.4e-4
+    * of the sample sd reported att -150.3 and ame -72.7, p .00013, against truth 2.56 and 1. The
+    * band is counted per requested type inside the loop and printed once per type, after the
+    * loop and only when no type was refused.
     local fail 0
     local ccrtype
     local ccrgrp
@@ -14212,6 +14220,11 @@ version 16.0
       cap drop `ccrng'
       qui gegen double `ccrsdg' = sd(`contreat')    if `esamp' & `tcell' == 0, by(`ccrby')
       qui gegen double `ccrng'  = count(`contreat') if `esamp' & `tcell' == 0, by(`ccrby')
+      * the fragility band: groups above the refusal cut but below 1e-3 of the sample sd
+      cap drop `ccrtag'
+      qui gegen byte `ccrtag' = tag(`ccrby') if `esamp' & `tcell' == 0 & `ccrng' >= 2 & `ccrsdg' > `ccrtol'*`ccrsd' & `ccrsdg' < 1e-3*`ccrsd'
+      qui count if `ccrtag' == 1
+      local ccrband_`ccrt' = r(N)
       qui count if `esamp' & `tcell' == 0 & (`ccrng' < 2 | `ccrsdg' >= . | `ccrsdg' <= `ccrtol'*`ccrsd')
       if r(N) == 0 continue
       cap drop `ccrtag'
@@ -14250,6 +14263,14 @@ version 16.0
       if "`ccrtype'" == "byTime" {
         dis as error "Error: the continuous treatment variable `contreat' has no usable variation in the control group for at least one period, or possibly in the reference period. This specification is not identified."
       }
+    }
+    else {
+      foreach ccrtype in basic byTreated byTtre byTime {
+        local n `ccrband_`ccrtype''
+        if "`n'" == "" | "`n'" == "0" continue
+        dis as text "Caution: under contreatcontrols(`ccrtype'), `n' group(s) have reference-period or control-group variation in `contreat' below 1/1000 of its sample standard deviation, so their baseline dose slopes are nearly unidentified and the reported effects may be wrong rather than noisy; examine or drop those group(s)."
+      }
+      local ccrtype
     }
     return scalar fail = `fail'
     return scalar n = `ccrn'

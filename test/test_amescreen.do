@@ -318,6 +318,65 @@ else {
   global pf = $pf + 1
 }
 
+* B2c (change audit round 2, U11 ccref-no-fragility-band; author ruling 2026-09-23, text
+* approved): the ccref twin of B2. The other contreatcontrols types share the byCohort screen's
+* 1e-5 refusal cut but passed the (1e-5, 1e-3) band silently, while byCohort cautions there.
+* The design is the round-2 refuter's (seed 7707): five cohorts, onsets 4/6/8 plus two never
+* treated, six units each; the never-treated dose is unit jitter of sd about 5.8e-4, so from
+* the last onset on byTime's reference pool per period has a dose sd of about 4.4e-4 of the
+* sample sd - inside the band. On the unpatched build it completes rc 0 with no caution and
+* reports att -150.3 and ame -72.7 (p .00013) against truth 2.56 and 1. It must still complete
+* (the band is a caution, not a refusal) and now print the caution naming byTime. B2d is the
+* same panel with a genuinely dosed never-treated pool, where the screen stays silent
+cap program drop mkccb
+program define mkccb
+  clear
+  set seed 7707
+  set sortseed 7707
+  qui set obs 5
+  gen i = _n
+  gen ttre = cond(i==1,4,cond(i==2,6,cond(i==3,8,.)))
+  qui expand 6
+  bysort i: gen k = _n
+  gen unit = (i-1)*6 + k
+  gen du = 1 + 2*runiform()
+  gen jit = rnormal(0, 1e-3*0.577)
+  qui expand 10
+  bysort unit: gen t = _n
+  gen post = (t >= ttre)
+  gen e = rnormal(0, 0.05)
+  gen y = 0.3*i + 0.2*t + 0.05*unit + post*(0.5 + 1.0*du) + e
+  gen dJ = cond(ttre<., du, jit)
+  gen dT = cond(ttre<., du, 1 + 2*runiform())
+  sort unit t
+  ereturn clear
+end
+mkccb
+qui log using ames_b2c.txt, text replace name(ames)
+cap noi wooldid y i t ttre, att contreat(dJ) contreatcontrols(byTime) robust esprelength(2) espostlength(2)
+local b2crc = _rc
+qui log close ames
+local b2cc = strpos(fileread("ames_b2c.txt"), "Caution: under contreatcontrols(byTime), ") > 0
+local b2cb = strpos(fileread("ames_b2c.txt"), "group(s) have reference-period or control-group variation in dJ below 1/1000") > 0
+cap erase ames_b2c.txt
+if `b2crc' == 0 & `b2cc' & `b2cb' dis "B2c ok"
+else {
+  dis as error "B2c FAIL: rc=`b2crc' caution=`b2cc' body=`b2cb' (want rc 0 with the ccref fragility caution naming byTime)"
+  global pf = $pf + 1
+}
+mkccb
+qui log using ames_b2d.txt, text replace name(ames)
+cap noi wooldid y i t ttre, att contreat(dT) contreatcontrols(byTime) robust esprelength(2) espostlength(2)
+local b2drc = _rc
+qui log close ames
+local b2dc = strpos(fileread("ames_b2d.txt"), "Caution: under contreatcontrols(") > 0
+cap erase ames_b2d.txt
+if `b2drc' == 0 & !`b2dc' dis "B2d ok"
+else {
+  dis as error "B2d FAIL: rc=`b2drc' caution=`b2dc' (want rc 0 and no fragility caution on a dosed reference pool)"
+  global pf = $pf + 1
+}
+
 * B3: healthy byCohort + robust -> clean run, real ame inference, screen silent
 mkdemo
 cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(byCohort) esf espre(2) espost(2)
