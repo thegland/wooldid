@@ -647,6 +647,10 @@ version 16.0
       if "`r(currentframe)'" != "`wdsh_frame'" cap frame change `wdsh_frame'
     }
     if `wdsh_dc' != 0 dis as text "Caution: the continuous-treatment plot-data file `e(wdid_cfxsave)'_cfx.dta could not be written (r(`wdsh_dc')), usually because a file of that name exists and replace was not specified."
+    * the rc is posted as bootsave() and permsave() post theirs (e(boot_save_rc), e(perm_save_rc)):
+    * the caution is invisible under quietly, while a posted rc is not. Hidden like the rest of
+    * the e(wdid_*) family, and posted only on failure, so its presence is the flag
+    if `wdsh_dc' != 0 ereturn hidden local wdid_cfxsave_rc `wdsh_dc'
   }
 end
 

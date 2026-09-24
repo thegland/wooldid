@@ -253,6 +253,7 @@ frame change l8fr
 use "`DATA'/dta_cont", clear
 cap noi wooldid y i t ttre, att cluster(i) contreat(intensity) contreatcontrols(basic) lattice(all 3) esprelength(1) espostlength(1) makecfxplots saveplots(l8probe) replace
 local l8rc1 = _rc
+local l8src1 "`e(wdid_cfxsave_rc)'"
 cap confirm file "l8probe_cfx.dta"
 local l8dta = (_rc == 0)
 * the .gph files go, so marginsplot's own save succeeds and only the plot-data write collides
@@ -263,6 +264,7 @@ cap frame change l8fr
 qui log using l8probe_log.txt, text replace name(l8)
 cap noi wooldid y i t ttre, att cluster(i) contreat(intensity) contreatcontrols(basic) lattice(all 3) esprelength(1) espostlength(1) makecfxplots saveplots(l8probe)
 local l8rc2 = _rc
+local l8src2 "`e(wdid_cfxsave_rc)'"
 qui log close l8
 qui frame
 local l8frame "`r(currentframe)'"
@@ -273,6 +275,14 @@ if `l8rc1' != 0 | `l8dta' != 1 | `l8rc2' != 0 | `l8caut' != 1 | "`l8frame'" != "
   local ++fails
 }
 else dis as result "L8 PASS: the refused plot-data write printed its caution with rc 0 and handed back frame l8fr"
+* L8b (change audit round 2, U01 shell-cfxtwin-norc; the author's ruling 2026-09-23): the refused
+* write posts its rc in e(wdid_cfxsave_rc), as bootsave() and permsave() post theirs, since the
+* caution is invisible under quietly; the successful write posts none
+if "`l8src1'" != "" | "`l8src2'" != "602" {
+  dis as error "L8b FAIL: e(wdid_cfxsave_rc) is [`l8src1'] after the written file (want empty) and [`l8src2'] after the refused one (want 602)"
+  local ++fails
+}
+else dis as result "L8b PASS: the refused plot-data write posted e(wdid_cfxsave_rc)=602"
 frame change default
 cap frame drop l8fr
 foreach f in l8probe_cfx.dta l8probe_cfxatt_cfxpost.gph l8probe_cfxame_cfxpost.gph l8probe_log.txt {
