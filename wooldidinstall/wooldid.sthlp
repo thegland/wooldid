@@ -276,7 +276,7 @@ IM-style inference changes {it:wooldid}'s target estimand: the cluster-specific 
 whatever estimand was requested. For example, if clustering at the cohort level, {it:att} will yield the same effect estimates as {it:att_i}. Each reported row uses a t
 distribution with degrees of freedom one less than the number of clusters contributing to that row, and {it:e(df_r)} is set to the smallest of these. IM-style inference is not
 allowed with the use of subgroups, or with the options {it:jointtests}, {it:makecfxplots}, {it:adversarial}, {it:customvce()}, {it:unconditionalse},
-{it:pretrendpower()}, {it:bootstrap()} and {it:permute()}. {it:fastnose} is accepted with a caution and has no effect. No event study covariance is returned under {it:impvalues}, so {it:e(V_es_*)} is absent and the {it:honestdid} handoff is unavailable. {p_end}
+{it:pretrendpower()}, {it:bootstrap()} and {it:permute()}. {it:fastnose} is accepted with a caution and has no effect. No event study vector or covariance is returned under {it:impvalues}: {it:e(b_es_*)}, {it:e(V_es_*)} and {it:e(numpre_*)} are absent, and the {it:honestdid} handoff is unavailable. {p_end}
 
 {phang}{opt fast:nose}: Fast exploratory mode, for specification search on large panels. Every {it:margins} call runs without variance estimation, so only point estimates
 are produced: standard errors, test statistics, p-values, confidence intervals, joint tests and plot confidence bands are omitted, and the corresponding table cells display
@@ -966,10 +966,10 @@ horizon block), with per-subgroup versions {it:e(b_es_{it:type}_s{it:sgcase})} a
 {it:lincom} and {it:test}. A direct positional handoff to {it:honestdid} additionally requires {it:esfixedbaseperiod} with the default {it:esrelativeto(-1)}, no {it:timetrends},
 at least one pre- and one post-treatment coefficient, consecutive horizons, and a covariance with no degenerate rows; other geometries hand {it:honestdid} the wrong event-time
 geometry silently. The covariance is withheld, under a caution, when no horizon has an identified variance (typically {it:timetrends}) and for the ame families
-under the cell-containment caution; the coefficient vector still posts. Under {it:fastnose} the covariance is never computed, so it is not posted and no caution prints. {it:e(es_ndegen_{it:type})} counts horizons whose variance is degenerate and is posted only when such rows
+under the cell-containment caution; the coefficient vector still posts. Under {it:fastnose} the covariance is never computed, so it is not posted and no caution prints. Under {it:impvalues} neither matrix is posted. {it:e(es_ndegen_{it:type})} counts horizons whose variance is degenerate and is posted only when such rows
 exist. {p_end}
 
-{synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument.{p_end}
+{synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument. Not posted under {it:impvalues}.{p_end}
 
 {synopt:{it:e(gteffects)}} The cohort-by-relative-period table produced by the {it:gteffects} option; see that option for the column layout. {it:e(gt_ncontained)} counts the cells
 lying wholly inside a single cluster, whose standard errors are understated, and is posted only when such cells exist; on the same rule {it:e(gt_ndegen)} counts cells whose variance is not
