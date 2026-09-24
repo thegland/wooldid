@@ -33,16 +33,23 @@ runs therefore detects *any* change in returned results, down to the last bit.
   line - the files a config saved, pinned by name - compares as a string; dumps written before
   2026-09-13 have no such line and read as "no files". Self-tests on startup. Use `--rtol 0`
   for strict bit-exactness.
-- `baseline/` — the committed reference outputs (as of commit `3cb0c41` — the B21
-  gen-double re-bless, 2026-07-21; gtools active, Stata 19.0 MP). Re-blessed 2026-09-01
-  when the cell collapse became the default (`fastcollapse` / `fullprecisionslow`): every
-  file gained the hidden macro `wdid_fcol`; the 17 collapse-eligible configs were
-  bit-identical to the previous baseline; `cont_lat`, `cont_uz`, `cont_uz_ss` moved at
-  1e-16..1e-10 in the shared session but were bit-identical to the pristine build when
-  each was run alone (session-order contamination from the earlier configs' collapse,
-  not a change to the contreat path, which does not collapse). Extended 2026-09-13 with the 11
-  permute()/bootstrap() configs of the suite audit (perm_sgjt_adv .. level_analytic), blessed
-  additively: the 37 earlier files are byte-unchanged and carry no `files|` line.
+- `baseline/` — the committed reference outputs for the 59 configs (gtools active, Stata
+  19.0 MP): the 37 configs that predate 2026-09-13, the 11 permute()/bootstrap() configs of
+  the 2026-09-13 suite audit (perm_sgjt_adv .. level_analytic) and 11 more added 2026-09-16
+  (`3ce24d4`, `07d7c6b`, `373e764`), the two later blocks blessed additively. Last re-blessed
+  in full at `1c09efa` (2026-09-20, run pristine twice): 58 of the 59 files changed, by
+  stored-result additions and removals only (no cell moved), and every file now carries a
+  `files|` line; `perm_atti` was byte-unchanged. Later re-blesses touch named configs only:
+  `e2b5fad` (aw_uncond, boot_ts_gt, boot_ts_sgadv, gt_basic), `aae69dd` (perm_atti) and
+  `929ae6c` (band_analytic, cont_lat, perm_cfxnose, perm_tstat, ptp_two); the full record is
+  `git log -- test/baseline`. Earlier history: `3cb0c41` (the B21 gen-double re-bless,
+  2026-07-21), then a re-bless on 2026-09-01 when the cell collapse became the default
+  (`fastcollapse` / `fullprecisionslow`): every file gained the hidden macro `wdid_fcol`;
+  the 17 collapse-eligible configs were bit-identical to the previous baseline; `cont_lat`,
+  `cont_uz`, `cont_uz_ss` moved at 1e-16..1e-10 in the shared session but were
+  bit-identical to the pristine build when each was run alone (session-order contamination
+  from the earlier configs' collapse, not a change to the contreat path, which does not
+  collapse).
 - `mkpathological.do` — builds `data/dta_path_*.dta`, the pathological data shapes used by
   the coverage grid (`review_process/assessment_grid.md`, dimension D12): no never-treated
   units, no controls, cohorts lacking pre-/post-periods, missing relative years, single-obs

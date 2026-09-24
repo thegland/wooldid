@@ -1,6 +1,6 @@
 * wooldid regression battery. Run from a fresh subdirectory of test/ (see test/README.md):
 *   mkdir test/run1 && cd test/run1 && "<stata>" -e do ../runbattery.do
-* Loads the CURRENT repo wooldid.ado, runs 48 configs, dumps all e() content
+* Loads the CURRENT repo wooldid.ado, runs 59 configs, dumps all e() content
 * (exact %21x hex) + rc + post-run varlist + saved-file names to <cfg>.csv in cwd.
 clear all
 set more off
@@ -377,7 +377,8 @@ dumpres perm_cfxnose `rc'
 * configs run on an 18-cluster subset of dta_binary (6 units from each onset block, both subgroups
 * in every block - the perm_probs precedent) so a replication costs ~1/5 of a full-panel one. These
 * are regression pins of the code paths, NOT realistic-data evidence; the full-panel behaviour is
-* the cert suites' business. Blessed additively (the 37 earlier baseline files are untouched).
+* the cert suites' business. Blessed additively on 2026-09-13 (the 37 earlier baseline files were
+* untouched then; 1c09efa re-blessed this block and the 37 together on 2026-09-20).
 
 * permute() + subgroups + jointtests + adversarial: the fixed-metric permutation joint tests and the
 * permuted pairwise contrasts - e(perm_jointW/perm_sgW/perm_advW) and their *Wobs, e(pwsgs) with its
