@@ -10659,12 +10659,15 @@ version 16.0
   tempname bse bmean bV bcnt
   local wdb_nlist 0
   local wdb_lowav
-  * CONSEQUENCE of the two different denominators, which a user will hit: se[k] is computed
-  * over the reps available for column k, while V uses only the rows complete over ALL
-  * non-excluded columns. So on any run with missing replication cells
-  * sqrt(diag(e(V_boot))) does NOT equal the printed se column, and a hand-run test or
-  * lincom on e(V) will not reproduce the table's Wald numbers exactly. e(boot_N_V) is the
-  * listwise count behind V; e(boot_navail) the per-column counts behind the se.
+  * the two moment passes use different denominators: se[k] is computed over the reps
+  * available for column k, while V comes from the rows complete over ALL non-excluded
+  * columns. wooldid_bootfin then rescales each identified diagonal of V to the per-column se,
+  * so sqrt(diag(e(V_boot))) equals the printed se column even on a run with missing
+  * replication cells, and a hand-run test or lincom on e(V) reproduces the
+  * bootdisplay(wald) numbers; only the correlations are listwise. The exception is a column
+  * the listwise pass found no variance for: it carries the -1e100 sentinel in e(V) while its
+  * se may still print. e(boot_N_V) is the listwise count behind the correlations;
+  * e(boot_navail) the per-column counts behind the se.
   * SIDE CHANNEL: this helper also returns through st_local, setting `wdb_nlw' (the
   * listwise row count posted as e(boot_N_V)), `wdb_exclnames' and `wdb_lowav'. Several
   * other Mata helpers in this program do the same (wdb_vesok, wdb_gblank, wdb_cellkeydup,
@@ -16101,13 +16104,13 @@ void wooldid_bootgrab(string scalar accname, real scalar r, string scalar obsbna
 // mean); LISTWISE complete-case covariance over non-excluded columns (A11);
 // sentinel -1e100 diagonals + zero off-diagonals for excluded/<2-available columns;
 // low-availability disclosure via locals
-// THE TWO MOMENT PASSES RUN ON DIFFERENT ROW SETS, and both are shipped to the user under
-// names that imply they agree. se[k] is computed over rows where column k alone is
-// available; V[k,k] over rows complete across every non-excluded column (that count is
-// reported as e(boot_N_V)). Whenever any column loses a replication - a failed fit, or an
-// A12b ame blank from wooldid_bootgrab - the two disagree, so sqrt(diag(e(V_boot))) is not
-// the printed se column and a hand-run test or lincom does not exactly reproduce the
-// table's Wald numbers. A11 ruled this a documented consequence rather than a defect.
+// THE TWO MOMENT PASSES RUN ON DIFFERENT ROW SETS. se[k] is computed over rows where column
+// k alone is available; the covariance over rows complete across every non-excluded column
+// (that count is reported as e(boot_N_V)). Whenever any column loses a replication - a
+// failed fit, or an A12b ame blank from wooldid_bootgrab - the two passes disagree on the
+// diagonal. A11 first ruled that a documented consequence; R8 (VCV-1, 2026-09-20) then had
+// the listwise diagonal rescaled to se below, so sqrt(diag(e(V_boot))) is the printed se on
+// every identified column and only the correlations are listwise.
 void wooldid_bootfin(string scalar accname, string scalar exclname, string scalar sename, string scalar meanname, string scalar vname, string scalar cntname)
 {
   real matrix A, V, CC, dev
