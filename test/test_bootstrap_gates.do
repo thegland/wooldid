@@ -1559,5 +1559,36 @@ foreach f in boot_gates_g42.dta boot_gates_g42p_ES_att.gph boot_gates_g42p_ES.dt
   cap erase "`f'"
 }
 
+* G43 (change audit round 2, U10 replay-extra-blank-line-engines / display-test-gaps): the bare
+* replay of a bootstrap() run is line-identical to the live run from the "Wooldid Estimation"
+* banner to EOF, by test_fastnose T5's method. The replay branch printed a blank line before
+* the part(boot) footer that the live run does not. The run has no bootsave() and stays below
+* the 10,000-draw cap: the lines those print below the footer are, by design, not replayed
+use `panel', clear
+qui log using boot_gates_g43a.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) dots(0)
+qui log close bg
+local g43rc1 = _rc
+qui log using boot_gates_g43b.txt, text replace name(bg)
+cap noi wooldid
+qui log close bg
+local g43rc2 = _rc
+chk 43a 0 `g43rc1'
+chk 43b 0 `g43rc2'
+local g43same 0
+local g43n 0
+mata: a_ = cat("boot_gates_g43a.txt") \ ""; b_ = cat("boot_gates_g43b.txt") \ ""
+mata: ia_ = selectindex(strpos(a_, "Wooldid Estimation") :== 1); ib_ = selectindex(strpos(b_, "Wooldid Estimation") :== 1)
+mata: hb_ = (rows(ia_) > 0) & (rows(ib_) > 0)
+mata: sa_ = a_[|(ia_ \ 1)[1] \ rows(a_)|]; sb_ = b_[|(ib_ \ 1)[1] \ rows(b_)|]
+mata: st_local("g43same", strofreal(hb_ & (rows(sa_) > 20) & (sa_ == sb_))); st_local("g43n", strofreal(rows(sa_)))
+di "G43 replay line-identical from the banner=`g43same' (`g43n' live lines)"
+if `g43same' != 1 {
+  di as error "G43c FAIL: the bootstrap() replay differs from the live run from the banner onward (`g43n' live lines)"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
+cap erase boot_gates_g43a.txt
+cap erase boot_gates_g43b.txt
+
 if ${BOOTG_FAILS} == 0 di as result "BOOTGATES_ALL_PASS"
 else di as error "BOOTGATES_FAILS=${BOOTG_FAILS}"

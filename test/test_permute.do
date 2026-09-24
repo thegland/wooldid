@@ -251,6 +251,35 @@ if _rc != 0 | strpos(fileread("perm_p9.txt"), "Randomization Inference") == 0 {
   global pf = $pf + 1
 }
 
+* ---- P9b: the replay is line-identical to the live run from the banner onward ----
+* (change audit round 2, U10 replay-extra-blank-line-engines / display-test-gaps) test_fastnose
+* T5's method on a permute() run. The replay branch printed a blank line before the part(perm)
+* footer that the live run does not. No permsave() and below the 10,000-draw cap: the lines
+* those print below the footer are, by design, not replayed
+mkperm 6 3 3
+qui log using perm_p9b_live.txt, text replace name(pm)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) permute(shuffle) permreps(20) rseed(99) dots(0)
+qui log close pm
+local rc9b1 = _rc
+qui log using perm_p9b_rep.txt, text replace name(pm)
+cap noi wooldid
+qui log close pm
+local rc9b2 = _rc
+local p9bsame 0
+local p9bn 0
+mata: a_ = cat("perm_p9b_live.txt") \ ""; b_ = cat("perm_p9b_rep.txt") \ ""
+mata: ia_ = selectindex(strpos(a_, "Wooldid Estimation") :== 1); ib_ = selectindex(strpos(b_, "Wooldid Estimation") :== 1)
+mata: hb_ = (rows(ia_) > 0) & (rows(ib_) > 0)
+mata: sa_ = a_[|(ia_ \ 1)[1] \ rows(a_)|]; sb_ = b_[|(ib_ \ 1)[1] \ rows(b_)|]
+mata: st_local("p9bsame", strofreal(hb_ & (rows(sa_) > 20) & (sa_ == sb_))); st_local("p9bn", strofreal(rows(sa_)))
+if `rc9b1' != 0 | `rc9b2' != 0 | `p9bsame' != 1 {
+  dis as error "P9b FAIL: rc est=`rc9b1' rep=`rc9b2', or the replay differs from the live run from the banner onward (`p9bn' live lines)"
+  global pf = $pf + 1
+}
+else dis "P9b info: replay line-identical from the banner onward (`p9bn' lines)"
+cap erase perm_p9b_live.txt
+cap erase perm_p9b_rep.txt
+
 * ---- P10: determinism under a set seed ----
 mkperm 6 3 3
 set seed 777

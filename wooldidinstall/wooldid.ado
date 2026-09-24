@@ -46,9 +46,10 @@ version 16.0
     wooldid_display , part(1)
     wooldid_display , part(roth)
     wooldid_display , part(2)
-    if "`e(perm_method)'" != "" dis as result " "
+    * no blank line between part(2) and the engine footers: the live engine branches below
+    * call part(perm) and part(boot) straight after part(2) and its plots, and replay must
+    * match them line for line (test_bootstrap_gates G43, test_permute P9b)
     wooldid_display , part(perm)
-    if "`e(boot_method)'" != "" dis as result " "
     wooldid_display , part(boot)
     dis as result  " "
     exit
