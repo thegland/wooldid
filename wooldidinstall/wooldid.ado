@@ -31,19 +31,47 @@ version 16.0
   * so a marker whose scalar is gone is stale and is ignored. The outermost call runs the rest
   * of this program as a nested call of itself, under capture inside nobreak (the pattern help
   * break documents), so the clearing runs on success, on error and on Break alike. The inner
-  * call prints its own output and errors; exit passes the rc on without reprinting it
+  * call prints its own output and errors; exit passes the rc on without reprinting it.
+  * The same wrapper keeps the caller's e() across a failed call (the author's ruling
+  * 2026-09-23, "keep the promise"): a call that fails, at any stage, leaves e() as it was
+  * before the call, as a failed Stata estimation command does. Without it a failure after
+  * the stage-1 fit left e() holding wooldid's internal reghdfe or ppmlhdfe regression on
+  * tempvar regressors, and a failure after the post left the failed call's own partial or
+  * half-rewired results. The caller's e() is copied aside before the call (_estimates hold,
+  * copy: the call still sees it, which update and replay need) and put back on any nonzero
+  * rc, after the caller's frame is restored, since the copy's e(sample) lives in that frame's
+  * data; on success the copy is dropped. restore makes Stata put it back itself if the
+  * program ends before either line runs. That includes a failure in or after an engine's
+  * replication loop: the engine restores this call's observed run on its way out, and the
+  * caller's results then replace it. Only the user's own call holds; the replications
+  * nested inside it are the engines' business and are not slowed by a copy each. If the
+  * copy cannot be made (Stata's limit of 300 held results), the call runs as before
   local wdsh_top 1
   if "${WOOLDID_INCALL}" != "" {
     cap confirm scalar ${WOOLDID_INCALL}
     if _rc == 0 local wdsh_top 0
   }
   if `wdsh_top' {
-    tempname wdsh_live
+    tempname wdsh_live wdsh_hold
+    local wdsh_cfr `c(frame)'
     nobreak {
       scalar `wdsh_live' = 1
       global WOOLDID_INCALL `wdsh_live'
+      cap _estimates hold `wdsh_hold', copy restore nullok
+      local wdsh_held = (_rc == 0)
       capture noisily break wooldid `0'
       local wdsh_trc = _rc
+      * on success the copy must go, or restore would put the caller's e() back over this
+      * run's results when the program ends: drop it (which also removes its e(sample)
+      * variable at once), and if that fails, cancel the restore the documented way
+      if `wdsh_held' & `wdsh_trc' == 0 {
+        cap _estimates drop `wdsh_hold'
+        if _rc != 0 cap _estimates unhold `wdsh_hold', not
+      }
+      else if `wdsh_held' {
+        if "`c(frame)'" != "`wdsh_cfr'" cap frame change `wdsh_cfr'
+        cap _estimates unhold `wdsh_hold'
+      }
       macro drop WOOLDID_INCALL WOOLDID_REPMODE WOOLDID_BOOTNOSUB WOOLDID_BOOTNOCOVSUB WOOLDID_BOOTDEBUG
     }
     exit `wdsh_trc'
@@ -59,11 +87,12 @@ version 16.0
     * global (namespaced like WOOLDID_CLEANUP) set to the failing rc in the shell's
     * rc-gated epilogue below whenever a wooldid invocation fails - at the parse
     * stage or anywhere later - and cleared there on any successful completion.
-    * (one deliberate exception: a post-estimation permutation-phase failure restores
-    * the still-valid observed results and clears the marker on its way out, so those
-    * results remain replayable. a saveplots() file refused before either engine's
-    * replication loop, by wooldid_plotpre, is the same case: the marker was cleared when
-    * the worker succeeded and is left clear.)
+    * (one deliberate exception: a failure inside either engine's replication loop clears
+    * the marker on its way out, so the results in e() remain replayable. a saveplots() file
+    * refused before either engine's replication loop, by wooldid_plotpre, is the same case:
+    * the marker was cleared when the worker succeeded and is left clear.) whatever the
+    * failure, the outermost-call wrapper at the top has put the caller's e() back by now,
+    * so e() holds the results from before the failed call.
     * while it is set, the stored e() results predate the user's latest (failed)
     * attempt, so redisplaying them silently would be misleading. exiting here
     * leaves the marker set: replay stays refused until a wooldid call completes
@@ -171,7 +200,8 @@ version 16.0
     qui wooldid_validate `0'
     * saveplots(): every file the deferred plot calls below will write is checked here, before
     * the replication loop, as permsave() is (wooldid_plotpre). A refusal leaves the replay
-    * marker clear, as a failed loop does below, so the observed results stay replayable
+    * marker clear, as a failed loop does below, so the results the wrapper at the top puts
+    * back in e() (the caller's, from before this call) stay replayable
     if "`saveplots'" != "" & "`replace'" == "" wooldid_plotpre , stem(`saveplots') cfx(`makecfxplots') es(`makeplots')
     * permtci implies permtstat (resolved in validate as well; kept for the rep string)
     if "`permtci'" != "" & "`permtstat'" == "" local permtstat permtstat
@@ -232,9 +262,10 @@ version 16.0
     global WOOLDID_LASTRC
     if `wdp_rc' != 0 exit `wdp_rc'
     * from here until the display completes, e() is being rewired to the permutation
-    * inference: an uncaught failure in between leaves a half-rewired e() that the replay
-    * branch must refuse (the marker is consumed there and cleared at the end of this
-    * block; a plot failure records its rc the same way)
+    * inference: an uncaught failure in between leaves a half-rewired e(), which the wrapper
+    * at the top replaces with the caller's e(), and the marker set here makes the replay
+    * branch refuse (it is cleared at the end of this block; a plot failure records its rc
+    * the same way)
     global WOOLDID_LASTRC postloop
     * run-level permutation results on the restored observed results
     ereturn local perm_method `permute'

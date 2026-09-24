@@ -662,12 +662,19 @@ foreach f in boot_gates_g20_ES_att.gph boot_gates_g20_ES.dta {
 }
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20)
 chk 20 0 _rc
+local g20cl `"`e(cmdline)'"'
 ! chmod 444 boot_gates_g20_ES_att.gph
 global WOOLDID_BOOTNOSUB 1
 global WOOLDID_BOOTNOCOVSUB 1
 global WOOLDID_BOOTDEBUG 1
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(standard) reps(10) rseed(7) makeplots saveplots(boot_gates_g20) replace
 chk 20b 608 _rc
+* G20h (the author's round-2 ruling, a failed call keeps the caller's e()): e() is the seed
+* run's again, not the failed call's half-rewired post (which carried replace in e(cmdline))
+if `"`e(cmdline)'"' != `"`g20cl'"' {
+  di as error `"G20h FAIL: after the post-loop failure e(cmdline) is [`e(cmdline)'], not the earlier run's [`g20cl']"'
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
 if "${WOOLDID_BOOTNOSUB}${WOOLDID_BOOTNOCOVSUB}${WOOLDID_BOOTDEBUG}" != "" {
   di as error "m14b FAIL: a diagnostic switch survived a call that failed after the loop (NOSUB=[${WOOLDID_BOOTNOSUB}] NOCOVSUB=[${WOOLDID_BOOTNOCOVSUB}] DEBUG=[${WOOLDID_BOOTDEBUG}])"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
@@ -1499,8 +1506,10 @@ cap erase boot_gates_g38.txt
 * after the loop, the run lost - where bootsave() and permsave() refuse a clash before it. It is
 * refused before the loop now (wooldid_plotpre). A seed run lists the files a call writes; then,
 * for each one alone, a stand-in of that name must make the rerun without replace fail r(602)
-* with no replication run (e(boot_method)/e(perm_method) empty: e() holds the observed results)
-* and nothing else written, and the observed results must replay, as after a failed loop. With
+* with nothing else written, leave e() as it was before the call (the seed run's results, by
+* e(cmdline): the author's round-2 ruling that a failed call keeps the caller's e(); this leg
+* used to read e(boot_method)/e(perm_method) empty, the refused call's own observed results),
+* and those results must replay. With
 * the files gone the same call without replace must still run and write the same files (a check
 * that refused it would be a regression). The three calls cover every naming rule the check
 * mirrors: the cfx .gph files and _cfx.dta, the event-study families and _ES.dta, and the
@@ -1517,6 +1526,7 @@ prog def g41leg
   use "`dataset'", clear
   cap qui wooldid `cmd' saveplots(`stem') replace
   local rc = _rc
+  local cl0 `"`e(cmdline)'"'
   local W : dir . files "`stem'_*"
   local W : subinstr local W `"""' "", all
   local W : list sort W
@@ -1536,16 +1546,16 @@ prog def g41leg
     use "`dataset'", clear
     cap qui wooldid `cmd' saveplots(`stem')
     local rc = _rc
-    local eng `e(`key')'
+    local clf `"`e(cmdline)'"'
     local left : dir . files "`stem'_*"
     local left : subinstr local left `"""' "", all
-    if `rc' != 602 | "`eng'" != "" | "`left'" != "`f'" {
-      di as error "G41`lab' FAIL: with `f' present, rc `rc' (want 602), e(`key')=[`eng'] (want empty: refused before the loop), `stem'_* files [`left'] (want only `f')"
+    if `rc' != 602 | `"`clf'"' != `"`cl0'"' | "`left'" != "`f'" {
+      di as error `"G41`lab' FAIL: with `f' present, rc `rc' (want 602), e(cmdline)=[`clf'] (want the seed run's: e() as before the call), `stem'_* files [`left'] (want only `f')"'
       global BOOTG_FAILS = ${BOOTG_FAILS} + 1
     }
     cap qui wooldid
     if _rc != 0 {
-      di as error "G41`lab' FAIL: the observed results do not replay after the refusal of `f'"
+      di as error "G41`lab' FAIL: the earlier results do not replay after the refusal of `f'"
       global BOOTG_FAILS = ${BOOTG_FAILS} + 1
     }
   }

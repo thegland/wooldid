@@ -944,8 +944,8 @@ replay uses) and appear only under {it:ereturn list, all}, though each can be re
 out of {it:e()} or stored there as missing, as the adversarial test is under {it:bootstrap()} without {it:boottstat}; check it with {it:missing()}, which is true either way,
 rather than with {it:confirm scalar}. Typing {it:wooldid} by itself after a successful estimation redisplays
 the stored results, including after {it:estimates restore}; it does not redraw plots or repeat estimation-time cautions, and it refuses with an error after a failed call until
-some {it:wooldid} call completes successfully. The exception is a failure inside the {it:permute()} or {it:bootstrap()} replication loop, which restores that
-call's own observed estimation and leaves it replayable. {p_end}
+some {it:wooldid} call completes successfully. The exception is a failure inside the {it:permute()} or {it:bootstrap()} replication loop, after which the earlier
+results stay replayable. A call that fails, at any stage, leaves {it:e()} as it was before the call. {p_end}
 
 {pstd} The coefficient vector {it:e(b)} and its covariance {it:e(V)} carry these column names, which are what {it:esttab}, {it:coefplot}, {it:lincom} and {it:test} address a
 coefficient by: {it:main_att} (the headline average treatment effect on the treated), {it:pretreatment_att} (the pooled pre-treatment average), {it:ES_att_pre#} and

@@ -1,6 +1,7 @@
 * Targeted suite for F6 permutation inference: validation gates (P6*), the engine's
 * exact/sampled/strata inference (P1-P4), its e() surface and additivity (P7, P11),
-* cautions (P8), replay (P9), and determinism (P10); onsets after the last period (P13).
+* cautions (P8), replay (P9), and determinism (P10); onsets after the last period (P13);
+* failing replications (P14); a failed loop keeps the caller's e() (P15).
 * Run from test/:  "<stata>" -e do test_permute.do   -> expect PERMUTE_ALL_PASS
 clear all
 set more off
@@ -687,6 +688,37 @@ if `rc14' != 0 | !(`p14f' > 4 & `p14f' < .) | `p14c' + `p14f' != 40 | `p14x' != 
   global pf = $pf + 1
 }
 cap erase perm_p14.txt
+
+* ---- P15: a replication loop that fails keeps the caller's e() (the author's round-2 ruling
+* 2026-09-23, "keep the promise": a call that fails, at any stage, leaves e() as it was before
+* the call). P14's design with the outcome missing on clusters 4-8 of 8: a draw that hands the
+* one onset to any of them fails, so too few replications complete for the max(20, half) floor
+* and the loop errors. The engine used to leave the failed call's own observed run in e(); e()
+* must now be the plain run before it, and it must still replay (the loop failure leaves the
+* replay marker clear) ----
+clear
+set seed 4243
+set sortseed 4243
+qui set obs 8
+qui gen i = _n
+qui gen ttre = cond(_n <= 1, 4, .)
+qui expand 8
+qui bysort i: gen t = _n
+qui gen y = 3*(t >= ttre & ttre < .) + 0.1*i + rnormal()
+qui replace y = . if i >= 4
+cap noi wooldid y i t ttre, att cluster(i)
+local rc15a = _rc
+local cl15 `"`e(cmdline)'"'
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(1515) dots(0)
+local rc15 = _rc
+local cl15b `"`e(cmdline)'"'
+cap qui wooldid
+local rc15r = _rc
+dis `"P15 info: plain rc=`rc15a' | permute rc=`rc15' e(cmdline)=[`cl15b'] | replay rc=`rc15r'"'
+if `rc15a' != 0 | `rc15' != 459 | `"`cl15b'"' != `"`cl15'"' | `rc15r' != 0 {
+  dis as error "P15 FAIL: after the failed replication loop e() is not the earlier run's, or it does not replay"
+  global pf = $pf + 1
+}
 
 if $pf == 0 dis "PERMUTE_ALL_PASS"
 else dis as error "PERMUTE_FAILS=$pf"

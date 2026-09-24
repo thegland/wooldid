@@ -18,6 +18,8 @@
 * E15 the worker's markout on factor-variable terms: controls(ib2.g) and fe(ib2.g) run (they
 *    used to die on Stata's bare "ib2:  operator invalid", r(198)), mark out the rows where g
 *    is missing exactly as controls(i.g) and fe(i.g) do, and give the same att
+* E16 a call failing after the stage-1 fit (the r(322) collinearity screen) leaves the caller's
+*    e() in place (a prior regress), not wooldid's internal reghdfe fit
 clear all
 set more off
 do "../wooldidinstall/wooldid.ado"
@@ -260,16 +262,24 @@ if `rc8' != 0 | `rc8b' != 0 | "`p8a'" != "`p8b'" | "`g8'" != "" | "`p8a'" == "" 
   local ++fails
 }
 
-* ---- E9 (BS-32): a failure after the post (a saveplots() name clash in the plot stage)
-* leaves e(cmd) posted, so the documented replay refusal is reachable
+* ---- E9 (BS-32): a failure after the post (a saveplots() name clash in the plot stage).
+* Since the author's round-2 ruling (2026-09-23, "keep the promise") the failed call leaves e()
+* as it was before the call: the first run's results, not the failed call's own post, which
+* used to stay in e(). The second call adds jointtests so the two command lines differ and
+* e(cmdline) says whose results e() holds
 use `pe6', clear
 replace ttre = 4 if ttre < .
 cap erase v1_ES.dta
 cap erase v1_ES.gph
 qui wooldid y i t ttre, att esprelength(1) espostlength(1) makeplots saveplots(v1)
-cap noi wooldid y i t ttre, att esprelength(1) espostlength(1) makeplots saveplots(v1)
+local e9cl0 `"`e(cmdline)'"'
+cap noi wooldid y i t ttre, att esprelength(1) espostlength(1) makeplots saveplots(v1) jointtests
 local rc9 = _rc
 local e9cmd `e(cmd)'
+if `"`e(cmdline)'"' != `"`e9cl0'"' {
+  di as error `"E9a FAIL: after the failed call e(cmdline) is [`e(cmdline)'], not the earlier run's [`e9cl0']"'
+  local ++fails
+}
 qui log using edges_e9.txt, text replace name(ed)
 cap noi wooldid
 local rc9b = _rc
@@ -563,6 +573,30 @@ foreach e15opt in controls fe {
   }
 }
 if `e15ok' di as result "E15 PASS: ib2.g is marked out on g in controls() and fe()"
+
+* ---- E16 (change audit round 2, S1 hyg-ereturn-internal-fit / U12 guide-failed-call-e-claim;
+* the author's ruling 2026-09-23, "keep the promise"): a call that fails after the stage-1 fit
+* leaves the caller's e() in place. A region-by-period fixed effect whose region 1 is exactly
+* the 2005 cohort absorbs that cohort's cell dummies, and the post-fit collinearity screen
+* refuses with r(322). e() used to hold wooldid's internal reghdfe fit on tempvar regressors
+* (e(cmd) reghdfe); it must hold the regress run before it, e(sample) included
+use data/dta_binary.dta, clear
+gen byte region = 1 if ttre == 2005
+replace region = 2 + mod(i, 2) if missing(region)
+egen long rt = group(region t)
+qui regress y t if i <= 40
+local e16n = e(N)
+local e16cl `"`e(cmdline)'"'
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) fe(rt)
+local rc16 = _rc
+qui count if e(sample)
+local e16s = r(N)
+di "E16 rc=`rc16' e(cmd)=[`e(cmd)'] e(N)=" e(N) " e(sample)=`e16s' (want regress, `e16n', `e16n')"
+if `rc16' != 322 | "`e(cmd)'" != "regress" | `"`e(cmdline)'"' != `"`e16cl'"' | e(N) != `e16n' | `e16s' != `e16n' {
+  di as error "E16 FAIL: a call failing after the stage-1 fit must leave the caller's e() (regress) in place"
+  local ++fails
+}
+else di as result "E16 PASS: the failed call left the caller's regress results in e()"
 
 if `fails' == 0 di as result "EDGES_ALL_PASS"
 else di as error "EDGES_FAILS=`fails'"
