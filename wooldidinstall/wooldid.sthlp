@@ -435,7 +435,7 @@ as plain missing. That screen runs on every row the {it:if} expression keeps, in
 {it:permexact}. Not compatible with
 {it:impvalues}, {it:unconditionalse}, {it:contreatwithin}, {it:contreatcontrols(untreatedZero)}, {it:oldsyntax}, {it:suppresssgprimaryeffects}, {it:pretrendpower()}, {it:simultaneousbands}
 or {it:bootstrap()}. A design that admits only one possible assignment is refused. With {it:subgroups()} the subgroup screens apply over the whole sample, since any cluster can be treated in
-a replication, and a unit labelled on some rows and missing on others is refused whatever {it:safety()} is. Every p-value and interval the run reports is permutation-based, including the subgroup contrasts, the joint pre-trend, subgroup equality and adversarial tests, and the
+a replication, and a unit split across subgroups, or labelled on some rows and missing on others, is refused whatever {it:safety()} is. Every p-value and interval the run reports is permutation-based, including the subgroup contrasts, the joint pre-trend, subgroup equality and adversarial tests, and the
 continuous-treatment plot cells. The subgroup equality tests and contrasts test the sharp null of no effect at any horizon, not equality of effects. P-values are two-sided equal-tailed, using the add-one form for sampled draws. Intervals are shift intervals at {it:level()}: the estimate minus the
 equal-tailed quantiles of the permutation distribution. By default the run and the replications are in fast mode, without analytic standard errors, so the {it:se_analytic} column is blank
 and {it:e(V)}, {it:e(b_es_*)} and {it:e(V_es_*)} are not posted; {it:permanalyticse} restores them. Quantities with no permutation distribution are left blank rather than filled
@@ -654,7 +654,7 @@ permuted as coefficient differences and stand; the caution then names the rows w
 {it:boottstat}, or a {it:cluster()} strictly finer than the cohort-by-period cells. {p_end}
 
 {pstd} Each treated unit of {it:i} should lie wholly within one subgroup: a subgroup variable that varies within a cohort-by-period cell, or over time within a unit, is refused
-with an informative error. With {it:safety(off)} such a run proceeds, entering a split unit into each subgroup weighted by its share of sample weight there, which changes what
+with an informative error. Except under {it:permute()}, {it:safety(off)} lets such a run proceed, entering a split unit into each subgroup weighted by its share of sample weight there, which changes what
 {it:att_i} and {it:att_itime} mean. Where the subgroup varies within a cell, every subgroup estimate also only reweights the same pooled cell
 effects, so contrasts cannot show within-cell differences and can come back identical when the true effects differ. The usual remedy is to define {it:i} at the finer level over which the subgroup varies, for example {it:egen newi = group(i sg), missing};
 the {it:missing} option matters, since without it rows with a missing subgroup value would be dropped from the estimation sample. Note that splitting {it:i} this way makes
