@@ -230,3 +230,62 @@ the pathological-data cap.
   written.
 - **Tests and claims (U16).** Commit claims with pins assert what the messages say; every ledger row
   cites a real commit; no bounded row is exceeded.
+
+## 4. Round 2 (2026-09-23): the low findings and the untested surface
+
+**What it covered.** The author chose to launch the work round 1 left: five verifiers re-checked all
+102 low findings at 998154a (68 confirmed, 20 in part, 13 fixed by a later commit, 1 refuted), with
+the critic's read-only claims settled by runs; five sweeps ran what no reviewer had run (Stata's
+prefixes, a missing gtools, failing-call hygiene, the help examples, poisson everywhere, options under
+the engines, Stata's bootstrap prefix as an oracle, and band coverage at 10 clusters). The sweeps filed
+23 findings; each high or medium one went to a separate refuter. Raw output:
+change_audit_2026-09-22/round2_results.json; triage: round2_bins.json.
+
+**Found sound by the sweeps.** bootstrap _b: and jackknife _b: reproduce the point estimates to
+4e-16, and the bootstrap prefix's e(V) equals wooldid's own bootstrap(standard) on the same seed
+(1.4e-9, the prefix's float storage); wooldid's percentile, BC and BCa endpoints equal estat bootstrap
+on identical draws to 3e-15; the help's examples 0-14 all run as written; poisson+subgroups runs with
+the z labels and headers 4173588 and 154d5dc promised; every generated lattice type equals a lattice
+built by hand; emptycellsoverride and ccnoabsorb agree with their controls.
+
+**Data fix, done at once.** Three of the 66 round-1 wording proposals sat on the wrong review-page card
+(the line-to-card map was wrong for 1647, 9500 and 10928): #34's moved to #33, #277's first to #276,
+and #304's DELETE proposal to #301's second line. 17 cards got round-2 notes.
+
+**Rulings (multiple choice, 2026-09-23).**
+
+| item | ruling | state |
+|---|---|---|
+| latticeignoreweights bins frozen on bootstrap's count leg and bayes | **Fix it**: replications re-bin on the resampled data; bootstrap SEs on those runs move | to build |
+| contreatpoly(2) all-zero VCE on an uncentred dose (v1.3 the same) | **Leave it** | no change |
+| band covers 0.90 at 10 clusters (measurement) | **Leave the docs** | no change |
+| bootstrap esttab posts the Wald SD family | **Same as permute()**: post the displayed family | to build |
+| ccref passes the 1e-5..1e-3 fragility band silently | **Caution, as bycoh does**; text approved: "Caution: under contreatcontrols(`ccrtype'), `n' group(s) have reference-period or control-group variation in `contreat' below 1/1000 of its sample standard deviation, so their baseline dose slopes are nearly unidentified and the reported effects may be wrong rather than noisy; examine or drop those group(s)." | to build |
+| bare wooldid after Stata's bootstrap/jackknife prefix replays the analytic tables | **Show the prefix's table** (hand off to Stata's prefix display, as regress does) | to build |
+| e() after a call that fails past the stage-1 fit | **Keep the promise**: hold the caller's e() and restore it on failure | to build |
+| replay refusal marker after a failed call | **Replay a restored store**; a mistyped replay line no longer blocks the next | to build |
+| adversarial p under permute() for a subgroup whose pre horizons were dropped | **Skip it**, as the analytic run does | to build |
+| hbar passed through string() under bootstrap() | **Full precision** | to build |
+| poisson + unconditionalse + cluster() prints pseudo-R2 '.' | **Spell vce(cluster)** | to build |
+| straddle caution (#277) on att-only boottstat runs | **Print only with a cell-weighted estimand** | to build |
+| #236 under boottstat with any cluster() | **Print only on realized pairwise degeneracy**, as D4 | to build |
+| analytic cfx plot-data write failure posts no return code | **Post e(wdid_cfxsave_rc)** | to build |
+| e(bootdist_pwse) above 10,000 replications | **Cap it** like e(bootdist) | to build |
+| #179's dead safety(off) escape | **Drop the gate and the escape**; text approved: "Error: the subgroup variable varies within i-t cells. This is unlikely to be valid with permute()." | to build |
+| saveplots() takes a name | **Keep names; fix the help** | to build |
+| poisson dyex/dydx titles reversed | **Relabel under poisson**: dyex "Elasticities (dyex)", dydx "Semi-elasticities (dydx)" | to build |
+| permtci redundant with permtstat permabsp | **Keep it** | no change |
+| within-cell screen a subset of the split-unit screen | **Keep both** | no change |
+| gteffects table formatting | **Apply PS-3 formatting**; no floor line | to build |
+| p-floor line under bootdisplay(bc) | **Omit it under bc** | to build |
+
+**Straight fixes (no number moves, no new text)** are being built in five groups (engines and shell,
+worker and validate, plots, docs, ledger); their commits are listed here when applied.
+
+**Left as they stand (FYI).** Fast mode's full VCE on the binary subgroup-by-horizon call (no cheap
+mechanism); the NIS k <= 4 cap (documented); the contreat subgroup reads without the fcdeg screen (no
+divergence reproduced); untreatedZero summary rows (v1.3's design); 18 bounded ledger rows without a
+cited sha (housekeeping); the reg-path maxvar preflight false positive (left on purpose in R18);
+jointmarginsdof reaching only two sites (no effect); unconditionalse's small-sample factor (it is
+regress + margins' own); a gtools that is present but cannot load (optional); the debug globals (a help
+sentence is in the docs group).
