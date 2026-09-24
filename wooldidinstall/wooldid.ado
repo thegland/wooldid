@@ -454,7 +454,7 @@ version 16.0
     * re-identification)
     local wdb_phys = cond("`bootstrap'" == "standard" & "`boottstat'" != "" & "`cluster'" == "" & "`wdp_wt'" != "" & "`poisson'" == "", "phys", "")
     tempname wdbW wdbjk
-    cap noi wooldid_bootrun , wmat(`wdbW') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")') y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' `wdb_phys' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') repopts2(`wdb_ro2') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp') seaccname(`=cond("`boottstat'" != "", "`wdbsacc'", "")') pwseaccname(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') kseaccname(`=cond("`boottstat'" != "", "`wdbksacc'", "")') kpwseaccname(`=cond("`boottstat'" != "", "`wdbkpwsacc'", "")') jwaccname(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobsname(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awaccname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobsname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') advesrel(`esrelativeto') advtt(`timetrends') advalt(`altmethod_adversarial') cellacc(`=cond("`gteffects'`makecfxplots'" != "", "`wdbcell'", "")')
+    cap noi wooldid_bootrun , wmat(`wdbW') jkacc(`=cond("`bootdisplay'" == "bca", "`wdbjk'", "")') y(`y') i(`i') t(`t') ttrevar(`ttre_asgiven') mode(`bootstrap') `wdb_reid' `wdb_phys' `=cond("`att_it'`att_i'`att_itime'" != "", "cellw", "")' reps(`reps') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') clus(`cluster') repopts(`wdb_ro') repopts2(`wdb_ro2') wtype(`wdp_wt') wexp(`wdp_wx') ifr(`wdp_if') pois(`poisson') obsb(`wdbobsb') accname(`wdbacc') compname(`wdbcomp') seaccname(`=cond("`boottstat'" != "", "`wdbsacc'", "")') pwseaccname(`=cond("`boottstat'" != "", "`wdbpwsacc'", "")') kseaccname(`=cond("`boottstat'" != "", "`wdbksacc'", "")') kpwseaccname(`=cond("`boottstat'" != "", "`wdbkpwsacc'", "")') jwaccname(`=cond("`boottstat'" != "", "`wdbjwacc'", "")') jobsname(`=cond("`boottstat'" != "", "`wdbjobs'", "")') awaccname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbawacc'", "")') aobsname(`=cond("`boottstat'" != "" & "`adversarial'`altmethod_adversarial'" != "", "`wdbaobs'", "")') advesrel(`esrelativeto') advtt(`timetrends') advalt(`altmethod_adversarial') cellacc(`=cond("`gteffects'`makecfxplots'" != "", "`wdbcell'", "")')
     local wdb_rc = _rc
     qui est restore `wdbobs'
     cap est drop `wdbobs'
@@ -9757,7 +9757,7 @@ version 16.0
 *** W_c makes a cluster's expected replicate mass its row-count share rather than its weight
 *** share, displacing the replication distribution from the estimate under weights.
 *** The rwgen priorpowers(-n_c) oracle for equal is its weights times n_c.
-  syntax , [mode(string) reid phys reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) repopts2(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) kseaccname(string) kpwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string) wmat(string) jkacc(string)]
+  syntax , [mode(string) reid phys cellw reps(integer 0) obsb(string) accname(string) y(varname) i(varname) t(varname) ttrevar(varname) clus(varlist) dots(integer 1) rseed(string) bootalpha(string) repopts(string asis) repopts2(string asis) wtype(string) wexp(string) ifr(string asis) pois(string) compname(string) seaccname(string) pwseaccname(string) kseaccname(string) kpwseaccname(string) jwaccname(string) jobsname(string) awaccname(string) aobsname(string) advesrel(string) advtt(string) advalt(string) cellacc(string) wmat(string) jkacc(string)]
 
   if `dots' == -1 local dots 1
   if "`bootalpha'" == "" local bootalpha equal
@@ -9921,7 +9921,11 @@ version 16.0
     local wdb_nstrad = r(N)
     drop `wdbstrtag'
     drop `wdbcmin' `wdbcmax'
-    if `wdb_nstrad' > 0 dis as text "Caution: `wdb_nstrad' of the `i' values in the estimation sample straddle two or more `clus' values, so every unit keeps its own identity in every replication, and the bootstrap standard errors of att_i, att_it and att_itime omit part of the composition variance and can be too small; the att and ame families are unaffected. Consider egen newi = group(`i' `clus'), missing (the missing option keeps unlabelled rows as their own group) or a cluster() that nests `i'. e(boot_nstraddle) and e(boot_reid) record this."
+    * printed only when att_i, att_it or att_itime is in the run (`cellw', from the shell): the
+    * caution is about those estimands' composition variance, and boottstat under cluster() takes
+    * this leg for att/ame alone too, where the keep-i rule changes nothing it names. the two
+    * scalars are posted by the shell either way (the author's ruling 2026-09-23, card m277)
+    if `wdb_nstrad' > 0 & "`cellw'" != "" dis as text "Caution: `wdb_nstrad' of the `i' values in the estimation sample straddle two or more `clus' values, so every unit keeps its own identity in every replication, and the bootstrap standard errors of att_i, att_it and att_itime omit part of the composition variance and can be too small; the att and ame families are unaffected. Consider egen newi = group(`i' `clus'), missing (the missing option keeps unlabelled rows as their own group) or a cluster() that nests `i'. e(boot_nstraddle) and e(boot_reid) record this."
   }
   * the shell's re-identification caution describes re-identified unit codes, which exist
   * only in the nesting regime - under keep-i nothing is re-identified and it would be false

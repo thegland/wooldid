@@ -1649,6 +1649,26 @@ if "`g44nsb'" != "0" | "`g44rib'" != "1" | `g44nb' != 0 {
   di as error "G44d FAIL: the nesting twin should post e(boot_nstraddle) 0 and e(boot_reid) 1 and stay silent (got `g44nsb', `g44rib', `g44nb')"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
+* G44e (change audit round 2, U08 bootrun-straddle-runlevel; the author's ruling 2026-09-23,
+* card m277): boottstat under cluster() takes the same leg with att alone, so the straddle is
+* counted and the two scalars are posted as before, but the caution names att_i, att_it and
+* att_itime, none of which is in the run, and prints only when one of them is
+use `strad', clear
+qui log using boot_gates_g44.txt, text replace name(bg)
+cap noi wooldid y unit t ttre, att cluster(cs) esprelength(1) espostlength(1) bootstrap(standard) boottstat reps(8) rseed(5) dots(0)
+local g44rcc = _rc
+qui log close bg
+chk 44e 0 `g44rcc'
+local g44nsc = e(boot_nstraddle)
+local g44ric = e(boot_reid)
+unwrap boot_gates_g44.txt
+local g44nc = (length(`"`lg'"') - length(subinstr(`"`lg'"', "straddle two or more", "", .))) / length("straddle two or more")
+cap erase boot_gates_g44.txt
+di "G44e att-only boottstat: nstraddle=`g44nsc' reid=`g44ric' caution printed `g44nc' time(s)"
+if "`g44nsc'" != "1" | "`g44ric'" != "0" | `g44nc' != 0 {
+  di as error "G44e FAIL: an att-only boottstat run should post e(boot_nstraddle) 1 and e(boot_reid) 0 and print no straddle caution (got `g44nsc', `g44ric', `g44nc')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
 
 * G45 (change audit round 2, S5 accum-writeback-cubic-cost): the per-replication write-back of
 * the R-row accumulators must not scale with R. Each replication wrote its row back with
