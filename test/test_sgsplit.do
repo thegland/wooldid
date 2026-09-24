@@ -3,7 +3,8 @@
 * share weighting plus a caution under safety(off) on the analytic path - while under
 * permute() the same split is refused at BOTH safety settings (G5), as is a unit labelled on
 * some rows and missing on others, never-treated units included (G6). G7 is the within-cell
-* case: a subgroup that varies inside an i-t cell rather than over time. Also pins the numeric-only
+* case: a subgroup that varies inside an i-t cell rather than over time, and G8 its permute() twin,
+* refused at both safety settings. Also pins the numeric-only
 * cluster() syntax. Run from test/: "<stata>" -e do test_sgsplit.do -> SGSPLIT_ALL_PASS
 clear all
 set more off
@@ -214,6 +215,34 @@ if `rc7a' != 459 | `e7a' != 1 | `rc7b' != 0 | `m7b' != 1 {
   dis as error "G7 FAIL: a within-cell subgroup must be refused r(459) at default safety and run under safety(off)"
   local ++fails
 }
+
+* ---- G8 (change audit round 2, U14 permctl-cell-gate-dead; author ruling 2026-09-23, card
+* #179): under permute() the within-cell refusal in wooldid_permctl no longer carries a safety(off)
+* escape. It used to end "To ignore this error, specify safety(off)", but taking that escape only
+* reached the unliftable split-unit refusal (G5). Both safety settings now refuse r(459) with the
+* within-cell message itself, and the escape sentence is gone. The needle for the escape is its
+* first words, never "safety(off)", which the echoed command line carries ----
+mkwc
+qui log using sgsp_g8a.txt, text replace name(sgsp8)
+cap noi wooldid y grp t ttre, att cluster(grp) esprelength(1) espostlength(1) subgroups(sg) permute(shuffle) permreps(20) rseed(11)
+local rc8a = _rc
+qui log close sgsp8
+mkwc
+qui log using sgsp_g8b.txt, text replace name(sgsp8)
+cap noi wooldid y grp t ttre, att cluster(grp) esprelength(1) espostlength(1) subgroups(sg) permute(shuffle) permreps(20) rseed(11) safety(off)
+local rc8b = _rc
+qui log close sgsp8
+local w8a = strpos(fileread("sgsp_g8a.txt"), "Error: the subgroup variable varies within i-t cells. This is unlikely to be valid with permute().") > 0
+local w8b = strpos(fileread("sgsp_g8b.txt"), "Error: the subgroup variable varies within i-t cells. This is unlikely to be valid with permute().") > 0
+local x8a = strpos(fileread("sgsp_g8a.txt"), "To ignore this error") > 0
+local x8b = strpos(fileread("sgsp_g8b.txt"), "To ignore this error") > 0
+dis "G8: permute within-cell default rc=`rc8a' text=`w8a' escape=`x8a' | safety(off) rc=`rc8b' text=`w8b' escape=`x8b'"
+if `rc8a' != 459 | `rc8b' != 459 | `w8a' != 1 | `w8b' != 1 | `x8a' != 0 | `x8b' != 0 {
+  dis as error "G8 FAIL: under permute() a within-cell subgroup must be refused r(459) with the within-cell text and no safety(off) escape, at both safety settings"
+  local ++fails
+}
+cap erase sgsp_g8a.txt
+cap erase sgsp_g8b.txt
 
 if `fails' == 0 dis "SGSPLIT_ALL_PASS"
 else dis as error "SGSPLIT_FAILS=`fails'"

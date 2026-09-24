@@ -6763,12 +6763,17 @@ version 16.0
     qui gegen double `sgmin' = min(cond(`sg' >= ., ., `sg')) if `insmp', by(`ivar' `tvar')
     qui gegen double `sgmax' = max(cond(`sg' >= ., ., `sg')) if `insmp', by(`ivar' `tvar')
     cap assert `sgmin' == `sgmax' if `insmp'
-    if _rc != 0 & "`si'" != "off" {
+    * UNLIFTABLE by safety(off), ruled by the author 2026-09-23 (card #179). The safety(off)
+    * escape this refusal used to offer was a dead end: a subgroup that varies within an i-t
+    * cell always splits some unit of i across subgroup levels too, so taking the escape only
+    * reached the unliftable split-unit refusal below. Old escape text, kept for reference:
+    * "To ignore this error, specify safety(off)."
+    if _rc != 0 {
       * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
       *   Permute() with subgroups(): the subgroup variable `sg' varies within `ivar'-by-`tvar' cells of the
       *   sample (over ALL units, because any cluster can be assigned treatment in a replication). Define
       *   `ivar' at the finer level over which the subgroup varies, or drop subgroups().
-      dis as error "Error: the subgroup variable varies within i-t cells. This is unlikely to be valid with permute(). To ignore this error, specify safety(off)."
+      dis as error "Error: the subgroup variable varies within i-t cells. This is unlikely to be valid with permute()."
       error 459
     }
     qui drop `sgmin' `sgmax'
