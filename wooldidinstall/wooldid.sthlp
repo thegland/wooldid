@@ -914,7 +914,7 @@ more than 100 distinct values (see {help wooldid##runtime:Runtime}), and halts w
 {phang}{opt oldsyntax}: In older versions, {it:wooldid} used the suffix {it:contemp} to flag the event study coefficient containing the period contemporaneous with treatment.
 This turned out to make {it:wooldid} relatively incompatible with the popular event study plot production program {help event_plot}, so the {it:contemp} suffix has been
 replaced with the suffix {it:post0}. This option reverts {it:wooldid} to using the older coefficient syntax, for compatibility with any older code that relies on it. It cannot be
-combined with {it:permute()} or {it:bootstrap()}. {p_end}
+combined with {it:permute()} or {it:bootstrap()}. The event study matrices {it:e(b_es_*)}, {it:e(V_es_*)} and {it:e(esband_*)} keep the label {it:post0}. {p_end}
 
 {marker runtime}{...}
 {title:Runtime}

@@ -794,7 +794,7 @@ The rest of this chapter is the help file's inventory.
 
 - **draw count** `reps()` required / `permreps()` required, and `permexact` enumerates instead. 
 
-`oldsyntax`: In older versions, *wooldid* used the suffix *contemp* to flag the event study coefficient containing the period contemporaneous with treatment. This turned out to make *wooldid* relatively incompatible with the popular event study plot production program `event_plot`, so the *contemp* suffix has been replaced with the suffix *post0*. This option reverts *wooldid* to using the older coefficient syntax, for compatibility with any older code that relies on it. It cannot be combined with `permute()` or `bootstrap()`: each refuses *oldsyntax* with an error.
+`oldsyntax`: In older versions, *wooldid* used the suffix *contemp* to flag the event study coefficient containing the period contemporaneous with treatment. This turned out to make *wooldid* relatively incompatible with the popular event study plot production program `event_plot`, so the *contemp* suffix has been replaced with the suffix *post0*. This option reverts *wooldid* to using the older coefficient syntax, for compatibility with any older code that relies on it. It cannot be combined with `permute()` or `bootstrap()`: each refuses *oldsyntax* with an error. The rename reaches *e(b)*, *e(V)*, *e(wdidmainresults)*, *e(escomp)* and the tables; the event-study handoff matrices *e(b_es_*type*)*, *e(V_es_*type*)* and *e(esband_*type*)* keep the label *post0*.
 
 ## 13. Stored results
 
