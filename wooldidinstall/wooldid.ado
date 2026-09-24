@@ -12751,19 +12751,14 @@ version 16.0
     local gtrows = rowsof(`gtd')
     dis as result " "
     dis as result "Cohort-by-Relative-Period Effects (regression scale; full table incl. weight totals in e(gteffects)):"
-    * name the blanked cells above the table. Existence-gated on e(), so replay reproduces it.
-    * Gated off the replication engines too, since those rewrite the cell inference columns
-    * themselves and the note would then describe a number the user is not reading.
     if `gtrows' <= 200 {
       tempname gtds
       * e(gteffects) is 15 columns (the stripe is set in Mata: i, onset, caltime, relyr,
       * estimate, se, p, lb_ci, ub_ci, inwindow, nobs, w_att, w_att_it, w_att_i,
       * w_att_itime). 9 is the boundary between the printed block and the export-only
       * columns, not a count of anything, and it must move if that stripe does - the slice
-      * is positional, so a restripe prints the wrong columns silently. NOTE the notes above
-      * point at inwindow, which is column 10 and therefore NOT in this printed slice: they
-      * are directing the reader to e(gteffects). The 200-row cap keeps a cohort-by-period
-      * table on high-cardinality i from burying the rest of the output
+      * is positional, so a restripe prints the wrong columns silently. The 200-row cap keeps
+      * a cohort-by-period table on high-cardinality i from burying the rest of the output
       matrix `gtds' = `gtd'[1..., 1..9]
       matlist `gtds', format(%9.0g)
     }
