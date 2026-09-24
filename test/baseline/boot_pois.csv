@@ -67,6 +67,12 @@ matnames|b_boot|1x1|r1|main_att
 mat|b_boot|1|1|+1.a925aefc0740dX-004
 matnames|bias_boot|1x1|y1|main_att
 mat|bias_boot|1|1|-1.4b1ad431685ecX-006
+matnames|ci_u|1x1|ul|main_att
+mat|ci_u|1|1|+1.28400f5055590X-003
+matnames|ci_l|1x1|ll|main_att
+mat|ci_l|1|1|+1.2c00afffd8d28X-004
+matnames|p|1x1|p|main_att
+mat|p|1|1|+0.0000000000000X-3ff
 matnames|boot_z0|1x1|r1|main_att
 mat|boot_z0|1|1|+1.aee8fa73a1335X-001
 matnames|boot_p_bc|1x1|r1|main_att

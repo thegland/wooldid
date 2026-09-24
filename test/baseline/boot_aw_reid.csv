@@ -249,6 +249,33 @@ mat|bias_boot|1|5|+1.9e048e4664e63X-004
 mat|bias_boot|1|6|-1.f01856fbecd50X-004
 mat|bias_boot|1|7|+1.ce2fd48d690cdX-004
 mat|bias_boot|1|8|-1.1d707a9b572b0X-004
+matnames|ci_u|1x8|ul|main_att main_att_it pretreatment_att pretreatment_att_it ES_att_pre1 ES_att_post0 ES_att_it_pre1 ES_att_it_post0
+mat|ci_u|1|1|+1.0ea5ed9f47c5eX+000
+mat|ci_u|1|2|+1.13dfb8ed22b52X+000
+mat|ci_u|1|3|+1.b11f02c6ecda0X-002
+mat|ci_u|1|4|+1.4cbf5b2aa6178X-002
+mat|ci_u|1|5|+1.b11f02c6ecda0X-002
+mat|ci_u|1|6|+1.a0421f4242f46X+000
+mat|ci_u|1|7|+1.4cbf5b2aa6178X-002
+mat|ci_u|1|8|+1.9a22502cb6420X+000
+matnames|ci_l|1x8|ll|main_att main_att_it pretreatment_att pretreatment_att_it ES_att_pre1 ES_att_post0 ES_att_it_pre1 ES_att_it_post0
+mat|ci_l|1|1|+1.28ca7cb2bf470X-002
+mat|ci_l|1|2|+1.d704417938f68X-002
+mat|ci_l|1|3|-1.aa9765d35bd90X-003
+mat|ci_l|1|4|-1.3d365c5812850X-003
+mat|ci_l|1|5|-1.aa9765d35bd90X-003
+mat|ci_l|1|6|+1.8960df258cb40X-001
+mat|ci_l|1|7|-1.3d365c5812850X-003
+mat|ci_l|1|8|+1.a930a33137cd8X-001
+matnames|p|1x8|p|main_att main_att_it pretreatment_att pretreatment_att_it ES_att_pre1 ES_att_post0 ES_att_it_pre1 ES_att_it_post0
+mat|p|1|1|+0.0000000000000X-3ff
+mat|p|1|2|+0.0000000000000X-3ff
+mat|p|1|3|+1.999999999999aX-001
+mat|p|1|4|+1.999999999999aX-002
+mat|p|1|5|+1.999999999999aX-001
+mat|p|1|6|+0.0000000000000X-3ff
+mat|p|1|7|+1.999999999999aX-002
+mat|p|1|8|+0.0000000000000X-3ff
 matnames|boot_z0|1x8|r1|main_att main_att_it pretreatment_att pretreatment_att_it ES_att_pre1 ES_att_post0 ES_att_it_pre1 ES_att_it_post0
 mat|boot_z0|1|1|+1.0c7e39582c5faX-001
 mat|boot_z0|1|2|+1.036d6c4a04b5aX-002

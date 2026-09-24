@@ -390,6 +390,45 @@ mat|bias_boot|1|9|+1.29c4ba883bc00X-00a
 mat|bias_boot|1|10|+1.eaef0a9979928X-007
 mat|bias_boot|1|11|-1.3ffc218f93900X-009
 mat|bias_boot|1|12|-1.033fac25ab278X-004
+matnames|ci_u|1x12|ul|main_att main_att_i pretreatment_att pretreatment_att_i ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_att_it_pre2 ES_att_it_pre1 ES_att_it_post0 ES_att_it_post1
+mat|ci_u|1|1|+1.0043898e99f78X+000
+mat|ci_u|1|2|+1.defff1231b314X-001
+mat|ci_u|1|3|+1.3798cf7e5ab80X-004
+mat|ci_u|1|4|+1.3798cf7e5ab80X-004
+mat|ci_u|1|5|+1.7a2086033d810X-003
+mat|ci_u|1|6|+1.4f9129fa31760X-003
+mat|ci_u|1|7|+1.28eecf8e40c68X+000
+mat|ci_u|1|8|+1.b500d4a9693b0X-001
+mat|ci_u|1|9|+1.7a2086033d810X-003
+mat|ci_u|1|10|+1.4f9129fa31760X-003
+mat|ci_u|1|11|+1.28eecf8e40c68X+000
+mat|ci_u|1|12|+1.b500d4a9693b0X-001
+matnames|ci_l|1x12|ll|main_att main_att_i pretreatment_att pretreatment_att_i ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_att_it_pre2 ES_att_it_pre1 ES_att_it_post0 ES_att_it_post1
+mat|ci_l|1|1|+1.59567af8f2a4cX-001
+mat|ci_l|1|2|+1.3215fc401bc50X-001
+mat|ci_l|1|3|-1.3bea021c3b640X-003
+mat|ci_l|1|4|-1.3bea021c3b640X-003
+mat|ci_l|1|5|-1.4c1ced454e780X-003
+mat|ci_l|1|6|-1.b677026ecd100X-003
+mat|ci_l|1|7|+1.521c809e448f8X-001
+mat|ci_l|1|8|+1.2437028e89e5cX-001
+mat|ci_l|1|9|-1.4c1ced454e780X-003
+mat|ci_l|1|10|-1.b677026ecd100X-003
+mat|ci_l|1|11|+1.521c809e448f8X-001
+mat|ci_l|1|12|+1.2437028e89e5cX-001
+matnames|p|1x12|p|main_att main_att_i pretreatment_att pretreatment_att_i ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_att_it_pre2 ES_att_it_pre1 ES_att_it_post0 ES_att_it_post1
+mat|p|1|1|+0.0000000000000X-3ff
+mat|p|1|2|+0.0000000000000X-3ff
+mat|p|1|3|+1.3333333333333X-001
+mat|p|1|4|+1.3333333333333X-001
+mat|p|1|5|+1.3333333333333X-001
+mat|p|1|6|+1.3333333333333X-001
+mat|p|1|7|+0.0000000000000X-3ff
+mat|p|1|8|+0.0000000000000X-3ff
+mat|p|1|9|+1.3333333333333X-001
+mat|p|1|10|+1.3333333333333X-001
+mat|p|1|11|+0.0000000000000X-3ff
+mat|p|1|12|+0.0000000000000X-3ff
 matnames|boot_z0|1x12|r1|main_att main_att_i pretreatment_att pretreatment_att_i ES_att_pre2 ES_att_pre1 ES_att_post0 ES_att_post1 ES_att_it_pre2 ES_att_it_pre1 ES_att_it_post0 ES_att_it_post1
 mat|boot_z0|1|1|+1.0c7e39582c5faX-001
 mat|boot_z0|1|2|+1.aee8fa73a1335X-001
