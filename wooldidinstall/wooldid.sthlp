@@ -239,7 +239,7 @@ cohort i is observed. If weights are not used, w is taken to have a value of 1 f
 {pstd}Under {it:contreat()} each requested estimand is also reported as the average marginal effect of the continuous treatment, labelled {it:ame}, {it:ame_it}, {it:ame_i} and {it:ame_itime}.
 Because {it:att_it}, {it:att_i} and {it:att_itime} weight cells or cohorts equally rather than observations, some options treat them differently. {it:unconditionalse} is
 refused for them unless {it:safety(off)} is specified, and {it:bootstrap(bayes)} is refused for them. {it:makecfxplots} produces its plots and the {it:e(cfx*)} matrices for {it:att} only unless
-{it:safety(off)} is specified. A {it:subgroups()} variable that splits a unit across subgroups over time is refused; under {it:safety(off)} such a unit enters each subgroup by its share of
+{it:safety(off)} or {it:contreatwithin} is specified. A {it:subgroups()} variable that splits a unit across subgroups over time is refused; under {it:safety(off)} such a unit enters each subgroup by its share of
 sample weight, so {it:att_i} and {it:att_itime} then no longer weight units equally.{p_end}
 
 {marker standarderrors}{...}
@@ -717,7 +717,7 @@ points for the rest of the sample. {p_end}
 
 {phang}{opt makec:fxplots}: Produce plots presenting the average marginal effect of {it:contreat} and the average treatment effect within each bin specified by either the lattice
 variable or, if specified, the variable in {it:cfxlattice()}; one of the two must be present. These plots are only sure to be valid for the ATT estimand type, but may be valid for others if lattice groupings
-do not crosscut cohorts (or, less stringently, cohort-periods, for ATT_it), so {it:wooldid} produces them for the {it:att} estimand only unless {it:safety(off)} is specified.
+do not crosscut cohorts (or, less stringently, cohort-periods, for ATT_it), so {it:wooldid} produces them for the {it:att} estimand only unless {it:safety(off)} or {it:contreatwithin} is specified.
 Requires {it:contreat()}; not compatible with {it:impvalues}. {p_end}
 
 {phang}{opt cfxlattice(varname)}: A variable containing the bins in which effects are to be calculated for the continuous treatment effects plots. If not specified,
