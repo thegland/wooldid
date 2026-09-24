@@ -2,7 +2,8 @@
 * shell properties(svyr) display routing. Run from test/: stata-mp -e do test_prefixharden.do
 * Gates: T1 plain run + replay unchanged; T2 coeftabresults-off cure (parent r503);
 * T3 naked bootstrap prefix end-to-end; T4 failure-marker semantics unchanged;
-* T5 svy remains a loud failure. Prints PREFIXHARDEN_ALL_PASS on column 1 iff all pass.
+* T5 svy remains a loud failure; T6 a bare wooldid after the bootstrap or jackknife prefix
+* prints the prefix's own table. Prints PREFIXHARDEN_ALL_PASS on column 1 iff all pass.
 clear all
 local REPO ..
 do "`REPO'/wooldidinstall/wooldid.ado"
@@ -104,6 +105,55 @@ if _rc == 0 {
   di as error "T5 FAIL: svy: wooldid ran rc 0 (must fail loudly)"
   local fails = `fails' + 1
 }
+
+* T6 (change audit round 2, S1 prefix-replay-analytic; the author's ruling 2026-09-23): after
+* Stata's bootstrap or jackknife prefix, e() is the prefix's post (e(prefix) set, e(V) the
+* prefix's covariance), and a bare wooldid hands the display to Stata's _prefix_display, as a
+* bare regress does: the prefix's own table, not wooldid's analytic tables with their analytic
+* standard errors. A plain run's replay keeps wooldid's tables. The logs hold only the bare
+* replay line, so neither needle can come from an echoed command
+clear
+set obs 24
+gen i = _n
+gen ttre = cond(i<=6, 4, cond(i<=12, 6, .))
+expand 6
+bysort i: gen t = _n
+set seed 11
+gen y = 2*(t>=ttre & ttre<.) + 0.1*i + 0.05*t + rnormal()
+tempfile panel24
+save `panel24'
+local t6 0
+foreach pfx in bootstrap jackknife {
+  use `panel24', clear
+  if "`pfx'" == "bootstrap" cap qui bootstrap _b, reps(8) seed(3) cluster(i) nowarn: wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1)
+  else cap qui jackknife _b, cluster(i): wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1)
+  local t6rc = _rc
+  local t6pfx `e(prefix)'
+  qui log using prefixharden_t6.txt, text replace name(ph6)
+  cap noi wooldid
+  local t6rc2 = _rc
+  qui log close ph6
+  local t6lg = fileread("prefixharden_t6.txt")
+  local t6want = cond("`pfx'" == "bootstrap", "Bootstrap results", "Jackknife results")
+  di "T6 `pfx': run rc=`t6rc' e(prefix)=[`t6pfx'] replay rc=`t6rc2' prefix table=" (strpos(`"`t6lg'"', "`t6want'") > 0) " wooldid banner=" (strpos(`"`t6lg'"', "Wooldid Estimation") > 0)
+  if `t6rc' != 0 | "`t6pfx'" != "`pfx'" | `t6rc2' != 0 | strpos(`"`t6lg'"', "`t6want'") == 0 | strpos(`"`t6lg'"', "Wooldid Estimation") > 0 {
+    di as error "T6 FAIL: a bare wooldid after the `pfx' prefix does not print the prefix's own table"
+    local ++t6
+  }
+}
+use `panel24', clear
+qui wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1)
+qui log using prefixharden_t6.txt, text replace name(ph6)
+cap noi wooldid
+local t6rc2 = _rc
+qui log close ph6
+local t6lg = fileread("prefixharden_t6.txt")
+if `t6rc2' != 0 | strpos(`"`t6lg'"', "Wooldid Estimation") == 0 | strpos(`"`t6lg'"', "Bootstrap results") > 0 | strpos(`"`t6lg'"', "Jackknife results") > 0 {
+  di as error "T6c FAIL: a plain run's replay no longer prints wooldid's own tables"
+  local ++t6
+}
+cap erase prefixharden_t6.txt
+local fails = `fails' + `t6'
 
 if `fails' == 0 {
   di as result "PREFIXHARDEN_ALL_PASS"

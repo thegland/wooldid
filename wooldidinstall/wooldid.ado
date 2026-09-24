@@ -20,7 +20,8 @@ prog def wooldid, eclass properties(svyr)
 version 16.0
   * replay: wooldid typed alone after a successful wooldid estimation redisplays the
   * stored results from e() (tables and diagnostics; plots are not redrawn, and no
-  * options are accepted on replay). gated on a strictly empty command line, so every
+  * options are accepted on replay; after Stata's bootstrap or jackknife prefix it prints the
+  * prefix's own table instead, below). gated on a strictly empty command line, so every
   * other invocation - including "wooldid, update" and an option typo like "wooldid,
   * att" - falls through to the worker
   if `"`0'"' == "" & "`e(cmd)'" == "wooldid" {
@@ -42,6 +43,17 @@ version 16.0
     if "${WOOLDID_LASTRC}" != "" {
       dis as error "Error: the last wooldid call failed; refit wooldid before replaying."
       exit 198
+    }
+    * after Stata's bootstrap or jackknife prefix (bootstrap _b: wooldid ...), e() is the
+    * prefix's post: e(cmd) stays wooldid, e(prefix) names the prefix, and e(V) is the prefix's
+    * covariance, while the hidden e(wdid_*) state still describes the observed run's analytic
+    * tables. Replaying those would print analytic standard errors under a header that does not
+    * say they are not the posted ones, so the replay is handed to Stata's own prefix display,
+    * exactly as regress does (regress.ado's Display) and as typing bootstrap or jackknife alone
+    * does
+    if "`e(prefix)'" != "" {
+      _prefix_display
+      exit
     }
     wooldid_display , part(1)
     wooldid_display , part(roth)
