@@ -1517,10 +1517,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * contreat() rewrites the working copy to off (wooldid_validate), and the relaxation that
   * needs is of the estimability screens, not of a variable count - while the preflight is
   * the difference between an early named error and a late r(907) mid-estimation.
-  * skipped inside a replication for the reason given at the onset-constancy block above:
-  * resampling cannot create more distinct cohorts than the data holds, so the implied
-  * variable count cannot exceed what rep 0 measured. every si8* local is consumed inside
-  * this block, so gating it leaves nothing undefined downstream.
+  * skipped inside a replication, per the rule at the head of this program: a replication is
+  * read for its coefficients alone. the count there is NOT bounded by rep 0's: under the
+  * bootstrap re-id leg `i' is rebuilt as group(__wdbns, `i'), so a replicate that draws the
+  * treated clusters more than once carries more treated (i,t) cells than the observed run.
+  * the skip is harmless all the same: a replicate past maxvar fails with r(907) instead of
+  * this named refusal, and is excluded as a failed replication either way, so the skip only
+  * changes which error ends it. every si8* local is consumed inside this block, so gating it
+  * leaves nothing undefined downstream.
   if "`safetyinput'" != "off" & "`wdrepmode'" != "1" {
     tempvar si8tag
     qui gegen byte `si8tag' = tag(`i') if `ifstatement'
