@@ -138,15 +138,16 @@ if _rc != 0 {
 }
 else {
   * NFADV-01/02: the adversarial p-value is esf-scoped; this pooled-reference pair
-  * still runs (the NFADV-07 contract) but returns the display line without a p
+  * still runs (the NFADV-07 contract), and since 2026-09-23 (author ruling: no line-only
+  * results) it returns neither a p-value nor the line
   cap confirm scalar e(adversarial_pval_att)
   if _rc == 0 {
     dis as error "T6c FAIL: adversarial p returned on the pooled-reference pair (esf-scoped since NFADV-01/02)"
     local ++fails
   }
   cap confirm matrix e(adversarial_line_att)
-  if _rc != 0 {
-    dis as error "T6c FAIL: adversarial line not returned on the pooled-reference pair"
+  if _rc == 0 {
+    dis as error "T6c FAIL: adversarial line returned without a p-value on the pooled-reference pair"
     local ++fails
   }
 }

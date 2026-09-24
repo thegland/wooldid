@@ -559,8 +559,8 @@ tests also require many observations per cohort-by-period cell. Refused with {it
 {phang}{opt adv:ersarial}: Tests the joint hypothesis that all estimated relative time period-specific effects fall on a single line through the reference period, where the slope of
 the line is chosen to fit the estimates as well as possible, a null that is adversarial toward finding pre-trend violations. The p-value comes from a minimum-distance test on the
 event-study coefficients and their covariance matrix. It requires
-{it:esfixedbaseperiod}: a pooled reference period has no single omitted period, so under the default the fitted line is reported without a p-value, under a caution. Under
-{it:timetrends} two periods are normalized to zero and the null reduces to every coefficient being zero. For display, {it:wooldid} also reports the line fit by the unweighted OLS
+{it:esfixedbaseperiod}: a pooled reference period has no single omitted period, so under the default the test fails, with a caution, and nothing is returned. Under
+{it:timetrends} two periods are normalized to zero and the null reduces to every coefficient being zero. Beside each p-value, {it:wooldid} also returns the line fit by the unweighted OLS
 regression of {it:coef_rt} on {it:time_rt}, where {it:coef_rt} is the estimated coefficient in relative time period {it:rt} and includes a value of 0 for the reference period.
 The test is cancelled, with a caution, when the requested window holds fewer than one pre-treatment and one post-treatment horizon (fewer than three coefficients in all under
 {it:timetrends}), when the estimation sample fails to realize those horizons, or when the event-study covariance is degenerate; under {it:subgroups()} it is skipped for any
@@ -1008,7 +1008,8 @@ is the value of the subgroup. {p_end}
 {synopt: Adversarial Line Tests:} P-values from the tests that all relative-time period treatment effect estimates and the reference period fall on the same line
 are found in the scalars {it:e(adversarial_pval_att)}, {it:e(adversarial_pval_ame)}, {it:e(adversarial_pval_att_s[SG])}, etc.; they are posted only under {it:esfixedbaseperiod}
 and only when the event-study covariance is not degenerate. The fitted line is returned in matrices named {it:e(adversarial_line_att)}, {it:e(adversarial_line_att_it)},
-{it:e(adversarial_line_ame)}, {it:e(adversarial_line_ame_it)} and their {it:_s{it:sgcase}} twins, with columns {it:slope} and {it:intercept_rt0}. {p_end}
+{it:e(adversarial_line_ame)}, {it:e(adversarial_line_ame_it)} and their {it:_s{it:sgcase}} twins, with columns {it:slope} and {it:intercept_rt0}; a test that fails returns
+neither the p-value nor the line. {p_end}
 
 {synopt: SG Effect Homogeneity Tests} For each estimate type (ATT, ATT_it, AME, etc.), the joint test that all subgroups have the same such post-treatment effect (namely, the
 same effect as the lowest numbered SG) may be found in the scalar {it:e(joint_att_allsgssame)} and analogously named scalars for other treatment effect types. For pre-treatment effects,
@@ -1171,7 +1172,7 @@ The {it:gteffects} option returns the cohort-by-relative-period effects underlyi
 {p 10 10}   {cmd:wooldid y i t ttre, coarsecohortcontrols(c.controlvar1 i.categoricalcontrolvar) timetrends }
 
 {phang}4) Event study with 3 pre-treatment and 3 post-treatment estimates using a pooled reference period and generating event study plots, as well as testing the hypothesis
-that all pre-treatment effects are 0 and fitting the adversarial line (whose p-value requires {it:esfixedbaseperiod}, so here the line is reported without one): {p_end}
+that all pre-treatment effects are 0 and requesting the adversarial test (which requires {it:esfixedbaseperiod}, so here it fails with a caution): {p_end}
 
 {p 10 10}   {cmd:wooldid y i t ttre, espre(3) espost(3)  makeplots jointtests adversarial}
 

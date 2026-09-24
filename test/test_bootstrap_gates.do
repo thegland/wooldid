@@ -1253,7 +1253,9 @@ if !`g37a' | `g37b' | !`g37c' | `g37d' {
 }
 
 * G38 (BS-30): adversarial under bootstrap() without boottstat has no bootstrap p-value;
-* the display must not print a bare "." line, and the bare replay discloses the absence
+* the display must not print a bare "." line, and the bare replay discloses the absence.
+* G38e (2026-09-23, author ruling: no line-only results, text approved): the fitted line is
+* not posted either, and the queued caution says the test failed
 use `panel', clear
 qui log using boot_gates_g38.txt, text replace name(bg)
 cap noi wooldid y unit t ttre, att cluster(unit) esfixedbaseperiod esprelength(2) espostlength(1) adversarial bootstrap(standard) reps(8) rseed(7)
@@ -1263,6 +1265,14 @@ chk 38 0 `g38rc'
 unwrap boot_gates_g38.txt
 local g38a = strpos(`"`lg'"', "single line: .") > 0
 local g38adv `e(boot_adv_absent)'
+cap confirm matrix e(adversarial_line_att)
+local g38l = _rc == 0
+local g38t = strpos(`"`lg'"', "Caution: the adversarial pre-trend test failed: under bootstrap() it needs boottstat.") > 0
+di "G38e line=`g38l' failed-caution=`g38t'"
+if `g38l' | !`g38t' {
+  di as error "G38e FAIL: under bootstrap() without boottstat the adversarial line must not be posted and the caution must say the test failed"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
 qui log using boot_gates_g38b.txt, text replace name(bg)
 cap noi wooldid
 local g38rc2 = _rc

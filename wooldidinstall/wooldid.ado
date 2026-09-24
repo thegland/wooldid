@@ -1140,9 +1140,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     local altmethod_adversarial
   }
 
-  * the adversarial p-value is esf-scoped (like pretrendpower); under the pooled reference the
-  * fitted line is still computed and returned, without inference
-  if "`adversarial'" != "" & "`esfixedbaseperiod'" == "" dis as text "Caution: the adversarial pre-trend p-value requires esfixedbaseperiod (the pooled reference has no single omitted period); the fitted line is reported without a p-value."
+  * the adversarial p-value is esf-scoped (like pretrendpower): the pooled reference has no
+  * single omitted period. Without a p-value the test has failed, and nothing is returned for
+  * it - no p-value and no fitted line (author ruling 2026-09-23: no line-only results)
+  if "`adversarial'" != "" & "`esfixedbaseperiod'" == "" dis as text "Caution: the adversarial pre-trend test failed: it needs esfixedbaseperiod."
 
   ****** after the above estimability checks and processing, does the SG variable have surviving members?
   * while we're at it, figure out how many levels the sg variable takes on during the treatment period - will be useful down the line
@@ -2572,10 +2573,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose"     {
             wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') fm(`wdfm')
             local advstatus `r(status)'
-            * a gap-cancelled altmethod fit calls off adversarial as a whole (overall section)
+            * a gap-cancelled altmethod fit calls off adversarial as a whole (overall section);
+            * the line is kept only beside its p-value ("ok"), never on its own
             if "`advstatus'" == "gapskip" local adversarial
-            else {
-              if "`advstatus'" == "ok" local adversarialP_`horizitem' = r(p)
+            else if "`advstatus'" == "ok" {
+              local adversarialP_`horizitem' = r(p)
               tempname adversarialB_`horizitem'
               matrix `adversarialB_`horizitem'' = r(line)
             }
@@ -3072,8 +3074,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') fm(`wdfm')
               local advstatus `r(status)'
               if "`advstatus'" == "gapskip" local adversarial
-              else {
-                if "`advstatus'" == "ok" local adversarialP_C`horizitem' = r(p)
+              else if "`advstatus'" == "ok" {
+                local adversarialP_C`horizitem' = r(p)
                 tempname adversarialB_C`horizitem'
                 matrix `adversarialB_C`horizitem'' = r(line)
               }
@@ -3380,8 +3382,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 else if  `finaladvtest' > 2  {
                   wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm')
                   local advstatus `r(status)'
-                  if "`advstatus'" != "gapskip" {
-                    if "`advstatus'" == "ok" local adversarialP_`horizitem'_s`sgcase' = r(p)
+                  if "`advstatus'" == "ok" {
+                    local adversarialP_`horizitem'_s`sgcase' = r(p)
                     tempname adversarialB_`horizitem'_s`sgcase'
                     matrix `adversarialB_`horizitem'_s`sgcase'' = r(line)
                   }
@@ -3845,8 +3847,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                   if  `finaladvtest' > 1  {
                     wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_Cs`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm')
                     local advstatus `r(status)'
-                    if "`advstatus'" != "gapskip" {
-                      if "`advstatus'" == "ok" local adversarialP_C`horizitem'_s`sgcase' = r(p)
+                    if "`advstatus'" == "ok" {
+                      local adversarialP_C`horizitem'_s`sgcase' = r(p)
                       tempname adversarialB_C`horizitem'_s`sgcase'
                       matrix `adversarialB_C`horizitem'_s`sgcase'' = r(line)
                     }
@@ -4879,17 +4881,19 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`joint_Choriz_i'" != "" ereturn scalar joint_Choriz_i = `joint_Choriz_i'
   }
 
+ local wdadvline = !("`bootstrap'" != "" & "`boottstat'" == "")
  if "`adversarial'" != "" {
    foreach scenario in _ _C {
      foreach type in att att_it {
-       * independent gates - the display line survives when inference is unavailable
-       * (pooled reference regime, degenerate covariance)
+       * the line is kept only beside its p-value (the call sites store it on "ok" alone).
+       * Under bootstrap() without boottstat wooldid_bootjnt blanks the p-value this run
+       * posts, so the line is not posted either and the test is reported as failed there
        cap confirm matrix `adversarialB`scenario'`type''
        if _rc == 0 {
          local typetext `type'
          if "`scenario'" == "_C" local typetext = subinstr("`typetext'","att","ame",.)
          if "`adversarialP`scenario'`type''" != "" ereturn scalar adversarial_pval_`typetext' = `adversarialP`scenario'`type''
-         ereturn matrix adversarial_line_`typetext' =   `adversarialB`scenario'`type''
+         if "`wdadvline'" == "1" ereturn matrix adversarial_line_`typetext' =   `adversarialB`scenario'`type''
        }
      }
    }
@@ -4910,13 +4914,13 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         if "`adversarial'" != "" {
           foreach scenario in _ _C {
             foreach type in att att_it {
-              * independent gates (see the overall twin above)
+              * line only beside a p the run keeps (see the overall twin above)
               cap confirm matrix `adversarialB`scenario'`type'_s`sgcase''
               if _rc == 0 {
                 local typetext `type'
                 if "`scenario'" == "_C" local typetext = subinstr("`typetext'","att","ame",.)
                 if "`adversarialP`scenario'`type'_s`sgcase''" != "" ereturn scalar adversarial_pval_`typetext'_s`sgcase' = `adversarialP`scenario'`type'_s`sgcase''
-                ereturn matrix adversarial_line_`typetext'_s`sgcase' =   `adversarialB`scenario'`type'_s`sgcase''
+                if "`wdadvline'" == "1" ereturn matrix adversarial_line_`typetext'_s`sgcase' =   `adversarialB`scenario'`type'_s`sgcase''
               }
             }
           }
@@ -7803,7 +7807,11 @@ version 16.0
     if `wdb_advblank' > 0 {
       ereturn local boot_adv_absent 1
       local ++wdbncaut
-      local wdbc`wdbncaut' the adversarial line-test p-value(s) were not computed: bootstrapping them means bootstrapping the test statistic, which needs boottstat. They are absent rather than shown as analytic tests, which would not be bootstrap quantities
+      * message detail trimmed from the user-facing text 2026-09-23 (author ruling), kept for
+      * reference: bootstrapping the p-value means bootstrapping the test statistic, and the
+      * analytic test would not be a bootstrap quantity, so it is absent rather than shown.
+      * The worker posts no line on these runs (wdadvline)
+      local wdbc`wdbncaut' the adversarial pre-trend test failed: under bootstrap() it needs boottstat
     }
     if `wdb_advmiss' > 0 {
       ereturn local boot_adv_absent 1
@@ -9370,8 +9378,8 @@ version 16.0
 
   * -------- adversarial line tests: wooldid_advW on the permutation-covariance metric
   * over the family's horizon columns; p under the sharp null of no effect at any
-  * horizon (esfixedbaseperiod only, the analytic test's own domain); the V-free display
-  * line is posted where the fast-mode observed run left none
+  * horizon (esfixedbaseperiod only, the analytic test's own domain); the V-free line is
+  * posted, under esfixedbaseperiod only, where the fast-mode observed run left none
   local wdpaw
   if "`adv'" != "" {
     local alt = ("`advalt'" != "")
@@ -9418,8 +9426,12 @@ version 16.0
           }
         }
         else if "`e(`ename')'" != "" ereturn scalar `ename' = .
+        * the V-free line is posted only where a p-value can be had (esfixedbaseperiod):
+        * under the pooled reference the test failed and nothing is returned (author ruling
+        * 2026-09-23; the worker printed the caution). With esfixedbaseperiod and no usable
+        * permutation p the line is still posted - that path was left for the author
         cap confirm matrix e(`lname')
-        if _rc != 0 {
+        if _rc != 0 & `esfflag' {
           tempname ln
           mata: wooldid_permadvline("`cmpb'", "`cols'", "`rels'", `advesrel', ("`advtt'" != ""), `esfflag', `alt', "`ln'")
           if `ln'[1, 1] < . {
@@ -14007,18 +14019,19 @@ end
 *      [slope, intercept_rt0];
 *  (2) computes a calibrated p-value on the event-study covariance, esfixedbaseperiod
 *      only (the pooled reference has no single omitted period; the worker prints one
-*      Caution per run and the line is returned without inference). Primary = a
+*      Caution per run and nothing is returned). Primary = a
 *      minimum-distance test of the composite null that all horizon effects lie on some
 *      line. Altmethod = the post coefficients tested against the pre-period-line forecasts
 *      using the full forecast covariance S = V_QQ + A V_PP A' - A V_PQ - V_QP A'; V_QQ
 *      alone would be anti-conservative. The statistics live in mata (wooldid_advx, end of
 *      file); F vs chi-squared reference follows the wooldid_ptp df_r convention.
-* Returns r(status): "ok" (line + p), "nop" (line only), "gapskip" (nothing - the gap
-* backstop: the altmethod fit sample has no real pre-period coefficient).
-* The rest of the return contract, which the call sites branch on: r(p) exists only on
-* "ok"; r(line) exists on "ok" and "nop" but not on "gapskip". "nop" means no p-value was
-* computable because esfixedbaseperiod was not in force (a pooled reference has no single
-* omitted period), and only the display line comes back. "gapskip" obliges the caller to
+* Returns r(status): "ok" (line + p), "nop" (nothing - the test failed), "gapskip"
+* (nothing - the gap backstop: the altmethod fit sample has no real pre-period coefficient).
+* The rest of the return contract, which the call sites branch on: r(p) and r(line) exist
+* only on "ok", so a line is never returned without its p-value (author ruling 2026-09-23).
+* "nop" means no p-value was computable: esfixedbaseperiod was not in force (a pooled
+* reference has no single omitted period; the worker prints that caution once per run) or
+* the covariance was degenerate (cautioned here). "gapskip" obliges the caller to
 * cancel adversarial - at the overall call site that clears the option for the whole run,
 * at the per-subgroup call sites it skips that subgroup only. The display line is fit over
 * all horizons by default and over the pre-period horizons only under
@@ -14099,12 +14112,12 @@ version 16.0
       * covers rank-0/degenerate covariance (e.g. timetrends), missing entries, a
       * residual outside the covariance's column space, and no testable residual
       * dimensions (e.g. only two real horizons under the primary composite null)
-      if "`sg'" == "" dis as text "Caution: adversarial: the composite-null covariance is degenerate; no p-value computed."
-      else dis as text "Caution: adversarial: the composite-null covariance is degenerate for subgroup `sg'; no p-value computed."
+      if "`sg'" == "" dis as text "Caution: the adversarial pre-trend test failed: its covariance is degenerate."
+      else dis as text "Caution: the adversarial pre-trend test failed for subgroup `sg': its covariance is degenerate."
     }
   }
   return local status `advstatus'
-  return matrix line = `advL'
+  if "`advstatus'" == "ok" return matrix line = `advL'
 end
 
 

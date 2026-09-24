@@ -160,7 +160,9 @@ else {
     }
     else dis as result "T2b: p reconstructed under the one-parameter null at reldif " %8.2e reldif(__t2bp, e(adversarial_pval_att)) " (q=1, p=" %10.6f e(adversarial_pval_att) ")"
   }
-  if strpos(fileread("advg_t2b.txt"), "the composite-null covariance is degenerate") != 0 {
+  * the degenerate-covariance caution's text since 2026-09-23 (the needle must track it, or
+  * this absence check goes vacuous)
+  if strpos(fileread("advg_t2b.txt"), "its covariance is degenerate") != 0 {
     dis as error "T2b FAIL: a degenerate-covariance Caution fired on a design whose null has one testable dimension"
     local ++fails
   }

@@ -1,8 +1,9 @@
 * Targeted suite for the NFADV-01/02/05 adversarial recalibration (wooldid_advstat):
 * hand-reconstruction of both p-values from e(b_es_att)/e(V_es_att) + the known
 * geometry, bitwise slope invariance vs the parent build, the intercept_rt0
-* re-expression, esf scoping (pooled Caution, no p, line retained), the degenerate
-* covariance Caution under timetrends, per-subgroup reconstruction, and a null Monte
+* re-expression, esf scoping (pooled Caution, no p and no line), the degenerate
+* covariance Caution under timetrends (overall and per subgroup, no line either), the
+* pooled regime under permute() (T8), per-subgroup reconstruction, and a null Monte
 * Carlo documenting the primary statistic's calibration (and the old frozen-line
 * statistic's miscalibration) on a heteroskedastic covariance.
 * Run from test/:  "<stata>" -e do test_advstat.do   -> expect ADVSTAT_ALL_PASS
@@ -239,7 +240,10 @@ else {
   }
 }
 
-* ---- T4: pooled reference regime -> Caution, no p, line retained ----
+* ---- T4: pooled reference regime -> Caution, no p, no line ----
+* RE-PINNED 2026-09-23 (change audit round 2, card #25 and siblings; author ruling, text
+* approved): the line used to be returned without a p-value, under a caution saying so. A
+* test with no p-value has failed: nothing is returned for it and the caution says so
 use "`DATA'/dta_binary", clear
 qui log using advstat_t4.txt, text replace name(advst)
 cap noi wooldid y i t ttre, att cluster(i) esprelength(3) espostlength(3) adversarial
@@ -255,19 +259,19 @@ else {
     local ++fails
   }
   cap confirm matrix e(adversarial_line_att)
-  if _rc != 0 {
-    dis as error "T4 FAIL: the display line must survive the pooled-regime scoping"
+  if _rc == 0 {
+    dis as error "T4 FAIL: a line was returned without a p-value under the pooled reference"
     local ++fails
   }
-  if strpos(fileread("advstat_t4.txt"), "Caution: the adversarial pre-trend p-value requires esfixedbaseperiod") == 0 {
+  if strpos(fileread("advstat_t4.txt"), "Caution: the adversarial pre-trend test failed: it needs esfixedbaseperiod.") == 0 {
     dis as error "T4 FAIL: no pooled-regime Caution in the console output"
     local ++fails
   }
 }
 
-* ---- T5: timetrends + esf -> degenerate-covariance Caution, no p, line retained ----
+* ---- T5: timetrends + esf -> degenerate-covariance Caution, no p, no line ----
 * (previously the frozen-line `test' silently dropped all constraints here and the
-* posted p was missing-valued)
+* posted p was missing-valued; until 2026-09-23 the line was still returned - see T4)
 use "`DATA'/dta_binary", clear
 qui log using advstat_t5.txt, text replace name(advst)
 cap noi wooldid y i t ttre, att cluster(i) timetrends esfixedbaseperiod esrelativeto(-1) esprelength(3) espostlength(3) adversarial
@@ -283,15 +287,55 @@ else {
     local ++fails
   }
   cap confirm matrix e(adversarial_line_att)
-  if _rc != 0 {
-    dis as error "T5 FAIL: the display line must survive the degenerate-covariance refusal"
+  if _rc == 0 {
+    dis as error "T5 FAIL: a line was returned without a p-value on a degenerate covariance"
     local ++fails
   }
-  if strpos(fileread("advstat_t5.txt"), "the composite-null covariance is degenerate") == 0 {
+  if strpos(fileread("advstat_t5.txt"), "Caution: the adversarial pre-trend test failed: its covariance is degenerate.") == 0 {
     dis as error "T5 FAIL: no degenerate-covariance Caution in the console output"
     local ++fails
   }
 }
+
+* ---- T5b (2026-09-23, as T4): the subgroup twin of T5. Every subgroup's covariance is
+* degenerate under timetrends at cluster(i), so each gets the subgroup caution and no
+* subgroup line or p-value is posted ----
+use "`DATA'/dta_binary", clear
+local t5bls = c(linesize)
+set linesize 255
+qui log using advstat_t5b.txt, text replace name(advst)
+cap noi wooldid y i t ttre, att cluster(i) timetrends subgroups(sg) esfixedbaseperiod esrelativeto(-1) esprelength(3) espostlength(3) adversarial
+local rc5b = _rc
+qui log close advst
+set linesize `t5bls'
+if `rc5b' != 0 {
+  dis as error "T5b FAIL: rc=" `rc5b'
+  local ++fails
+}
+else {
+  local t5bn 0
+  foreach sgv in `e(wdid_sglist)' {
+    local ++t5bn
+    cap confirm matrix e(adversarial_line_att_s`sgv')
+    if _rc == 0 {
+      dis as error "T5b FAIL: subgroup `sgv' line returned without a p-value on a degenerate covariance"
+      local ++fails
+    }
+    if "`e(adversarial_pval_att_s`sgv')'" != "" {
+      dis as error "T5b FAIL: subgroup `sgv' p-value posted on a degenerate covariance"
+      local ++fails
+    }
+    if strpos(fileread("advstat_t5b.txt"), "Caution: the adversarial pre-trend test failed for subgroup `sgv': its covariance is degenerate.") == 0 {
+      dis as error "T5b FAIL: no degenerate-covariance Caution for subgroup `sgv'"
+      local ++fails
+    }
+  }
+  if `t5bn' < 2 {
+    dis as error "T5b FAIL: fewer than two subgroups realized (`e(wdid_sglist)')"
+    local ++fails
+  }
+}
+cap erase advstat_t5b.txt
 
 * ---- T6: per-subgroup esf p-values finite and reconstructable the same way ----
 use "`DATA'/dta_binary", clear
@@ -381,6 +425,34 @@ if `mcold' >= 0.02 & `mcold' <= 0.09 {
   dis as error "T7 FAIL: old frozen-line rejection `mcold' inside the nominal band - no cure documented"
   local ++fails
 }
+
+* ---- T8 (2026-09-23, as T4): the pooled reference under permute(). The worker prints the
+* caution on the observed run; the permutation engine used to post its V-free line anyway
+* (e(adversarial_line_att) with no p). Now neither a p-value nor a line is posted ----
+use "`DATA'/dta_binary", clear
+local t8ls = c(linesize)
+set linesize 255
+qui log using advstat_t8.txt, text replace name(advst)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) adversarial permute(shuffle) permreps(20) rseed(3) dots(0)
+local rc8 = _rc
+qui log close advst
+set linesize `t8ls'
+if `rc8' != 0 {
+  dis as error "T8 FAIL: rc=" `rc8'
+  local ++fails
+}
+else {
+  cap confirm matrix e(adversarial_line_att)
+  local t8l = _rc == 0
+  local t8p = "`e(adversarial_pval_att)'" != "" & "`e(adversarial_pval_att)'" != "."
+  local t8c = strpos(fileread("advstat_t8.txt"), "Caution: the adversarial pre-trend test failed: it needs esfixedbaseperiod.") > 0
+  dis "T8: permute pooled line=`t8l' p=`t8p' caution=`t8c'"
+  if `t8l' | `t8p' | !`t8c' {
+    dis as error "T8 FAIL: under permute() the pooled reference must return no line and no p-value, with the failed-test caution"
+    local ++fails
+  }
+}
+cap erase advstat_t8.txt
 
 if `fails' == 0 dis "ADVSTAT_ALL_PASS"
 else dis as error "ADVSTAT_FAILS=`fails'"
