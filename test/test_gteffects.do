@@ -246,6 +246,30 @@ if _rc == 0 {
   local ++fails
 }
 
+* ---- G12 (change audit 2026-09-22, gt-containment-customvce-arm): the containment count and
+* its caution under a heteroskedasticity-robust customvce(). every treated cell of
+* dta_path_onepercell is one observation, so robust counts all of them; customvce(robust) is the
+* same meat and must count the same cells (it used to post no e(gt_ncontained) and print nothing) ----
+set linesize 255
+use "`DATA'/dta_path_onepercell", clear
+cap noi wooldid y i t ttre, att robust esprelength(1) espostlength(1) gteffects
+local rc12a = _rc
+local nc12a = e(gt_ncontained)
+local nr12a = cond(`rc12a' == 0, rowsof(e(gteffects)), .)
+use "`DATA'/dta_path_onepercell", clear
+qui log using gt_g12.txt, text replace name(gt12)
+cap noi wooldid y i t ttre, att customvce(robust) esprelength(1) espostlength(1) gteffects
+local rc12b = _rc
+qui log close gt12
+local nc12b = e(gt_ncontained)
+local cau12b = strpos(fileread("gt_g12.txt"), "e(gteffects) cell(s) lie wholly inside a single observation") > 0
+cap erase gt_g12.txt
+dis "G12: robust rc=`rc12a' ncontained=`nc12a' rows=`nr12a' | customvce(robust) rc=`rc12b' ncontained=`nc12b' caution=`cau12b'"
+if `rc12a' != 0 | `rc12b' != 0 | `nc12a' >= . | `nc12a' < 1 | `nc12b' != `nc12a' | `cau12b' != 1 {
+  dis as error "G12 FAIL: customvce(robust) must count the one-observation cells as robust does"
+  local ++fails
+}
+
 if `fails' == 0 dis "GTEFFECTS_ALL_PASS"
 else dis as error "GTEFFECTS_FAILS=`fails'"
 exit, clear

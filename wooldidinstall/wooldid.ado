@@ -2128,7 +2128,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         cap drop `gtccl'
         cap drop `gtcct'
       }
-      else if "`robust'" != "" | "`weight'" == "pweight" {
+      * a customvce() whose first word is robust (or an abbreviation of it), hc2 or hc3 is the
+      * same heteroskedasticity-robust meat as robust and shares its blind spot: a one-row cell
+      else if "`robust'" != "" | "`weight'" == "pweight" | inlist("`gtccvw'", "hc2", "hc3") | ("`gtccvw'" != "" & strpos("robust", "`gtccvw'") == 1) {
         local gtcmode observation
         local gtcvce heteroskedasticity-robust
         tempvar gtcct2
