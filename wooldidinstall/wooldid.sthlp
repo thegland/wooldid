@@ -64,7 +64,7 @@ Weights may be aweights or pweights; frequency weights (fw) are not accepted. {p
 
 {synoptset 22 tabbed}{...}
 {synopt : {it:y}}Outcome variable. {p_end}
-{synopt : {it:i}}Cohort identifier; must consist of integers greater than 0, and at most 2,147,483,647 on treated units. Cohorts can be fine (i = individual units) or coarse (i = collections of individual units), but should be no coarser
+{synopt : {it:i}}Cohort identifier; must consist of integers greater than 0, and at most 2,147,483,647 on units with a treatment onset. Cohorts can be fine (i = individual units) or coarse (i = collections of individual units), but should be no coarser
 than to consist of treatment onset cohorts. Coarser cohort definitions tend to enable much faster estimation, so do not default {it:i} to the finest level: coarsen it and specify unit-level
 fixed effects in {opt fe()}, which a coarse {it:i} also needs when the panel is unbalanced within cohorts. {p_end}
 {synopt : {it:t}}Time period identifier; must be numeric and on the same grid as {it:ttre}. Zero, negative and non-consecutive values are fine on the default path. With {opt uncond:itionalse},
@@ -239,7 +239,7 @@ cohort i is observed. If weights are not used, w is taken to have a value of 1 f
 {pstd}Under {it:contreat()} each requested estimand is also reported as the average marginal effect of the continuous treatment, labelled {it:ame}, {it:ame_it}, {it:ame_i} and {it:ame_itime}.
 Because {it:att_it}, {it:att_i} and {it:att_itime} weight cells or cohorts equally rather than observations, some options treat them differently. {it:unconditionalse} is
 refused for them unless {it:safety(off)} is specified, and {it:bootstrap(bayes)} is refused for them. {it:makecfxplots} produces its plots and the {it:e(cfx*)} matrices for {it:att} only unless
-{it:safety(off)} or {it:contreatwithin} is specified. A {it:subgroups()} variable that splits a unit across subgroups over time is refused; under {it:safety(off)} such a unit enters each subgroup by its share of
+{it:safety(off)} or {it:contreatwithin} is specified. A {it:subgroups()} variable that splits a unit across subgroups over time is refused; except under {it:permute()}, {it:safety(off)} lets such a unit enter each subgroup by its share of
 sample weight, so {it:att_i} and {it:att_itime} then no longer weight units equally.{p_end}
 
 {marker standarderrors}{...}
@@ -362,7 +362,7 @@ of the variance and is refused. Plots, {it:gteffects} cells, {it:jointtests}
 and {it:pretrendpower()} all follow the bootstrap. Only the {it:histogramcohorteffects} output is untouched: it draws the observed point estimates, which the bootstrap does not change. Under
 {it:cfxplotnose} the continuous treatment cells still get bootstrap inference; {it:boottstat}, which needs their standard errors, drops {it:cfxplotnose} with a caution. {it:wooldid} cautions when fewer than 6
 clusters are treated. Neither mode is a remedy for few treated clusters and no wild cluster bootstrap is offered; use {it:permute()} there, or
-{help boottest} on the underlying regression outside {it:wooldid}. When {it:cluster()} does not nest {it:i} and some unit spans two clusters, a caution says the
+{help boottest} on the underlying regression outside {it:wooldid}. When {it:cluster()} does not nest {it:i}, some unit spans two clusters and a cell-weighted estimand is requested, a caution says the
 standard errors of the cell-weighted estimands may be understated; the remedies are a finer {it:i} or a {it:cluster()} that nests {it:i}. Where {it:cluster()} nests {it:i} and the run carries {it:att_it}, {it:att_i}, {it:att_itime} or {it:boottstat}, each replication gives the drawn copies of a cluster fresh unit codes, and
 {it:i} is replaced by that code wherever its name appears in {it:fe()}, {it:controls()}, {it:interactivecontrols()}, {it:coarsecohortcontrols()} or {it:ccc_absorb()};
 a variable that encodes {it:i} under another name, or was merged in on {it:i}, is not found and keeps its original codes across the copies. {p_end}
@@ -370,8 +370,8 @@ a variable that encodes {it:i} under another name, or was merged in on {it:i}, i
 {phang}{opt reps(#)}: Number of bootstrap replications. Required with {it:bootstrap()} and refused without it. No minimum is imposed, so a small value can be used to
 time a specification. Replications that fail to estimate are excluded and counted in {it:e(boot_failed)}. Above 10,000 completed replications the draw matrices
 are not posted and a caution says so; {it:bootsave()} writes them regardless. The smallest p-value a run can print is set by the number
-of completed replications {it:n}: 2/{it:n} for the percentile and bias-corrected coefficient p-values, which can print exactly 0, 2/({it:n}+1) under
-{it:boottstat}, and 1/({it:n}+1) for the joint tests, and a caution names the limit whenever it exceeds .05. {p_end}
+of completed replications {it:n}: 2/{it:n} for the percentile coefficient p-values, which can print exactly 0, 2/({it:n}+1) under
+{it:boottstat}, and 1/({it:n}+1) for the joint tests, and a caution names the limit whenever it exceeds .05. The {it:bc} and {it:bca} p-values invert their intervals and have no such limit: they can fall below 2/{it:n}, and can print exactly 0. {p_end}
 
 {phang}{opt bootalp:ha(spec)}: The Dirichlet convention for {it:bootstrap(bayes)}; refused with {it:bootstrap(standard)}. {it:bootalpha(equal)}, the default, draws
 Dirichlet(1,...,1) across clusters and applies each cluster's draw as a multiplier on its observations, so a cluster's total mass stays proportional to its size.
@@ -513,7 +513,7 @@ generated have a suffix appended to the name specifying the exact graph/dataset
 generated. {it:name} must be a Stata name, so it takes no directory part and at most 32 characters; it begins the name of every graph and dataset
 file written, and everything is saved to Stata's working directory. {p_end}
 
-{phang}{opt replace}: Overwrite any existing files with the names specified in {it:saveplots()}, {it:permsave()}, or {it:bootsave()}. Without it, an existing file is an error;
+{phang}{opt replace}: Overwrite any existing files with the names specified in {it:saveplots()}, {it:permsave()}, or {it:bootsave()}. Without it, an existing file is an error, except {it:name}_cfx.dta on a run without {it:bootstrap()} or {it:permute()}, which gets a caution;
 under {it:permute()} and {it:bootstrap()} it is raised before the replications run. {p_end}
 
 {phang}{opt sum:marystats}: Compute and present summary statistics of the outcome variable y and, if present, of the continuous treatment variable contreat.
@@ -528,11 +528,11 @@ are presented in terms of differences in linear predictions (the poisson {it:pre
 log(y) as an outcome but y contains natural 0s, or when treatment and control groups are only on parallel trends in proportions.
 Poisson accepts pweights but not aweights, refuses a negative outcome, and may not be combined with {it:boottstat}. {it:ppmlhdfe} cannot absorb a slope on a
 one-level factor or a factor with two or more slopes. Under plain {it:contreatcontrols(basic)}, with no {it:lattice()} and no byTreated, byTtre, byCohort or byTime
-control, the pooled dose control and any {it:ccc_absorb()} controls therefore enter the regression explicitly, as the retry below enters them; so do the continuous
+control, the pooled dose control and, without {it:ccnoabsorb}, any {it:ccc_absorb()} controls therefore enter the regression explicitly, as the retry below enters them; so do the continuous
 treatment controls under {it:contreatpoly()} above 1 with {it:lattice()} or one of those controls, as under {it:ccnoabsorb}. Elsewhere {it:ccc_absorb()} stays absorbed,
 one variable per term when it has two or more. If {it:ppmlhdfe} still fails with r(3200), as a one-level term in {it:fe()} or a one-level {it:lattice()} can make it, {it:wooldid}
-retries once with the {it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. {it:ppmlhdfe} can drop an explicit pooled dose control
-as collinear with the fixed effects when the dose's mean is large relative to its spread; {it:wooldid} then prints a caution, and subtracting the mean from the dose avoids it.
+retries once with the {it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. {it:fe()} stays absorbed, so a term there that made the first fit fail stops the run with r(3200). {it:ppmlhdfe} can drop an explicit pooled dose control
+as collinear with the fixed effects when the dose's mean is large relative to its spread; {it:wooldid} then prints a caution, and subtracting the mean from the dose avoids it. Under {it:contreatelasticitytype(dyex)} subtracting the mean also changes the elasticity, which scales by the dose itself.
 A treated cohort-period cell whose outcome is zero on every row is perfect separation rather than
 multicollinearity; {it:wooldid} names the cell and exits. Coarsen {it:i}, drop the cohort, or specify {it:safety(off)}, which excludes the separated cells from the estimated effects. The
 variable name {it:_ppmlhdfe_d} is reserved on poisson runs. {p_end}
@@ -569,7 +569,7 @@ event-study coefficients and their covariance matrix. It requires
 {it:timetrends} two periods are normalized to zero and the null reduces to every coefficient being zero. Beside each p-value, {it:wooldid} also returns the line fit by the unweighted OLS
 regression of {it:coef_rt} on {it:time_rt}, where {it:coef_rt} is the estimated coefficient in relative time period {it:rt} and includes a value of 0 for the reference period.
 The test is cancelled, with a caution, when the requested window holds fewer than one pre-treatment and one post-treatment horizon (fewer than three coefficients in all under
-{it:timetrends}), when the estimation sample fails to realize those horizons, or when the event-study covariance is degenerate; under {it:subgroups()} it is skipped for any
+{it:timetrends}), when the estimation sample fails to realize those horizons, or when the event-study covariance is degenerate; under {it:subgroups()} the {it:att} and {it:att_it} tests are skipped for any
 subgroup that lost a relative period as inestimable. Like {it:jointtests}, the test is sensitive to clustering: it is severely oversized unless each treated cohort-by-period cell
 is spanned by many clusters, and clustering on {it:i} itself places every cell inside a single cluster. Where that condition is not met, use {it:permute()} or {it:bootstrap()}
 with {it:boottstat}, under which the adversarial p-value is a permutation or bootstrap quantity (without {it:boottstat} it is absent under {it:bootstrap()}). Refused with
@@ -637,7 +637,7 @@ For the {it:att_i} and {it:att_itime} concepts, {it:att_it} type results will be
 {phang}{opt sub:groups()}: Specifies the subgroup (SG) variable, whose levels specify subgroups for which {it:wooldid} will compute subgroup specific estimates.
 The SG variable must consist of non-negative integer values (or missing values) on the observations of treated units, and its levels must specify collections of cohorts i. For estimates to be valid, a given cohort i cannot
 be split across multiple subgroups. Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations. A unit must be missing on all of
-its rows to be left out: a treated unit labelled on some rows and missing on others is refused, and with {it:safety(off)} enters its subgroup weighted by the labelled share of its sample
+its rows to be left out: a treated unit labelled on some rows and missing on others is refused, and with {it:safety(off)}, except under {it:permute()}, enters its subgroup weighted by the labelled share of its sample
 weight, under a caution. Because subgroup values are
 embedded in the names of stored results and plots, values 8 or more digits long can exceed Stata's limits on names; recode ID-style codes to small integers first (for example
 {it:egen newsg = group(oldsg)}). With {it:esprelength()} greater than 0 and {it:espostlength()} 0, {it:wooldid} raises {it:espostlength()} to 1 under a caution, since subgroup
@@ -657,7 +657,7 @@ for subgroup-specific estimates can fail when using clustered standard errors in
 the level of the cohort variable {it:i} or above, the analytic standard error of a pairwise contrast can be degenerate (its standard error is rounding residue rather than an estimated
 variance); {it:wooldid} then reports that contrast, and the across-subgroup equality test covering it,
 without inference, under a caution naming the count. With {it:safety(off)} they are reported as computed. Under {it:permute()} the contrasts are
-permuted as coefficient differences and stand; the caution then names the rows whose {it:se_analytic} is residue. Under {it:boottstat} each contrast is studentized by
+permuted as coefficient differences and stand; the caution then counts the rows whose {it:se_analytic} is residue. Under {it:boottstat} each contrast is studentized by
 that standard error, and a caution says so when it is residue. The remedies are {it:permute()}, {it:bootstrap()} without
 {it:boottstat}, or a {it:cluster()} strictly finer than the cohort-by-period cells. {p_end}
 
@@ -683,7 +683,7 @@ results as missing, and continues with the att results; under {it:contreatcontro
 
 {phang}{opt contreatelas:ticitytype(dydx|dyex)}: Specifies which type of marginal effect of the continuous treatment to compute. {it:dydx} is the default and reports the
 average marginal effect itself (change in y per unit change in the continuous treatment). {it:dyex} reports the change in y per proportional change in the continuous treatment.
-Under {it:poisson} results are on the linear index, where {it:dydx} already gives the semi-elasticity of E[y] and {it:dyex} the elasticity. Only {it:dydx} and {it:dyex} are accepted; the
+Under {it:poisson} results are on the linear index, where {it:dydx} already gives the semi-elasticity of E[y] and {it:dyex} the elasticity, and the tables and plots are titled that way. Only {it:dydx} and {it:dyex} are accepted; the
 older {it:eyex} and {it:eydx} forms have been removed. {p_end}
 
 {phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option relaxes the estimability
@@ -764,7 +764,7 @@ of treated cohort-periods. If this option is specified when the always 0 conditi
 {pstd} Each control type requires variation in {it:contreat} across the reference-period observations of every group for which it fits a baseline dose slope: the whole
 sample under {it:basic}, each treatment-status group under {it:byTreated}, each onset group under {it:byTtre}, each cohort under {it:byCohort} and each calendar period under
 {it:byTime}. If any group lacks it the run stops; under {it:byTime} this happens whenever never-treated units carry a zero or constant dose in the periods after the
-last onset. {p_end}
+last onset. A group whose variation is not absent but is below 1/1000 of the sample standard deviation of {it:contreat} draws a caution instead: its baseline dose slope is nearly unidentified, and the estimates can be wrong rather than noisy. {p_end}
 
 {pstd} {ul:On Specifying contreatcontrols() and lattice:} As discussed {help wooldid##description:here}, the regression equation {it:wooldid} adopts when estimating
 the effects of a continuous treatment variable is:
@@ -883,7 +883,7 @@ You may wish to set this higher or lower; higher may be advisable in settings wh
 to occur when using continuous treatment variables. It has no effect under {it:unconditionalse} or {it:customvce()}, which estimate through {it:regress} or {it:poisson}. {p_end}
 
 {phang}{opt ccno:absorb}: Forces continuous treatment controls to be included in the main regression statement, rather than in the {it:absorb()} option, which is the default
-whenever using the commands {it:reghdfe} or {it:ppmlhdfe} to estimate the underlying regression. Under certain conditions, this can improve estimation stability and avoid problems
+whenever using the commands {it:reghdfe} or {it:ppmlhdfe} to estimate the underlying regression, except on the {it:poisson} paths that already enter them explicitly (see {it:poisson}). Under certain conditions, this can improve estimation stability and avoid problems
 with variables being inappropriately dropped from the regression. {p_end}
 
 {phang}{opt ccc_absorb()}: An alternate version of coarsecohortcontrols() that admits only continuous variables and passes the controls to the {it:absorb()} statement when using
@@ -892,7 +892,7 @@ efficiency in the main regression or under certain other circumstances. Be extra
 of identification failure are detected. In particular, with an event-study window, variables that are constant within cohort-by-period cells (a unit-level variable with a
 unit-level {it:i}, for example) absorb the treatment interactions themselves and the run stops with an error. Under {it:contreat()}, naming the treatment
 variable itself here turns the default cell collapse off (see {it:nofastcollapse}). With {it:poisson} on the {it:ppmlhdfe} path the controls stay absorbed, except under plain
-{it:contreatcontrols(basic)} and in the r(3200) retry, where they enter the regression explicitly (see {it:poisson}). {p_end}
+{it:contreatcontrols(basic)} without {it:ccnoabsorb} and in the r(3200) retry, where they enter the regression explicitly (see {it:poisson}). {p_end}
 
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses and prints progress reports throughout the estimation process; the regression itself is run quietly.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}, though only for
@@ -904,7 +904,7 @@ aggregates, one row per estimated {it:i}-by-relative-period cell, read directly 
 estimation weight under each requested estimand ({it:w_att}, {it:w_att_it}, {it:w_att_i}, {it:w_att_itime}). The weighted mean of {it:estimate} under one of these weight columns,
 taken over the post-treatment rows ({it:relyr} at or above 0), the pre-treatment rows, or a single {it:relyr}, reproduces the corresponding aggregate exactly, so the table supports
 custom aggregations. With {it:subgroups()} a single full-sample table is returned. Standard errors are the regression's coefficient-level
-ones: with {it:cluster()} at the level of {it:i} or coarser a treated cell lies inside a single cluster and its standard error is understated, which a caution reports; a cell whose
+ones: with {it:cluster()} at the level of {it:i} or coarser a treated cell lies inside a single cluster, and under {it:robust}, pweights or a robust {it:customvce()} a cell may hold a single observation; either way its standard error is understated, which a caution reports; a cell whose
 variance is not identified is reported with a missing standard error. Not available with {it:contreat()}, where the cohort-by-period coefficients are dose-zero intercepts rather than
 treatment effects; available under {it:fastnose}; under {it:bootstrap()} the cell inference is bootstrap-based, and under {it:permute()} the cells carry no inference. {p_end}
 
@@ -989,7 +989,7 @@ exist. {p_end}
 {synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument. Not posted under {it:impvalues}.{p_end}
 
 {synopt:{it:e(gteffects)}} The cohort-by-relative-period table produced by the {it:gteffects} option; see that option for the column layout. {it:e(gt_ncontained)} counts the cells
-lying wholly inside a single cluster, whose standard errors are understated, and is posted only when such cells exist; on the same rule {it:e(gt_ndegen)} counts cells whose variance is not
+lying wholly inside a single cluster (a single observation under {it:robust}, pweights or a {it:customvce()} of robust, hc2 or hc3), whose standard errors are understated, and is posted only when such cells exist; on the same rule {it:e(gt_ndegen)} counts cells whose variance is not
 identified.{p_end}
 
 {synopt:{it:e(escomp)}} Event-study composition diagnostics, one row per reported horizon, aligned with the event-study rows of {it:e(wdidmainresults)}: {it:ncohorts},
@@ -1049,7 +1049,7 @@ effects of the continuous treatment). Meanwhile, [type] is either cfxpost (estim
 relative time period Z, where the letter n represents a negative sign). Under {it:makecfxplotsbysg} each matrix carries the further suffix {it:_sg[sgcase]}. {it:e(wdid_cfxmats)}
 lists every cfx matrix a run posted. When the plot standard errors are estimated, a bin whose dose-slope terms were all dropped for collinearity has missing entries.
 If {it:saveplots()} cannot write {it:name}_cfx.dta on a run without {it:bootstrap()} or {it:permute()}, the run completes with a caution and the return code is posted in
-{it:e(wdid_cfxsave_rc)}. {p_end}
+the hidden {it:e(wdid_cfxsave_rc)}. {p_end}
 
 {synopt:{it:e(sample)}} A function characterizing the estimation sample used; useful for identifying which observations are dropped by {it:wooldid} during its sample formation and sanitation
 procedures.{p_end}
