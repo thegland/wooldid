@@ -327,3 +327,42 @@ message prints (#1, #34, #46, #100, #192, #236, #277, #415); two new cards carry
 dropped-slope caution, #418 the ccref band caution). The page itself was republished (Version 7): its
 embedded card list had stopped at #408, so #409-#416 had never shown on it, and it now also adds any card
 the shared record holds that the embedded list lacks.
+
+**Docs audit 2026-09-24 (7068bcd; guide chapter 14 regenerated 295d18a).** A five-area audit (engines; shell and
+replay; worker screens; poisson with contreat(); display, plots and adversarial) checked the help and the guide
+against every behaviour change since the round-1 docs pass, one auditor and one verifier per area, with a Stata
+probe or a code read behind each claim. 56 anchored edits were applied; seven duplicate proposals from overlapping
+areas were dropped for their twins. No message text changed, so the review page needs no further sync. The
+register check holds (no dashes added, file-wide densities unchanged) and every added SMCL line balances its
+braces. Two behaviours the audit surfaced are documented rather than changed: the r(3200) retry leaves fe()
+absorbed, so a one-level fe() term still stops the run; and a one-level lattice() at contreatpoly(1) still prints
+the collinearity caution (the note on card m034 had said wooldid's own terms no longer trigger it; corrected on
+the page). The certification run launched on 7068bcd was cut short by a system shutdown on 2026-09-24 at 16:22 and
+re-run on 2026-09-24 evening as a full run: cert 45/45, newfeat 13/13, battery IDENTICAL against the cfd0e8d
+baselines, coverage OK. Old-versus-new finished 108 of 112 shards; the four new-side shards that timed out did so under
+machine load (load average 17 on 10 cores while a docs-check workflow and a second Claude session ran beside the suite's
+six instances), and one of them runs no continuous-treatment call at all, so the only ado change since the last clean
+run (efc0671) cannot have caused it. Re-run in isolation as two ONLY= subsets (covars, perm and real: 37 configs; boot:
+22 configs, with boot_slow_00 finishing in 530 s against its 3600 s limit): unexplained=0 and stale_ledger=0 over all
+567 configs, and degeneracy OK once every dump existed. The docs fixes fd3f3d4 and the comment-only c619373 landed after
+the run; the ado they leave differs from the verified one only in comment lines.
+
+**Post-apply check of the docs audit (2026-09-24 evening).** Five independent checkers (one per slice of the
+commit's 34 diff hunks) read every applied sentence against the ado at HEAD and grepped both documents for
+contradictions; three hunks were flagged and a separate refuter confirmed each. All three are documentation
+fixes, committed as fd3f3d4: the guide's paragraph on the cell-weighted estimands lacked the permute()
+exception the help now carries (the split-unit refusal is unliftable under permute(); wooldid_permctl); the
+help and the guide said a group with dose variation "not absent but below 1/1000" of the sample sd draws the
+ccref band caution, when a group at or below 1/100000 of it is refused with r(459) (ccrtol(1e-5) at the ccref
+call, the same cut hard-coded in bycoh), so both now name the refusal cut; and the guide's ccnoabsorb entry had
+lost the engine qualifier the help keeps (absorbing the controls is the default only under reghdfe and
+ppmlhdfe, and the poisson paths enter the whole set explicitly, never part of it). The other 31 hunks stand.
+Two things the checkers surfaced in the program, not built: (1) wooldid_bootctl's resolution caution at
+reps() below 40 puts bootdisplay(bc) and bootdisplay(bca) on the 2/reps grid ("the coefficient p-values fall
+on a grid of ..."), though 27e277d and 6adca1b took the bc and bca p-values off that grid; the footer and
+wooldid_pfloor were updated and this parse-time caution was not; a ruling is needed on whether it should be
+skipped under bc and bca (no new text) or replaced by a bc/bca-specific sentence (his text). (2) A stale code
+comment above the worker's within-cell subgroup screen still says safety(off) lifts that screen under
+permute(); the code (402b324) and both documents say it is unliftable there; comment-only, fixed as
+c619373.
+
