@@ -51,7 +51,7 @@ def match_option(token, opts):
     # TWO PROPERTIES THAT CAN OVERSTATE COVERAGE, neither of them fatal at runtime.
     # (1) This returns the FIRST full name the token satisfies, in syntax-line order, where
     #     Stata would reject an ambiguous abbreviation outright. Measured on the current
-    #     syntax line: 79 options and no token that legally abbreviates two of them, so
+    #     syntax line: 76 options and no token that legally abbreviates two of them, so
     #     first-wins is correct today by luck of naming rather than by construction. Add an
     #     option that is a prefix-relative of an existing one - the boot*/perm* families
     #     already share stems - and every matching config's credit silently transfers to
