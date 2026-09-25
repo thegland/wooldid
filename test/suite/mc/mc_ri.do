@@ -136,8 +136,8 @@ forval rep = 1/`NREPS' {
     local nfail = e(perm_failed)
     local ncomp = e(perm_completed)
     local npos = e(perm_npossible)
-    * CS-57: e(perm_bandlo/bandhi_att) are the canonical names of the level() null band;
-    * e(perm_lb/ub_att) are their deprecated twins (identical values, kernel rows 11/12)
+    * CS-57: e(perm_bandlo/bandhi_att) are the names of the level() null band (kernel rows
+    * 11/12); the deprecated twins e(perm_lb/ub_att) were removed on 2026-09-25
     local lb = e(perm_bandlo_att)
     local ub = e(perm_bandhi_att)
     cap local tlb = e(perm_tlb_att)

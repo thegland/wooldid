@@ -136,19 +136,32 @@ if _jo:
 
 # ------------------------------------------------------------------ package verification
 print("\n## 1. Package verification of the alternative p-value conventions\n")
-print("Every VERIFY-th D1 rep was re-run through the package with permabsp / permrawp /")
+print("Every VERIFY-th D1 rep was re-run through the package with permabsp and")
 print("permside(left) on the SAME rseed (identical draws). The package p is compared with")
-print("the value the driver computed from e(permdist_b) + e(perm_comparator_b).\n")
+print("the value the driver computed from e(permdist_b) + e(perm_comparator_b). The plain")
+print("share c/n (ritest's number; permrawp was deleted on 2026-09-25) is checked through")
+print("the permabsp arm, recovered as ((n+1)*p - 1)/n with n that arm's usable draws.\n")
 mainbykey = {(r["shard"], r["rep"]): r for r in D1}
+
+
+def _rawp_from_absp(r):
+    p, n = num(r, "p_main"), num(r, "ndraw")
+    if p is None or not n:
+        return None
+    return ((n + 1) * p - 1) / n
+
+
 hdr(["arm", "n verified", "exact matches", "max abs diff"])
-for arm, comp in (("absp", "cpabs"), ("rawp", "cpraw"), ("left", "cpleft")):
-    vr = [r for r in by[("D1", arm)] if r["rc"] == "0"]
+for arm, comp, src in (("absp", "cpabs", "absp"), ("plain share via absp", "cpraw", "absp"),
+                       ("left", "cpleft", "left")):
+    vr = [r for r in by[("D1", src)] if r["rc"] == "0"]
     nmatch, mx, nn = 0, 0.0, 0
     for r in vr:
         m = mainbykey.get((r["shard"], r["rep"]))
         if not m:
             continue
-        a, b = num(r, "p_main"), num(m, comp)
+        a = _rawp_from_absp(r) if comp == "cpraw" else num(r, "p_main")
+        b = num(m, comp)
         if a is None or b is None:
             continue
         nn += 1
@@ -166,7 +179,7 @@ print(f"Nominal size is attained EXACTLY on the {NDRAW}-replication grid: with t
 print(f"statistic ranked R uniform on 1..{NDRAW+1}, the equal-tailed p is 2*min(R,{NDRAW+2}-R)/{NDRAW+1}, so")
 print(f"P(p<=.05)={sum(1 for p in _peq if p <= .05 + EPS)}/{NDRAW+1}={sum(1 for p in _peq if p <= .05 + EPS)/(NDRAW+1):.4f} "
       f"and P(p<=.10)={sum(1 for p in _peq if p <= .10 + EPS)}/{NDRAW+1}={sum(1 for p in _peq if p <= .10 + EPS)/(NDRAW+1):.4f}; the same holds for permabsp,")
-print("permrawp and permside(). Any departure below is a real calibration finding.\n")
+print("the plain share c/n and permside(). Any departure below is a real calibration finding.\n")
 ELEMS = [("main_att", "p_main"), ("pretreatment_att", "p_pre"), ("ES_att_pre2", "p_pre2"),
          ("ES_att_pre1", "p_pre1"), ("ES_att_post0", "p_post0"), ("ES_att_post1", "p_post1")]
 for alpha in (0.05, 0.10):
@@ -190,7 +203,7 @@ print("\n### alternative conventions, main_att (computed on every D1 rep)\n")
 hdr(["convention", "size", "MC se", "n", "dev (MC se)", ""])
 for alpha in (0.05, 0.10):
     for nm, col in (("equal-tailed (default)", "p_main"), ("permabsp", "cpabs"),
-                    ("permrawp", "cpraw"), ("permside(left)", "cpleft")):
+                    ("plain share c/n (ritest)", "cpraw"), ("permside(left)", "cpleft")):
         ps = [num(r, col) for r in D1]
         ps = [p for p in ps if p is not None]
         line(f"{nm} @{alpha:.2f}", sum(1 for p in ps if p <= alpha + EPS), len(ps), alpha)

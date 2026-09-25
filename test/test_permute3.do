@@ -234,7 +234,9 @@ if `rc' == 0 {
   if "`e(perm_stat)'" != "b" local ++bad
   * the legacy scalars are the SAME numbers the tables carry
   if e(perm_p_att) != e(wdidmainresults)[1, 4] local ++bad
-  if e(perm_lb_att) != e(perm_nullband)[1, 1] | e(perm_ub_att) != e(perm_nullband)[2, 1] local ++bad
+  if e(perm_bandlo_att) != e(perm_nullband)[1, 1] | e(perm_bandhi_att) != e(perm_nullband)[2, 1] local ++bad
+  * the deprecated aliases e(perm_lb_*)/e(perm_ub_*) are no longer posted (ruling 2026-09-25)
+  if e(perm_lb_att) < . | e(perm_ub_att) < . local ++bad
   if e(perm_sd_att) != e(perm_sd)[1, 1] local ++bad
   * the comparator equals the fast-mode observed estimate bitwise
   if mreldif(e(perm_comparator_b), e(b)) != 0 local ++bad
@@ -1270,8 +1272,10 @@ cap erase perm3_q21.txt
 cap erase perm3_q21.dta
 
 * ================= Q22 (F052/F064, 2026-09-06): the p-value conventions and the
-* Monte-Carlo precision record. From the same draws: permrawp = c/n |s| share with no
-* add-one; permside(left|right) = the one-sided add-one shares, which e(perm_p_lo) /
+* Monte-Carlo precision record. From the same draws: permabsp = (1 + c)/(n + 1) |s| share,
+* from which the plain c/n share (ritest's number) is recovered exactly as ((n+1)p - 1)/n with
+* n from e(perm_n); permrawp itself was deleted (ruling 2026-09-25) and is refused with r(198);
+* permside(left|right) = the one-sided add-one shares, which e(perm_p_lo) /
 * e(perm_p_hi) carry under every convention and whose 2*min is the default p; e(perm_p_se)
 * and e(perm_p_ci) follow the documented formulas; the conventions are mutually exclusive
 mkperm3 8 4 3
@@ -1285,7 +1289,7 @@ local q22hi = e(perm_p_hi)[1, 1]
 local q22se = e(perm_p_se)[1, 1]
 local q22cl = e(perm_p_ci)[1, 1]
 local q22ch = e(perm_p_ci)[2, 1]
-mata: D = st_matrix("Q22D")[., 1]; c = st_matrix("Q22C")[1, 1]; D = select(D, D :< .); n = rows(D); m0 = sum(D :<= c); m1 = sum(D :>= c); ma = sum(abs(D) :>= abs(c)); st_numscalar("q22_n", n); st_numscalar("q22_plo", (1 + m0)/(n + 1)); st_numscalar("q22_phi", (1 + m1)/(n + 1)); st_numscalar("q22_raw", ma/n); cc = min((m0, m1)); q = cc/n; st_numscalar("q22_se", 2*sqrt(q*(1 - q)/n)); st_numscalar("q22_cl", min((1, 2*(cc <= 0 ? 0 : invibeta(cc, n - cc + 1, .025))))); st_numscalar("q22_ch", min((1, 2*(cc >= n ? 1 : invibeta(cc + 1, n - cc, .975)))))
+mata: D = st_matrix("Q22D")[., 1]; c = st_matrix("Q22C")[1, 1]; D = select(D, D :< .); n = rows(D); m0 = sum(D :<= c); m1 = sum(D :>= c); ma = sum(abs(D) :>= abs(c)); st_numscalar("q22_n", n); st_numscalar("q22_plo", (1 + m0)/(n + 1)); st_numscalar("q22_phi", (1 + m1)/(n + 1)); st_numscalar("q22_raw", ma/n); st_numscalar("q22_abs", (1 + ma)/(n + 1)); cc = min((m0, m1)); q = cc/n; st_numscalar("q22_se", 2*sqrt(q*(1 - q)/n)); st_numscalar("q22_cl", min((1, 2*(cc <= 0 ? 0 : invibeta(cc, n - cc + 1, .025))))); st_numscalar("q22_ch", min((1, 2*(cc >= n ? 1 : invibeta(cc + 1, n - cc, .975)))))
 di "Q22 n=`q22n'/" q22_n " p=" %10.8f `q22p0' " 2min=" %10.8f min(1, 2*min(q22_plo, q22_phi)) " lo=" %10.8f `q22lo' "/" %10.8f q22_plo " hi=" %10.8f `q22hi' "/" %10.8f q22_phi " se=" %10.8f `q22se' "/" %10.8f q22_se " ci=[" %8.6f `q22cl' "," %8.6f `q22ch' "] hand=[" %8.6f q22_cl "," %8.6f q22_ch "] pconv=`e(perm_pconv)'"
 if reldif(`q22p0', min(1, 2*min(q22_plo, q22_phi))) > 1e-12 | reldif(`q22lo', q22_plo) > 1e-12 | reldif(`q22hi', q22_phi) > 1e-12 ///
    | reldif(`q22se', q22_se) > 1e-10 | reldif(`q22cl', q22_cl) > 1e-8 | reldif(`q22ch', q22_ch) > 1e-8 | "`e(perm_pconv)'" != "equaltailed" {
@@ -1293,13 +1297,18 @@ if reldif(`q22p0', min(1, 2*min(q22_plo, q22_phi))) > 1e-12 | reldif(`q22lo', q2
   global pf = $pf + 1
 }
 mkperm3 8 4 3
-qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(22) permrawp
-local q22r = e(perm_p)[1, 1]
-di "Q22 permrawp p=" %10.8f `q22r' " hand c/n=" %10.8f q22_raw " pconv=`e(perm_pconv)' absp=" e(perm_absp)
-if reldif(`q22r', q22_raw) > 1e-12 | "`e(perm_pconv)'" != "raw" | e(perm_absp) != 0 {
-  dis as error "Q22b FAIL: permrawp is not the plain c/n absolute share"
+qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(22) permabsp
+local q22a = e(perm_p)[1, 1]
+local q22an = e(perm_n)[1, 1]
+local q22r = ((`q22an' + 1)*`q22a' - 1)/`q22an'
+di "Q22 permabsp p=" %10.8f `q22a' " hand (1+c)/(n+1)=" %10.8f q22_abs " n=`q22an'/" q22_n " recovered c/n=" %10.8f `q22r' " hand c/n=" %10.8f q22_raw " pconv=`e(perm_pconv)' absp=" e(perm_absp)
+if reldif(`q22a', q22_abs) > 1e-12 | `q22an' != q22_n | reldif(`q22r', q22_raw) > 1e-12 | "`e(perm_pconv)'" != "absolute" | e(perm_absp) != 1 {
+  dis as error "Q22b FAIL: permabsp is not the add-one absolute share, or the plain c/n share does not recover from it"
   global pf = $pf + 1
 }
+mkperm3 8 4 3
+cap qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permrawp
+xrc Q22h 198 _rc
 mkperm3 8 4 3
 qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(40) rseed(22) permside(left)
 local q22l = e(perm_p)[1, 1]
@@ -1316,7 +1325,7 @@ mkperm3 8 4 3
 cap qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permside(up)
 xrc Q22d 198 _rc
 mkperm3 8 4 3
-cap qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permrawp permabsp
+cap qui wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) permside(left) permabsp
 xrc Q22e 198 _rc
 mkperm3 8 4 3
 cap qui wooldid y i t ttre, att cluster(i) permside(left)
@@ -1426,13 +1435,12 @@ program define scan3, rclass
 end
 * Q25 (BS-20): the resolution caution follows the convention in force - at permreps(20)
 * the equal-tailed floor 2/21 = .095 draws it, the one-sided/absolute floor 1/21 does
-* not, and the plain share has no floor; the "cannot reject" claim and the printed p
-* must never disagree in one output
+* not; the "cannot reject" claim and the printed p must never disagree in one output
 mkperm3 8 4 3
 tempfile q25
 save `q25'
 local q25n
-foreach conv in "" "permabsp" "permside(right)" "permrawp" {
+foreach conv in "" "permabsp" "permside(right)" {
   use `q25', clear
   qui log using perm3_q25.txt, text replace name(p3)
   cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(20) rseed(25) `conv'
@@ -1441,12 +1449,12 @@ foreach conv in "" "permabsp" "permside(right)" "permrawp" {
   xrc "Q25 `conv'" 0 `rc'
   scan3 perm3_q25.txt "smallest attainable per-coefficient permutation p-value"
   local q25n `q25n' `r(found)'
-  local q25p_`=cond("`conv'" == "", "eq", cond("`conv'" == "permabsp", "abs", cond("`conv'" == "permrawp", "raw", "right")))' = e(perm_p)[1,1]
+  local q25p_`=cond("`conv'" == "", "eq", cond("`conv'" == "permabsp", "abs", "right"))' = e(perm_p)[1,1]
 }
 cap erase perm3_q25.txt
-dis "Q25 caution counts (eq abs right raw) = `q25n'; p: eq=`q25p_eq' abs=`q25p_abs' right=`q25p_right' raw=`q25p_raw'"
-if "`q25n'" != "1 0 0 0" | `q25p_right' >= .05 | `q25p_raw' >= .05 {
-  dis as error "Q25 FAIL: the floor caution does not follow the convention (counts `q25n'; right p `q25p_right', raw p `q25p_raw')"
+dis "Q25 caution counts (eq abs right) = `q25n'; p: eq=`q25p_eq' abs=`q25p_abs' right=`q25p_right'"
+if "`q25n'" != "1 0 0" | `q25p_right' >= .05 {
+  dis as error "Q25 FAIL: the floor caution does not follow the convention (counts `q25n'; right p `q25p_right')"
   global pf = $pf + 1
 }
 * Q26 (BS-22): under permexact the shares are exact - e(perm_p_se) and e(perm_p_ci) are
@@ -1507,19 +1515,24 @@ if `q27a' != 1 | `q27b' != 0 | !`: list posof "p_raw" in q27rn' {
   dis as error "Q27 FAIL: step-down footer / kernel row"
   global pf = $pf + 1
 }
-* Q28 (BS-25): a plain-share p of exactly 0 (permrawp, sampled draws, a strong effect on
-* a large assignment space) draws the resolution note; the add-one conventions and an
-* exact enumeration do not (an exact share is never below 1/M since the observed
+* Q28 (BS-25; permrawp deleted 2026-09-25): on sampled draws with a strong effect on a
+* large assignment space no draw reaches the observed statistic, so the plain c/n share
+* recovered from permabsp is exactly 0 and permabsp itself sits at its floor 1/(n+1). With
+* permrawp gone no permute() convention prints a p of 0, so the resolution note under the
+* table never prints under permute(): not under the default or permabsp on sampled draws,
+* nor under an exact enumeration (an exact share is never below 1/M since the observed
 * assignment is a member)
 mkperm3 20 8 3
 tempfile q28
 save `q28'
 qui log using perm3_q28.txt, text replace name(p3)
-cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(99) rseed(28) permrawp
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permreps(99) rseed(28) permabsp
 local rc = _rc
 qui log close p3
 xrc Q28a 0 `rc'
-local q28p = e(perm_p)[1,1]
+local q28a = e(perm_p)[1,1]
+local q28an = e(perm_n)[1,1]
+local q28p = ((`q28an' + 1)*`q28a' - 1)/`q28an'
 scan3 perm3_q28.txt "p = 0 above means p <"
 local q28n = r(found)
 local q28x
@@ -1535,7 +1548,7 @@ foreach conv in "" "permabsp" {
 }
 use `q25', clear
 qui log using perm3_q28.txt, text replace name(p3)
-cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact permrawp
+cap noi wooldid y i t ttre, att cluster(i) permute(shuffle) permexact permabsp
 local rc = _rc
 qui log close p3
 xrc Q28d 0 `rc'
@@ -1544,9 +1557,9 @@ local q28M = e(perm_completed)
 scan3 perm3_q28.txt "p = 0 above means p <"
 local q28e = r(found)
 cap erase perm3_q28.txt
-dis "Q28 permrawp sampled: p=`q28p' note=`q28n' | default/permabsp notes=`q28x' | exact permrawp: min p=`q28min' completed=`q28M' note=`q28e'"
-if `q28p' != 0 | `q28n' != 1 | "`q28x'" != "0 0" | `q28min' < 1/`q28M' - 1e-6 | `q28e' != 0 {
-  dis as error "Q28 FAIL: the p = 0 resolution note under permrawp"
+dis "Q28 permabsp sampled: p=`q28a' (floor " 1/(`q28an' + 1) ") recovered c/n=`q28p' note=`q28n' | default/permabsp notes=`q28x' | exact permabsp: min p=`q28min' completed=`q28M' note=`q28e'"
+if abs(`q28p') > 1e-12 | reldif(`q28a', 1/(`q28an' + 1)) > 1e-12 | `q28n' != 0 | "`q28x'" != "0 0" | `q28min' < 1/`q28M' - 1e-6 | `q28e' != 0 {
+  dis as error "Q28 FAIL: the p = 0 resolution note under permute(), or the zero plain share recovered from permabsp"
   global pf = $pf + 1
 }
 

@@ -6,10 +6,13 @@
 *   D1  tau = 0  sharp null, default (equal-tailed) p; jointtests; the step-down record
 *                (permstepdown is passed on the main arm: opt-in since PS-45/7a158ea, without
 *                it e(perm_stepdown) is not posted and tobs/praw/pss/psd are all '.').
-*                Every VERIFY-th rep also runs the package's permabsp / permrawp /
+*                Every VERIFY-th rep also runs the package's permabsp and
 *                permside(left) arms on the SAME rseed (identical draws), so the
 *                conventions computed in-driver from e(permdist_b) can be checked
-*                against the package bit-for-bit.
+*                against the package bit-for-bit. The plain share c/n (ritest's
+*                number; the package's permrawp arm until that option was deleted on
+*                2026-09-25) is checked through the permabsp arm instead, as
+*                ((n+1)*p_absp - 1)/n (analyze_mcri2.py).
 *   D2  tau = 1  planted constant effect, default arm: shift-interval coverage of tau.
 *   D3  tau = 3  planted constant effect, default arm: the F035 width growth.
 *   D4  tau = 1  permtstat arm: does studentizing remove the width growth?
@@ -222,10 +225,12 @@ program define emitrow
 end
 
 *----------------------------------------------------------------- mata: the conventions
-* Replicates wooldid_permtail's four p-value conventions on the SAME accumulator column:
+* Replicates wooldid_permtail's three package p-value conventions, plus the plain share
+* ritest reports, on the SAME accumulator column:
 *   equal-tailed (default)  min(1, 2 min(plo, phi)),  plo = (1+m0)/(n+1), phi = (1+m1)/(n+1)
 *   permabsp                (1 + ma)/(n + 1),         ma = #{|s_r| >= |s_obs|}
-*   permrawp                ma/n
+*   plain share (ritest)    ma/n   (no package option since 2026-09-25; recovered from
+*                                   permabsp as ((n+1)*p - 1)/n)
 *   permside(left)          plo
 * Non-exact branch only (permreps(), never permexact), which is what this driver runs.
 mata:
@@ -292,8 +297,8 @@ forval rep = 1/`MAXREPS' {
   emitrow D1 main 0 `rep' `dgpseed' `rseed' `rc' `secs'
   * verification arms: the package's own alternative conventions on the SAME draws
   if mod(`rep', `VERIFY') == 0 {
-    foreach av in absp rawp left {
-      local opt = cond("`av'" == "absp", "permabsp", cond("`av'" == "rawp", "permrawp", "permside(left)"))
+    foreach av in absp left {
+      local opt = cond("`av'" == "absp", "permabsp", "permside(left)")
       timer clear 91
       timer on 91
       mkdgp `dgpseed' 0

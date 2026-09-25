@@ -294,7 +294,7 @@ version 16.0
     * point at
     local wdp_OR = cond("`permexact'" != "" & "`wdp_r_obsrow'" != "", "`wdp_r_obsrow'", "0")
     * rewire the coefficient tables and post the stripe-aligned surfaces (eclass sub)
-    wooldid_permwire , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') seacc(`wdpsacc') cmpse(`wdpcmpse') level(`level') m(`wdp_M') orow(`wdp_OR') done(`wdp_r_done') fail(`wdp_r_fail') blank(`wdp_r_blank') ts(`wdp_ts') method(`permute') reps(`wdp_r_reps') ase(`permanalyticse') clus(`cluster') gt(`gteffects') absp(`permabsp') side(`permside') rawp(`permrawp')
+    wooldid_permwire , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') seacc(`wdpsacc') cmpse(`wdpcmpse') level(`level') m(`wdp_M') orow(`wdp_OR') done(`wdp_r_done') fail(`wdp_r_fail') blank(`wdp_r_blank') ts(`wdp_ts') method(`permute') reps(`wdp_r_reps') ase(`permanalyticse') clus(`cluster') gt(`gteffects') absp(`permabsp') side(`permside')
     * the legacy per-estimand scalars, read from the posted kernel by name so they are
     * the SAME numbers the tables carry (one convention: equal-tailed p, 5th-95th null
     * band, permutation SD; on the t-ratio scale under permtstat)
@@ -307,11 +307,9 @@ version 16.0
         * rows 11-12 are the signed level() quantiles of the null distribution - the region the
         * statistic occupies under the null - not an interval for the estimand, which is why the
         * band-specific names are the canonical pair. e(perm_ci) and every e(boot_ci_*) use
-        * ll/ul for a genuine interval; the lb/ub pair below carries the same two numbers
+        * ll/ul for a genuine interval
         ereturn scalar perm_bandlo_`wdpe' = `wdpk'[11, `wdpc']
         ereturn scalar perm_bandhi_`wdpe' = `wdpk'[12, `wdpc']
-        ereturn scalar perm_lb_`wdpe' = `wdpk'[11, `wdpc']
-        ereturn scalar perm_ub_`wdpe' = `wdpk'[12, `wdpc']
         ereturn scalar perm_sd_`wdpe' = `wdpk'[6, `wdpc']
         if "`permtci'" != "" {
           * inverted-t CI (permtci, retained): observed b +/- (level() quantile of the
@@ -341,14 +339,14 @@ version 16.0
     * e(perm_comparator_b))
     cap ereturn matrix perm_comparator = `wdpcomp'
     * joint tests, subgroup equality, adversarial and contrasts (eclass sub)
-    wooldid_permjnt , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') level(`level') m(`wdp_M') orow(`wdp_OR') ts(`wdp_ts') jt(`jointtests') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') esf(`esfixedbaseperiod') absp(`permabsp') side(`permside') rawp(`permrawp') sd(`permstepdown')
+    wooldid_permjnt , acc(`wdpacc') obsb(`wdpobsb') cmpb(`wdpcmpb') level(`level') m(`wdp_M') orow(`wdp_OR') ts(`wdp_ts') jt(`jointtests') adv(`adversarial') advalt(`altmethod_adversarial') advesrel(`esrelativeto') advtt(`timetrends') esf(`esfixedbaseperiod') absp(`permabsp') side(`permside') sd(`permstepdown')
     * the continuous-treatment plot cells (eclass sub)
     if "`makecfxplots'" != "" & `wdp_ncfx' > 0 {
       local wdp_cfxnames
       forval wdk = 1/`wdp_ncfx' {
         local wdp_cfxnames `wdp_cfxnames' `wdb_cfxname`wdk''
       }
-      wooldid_permcellsx , cell(`wdpcell') cell0(`wdpcell0') ncfx(`wdp_ncfx') names(`wdp_cfxnames') level(`level') m(`wdp_M') orow(`wdp_OR') ts(`wdp_ts') lattype(`latticetype') cfxlat(`cfxlattice') absp(`permabsp') side(`permside') rawp(`permrawp')
+      wooldid_permcellsx , cell(`wdpcell') cell0(`wdpcell0') ncfx(`wdp_ncfx') names(`wdp_cfxnames') level(`level') m(`wdp_M') orow(`wdp_OR') ts(`wdp_ts') lattype(`latticetype') cfxlat(`cfxlattice') absp(`permabsp') side(`permside')
     }
     * permsave(): the replication draws as a .dta in the working directory. Written here,
     * before the deferred display and plots, so a plot that fails below cannot lose the file.
@@ -750,7 +748,7 @@ version 16.0
   set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) Level(real 0) dots(integer -1) rseed(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) Level(real 0) dots(integer -1) rseed(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -5433,7 +5431,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) Level(real 0) dots(integer -1) rseed(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) Level(real 0) dots(integer -1) rseed(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -5754,7 +5752,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`permanalyticse'" != "" local permstray `permstray' permanalyticse
     if "`permabsp'" != "" local permstray `permstray' permabsp
     if "`permside'" != "" local permstray `permstray' permside()
-    if "`permrawp'" != "" local permstray `permstray' permrawp
     if "`permstepdown'" != "" local permstray `permstray' permstepdown
     if "`permonsetcohorts'" != "" local permstray `permstray' permonsetcohorts
     if "`permstray'" != "" {
@@ -5800,7 +5797,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * error 459 if that refusal is ever lifted, rather than silently downgrading them to a
   * caution - the failure the safetyinput split exists to prevent
   if "`permute'" != "" {
-    cap noi wooldid_permctl , yv(`y') permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safetyuser') psave(`permsave') level(`level') onc(`permonsetcohorts') ase(`permanalyticse') oostreatedcontrols(`oostreatedcontrols') anticipation(`anticipation') `replace'
+    cap noi wooldid_permctl , yv(`y') permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safetyuser') psave(`permsave') level(`level') onc(`permonsetcohorts') ase(`permanalyticse') oostreatedcontrols(`oostreatedcontrols') anticipation(`anticipation') `replace'
     if _rc != 0 exit _rc   // exit, not error - the cap noi above already printed it
   }
 
@@ -6359,7 +6356,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * already builds the lb_92p5ci column names with %9.0g, which is why those were always right
   * while the `set level' beside them was wrong.
   local level = strofreal(`level', "%9.0g")
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update pretrendpower fastnose nofastcollapse fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp permstepdown permonsetcohorts simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps level dots rseed bootdf bootdisplay boottstat bootsave esprelengthraw {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update pretrendpower fastnose nofastcollapse fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permstepdown permonsetcohorts simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps level dots rseed bootdf bootdisplay boottstat bootsave esprelengthraw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -6704,7 +6701,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) yv(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) side(string) rawp(string) onc(string) ase(string) oostreatedcontrols(integer 0) anticipation(integer 0) replace]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) yv(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) side(string) onc(string) ase(string) oostreatedcontrols(integer 0) anticipation(integer 0) replace]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -6720,8 +6717,8 @@ version 16.0
     dis as error "Error: permside() must be permside(left), the share of replications at or below the observed statistic, or permside(right), the share at or above it. Do not specify permside() at all for two-tailed inference."
     error 198
   }
-  if ("`side'" != "") + ("`rawp'" != "") + ("`absp'" != "") > 1 {
-    dis as error "Error: permside(), permrawp and permabsp are alternative p-value conventions; specify at most one."
+  if "`side'" != "" & "`absp'" != "" {
+    dis as error "Error: permside() and permabsp are alternative p-value conventions; specify at most one."
     error 198
   }
   if "`uncond'" != "" {
@@ -6800,22 +6797,21 @@ version 16.0
     error 198
   }
   * the sampled-draw p-value has floor 2/(permreps + 1) under the default equal-tailed
-  * convention; 1/(permreps + 1) under permabsp and permside(); no floor under permrawp, whose
-  * plain c/n share can be 0. the caution follows the convention in force (the five-way code
-  * wooldid_permwire builds), so below 39 replications a 5% rejection is unreachable by
-  * construction and every row prints the floor as if it were evidence
+  * convention and 1/(permreps + 1) under permabsp and permside(). the caution follows the
+  * convention in force (the code wooldid_permwire builds), so below 39 replications a 5%
+  * rejection is unreachable by construction and every row prints the floor as if it were
+  * evidence
   if `permreps' > 0 & "`permexact'" == "" {
     * the p-value convention code, byte-identical to the `wdpabs' expression in
     * wooldid_permwire and duplicated here only to pick the floor this caution prints:
-    * 0 equal-tailed (default), 1 absolute add-one (permabsp), 2 raw c/n share without
-    * add-one (permrawp), 3 permside(left), 4 permside(right). keep the two in sync - if they
-    * drift, this caution announces a smallest attainable p-value the engine does not use,
-    * i.e. a wrong number told to the user about their own resolution limit. the cond()
-    * ladder's precedence is never exercised: the mutual-exclusivity screen above guarantees
-    * at most one of permside()/permrawp/permabsp is set, so the order is an artefact of the
-    * nesting
-    local wdpcv = cond("`rawp'" != "", 2, cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != ""))))
-    local wdp_floor = cond(`wdpcv' == 0, 2/(`permreps' + 1), cond(`wdpcv' == 2, 0, 1/(`permreps' + 1)))
+    * 0 equal-tailed (default), 1 absolute add-one (permabsp), 3 permside(left), 4
+    * permside(right). keep the two in sync - if they drift, this caution announces a smallest
+    * attainable p-value the engine does not use, i.e. a wrong number told to the user about
+    * their own resolution limit. the cond() ladder's precedence is never exercised: the
+    * mutual-exclusivity screen above guarantees at most one of permside()/permabsp is set, so
+    * the order is an artefact of the nesting
+    local wdpcv = cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != "")))
+    local wdp_floor = cond(`wdpcv' == 0, 2/(`permreps' + 1), 1/(`permreps' + 1))
     if `wdp_floor' > .05 dis as text "Caution: with permreps(`permreps') the smallest attainable per-coefficient permutation p-value is " %5.3f `wdp_floor' " (" cond(`wdpcv' == 0, "2", "1") "/(permreps + 1)), above .05, so no coefficient p-value can reject at the 5% level; a p-value printed at that floor is the resolution limit rather than evidence. Use at least " cond("`absp'" != "", "20", "40") " replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002). The joint, equality and step-down tests have floor 1/(permreps + 1)."
   }
   if "`permmethod'" == "probabilities" {
@@ -9060,14 +9056,14 @@ version 16.0
 *** analytic standard error (labelled se_analytic) under permtstat or permanalyticse, blank
 *** under the fast-mode default. The per-element kernel and the stripe-aligned vectors are
 *** posted by name; the analytic tables are kept as hidden twins
-  syntax , acc(string) obsb(string) cmpb(string) [seacc(string) cmpse(string) level(real 0) m(string) orow(integer 0) done(integer 0) fail(integer 0) blank(integer 0) ts(integer 0) method(string) reps(integer 0) ase(string) clus(varlist) gt(string) absp(string) side(string) rawp(string)]
+  syntax , acc(string) obsb(string) cmpb(string) [seacc(string) cmpse(string) level(real 0) m(string) orow(integer 0) done(integer 0) fail(integer 0) blank(integer 0) ts(integer 0) method(string) reps(integer 0) ase(string) clus(varlist) gt(string) absp(string) side(string)]
   if `level' == 0 local level = c(level)
-  * p-value convention code: 0 equal-tailed (default), 1 absolute add-one (permabsp), 2 raw |s|
-  * share c/n without add-one (permrawp: the ritest / Stata permute number), 3 left one-sided,
-  * 4 right one-sided (permside())
+  * p-value convention code: 0 equal-tailed (default), 1 absolute add-one (permabsp), 3 left
+  * one-sided, 4 right one-sided (permside()). code 2, the add-one-free share of the retired
+  * permrawp, is no longer produced
   * this expression is duplicated byte-for-byte in wooldid_permctl, where it picks the floor the
   * resolution caution prints; the two must be kept in sync
-  local wdpabs = cond("`rawp'" != "", 2, cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != ""))))
+  local wdpabs = cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != "")))
   local wdpM = cond("`m'" == "" | "`m'" == ".", ".", "`m'")
   if `ts' == 0 {
     local seacc
@@ -9340,7 +9336,7 @@ version 16.0
   ereturn local perm_offcentre `wdpoff'
   ereturn scalar perm_blank = `blank'
   if "`ase'" != "" ereturn scalar perm_analyticse = 1
-  ereturn local perm_pconv = cond(`wdpabs' == 1, "absolute", cond(`wdpabs' == 2, "raw", cond(`wdpabs' == 3, "left", cond(`wdpabs' == 4, "right", "equaltailed"))))
+  ereturn local perm_pconv = cond(`wdpabs' == 1, "absolute", cond(`wdpabs' == 3, "left", cond(`wdpabs' == 4, "right", "equaltailed")))
   ereturn scalar perm_absp = (`wdpabs' == 1)
 
   * -------- header: the display reads e(wdid_vcespec) and e(wdid_fastnose)
@@ -9446,12 +9442,12 @@ version 16.0
 *** while the shift interval is anchored on the displayed analytic difference read out of
 *** e(pwsgs), which is still analytic here because wooldid_permwire does not touch it
 *** (wooldid_bootjnt states the same for its own read of e(pwsgs))
-  syntax , acc(string) obsb(string) cmpb(string) [level(real 0) m(string) orow(integer 0) ts(integer 0) jt(string) adv(string) advalt(string) advesrel(string) advtt(string) esf(string) absp(string) side(string) rawp(string) sd(string)]
+  syntax , acc(string) obsb(string) cmpb(string) [level(real 0) m(string) orow(integer 0) ts(integer 0) jt(string) adv(string) advalt(string) advesrel(string) advtt(string) esf(string) absp(string) side(string) sd(string)]
   if `level' == 0 local level = c(level)
-  * p-value convention code: 0 equal-tailed (default), 1 absolute add-one (permabsp), 2 raw
-  * |s| share c/n without add-one (permrawp: the ritest / Stata permute number), 3 left
-  * one-sided, 4 right one-sided (permside())
-  local wdpabs = cond("`rawp'" != "", 2, cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != ""))))
+  * p-value convention code: 0 equal-tailed (default), 1 absolute add-one (permabsp), 3 left
+  * one-sided, 4 right one-sided (permside()). code 2, the add-one-free share of the retired
+  * permrawp, is no longer produced
+  local wdpabs = cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != "")))
   local wdpM = cond("`m'" == "" | "`m'" == ".", ".", "`m'")
   if "`advesrel'" == "" local advesrel -1
   tempname wm
@@ -9896,12 +9892,12 @@ version 16.0
   * byTreated*, byTtre*) are not permutation statistics - lattice_k is a different dose
   * range in every replication - so those matrices keep their points and have their
   * inference columns blanked, with a caution
-  syntax , cell(string) cell0(string) [ncfx(integer 0) names(string) level(real 0) m(string) orow(integer 0) ts(integer 0) lattype(string) cfxlat(string) absp(string) side(string) rawp(string)]
+  syntax , cell(string) cell0(string) [ncfx(integer 0) names(string) level(real 0) m(string) orow(integer 0) ts(integer 0) lattype(string) cfxlat(string) absp(string) side(string)]
   if `level' == 0 local level = c(level)
-  * p-value convention code: 0 equal-tailed (default), 1 absolute add-one (permabsp), 2 raw
-  * |s| share c/n without add-one (permrawp: the ritest / Stata permute number), 3 left
-  * one-sided, 4 right one-sided (permside())
-  local wdpabs = cond("`rawp'" != "", 2, cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != ""))))
+  * p-value convention code: 0 equal-tailed (default), 1 absolute add-one (permabsp), 3 left
+  * one-sided, 4 right one-sided (permside()). code 2, the add-one-free share of the retired
+  * permrawp, is no longer produced
+  local wdpabs = cond("`side'" == "left", 3, cond("`side'" == "right", 4, ("`absp'" != "")))
   local wdpM = cond("`m'" == "" | "`m'" == ".", ".", "`m'")
   * this whitelist is the exact complement of the latticetype list the validator accepts: the
   * four assignment-invariant types (all, byCohort, byTime, byCohortByTime) are the ones left
@@ -12254,10 +12250,10 @@ end
 * a rank-based bootstrap p of exactly 0 means no completed replication fell on the far side
 * of the null - the resolution limit 2/n, not a probability of 0. matlist renders a numeric
 * matrix, so the cell keeps the 0, as does e(); this line under the table says what the 0
-* means. Under permute() only the plain c/n share (permrawp) can print 0 from a sampled
-* enumeration - the add-one conventions never do, and an exact enumeration's 0 would be a
-* true share; the Wald display's p is a tail probability of the t/normal reference rather
-* than a rank, so it has no floor and exits at the top of the program. The boottstat
+* means. Under permute() every sampled-draw convention is add-one and never prints 0, and an
+* exact enumeration's 0 would be a true share, so the program exits there; the Wald
+* display's p is a tail probability of the t/normal reference rather than a rank, so it has
+* no floor and exits at the top of the program. The boottstat
 * pass-through in that same gate is vacuous: the studentized family is add-one with floor
 * 2/(n+1) and can never print 0, so the 2/n message would be wrong if it ever fired. The
 * resolution prints unpadded in %9.2g, so a large n shows .0004 rather than 0.000.
@@ -12275,12 +12271,6 @@ prog def wooldid_pfloor
     local wdpn = e(boot_completed)
     local wdpres = 2/`wdpn'
     local wdpmsg (2/`wdpn' completed replications, the resolution of the rank-based p): no completed replication fell on the far side of the null. The cell and e() keep the 0.
-  }
-  else if "`e(perm_completed)'" != "" {
-    if "`e(perm_pconv)'" != "raw" | "`e(perm_exact)'" == "1" exit
-    local wdpn = e(perm_completed)
-    local wdpres = 1/`wdpn'
-    local wdpmsg (1/`wdpn' completed replications, the resolution of the plain c/n share): no completed replication reached the observed absolute statistic. The cell and e() keep the 0; e(perm_p_ci) holds the Clopper-Pearson upper bound.
   }
   else exit
   cap confirm matrix `mat'
@@ -13211,10 +13201,6 @@ version 16.0
         local wdppc two-sided absolute-value permutation p-values (permabsp): the share of replications whose absolute statistic is at or above the observed absolute statistic, `wdpex'
         local wdpiv symmetric shift intervals dual to that p-value - the estimate plus or minus the `wdplv'th-percentile absolute
       }
-      else if "`e(perm_pconv)'" == "raw" {
-        local wdppc two-sided absolute-value permutation p-values WITHOUT the add-one adjustment (permrawp): c/n, the share of replications whose absolute statistic is at or above the observed absolute statistic - the number ritest and Stata's permute prefix report; a p of exactly 0 means no replication reached the observed absolute statistic (the note under the table gives the resolution)
-        local wdpiv symmetric shift intervals - the estimate plus or minus the `wdplv'th-percentile absolute
-      }
       else if "`e(perm_pconv)'" == "left" | "`e(perm_pconv)'" == "right" {
         local wdppc one-sided `e(perm_pconv)'-tail permutation p-values (permside(`e(perm_pconv)')): the share of replications whose statistic is at or `=cond("`e(perm_pconv)'" == "left", "below", "above")' the observed statistic, `wdpex'; the two-sided equal-tailed p-values are 2 min(e(perm_p_lo), e(perm_p_hi))
         local wdpiv two-sided shift intervals at level() - the estimate minus the equal-tailed quantiles of the
@@ -13281,7 +13267,7 @@ version 16.0
       dis as result "  Pooled estimand summaries (p, `wdplv'% null band and SD of the permutation distribution`=cond("`e(perm_stat)'" == "t", ", on the t-ratio scale", "")'):"
       local wdptcihedge 0
       foreach wdpe in `e(wdid_permest)' {
-        dis as result "    `wdpe': estimate " %10.0g e(b)[1, colnumb(e(b), "main_`wdpe'")] "   p " %6.4f e(perm_p_`wdpe') "   null band [" %10.0g e(perm_lb_`wdpe') ", " %10.0g e(perm_ub_`wdpe') "]   SD " %10.0g e(perm_sd_`wdpe')
+        dis as result "    `wdpe': estimate " %10.0g e(b)[1, colnumb(e(b), "main_`wdpe'")] "   p " %6.4f e(perm_p_`wdpe') "   null band [" %10.0g e(perm_bandlo_`wdpe') ", " %10.0g e(perm_bandhi_`wdpe') "]   SD " %10.0g e(perm_sd_`wdpe')
         if e(perm_tlb_`wdpe') < . {
           dis as result "        inverted-|t| `wdplv'% CI (permtci) [" %10.0g e(perm_tlb_`wdpe') ", " %10.0g e(perm_tub_`wdpe') "]"
           local wdptcihedge 1
@@ -18268,8 +18254,8 @@ real rowvector wooldid_permtail(real colvector draws, real scalar sobs, real sca
                                 real scalar memb, real scalar al, real scalar zc,
                                 real scalar absp)
 {
-  // absp is the CONVENTION CODE: 0 equal-tailed, 1 absolute add-one (permabsp), 2 raw c/n
-  // |s| share with no add-one (permrawp), 3 left one-sided, 4 right one-sided (permside()).
+  // absp is the CONVENTION CODE: 0 equal-tailed, 1 absolute add-one (permabsp), 3 left
+  // one-sided, 4 right one-sided (permside()); code 2 (the retired permrawp) is not produced.
   // Rows 14-18 of the returned vector: 14 P_lo and 15 P_hi (the one-sided shares under the
   // add-one / plain-share rule), 16 se_p (the Monte-Carlo standard error of the reported p's
   // underlying share, doubled under the equal-tailed 2*min rule), 17-18 the Clopper-Pearson
@@ -18310,11 +18296,10 @@ real rowvector wooldid_permtail(real colvector draws, real scalar sobs, real sca
   out[14] = plo
   out[15] = phi
   mult = 1
-  if (absp == 1 | absp == 2) {
-    // absolute-value conventions: the level/100 quantile of |s_r| on each side
+  if (absp == 1) {
+    // absolute-value convention: the level/100 quantile of |s_r| on each side
     qa = wooldid_permq(sort(abs(v), 1), 1 - 2*al)
-    if (absp == 1) out[3] = (exact | memb ? ma/n : (1 + ma)/(n + 1))
-    else out[3] = ma/n
+    out[3] = (exact | memb ? ma/n : (1 + ma)/(n + 1))
     out[4] = -qa
     out[5] = qa
     cc = ma
@@ -18579,11 +18564,11 @@ void wooldid_permqf(string scalar accname, string scalar cmpname, string scalar 
 // drop-on-write is also what makes it safe to reuse one tempname across loop iterations.
 // NOT absp-AWARE, deliberately, unlike every sibling permutation kernel: the max-|t|
 // step-down (Westfall-Young / Romano-Wolf) is a statement about the two-sided |t| maximum
-// over a family, so a one-sided permside() or an add-one-free permrawp share has no meaning
-// for it. p_raw is reported in the step-down's own studentized metric so it is comparable
-// with p_singlestep and p_stepdown beside it, NOT with the table's p. Do not thread absp
-// through here: giving this kernel an absp argument "for consistency" would silently move
-// every published step-down p-value.
+// over a family, so a one-sided permside() share has no meaning for it. p_raw is reported
+// in the step-down's own studentized metric so it is comparable with p_singlestep and
+// p_stepdown beside it, NOT with the table's p. Do not thread absp through here: giving
+// this kernel an absp argument "for consistency" would silently move every published
+// step-down p-value.
 void wooldid_permstep(string scalar accname, string scalar cmpname, string scalar colslist,
                       real scalar M, real scalar orow, string scalar outname)
 {

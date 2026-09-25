@@ -39,7 +39,7 @@ entry/exit, lognormal population weights — carries the only coverage anywhere 
 `customvce(cluster)`, poisson+pweight, clean factor-variable `fe()`, subgroups×summarystats,
 unconditionalse+pweight, and the saveplots×subgroups filename pin), `plots`, `screens`
 (rc-contract deck), `patho` (the pathological shapes), `boot` (the bootstrap-SE deck:
-both engines, the re-id leg, weighted, subgroups, joint tests, observation-level), `perm` (permute() completeness: perm_cfxnose, perm_rawp, perm_side_left), `ps45` (simultaneousbands: band_analytic, band_boot, band_multi, perm_stepdown), and the mined
+both engines, the re-id leg, weighted, subgroups, joint tests, observation-level), `perm` (permute() completeness: perm_cfxnose, perm_side_left), `ps45` (simultaneousbands: band_analytic, band_boot, band_multi, perm_stepdown), and the mined
 `extgrid`/`extlattice`/`extcase`/`extval`.
 
 A separate DEEP-VALIDATION component lives in `mc/` (own orchestrator `mc/run_mc.sh`,

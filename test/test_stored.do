@@ -14,7 +14,8 @@
 * S5  CS-54: e(boot_percentile_mainresults) exists and is element-identical to the
 *     legacy e(boot_pctl_mainresults)
 * S6  CS-57: e(perm_bandlo_*)/e(perm_bandhi_*) exist for every permuted estimand and
-*     equal the deprecated e(perm_lb_*)/e(perm_ub_*)
+*     equal the e(perm_nullband) rows by name; the deprecated aliases e(perm_lb_*)/
+*     e(perm_ub_*) are no longer posted (ruling 2026-09-25)
 * S8  PS-62: the within-family event-study covariance blocks are spliced into e(V), every
 *     cross-family cell stays zero, and e(wdid_vblocks)/e(wdid_vblockn) name what landed
 * S7  CS-4: e(wdid_vcvstate) reports what e(V) actually is - analytic-blocks once an event
@@ -157,17 +158,24 @@ use `panel', clear
 qui wooldid y unit t ttre, att cluster(unit) permute(shuffle) permreps(20) rseed(4) esprelength(2) espostlength(2)
 local s6bad
 local s6n 0
+tempname S6NB
+matrix `S6NB' = e(perm_nullband)
 foreach e in `e(wdid_permest)' {
   local ++s6n
-  if e(perm_bandlo_`e') != e(perm_lb_`e') local s6bad `s6bad' bandlo_`e'
-  if e(perm_bandhi_`e') != e(perm_ub_`e') local s6bad `s6bad' bandhi_`e'
+  local s6c = colnumb(`S6NB', "main_`e'")
+  if `s6c' >= . local s6bad `s6bad' nocol_`e'
+  else {
+    if e(perm_bandlo_`e') != `S6NB'[1, `s6c'] local s6bad `s6bad' bandlo_`e'
+    if e(perm_bandhi_`e') != `S6NB'[2, `s6c'] local s6bad `s6bad' bandhi_`e'
+  }
   if e(perm_bandlo_`e') >= . local s6bad `s6bad' missing_`e'
+  if e(perm_lb_`e') < . | e(perm_ub_`e') < . local s6bad `s6bad' alias_`e'
 }
 if `s6n' == 0 | "`s6bad'" != "" {
   dis as error "S6 FAIL: estimands=`s6n' mismatches:`s6bad'"
   local ++fails
 }
-else dis as result "S6 PASS: `s6n' permuted estimand(s) carry matching band twins"
+else dis as result "S6 PASS: `s6n' permuted estimand(s) carry band scalars equal to e(perm_nullband), and no deprecated alias"
 local st6 = "`e(wdid_vcvstate)'"
 local vce6a = "`e(vce)'`e(vcetype)'"
 

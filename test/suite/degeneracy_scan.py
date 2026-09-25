@@ -619,7 +619,7 @@ def surface(opt, S):
         ok = bool(adv) and _noflag(S, "ADV_")
         return ok, f"adv={len(adv)}"
     if opt in ("permute", "permreps", "permexact", "permstrata", "permtstat", "permtci", "permside",
-               "permrawp", "permstepdown", "permabsp", "permanalyticse", "permsave"):
+               "permstepdown", "permabsp", "permanalyticse", "permsave"):
         ok = "perm" in S and _noflag(S, "PERM_")
         if opt == "permstepdown": ok = ok and any(m == "perm_stepdown" for m in S.get("mats", []))
         if opt == "permanalyticse": ok = ok and "perm_analytic_mainresults" in S.get("mats", [])

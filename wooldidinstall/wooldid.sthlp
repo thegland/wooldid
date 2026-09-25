@@ -84,7 +84,7 @@ with an informative error unless {opt safety(off)}. Store large onset codes, suc
 {opt bootsa:ve(name)} {opt rseed(#)} {opt dots(int)} {p_end}
 
 {synopt : {help wooldid##permute:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt permreps(int)} {opt permstr:ata(variable)} {opt permpr:obs(spec)} {opt permex:act}
-{opt permts:tat} {opt permt:ci} {opt perman:alyticse} {opt permab:sp} {opt permsi:de(left|right)} {opt permraw:p} {opt permstep:down} {opt permonset:cohorts} {opt permsa:ve(name)} {p_end}
+{opt permts:tat} {opt permt:ci} {opt perman:alyticse} {opt permab:sp} {opt permsi:de(left|right)} {opt permstep:down} {opt permonset:cohorts} {opt permsa:ve(name)} {p_end}
 
 {synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(name)} {opt replace} {opt sum:marystats}
 {opt pois:son} {p_end}
@@ -478,13 +478,10 @@ remain permutation-based, and the posted {it:e(V)} is analytic. {it:fastnose} is
 
 {phang}{opt permab:sp}: Report absolute-value permutation p-values instead of equal-tailed ones: the share of replications whose absolute statistic is at or above the observed absolute
 statistic. Intervals become the estimate plus or minus the {it:level()} quantile of the permuted absolute statistics, so p-value and interval keep agreeing. The joint, equality and
-adversarial tests are unchanged. At most one of {it:permabsp}, {it:permside()} and {it:permrawp} may be specified. {p_end}
+adversarial tests are unchanged. {it:permabsp} and {it:permside()} may not be combined. {p_end}
 
 {phang}{opt permsi:de(left|right)}: One-sided permutation p-values: {it:permside(left)} is the share of replications at or below the observed statistic and {it:permside(right)} the share at
 or above it. The intervals stay the two-sided shift intervals. {p_end}
-
-{phang}{opt permraw:p}: The plain absolute-value share with no add-one adjustment, which is the number {it:ritest} and Stata's {it:permute} prefix report. It can print exactly 0, meaning no
-draw reached the observed statistic; intervals are those of {it:permabsp}. {p_end}
 
 {phang}{opt permstep:down}: Report, for each family of two or more horizons, the Romano and Wolf max-|studentized| step-down computed from the same replications, which controls the
 family-wise error rate across the horizons under the sharp null of no effect at any horizon. Post-treatment and pre-treatment horizons are adjusted as separate families. Results are stored in {it:e(perm_stepdown*)} and summarised in the
@@ -1151,8 +1148,7 @@ and {it:e(ci_u)} are also posted, so {it:esttab} reports the permutation p-value
 analytic ones. Further records: {it:e(perm_npossible_str)}, {it:e(perm_comparator_se)} (under
 {it:permtstat}), the hidden {it:e(perm_kernel)} and {it:e(perm_pwsgs_kernel)}, and behind each cfx matrix the hidden {it:e(perm_analytic_{it:cfxname})},
 {it:e(permdist_{it:cfxname})}, {it:e(permcmp_{it:cfxname})} and, under {it:permtstat}, {it:e(permdistse_{it:cfxname})} and {it:e(permcmpse_{it:cfxname})}. The ame
-step-down tables are {it:e(perm_Cstepdown)} and {it:e(perm_Cstepdown_i)}. {it:e(perm_lb_{it:est})} and {it:e(perm_ub_{it:est})} are deprecated aliases of the band
-scalars. {p_end}
+step-down tables are {it:e(perm_Cstepdown)} and {it:e(perm_Cstepdown_i)}. {p_end}
 
 {pstd} In addition to these objects returned in e(), if saveplots() is specified, a dataset containing the information used to produce event study plots along with .gph files containing
 all graphs generated will be saved to a file with your specified name in Stata's working directory. {p_end}

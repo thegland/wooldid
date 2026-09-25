@@ -25,11 +25,14 @@
 *   permute: c_lower = #{T <= T_obs + eps}, c_upper = #{T >= T_obs - eps},
 *            p_twosided = min(n, 2*min(c_lo,c_hi))/n, NO add-one.
 *   wooldid: exact comparison (no eps); sampled p's carry the add-one (1+c)/(n+1);
-*            permexact drops it.  So the ONLY wooldid convention that can equal an
-*            external p is permrawp (= c_abs/n, which wooldid.sthlp:590 says in as
-*            many words), or wooldid's plain tails recomputed offline.  Under
-*            permexact wooldid already uses plain shares, so permute's p_twosided
-*            equals e(perm_p_att) there exactly.  Block X6 pins all of this.
+*            permexact drops it.  No wooldid convention prints the external p on
+*            sampled draws (permrawp, the add-one-free share, was deleted by the
+*            author's ruling of 2026-09-25).  It is recovered EXACTLY from permabsp:
+*            c_abs/n = ((n+1)*p_absp - 1)/n with n the element's e(perm_n), and it is
+*            that converted number that is compared with ritest below.  Under
+*            permexact wooldid already uses plain shares, so permabsp is c_abs/M and
+*            permute's p_twosided equals e(perm_p_att) there exactly.  Block X6 pins
+*            all of this.
 *   Two numerical traps, both measured and both handled below:
 *     (a) ritest's and permute's saving() files are FLOAT unless double is given -
 *         without it a bitwise 199/199 becomes 0/199 at a 5.6e-08 spread.  Every
@@ -54,7 +57,8 @@
 *       through samplingsourcefile(), so there is no Monte-Carlo tolerance at all.
 *       Rep-by-rep equality at reldif <= 1e-10 (bitwise count reported), SD at 1e-10,
 *       observed statistic at 1e-13, and ritest's p identical to wooldid's own
-*       permrawp engine number at 1e-12.  On dta_binary with a NULL outcome.
+*       permabsp engine number converted to the plain share, ((n+1)*p_absp - 1)/n,
+*       at 1e-12.  On dta_binary with a NULL outcome.
 *   X4  MONTE-CARLO: independent draws, ritest cluster(i) and permute (wrapper), on
 *       the same null outcome.  ONE-SIDED tails only (never the two-sided p: the
 *       min-and-double rule amplifies a tail difference near 1/2) and a NULL outcome
@@ -676,13 +680,16 @@ else dis as error "X2 skipped: the X1 wooldid permexact run failed (already coun
 * 20-assignment tiny panel, so it costs seconds.
 * PASS (every share at reldif <= 1e-12 against counts recomputed offline from
 * e(permdist_b) and the exact-bit e(perm_comparator_b)):
-*   exact mode  : default == min(1, 2*min(c_lo,c_hi)/M); permabsp == permrawp ==
-*                 c_abs/M; permside(left) == c_lo/M; permside(right) == c_hi/M;
-*                 e(perm_p_lo) == c_lo/M; e(perm_p_hi) == c_hi/M
+*   exact mode  : default == min(1, 2*min(c_lo,c_hi)/M); permabsp == c_abs/M
+*                 (THE EXTERNAL ENGINES' NUMBER as it stands); permside(left) ==
+*                 c_lo/M; permside(right) == c_hi/M; e(perm_p_lo) == c_lo/M;
+*                 e(perm_p_hi) == c_hi/M
 *   sampled mode: default == min(1, 2*(1+min(c_lo,c_hi))/(n+1));
-*                 permabsp == (1+c_abs)/(n+1); permrawp == c_abs/n  <- THE EXTERNAL
-*                 ENGINES' NUMBER; permside(left/right) == (1+c_lo)/(n+1),
-*                 (1+c_hi)/(n+1); e(perm_p_lo)/e(perm_p_hi) the same two
+*                 permabsp == (1+c_abs)/(n+1), and ((n+1)*permabsp - 1)/n == c_abs/n
+*                 with n read from e(perm_n)  <- THE EXTERNAL ENGINES' NUMBER;
+*                 permside(left/right) == (1+c_lo)/(n+1), (1+c_hi)/(n+1);
+*                 e(perm_p_lo)/e(perm_p_hi) the same two
+*   and under permabsp in both modes e(perm_n) for main_att == the offline n
 *   and in both modes every convention's e(permdist_b) is BITWISE identical to the
 *   default run at the same rseed (a p-value convention must not move the draws)
 ****************************************************************************
@@ -700,7 +707,7 @@ foreach mode in exact samp {
     local mtag X6s
   }
   local firstconv 1
-  forval j = 1/5 {
+  forval j = 1/4 {
     if `j' == 1 {
       local conv
       local cname default
@@ -710,14 +717,10 @@ foreach mode in exact samp {
       local cname permabsp
     }
     if `j' == 3 {
-      local conv permrawp
-      local cname permrawp
-    }
-    if `j' == 4 {
       local conv permside(left)
       local cname permsideleft
     }
-    if `j' == 5 {
+    if `j' == 4 {
       local conv permside(right)
       local cname permsideright
     }
@@ -744,12 +747,16 @@ foreach mode in exact samp {
     if `e6' >= . local e6 = 1
     scalar __plo6 = `L6'[1, `e6']
     scalar __phi6 = `H6'[1, `e6']
+    tempname N6
+    matrix `N6' = e(perm_n)
+    local f6 = colnumb(`N6', "main_att")
+    if `f6' >= . local f6 = 1
+    scalar __n6e = `N6'[1, `f6']
     mata: rxc_tails(st_local("PD6"), st_numscalar("__o6"), 0)
     local n6 = __t_n
     if "`mode'" == "exact" {
       if "`cname'" == "default"       local want = min(1, 2*min(__t_clo, __t_chi)/`n6')
       if "`cname'" == "permabsp"      local want = __t_cabs/`n6'
-      if "`cname'" == "permrawp"      local want = __t_cabs/`n6'
       if "`cname'" == "permsideleft"  local want = __t_clo/`n6'
       if "`cname'" == "permsideright" local want = __t_chi/`n6'
       local wlo = __t_clo/`n6'
@@ -758,7 +765,6 @@ foreach mode in exact samp {
     else {
       if "`cname'" == "default"       local want = min(1, 2*(1 + min(__t_clo, __t_chi))/(`n6' + 1))
       if "`cname'" == "permabsp"      local want = (1 + __t_cabs)/(`n6' + 1)
-      if "`cname'" == "permrawp"      local want = __t_cabs/`n6'
       if "`cname'" == "permsideleft"  local want = (1 + __t_clo)/(`n6' + 1)
       if "`cname'" == "permsideright" local want = (1 + __t_chi)/(`n6' + 1)
       local wlo = (1 + __t_clo)/(`n6' + 1)
@@ -772,6 +778,22 @@ foreach mode in exact samp {
     if reldif(__plo6, `wlo') > 1e-12 | reldif(__phi6, `whi') > 1e-12 {
       dis as error "`mtag' FAIL: `cname' e(perm_p_lo)=" __plo6 " e(perm_p_hi)=" __phi6 " vs the documented " `wlo' " / " `whi'
       global pf = $pf + 1
+    }
+    if "`cname'" == "permabsp" {
+      * the external engines' plain share c_abs/n, recovered from permabsp with the n
+      * wooldid posts: exact under permexact (no add-one to undo), ((n+1)p - 1)/n on
+      * sampled draws
+      if __n6e != `n6' {
+        dis as error "`mtag' FAIL: e(perm_n) for main_att is " __n6e " but the offline count of e(permdist_b) is " `n6'
+        global pf = $pf + 1
+      }
+      if "`mode'" == "exact" scalar __raw6 = __p6
+      else scalar __raw6 = ((__n6e + 1)*__p6 - 1)/__n6e
+      if reldif(__raw6, __t_cabs/`n6') > 1e-12 {
+        dis as error "`mtag' FAIL: the plain share recovered from permabsp is " __raw6 " but c_abs/n = " __t_cabs/`n6' " (n=" `n6' ")"
+        global pf = $pf + 1
+      }
+      else dis "`mtag' info: the plain share recovered from permabsp " %9.6f __raw6 " == c_abs/n " %9.6f __t_cabs/`n6' " (the external engines' number)"
     }
     if `firstconv' == 1 {
       matrix `PDREF' = `PD6'
@@ -789,8 +811,8 @@ foreach mode in exact samp {
 }
 timer off 5
 timer list 5
-dis "X6 info: 10 convention runs, " %6.2f r(t5) "s"
-if `x6fail' == 0 dis "X6 info: the external engines' number is permrawp (c_abs/n); wooldid's default and permabsp carry the add-one and cannot equal an external p except by coincidence"
+dis "X6 info: 8 convention runs, " %6.2f r(t5) "s"
+if `x6fail' == 0 dis "X6 info: the external engines' number is c_abs/n, which permabsp gives directly under permexact and as ((n+1)*p - 1)/n on sampled draws; wooldid's default carries the add-one and the equal-tailed rule and cannot equal an external p except by coincidence"
 
 ****************************************************************************
 * X5 - STRATA and PROBABILITIES against ritest.
@@ -969,21 +991,27 @@ if `HASRI' {
     dis "X5-9 info: the exact design |s| tail is " %8.5f __qtail " over the 15 estimable subsets"
     use `TINYP', clear
     set seed 424242
-    cap noi wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(`RPRB') permrawp permprobs((ttre 4 .) (1 .8 .2) (2 .6 .4) (3 .4 .6) (4 .2 .8) (5 0 1) (6 0 1))
+    cap noi wooldid y i t ttre, att cluster(i) permute(probabilities) permreps(`RPRB') permabsp permprobs((ttre 4 .) (1 .8 .2) (2 .6 .4) (3 .4 .6) (4 .2 .8) (5 0 1) (6 0 1))
     local rc7 = _rc
     if `rc7' != 0 {
       dis as error "X5-10 FAIL: wooldid permute(probabilities) rc=" `rc7'
       global pf = $pf + 1
     }
     else {
-      scalar __qwp = e(perm_p_att)
-      scalar __qwn = e(perm_completed)
+      * the plain share c_abs/n, recovered from the add-one permabsp p with the
+      * element's own n from e(perm_n)
+      tempname QN
+      matrix `QN' = e(perm_n)
+      local qnc = colnumb(`QN', "main_att")
+      if `qnc' >= . local qnc = 1
+      scalar __qwn = `QN'[1, `qnc']
+      scalar __qwp = ((__qwn + 1)*e(perm_p_att) - 1)/__qwn
       local sew = sqrt(__qtail*(1 - __qtail)/__qwn)
       if abs(__qwp - __qtail) > 4*`sew' {
-        dis as error "X5-10 FAIL: wooldid permrawp " %8.5f __qwp " vs the exact design tail " %8.5f __qtail ", se " %8.5f `sew' ", z " %6.2f (__qwp - __qtail)/`sew' " (tol 4 se)"
+        dis as error "X5-10 FAIL: wooldid plain share from permabsp " %8.5f __qwp " vs the exact design tail " %8.5f __qtail ", se " %8.5f `sew' ", z " %6.2f (__qwp - __qtail)/`sew' " (tol 4 se)"
         global pf = $pf + 1
       }
-      else dis "X5-10 info: wooldid permrawp " %8.5f __qwp " (n=" __qwn ") vs exact " %8.5f __qtail ", z " %6.2f (__qwp - __qtail)/`sew'
+      else dis "X5-10 info: wooldid plain share from permabsp " %8.5f __qwp " (n=" __qwn ") vs exact " %8.5f __qtail ", z " %6.2f (__qwp - __qtail)/`sew'
     }
     use `TINYP', clear
     mata: rxc_reset()
@@ -1055,8 +1083,10 @@ else dis "X5 info: SKIPPED (uncounted) - ritest is not installed"
 *   X3-3  NO draw lies within 1e-7 of |s_obs| - the precondition that makes wooldid's
 *         exact tie rule and the engines' eps rule count the same draws.  If one did,
 *         the p comparison would have to use #{|s| >= |s_obs| - 1e-7}/n instead.
-*   X3-4  the permrawp rerun at the same rseed is BITWISE identical draw for draw
-*   X3-5  its engine p == the offline c_abs/n at 1e-12
+*   X3-4  the permabsp rerun at the same rseed is BITWISE identical draw for draw
+*   X3-5  its engine p == the offline (1 + c_abs)/(n + 1) at 1e-12, its e(perm_n)
+*         == the offline n, and the plain share recovered from it,
+*         ((n+1)*p_absp - 1)/n, == the offline c_abs/n at 1e-12
 *   X3-6  the permsave file carries one onset_ column per cluster (wooldid documents
 *         that a column can be silently dropped on a name collision)
 *   X3-7  the transposed _rep row is 0,1,..,R
@@ -1064,7 +1094,9 @@ else dis "X5 info: SKIPPED (uncounted) - ritest is not installed"
 *   X3-9  sd(ritest replay draws) == e(perm_sd) at reldif 1e-10
 *   X3-10 reldif(r(b), e(perm_comparator_b)) <= 1e-13
 *   X3-11 ritest p == the offline c_abs/n at 1e-12
-*   X3-12 ritest p == wooldid's own permrawp ENGINE number at 1e-12 (engine to engine)
+*   X3-12 ritest p == the plain share recovered from wooldid's own permabsp ENGINE
+*         number at 1e-12 (engine to engine; the conversion uses only e(perm_p_att)
+*         and e(perm_n), no offline count)
 *
 * X4 - MONTE-CARLO, independent draws.  ONE-SIDED tails only, against a binomial
 *   standard error: for two independent draw sets estimating the same share,
@@ -1144,32 +1176,47 @@ else {
 
     use `BINN', clear
     timer on 8
-    cap noi wooldid y0 i t ttre, att cluster(i) permute(shuffle) permreps(`RB') rseed(11) permrawp
+    cap noi wooldid y0 i t ttre, att cluster(i) permute(shuffle) permreps(`RB') rseed(11) permabsp
     local rcw2 = _rc
     timer off 8
     if `rcw2' != 0 {
-      dis as error "X3-4 FAIL: the wooldid permrawp rerun failed, rc=" `rcw2'
+      dis as error "X3-4 FAIL: the wooldid permabsp rerun failed, rc=" `rcw2'
       global pf = $pf + 1
     }
     else {
-      tempname PDW2
+      tempname PDW2 NW2
       matrix `PDW2' = e(permdist_b)
       local cw2 = colnumb(`PDW2', "main_att")
       if `cw2' >= . local cw2 = 1
       matrix `PDW2' = `PDW2'[1..., `cw2'..`cw2']
-      scalar __wraw = e(perm_p_att)
+      matrix `NW2' = e(perm_n)
+      local nw2 = colnumb(`NW2', "main_att")
+      if `nw2' >= . local nw2 = 1
+      scalar __wn2  = `NW2'[1, `nw2']
+      scalar __wabs = e(perm_p_att)
+      * the plain share c_abs/n that ritest and permute report, recovered exactly from
+      * the add-one permabsp p with the n wooldid posts
+      scalar __wraw = ((__wn2 + 1)*__wabs - 1)/__wn2
       scalar __w2ok = 1
       mata: rxc_bitcmp(st_local("PDW"), st_local("PDW2"))
       if __bc_same != __bc_n {
-        dis as error "X3-4 FAIL: permrawp at the same rseed moved the draws - only " __bc_same " of " __bc_n " are bitwise identical"
+        dis as error "X3-4 FAIL: permabsp at the same rseed moved the draws - only " __bc_same " of " __bc_n " are bitwise identical"
         global pf = $pf + 1
       }
-      else dis "X3-4 info: the permrawp rerun at rseed 11 is bitwise identical (" __bc_n "/" __bc_n ")"
+      else dis "X3-4 info: the permabsp rerun at rseed 11 is bitwise identical (" __bc_n "/" __bc_n ")"
+      if __wn2 != __wn {
+        dis as error "X3-5 FAIL: e(perm_n) for main_att under permabsp = " __wn2 " but the offline n = " __wn
+        global pf = $pf + 1
+      }
+      if reldif(__wabs, (1 + __wcabs)/(__wn + 1)) > 1e-12 {
+        dis as error "X3-5 FAIL: e(perm_p_att) under permabsp = " __wabs " but (1 + c_abs)/(n + 1) = " (1 + __wcabs)/(__wn + 1)
+        global pf = $pf + 1
+      }
       if reldif(__wraw, __wcabs/__wn) > 1e-12 {
-        dis as error "X3-5 FAIL: e(perm_p_att) under permrawp = " __wraw " but c_abs/n = " __wcabs/__wn
+        dis as error "X3-5 FAIL: the plain share recovered from permabsp = " __wraw " but c_abs/n = " __wcabs/__wn
         global pf = $pf + 1
       }
-      else dis "X3-5 info: the permrawp engine p " %9.7f __wraw " == the offline c_abs/n " %9.7f __wcabs/__wn " (this is the number ritest and permute report)"
+      else dis "X3-5 info: the permabsp engine p " %9.7f __wabs " gives the plain share " %9.7f __wraw " == the offline c_abs/n " %9.7f __wcabs/__wn " (this is the number ritest and permute report)"
     }
     timer list 8
     scalar __x3t2 = r(t8)
@@ -1273,12 +1320,12 @@ else {
       else dis "X3-11 info: ritest p " %18.15f __rrp " == the offline c_abs/n " %18.15f __wcabs/__wn " on the same draws"
       if __w2ok == 1 {
         if reldif(__rrp, __wraw) > 1e-12 {
-          dis as error "X3-12 FAIL: ritest p " %18.15f __rrp " != wooldid's permrawp engine p " %18.15f __wraw " on the same draws (tol 1e-12)"
+          dis as error "X3-12 FAIL: ritest p " %18.15f __rrp " != the plain share from wooldid's permabsp engine p " %18.15f __wraw " on the same draws (tol 1e-12)"
           global pf = $pf + 1
         }
-        else dis "X3-12 info: ritest p == the wooldid permrawp engine p, " %18.15f __rrp " (engine to engine, no offline step)"
+        else dis "X3-12 info: ritest p == the plain share from the wooldid permabsp engine p, " %18.15f __rrp " (engine to engine, no offline count)"
       }
-      dis "X3 info: wooldid " %7.1f __x3t1 "s, permrawp rerun " %7.1f __x3t2 "s, ritest replay " %7.1f __x3t3 "s"
+      dis "X3 info: wooldid " %7.1f __x3t1 "s, permabsp rerun " %7.1f __x3t2 "s, ritest replay " %7.1f __x3t3 "s"
     }
   }
   else if !`HASRI' dis "X3 info: the ritest replay leg is SKIPPED (uncounted) - ritest is not installed"

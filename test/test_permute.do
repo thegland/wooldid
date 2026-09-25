@@ -218,7 +218,7 @@ else {
   if e(perm_npossible) != 252 local ++bad
   foreach ee in att att_it {
     if !(e(perm_p_`ee') >= 0 & e(perm_p_`ee') <= 1) local ++bad
-    if !(e(perm_lb_`ee') <= e(perm_ub_`ee')) local ++bad
+    if !(e(perm_bandlo_`ee') <= e(perm_bandhi_`ee')) local ++bad
     if !(e(perm_sd_`ee') > 0 & e(perm_sd_`ee') < .) local ++bad
   }
   cap confirm matrix e(permdist)
