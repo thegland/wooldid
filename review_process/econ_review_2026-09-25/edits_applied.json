@@ -1,0 +1,1433 @@
+{
+ "edits": [
+  {
+   "id": "ident:F4",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{pstd} A special case to consider is the difference-in-differences-in-differences (triple diff) case. In the triple diff case, all cohorts are categorized into two groups, with both groups\nexisting among treated cohorts and control cohorts. The target estimand may be thought of as the difference in the diff-in-diff estimates obtained separately for each of the two groups. To\nimplement a triple diff design in {it:wooldid}, one can specify the variable containing the two triple diff groups as a SG variable and then manually specify inclusion of SG by period\nfixed effects (i.e., specifying {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}). The difference in SG level estimates returned will be the triple diff estimate. {p_end}",
+   "replace": "{pstd} A special case to consider is the difference-in-differences-in-differences (triple diff) case. In the triple diff case, all cohorts are categorized into two groups, with both groups\nexisting among treated cohorts and control cohorts. The target estimand is the difference between the diff-in-diff estimates obtained separately for each of the two groups. To\nimplement a triple diff design in {it:wooldid}, define {it:i} as the treatment onset cohort by group, for example {it:egen newi = group(ttre sgvarname), missing}. Specify the variable containing\nthe two groups as the SG variable and add SG by period fixed effects, as in {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}. The contrast removes shocks that hit both groups\nin a treated cohort and period only when the two SG estimates weight the same onset-cohort-by-period cells in the same way. Use {it:att_it}, with both groups present in every treated\nonset-cohort-by-period cell. Its contrast is then the simple average of the cell-level triple differences. Under {it:att} each group weights its cells by the sample weight of its own observations,\nso that contrast keeps those shocks whenever the group shares of that weight differ across cells. {p_end}",
+   "why": "The old last sentence called the default att contrast the triple diff estimate. Under att each subgroup weights its cells by its own observation counts, so cohort-by-period shocks shared by the two groups survive whenever group shares differ across cells (refuter's noiseless run: att 3.84, att_it 1, true 1). The new text defines i as onset cohort by group, recommends att_it and states the att caveat.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F4",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "- A triple difference is `subgroups(g) fe(i.g##i.t)`: the contrast between the two subgroup estimates is the triple-difference estimate.",
+   "replace": "- A triple difference is `subgroups(g) fe(i.g##i.t)` with `att_it` and `i` defined as onset cohort by group (`egen newi = group(ttre_groups g), missing`). When both groups are present in every treated onset-cohort-by-period cell, the `att_it` contrast is the average of the cell-level triple differences. The `att` contrast weights each group's cells by the sample weight of its own observations, so it keeps shocks shared by the two groups whenever the group shares of that weight differ across cohorts or periods.",
+   "why": "The chapter 8 rules-of-road bullet repeats the same false claim. Replaced with the corrected recipe as the corrected_fix gives it.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F4",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "A special case to consider is the difference-in-differences-in-differences (triple diff) case. In the triple diff case, all cohorts are categorized into two groups, with both groups existing among treated cohorts and control cohorts. The target estimand may be thought of as the difference in the diff-in-diff estimates obtained separately for each of the two groups. To implement a triple diff design in *wooldid*, one can specify the variable containing the two triple diff groups as a SG variable and then manually specify inclusion of SG by period fixed effects (i.e., specifying *subgroups(sgvarname) fe(i.sgvarname##i.t)*). The difference in SG level estimates returned will be the triple diff estimate.",
+   "replace": "A special case to consider is the difference-in-differences-in-differences (triple diff) case. In the triple diff case, all cohorts are categorized into two groups, with both groups existing among treated cohorts and control cohorts. The target estimand is the difference between the diff-in-diff estimates obtained separately for each of the two groups. To implement a triple diff design in *wooldid*, define *i* as the treatment onset cohort by group, for example *egen newi = group(ttre sgvarname), missing*. Specify the variable containing the two groups as the SG variable and add SG by period fixed effects, as in *subgroups(sgvarname) fe(i.sgvarname##i.t)*. The contrast removes shocks that hit both groups in a treated cohort and period only when the two SG estimates weight the same onset-cohort-by-period cells in the same way. Use *att_it*, with both groups present in every treated onset-cohort-by-period cell. Its contrast is then the simple average of the cell-level triple differences. Under *att* each group weights its cells by the sample weight of its own observations, so that contrast keeps those shocks whenever the group shares of that weight differ across cells.",
+   "why": "This is the guide's 'From the help file' copy of the help paragraph. It is kept in step with the new help text, in Markdown.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F4",
+   "k": 3,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "wooldid y newi2 t ttre, att cluster(unit) fe(i.unit i.g##i.t) subgroups(g)",
+   "replace": "wooldid y newi2 t ttre, att_it cluster(unit) fe(i.unit i.g##i.t) subgroups(g)",
+   "why": "The chapter 16 worked triple-difference recipe used att, and that contrast does not remove shocks shared by the two groups. Changed to att_it. This is chapter 16, not the generated chapter 14.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-01",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "The remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}. {p_end}",
+   "replace": "The remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}. For the {it:gteffects} cells only the finer {it:cluster()} is a remedy. A cell inside one cluster is resampled whole, so its bootstrap standard error is understated too, and under {it:permute()} the cells carry no inference. {p_end}",
+   "why": "corrected_fix item 3: the remedies list in Discussion of What Level to Cluster At claims bootstrap() and permute() repair the gteffects cells. They do not. A contained cell is resampled whole, and permute() blanks the cells.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-01",
+   "k": 1,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "available under {it:fastnose}; under {it:bootstrap()} the cell inference is bootstrap-based, and under {it:permute()} the cells carry no inference. {p_end}",
+   "replace": "available under {it:fastnose}; under {it:bootstrap()} the cell inference is bootstrap-based, but a cell the caution counts is resampled whole, so its standard error stays understated; under {it:permute()} the cells carry no inference. {p_end}",
+   "why": "corrected_fix item 4: the gteffects option implied that bootstrap-based cell inference is valid. For contained cells it stays understated. The sentence was restructured to fit its existing semicolon chain. \"the caution\" points back to \"which a caution reports\" earlier in the same paragraph.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-01",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "`gteffects` cells are understated (cautioned). Use `bootstrap()`",
+   "replace": "`gteffects` cells are understated (cautioned). No engine repairs the `gteffects` cells in this design: `bootstrap()` resamples a cell inside one cluster whole, and `permute()` leaves their inference columns blank. Only a finer `cluster()` does. For the other rows and tests, use `bootstrap()`",
+   "why": "corrected_fix item 5: decision rule 2 in chapter 4 offered bootstrap()/permute() as the fix for the gteffects cells as well. The closing Use bootstrap() ... or permute() sentence is kept as the refuter directed, and it now reads as covering the other rows and tests.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-01",
+   "k": 3,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "so the remedies are a finer `cluster()`, or `bootstrap()` or `permute()`, which build their inference from replications instead.",
+   "replace": "so the remedies are a finer `cluster()`, or `bootstrap()` or `permute()`, which build their inference from replications instead. For the `gteffects` cells only the finer `cluster()` works, since `bootstrap()` resamples a cell inside one cluster whole and `permute()` leaves their inference columns blank.",
+   "why": "corrected_fix item 6: this is the guide's What level to cluster at paragraph, in its From the help file block. The permute() clause is added so it matches the help L316 edit.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-01",
+   "k": 4,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "(the standard error is the bootstrap standard deviation of the cell, or its analytic standard error under `boottstat`).",
+   "replace": "(the standard error is the bootstrap standard deviation of the cell, or its analytic standard error under `boottstat`). A cell that *e(gt_ncontained)* counts is resampled whole, so its own variation is the same in every replication and these columns stay understated for it.",
+   "why": "Rule 7 mirror. This is the guide's gteffects option, the fuller counterpart of help L909. It says the cell columns under bootstrap() are bootstrap quantities and gives no limit. corrected_fix does not name this site. It is added so the guide agrees with the help L909 edit.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-1",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "but it protects only when the cluster-robust standard error is informative about the treated clusters - many observations per treated cohort-period cell, with `cluster()` coarser than the cell. With `cluster()` at *i* and one observation per *i*-period the treated cells are absorbed by their own cohort-period terms, the standard error cannot see their variance, and neither statistic is protected (the same design rejected in 7 of 30 datasets under `permtstat`);",
+   "replace": "but it protects only when the cluster-robust standard error can see the treated clusters' own variance. That needs each treated cohort-period cell to contain several clusters, with `cluster()` finer than *i*. Under `permute()` only `permonsetcohorts` admits that. Whenever `cluster()` nests *i*, at *i* or coarser, each treated cell sits inside one cluster. Its own cohort-period term then absorbs it, however many observations it holds. The standard error cannot see its variance, and neither statistic is protected (the design with `cluster()` at *i* rejected in 7 of 30 datasets under `permtstat`);",
+   "why": "PERM-1: the stated condition (cluster() coarser than the cell) is the blind case. The cell dummy zeroes the cell's score when one cluster holds the whole cell, so the SE sees the treated variance only with several clusters per treated cell, which under permute() needs permonsetcohorts.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-1",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "only when the standard error can see that cluster, which at `cluster()` = `i` it cannot).",
+   "replace": "only when the standard error can see that cluster, which it cannot whenever `cluster()` nests `i`; that needs `permonsetcohorts` with a finer `cluster()`).",
+   "why": "PERM-1: the summary bullet named only cluster() equal to i. A coarser cluster() is just as blind, and only permonsetcohorts with a finer cluster() lets permtstat protect.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-1",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "it protects only when the cluster-robust standard error is informative about the treated clusters, and at `cluster()` = *i* with one observation per *i*-period it is not (a caution says so).",
+   "replace": "it protects only when the cluster-robust standard error can see the treated clusters' own variance, which needs each treated cohort-period cell to contain several clusters, and so `permonsetcohorts` with a `cluster()` finer than *i*. Whenever `cluster()` nests *i* it does not protect, however many observations each cell holds (at `cluster()` = *i* a caution says so).",
+   "why": "PERM-1, rule 7: the guide's permtstat entry mirrors help 464-465 and carries the same wrong qualifier (one observation per i-period), which implies that many observations per cell would protect.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-1",
+   "k": 3,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "can see that cluster's own variance, which at `cluster()` equal to *i* it cannot.",
+   "replace": "can see that cluster's own variance, which it cannot whenever `cluster()` nests *i*.",
+   "why": "PERM-1: in the permonsetcohorts entry, a cluster() coarser than i is as blind as cluster() at i.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-1",
+   "k": 4,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "It protects against a treated cluster with unusually dispersed errors only where the cluster-robust standard error\nsees that cluster's own variance, which at {it:cluster()} equal to {it:i} it does not; a caution says so. {p_end}",
+   "replace": "It protects against a treated cluster with unusually dispersed errors only where each\ntreated cohort-period cell contains several clusters. Under {it:permute()} that needs {it:permonsetcohorts} with a {it:cluster()} finer than {it:i}. Whenever {it:cluster()} nests {it:i} it does not protect,\nand at {it:cluster()} equal to {it:i} a caution says so. {p_end}",
+   "why": "PERM-1: the help named only cluster() equal to i. Any cluster() that nests i leaves each treated cell inside one cluster, so permtstat cannot protect there. Only permonsetcohorts with a finer cluster() can.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-2",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "lattice bin it occupies, since that is the only variation identifying that piece's slope; pieces without it are dropped for collinearity, the reported average marginal effect then\naverages only the pieces that survived, and the analytic standard errors can be far smaller than the estimates' sampling variability. A useful rule of thumb is that the number of\nunits contributing to a treated cell should be several times the number of lattice bins. {p_end}",
+   "replace": "lattice bin it occupies. That variation is all that identifies the piece's slope. A piece without it has no slope of its own. One slope term in that cell then drops for\ncollinearity, and the piece takes the slope of another bin in the same cell. The reported average marginal effect and the plotted average marginal effects by bin include that\nborrowed slope. No caution prints unless {it:verbose} is given. Separately, a piece with no more observations than parameters is fitted exactly, and the analytic standard errors can\nthen be far smaller than the estimates' sampling variability. A useful rule of thumb is that the number of units contributing to a treated cell should be several times the number of\nlattice bins. {p_end}",
+   "why": "The help says pieces without dose variation are dropped and the ame averages only the survivors. In the code, the piece loses only its slope term, not its rows, so it takes another bin's slope and the ame includes that borrowed slope (probes p3b and q1). The SE clause pointed at the wrong mechanism. The understated SEs come from exactly fitted pieces, as blue-sky LAT L4 R1 and R2 measured. The author's opening sentence and the two-distinct-values sentence on line 792 are kept.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-2",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "the pieces with fewer than two distinct values are dropped for collinearity, the reported average marginal effect then averages only the pieces that survived, and the analytic standard errors on such a design can be very much smaller than the estimates' sampling variability.",
+   "replace": "a piece with fewer than two distinct values has no slope of its own. One slope term in that cell then drops for collinearity, and the piece takes the slope of another bin in the same cell. The average marginal effect and the plotted average marginal effects by bin then include that borrowed slope, and no caution prints unless *verbose* is given. Separately, a piece with no more observations than parameters is fitted exactly, and the analytic standard errors on such a design can be very much smaller than the estimates' sampling variability.",
+   "why": "This is the guide's version of the same help paragraph (the support-requirement paragraph in the contreat chapter). It has the same wrong mechanism, so it gets the same correction. The rest of the paragraph is unchanged.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-2",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "15. A lattice with more bins than units per cell: pieces drop for collinearity and the `ame` averages only the survivors.",
+   "replace": "15. A lattice with more bins than units per cell: a piece without dose variation takes the slope of another bin in its cell, so the `ame` includes slopes the data never estimated, and no caution prints without `verbose`.",
+   "why": "The pitfalls list repeats the same wrong claim that the ame averages only the survivors. The finding quoted this line as 1383. After the oldsyntax removal it sits at line 1379, in the pitfalls list of chapter 15, outside the generated chapter 14.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-3",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "and to the presence of i-t fixed effects (if specified). When specified, {it:wooldid} will still present ATT-type average treatment effects estimates, which in this case should essentially\nbe the integral of the estimated average marginal effects across the distribution of the continuous treatment variable. Note: the control type {it:byTime} is refused in this case,",
+   "replace": "and to the presence of i-t fixed effects (if specified). When specified, {it:wooldid} still reports att estimates, but read them with care. In a period where some unit is not yet treated,\nthe att of a treated cell includes the level effect of treatment, measured against the untreated units of that period. In a period with no untreated reference rows, the level effects\nof the treated cells are not identified. {it:wooldid} then sets one cell's level effect in that period to zero and measures the other cells against it, without a message. The att there\ndepends on which cell was set to zero. It can change when the cohorts are relabelled, and it can take the wrong sign. Rows moved into an {it:esprelength()} window also leave the\nreference pool, so the pretreatment att can be affected in the same way. The att and its event study can therefore shift sharply at the last treatment onset for this reason alone.\nThe att is the integral of the estimated average marginal effects across the distribution of the continuous treatment variable only when {it:fe()} absorbs every cohort-period level\neffect, for example with i-t fixed effects. Even then, it extrapolates the estimated slope down to a dose of zero. Rely on the ame results under {it:contreatwithin}.\nNote: the control type {it:byTime} is refused in this case,",
+   "why": "The help says that under contreatwithin the att is roughly the integral of the ames. In staggered designs that is false. In periods with no untreated reference rows, the cell level effects are normalised against a cell the solver picks. The att can then depend on the cohort labels and can take the wrong sign (refuter probe h.log: att 1.472 vs 3.304 on relabelled cohorts, post2 -0.591). The sentence is replaced with the refuter's corrected_fix.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-3",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "When specified, *wooldid* will still present ATT-type average treatment effects estimates, which in this case should essentially be the integral of the estimated average marginal effects across the distribution of the continuous treatment variable. Note:",
+   "replace": "When specified, *wooldid* still reports att estimates, but read them with care. In a period where some unit is not yet treated, the att of a treated cell includes the level effect of treatment, measured against the untreated units of that period. In a period with no untreated reference rows, the level effects of the treated cells are not identified. *wooldid* then sets one cell's level effect in that period to zero and measures the other cells against it, without a message. The att there depends on which cell was set to zero. It can change when the cohorts are relabelled, and it can take the wrong sign. Rows moved into an *esprelength()* window also leave the reference pool, so the pretreatment att can be affected in the same way. The att and its event study can therefore shift sharply at the last treatment onset for this reason alone. The att is the integral of the estimated average marginal effects across the distribution of the continuous treatment variable only when *fe()* absorbs every cohort-period level effect, for example with i-t fixed effects. Even then, it extrapolates the estimated slope down to a dose of zero. Rely on the ame results under *contreatwithin*. Note:",
+   "why": "Guide chapter 9 (line 603) repeats the help sentence word for word. This is the same replacement in Markdown. It uses *italic* option names, as every other option in this paragraph does.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-1",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{it:ES_att_post#} (the event-study horizons, numbered outward from the reference period), and",
+   "replace": "{it:ES_att_post#} (the event-study horizons, named by relative period: {it:pre#} is relative period -# and {it:post#} is relative period #, with {it:post0} the onset period; the reference period has no column), and",
+   "why": "The code names each horizon by its period relative to onset (post<relyr>/pre<abs(relyr)>), not by its distance from the reference period. Under esfixedbaseperiod at esrelativeto(-1), the first pre column is pre2.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-1",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "*ES_att_post#* (the event-study horizons, numbered outward from the reference period), and",
+   "replace": "*ES_att_post#* (the event-study horizons, named by relative period: *pre#* is relative period -# and *post#* is relative period #, with *post0* the onset period; the reference period has no column), and",
+   "why": "This guide paragraph copies the help sentence, so it gets the same correction in Markdown.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-1",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "the event-study horizons `pre#` and `post#` counted outward from the reference period.",
+   "replace": "the event-study horizons `pre#` and `post#` named by relative period (`pre1` is relative period -1, `post0` the onset period).",
+   "why": "The guide overview made the same wrong claim: that horizons are counted outward from the reference period.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F2",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "time period immediately prior to treatment (relative period -1), though the user can specify alternative behavior. For more on how this is implemented, see {help wooldid##description:Description}.{p_end}\n",
+   "replace": "time period immediately prior to treatment (relative period -1), though the user can specify alternative behavior. For more on how this is implemented, see {help wooldid##description:Description}.{p_end}\n\n{pstd} The choice also changes the comparison group. Under the pooled reference period every untreated observation serves as a control. That includes never-treated cohorts, cohorts treated after the end of the sample,\nand the pre-treatment periods of cohorts not yet treated, apart from any pre-treatment horizons the run asks for. Parallel trends and no anticipation must then hold across all of those periods. Under {it:esfixedbaseperiod}\neach treated cohort's pre-treatment periods other than the reference period carry their own indicators, and the reference period only anchors that cohort's own level. If {it:timetrends} is also specified, the period immediately before the\nreference period carries no indicator either, and the two together anchor the cohort's level and trend. The period effects then come from never-treated cohorts and cohorts treated after the end of the sample alone. Cohorts not yet treated\ndo not serve as controls. Parallel trends is needed only between each treated cohort and those cohorts, from the reference period on. This is the never-treated comparison of Callaway and Sant'Anna (2021)\nand Sun and Abraham (2021). The pooled default instead matches the imputation estimator of Borusyak, Jaravel, and Spiess (2023) under the conditions given in\n{help wooldid##comparison:Comparison with Related Estimators}. {p_end}\n",
+   "why": "Adds a paragraph after the Two Approaches paragraph. The pooled and fixed reference periods use different comparison groups and need different parallel trends assumptions, and neither the help nor the guide said so (ident:F2).",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F2",
+   "k": 1,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{pstd} While there is no general solution to this transparency-precision tradeoff, use",
+   "replace": "{pstd} While there is no general solution to this tradeoff, use",
+   "why": "Once the comparison-group paragraph comes before it, the choice is no longer only a transparency-precision tradeoff (ident:F2).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F2",
+   "k": 2,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{phang} Borusyak, Kirill, Xavier Jaravel, and Jann Spiess. Revisiting Event Study Designs: Robust and Efficient Estimation. Working Paper, 2023. {p_end}\n",
+   "replace": "{phang} Borusyak, Kirill, Xavier Jaravel, and Jann Spiess. Revisiting Event Study Designs: Robust and Efficient Estimation. Working Paper, 2023. {p_end}\n\n{phang} Callaway, Brantly and Pedro H.C. Sant'Anna. Difference-in-Differences with Multiple Time Periods. Journal of Econometrics, 2021, 225(2): 200-230. {p_end}\n\n{phang} Sun, Liyang and Sarah Abraham. Estimating Dynamic Treatment Effects in Event Studies with Heterogeneous Treatment Effects. Journal of Econometrics, 2021, 225(2): 175-199. {p_end}\n",
+   "why": "The new paragraph cites Callaway and Sant'Anna (2021) and Sun and Abraham (2021), and the Citations section did not list either one (ident:F2).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F2",
+   "k": 3,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "and the `honestdid` handoff all require it.\n",
+   "replace": "and the `honestdid` handoff all require it. The choice also changes the comparison group. The pooled default uses every untreated row as a control, including the pre-treatment periods of not-yet-treated cohorts that fall in their pooled reference. `esfixedbaseperiod` identifies the period effects from never-treated cohorts and cohorts treated after the sample ends only, so parallel trends is needed only against them, from the reference period on.\n",
+   "why": "The 'Pooled or fixed reference period' decision rule now names the comparison group each choice uses (ident:F2).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F2",
+   "k": 4,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "though the user can specify alternative behavior. For more on how this is implemented, see discussion.\n",
+   "replace": "though the user can specify alternative behavior. For more on how this is implemented, see discussion.\n\nThe choice also changes the comparison group. Under the pooled reference period every untreated observation serves as a control. That includes never-treated cohorts, cohorts treated after the end of the sample, and the pre-treatment periods of cohorts not yet treated, apart from any pre-treatment horizons the run asks for. Parallel trends and no anticipation must then hold across all of those periods. Under *esfixedbaseperiod* each treated cohort's pre-treatment periods other than the reference period carry their own indicators, and the reference period only anchors that cohort's own level. If *timetrends* is also specified, the period immediately before the reference period carries no indicator either, and the two together anchor the cohort's level and trend. The period effects then come from never-treated cohorts and cohorts treated after the end of the sample alone. Cohorts not yet treated do not serve as controls. Parallel trends is needed only between each treated cohort and those cohorts, from the reference period on. This is the never-treated comparison of Callaway and Sant'Anna (2021) and Sun and Abraham (2021). The pooled default instead matches the imputation estimator of Borusyak, Jaravel, and Spiess (2023) under the conditions given in chapter 15. \n",
+   "why": "Mirrors the new help paragraph in the guide's 'From the help file' block (ident:F2).",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F2",
+   "k": 5,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "While there is no general solution to this transparency-precision tradeoff, use",
+   "replace": "While there is no general solution to this tradeoff, use",
+   "why": "Mirrors the wording change in the help (ident:F2).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F3",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "post-treatment estimate. With controls, {it:wooldid} and {it:did_imputation} will still yield the same results provided",
+   "replace": "post-treatment estimate. The level of {it:i} matters as well. {it:did_imputation} uses unit fixed effects, so the estimates match only when {it:i} identifies\nindividual units or every unit within an {it:i} is observed in the same periods. When {it:i} is coarser than the unit and its units are observed in different\nperiods, the estimates differ, and adding the unit to {it:fe()} does not restore the match. With controls, {it:wooldid} and {it:did_imputation} will still yield the same results provided",
+   "why": "The help listed the conditions for matching did_imputation without the level of i. With a coarse i on a panel unbalanced within i, the estimates differ (probe p3: 1.85877 vs 1.92558, or 1.84560 with fe(unit)). They match when i is the unit or when every unit in an i is observed in the same periods (refuter probe q).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F3",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "and does not use controls. With controls, *wooldid* and *did_imputation* will still yield the same results provided",
+   "replace": "and does not use controls. The level of *i* matters as well. *did_imputation* uses unit fixed effects, so the estimates match only when *i* identifies individual units or every unit within an *i* is observed in the same periods. When *i* is coarser than the unit and its units are observed in different periods, the estimates differ, and adding the unit to *fe()* does not restore the match. With controls, *wooldid* and *did_imputation* will still yield the same results provided",
+   "why": "Mirrors the help edit in the guide's ch.15 'From the help file' copy (rule 7).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F3",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "| `did_imputation` (Borusyak, Jaravel, Spiess) | `att`, pooled reference, `esprelength(0)`, no controls, analytic standard errors | with controls only in the fine-cohort case; requesting pre-horizons changes the pooled reference |",
+   "replace": "| `did_imputation` (Borusyak, Jaravel, Spiess) | `att`, pooled reference, `esprelength(0)`, no controls, analytic standard errors, and `i` at the unit level or every unit in an `i` observed in the same periods | with controls only in the fine-cohort case; requesting pre-horizons changes the pooled reference; a coarse `i` with units observed in different periods, even with the unit in `fe()` |",
+   "why": "The ch.15 comparison table row left out the same condition. Both columns are updated as corrected_fix specifies.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F3",
+   "k": "missed",
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "or you need to reproduce `did_imputation` with controls, which matches wooldid only in the fine-cohort case.",
+   "replace": "or you need to reproduce `did_imputation`. With controls it matches wooldid only in the fine-cohort case. Without controls it also needs a fine `i` unless every unit in an `i` is observed in the same periods.",
+   "why": "Guide ch.3 says a fine i is needed to reproduce did_imputation only when there are controls. After F3, the ch.15 prose and table say the no-controls match also fails with a coarse i whose units are observed in different periods, even with fe(unit). Line 103 of the guide, help line 69 and the ado caution at about line 1755 all say fe() 'holds the point estimate fixed' on a panel unbalanced within cohorts. That also sits uneasily with p3, where i=cohort with fe(unit) gave 1.84560 and i=unit gave 1.85877. Those lines belong to ident:F7 and the blue-sky R1/R2 record, so they are not repeated here.",
+   "verdict": "MISSED",
+   "src": "verifier",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-02",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "3. **`robust`** is appropriate when errors are independent across observations, which is rare in a panel; it does not carry the cell-containment problem, and the analytic `ame` standard errors are identified under it.",
+   "replace": "3. **`robust`** is appropriate when errors are independent across observations, which is rare in a panel. It avoids the cell-containment problem only when every treated cell holds several observations. With a unit-level `i` on one row per unit per period, each treated cell is a single observation whose residual its own dummy sets to zero, so the analytic standard errors of the `att` rows are understated, as they are under `cluster()` at `i`. When cells hold several observations, the analytic `ame` standard errors are identified under `robust`.",
+   "why": "Decision rule 3 said robust escapes cell containment without qualification. A one-row treated cell has leverage 1 and a zero residual under robust, so its variance is missing from the sandwich. The help (gteffects, e(gt_ncontained), Standard Errors) and the code's containment count already say so.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-02",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "Even then, prefer `robust` or a `cluster()` finer than the cell for the analytic run, and use `bootstrap()` or `permute()` for the tests.",
+   "replace": "On a panel with one row per unit per period, every treated cell is then a single observation. No `cluster()` finer than the cell exists, and `robust` leaves each cell's residual at zero, so the analytic standard errors of the `att` rows are understated either way; use `bootstrap()` or `permute()` for inference on the aggregate rows. Where cells hold several rows, prefer `robust` or a `cluster()` finer than the cell for the analytic run. Use `bootstrap()` or `permute()` for the tests in either case.",
+   "why": "With a fine i on one row per unit per period no cluster finer than the cell exists, and robust has the same zero-residual defect, so the recommendation pointed at understated standard errors.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-03",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "and cluster at the unit level or at any level strictly finer than the cohort-by-period cells.",
+   "replace": "and cluster at the level at which treatment is assigned, usually the unit, or coarser. That level must still be strictly finer than the cohort-by-period cells, so that each treated cell holds several clusters.",
+   "why": "The old L95 wording let any level finer than the cells pass, including unit-by-period and sub-assignment clustering. Both are anti-conservative (BDM 2004; AAIW 2023).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-03",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "clustering at the unit is the natural choice and satisfies this.",
+   "replace": "clustering at the unit is the natural choice and satisfies this. Being finer than `i` is not enough on its own. The cluster must also sit at or above the level at which treatment is assigned, and must keep each unit's periods together. A state policy studied on county data needs `cluster(state)`, not `cluster(county)`. If no such level leaves several clusters in each treated cell, use `bootstrap()` or `permute()` at the assignment level.",
+   "why": "Rule 1 gave only an upper bound on the cluster level. This adds the lower bound: the assignment level and serial dependence.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-03",
+   "k": 2,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{it:robust} or {it:fastnose} are the ways out. {p_end}",
+   "replace": "{it:robust} or {it:fastnose} are the ways out. Cluster at the level at which treatment is assigned, or coarser, and never below the unit whose rows are\ncorrelated over time. A state policy studied on county data needs {it:cluster(state)}, not {it:cluster(county)}. The discussion of what level to cluster at below adds a\nsecond condition specific to {it:wooldid}. {p_end}",
+   "why": "The help's cluster() entry said nothing about which level to choose. The general validity condition belongs here once.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-03",
+   "k": 3,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "The same gate stops a run that is left with no residual degrees of freedom whatever.",
+   "replace": "The same gate stops a run that is left with no residual degrees of freedom whatever. Cluster at the level at which treatment is assigned, or coarser, and never below the unit whose rows are correlated over time. A state policy studied on county data needs `cluster(state)`, not `cluster(county)`. The paragraph above on what level to cluster at adds a second condition specific to *wooldid*.",
+   "why": "This mirrors the help cluster() entry edit (rule 7). The pointer says 'What level to cluster at' rather than 'below' because that section comes before this entry in the guide.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-03",
+   "k": 4,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "affected cells and cautions). The remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}. {p_end}",
+   "replace": "affected cells and cautions). The remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}. A finer\n{it:cluster()} is a remedy only when it still sits at or above the level at which treatment is assigned (see {it:cluster()}). When no such level is finer than the\ncells, use {it:bootstrap()} or {it:permute()}. {p_end}",
+   "why": "The remedy list for the containment mechanism read as if any finer cluster were valid. This adds the assignment-level qualifier, as corrected_fix specifies.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-03",
+   "k": 5,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "which build their inference from replications instead.",
+   "replace": "which build their inference from replications instead. A finer `cluster()` is a remedy only when it still sits at or above the level at which treatment is assigned (see `cluster()`). When no such level is finer than the cells, use `bootstrap()` or `permute()`.",
+   "why": "This mirrors the help L316 qualifier in the guide's 'What level to cluster at' paragraph, which is the From-the-help-file counterpart of the help discussion (rule 7).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-04",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "Intuitively, this ought to be true whenever samples are large enough that sampling variation in covariates is ignorable (more precisely, ignorable within cohort-time period cells).\nUnconditional standard errors may be more impactful, however, when samples are small, or when sample weights make particular observations very influential. Additionally, when",
+   "replace": "They are similar when treatment effects vary little across cohort-time period cells, covariate values and treatment intensities.\nWhere effects are heterogeneous the unconditional standard errors are larger, and the ratio between them does not shrink as the sample grows. The conditional standard errors describe\nthe effect averaged over the treated observations in the sample. The unconditional standard errors describe the population average. Unconditional standard errors may also be\nmore impactful when sample weights make particular observations very influential. Additionally, when",
+   "why": "The gap between conditional and unconditional SEs is O(1/N) like both variances and reflects effect heterogeneity (SATE vs PATE), not sample size; the probe shows a flat ratio of about 2.2 from 60 to 600 units. Keeps the author's hedged weights clause.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-04",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "Intuitively, this ought to be true whenever samples are large enough that sampling variation in covariates is ignorable (more precisely, ignorable within cohort-time period cells). Unconditional standard errors may be more impactful, however, when samples are small, or when sample weights make particular observations very influential. Additionally, when",
+   "replace": "They are similar when treatment effects vary little across cohort-time period cells, covariate values and treatment intensities. Where effects are heterogeneous the unconditional standard errors are larger, and the ratio between them does not shrink as the sample grows. The conditional standard errors describe the effect averaged over the treated observations in the sample. The unconditional standard errors describe the population average. Unconditional standard errors may also be more impactful when sample weights make particular observations very influential. Additionally, when",
+   "why": "This is the guide's copy of the help paragraph in the 'From the help file' section (not chapter 14), so it gets the same correction.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-04",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "4. **`unconditionalse`** when sampling variation in covariates or in the dose matters (small samples, influential weights). It runs",
+   "replace": "4. **`unconditionalse`** when the target is the population average effect and the effect varies across cells, covariate values or the dose. The ratio to the default standard errors does not shrink as the sample grows, so a large sample is no reason to skip it. It runs",
+   "why": "Decision rule 4 repeated the small-sample misconception. The new rule ties the choice to the estimand and effect heterogeneity and keeps the dose. The rest of the rule is unchanged.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "option will rely on either {it:reghdfe} or, for poisson, {it:ppmlhdfe}. {p_end}",
+   "replace": "option will rely on either {it:reghdfe} or, for poisson, {it:ppmlhdfe}. Without {it:cluster()}, {it:robust} or {it:customvce()}, the linear regression reports conventional\nstandard errors. These assume independent, homoskedastic errors. With pweights, or under {it:poisson}, the default is robust instead. None of these defaults allows for\ncorrelation within a unit over time. On panel data they usually overstate precision. Specify {it:cluster()} at the level at which treatment is assigned. {p_end}",
+   "why": "Help rob:ust entry: state the default variance when no cluster(), robust or customvce() is given, and the pweights/poisson robust defaults (SEB-05 corrected_fix, first help site).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 1,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{marker examples}{...}\n{title:Examples}\n",
+   "replace": "{marker examples}{...}\n{title:Examples}\n\n{pstd}Examples 1 to 10 omit {it:cluster()} for brevity. On panel data, add it at the level at which treatment is assigned.{p_end}\n",
+   "why": "Help examples: say that examples 1 to 10 are unclustered for brevity (SEB-05 corrected_fix, second help site).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "By default, regression estimation using this option will underlyingly rely on either *reghdfe* or, for poisson, *ppmlhdfe*. ",
+   "replace": "By default, regression estimation using this option will underlyingly rely on either *reghdfe* or, for poisson, *ppmlhdfe*. Without *cluster()*, *robust* or *customvce()*, the linear regression reports conventional standard errors. These assume independent, homoskedastic errors. With pweights, or under `poisson`, the default is robust instead. None of these defaults allows for correlation within a unit over time. On panel data they usually overstate precision. Specify *cluster()* at the level at which treatment is assigned. ",
+   "why": "Guide ch. 4 'From the help file' mirror of the rob:ust entry, kept in step with the help edit (rule 7).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 3,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "### Examples\n\n0) Conventional",
+   "replace": "### Examples\n\nExamples 1 to 10 omit `cluster()` for brevity. On panel data, add it at the level at which treatment is assigned.\n\n0) Conventional",
+   "why": "Guide ch. 15 'From the help file' mirror of the examples intro, kept in step with the help edit (rule 7).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 4,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "### Decision rules\n\n1. **Cluster below the level of `i`.**",
+   "replace": "### Decision rules\n\n1. **Specify a variance.** With no `cluster()`, `robust` or `customvce()`, the linear path uses conventional OLS standard errors. `poisson` and pweights default to robust. None of these allows for serial correlation within a unit, so on a panel pass `cluster()` at the level of treatment assignment.\n2. **Cluster below the level of `i`.**",
+   "why": "Guide ch. 4 decision rules: new first rule on the default variance (SEB-05 corrected_fix, guide site).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 5,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "\n8. **`fastnose`** produces point",
+   "replace": "\n9. **`fastnose`** produces point",
+   "why": "Renumber the ch. 4 decision rules after the new first rule.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 6,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "\n7. **`level()`** sets every",
+   "replace": "\n8. **`level()`** sets every",
+   "why": "Renumber the ch. 4 decision rules after the new first rule.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 7,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "\n6. **`impvalues`** (Ibragimov-Muller)",
+   "replace": "\n7. **`impvalues`** (Ibragimov-Muller)",
+   "why": "Renumber the ch. 4 decision rules after the new first rule.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 8,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "\n5. **`customvce()`** for a variance",
+   "replace": "\n6. **`customvce()`** for a variance",
+   "why": "Renumber the ch. 4 decision rules after the new first rule.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 9,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "\n4. **`unconditionalse`** when",
+   "replace": "\n5. **`unconditionalse`** when",
+   "why": "Renumber the ch. 4 decision rules after the new first rule.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 10,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "\n3. **`robust`** is appropriate",
+   "replace": "\n4. **`robust`** is appropriate",
+   "why": "Renumber the ch. 4 decision rules after the new first rule.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-05",
+   "k": 11,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "\n2. **If you must cluster at or above `i`**",
+   "replace": "\n3. **If you must cluster at or above `i`**",
+   "why": "Renumber the ch. 4 decision rules after the new first rule.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-06",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{phang}0) Conventional diff-in-diff, targeting the ATT and clustering standard errors by cohort:{p_end}\n\n{p 10 10} {cmd:wooldid y i t ttre, cluster(i) att}",
+   "replace": "{phang}0) Conventional diff-in-diff, targeting the ATT, with {it:i} the treatment onset cohort, unit fixed effects, and standard errors clustered by unit:{p_end}\n\n{p 10 10} {cmd:wooldid y i t ttre, cluster(unit) fe(unit) att}",
+   "why": "Example 0 clustered at i on the analytic path, which the help's own Discussion of What Level to Cluster At says understates the att standard errors without a caution. The new example uses the shape the package recommends: i at the onset cohort, cluster() at the unit, fe() naming the unit.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-06",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "0) Conventional diff-in-diff, targeting the ATT and clustering standard errors by cohort:\n\n`wooldid y i t ttre, cluster(i) att`",
+   "replace": "0) Conventional diff-in-diff, targeting the ATT, with *i* the treatment onset cohort, unit fixed effects, and standard errors clustered by unit:\n\n`wooldid y i t ttre, cluster(unit) fe(unit) att`",
+   "why": "This is the guide's copy of help Example 0 (the From the help file Examples block, chapter 15 region, not chapter 14). It gets the same edit so the two files match.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-2",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "Randomization inference assumes clusters are exchangeable in **assignment** and fails when onset is systematically related to the outcome path - which is the identifying assumption the design already needs.",
+   "replace": "Randomization inference assumes clusters are exchangeable in **assignment**: any cluster could have received any onset. That is stronger than the parallel trends the design already needs. It fails when the treated clusters differ from the others in size or error variance, even when parallel trends holds (MacKinnon and Webb 2020). `permtstat` protects against that only where the cluster-robust standard error can see the treated clusters' own variance, as the chapter on randomization inference explains.",
+   "why": "The old sentence said the ruling's assignment assumption was the same as the design's identifying assumption, and it left out the variance failure mode that rulings_2026-09-07.md states. Exchangeable assignment is stronger than parallel trends. The new text states the variance failure mode and says where permtstat helps, so it now matches guide ch.6 and the runtime caution.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-3",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "A caution prints when fewer than 6 clusters are ever treated, since the set of distinct assignments is then small whatever {it:permreps()} is. {p_end}",
+   "replace": "A caution prints when fewer than 6 clusters are ever treated. With so few treated clusters the test's size rests on their being exchangeable in assignment with the others, and a few atypical treated clusters can mis-size it. Few treated clusters do not by themselves make the possible assignments few. Their number is in {it:e(perm_npossible)}. Under {it:permute(shuffle)} without {it:permstrata()} it is small only when there are few clusters in all or only one or two are treated, and strata make it smaller. {p_end}",
+   "why": "The help claims fewer than 6 treated clusters make the set of assignments small. That is false in general: C(30,5) = 142,506. The replacement gives the real few-treated risk, which is exchangeability and size (the 2026-09-07 ruling), and points to e(perm_npossible) for the true count. The permreps() entry already covers the 10-percent caution, so it is not repeated.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-3",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "When fewer than 6 of the resampling clusters are ever treated a caution names the count: few ever-treated clusters means few distinct onset assignments, so sampled draws repeat and the reference set (and with it the set of p-values the run can produce) stays coarse however large `permreps()` is. That is a limit of the design rather than of the replication count, and `permexact` answers it by enumerating the assignments and reporting the exact floor instead of sampling them. It is not the same condition as `bootstrap()`'s caution at fewer than 6 treated clusters, which is about resampling variance rather than about how many assignments exist.",
+   "replace": "When fewer than 6 of the resampling clusters are ever treated a caution names the count. With so few treated clusters the test's size rests on their being exchangeable in assignment with the other clusters, and a handful of atypical treated clusters can mis-size it (MacKinnon and Webb 2020). Few treated clusters do not by themselves make the reference set small. Under `permute(shuffle)` with *k* treated clusters at one onset among *G* clusters there are C(*G*, *k*) possible assignments, 142,506 at *k* = 5 and *G* = 30. In general the shuffle count is the multinomial coefficient of the onset group sizes within each stratum, multiplied across strata. The count is reported in *e(perm_npossible)*. Without `permstrata()` the shuffle count is small only when *G* is small or one or two clusters are treated, and strata make it smaller. When the count is small, `permexact` can enumerate the assignments under `permute(shuffle)`. This caution is not the same condition as `bootstrap()`'s caution at fewer than 6 treated clusters. That one is about resampling variance, and this one is about assignment.",
+   "why": "This is the guide's copy of the same false counting claim, with the wrong permexact advice (permexact is refused above 65,534 assignments). It is replaced with the exchangeability risk, the true C(G,k) and multinomial count, and where the count is reported. This paragraph sits in the permute() chapter at line 383, before chapter 14, which is not touched.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-4",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "which controls the\nfamily-wise error rate across the horizons. Post-treatment",
+   "replace": "which controls the\nfamily-wise error rate across the horizons under the sharp null of no effect at any horizon. Post-treatment",
+   "why": "The step-down is only shown to control the FWER under the global sharp null (weak control). The unqualified claim reads as strong control. This adds one qualifying clause and leaves the mechanism to the guide.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-4",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "It is exact under the sharp null of no effect at any horizon of the family and controls the family-wise error rate across those horizons, which the per-horizon p-values in the table do not.",
+   "replace": "It is exact under the sharp null of no effect at any horizon, and under that null it controls the family-wise error rate across the family's horizons, which the per-horizon p-values in the table do not. That is all it guarantees. When some horizons have an effect and others have none, the reassigned onsets can carry the effect into the other horizons' null draws, so control over the horizons with no effect is not established.",
+   "why": "Drops 'of the family' from the exactness null, because effects outside the family also contaminate the draws. States weak control only and explains why strong control (subset pivotality) is not established.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-4",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "The pre-treatment family inherits the pre-treatment caveat below - in staggered designs the reassigned onsets widen the null for pre-period statistics - so its adjusted p-values are conservative in a way the post-treatment family's are not.",
+   "replace": "The pre-treatment family inherits the pre-treatment caveat above. In staggered designs the reassigned onsets widen the null for pre-period statistics whenever there is a true post-treatment effect, so its adjusted p-values are then conservative. The post-treatment family is exposed to the same leakage when some of its horizons have an effect and others have none.",
+   "why": "The old contrast ('in a way the post-treatment family's are not') is false once mixed post effects are acknowledged. The caveat it points to ('What the test assumes', line ~383) is above this paragraph (~403), not below. Also removes the dash asides.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-5",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "It is not robust to the treated clusters being atypical in size or in error variance - relabelling then mixes clusters of different variance, and the reference distribution is narrower than the sampling distribution of the observed statistic (MacKinnon and Webb 2020).",
+   "replace": "It is not robust to the treated clusters being atypical in size or in error variance. Relabelling then mixes clusters of different variance, so the reference distribution can be narrower or wider than the sampling distribution of the observed statistic. When the treated clusters are smaller or noisier than the controls, the reference distribution is the narrower of the two and the test rejects too often. When they are larger or quieter, it is the wider and the test rejects too seldom (MacKinnon and Webb 2020).",
+   "why": "MacKinnon and Webb (2020) find that the failure runs both ways: the coefficient randomization test over-rejects when the treated clusters are small or noisy and under-rejects when they are large or quiet. The old sentence gave only the first direction. This edit implements the refuter's corrected_fix in the guide's plain register, with no dashes.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-4",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "handling continuous treatments using interactions between treated cell indicators and the continuous treatment variable. {p_end}\n",
+   "replace": "handling continuous treatments using interactions between treated cell indicators and the continuous treatment variable. These within-cell effects compare units that\nreceived different doses. Reading them as the effect of a larger dose needs more than parallel trends; see {help wooldid##continuous:continuous_treatment}. {p_end}\n",
+   "why": "Help site 1: the description paragraph now says that the within-cell dose effects compare units at different doses and need more than parallel trends, and it points to the new paragraph.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-4",
+   "k": 1,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{it:safety(off)} downgrades the refusal to a caution. {p_end}\n",
+   "replace": "{it:safety(off)} downgrades the refusal to a caution. {p_end}\n\n{pstd} {ul:What the ame Measures:} Within a treated cell, the ame compares units that received different doses. The choice of g() sets the parallel trends assumption: without treatment,\nunits at different doses would have followed the same outcome path, apart from the dose effects g() allows for. Under that assumption the att is identified, and so is the att within\neach bin of the continuous treatment effects plots. The ame is the effect of a marginal increase in the dose only under a stronger condition: units at different doses would also have\ngained the same from treatment at any given dose. This is the strong parallel trends assumption of Callaway, Goodman-Bacon and Sant'Anna (2024). Without it, the ame also carries\nselection bias, since the units that took higher doses may simply be the units that gain more from treatment. The same applies to the ame within each bin and to differences in att\nacross the bins of the continuous treatment effects plots. Under {it:contreatwithin} with no untreated group, the att is essentially the integral of the ame, so it needs the same\nstronger condition.\n{p_end}\n",
+   "why": "Help site 2: a new paragraph between the contreatwithin paragraph and the Cluster-Robust paragraph. It states the parallel trends assumption relative to g() and what that assumption identifies: the att, and the att within each cfx bin. It then says that the ame, the ame within each bin, differences in att across bins, and the att under contreatwithin all need strong parallel trends.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-4",
+   "k": 2,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{phang} Borusyak, Kirill, Xavier Jaravel, and Jann Spiess. Revisiting Event Study Designs: Robust and Efficient Estimation. Working Paper, 2023. {p_end}\n",
+   "replace": "{phang} Borusyak, Kirill, Xavier Jaravel, and Jann Spiess. Revisiting Event Study Designs: Robust and Efficient Estimation. Working Paper, 2023. {p_end}\n\n{phang} Callaway, Brantly, Andrew Goodman-Bacon, and Pedro H. C. Sant'Anna. Difference-in-Differences with a Continuous Treatment. NBER Working Paper 32117, 2024. {p_end}\n",
+   "why": "Help site 3: adds the Citations entry for Callaway, Goodman-Bacon and Sant'Anna (2024), which the new paragraph cites.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-4",
+   "k": 3,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "handling continuous treatments using interactions between treated cell indicators and the continuous treatment variable. \n",
+   "replace": "handling continuous treatments using interactions between treated cell indicators and the continuous treatment variable. These within-cell effects compare units that received different doses. Reading them as the effect of a larger dose needs more than parallel trends; see continuous_treatment. \n",
+   "why": "Guide chapter 1 copies the help's description paragraph word for word, so it gets the same edit as help site 1 (rule 7). The corrected_fix did not name this site. The cross-reference is written the way the chapter's other cross-references are ('see event_study', 'see subgroups').",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-4",
+   "k": 4,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "`untreatedZero` drops `g()` entirely and is only for a dose that is genuinely zero outside treated cells.",
+   "replace": "`untreatedZero` drops `g()` entirely and is only for a dose that is genuinely zero outside treated cells. The assumption the chosen type encodes identifies `att`, and `att` within each dose bin. It does not make `ame` the effect of a larger dose. That needs strong parallel trends (Callaway, Goodman-Bacon and Sant'Anna 2024): units at different doses would have gained the same from treatment at any given dose. Without it, `ame` and the differences in `att` across the `makecfxplots` bins also carry selection bias from sorting into dose. Under `contreatwithin` with no untreated group, `att` is essentially the integral of `ame`, so it needs the same condition.",
+   "why": "Guide site 1: decision rule 1 of chapter 9 now says what the identifying assumption identifies and what it does not.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-4",
+   "k": 5,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "threatening identification. Specify *safety(off)* before the run to proceed anyway, which downgrades the refusal to a caution.\n",
+   "replace": "threatening identification. Specify *safety(off)* before the run to proceed anyway, which downgrades the refusal to a caution.\n\n**What the ame Measures:** Within a treated cell, the ame compares units that received different doses. The choice of g() sets the parallel trends assumption: without treatment, units at different doses would have followed the same outcome path, apart from the dose effects g() allows for. Under that assumption the att is identified, and so is the att within each bin of the continuous treatment effects plots. The ame is the effect of a marginal increase in the dose only under a stronger condition: units at different doses would also have gained the same from treatment at any given dose. This is the strong parallel trends assumption of Callaway, Goodman-Bacon and Sant'Anna (2024, 'Difference-in-Differences with a Continuous Treatment', NBER Working Paper 32117). Without it, the ame also carries selection bias, since the units that took higher doses may simply be the units that gain more from treatment. The same applies to the ame within each bin and to differences in att across the bins of the continuous treatment effects plots. Under *contreatwithin* with no untreated group, the att is essentially the integral of the ame, so it needs the same stronger condition.\n",
+   "why": "Guide site 2: the guide's copy of the new help paragraph. It goes in the 'From the help file' block of chapter 9, after the contreatwithin paragraph and just before '## 10. Controls and fixed effects'. The full citation is given in the text because the guide has no Citations list.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-5",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "the joint pre-trend and adversarial tests are not calibrated, the `ame` standard errors under `contreat()` are not identified, and the `gteffects` cells' intervals do not cover. The chapter on analytic inference explains the mechanism.\n",
+   "replace": "the joint pre-trend and adversarial tests are not calibrated, and the `gteffects` cells' intervals do not cover. The chapter on analytic inference explains the mechanism. Under `contreat()` the loss comes before inference and does not depend on the clustering. A one-row cell has no dose variation, so no treated cell's dose slope can be told apart from its intercept, and the `ame` itself is not identified. Under default safety wooldid says so in a caution and reports the `ame` results as missing; under `contreatcontrols(untreatedZero)` it refuses the run instead. No `cluster()`, `bootstrap()` or `permute()` choice changes that. The chapter on continuous treatments covers the design.\n",
+   "why": "Section 2, finest-i trap, Inference bullet. With a unit-level i every treated cell has one row, so the dose slopes drop. The amevoid screen in wooldid_ccscreen then voids the whole ame family, point estimates included, whatever the clustering. The old clause placed that loss among the clustering consequences and said only the standard errors fail. The edit takes the ame out of that list and states the void, the untreatedZero refusal, and that no cluster(), bootstrap() or permute() choice rescues it.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-3",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "| none; unavailable under `fastnose` | `permute()` |",
+   "replace": "| analytic `cluster()` at or above `i` (not cautioned); unavailable under `fastnose` | `permute()` |",
+   "why": "Chapter 7 pre-trend table: the simultaneousbands row said 'none' under 'not calibrated when'. But the analytic band is scaled by e(V_es_*), which is understated with cluster() at or above i. The jointtests and pretrendpower rows already list that condition.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-3",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "the `att` rows' analytic standard errors are somewhat understated, without a caution;",
+   "replace": "the `att` rows' analytic standard errors are somewhat understated, without a caution; the analytic `simultaneousbands` band is scaled by standard errors of the same kind and is too narrow, also without a caution;",
+   "why": "Chapter 4 decision rule 2 lists what goes wrong when clustering at or above i. The analytic band inherits the understated event-study standard errors and nothing cautions.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-3",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "or `permute()` for inference in that design.",
+   "replace": "or `permute()` for inference in that design. For the band use `bootstrap()`, since `permute()` refuses it.",
+   "why": "Decision rule 2's remedy: permute() refuses simultaneousbands (wooldid_validate error), so bootstrap() is the only replication remedy for the band.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-3",
+   "k": 3,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "the draws are normal. *e(esband_engine)* records which.",
+   "replace": "the draws are normal. *e(esband_engine)* records which. The analytic band is only as good as *e(V_es_*)*. With `cluster()` at or above `i` its standard errors are understated, so the band is too narrow, and no caution says so. Use `bootstrap()` or a finer `cluster()` there.",
+   "why": "The simult:aneousbands option entry describes the analytic engine as drawing from e(V_es_*) but does not say the band is too narrow when that covariance is understated with cluster() at or above i.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-3",
+   "k": 4,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "With {it:bootstrap()} it is taken from the replications.",
+   "replace": "With {it:bootstrap()} it is taken from the replications.\nWith {it:cluster()} at or above the level of {it:i} the standard errors in the analytic covariance are understated, so the band built without {it:bootstrap()} is too\nnarrow, and no caution says so. Use {it:bootstrap()} or a {it:cluster()} strictly finer than the cohort-by-period cells there.",
+   "why": "The help's simultaneousbands entry claims unqualified simultaneous coverage. The analytic band is scaled by the event-study covariance, which the help's own clustering discussion says is understated with cluster() at or above i, without a caution.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-3",
+   "k": "missed",
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "and it is refused under `permute()`.",
+   "replace": "and it is refused under `permute()`. The analytic `simultaneousbands` band is scaled by that covariance too, so it is too narrow, and no caution says so. Use `bootstrap()` for the band.",
+   "why": "Pitfalls checklist item 6 says pretrendpower() 'reads the same covariance' as the joint tests under cluster() at or above i, but it omits the band, which reads it as well. The refuter named this inconsistency, and the edits add the band to rule 2 and the table but not here. The anchor occurs once.",
+   "verdict": "MISSED",
+   "src": "verifier",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-3",
+   "k": "missed",
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "affected cells and cautions). The remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}. {p_end}",
+   "replace": "affected cells and cautions). The analytic {it:simultaneousbands} band is scaled by those understated standard errors, so it is too narrow, also without a caution.\nThe remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}; for the band only the first two, since\n{it:permute()} refuses it. {p_end}",
+   "why": "The help's 'Discussion of What Level to Cluster At' lists the design's consequences and offers permute() as a remedy. Once guide rule 2 lists the band and says permute() refuses it, the help's parallel paragraph omits both. The editor flagged this gap and left it undone. The anchor occurs once and the braces balance.",
+   "verdict": "MISSED",
+   "src": "verifier",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F7",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "On a panel that is unbalanced inside its cohorts the `fe()` half of that recipe is what holds the point estimate fixed, not a modelling preference. Keep it.",
+   "replace": "Keep the `fe()` half of that recipe. It keeps the permanent differences between units in the model. Without it, a shifting mix of units in the cells moves the point estimate whenever the panel is unbalanced inside its cohorts. It does not make the estimate equal to the one a unit-level `i` gives. On such a panel each cell's estimate draws on all the units of its cohort, weighted by how their rows split between untreated and treated periods, so the two runs differ when effects vary across the units of a cohort.",
+   "why": "The current sentence says fe() 'holds the point estimate fixed', which implies the coarse-i run matches the unit-level-i run. On a ragged panel with unit-level effect heterogeneity it does not (probe p3: 1.85877 vs 1.84560). Both DOC-1 review rounds struck this wording, and commit e2b5fad shipped it anyway by a build slip.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F5",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "use of a pooled reference period is likely disadvantageous whenever the outcome variable\nis evolving over time within the pre-treatment period.",
+   "replace": "use of a pooled reference period is likely disadvantageous whenever the outcomes of treated cohorts\nevolve differently from those of the comparison cohorts within the pre-treatment period. Trends shared by all cohorts are absorbed by the time fixed effects.",
+   "why": "A trend common to all cohorts is absorbed by the time fixed effects and costs the pooled reference nothing. The disadvantage comes from differential pre-trends: with a linear differential trend over K pooled pre-periods, the pooled reference carries more bias than the fixed -1 reference whenever K>1.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F5",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "use of a pooled reference period is likely disadvantageous whenever the outcome variable is evolving over time within the pre-treatment period.",
+   "replace": "use of a pooled reference period is likely disadvantageous whenever the outcomes of treated cohorts evolve differently from those of the comparison cohorts within the pre-treatment period. Trends shared by all cohorts are absorbed by the time fixed effects.",
+   "why": "The guide's chapter 7 copy of the help paragraph must match the corrected help sentence.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F5",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "Prefer the fixed reference when the outcome trends within the pre-period, when cohorts have different pre-period lengths,",
+   "replace": "Prefer the fixed reference when treated cohorts' outcomes trend differently from the comparison group's in the pre-period, when cohorts have different pre-period lengths,",
+   "why": "The guide's flat directive sends users whose outcome has a secular trend (for example log wages) away from the more precise pooled default for no gain. Only differential pre-trends favour the fixed reference.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F6",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "The weighted mean of {it:estimate} under one of these weight columns,\ntaken over the post-treatment rows ({it:relyr} at or above 0), the pre-treatment rows, or a single {it:relyr}, reproduces the corresponding aggregate exactly, so the table supports\ncustom aggregations.",
+   "replace": "The weighted mean of {it:estimate} under one of these weight columns,\ntaken over the post-treatment rows ({it:relyr} at or above 0) or the pre-treatment rows, reproduces the corresponding main or pretreatment row exactly. Taken over a single\n{it:relyr}, it reproduces the event-study row under {it:w_att} or {it:w_att_it} only. {it:att_i} and {it:att_itime} report the {it:att_it} event study, so under {it:w_att_i} or\n{it:w_att_itime} a single {it:relyr} gives a custom aggregate that no reported row matches. The table therefore supports\ncustom aggregations.",
+   "why": "The single-relyr identity holds only under w_att and w_att_it: att_i and att_itime report the att_it event study, so a w_att_i or w_att_itime horizon mean matches no reported row (probe p3). Main and pretreatment identities hold under all four columns.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F6",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "The weighted mean of *estimate* under any of these weight columns, taken over the rows that make up the aggregate in question, reproduces the corresponding aggregate exactly: *relyr* >= 0 for a main row, *relyr* < 0 for a pretreatment row, and a single *relyr* for an event-study horizon.",
+   "replace": "The weighted mean of *estimate* under any of these weight columns, taken over the rows that make up the aggregate in question, reproduces the corresponding aggregate exactly: *relyr* >= 0 for a main row and *relyr* < 0 for a pretreatment row. A single *relyr* reproduces an event-study horizon under *w_att* or *w_att_it* only. *att_i* and *att_itime* report the *att_it* event study, so under *w_att_i* or *w_att_itime* a single-*relyr* mean is a custom aggregate that no reported row matches.",
+   "why": "Same correction in the guide's gteffects entry (chapter 13, Working With Output; not chapter 14). The rest of the entry is unchanged, including the opening qualifier about transformations, time-varying interactive controls and impvalues.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F9",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "The {it:gteffects} option returns the cohort-by-relative-period effects underlying {it:wooldid}'s aggregates, which are comparable to the group-time tables of\n{help csdid} and {help xthdidregress} when {it:i} indexes treatment cohorts. {p_end}",
+   "replace": "The {it:gteffects} option returns the cohort-by-relative-period effects underlying {it:wooldid}'s aggregates. When {it:i} indexes treatment cohorts these are group-time effects, like the tables of\n{help csdid} and {help xthdidregress}, but by default they are not the same numbers. Under the default pooled reference period each cell uses the not-yet-treated observations as controls\nand the cohort's pre-treatment periods outside the requested event-study window as its baseline. With {it:esfixedbaseperiod} at the default {it:esrelativeto(-1)}, a balanced panel and no controls, the cells equal the group-time table\nof {help csdid} with its {it:long2} option. {p_end}",
+   "why": "The help said the gteffects cells are comparable to csdid/xthdidregress tables. They are the same objects, but by default they are not the same numbers: the pooled reference uses not-yet-treated controls and a pooled baseline. The exact identity holds only for esfixedbaseperiod esrelativeto(-1) against csdid long2 on balanced panels with no controls (benchmark max gap 1e-14).",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F9",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "With that filter the table supports arbitrary custom aggregations and is directly comparable to the group-time tables of *csdid* or *xthdidregress* (the cells are ATT(g,t)-style group-time effects when *i* indexes cohorts; with a fine unit-level *i* they are unit-by-period effects and the table can be large).",
+   "replace": "With that filter the table supports arbitrary custom aggregations. When *i* indexes cohorts the cells are ATT(g,t)-style group-time effects, the same objects as the group-time tables of *csdid* or *xthdidregress*; with a fine unit-level *i* they are unit-by-period effects and the table can be large. They are not the same numbers by default: under the pooled reference each cell uses the not-yet-treated observations as controls and the cohort's pooled pre-treatment periods as its baseline. With `esfixedbaseperiod` at the default `esrelativeto(-1)`, a balanced panel and no controls they equal the group-time table of *csdid* with `long2`.",
+   "why": "The guide's gteffects entry (line 919, before generated ch.14 at 921) said 'directly comparable'. That overclaims. Replaced it with the same objects/different numbers statement and the benchmarked csdid long2 identity.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F9",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "| `csdid`, `xthdidregress` | `gteffects` with `i` = onset cohort gives the group-time table | conventions differ by default, so the aggregates need not match without an option mapping |",
+   "replace": "| `csdid`, `xthdidregress` | `gteffects` with `i` = onset cohort, `esfixedbaseperiod` at the default `esrelativeto(-1)`, a balanced panel and no controls gives *csdid*'s `long2` group-time table | under the default pooled reference the cells use not-yet-treated controls and a pooled baseline, so the cells differ too; the aggregates need an option mapping as well |",
+   "why": "The ch.15 table (hand-written, line 1312) listed 'gteffects with i = onset cohort' as a setting that matches, which implied the cells match by default. The row now names the settings under which the identity holds and says the default cells differ.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F10",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "Too small a value leaves a visible residual pre-trend, while too\nlarge a value attenuates the estimated effects without any diagnostic, so prefer the smallest defensible value.",
+   "replace": "Too small a value leaves anticipation in the reference period, which shows in the pre-treatment horizons when they are requested. Too\nlarge a value keeps the pre-trends clean but attenuates the pooled estimates, and the first post-treatment horizons, which then fall before any response, read near zero.\nA run without an event study shows neither, so request one and prefer the smallest defensible value.",
+   "why": "The old sentence says an over-long window has no diagnostic and an under-shift always shows. Neither holds. With too large a value, the first # post horizons fall before the actual onset and read near zero. A too-short window shows only when pre horizons are requested, and espre and espost both default to 0.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F10",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "Too small a value leaves a visible residual pre-trend; too large attenuates the effect with no diagnostic.",
+   "replace": "Too small a value leaves anticipation in the reference period, which shows in the pre-treatment horizons when they are requested; too large keeps the pre-trends clean but attenuates the pooled effect, and the first post-treatment horizons, which then fall before any response, read near zero. A run without an event study shows neither.",
+   "why": "The ch.7 decision rule repeats the same overstated asymmetry. This brings it in line with the corrected help.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "ident:F10",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "Note an inherent asymmetry: specifying too SMALL an anticipation length leaves a loud residual pre-trend signal, but too LARGE a value attenuates the estimated effects with clean pre-trends and no diagnostic - prefer the smallest defensible value.",
+   "replace": "The two errors show in different places. Too SMALL an anticipation length leaves anticipation in the reference period, which shows in the pre-treatment event-study horizons when they are requested. Too LARGE a value keeps the pre-trends clean but attenuates the pooled estimates, because periods with no effect are averaged in as treated, and the first post-treatment horizons, which then fall before any response, read near zero. A run without an event study shows neither, so request one and prefer the smallest defensible value.",
+   "why": "This is the guide's 'From the help file' anticipation entry, which mirrors the help paragraph, so it gets the same correction. The replacement also drops the ' - ' dash to match the register.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-08",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "exactly as under the pairs cluster bootstrap, whose first two moments it shares -",
+   "replace": "exactly as under the pairs cluster bootstrap, whose weights it matches in mean on a common scale, and in covariance up to a factor *G*/(*G*+1) for *G* clusters, so its spread runs slightly smaller when clusters are few -",
+   "why": "Scaled Dirichlet(1,...,1) weights share the pairs-bootstrap counts' mean, but their covariance is G/(G+1) times the counts' covariance (Rubin 1981). So 'first two moments it shares' is false at finite G: the variance factor is 0.91 at G=10. G is set in italics as the guide does elsewhere (1/*G*, *G*-1). The sentence's existing ' - ... - ' parenthetical is kept.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-10",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "There the plain share stands, which is also what `bootstrap`'s own *estat bootstrap* reports; the `bc` and `bca` rows carry no add-one either, but are the duals of their intervals rather than shares.",
+   "replace": "There the plain share stands. It is the p-value dual to the percentile interval, one of the intervals `bootstrap`'s own *estat bootstrap* reports; *estat bootstrap* itself prints intervals and no p-values. The `bc` and `bca` rows carry no add-one either, but are the duals of their intervals rather than shares.",
+   "why": "estat bootstrap prints confidence intervals (normal, percentile, bc, bca) with bias and the bootstrap SE, and no p-values, so it cannot report the plain share. The plain share is the p-value dual to its percentile interval. The closing bc/bca clause is kept.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-11",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "The intended practice is to cluster **below** the level of *i* - at a level whose units are nested inside cohorts, so that a treated cohort-by-period cell contains several clusters. That third one is not confined to clustering: `robust` with a unit-level *i* leaves each treated cell holding a single observation whose residual its own dummy drives to zero, and the same panel then gives 0.64 and 70%.",
+   "replace": "The intended practice is to cluster **below** the level of *i*, at a level whose units are nested inside cohorts, so that a treated cohort-by-period cell contains several clusters. At the level of *i* or coarser, each treated cell lies wholly inside one cluster, and the saturated cell dummies leave the cluster-robust covariance nothing within the cluster to identify. The analytic standard errors of the `ame` estimates are then not identified and are reported as missing. The analytic joint pre-trend tests and the adversarial line test are not calibrated, and pairwise subgroup contrasts can be degenerate. The `att` rows' analytic standard errors are understated, and the table does not say so. The `gteffects` cells fail harder still, because a cell has no aggregation to average the error over. The cell failure is not confined to clustering: `robust` with a unit-level *i* leaves each treated cell holding a single observation whose residual its own dummy drives to zero.",
+   "why": "The guide's copy of the help paragraph lost its mechanism sentence when the guide was built, so 'That third one' and '0.64 and 70%' pointed at text that is gone. This restores the mechanism and its consequences, worded from the HEAD help's pared paragraph and without numbers, and drops the orphaned measurement. The rest of the paragraph, from 'A run that asks for `gteffects`' onward, is unchanged.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-11",
+   "k": "missed",
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "they are understated and the cell interval does not cover at its nominal level, which What level to cluster at measures and *e(gt_ncontained)* counts;",
+   "replace": "they are understated and the cell interval does not cover at its nominal level, which What level to cluster at explains and *e(gt_ncontained)* counts;",
+   "why": "The guide's gteffects entry (line 919, before chapter 14) says the 'What level to cluster at' paragraph 'measures' the cell understatement. The guide's version of that paragraph has carried no measurement since 08b0b7d. After this edit it states the mechanism and no numbers, so 'measures' points at text that is not there. The help's gteffects entry (sthlp 906-909) has no such pointer, so only the guide needs the change. The find string occurs exactly once.",
+   "verdict": "MISSED",
+   "src": "verifier",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-12",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "P-values are then obtained from a t-distribution with the residual degrees of freedom of the underlying regression.",
+   "replace": "P-values are then obtained from a t-distribution with the degrees of freedom the underlying regression reports. Under {it:cluster()}, or a {it:customvce()} of cluster, that is one less than the number of clusters, and under multi-way {it:cluster()} one less than the smallest cluster count. Otherwise it is the residual degrees of freedom. Under {it:poisson} the regression reports none, and p-values come from the normal distribution.",
+   "why": "Overview misstates the reference distribution: under cluster() e(df_r) is G-1 (smallest G-1 multi-way), and under poisson ppmlhdfe posts no df_r so inference is normal (tables read z).",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-12",
+   "k": 1,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{it:e(df_r)} the residual degrees of freedom; under {it:impvalues} {it:e(df_r)} is the smallest of the",
+   "replace": "{it:e(df_r)} the degrees of freedom of the reported t statistics. Under {it:cluster()}, or a {it:customvce()} of cluster, that is one less than the number of clusters, and under multi-way {it:cluster()} one less than the smallest cluster count. Otherwise it is the residual degrees of freedom. Under {it:poisson} it is missing, since the statistics are z. Under {it:bootstrap()} it follows {it:bootdf()} instead. Under {it:impvalues} {it:e(df_r)} is the smallest of the",
+   "why": "Stored-results entry for e(df_r) carries the same misdescription; the continuation line ('per-estimate values, which {it:e(imdf_min)} ...') is untouched.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-12",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "Given these standard errors, p-values are then obtained using a t-distribution of same degrees of freedom as the residual number of degrees of freedom in the underlying regression model.",
+   "replace": "Given these standard errors, p-values are then obtained from a t-distribution with the degrees of freedom the underlying regression reports. Under `cluster()`, or a `customvce()` of cluster, that is one less than the number of clusters, and under multi-way `cluster()` one less than the smallest cluster count. Otherwise it is the residual degrees of freedom. Under `poisson` the regression reports none, and p-values come from the normal distribution.",
+   "why": "The guide's 'From the help file' copy of the overview paragraph (line 47) mirrors the help sentence and needs the same correction.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-12",
+   "k": "missed",
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "(a multivariate *t* with the regression's residual degrees of freedom where it has them)",
+   "replace": "(a multivariate *t* on the degrees of freedom the regression reports, where it reports any)",
+   "why": "The analytic esband engine gets dfr(`df_r') (ado 5056) and uses it as the t df (ado 12307-12311), so under cluster() it is G-1. The edited help now separates G-1 from 'the residual degrees of freedom', and this sentence would contradict it. The parentheses are already in the original.",
+   "verdict": "MISSED",
+   "src": "verifier",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-12",
+   "k": "missed",
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "analytic event study covariance. Where the regression has residual degrees",
+   "replace": "analytic event study covariance. Where the regression reports degrees",
+   "why": "Help 301-302 gates the band's t distribution on the regression 'having residual degrees of freedom'. It means e(df_r), which is G-1 under cluster(). The edited overview now uses 'residual degrees of freedom' for the unclustered case only, so a minimal swap keeps the two consistent. The continuation 'of freedom it uses the same t distribution...' still reads correctly. The claim was loose, not false, so this is lower priority.",
+   "verdict": "MISSED",
+   "src": "verifier",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-12",
+   "k": "missed",
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "Where the regression has residual degrees of freedom - the ones the pointwise intervals are built on - each draw",
+   "replace": "Where the regression reports degrees of freedom - the ones the pointwise intervals are built on - each draw",
+   "why": "Same loose synonym in the guide's simultaneousbands entry (line 262). A minimal word swap that keeps the existing dash aside as written and adds no new dash. Lower priority.",
+   "verdict": "MISSED",
+   "src": "verifier",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-12",
+   "k": "missed",
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "Where there are no residual degrees of freedom (the `poisson` path) the draws are normal.",
+   "replace": "Where it reports none (the `poisson` path) the draws are normal.",
+   "why": "Companion to the previous swap in the same guide paragraph. Under poisson no e(df_r) is posted (ado 2044-2045), which is what 'reports none' says. The existing parenthesis is kept. Lower priority.",
+   "verdict": "MISSED",
+   "src": "verifier",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-13",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "({it:matrix b = e(b_es_{it:type})}, {it:matrix V = e(V_es_{it:type})}, {it:ereturn post b V}).",
+   "replace": "({it:matrix b = e(b_es_{it:type})}, {it:matrix V = e(V_es_{it:type})}, {it:ereturn post b V, dof(`=e(df_r)')}). The {it:dof()} option carries {it:e(df_r)}, so on an analytic run {it:test} and {it:lincom} use the same degrees of freedom as the printed event study. Without it they use the normal and the chi-squared, which are narrower than the table when clusters are few. Where {it:e(df_r)} is missing, {it:dof()} changes nothing.",
+   "why": "Help recipe (Incompatible Post-Estimation Commands). It now posts with dof() so that a hand-run test or lincom reproduces the table's t(e(df_r)).",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-13",
+   "k": 1,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "After {it:ereturn post} these matrices are valid inputs for\n{it:lincom} and {it:test}.",
+   "replace": "After {it:ereturn post} with {it:dof(`=e(df_r)')} these matrices are valid inputs for\n{it:lincom} and {it:test}.",
+   "why": "Help Stored Results entry for e(b_es_type)/e(V_es_type). It names the dof() posting.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-13",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "* a test across horizons of one family (after saving anything else you need from e())\nmatrix b = e(b_es_att)\nmatrix V = e(V_es_att)\nereturn post b V\ntest post0 = post1",
+   "replace": "* a test across horizons of one family (after saving anything else you need from e())\n* dof() keeps the table's degrees of freedom; a missing e(df_r) gives the normal, as the table does\nmatrix b = e(b_es_att)\nmatrix V = e(V_es_att)\nereturn post b V, dof(`=e(df_r)')\ntest post0 = post1",
+   "why": "Guide chapter 13 recipe block (hand-written). The same dof() posting as the help.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-13",
+   "k": 3,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "After *ereturn post* these matrices are valid inputs for *lincom* and *test*.",
+   "replace": "After *ereturn post* with ``dof(`=e(df_r)')`` these matrices are valid inputs for *lincom* and *test*.",
+   "why": "This is the guide's mirror of the help's Stored Results sentence, so rule 7 applies. corrected_fix did not list this site.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "se:SEB-13",
+   "k": 4,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "`matrix b = e(b_es_att)`, `matrix V = e(V_es_att)`, `ereturn post b V` (with *att* replaced by the estimand type).",
+   "replace": "`matrix b = e(b_es_att)`, `matrix V = e(V_es_att)`, ``ereturn post b V, dof(`=e(df_r)')`` (with *att* replaced by the estimand type). On an analytic run the *dof()* option makes *test* and *lincom* use the degrees of freedom of the printed event study rather than the normal.",
+   "why": "Guide inline recipe, the mirror of help 1124. The double-backtick delimiters are needed because the code contains a backtick. The following 'ereturn post takes matrix names' sentence is kept.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "perm:PERM-7",
+   "k": 0,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "re-randomized (the null: timing as-if random given dose);",
+   "replace": "re-randomized (the same sharp null of no effect, valid when onset timing was assigned as if at random given each unit's dose);",
+   "why": "The parenthesis called the assignment assumption the null. That contradicts the same paragraph, whose opening says the p-value tests the sharp null under an exchangeable-onset assumption. Under contreat() the tested hypothesis is still the sharp null of no effect. Timing that is as-if random given dose is the condition that makes the reference distribution valid.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-6",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "without confidence intervals; the att results are\nunaffected. A cell",
+   "replace": "without confidence intervals. The att rows are still reported, but their analytic standard errors are\nunderstated in this design as well (see the Discussion of What Level to Cluster At under {help wooldid##standarderrors:Standard Errors}). A cell",
+   "why": "The help said the att results are unaffected by the cluster-at-i design. That contradicts the help's own clustering discussion (the att rows' analytic SEs are understated without a caution), guide 649 and the program's caution. The new wording keeps the true part (the att rows are still reported) and states the understatement, linking to the Discussion of What Level to Cluster At under the standarderrors marker.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-8",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "is in the lowest {it:latticenum}-th percent for their time period",
+   "replace": "is in the lowest 1/{it:latticenum} of the distribution for their time period",
+   "why": "byTime runs gquantiles xtile nquantiles(latticenum) by(t), so bin 1 holds the lowest 1/latticenum of each period's (weighted) distribution, e.g. 20% at latticenum 5, not the latticenum-th percent.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-8",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "is in the lowest *latticenum*-th percent for their time period",
+   "replace": "is in the lowest 1/*latticenum* of the distribution for their time period",
+   "why": "Guide byTime bullet (outside generated chapter 14) mirrors the help and carries the same wrong 'latticenum-th percent'.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-9",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "If this option is specified when the always 0 condition is not met, {it:wooldid} will return poorly identified estimates. {p_end}",
+   "replace": "If this option is specified when the always 0 condition is not met, the baseline effect of {it:contreat} is left out of the model, and {it:wooldid} will return biased estimates, however precise they appear. {p_end}",
+   "why": "untreatedZero sets g() = 0, so a nonzero dose outside treated cells leaves its baseline effect in the error term: the result is bias, not weak identification, and the estimates can be precise (measured: ame 1.625 vs truth 1.025).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-9",
+   "k": 1,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "If this option is specified when the always 0 condition is not met, *wooldid* will return poorly identified estimates.",
+   "replace": "If this option is specified when the always 0 condition is not met, the baseline effect of *contreat* is left out of the model, and *wooldid* will return biased estimates, however precise they appear.",
+   "why": "Guide mirror of the help's untreatedZero entry; same correction (bias from the omitted baseline dose effect, not poor identification).",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "dose:CT-9",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "14. `contreatcontrols(untreatedZero)` when the dose is not zero outside treated cells: poorly identified estimates with no error.",
+   "replace": "14. `contreatcontrols(untreatedZero)` when the dose is not zero outside treated cells: the baseline dose effect is left out of the model, and the estimates are biased with no error.",
+   "why": "Pitfall 14 (chapter 16, not the generated chapter 14) repeats the 'poorly identified' description; corrected to bias from the omitted baseline dose effect.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-5",
+   "k": 0,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "is posted only when such rows\nexist. {p_end}",
+   "replace": "is posted only when such rows\nexist. {it:Design conditions for every consumer of e(V_es_*)}: the analytic covariance inherits the design's identification, and neither condition shows in the matrix itself.\nOne: a treated cohort-by-period cell that lies wholly inside one cluster adds none of its own variation (see {help wooldid##standarderrors:Standard Errors}).\nTwo, singleton-cell designs: with a unit-level {it:i}, each treated cohort-by-period cell is a single observation, its residual is zero, and the covariance carries control-side\nvariation only. This holds under {it:robust} as well. {it:honestdid} and {it:pretrendpower()} read this matrix directly and inherit both conditions. A coarser {it:i} with unit\nfixed effects in {it:fe()} meets condition Two, and a {it:cluster()} strictly finer than the cohort-by-period cells meets condition One. {p_end}",
+   "why": "Three runtime cautions (ado 11909, 11910 and the replay at 12939) cite 'the Design conditions for every consumer of e(V_es_*) in the help, condition Two' and 'the singleton-cell degeneracy the help describes'. Commit 07dd933 removed that passage from the help. This restores it under the exact name in the e(b_es_type), e(V_es_type) entry, labelled 'Two, singleton-cell designs', so both wordings resolve. It uses {it:fe()} rather than {opt fe()} to match the entry's neighbours, and a comma where the guide has a dash.",
+   "verdict": "ACCEPT_WITH_FIX",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-5",
+   "k": 1,
+   "file": "wooldidinstall/wooldid.sthlp",
+   "find": "{it:timetrends}) or ill-conditioned. The {it:mdt_nis} column",
+   "replace": "{it:timetrends}) or ill-conditioned. When the block has partial rank, the diagnostics run on a generalized inverse under a caution; a singleton-cell design is the usual cause (see\ncondition Two under {it:e(V_es_type)} in {help wooldid##output:Working with Output}). The {it:mdt_nis} column",
+   "why": "This is the optional pretrendpower() pointer from corrected_fix. It is adapted to the current text. The preceding sentence says ill-conditioned blocks are skipped, but a partial-rank block runs on a generalized inverse under the caution that carries the reference (ado ~11906). A bare 'makes the block rank-deficient' would therefore read as 'skipped'. The added clause states the actual path.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-5",
+   "k": 2,
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "depends on which columns are retained, so treat those numbers as one representative of an underdetermined family and interpret with care).",
+   "replace": "depends on which columns are retained, so treat those numbers as one representative of an underdetermined family and interpret with care). A singleton-cell design is the usual cause of a rank-deficient block; see condition Two under the Design conditions for every consumer of *e(V_es_*)* in Stored Results.",
+   "why": "Rule 7: the guide's chapter 7 'From the help file' pretrendpower() entry mirrors the help entry changed above, so it gets the same pointer. The guide already describes the generalized-inverse path, so only the pointer is added. The target passage already exists at guide line 851.",
+   "verdict": "ACCEPT",
+   "src": "editor",
+   "status": "ok"
+  },
+  {
+   "id": "es:ES-5",
+   "k": "missed",
+   "file": "wooldidinstall/wooldid_agent_guide.md",
+   "find": "with unit fixed effects supplied through `fe()` is the design that satisfies them.",
+   "replace": "with unit fixed effects supplied through `fe()` satisfies condition Two, and a `cluster()` strictly finer than the cohort-by-period cells satisfies condition One.",
+   "why": "Guide 851 (the 'From the help file' copy of the Design conditions) says a coarser i with unit FE satisfies both conditions. That is not true for condition One: a coarse i under cluster(i) still puts every treated cell inside one cluster (help sthlp 312-316). It would also contradict the corrected help text of edit 0, which splits the two remedies. The find occurs once.",
+   "verdict": "MISSED",
+   "src": "verifier",
+   "status": "ok"
+  }
+ ],
+ "held": [
+  {
+   "id": "se:SEB-01",
+   "what": "Runtime caution at wooldid.ado L4943 (the finding cites L4949; HEAD shifted it). Current text ends \"A cluster() strictly finer than the cohort-by-period cells, bootstrap() or permute() gives valid cell inference.\" Refuter's proposed text, verbatim: \"Caution: `gtcontain' of `gtn' e(gteffects) cell(s) lie wholly inside a single `gtcmode', so their se, p and interval columns are understated and the cell interval does not cover at its nominal level. bootstrap() does not repair this, since such a cell is resampled whole. Only a cluster() strictly finer than the cohort-by-period cells gives valid cell inference. The aggregate rows are a separate question, discussed under Standard Errors in the help.\"",
+   "why": "This is a runtime message's wording, so under the new-message rule it needs the author's clearance. Constraint: the opener \"e(gteffects) cell(s) lie wholly inside a single `gtcmode'\" must survive, because test/test_gteffects.do:265 greps for it. Keep the caution firing under bootstrap(). Guide ch.14 row L956 regenerates from the ado and must not be hand-edited."
+  },
+  {
+   "id": "se:SEB-01",
+   "what": "Sibling gtndegen caution at wooldid.ado L4953. It currently says \"bootstrap() rebuilds the cell inference from replications, and a cluster() strictly finer than the cohort-by-period cells avoids the degeneracy.\" Refuter's proposed replacement for that clause, verbatim: \"bootstrap() fills those columns from replications, but a cell inside one cluster is resampled whole, so they stay understated; a cluster() strictly finer than the cohort-by-period cells avoids the degeneracy.\"",
+   "why": "This is also runtime message wording and needs the author's clearance. Degenerate cells come from the same contained geometry, so bootstrap-rebuilt inference for them is understated in the same way. This caution prints only when neither bootstrap() nor permute() is in the run. Guide ch.14 row L957 regenerates from the ado."
+  },
+  {
+   "id": "se:SEB-01",
+   "what": "Reviewer R1's requirement in review_process/blue_sky_2026-09-18/fix_proposal_status.md (about L407-412) to gate the containment caution off under bootstrap() and permute().",
+   "why": "Do NOT build it. It rests on the false premise that bootstrap repairs contained cells. Probes p1 and q1 show the caution is true under bootstrap(): cell se is about .2 against a true sd of about 1.1. This is recorded so a later agent does not undo it."
+  },
+  {
+   "id": "perm:PERM-1",
+   "what": "The wording of the runtime caution at ado ~6948 (permtstat, clus == ivar): replace 'needs many observations per treated cohort-period cell and cluster() coarser than the cell; with one observation per i-period it cannot' with the corrected_fix's proposed text (several clusters inside each treated cohort-period cell; here each treated cell sits inside one cluster, so permtstat gives no protection). The twin at ~6957 (coefficient path) should drop 'with one observation per i-period'.",
+   "why": "This is user-facing runtime message wording. Under the standing 2026-09-21 new-message rule the author must clear it first."
+  },
+  {
+   "id": "perm:PERM-1",
+   "what": "The ado comment at ~6944-6946 above those cautions has the same one-observation-per-i-period qualifier.",
+   "why": "Program code. Fix it together with the caution wording once the author clears that wording."
+  },
+  {
+   "id": "perm:PERM-1",
+   "what": "Widening both caution triggers from clus == ivar to 'cluster() nests i and permonsetcohorts is not specified', so that i = unit with cluster(state) also gets the caution.",
+   "why": "This changes a message trigger. It goes against the author's 2026-09-06 F049/F051 ruling ('CAUTION when cluster() == i and permtstat', commit 4ba355d) and against test_permute3 Q20, which pins the caution staying silent under a coarser cluster. Offer it to the author as an option. Do not build it."
+  },
+  {
+   "id": "perm:PERM-1",
+   "what": "Guide chapter 14 rows 982/983 (wooldid_permctl cautions).",
+   "why": "Chapter 14 is generated from the ado and must never be hand-edited. Regenerate it only after the ado caution changes land."
+  },
+  {
+   "id": "dose:CT-2",
+   "what": "The verbose-only dropped-term caution text \"If using a lattice, this is likely innocuous.\" (wooldid.ado, near line 13471). It is misleading for a single-valued cell-by-bin piece, whose slope is silently borrowed from another bin.",
+   "why": "This is a runtime message's wording. The standing new-message check-in rule says any change must be cleared with the author."
+  },
+  {
+   "id": "dose:CT-2",
+   "what": "Whether a default caution should fire when a lattice leaves a treated cell-by-bin piece without its own slope. At present the display gate (lattice == \"\" | verbose) suppresses it.",
+   "why": "This would add a message and change a trigger in the code. The author declined the L3 screen (HELD_FOR_RULING_2026-09-20.md:54-59), so this needs his ruling."
+  },
+  {
+   "id": "dose:CT-3",
+   "what": "Optional caution: in wooldid_ccscreen, count the treated cell dummies dropped under contreatwithin (the scan is skipped when sw is off, ado ~13372) and print one caution naming the periods whose att rests on the normalisation.",
+   "why": "This is program code and a new runtime message. Under the standing new-message rule the author must clear the wording first, and the corrected_fix itself calls it the author's call."
+  },
+  {
+   "id": "se:SEB-03",
+   "what": "Runtime caution strings in wooldid.ado that name 'a cluster() strictly finer than the cohort-by-period cells' as a remedy: the jointtests/pretrendpower caution, the gteffects containment and degeneracy cautions, and the two subgroup-degeneracy cautions in wooldid_display. Guide chapter 14 shows them at L939, 956, 957, 1065 and 1067.",
+   "why": "Rewording a runtime message needs the author's clearance under the new-message check-in rule, and chapter 14 is generated from the ado and must not be hand-edited."
+  },
+  {
+   "id": "se:SEB-05",
+   "what": "ado ~L5101: post e(vce)=robust (vcetype Robust) when poisson runs on the ppmlhdfe path, or when pweights are present, and neither cluster() nor robust was given. Keep oim only for poisson on the unconditionalse/customvce path.",
+   "why": "This changes a stored result. The corrected_fix itself says to hold it for the author's ruling. The refuter's probe showed the current labels, oim and ols, sit over a robust V."
+  },
+  {
+   "id": "se:SEB-05",
+   "what": "Guide L889 e(vce) description rewrite: '...or *ols* when none of those applies (*robust* under `poisson` or pweights, which force it; *oim* for `poisson` on the `unconditionalse` path)'.",
+   "why": "It only holds after the ado label change above, so it stays with that change. The current text '*ols* (*oim* under `poisson`)' correctly describes what the code posts today."
+  },
+  {
+   "id": "se:SEB-05",
+   "what": "gteffects cell-containment screen skips the iid (no cluster, no robust) case (ado ~2340), as named in the finding.",
+   "why": "This is program code, and the corrected_fix does not include it. It needs the author's ruling, and any new caution needs its wording cleared under the new-message check-in rule."
+  },
+  {
+   "id": "perm:PERM-2",
+   "what": "The code comment above the permute() exchangeability caution in wooldidinstall/wooldid.ado (about line 6931-6937, '...a randomization test fails on two other axes - onset not being exchangeable in assignment, which is the design assumption and cannot be diagnosed here, and, diagnosably, too few ever-treated clusters...'). It should also name the third axis: treated clusters that are heterogeneous in size or error variance. The caution printed right below it already states that axis.",
+   "why": "This is a program-file change (code comment only, no behaviour change). The rules keep ado edits out of this edit set, so it goes to the author for a ruling."
+  },
+  {
+   "id": "perm:PERM-3",
+   "what": "The runtime caution in wooldid_permctl (wooldid.ado ~6954): 'Caution: only `wdpntc' of the resampling clusters are ever treated, so the number of distinct onset assignments is small: sampled draws will repeat ... permexact enumerates the assignments and reports the exact floor instead.' The options for the author are: (a) keep the k<6 trigger and reword it to the exchangeability risk; (b) drop the counting half and leave coarseness to the existing 10-percent-of-M caution; (c) move a counting caution into permrun and key it on wdp_npd.",
+   "why": "The wording or trigger of a runtime message needs the author's ruling. Under the new-message check-in rule it must also be cleared on the message-review page first. Guide chapter 14 (~985) regenerates from whichever text he picks. No reported number moves under any option. The help and guide edits hold either way, because they describe the trigger and the true count without quoting the caution."
+  },
+  {
+   "id": "perm:PERM-3",
+   "what": "The code comment above the caution (wooldid.ado ~6931-6937): '... too few ever-treated clusters, which makes the set of distinct assignments small, a limit no replication count can lift because the draws repeat'.",
+   "why": "This is program code. It should be corrected to match whichever option the author picks for the caution, so it waits on that ruling."
+  },
+  {
+   "id": "perm:PERM-4",
+   "what": "Optional size study of the step-down under a partial alternative (for example an effect at post0 only with post1 null), needed only if the author wants the step-down to claim strong FWER control.",
+   "why": "This is a research or simulation task for the author, not a doc edit. F058 simulated only the global null."
+  },
+  {
+   "id": "perm:PERM-5",
+   "what": "The runtime cautions on cluster() at i, which say the coefficient statistic has no protection against treated errors that are 'unusually dispersed'.",
+   "why": "The refuter found them correct as written: they name the over-rejecting direction, which is the one left unprotected. They are also runtime message wording, which is outside the scope of a doc edit, so they are not changed."
+  },
+  {
+   "id": "es:ES-3",
+   "what": "Whether wooldid_esband should print a caution when the analytic band is built with cluster() at or above i.",
+   "why": "This would be a new runtime message and a code change. Under the new-message rule the author must clear the wording and the trigger first."
+  },
+  {
+   "id": "es:ES-3",
+   "what": "The scope of ruling changes_review_2026-09-22.md l.261 ('band covers 0.90 at 10 clusters (measurement) | Leave the docs').",
+   "why": "This ruling sits next to these edits. It covered a different mechanism: few clusters below i. If the author meant 'Leave the docs' to cover every coverage caveat on the band, he may rule edits 1-5 out. That is his decision."
+  },
+  {
+   "id": "ident:F7",
+   "what": "Runtime caution at wooldid.ado (wooldid_worker, si8ilev > 100): replace '...specify unit-level fixed effects via fe(), which on a panel unbalanced within cohorts is what holds the point estimate fixed, and swap `i' to a coarser level...' with '...specify unit-level fixed effects via fe(), which keep the permanent differences between units in the model, and swap `i' to a coarser level...' (the wording both DOC-1 rounds proposed).",
+   "why": "This changes a runtime message's wording, so the standing new-message check-in rule requires the author's ruling first. If he adopts it, guide chapter 14 (the line mirroring this caution, about line 938) must be regenerated from the ado and never hand-edited."
+  },
+  {
+   "id": "se:SEB-08",
+   "what": "Few-treated-cluster caution in wooldid_bootrun (ado about line 10087): replace 'Bayesian bootstrap, which shares the pairs cluster bootstrap's first two moments' with 'Bayesian bootstrap, whose weights match the pairs cluster bootstrap's in mean and, up to a factor G/(G+1), in variance'.",
+   "why": "This is runtime message wording. The standing new-message check-in rule means the author has to clear it through the message-review artifact. If he approves, the strpos checks in test/test_bootstrap_bayes.do and test/test_bootstrap_gates.do must change with it, and guide ch.14 (row about line 1029) must be regenerated from the ado, never hand-edited."
+  },
+  {
+   "id": "se:SEB-08",
+   "what": "Ado comment at about line 10074: change 'the Bayesian bootstrap shares its first two moments' to 'the Bayesian bootstrap matches its first moment, and its second up to a factor G/(G+1)'.",
+   "why": "The change touches only a comment, but it is in wooldid.ado, which is outside this documentation pass. It belongs in the same commit as the caution change above."
+  },
+  {
+   "id": "perm:PERM-7",
+   "what": "ado:6641 code comment 'contreat in general stays allowed - the null is timing-as-if-random given dose' could read 'contreat in general stays allowed - the test is of the sharp null, valid when timing is as-if random given dose'",
+   "why": "This is program code (a comment in wooldid.ado). The refuter marked it optional and for the author. It changes no behaviour."
+  },
+  {
+   "id": "dose:CT-9",
+   "what": "FIX-UZ-D premise screen: a new caution when contreat is nonzero outside treated cohort-periods under contreatcontrols(untreatedZero) (blue_sky_2026-09-18/fixprop/uz-regress.md, uz-altfix.md Option G).",
+   "why": "Program code and a new runtime message; the wording needs the author's clearance under the new-message rule and it was never ruled. If it ships, the three edited sentences should say a caution prints instead of 'with no error'."
+  },
+  {
+   "id": "es:ES-5",
+   "what": "ALTERNATIVE runtime-message fix: delete the final sentence 'See the Design conditions for every consumer of e(V_es_*) in the help, condition Two.' at ado 11909 (wooldid_ptp) and 12939 (the replay in wooldid_display). At ado 11910 replace 'the singleton-cell degeneracy the help describes under the Design conditions for every consumer of e(V_es_*)' with 'the singleton-cell degeneracy'. Guide chapter 14 would then be regenerated.",
+   "why": "This changes a runtime message's wording (rule 6), and the standing new-message check-in rule says the author must clear any caution wording first. The documentation edits above already make the existing references resolve, so this is for the author to rule on."
+  },
+  {
+   "id": "pois:POIS-4",
+   "what": "Reword the second line of the rc-3200 fallback caution in wooldid_worker (wooldid.ado ~1941). The current line is \"Falling back to estimation with ppmlhdfe, but with any included time-trend controls, ccc_absorb controls, and/or continuous treatment controls pulled out of the absorb() statement and placed in the main regression.\" The proposed line is \"Falling back to estimation with ppmlhdfe, with any ccc_absorb() controls and continuous treatment controls moved out of the absorb() statement and into the main regression.\"",
+   "why": "This changes the wording of a runtime message in program code, so it is outside the help and guide edits. The new-message check-in rule also applies: an existing caution cannot be reworded without the author's approval. Chapter 14 of the agent guide regenerates from the ado and must not be hand-edited. The code check confirms the finding. `trendinjector' is an explicit regressor in both the first ppmlhdfe call and the retry. The retry moves only contreatcontrolinserterABS (to contreatcontrolinserter/FE) and ccc_absorbinserterPPML (to ccc_absorbinserter) out of absorb(). The change moves no number."
+  }
+ ]
+}
