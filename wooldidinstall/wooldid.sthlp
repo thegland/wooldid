@@ -706,7 +706,13 @@ so that contrast keeps those shocks whenever the group shares of that weight dif
 {phang}{opt contreat(varname)}: The continuous treatment variable. Must be defined for all observations (set to 0 if not naturally defined within untreated cohort-periods);
 observations on which it is missing are dropped from the estimation sample. If the continuous treatment carries no identifying variation for any treated cohort-period cell's
 dose slope (for example, a dose constant within each cohort), the within-cell average marginal effects are not identified: under default safety {it:wooldid} names this situation, reports the ame
-results as missing, and continues with the att results; under {it:contreatcontrols(untreatedZero)} the same design is refused instead. Not available with {it:gteffects}. {p_end}
+results as missing, and continues with the att results; under {it:contreatcontrols(untreatedZero)} the same design is refused instead. If only some treated cohort-period
+cells lack within-cell variation in the dose, their dose slopes are not identified either, and they would enter the ame as zeros. {it:wooldid} drops those cells from the
+estimation sample with a caution, so the att and the ame are estimated on the remaining cells. The cells checked are the ones that carry a dose slope, which include the
+pre-treatment periods under {it:esfixedbaseperiod}. The number dropped is stored in {it:e(contreat_ndropcells)}, and their observations are counted in {it:e(N_dropped)}.
+{it:safety(off)} silences the caution but keeps the drop. A cell whose dose is zero throughout is never dropped, and no cell is dropped when no cell on its side
+of treatment onset has dose variation. Under {it:contreatcontrols(untreatedZero)} the check does not run.
+Not available with {it:gteffects}. {p_end}
 
 {phang}{opt contreatelas:ticitytype(dydx|dyex)}: Specifies which type of marginal effect of the continuous treatment to compute. {it:dydx} is the default and reports the
 average marginal effect itself (change in y per unit change in the continuous treatment). {it:dyex} reports the change in y per proportional change in the continuous treatment.
@@ -1071,6 +1077,9 @@ neither the p-value nor the line. {p_end}
 {synopt: SG Effect Homogeneity Tests} For each estimate type (ATT, ATT_it, AME, etc.), the joint test that all subgroups have the same such post-treatment effect (namely, the
 same effect as the lowest numbered SG) may be found in the scalar {it:e(joint_att_allsgssame)} and analogously named scalars for other treatment effect types. For pre-treatment effects,
 the test can be found in objects with names like {it:e(joint_pre_att_allsgssame)}. A test whose pairwise covariance is degenerate is stored as missing.{p_end}
+
+{synopt:{it:e(contreat_ndropcells)}} Under {it:contreat()}, the number of treated cohort-period cells dropped from the estimation sample because the dose does not vary within
+them (see {help wooldid##continuous:contreat()}). Posted only when such cells exist.{p_end}
 
 {synopt:{it:e(N)}, {it:e(N_dropped)}, {it:e(Nclus)}} Estimation sample observation count, number of observations dropped from initially specified sample, and cluster count.
 {it:e(N_clust)}, {it:e(clustvar)}, {it:e(vce)} and {it:e(vcetype)} are the conventional variance-type entries, posted so that {it:estout} and {it:esttab} find what they expect;

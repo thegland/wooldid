@@ -199,10 +199,14 @@ foreach leg in "permute(shuffle) permreps(20) rseed(11)" "bootstrap(standard) re
 * T8: the sweep's fixture (dose constant within cohort-period cells, so no AME horizon
 *     is identified): rc 0, the binary caution, both "skipped entirely" cautions and
 *     empty ES_ame blocks. T9/T10: a dose with within-cell variation everywhere except
-*     subgroup 2's pre2 cells, so exactly that AME horizon is dropped: sg2 ES_ame (and
-*     ES_ame_it) = post0 with the caution naming it, sg1 keeps pre2 post0, the binary
-*     rows are untouched, and no label repeats (Stata pads a short namelist by repeating
-*     its last name, so a duplicate is the signature of the old mislabelling)
+*     subgroup 2's pre2 cells. Until 2026-09-25 exactly that AME horizon was dropped while
+*     the binary rows kept it. Since the dose-variation estimability check (author ruling
+*     2026-09-25, CT-1) those 18 cells leave the sample with the check's caution, so sg2's
+*     pre2 goes from the binary rows as well: sg2 ES_ame, ES_ame_it and ES_att = post0, the
+*     continuous-treatment SI-7 caution does not print, sg1 keeps pre2 post0, and no label
+*     repeats (Stata pads a short namelist by repeating its last name, so a duplicate is the
+*     signature of the old mislabelling). The AME-only horizon drop BS-8 fixed can no longer
+*     be reached through a constant-dose cell
 cap program drop ameblock
 program define ameblock, rclass
   args sg pfx
@@ -281,6 +285,9 @@ foreach leg in "att" "att att_it" {
   local caut1k = r(found)
   scanlog si7_t9.txt "conformability"
   local confk = r(found)
+  scanlog si7_t9.txt "Caution: estimability checks found 18 treated cohort-period cell(s) with no within-cell variation in dose"
+  local dropk = r(found)
+  local ndck = e(contreat_ndropcells)
   cap erase si7_t9.txt
   local okk 1
   local pfxs ES_ame
@@ -300,12 +307,12 @@ foreach leg in "att" "att att_it" {
   local b1 `r(rows)'
   ameblock 2 ES_att
   local b2 `r(rows)'
-  if "`b1'" != "pre2 post0" | "`b2'" != "pre2 post0" local okk 0
-  if `rck' == 0 & `cautk' == 1 & `caut1k' == 0 & `confk' == 0 & `okk' {
-    dis as result "T`k' PASS: contreat + `leg' -> rc 0, sg2's pre2 AME dropped with its caution;`rep'; ES_att sg1=[`b1'] sg2=[`b2']"
+  if "`b1'" != "pre2 post0" | "`b2'" != "post0" local okk 0
+  if `rck' == 0 & `dropk' == 1 & "`ndck'" == "18" & `cautk' == 0 & `caut1k' == 0 & `confk' == 0 & `okk' {
+    dis as result "T`k' PASS: contreat + `leg' -> rc 0, sg2's 18 constant-dose pre2 cells dropped with the check's caution;`rep'; ES_att sg1=[`b1'] sg2=[`b2']"
   }
   else {
-    dis as error "T`k' FAIL: contreat + `leg' -> rc=`rck' caution2=`cautk' caution1=`caut1k' conformability=`confk';`rep'; ES_att sg1=[`b1'] sg2=[`b2']"
+    dis as error "T`k' FAIL: contreat + `leg' -> rc=`rck' dropcaution=`dropk' ndropcells=`ndck' caution2=`cautk' caution1=`caut1k' conformability=`confk';`rep'; ES_att sg1=[`b1'] sg2=[`b2']"
     global pf = $pf + 1
   }
 }

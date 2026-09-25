@@ -9,6 +9,11 @@
 * adversarial scalars; unfired runs carry real ame SEs and a posted V_es_ame.
 * Group C is the dose-slope void screen, including under contreatwithin, where it and its
 * interactivecontrols twin run while the dropped-dummy error stays skipped.
+* Group D is the dose-variation estimability check (author ruling 2026-09-25, CT-1): treated
+* cohort-period cells with one dose value are dropped from the sample with a caution and
+* e(contreat_ndropcells); untreatedZero is exempt, zero-dose cells are never dropped, and a
+* pre- or post-onset block with no varying cell keeps its cells; the drop holds under
+* safety(off), under contreatwithin, and in every bootstrap and permutation replication.
 * Run from test/:  "<stata>" -e do test_amescreen.do   -> expect AMESCREEN_ALL_PASS
 clear all
 set more off
@@ -513,6 +518,265 @@ cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(basic) co
 if _rc == 0 dis "C6 ok"
 else {
   dis as error "C6 FAIL: rc=" _rc " (want 0: contreatwithin skips the dropped-dummy error)"
+  global pf = $pf + 1
+}
+
+* ---- Group D: the dose-variation estimability check (CT-1) ----
+* the review's probe design: 200 units in 4 onset groups (0 never treated), i = group, true
+* dose slope 1 everywhere, group 3's dose constant at 1.2. Its 5 post-onset cells hold 250
+* rows. Before the check the ame was .72 (the dropped slopes entered as zeros at full weight).
+* The fixed tolerances below (D0's ame within .01 of 1, D5's bootstrap se under .01) rest on the
+* seeds set here (12345) and in rseed(5150); a seed change can move them without a regression
+cap program drop mkct
+program define mkct
+  clear
+  set seed 12345
+  qui set obs 200
+  gen id = _n
+  gen coh = mod(id,4)
+  gen ttre = cond(coh==0, 0, 3+coh)
+  qui replace ttre = . if coh==0
+  gen ufe = rnormal()
+  gen dbase = 0.5 + runiform()
+  qui expand 10
+  bysort id: gen t = _n
+  gen post = !missing(ttre) & t >= ttre
+  gen dose = dbase
+  qui replace dose = 1.2 if coh==3
+  gen y = ufe + 0.1*t + 1*dose*post + 0.01*rnormal()
+  gen i = coh + 1
+  ereturn clear
+end
+cap program drop ctget
+program define ctget, rclass
+  tempname W
+  cap matrix `W' = e(wdidmainresults)
+  if _rc != 0 {
+    return scalar att = .
+    return scalar ame = .
+    return scalar amese = .
+    exit
+  }
+  local ra = rownumb(`W', "main:att")
+  local rm = rownumb(`W', "main:ame")
+  return scalar att = cond(`ra' < ., `W'[`ra', 1], .)
+  return scalar ame = cond(`rm' < ., `W'[`rm', 1], .)
+  return scalar amese = cond(`rm' < ., `W'[`rm', 2], .)
+end
+* scana5 answers whether a line holds the needle; this counts the lines that do
+cap program drop scand5
+program define scand5, rclass
+  args lf needle
+  tempname fh
+  local n 0
+  file open `fh' using "`lf'", read text
+  file read `fh' line
+  while r(eof) == 0 {
+    if strpos(`"`macval(line)'"', `"`needle'"') != 0 local ++n
+    file read `fh' line
+  }
+  file close `fh'
+  return scalar n = `n'
+end
+local ctneedle "treated cohort-period cell(s) with no within-cell variation in dose, causing them to be dropped"
+
+* D0: the oracle, in this build: the same call with the constant cells' rows removed by if()
+mkct
+cap noi wooldid y i t ttre if !(coh==3 & t>=ttre), contreat(dose) contreatcontrols(basic) fe(id) cluster(id)
+local d0rc = _rc
+ctget
+local d0att = r(att)
+local d0ame = r(ame)
+local d0N = e(N)
+local d0ndc = e(contreat_ndropcells)
+if `d0rc' == 0 & missing(`d0ndc') & `d0N' == 1750 & abs(`d0ame' - 1) < .01 dis "D0 ok"
+else {
+  dis as error "D0 FAIL: rc=`d0rc' N=`d0N' ame=`d0ame' ndc=`d0ndc' (want rc 0, N 1750, ame near 1, no e(contreat_ndropcells))"
+  global pf = $pf + 1
+}
+
+* D1: the check drops the 5 cells, names the count, and reproduces the oracle
+mkct
+qui log using ames_d1.txt, text replace name(ames)
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) fe(id) cluster(id)
+local d1rc = _rc
+qui log close ames
+scana5 ames_d1.txt "Caution: estimability checks found 5 `ctneedle'."
+local d1msg = r(found)
+cap erase ames_d1.txt
+ctget
+local d1att = r(att)
+local d1ame = r(ame)
+local d1N = e(N)
+local d1ndc = e(contreat_ndropcells)
+if `d1rc' == 0 & `d1msg' == 1 & `d1ndc' == 5 & `d1N' == 1750 & reldif(`d1ame', `d0ame') < 1e-10 & reldif(`d1att', `d0att') < 1e-10 dis "D1 ok"
+else {
+  dis as error "D1 FAIL: rc=`d1rc' caution=`d1msg' ndc=`d1ndc' N=`d1N' ame=`d1ame' (oracle `d0ame') att=`d1att' (oracle `d0att')"
+  global pf = $pf + 1
+}
+
+* D2: safety(off) keeps the drop and silences the caution
+mkct
+qui log using ames_d2.txt, text replace name(ames)
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) fe(id) cluster(id) safety(off)
+local d2rc = _rc
+qui log close ames
+scana5 ames_d2.txt "`ctneedle'"
+local d2msg = r(found)
+cap erase ames_d2.txt
+ctget
+local d2ame = r(ame)
+local d2ndc = e(contreat_ndropcells)
+if `d2rc' == 0 & `d2msg' == 0 & `d2ndc' == 5 & reldif(`d2ame', `d0ame') < 1e-10 dis "D2 ok"
+else {
+  dis as error "D2 FAIL: rc=`d2rc' caution=`d2msg' ndc=`d2ndc' ame=`d2ame' (want the drop, no caution)"
+  global pf = $pf + 1
+}
+
+* D3: contreatwithin rewrites the working safety value to off, but the caution reads the
+* user's own value, so the drop is still announced
+mkct
+qui log using ames_d3.txt, text replace name(ames)
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) contreatwithin fe(id) cluster(id)
+local d3rc = _rc
+qui log close ames
+scana5 ames_d3.txt "`ctneedle'"
+local d3msg = r(found)
+cap erase ames_d3.txt
+local d3ndc = e(contreat_ndropcells)
+if `d3rc' == 0 & `d3msg' == 1 & `d3ndc' == 5 dis "D3 ok"
+else {
+  dis as error "D3 FAIL: rc=`d3rc' caution=`d3msg' ndc=`d3ndc' (want the drop and the caution under contreatwithin)"
+  global pf = $pf + 1
+}
+
+* D4: untreatedZero is exempt: its all-zero pre-treatment cells are the reference and stay
+mkct
+qui replace dose = dbase
+qui replace dose = 0 if !post
+qui log using ames_d4.txt, text replace name(ames)
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(untreatedZero) fe(id) cluster(id) esfixedbaseperiod esprelength(2) espostlength(2)
+local d4rc = _rc
+qui log close ames
+scana5 ames_d4.txt "`ctneedle'"
+local d4msg = r(found)
+cap erase ames_d4.txt
+local d4ndc = e(contreat_ndropcells)
+local d4N = e(N)
+if `d4rc' == 0 & `d4msg' == 0 & missing(`d4ndc') & `d4N' == 2000 dis "D4 ok"
+else {
+  dis as error "D4 FAIL: rc=`d4rc' caution=`d4msg' ndc=`d4ndc' N=`d4N' (want no drop under untreatedZero)"
+  global pf = $pf + 1
+}
+
+* D5: bootstrap(standard) applies the drop in every replication (a replication that kept the
+* cells would put its ame near .72 and inflate the bootstrap se far past .01); the caution
+* prints once, for the observed run
+mkct
+qui log using ames_d5.txt, text replace name(ames)
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) fe(id) cluster(id) bootstrap(standard) reps(20) rseed(5150) dots(0)
+local d5rc = _rc
+qui log close ames
+scand5 ames_d5.txt "`ctneedle'"
+local d5msgn = r(n)
+cap erase ames_d5.txt
+ctget
+local d5ame = r(ame)
+local d5amese = r(amese)
+local d5ndc = e(contreat_ndropcells)
+if `d5rc' == 0 & `d5msgn' == 1 & `d5ndc' == 5 & reldif(`d5ame', `d0ame') < 1e-10 & `d5amese' > 0 & `d5amese' < .01 dis "D5 ok"
+else {
+  dis as error "D5 FAIL: rc=`d5rc' cautions=`d5msgn' ndc=`d5ndc' ame=`d5ame' amese=`d5amese' (want rc 0, one caution, the observed drop, a small real bootstrap se)"
+  global pf = $pf + 1
+}
+
+* D6: permute() completes with the drop applied on the observed run and in each permutation
+mkct
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) fe(id) cluster(i) permute(shuffle) permreps(20) rseed(5150) dots(0)
+local d6rc = _rc
+ctget
+local d6ame = r(ame)
+local d6ndc = e(contreat_ndropcells)
+if `d6rc' == 0 & `d6ndc' == 5 & reldif(`d6ame', `d0ame') < 1e-10 dis "D6 ok"
+else {
+  dis as error "D6 FAIL: rc=`d6rc' ndc=`d6ndc' ame=`d6ame' (want rc 0 and the observed drop)"
+  global pf = $pf + 1
+}
+
+* D7: nothing to drop, nothing posted: a design with dose variation in every cell (the demo),
+* and the all-constant design, which keeps the Group C outcome (ame voided, att reported)
+* rather than losing every treated row
+mkdemo
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(basic) esf espre(2) espost(2)
+local d7arc = _rc
+local d7andc = e(contreat_ndropcells)
+mkdemo
+qui replace dose = 0.5 + 0.1*i
+cap noi wooldid y i t ttre, att robust contreat(dose) contreatcontrols(basic) esf espre(2) espost(2)
+local d7brc = _rc
+local d7bndc = e(contreat_ndropcells)
+ctget
+local d7bame = r(ame)
+local d7batt = r(att)
+if `d7arc' == 0 & missing(`d7andc') & `d7brc' == 0 & missing(`d7bndc') & missing(`d7bame') & !missing(`d7batt') dis "D7 ok"
+else {
+  dis as error "D7 FAIL: rc=`d7arc'/`d7brc' ndc=`d7andc'/`d7bndc' all-constant ame=`d7bame' att=`d7batt'"
+  global pf = $pf + 1
+}
+
+* D8: a dose written as zero before onset (the help's advice where the dose is not naturally
+* defined) makes every pre-treatment cell of a treated unit constant at zero. Such cells are
+* structural zeros, never dropped: under esfixedbaseperiod the run completes as before (a
+* literal drop emptied the pretreatment block and died at margins with r(461))
+mkct
+qui replace dose = dbase
+qui replace dose = 0 if ttre < . & !post
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) fe(id) cluster(id) esfixedbaseperiod esprelength(3) espostlength(3)
+local d8rc = _rc
+local d8N = e(N)
+local d8ndc = e(contreat_ndropcells)
+ctget
+local d8att = r(att)
+if `d8rc' == 0 & `d8N' == 2000 & missing(`d8ndc') & !missing(`d8att') dis "D8 ok"
+else {
+  dis as error "D8 FAIL: rc=`d8rc' N=`d8N' ndc=`d8ndc' att=`d8att' (want zero-dose pre cells kept, rc 0, N 2000)"
+  global pf = $pf + 1
+}
+
+* D9: a constant NONZERO placeholder before onset (dose 1) leaves no pre-treatment cell with
+* variation, so the pre-onset block keeps its cells (the per-block guard) and the pretreatment
+* att is still reported
+mkct
+qui replace dose = dbase
+qui replace dose = 1 if ttre < . & !post
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) fe(id) cluster(id) esfixedbaseperiod esprelength(3) espostlength(3)
+local d9rc = _rc
+local d9N = e(N)
+local d9ndc = e(contreat_ndropcells)
+local d9pre .
+cap matrix d9W = e(wdidmainresults)
+if _rc == 0 {
+  local d9r = rownumb(d9W, "pretreatment:att")
+  if `d9r' < . local d9pre = d9W[`d9r', 1]
+  cap matrix drop d9W
+}
+if `d9rc' == 0 & `d9N' == 2000 & missing(`d9ndc') & !missing(`d9pre') dis "D9 ok"
+else {
+  dis as error "D9 FAIL: rc=`d9rc' N=`d9N' ndc=`d9ndc' pre att=`d9pre' (want the pre block kept whole, rc 0)"
+  global pf = $pf + 1
+}
+
+* D10: D8's zero pre-onset dose with group 3's post-onset dose constant at 1.2: the 5 post
+* cells are dropped, the zero-dose pre cells stay
+mkct
+qui replace dose = 0 if ttre < . & !post
+cap noi wooldid y i t ttre, contreat(dose) contreatcontrols(basic) fe(id) cluster(id) esfixedbaseperiod esprelength(3) espostlength(3)
+local d10rc = _rc
+local d10ndc = e(contreat_ndropcells)
+local d10N = e(N)
+if `d10rc' == 0 & "`d10ndc'" == "5" & `d10N' == 1750 dis "D10 ok"
+else {
+  dis as error "D10 FAIL: rc=`d10rc' ndc=`d10ndc' N=`d10N' (want the 5 post cells dropped and the zero pre cells kept)"
   global pf = $pf + 1
 }
 

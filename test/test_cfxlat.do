@@ -352,8 +352,13 @@ foreach f in l9probe_cfx.dta l9probe_cfxatt_cfxpost.gph l9probe_cfxame_cfxpost.g
 * and the all-slopes-dropped caution prints - the run completes, both figures are saved, the ame
 * matrix is blank, the att matrix keeps its estimates and standard errors, and the plot-data file
 * carries the blank ame rows. L10b/L10c: the level-1 (L10b) or level-2 (L10c) units each form
-* their own i, one observation per cell, so only that lattice level is omitted - its ame row is
-* blank and the other two keep their estimates ----
+* their own i, one observation per cell. Until 2026-09-25 only that lattice level was omitted
+* and its ame row was blank. Since the dose-variation estimability check (author ruling
+* 2026-09-25, CT-1) those one-row cells (60) have no within-cell dose variation while the
+* pooled cells do, so they leave the sample: the level has no treated rows, the cfx matrices
+* carry the other two levels only, each with b and se, and e(contreat_ndropcells) is 60. The
+* omitted-row parse (1bno. on the first level, 2o. on a later one) stays covered by L10a,
+* where every level is omitted ----
 cap program drop mkq33c
 program define mkq33c
   clear
@@ -450,12 +455,34 @@ foreach lc in 1 2 {
   cap noi wooldid y i t ttre, att cluster(u) contreat(dose) contreatcontrols(basic) makecfxplots lattice(L) esprelength(1) espostlength(1)
   local l10rc = _rc
   local l10bad 1
-  if `l10rc' == 0 l10chk , blank(`lc')
+  local l10ndc .
+  if `l10rc' == 0 {
+    local l10bad 0
+    local l10ndc = e(contreat_ndropcells)
+    if "`l10ndc'" != "60" local ++l10bad
+    local l10keep = cond(`lc' == 1, "lattice_2 lattice_3", "lattice_1 lattice_3")
+    if "`e(wdid_cfxmats)'" != "cfxame_cfxpost cfxatt_cfxpost" local ++l10bad
+    foreach nm in cfxame_cfxpost cfxatt_cfxpost {
+      cap confirm matrix e(`nm')
+      if _rc != 0 {
+        local ++l10bad
+        continue
+      }
+      tempname M
+      matrix `M' = e(`nm')
+      if rowsof(`M') != 2 | colsof(`M') != 6 | "`: rowfullnames `M''" != "`l10keep'" local ++l10bad
+      else {
+        forval r = 1/2 {
+          if `M'[`r', 1] >= . | `M'[`r', 2] >= . | `M'[`r', 2] <= 0 local ++l10bad
+        }
+      }
+    }
+  }
   if `l10rc' != 0 | `l10bad' != 0 {
-    dis as error "`l10lg' FAIL: lattice level `lc' omitted rc=`l10rc' (r(498) = the row-name parse) shape_bad=`l10bad' (its ame row must be blank, every other row carry b and se)"
+    dis as error "`l10lg' FAIL: lattice level `lc' units in one-row cells rc=`l10rc' ndropcells=`l10ndc' shape_bad=`l10bad' (the 60 constant-dose cells must be dropped and the other two levels carry b and se)"
     local ++fails
   }
-  else dis as result "`l10lg' PASS: lattice level `lc' omitted - its ame row is blank, the other levels keep their estimates"
+  else dis as result "`l10lg' PASS: lattice level `lc' units in one-row cells - the 60 constant-dose cells are dropped, the other two levels keep their estimates"
 }
 foreach f in l10probe_cfx.dta l10probe_cfxatt_cfxpost.gph l10probe_cfxame_cfxpost.gph l10probe_log.txt {
   cap erase "`f'"

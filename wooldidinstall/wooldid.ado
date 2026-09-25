@@ -1263,6 +1263,17 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   tempvar targetflag
   qui gen `targetflag' = `_t' > 0 & `_t' < . if `ifstatement'
 
+  * the dose-variation estimability check (author ruling 2026-09-25, CT-1). a treated cohort-
+  * period cell whose dose takes one value has no identified dose slope, and its rows would
+  * enter the ame as zeros at full weight. such cells are dropped here, on every fit, before
+  * the lattice is built; replications included, since a draw or a permutation forms its own
+  * cells. a cell whose dose is zero throughout is never dropped (see the helper). under
+  * untreatedZero the check does not run: its all-zero cells are the reference, and a constant
+  * nonzero cell there is refused by the dose-slope screen in wooldid_ccscreen. the body is in
+  * wooldid_dosecells (worker size headroom); the count comes back for e(contreat_ndropcells)
+  local wdctndrop 0
+  if "`contreat'" != "" & "`contreatcontrols'" != "untreatedZero" wooldid_dosecells , ct(`contreat') ui(`_i') ut(`_t') tf(`targetflag') tv(`t') ttrev(`ttre') ifv(`ifvar') si(`safetyinput') rm(`wdrepmode')
+
 
 
   * prepare the continuous treatment materials  - this must be done after ttre is fully updated and bad treatments are missinged out
@@ -5033,6 +5044,8 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "``scalar''" != "." ereturn scalar `scalar' = ``scalar''
   }
   ereturn scalar N_dropped = `droppedobs'
+  * posted only when the dose-variation check dropped cells, as e(gt_ncontained) is
+  if `wdctndrop' > 0 ereturn scalar contreat_ndropcells = `wdctndrop'
 
   * one disclosure contract for what e(V) is on this run. the four states the package can post
   * are: "analytic-diagonal" (variances only, no covariance - a cross-estimate test on it is not
@@ -6366,6 +6379,50 @@ version 16.0
     qui drop `antictag'
   }
   qui drop `rawref' `rawrefobs'
+end
+
+* the dose-variation estimability check (author ruling 2026-09-25, CT-1). a treated cohort-
+* period cell (_i, _t over targetflag rows, the factors that multiply c.contreat in the
+* regression) whose dose takes one value has no identified dose slope: the slope column is
+* collinear with the cell dummy and drops, and margins then averages a zero at the cell's full
+* weight into the ame. every in-sample row carries a positive weight (the worker marks out
+* w <= 0, which is also how a bootstrap count draw leaves an undrawn cluster), so one distinct
+* value is the same as zero weighted within-cell variance. the cells are keyed on (_i, _t)
+* alone: lattice pieces are not cells, and a piece without variation borrows another bin's
+* slope rather than a zero. a cell whose dose is zero throughout is never dropped: its slope
+* column is a structural zero rather than a rank failure (the predicate the dose-slope screen
+* in wooldid_ccscreen uses), and the help tells users to write zeros where the dose is not
+* naturally defined, which makes every pre-treatment cell of a treated unit such a cell.
+* two guards. when no post-onset cell varies nothing at all is dropped, which keeps the
+* author's R6 outcome in the all-dropped case (att reported, ame voided in wooldid_ccscreen).
+* when no pre-onset cell varies the pre-onset cells are kept, since dropping all of them would
+* leave the pretreatment margins subpop with no rows (r(461)). the drop stands under
+* safety(off) and in replications; the caution is silenced there. gated on the user's own
+* safety value, not the working one that contreatwithin rewrites to off, so a contreatwithin
+* run still says that it dropped cells. `ifv' is the caller's tempvar, passed by name and
+* changed in place
+cap prog drop wooldid_dosecells
+prog def wooldid_dosecells
+version 16.0
+  syntax , ct(string) ui(string) ut(string) tf(string) tv(string) ttrev(string) ifv(string) [si(string) rm(string)]
+  tempvar dmin dmax
+  qui gegen double `dmin' = min(`ct') if `ifv' == 1 & `tf' == 1, by(`ui' `ut')
+  qui gegen double `dmax' = max(`ct') if `ifv' == 1 & `tf' == 1, by(`ui' `ut')
+  qui count if `dmin' == `dmax' & `dmin' != 0 & `dmin' < .
+  if r(N) == 0 exit
+  qui count if `dmax' > `dmin' & `dmax' < . & `tv' >= `ttrev'
+  if r(N) == 0 exit
+  qui count if `dmax' > `dmin' & `dmax' < . & `tv' < `ttrev'
+  local wdctlpre = r(N) > 0
+  tempvar cdrop ctag
+  qui gen byte `cdrop' = `dmin' == `dmax' & `dmin' != 0 & `dmin' < . & (`tv' >= `ttrev' | `wdctlpre')
+  qui gegen byte `ctag' = tag(`ui' `ut') if `cdrop' == 1
+  qui count if `ctag' == 1
+  local wdctn = r(N)
+  if `wdctn' == 0 exit
+  qui replace `ifv' = 0 if `cdrop' == 1
+  if "`rm'" == "" & "`si'" != "off" dis as text "Caution: estimability checks found `wdctn' treated cohort-period cell(s) with no within-cell variation in `ct', causing them to be dropped."
+  c_local wdctndrop `wdctn'
 end
 
 * wooldid keeps the rows where the if() expression equals exactly 1; stata's own
