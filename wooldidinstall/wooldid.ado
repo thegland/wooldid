@@ -13816,10 +13816,10 @@ version 16.0
   * trip either one. the bootstrap reweights or duplicates the observed rows, and its re-id
   * leg rebuilds `i' finer than the original, so every replication cell and unit nests in a
   * screened one. under permute() wooldid_permctl has already run both screens over every
-  * design unit, never-treated ones included: a subgroup varying within `i' is refused
-  * whatever safety() is, and within an `i'-by-period cell unless safety(off), which skips
-  * the within-cell screen here too; permonsetcohorts, which rebuilds `i', is refused with
-  * subgroups(). skipping them saves up to four gegen passes per replication
+  * design unit, never-treated ones included, and neither is lifted by safety(off) there
+  * (off permute(), safety(off) skips this within-cell screen and admits a split unit with
+  * the caution below); permonsetcohorts, which rebuilds `i', is refused with subgroups().
+  * skipping them saves up to four gegen passes per replication
   if "`safetyinput'" != "off" & "`rm'" != "1" {
     tempvar f13sgitmin f13sgitmax
     qui gegen double `f13sgitmin' = min(cond(`subgroups' >= ., ., `subgroups')) if `ifstatement' & `ttre' != ., by(`i' `t')
