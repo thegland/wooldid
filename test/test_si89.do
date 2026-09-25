@@ -110,6 +110,33 @@ else {
   global pf = $pf + 1
 }
 
+* g5find <file> <needle>: r(found) is 1 when the needle occurs in the file once line breaks,
+* spaces and the "> " continuation marks are removed from both, so a message the log wrapped
+* still matches. Read only from logs closed before the call
+cap program drop g5find
+program define g5find, rclass
+  args lf needle
+  local h = fileread("`lf'")
+  local h = subinstr(`"`macval(h)'"', char(13), "", .)
+  local h = subinstr(`"`macval(h)'"', char(10), "", .)
+  local h = subinstr(`"`macval(h)'"', ">", "", .)
+  local h = subinstr(`"`macval(h)'"', " ", "", .)
+  local n = subinstr(`"`needle'"', " ", "", .)
+  return scalar found = strpos(`"`macval(h)'"', `"`n'"') > 0
+end
+* ---- T3b (author ruling 2026-09-25, card m026): the granular-i caution gives the fe() reason
+* as keeping the permanent differences between units in the model, not as holding the point
+* estimate fixed ----
+g5find si89_t3.txt "specify unit-level fixed effects via fe(), which keep the permanent differences between units in the model, and swap"
+local t3bnew = r(found)
+g5find si89_t3.txt "holds the point estimate fixed"
+local t3bold = r(found)
+if `t3bnew' == 1 & `t3bold' == 0 dis as result "T3b PASS: the granular-i caution carries the 2026-09-25 fe() reason"
+else {
+  dis as error "T3b FAIL: new fe() reason found = `t3bnew', old one found = `t3bold'"
+  global pf = $pf + 1
+}
+
 * ---- T4: safety(off) suppresses the granular-i caution ----
 mkgran 150
 qui log using si89_t4.txt, text replace name(si89)

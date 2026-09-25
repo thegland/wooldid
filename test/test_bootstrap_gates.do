@@ -892,7 +892,7 @@ chk 28c 0 `g28rc'
 local lg = fileread("boot_gates_g28.txt")
 local lg = subinstr(`"`lg'"', char(13), "", .)
 local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
-if strpos(`"`lg'"', "only 2 treated cluster(s) are available for resampling") == 0 | strpos(`"`lg'"', "Bayesian bootstrap, which shares the pairs cluster bootstrap's first two moments") == 0 {
+if strpos(`"`lg'"', "only 2 treated cluster(s) are available for resampling") == 0 | strpos(`"`lg'"', "Bayesian bootstrap, whose weights match the pairs cluster bootstrap's in mean and, up to a factor G/(G+1), in variance") == 0 {
   di as error "G28d FAIL: no treated-cluster caution with 2 treated clusters under bootstrap(bayes)"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }

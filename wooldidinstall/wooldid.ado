@@ -1770,7 +1770,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     }
     local si8demand = `si8cells'*`si8mult' + `si8levels' + 200
     if `si8ilev' > 100 {
-      dis as text "Caution: the cohort variable `i' takes `si8ilev' distinct values. wooldid builds one interaction term per cohort-by-period cell, and runtime grows faster than linearly in that cell count, so a granular `i' can dominate runtime. Coarsening `i' is normally the single largest speedup available: specify unit-level fixed effects via fe(), which on a panel unbalanced within cohorts is what holds the point estimate fixed, and swap `i' to a coarser level of aggregation, such as cohorts or treatment onset groups. (safety(off) suppresses this check.)"
+      dis as text "Caution: the cohort variable `i' takes `si8ilev' distinct values. wooldid builds one interaction term per cohort-by-period cell, and runtime grows faster than linearly in that cell count, so a granular `i' can dominate runtime. Coarsening `i' is normally the single largest speedup available: specify unit-level fixed effects via fe(), which keep the permanent differences between units in the model, and swap `i' to a coarser level of aggregation, such as cohorts or treatment onset groups. (safety(off) suppresses this check.)"
     }
     if `si8demand' > c(maxvar) {
       dis as error "Error: this specification will breach the current maxvar limit; at least `si8demand' variables are needed. Please either raise the maxvar limit or reduce the number of needed variables. If this error seems surprising, check whether your i variable is set to individual units within your dataset, rather than something more aggregate like groups of units by treatment onset (in which case, consider using your unit variable for fe(), and a treatment onset group variable for i). "
@@ -1964,7 +1964,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       qui cap ppmlhdfe `y' `contreatcontrolinserter' `trendinjector'    i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'    `contreatcontrolinserterABS'  `ccc_absorbinserterPPML' ) `vcespecifier' tol(1e-`regtol') d
       if _rc == 3200 {
         dis as text "Caution: initial estimation of ppmlhdfe failed, possibly due to inclusion of an absorbed categorical fixed effect with only 1 level."
-        dis as text "Falling back to estimation with ppmlhdfe, but with any included time-trend controls, ccc_absorb controls, and/or continuous treatment controls pulled out of the absorb() statement and placed in the main regression."
+        dis as text "Falling back to estimation with ppmlhdfe, with any ccc_absorb() controls and continuous treatment controls moved out of the absorb() statement and into the main regression."
         dis as text "In principle, this fallback solution should usually yield the same results, but will be computationally less efficient."
         dis as text "If estimation still fails, the issue could be either with the fe() specified or a result of having few cohorts/time-periods."
         qui ppmlhdfe `y' `contreatcontrolinserter' `contreatcontrolinserterFE'  `ccc_absorbinserter'  `trendinjector'  i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' , absorb(i.`i' i.`t' `fe'   ) `vcespecifier' tol(1e-`regtol') d
@@ -4979,7 +4979,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       if `gtprc' != 0 dis as text "Caution: e(gteffects) could not be posted (rc `gtprc')."
       * the containment disclosure. `gtcontain' is 0 unless the screen above ran
       if `gtprc' == 0 & `gtcontain' > 0 {
-        dis as text "Caution: `gtcontain' of `gtn' e(gteffects) cell(s) lie wholly inside a single `gtcmode', so their se, p and interval columns are understated and the cell interval does not cover at its nominal level; the aggregate rows are a separate question, discussed under Standard Errors in the help. A cluster() strictly finer than the cohort-by-period cells, bootstrap() or permute() gives valid cell inference."
+        dis as text "Caution: `gtcontain' of `gtn' e(gteffects) cell(s) lie wholly inside a single `gtcmode', so their se, p and interval columns are understated and the cell interval does not cover at its nominal level. bootstrap() does not repair this, since such a cell is resampled whole. Only a cluster() strictly finer than the cohort-by-period cells gives valid cell inference. The aggregate rows are a separate question, discussed under Standard Errors in the help."
         cap ereturn scalar gt_ncontained = `gtcontain'
       }
       * report the degeneracy floor. under a plain bootstrap()/permute() the cell inference
@@ -4989,7 +4989,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       * studentizes by, so the caution says so in those terms
       if `gtprc' == 0 & `gtndegen' > 0 {
         cap ereturn scalar gt_ndegen = `gtndegen'
-        if "`bootstrap'`permute'" == "" dis as text "Caution: `gtndegen' of `gtn' e(gteffects) cell(s) have a stage-1 variance that is cancellation residue rather than an estimated variance, so their se, p and interval columns are reported as missing; the point estimates are unaffected. bootstrap() rebuilds the cell inference from replications, and a cluster() strictly finer than the cohort-by-period cells avoids the degeneracy."
+        if "`bootstrap'`permute'" == "" dis as text "Caution: `gtndegen' of `gtn' e(gteffects) cell(s) have a stage-1 variance that is cancellation residue rather than an estimated variance, so their se, p and interval columns are reported as missing; the point estimates are unaffected. bootstrap() fills those columns from replications, but a cell inside one cluster is resampled whole, so they stay understated; a cluster() strictly finer than the cohort-by-period cells avoids the degeneracy."
         else if "`boottstat'" != "" dis as text "Caution: `gtndegen' of `gtn' e(gteffects) cell(s) have a stage-1 variance that is cancellation residue rather than an estimated variance. Under boottstat that standard error is the studentizing denominator, so those cells report a missing se, p and interval, and the p-values of the other cells move too; the point estimates are unaffected."
       }
     }
@@ -6736,7 +6736,8 @@ version 16.0
   * periods; replications reassign onset while the dose path stays frozen, so every rep would
   * violate that structural premise and silently contaminate the null distribution. plain
   * equality suffices: validate already forces untreatedZero to be the sole contreatcontrols
-  * token. contreat in general stays allowed - the null is timing-as-if-random given dose
+  * token. contreat in general stays allowed - the test is of the sharp null, valid when timing
+  * is as-if random given dose
   if `"`cc'"' == "untreatedZero" {
     dis as error "Error: permute() is not compatible with contreatcontrols(untreatedZero)."
     error 198
@@ -7022,18 +7023,20 @@ version 16.0
   * assertion is verified as a bijection above.
   * the studentized statistic is MacKinnon-Webb (2020)'s remedy for atypical treated
   * clusters, but it presumes a cluster-robust se that sees each treated cluster's own
-  * variance. With cluster() at i and one observation per i-period the treated cohort-period
-  * cells are absorbed by their own terms, so the se cannot see them and permtstat does not
-  * restore size. Say so; the run proceeds
-  if "`ts'" != "" & "`clus'" == "`ivar'" dis as text "Caution: permtstat with cluster() at the i level. The studentized statistic protects against treated clusters being atypical in variance only when the cluster-robust standard error can see their variance, which needs many observations per treated cohort-period cell and cluster() coarser than the cell; with one observation per i-period it cannot, and permtstat gives no protection there."
+  * variance, which needs several clusters inside each treated cohort-period cell. With
+  * cluster() at i each treated cell sits inside one cluster and its own cohort-period term
+  * absorbs it, however many observations it holds, so the se cannot see it and permtstat
+  * does not restore size. Say so; the run proceeds
+  if "`ts'" != "" & "`clus'" == "`ivar'" dis as text "Caution: permtstat with cluster() at the i level. The studentized statistic protects against treated clusters being atypical in variance only when the cluster-robust standard error can see their variance, which needs several clusters inside each treated cohort-period cell. Here each treated cell sits inside one cluster, so permtstat gives no protection."
   * permute() gets its own exchangeability caution rather than the bootstrap's few-cluster
   * ones. the failure modes differ in kind: the pairs cluster bootstrap fails when clusters
-  * are not exchangeable as sampling draws, while a randomization test fails on two other
+  * are not exchangeable as sampling draws, while a randomization test fails on three other
   * axes - onset not being exchangeable in assignment, which is the design assumption and
-  * cannot be diagnosed here, and, diagnosably, too few ever-treated clusters, which makes
-  * the set of distinct assignments small, a limit no replication count can lift because the
-  * draws repeat
-  if "`ts'" == "" & "`clus'" == "`ivar'" dis as text "Caution: cluster() is at the i level and the permuted statistic is the coefficient itself. Randomization inference presumes clusters are exchangeable in assignment, not alike in variance, so the coefficient statistic carries no protection against a treated cluster whose errors are unusually dispersed; permtstat protects only when the cluster-robust standard error can see the treated clusters' own variance, which at cluster() = i with one observation per i-period it cannot."
+  * cannot be diagnosed here; treated clusters heterogeneous in size or error variance, which
+  * the coefficient statistic does not guard against (the caution below says so at
+  * cluster() = i); and, diagnosably, too few ever-treated clusters, which makes the set of
+  * distinct assignments small, a limit no replication count can lift because the draws repeat
+  if "`ts'" == "" & "`clus'" == "`ivar'" dis as text "Caution: cluster() is at the i level and the permuted statistic is the coefficient itself. Randomization inference presumes clusters are exchangeable in assignment, not alike in variance, so the coefficient statistic carries no protection against a treated cluster whose errors are unusually dispersed; permtstat protects only when the cluster-robust standard error can see the treated clusters' own variance, which needs several clusters inside each treated cohort-period cell."
   * the clusters whose onset the design recoded to never-treated (an onset as given, missing
   * as the design onset), counted once each
   tempvar wdpltag
@@ -10172,7 +10175,8 @@ version 16.0
     * - few treated clusters. The pairs cluster bootstrap keeps only the replications that
     * draw at least one treated cluster (the others fail and are excluded), so the retained
     * distribution is conditional on that event, and MacKinnon-Webb (2017, 2018) find it badly
-    * sized there; the Bayesian bootstrap shares its first two moments. The wild cluster
+    * sized there; the Bayesian bootstrap's weights match the pairs cluster bootstrap's in mean
+    * and, up to a factor G/(G+1), in variance. The wild cluster
     * bootstrap-t is the literature's remedy and is not offered - a self-contained wild
     * bootstrap of the margins functional would be a new engine with a refit per replication -
     * so the caution names permute() and boottest on the stage-1 regression. Keyed on the
@@ -10185,7 +10189,7 @@ version 16.0
       qui gegen byte `wdbctag' = tag(`clusv') if `smp' & `wdbctr' == 1
       qui count if `wdbctag' == 1
       if r(N) < 6 {
-        dis as text "Caution: only " r(N) " treated cluster(s) are available for resampling. What is implemented is the " cond("`mode'" == "bayes", "Bayesian bootstrap, which shares the pairs cluster bootstrap's first two moments", "pairs cluster bootstrap, which keeps only the replications that draw at least one treated cluster") "; with few treated clusters it is badly sized, and boottstat is not a cure for it. Consider permute(), randomization inference over the treatment assignment, or the wild cluster bootstrap-t (boottest, on the stage-1 regression outside wooldid)."
+        dis as text "Caution: only " r(N) " treated cluster(s) are available for resampling. What is implemented is the " cond("`mode'" == "bayes", "Bayesian bootstrap, whose weights match the pairs cluster bootstrap's in mean and, up to a factor G/(G+1), in variance", "pairs cluster bootstrap, which keeps only the replications that draw at least one treated cluster") "; with few treated clusters it is badly sized, and boottstat is not a cure for it. Consider permute(), randomization inference over the treatment assignment, or the wild cluster bootstrap-t (boottest, on the stage-1 regression outside wooldid)."
       }
       drop `wdbtrt' `wdbctr' `wdbctag'
     }
@@ -12007,8 +12011,8 @@ version 16.0
       }
       dis as text "Caution: the `ptpty' pre-period variance-covariance block is rank-deficient (rank `ptpkeff' of `ptpk'), so the slope, its CI, the joint test (now `ptpkeff' degrees of freedom) and the detectable-trend columns reflect only the linearly independent subset of pre-period coefficients a generalized inverse retains, not a summary of all pre-period evidence; interpret with care."
       if "`ptpsingmax'" != "" {
-        if `ptpsingmax' == 1 dis as text "  The usual cause is a singleton-cell design, and this run is one: every treated (i, relative-period) cell holds exactly one observation, so the treated residuals are identically zero and this covariance is built from control-cell variation alone - two pre-period horizons can then be reported as exactly proportional when their estimates are not. It is not caused by the clustering, and it is present under robust. A coarser i (cohorts, or treatment-onset groups) with unit fixed effects supplied through fe() removes it, and bootstrap() or permute() give inference that does not read this matrix. See the Design conditions for every consumer of e(V_es_*) in the help, condition Two."
-        if `ptpsingmax' > 1 & `ptpsingmax' < . dis as text "  Treated (i, relative-period) cells here hold up to `ptpsingmax' observations, so the singleton-cell degeneracy the help describes under the Design conditions for every consumer of e(V_es_*) is not the cause; the deficiency is in the estimated covariance itself. bootstrap() or permute() give inference that does not read this matrix."
+        if `ptpsingmax' == 1 dis as text "  The usual cause is a singleton-cell design, and this run is one: every treated (i, relative-period) cell holds exactly one observation, so the treated residuals are identically zero and this covariance is built from control-cell variation alone - two pre-period horizons can then be reported as exactly proportional when their estimates are not. It is not caused by the clustering, and it is present under robust. A coarser i (cohorts, or treatment-onset groups) with unit fixed effects supplied through fe() removes it, and bootstrap() or permute() give inference that does not read this matrix."
+        if `ptpsingmax' > 1 & `ptpsingmax' < . dis as text "  Treated (i, relative-period) cells here hold up to `ptpsingmax' observations, so the singleton-cell degeneracy is not the cause; the deficiency is in the estimated covariance itself. bootstrap() or permute() give inference that does not read this matrix."
         cap ereturn hidden scalar roth_cellmax_`ptpty' = `ptpsingmax'
       }
     }
@@ -13045,7 +13049,7 @@ version 16.0
     if `ptpkeff' < `ptpk' dis as text "Caution: the `ptpty' pre-period variance-covariance block is rank-deficient (rank `ptpkeff' of `ptpk'), so the slope, its CI, the joint test (now `ptpkeff' degrees of freedom) and the detectable-trend columns reflect only the linearly independent subset of pre-period coefficients a generalized inverse retains, not a summary of all pre-period evidence; interpret with care."
     * PTP PROPOSAL 2 replay mirror: the renderer has no data access, so it reads the scalar the
     * live run posted rather than recomputing the cell occupancy
-    if `ptpkeff' < `ptpk' & e(roth_cellmax_`ptpty') == 1 dis as text "  The usual cause is a singleton-cell design, and this run is one: every treated (i, relative-period) cell holds exactly one observation, so the treated residuals are identically zero and this covariance is built from control-cell variation alone - two pre-period horizons can then be reported as exactly proportional when their estimates are not. It is not caused by the clustering, and it is present under robust. A coarser i (cohorts, or treatment-onset groups) with unit fixed effects supplied through fe() removes it, and bootstrap() or permute() give inference that does not read this matrix. See the Design conditions for every consumer of e(V_es_*) in the help, condition Two."
+    if `ptpkeff' < `ptpk' & e(roth_cellmax_`ptpty') == 1 dis as text "  The usual cause is a singleton-cell design, and this run is one: every treated (i, relative-period) cell holds exactly one observation, so the treated residuals are identically zero and this covariance is built from control-cell variation alone - two pre-period horizons can then be reported as exactly proportional when their estimates are not. It is not caused by the clustering, and it is present under robust. A coarser i (cohorts, or treatment-onset groups) with unit fixed effects supplied through fe() removes it, and bootstrap() or permute() give inference that does not read this matrix."
     if `ptpheader' == 0 {
       dis as result " "
       dis as result "Pre-Trend Power Diagnostics (Roth 2022):"

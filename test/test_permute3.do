@@ -1765,6 +1765,43 @@ if `q31rca' != 0 | `q31rcb' != 0 | `q31a_def' != 1 | `q31a_ts' != 0 | `q31a_few'
 }
 else dis as result "Q31 PASS: the coefficient-statistic caution and the permtstat one are alternatives, and the few-treated-cluster line stays silent on an 80-cluster fixture"
 
+* g5find <file> <needle>: r(found) is 1 when the needle occurs in the file once line breaks,
+* spaces and the "> " continuation marks are removed from both, so a message the log wrapped
+* still matches. Read only from logs closed before the call
+cap program drop g5find
+program define g5find, rclass
+  args lf needle
+  local h = fileread("`lf'")
+  local h = subinstr(`"`macval(h)'"', char(13), "", .)
+  local h = subinstr(`"`macval(h)'"', char(10), "", .)
+  local h = subinstr(`"`macval(h)'"', ">", "", .)
+  local h = subinstr(`"`macval(h)'"', " ", "", .)
+  local n = subinstr(`"`needle'"', " ", "", .)
+  return scalar found = strpos(`"`macval(h)'"', `"`n'"') > 0
+end
+* ---- Q31c (author ruling 2026-09-25, cards m173 and m174): both cluster()-at-i cautions say
+* the protection needs several clusters inside each treated cohort-period cell, the permtstat
+* one says each treated cell here sits inside one cluster, and neither keeps the old
+* "one observation per i-period" condition. Read from the logs Q31 closed ----
+local q31cn "which needs several clusters inside each treated cohort-period cell."
+local q31ch "Here each treated cell sits inside one cluster, so permtstat gives no protection."
+local q31co "one observation per i-period"
+g5find perm3_q31a.txt "`q31cn'"
+local q31c_an = r(found)
+g5find perm3_q31a.txt "`q31co'"
+local q31c_ao = r(found)
+g5find perm3_q31b.txt "`q31cn'"
+local q31c_bn = r(found)
+g5find perm3_q31b.txt "`q31ch'"
+local q31c_bh = r(found)
+g5find perm3_q31b.txt "`q31co'"
+local q31c_bo = r(found)
+if `q31c_an' != 1 | `q31c_ao' != 0 | `q31c_bn' != 1 | `q31c_bh' != 1 | `q31c_bo' != 0 {
+  dis as error "Q31c FAIL: default run (several clusters=`q31c_an' old clause=`q31c_ao'), permtstat run (several clusters=`q31c_bn' one cluster=`q31c_bh' old clause=`q31c_bo')"
+  global pf = $pf + 1
+}
+else dis as result "Q31c PASS: both cluster()-at-i cautions carry the 2026-09-25 wording"
+
 * ---- Q32 PS-46 (author rulings 2026-09-10 and 2026-09-23): every permute() run posts its
 * permutation inference under the derivable names estout reads AHEAD of any covariance, so a
 * coefficient table built with the standard tools carries this run's real permutation p-values

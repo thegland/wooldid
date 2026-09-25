@@ -398,6 +398,52 @@ if `rc13b' != 0 | `nr13b' >= . | `rows13b' != `nr13b' | `badp13b' != 0 | `flb13b
   local ++fails
 }
 
+* g5find <file> <needle>: r(found) is 1 when the needle occurs in the file once line breaks,
+* spaces and the "> " continuation marks are removed from both, so a message the log wrapped
+* still matches. Read only from logs closed before the call
+cap program drop g5find
+program define g5find, rclass
+  args lf needle
+  local h = fileread("`lf'")
+  local h = subinstr(`"`macval(h)'"', char(13), "", .)
+  local h = subinstr(`"`macval(h)'"', char(10), "", .)
+  local h = subinstr(`"`macval(h)'"', ">", "", .)
+  local h = subinstr(`"`macval(h)'"', " ", "", .)
+  local n = subinstr(`"`needle'"', " ", "", .)
+  return scalar found = strpos(`"`macval(h)'"', `"`n'"') > 0
+end
+
+* ---- G14 (author ruling 2026-09-25, card m055): the containment caution says bootstrap()
+* does not repair a contained cell, since such a cell is resampled whole, and it keeps
+* printing inside a bootstrap() run, whose observed run is not fastnose. cluster(i) holds
+* every cohort-by-period cell of dta_binary inside one cluster, so every cell counts. The
+* old last sentence, which named bootstrap() and permute() as remedies, must be gone ----
+set linesize 255
+local g14new "bootstrap() does not repair this, since such a cell is resampled whole. Only a cluster() strictly finer than the cohort-by-period cells gives valid cell inference. The aggregate rows are a separate question"
+local g14old "bootstrap() or permute() gives valid cell inference"
+foreach g14m in an bs {
+  local g14b
+  if "`g14m'" == "bs" local g14b bootstrap(standard) reps(12) rseed(5) dots(0)
+  use "`DATA'/dta_binary", clear
+  qui log using gt_g14.txt, text replace name(gt14)
+  cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) gteffects `g14b'
+  local rc14`g14m' = _rc
+  qui log close gt14
+  local nc14`g14m' = e(gt_ncontained)
+  g5find gt_g14.txt "e(gteffects) cell(s) lie wholly inside a single cluster"
+  local op14`g14m' = r(found)
+  g5find gt_g14.txt "`g14new'"
+  local new14`g14m' = r(found)
+  g5find gt_g14.txt "`g14old'"
+  local old14`g14m' = r(found)
+  cap erase gt_g14.txt
+}
+dis "G14: analytic rc=`rc14an' ncontained=`nc14an' opener=`op14an' new=`new14an' old=`old14an' | bootstrap rc=`rc14bs' ncontained=`nc14bs' opener=`op14bs' new=`new14bs' old=`old14bs'"
+if `rc14an' != 0 | `rc14bs' != 0 | `nc14an' >= . | `nc14an' < 1 | `nc14bs' != `nc14an' | `op14an' != 1 | `op14bs' != 1 | `new14an' != 1 | `new14bs' != 1 | `old14an' != 0 | `old14bs' != 0 {
+  dis as error "G14 FAIL: the containment caution must carry the 2026-09-25 text, analytic and under bootstrap()"
+  local ++fails
+}
+
 if `fails' == 0 dis "GTEFFECTS_ALL_PASS"
 else dis as error "GTEFFECTS_FAILS=`fails'"
 exit, clear

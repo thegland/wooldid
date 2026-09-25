@@ -343,9 +343,18 @@ cap noi wooldid y_count cohort t ttre, contreat(dose) contreatcontrols(basic) po
 local p10urc = _rc
 qui log close p10log
 local p10ucau = strpos(fileread("p10u.txt"), "`p10needle'") > 0
+* P10c (author ruling 2026-09-25, card m034): the fallback's second line names only the
+* ccc_absorb() and continuous treatment controls; time-trend controls never enter absorb()
+local p10unew = strpos(fileread("p10u.txt"), "Falling back to estimation with ppmlhdfe, with any ccc_absorb() controls and continuous treatment controls moved out of the absorb() statement and into the main regression.") > 0
+local p10uold = strpos(fileread("p10u.txt"), "time-trend controls") > 0
 cap erase p10u.txt
 set linesize `p10ls'
 di "P10a_plainbasic rc=`p10arc' caution=`p10acau' pin_misses=[`p10miss'] | P10b_user_onelevel rc=`p10urc' caution=`p10ucau'"
+di "P10c fallback second line: new=`p10unew' old=`p10uold'"
+if !`p10unew' | `p10uold' {
+  di as error "P10c FAIL: the r(3200) fallback's second line must carry the 2026-09-25 text"
+  local ++fails
+}
 if `p10arc' != 0 | `p10acau' | "`p10miss'" != "" | `p10urc' != 3200 | !`p10ucau' {
   di as error "P10 FAIL: plain basic poisson must fit first time with the old re-fit's results, and a one-level fe() slope must still caution and stop r(3200)"
   local ++fails

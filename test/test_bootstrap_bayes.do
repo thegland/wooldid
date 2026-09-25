@@ -88,7 +88,8 @@ if `w2' > 1e-12 {
 * the old p_c / W_c split gave every state the same total mass whatever its size and
 * centred the replications on the equal-cluster estimand. The engine must equal the
 * rwgen-times-n_c oracle here too, and its replication mean must sit beside the standard
-* engine's (Rubin: the first two moments match the pairs cluster bootstrap)
+* engine's (Rubin: the weights match the pairs cluster bootstrap's in mean, and in variance
+* up to a factor G/(G+1))
 cap prog drop mkpan_unb
 prog def mkpan_unb
   clear
@@ -129,10 +130,10 @@ if `w2c' > 1e-12 {
   di as error "O2c FAIL: unbalanced-panel equal-alpha engine is not rwgen x n_c"
   local ++fails
 }
-* Rubin's cluster Bayesian bootstrap shares its first two moments with the pairs cluster
-* bootstrap, so the equal-alpha replication mean must sit beside the standard engine's on
-* the same data (the old split put it at the equal-cluster estimand, 0.7 away on this
-* fixture); the size-alpha mean is printed for reference
+* Rubin's cluster Bayesian bootstrap weights match the pairs cluster bootstrap's in mean
+* (and in variance up to a factor G/(G+1)), so the equal-alpha replication mean must sit
+* beside the standard engine's on the same data (the old split put it at the equal-cluster
+* estimand, 0.7 away on this fixture); the size-alpha mean is printed for reference
 mkpan_unb
 qui wooldid y unit t ttre, att cluster(state) bootstrap(bayes) reps(80) rseed(556)
 mata: st_numscalar("o2c_mean", mean(select(st_matrix("e(bootdist)")[., 1], st_matrix("e(bootdist)")[., 1] :< .)))
