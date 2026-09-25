@@ -56,8 +56,6 @@ cap qui wooldid y unit t ttre, att cluster(unit) reps(50)
 chk 1 198 _rc
 cap qui wooldid y unit t ttre, att cluster(unit) rseed(42)
 chk 1b 198 _rc
-cap qui wooldid y unit t ttre, att cluster(unit) bootalpha(equal)
-chk 1c 198 _rc
 
 * G2 bad master token
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(wild) reps(50)
@@ -76,10 +74,6 @@ cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) rs
 chk 4c 198 _rc
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) rseed(2.5)
 chk 4d 198 _rc
-cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) reps(50) bootalpha(nonsense)
-chk 4e 198 _rc
-cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) bootalpha(equal)
-chk 4f 198 _rc
 * G4g (change audit round 2, U08/U07 dots-negative): dots() is shared with permute(), and its
 * range check sat below wooldid_bootctl's permute() exit, so a negative dots() under permute()
 * ran silently as dots(0) while bootstrap() refused it (4b). Both engines refuse it now, with
@@ -782,7 +776,7 @@ matrix G24_BS_PC = e(ci_percentile)
 restore
 mata: A = (1::40); st_matrix("G24_A", A); st_matrix("G24_OB", 20.5); st_matrix("G24_CMP", 20.5)
 tempname g24n g24p g24b g24pp g24bp g24z
-mata: wooldid_bootci("G24_A", "G24_OB", "G24_CMP", 95, 0, "`g24n'", "`g24p'", "`g24b'", "`g24pp'", "`g24bp'", "`g24z'", .)
+mata: wooldid_bootci("G24_A", "G24_OB", "G24_CMP", 95, "`g24n'", "`g24p'", "`g24b'", "`g24pp'", "`g24bp'", "`g24z'", .)
 if `g24z'[1,1] != 0 | `g24b'[1,1] != G24_BS_BC[1,1] | `g24b'[2,1] != G24_BS_BC[2,1] | `g24p'[1,1] != G24_BS_PC[1,1] | `g24p'[2,1] != G24_BS_PC[2,1] | G24_BS_BC[2,1] != 39.5 {
   di as error "G24 FAIL: z0=" `g24z'[1,1] " BC=[" `g24b'[1,1] ", " `g24b'[2,1] "] vs bstat [" G24_BS_BC[1,1] ", " G24_BS_BC[2,1] "]; percentile=[" `g24p'[1,1] ", " `g24p'[2,1] "] vs bstat [" G24_BS_PC[1,1] ", " G24_BS_PC[2,1] "]"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
@@ -1297,32 +1291,6 @@ if `g35jk' > 2 | `g35cimiss' != 1 | `g35sd' >= . | `g35sd' != `g35sdbc' | `g35bl
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 cap erase boot_gates_g35.txt
-
-* G36 (BS-18): bootsave() under bootalpha(size) writes row 0 on the replication scale -
-* the invariant sum_c n_c w_c = 1 (n_c = 8 rows per unit here, so the row total of the
-* w_ columns is 1/8) holds on every row including _rep = 0. n_c, the cluster's ROW COUNT,
-* is the divisor since the 2026-09-13 ruling; unweighted it equals the base-weight total
-* this leg was written against, so the expected numbers are unchanged
-use `panel', clear
-cap erase boot_gates_g36.dta
-cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(bayes) bootalpha(size) reps(8) rseed(7) bootsave(boot_gates_g36)
-local g36rc = _rc
-chk 36 0 `g36rc'
-preserve
-usegate boot_gates_g36 G36r
-egen double g36s = rowtotal(w_*)
-qui sum g36s
-local g36min = r(min)
-local g36max = r(max)
-qui sum g36s if _rep == 0
-local g36obs = r(mean)
-restore
-di "G36 size: w row totals " `g36min' "-" `g36max' " obs row " `g36obs' " (expect 1/8 = .125 throughout)"
-if abs(`g36min' - 1/8) > 1e-9 | abs(`g36max' - 1/8) > 1e-9 | abs(`g36obs' - 1/8) > 1e-9 {
-  di as error "G36b FAIL: bootsave() row 0 under bootalpha(size) is not on the replication scale"
-  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
-}
-cap erase boot_gates_g36.dta
 
 * G37 (BS-31): the bayes header names the resampling unit, as the standard one does
 use `panel', clear

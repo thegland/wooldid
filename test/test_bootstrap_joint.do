@@ -5,7 +5,7 @@
 * boot Wald; ET4 percentile AND bias-corrected CIs EXACT vs the bstat oracle fed our
 * own replication matrix + rep-0 comparator (the odd-rep-count case that separates the
 * classic percentile rule from interpolation); ET5 no joint scalars without jointtests;
-* ET6 analytic joint path unchanged off-state; ET7 ties z0 convention == bstat.
+* ET6 analytic joint path unchanged off-state; ET7 z0 convention == bstat.
 * Prints BOOTJOINT_ALL_PASS iff all pass.
 clear all
 local REPO ..
@@ -250,7 +250,7 @@ if `et8leak' > 0 | `et8halfblank' > 0 {
   local ++fails
 }
 
-* ---- E-T7: ties z0 convention pinned vs bstat (half-weighted ties)
+* ---- E-T7: the z0 convention pinned vs bstat, on draws that tie the comparator
 clear
 set seed 77
 set obs 30
@@ -265,19 +265,14 @@ matrix OBS = (2)
 matrix colnames OBS = a:x
 qui bstat _bs_1, stat(OBS) n(50) level(90)
 scalar z0plain = el(e(z0),1,1)
-cap qui bstat _bs_1, stat(OBS) n(50) level(90) ties
-di "BSTAT_TIES_RC=" _rc
-scalar z0ties = el(e(z0),1,1)
 * our formulas
 qui sum _bs_1
 mata: v = st_data(., "_bs_1"); c = 2
 mata: st_numscalar("ourplain", invnormal(sum(v :<= c)/rows(v)))
-mata: st_numscalar("ourties", invnormal((sum(v :< c) + 0.5*sum(v :== c))/rows(v)))
 di "ET7_TIESPIN plain: bstat=" z0plain " ours=" ourplain " diff=" reldif(z0plain, ourplain)
-di "ET7_TIESPIN ties:  bstat=" z0ties " ours=" ourties " diff=" reldif(z0ties, ourties)
 
-if reldif(z0plain, ourplain) > 0 | reldif(z0ties, ourties) > 0 {
-  di as error "ET7 FAIL: ties z0 convention diverges from bstat"
+if reldif(z0plain, ourplain) > 0 {
+  di as error "ET7 FAIL: z0 convention diverges from bstat"
   local ++fails
 }
 

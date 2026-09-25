@@ -4,7 +4,9 @@
 * Measures, per design and estimator: mean reported SE / true sampling SD of the
 * att estimate ("ratio", 1.0 = calibrated), and empirical 95% CI coverage.
 * Design A (primary) clusters strictly ABOVE the unit; design B is the cluster-at-i
-* contrast that exposes the bootalpha(size) shortfall. Authored 2026-08-30.
+* contrast. Authored 2026-08-30. The bootalpha(size) arm went with the option on
+* 2026-09-25; its baysz_* columns are still written, always missing, so the output
+* file keeps the schema of the files written before.
 clear all
 set more off
 set linesize 200
@@ -159,7 +161,7 @@ forval m = `FIRST'/`LAST' {
     }
   }
 
-  * ---- arm 2: bootstrap(bayes), default bootalpha(equal)
+  * ---- arm 2: bootstrap(bayes)
   cap qui wooldid y unit t ttre, att cluster(`CVAR') bootstrap(bayes) ///
       reps(`REPS') rseed(`=810000 + `m'') dots(0) safety(off)
   local bayeq_rc = _rc
@@ -171,19 +173,6 @@ forval m = `FIRST'/`LAST' {
     local bayeq_nv = e(boot_N_V)
   }
 
-  * ---- arm 3: bootstrap(bayes) bootalpha(size); every draw on B, subset on A
-  if "`DESIGN'" == "B" | `sub' {
-    cap qui wooldid y unit t ttre, att cluster(`CVAR') bootstrap(bayes) ///
-        bootalpha(size) reps(`REPS') rseed(`=820000 + `m'') dots(0) safety(off)
-    local baysz_rc = _rc
-    if `baysz_rc' == 0 {
-      matrix `M3' = e(boot_wald_mainresults)
-      local baysz_se = el(`M3',1,2)
-      local baysz_lb = el(`M3',1,5)
-      local baysz_ub = el(`M3',1,6)
-      local baysz_nv = e(boot_N_V)
-    }
-  }
   }
 
   * ---- arm 4: analytic clustered VCE (no bootstrap)
@@ -287,7 +276,7 @@ di "MCB_SD_OF_BHAT bootdraws=" %9.6f `sdb' "  alldraws=" %9.6f `sdall' "  <- rat
 if `nall' > 1 di "MCB_MEAN_BHAT=" %9.6f `meanall' "  bias=" %9.6f `=`meanall'-`TRUEATT'' ///
    "  bias_t=" %6.3f `=(`meanall'-`TRUEATT')/(`sdall'/sqrt(`nall'))'
 di "MCB_ARM arm / n / meanSE / ratio / coverage / coverage_mcse_pp"
-foreach a in std bayeq baysz plain pfx {
+foreach a in std bayeq plain pfx {
   local sev `a'_se
   local lbv `a'_lb
   local ubv `a'_ub
@@ -314,7 +303,7 @@ foreach a in std bayeq baysz plain pfx {
 * PAIRED per-draw SE ratios. These share the draw (same data, same att-hat), so they
 * are far more precise than comparing two independently noisy mean/SD ratios, and they
 * stay informative at the small n the 199-rep arms can afford.
-local PAIRS baysz:bayeq pfx:std std:plain bayeq:std
+local PAIRS pfx:std std:plain bayeq:std
 foreach pr of local PAIRS {
   local cut = strpos("`pr'", ":")
   local nu = substr("`pr'", 1, `cut'-1)
@@ -329,8 +318,6 @@ foreach pr of local PAIRS {
   }
   cap drop prr
 }
-di "MCB_SIZEALPHA_PREDICTION mean_cluster_obs=`=`UA'*`T''  predicted_size/equal=" ///
-   %7.4f `=1/sqrt(`UA'*`T')'
 * feature claims that must hold EXACTLY, checked on every draw
 cap drop dchk
 qui gen double dchk = abs(b - plain_b)
@@ -344,7 +331,7 @@ cap drop dchk
 qui gen double dchk = abs(std_analse - plain_se)
 qui sum dchk
 di "MCB_CHECK e(V_analytic) == analytic run SE: maxabsdiff=" %12.4e r(max) " n=" r(N)
-foreach v in std_nv bayeq_nv baysz_nv {
+foreach v in std_nv bayeq_nv {
   qui sum `v'
   if r(N) > 0 di "MCB_BOOT_NV `v' n=" r(N) " min=" r(min) " mean=" %7.2f r(mean) " (of `REPS' requested)"
 }

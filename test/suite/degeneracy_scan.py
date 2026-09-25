@@ -625,8 +625,8 @@ def surface(opt, S):
         if opt == "permanalyticse": ok = ok and "perm_analytic_mainresults" in S.get("mats", [])
         if opt == "permtstat": ok = ok and ("perm_stat" in S.get("macros", {}) and S["macros"]["perm_stat"] == "t")
         return ok, ",".join(f for f in fl if f.startswith("PERM"))
-    if opt in ("bootstrap", "reps", "rseed", "boottstat", "bootdisplay", "bootdf", "bootalpha",
-               "bootsave", "ties"):
+    if opt in ("bootstrap", "reps", "rseed", "boottstat", "bootdisplay", "bootdf",
+               "bootsave"):
         ok = "boot" in S and _noflag(S, "BOOT_", "BOOTRES_", "V_boot_DIAG")
         if opt == "boottstat": ok = ok and "boot_tstud" in S.get("mats", [])
         if opt == "rseed" and "boot" not in S:  # rseed also used by permute configs

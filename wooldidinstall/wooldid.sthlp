@@ -80,8 +80,8 @@ with an informative error unless {opt safety(off)}. Store large onset codes, suc
 {synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values} {opt level(#)}
 {opt fast:nose} {opt nofastcollapse} {opt simult:aneousbands} {p_end}
 
-{synopt : {help wooldid##bootstrap:Bootstrap Standard Errors:}} {opt boot:strap(standard|bayes)} {opt reps(int)} {opt bootts:tat} {opt bootdisp:lay(spec)} {opt bootd:f(spec)} {opt bootalp:ha(spec)}
-{opt ties} {opt bootsa:ve(name)} {opt rseed(#)} {opt dots(int)} {p_end}
+{synopt : {help wooldid##bootstrap:Bootstrap Standard Errors:}} {opt boot:strap(standard|bayes)} {opt reps(int)} {opt bootts:tat} {opt bootdisp:lay(spec)} {opt bootd:f(spec)}
+{opt bootsa:ve(name)} {opt rseed(#)} {opt dots(int)} {p_end}
 
 {synopt : {help wooldid##permute:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt permreps(int)} {opt permstr:ata(variable)} {opt permpr:obs(spec)} {opt permex:act}
 {opt permts:tat} {opt permt:ci} {opt perman:alyticse} {opt permab:sp} {opt permsi:de(left|right)} {opt permraw:p} {opt permstep:down} {opt permonset:cohorts} {opt permsa:ve(name)} {p_end}
@@ -386,11 +386,6 @@ are not posted and a caution says so; {it:bootsave()} writes them regardless. Th
 of completed replications {it:n}: 2/{it:n} for the percentile coefficient p-values, which can print exactly 0, 2/({it:n}+1) under
 {it:boottstat}, and 1/({it:n}+1) for the joint tests, and a caution names the limit whenever it exceeds .05. The {it:bc} and {it:bca} p-values invert their intervals and have no such limit: they can fall below 2/{it:n}, and can print exactly 0. {p_end}
 
-{phang}{opt bootalp:ha(spec)}: The Dirichlet convention for {it:bootstrap(bayes)}; refused with {it:bootstrap(standard)}. {it:bootalpha(equal)}, the default, draws
-Dirichlet(1,...,1) across clusters and applies each cluster's draw as a multiplier on its observations, so a cluster's total mass stays proportional to its size.
-{it:bootalpha(size)} instead gives each cluster a Gamma shape equal to its observation count and spreads the drawn mass equally over its rows, which matches
-{help bayesboot} with {it:id()}. It is for comparison against that command only; on panel data it understates the standard errors badly. {p_end}
-
 {phang}{opt bootd:f(spec)}: The reference distribution for the Wald family of bootstrap statistics; refused without {it:bootstrap()}. {it:bootdf(normal)} uses standard
 normal critical values and reports z statistics. {it:bootdf(clusters)} uses the t distribution with {it:G}-1 degrees of freedom, {it:G} the number of
 clusters in the estimation sample, and is refused without {it:cluster()}; a positive integer sets the degrees of freedom directly. The default is
@@ -422,10 +417,7 @@ there. {p_end}
 plain file name, and an existing file is overwritten only with {it:replace}. The file has one row per replication, {it:_rep} = 1 to {it:reps()}, with the
 coefficients under their {it:e(b)} names, and a row {it:_rep} = 0 with the observed estimates; a failed replication keeps its row with every value missing. Under
 {it:boottstat} the replication analytic standard errors are added as {it:se_*}, and with {it:cluster()} one {it:w_} column per cluster records how many times it was
-drawn, or its Dirichlet weight under {it:bootstrap(bayes)}, divided by the cluster's observation count under {it:bootalpha(size)}. Its characteristics record the engine, seed and random-number state. If the file cannot be written the run still completes, with a caution, and the return code is posted in {it:e(boot_save_rc)}. {p_end}
-
-{phang}{opt ties}: Adjust the bias-corrected intervals' median-bias constant for ties between the replications and the observed statistic, as the {it:ties} option
-of Stata's {help bootstrap} does; refused without {it:bootstrap()}. It has no effect on continuous statistics. {p_end}
+drawn, or its Dirichlet weight under {it:bootstrap(bayes)}. Its characteristics record the engine, seed and random-number state. If the file cannot be written the run still completes, with a caution, and the return code is posted in {it:e(boot_save_rc)}. {p_end}
 
 {phang}{opt dots(#)}: Show a progress dot every {it:#} replications; {it:dots(0)} suppresses the display, and the default is 1. After the fifth replication a projected
 runtime for the loop is printed on the dots line. Requires {it:bootstrap()} or {it:permute()} and is refused with neither. {p_end}
@@ -1126,7 +1118,7 @@ from the underlying regression estimator, wherever available. {p_end}
 
 {synopt:{it:Bootstrap inference}} When {it:bootstrap()} is used, the reported tables carry the bootstrap inference, and e() additionally holds: run-level scalars and macros
 ({it:e(boot_reps)}, {it:e(boot_completed)}, {it:e(boot_failed)}, {it:e(boot_level)}, {it:e(boot_N_V)}, {it:e(boot_method)}, {it:e(boot_display)}, {it:e(boot_stat)},
-{it:e(boot_df)} when the reference distribution is a t, {it:e(boot_seed)}, {it:e(boot_rngstate)}, {it:e(boot_alpha)}, {it:e(boot_ties)}, {it:e(boot_save_rc)} when a {it:bootsave()} write failed, and {it:e(boot_nstraddle)} with {it:e(boot_reid)}, which record whether the replications re-identified duplicated
+{it:e(boot_df)} when the reference distribution is a t, {it:e(boot_seed)}, {it:e(boot_rngstate)}, {it:e(boot_save_rc)} when a {it:bootsave()} write failed, and {it:e(boot_nstraddle)} with {it:e(boot_reid)}, which record whether the replications re-identified duplicated
 units, and {it:e(boot_covsub)}, the number of covariate terms rewritten to the fresh unit code, present only when that happened); the replication covariance
 {it:e(V_boot)} (also posted as {it:e(V)}, with the analytic one preserved as {it:e(V_analytic)}), the replication means {it:e(b_boot)} and bias {it:e(bias_boot)}; the draw
 matrices {it:e(bootdist)} and, under {it:boottstat}, {it:e(bootdist_se)} (up to 10,000 replications); the interval and p-value families aligned to {it:e(b)},

@@ -424,15 +424,15 @@ cap noi wooldid ycount i t ttre, att cluster(i) poisson permute(shuffle) permrep
 local rc = _rc
 dumpres perm_pois `rc'
 
-* bootstrap(bayes) + subgroups + jointtests + ties + bootdf(5) + level(90) + simultaneousbands: the
+* bootstrap(bayes) + subgroups + jointtests + bootdf(5) + level(90) + simultaneousbands: the
 * Dirichlet reweighting path (no battery config runs bayes), the subgroup rewiring (per-sg tables,
 * their family twins, e(pwsgs) from the contrast draws), the fixed-metric joint family
-* (e(boot_jointW), e(boot_jt_family)), an integer reference df, the ties z0 convention and the
+* (e(boot_jointW), e(boot_jt_family)), an integer reference df and the
 * non-studentized bootstrap band engine including the per-subgroup families.
 freshstart "`DATA'/dta_binary"
 qui keep if inrange(i, 1, 6) | inrange(i, 27, 32) | inrange(i, 51, 56)
 set seed 141421
-cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests bootstrap(bayes) reps(10) ties bootdf(5) level(90) simultaneousbands rseed(14142) dots(0)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) subgroups(sg) jointtests bootstrap(bayes) reps(10) bootdf(5) level(90) simultaneousbands rseed(14142) dots(0)
 local rc = _rc
 dumpres boot_bayes_sgjt `rc'
 

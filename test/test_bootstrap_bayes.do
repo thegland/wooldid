@@ -1,10 +1,8 @@
 * test_bootstrap_bayes.do - commit-C engine validation: bayes bootstrap end-to-end.
 * Run from test/: stata-mp -e do test_bootstrap_bayes.do
-* O1/O2: BITWISE oracle vs a manual rwgen-bayes-driven rep loop (both alpha
-* conventions - proves draws, weight injection and accumulation exactly reproduce
-* the rwgen/bayesboot weight algorithm; O2d pins the size divisor against a WEIGHTED
-* unbalanced panel, where it is the only thing keeping the replications on the
-* estimate). O3: point estimates never change. O4 aw;
+* O2/O2c: BITWISE oracle vs a manual rwgen-bayes-driven rep loop (proves draws, weight
+* injection and accumulation exactly reproduce the rwgen weight algorithm times n_c).
+* O3: point estimates never change. O4 aw;
 * O5 poisson pw; O6 subgroups (SG tables rewired, pwsgs blanked); O7 esf + the A8
 * raw-esprelength emission; O8 replay; O9 state hygiene; O10 d3-class contreat
 * parity with the analytic scrub. Prints BOOTBAYES_ALL_PASS iff all pass.
@@ -30,37 +28,14 @@ prog def mkpan
   replace ycnt = ycnt + 1 + mod(unit+t, 3)
 end
 
-* ---- O1: ORACLE - engine vs manual rwgen loop, same seed, unweighted, size alpha
-mkpan
-qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(12) rseed(424) bootalpha(size)
-matrix ENG = e(bootdist)
-local engK = colsof(ENG)
-mkpan
-rwgen bayes RW, reps(12) id(unit) rseed(424)
-matrix MAN = J(12, `engK', .)
-forval r = 1/12 {
-  qui wooldid y unit t ttre [aw=RW`r'], att cluster(unit) esprelength(1) espostlength(1) fastnose
-  matrix MAN[`r', 1] = e(b)
-}
-local w1 0
-forval r = 1/12 {
-  forval c = 1/`engK' {
-    local w1 = max(`w1', reldif(ENG[`r',`c'], MAN[`r',`c']))
-  }
-}
-di "O1_ORACLE_SIZE_MAXRELDIF=" `w1'
-if `w1' > 1e-12 {
-  di as error "O1 FAIL"
-  local ++fails
-}
-
-* ---- O2: equal alpha vs rwgen priorpowers(-n_c). rwgen's weight is p_c / n_c per row;
+* ---- O2: the engine vs rwgen priorpowers(-n_c). rwgen's weight is p_c / n_c per row;
 * since 2026-09-06 (quality-review F001) the engine multiplies every row of cluster c by
 * p_c itself, so the oracle is rwgen's weight times n_c (identical on this balanced
 * fixture up to scale, which aweights ignore; O2c below is the discriminating case)
 mkpan
-qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(8) rseed(555) bootalpha(equal)
+qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(8) rseed(555)
 matrix ENG2 = e(bootdist)
+local engK = colsof(ENG2)
 mkpan
 bysort unit: gen double nc = _N
 gen double pv = -nc
@@ -133,91 +108,16 @@ if `w2c' > 1e-12 {
 * Rubin's cluster Bayesian bootstrap weights match the pairs cluster bootstrap's in mean
 * (and in variance up to a factor G/(G+1)), so the equal-alpha replication mean must sit
 * beside the standard engine's on the same data (the old split put it at the equal-cluster
-* estimand, 0.7 away on this fixture); the size-alpha mean is printed for reference
+* estimand, 0.7 away on this fixture)
 mkpan_unb
 qui wooldid y unit t ttre, att cluster(state) bootstrap(bayes) reps(80) rseed(556)
 mata: st_numscalar("o2c_mean", mean(select(st_matrix("e(bootdist)")[., 1], st_matrix("e(bootdist)")[., 1] :< .)))
 mkpan_unb
 qui wooldid y unit t ttre, att cluster(state) bootstrap(standard) reps(80) rseed(556)
 mata: st_numscalar("o2c_meanstd", mean(select(st_matrix("e(bootdist)")[., 1], st_matrix("e(bootdist)")[., 1] :< .)))
-mkpan_unb
-qui wooldid y unit t ttre, att cluster(state) bootstrap(bayes) reps(80) rseed(556) bootalpha(size)
-mata: st_numscalar("o2c_meansz", mean(select(st_matrix("e(bootdist)")[., 1], st_matrix("e(bootdist)")[., 1] :< .)))
-di "O2c_MEAN_EQUAL=" o2c_mean " MEAN_STANDARD=" o2c_meanstd " MEAN_SIZE=" o2c_meansz " ATT=" `attobs'
+di "O2c_MEAN_EQUAL=" o2c_mean " MEAN_STANDARD=" o2c_meanstd " ATT=" `attobs'
 if abs(o2c_mean - o2c_meanstd) > 0.15 {
   di as error "O2c FAIL: equal-alpha replication mean " o2c_mean " is not beside the standard engine's " o2c_meanstd
-  local ++fails
-}
-
-* ---- O2d (author ruling 2026-09-13, quality-review F001): bootalpha(size) on a WEIGHTED
-* unbalanced panel. The engine divides the cluster's Dirichlet draw by a divisor that has
-* to be proportional to the Gamma SHAPE, which under size is the cluster's ROW COUNT n_c:
-* E[p_c] = n_c/N, so each row's expected multiplier is 1/N and the replications centre on
-* the same weighted estimand the point estimate targets. The divisor shipped until
-* 2026-09-13 was the cluster's base-weight TOTAL W_c, which is the SAME NUMBER unweighted
-* (a total() of ones) and is why no existing leg saw it. Weighted, it put expected mass
-* n_c/(N W_c) on each row - the row-count-weighted estimand - and the replication
-* distribution came away from the estimate: every draw on one side, the whole BC family
-* withheld, and no reps() setting repairs any of it.
-* The weight below is constant WITHIN state and rises with the state's treatment effect,
-* so W_c/n_c differs by a factor of ~40 across clusters and the weighted att is far from
-* the row-count-weighted one - the discriminating shape. THIS LEG FAILS ON A PRE-FIX
-* BUILD (measured on ado_pristine: max |z| = 6.51, e(boot_bc_absent) = pretreatment_att
-* ES_att_pre1); after the fix max |z| = 0.17 and nothing is withheld.
-cap prog drop mkpan_unbw
-prog def mkpan_unbw
-  clear
-  set obs 12
-  gen state = _n
-  gen nunits = _n
-  expand nunits
-  gen unit = _n
-  gen ttre = cond(mod(state, 2) == 1, 5, .)
-  expand 8
-  bysort unit: gen t = _n
-  set seed 12
-  gen y = (0.1*nunits)*(t>=ttre & ttre<.) + 0.1*state + 0.05*t + rnormal()
-  gen double wt = 0.05 + 0.5*state
-end
-mkpan_unbw
-qui wooldid y unit t ttre [aw=wt], att cluster(state) esprelength(1) espostlength(1) ///
-    bootstrap(bayes) reps(80) rseed(557) bootalpha(size) dots(0)
-matrix O2DD = e(bootdist)
-matrix O2DB = e(b)
-local o2dbc `e(boot_bc_absent)'
-local o2dK = colsof(O2DD)
-local o2dzmax = 0
-local o2dncol = 0
-preserve
-clear
-qui set obs `=rowsof(O2DD)'
-qui svmat double O2DD, names(o2dc)
-forval c = 1/`o2dK' {
-  qui sum o2dc`c'
-  if r(N) >= 5 & r(sd) > 0 & !missing(O2DB[1, `c']) {
-    local o2dzmax = max(`o2dzmax', abs((r(mean) - O2DB[1, `c'])/r(sd)))
-    local ++o2dncol
-  }
-}
-restore
-di "O2d_WEIGHTED_SIZE_MAXZ=" `o2dzmax' " over `o2dncol' column(s); bc_absent=[`o2dbc']"
-if `o2dzmax' > 1 | `o2dncol' < 3 {
-  di as error "O2d FAIL: the bootalpha(size) replication mean is `o2dzmax' bootstrap deviations from the estimate (max over `o2dncol' columns); the size divisor is not the cluster's row count"
-  local ++fails
-}
-if "`o2dbc'" != "" {
-  di as error "O2d FAIL: the bias-corrected family is withheld for [`o2dbc'] on a centred weighted bayes run"
-  local ++fails
-}
-
-* ---- O2b: the DEFAULT alpha is equal (author ruling 2026-08-31): a default run
-* reproduces an explicit bootalpha(equal) run bitwise under the same seed
-mkpan
-qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1) bootstrap(bayes) reps(8) rseed(555)
-matrix DEFD = e(bootdist)
-di "O2b_DEFAULT_EQUAL_DIFF=" mreldif(DEFD, ENG2)
-if mreldif(DEFD, ENG2) > 0 {
-  di as error "O2b FAIL: default is not equal-alpha"
   local ++fails
 }
 

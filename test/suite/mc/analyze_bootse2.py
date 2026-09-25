@@ -70,7 +70,7 @@ ARMDESC = {
     "plainit": "analytic clustered (att_it)",
     "std": "bootstrap(standard)",
     "stdbca": "bootstrap(standard) bootdisplay(bca)",
-    "bayes": "bootstrap(bayes), bootalpha(equal)",
+    "bayes": "bootstrap(bayes)",
     "attit": "bootstrap(standard), att_it",
     "bts": "bootstrap(standard) boottstat",
 }
