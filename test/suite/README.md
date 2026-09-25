@@ -244,8 +244,9 @@ Two cautions when reading it, both measurable and both real today:
 - The colleagues' oracle/metamorphic library is not ported (future component).
 - `.gph` files are compared by NAME only (`files|`), never by content (embedded
   timestamps).
-- `ccc_absorb()` is pinned rc 198 -> 459 on `cov_ccc_absorb` and runs rc 0/0 on
-  `ext_bin_ext_ccc_absorb`; `cov_icbad` under-triggers the B21(b) collinearity class
+- `ccc_absorb()` is pinned rc 198 -> 0 on `cov_ccc_absorb` (459 before the centred
+  coarse controls of 2026-09-25) and runs rc 0/0 on `ext_bin_ext_ccc_absorb`, whose
+  estimates move by design (ledger class CCC-centre); `cov_icbad` under-triggers the B21(b) collinearity class
   (levels ~1e6 are float-representable — a ~1e8 variant would pin it old-side).
 - Performance is not compared beyond shard durations in `pool.log`.
 - TODO (degeneracy audit F9): the `degeneracy` component digests console cautions per

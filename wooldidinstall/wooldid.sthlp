@@ -886,12 +886,11 @@ automatically include any time trends that are a function of any included contin
 terms typically leave the covariance unidentified: {it:wooldid} says so and continues, reporting the estimates without standard errors; the same specification under
 {it:robust} is unaffected. {p_end}
 
-{phang}{opt coarse:cohortcontrols()}: Includes the specified controls as well as interactions between them with all Tz_it dummies included in the model, meaning one interaction with each
-cohort-time period for which a treatment effect is estimated (if {it:esfixedbaseperiod} is specified, that includes every estimable treated cohort by relative time period effect). Note that
-reported treatment effects will not vary as a direct function of these controls; the effect of these controls are partialled out from the reported treatment effects.
-This option differs from simply specifying cohort
-by time period interactions with a given control in that it pools the effect of the controls in the reference period and the control group. Note that all specified coarse cohort controls must be
-specified using factor notation, so that {it:wooldid} knows if they are to be interacted as a continuous variable (prefixed with "c.") or as a categorical variable (prefixed with "i."). {p_end}
+{phang}{opt coarse:cohortcontrols()}: Includes the specified controls, and interactions between them and every Tz_it dummy in the model. That is one interaction for each cohort-time
+period with an estimated treatment effect (with {it:esfixedbaseperiod}, every estimable treated cohort by relative time period). The control slopes are pooled across the reference period
+and the control group. Each treated cohort-period gets its own slope. Each reported effect is the cell's average outcome less its predicted untreated outcome at the pooled slope.
+So it does not depend on where the control is centred or on its units. This option differs from specifying cohort by time period interactions with a control yourself, because those do
+not pool the reference period and the control group. All coarse cohort controls must use factor notation, {it:c.} for continuous and {it:i.} for categorical. {p_end}
 
 {phang}{opt inter:activecontrols()}: Includes the specified variables in the regression in two capacities. First, the variables are included as controls interacted with time period-specific
 indicator variables. Second, the variables are de-meaned by cohort (i) and then treatment effects are permitted to vary linearly with the de-meaned variables. This is achieved by including
@@ -930,12 +929,12 @@ to occur when using continuous treatment variables. It has no effect under {it:u
 whenever using the commands {it:reghdfe} or {it:ppmlhdfe} to estimate the underlying regression, except on the {it:poisson} paths that already enter them explicitly (see {it:poisson}). Under certain conditions, this can improve estimation stability and avoid problems
 with variables being inappropriately dropped from the regression. {p_end}
 
-{phang}{opt ccc_absorb()}: An alternate version of coarsecohortcontrols() that admits only continuous variables and passes the controls to the {it:absorb()} statement when using
-a high dimensional fixed effects estimator. This is often less efficient than the alternative approach in terms of computation time, but can be important in terms of memory
+{phang}{opt ccc_absorb()}: An alternate version of {it:coarsecohortcontrols()} for continuous variables. The pooled control slopes enter the regression. The treated cells' own
+slopes, on the control centred at each cell's mean, are passed to the {it:absorb()} statement. The reported effects are those of {it:coarsecohortcontrols()}.
+This is often less efficient than the alternative approach in terms of computation time, but can be important in terms of memory
 efficiency in the main regression or under certain other circumstances. Be extra careful to ensure that specifications featuring {it:ccc_absorb()} are identified; not all cases
-of identification failure are detected. In particular, with an event-study window, variables that are constant within cohort-by-period cells (a unit-level variable with a
-unit-level {it:i}, for example) absorb the treatment interactions themselves and the run stops with an error. Under {it:contreat()}, naming the treatment
-variable itself here turns the default cell collapse off (see {it:nofastcollapse}). With {it:poisson} on the {it:ppmlhdfe} path the controls stay absorbed, except under plain
+of identification failure are detected. Under {it:contreat()}, naming the treatment
+variable itself here turns the default cell collapse off (see {it:nofastcollapse}). With {it:poisson} on the {it:ppmlhdfe} path the cell slopes stay absorbed, except under plain
 {it:contreatcontrols(basic)} without {it:ccnoabsorb} and in the r(3200) retry, where they enter the regression explicitly (see {it:poisson}). {p_end}
 
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses and prints progress reports throughout the estimation process; the regression itself is run quietly.

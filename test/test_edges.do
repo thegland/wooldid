@@ -430,12 +430,17 @@ if `rc12' != 322 | `e12a' != 1 | `e12b' != 0 | `e12c' != 0 | `rc12b' != 0 | `e12
 
 * ---- E13 (BS-33 follow-up): the two causes of an empty horizon scan get different
 * messages. E3 above covers the data cause (the requested period is never realized).
-* Here the periods ARE realized but ccc_absorb() absorbs the cohort-by-period treatment
-* interactions, so the fitted model carries no coefficient to find; the run must say so
-* rather than blaming the data (it used to die with a bare invalid-syntax r(198))
+* Here the periods ARE realized but an absorbed fixed effect absorbs the cohort-by-period
+* treatment interactions, so the fitted model carries no coefficient to find; the run must say
+* so rather than blaming the data (it used to die with a bare invalid-syntax r(198)). The
+* trigger was ccc_absorb(x2) on this unit-level i until the centred coarse controls
+* (2026-09-25): its uncentred absorbed slope spanned each one-row cell's dummy. The centred
+* slope is zero in a one-row cell, so that run now completes (E13b below), and the absorbing
+* term here is an fe() with one level per treated window row
 use suite/data/dta_s_covars.dta, clear
+gen double cellfe = cond(ttre < . & t - ttre >= -1 & t - ttre <= 1, i*100 + t, 0)
 qui log using edges_e13.txt, text replace name(ed)
-cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) ccc_absorb(x2)
+cap noi wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) fe(cellfe)
 local rc13 = _rc
 qui log close ed
 scanE edges_e13.txt "fitted model carries no estimable treatment-effect coefficient"
@@ -443,9 +448,34 @@ local e13a = r(found)
 scanE edges_e13.txt "no treated unit is observed at any of the requested"
 local e13b = r(found)
 cap erase edges_e13.txt
-di "E13 ccc_absorb rc=`rc13' absorbed-message=`e13a' data-message=`e13b'"
+di "E13 fe(cellfe) rc=`rc13' absorbed-message=`e13a' data-message=`e13b'"
 if `rc13' != 459 | `e13a' != 1 | `e13b' != 0 {
   di as error "E13 FAIL: an absorbed treatment term must not be reported as missing data"
+  local ++fails
+}
+
+* ---- E13b (centred coarse controls, ruling 2026-09-25): on this unit-level i every treated
+* cell is one row, so the centred copy of the control is zero in every cell and is left out,
+* and the control enters once as a pooled regressor. ccc_absorb(x2) and
+* coarsecohortcontrols(c.x2) must then run and equal controls(c.x2) exactly
+tempname e13m0 e13m1 e13m2
+use suite/data/dta_s_covars.dta, clear
+cap qui wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) controls(c.x2)
+local rc13c = _rc
+if `rc13c' == 0 matrix `e13m0' = e(wdidmainresults)
+use suite/data/dta_s_covars.dta, clear
+cap qui wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) ccc_absorb(x2)
+local rc13a = _rc
+local e13d1 .
+if `rc13a' == 0 & `rc13c' == 0 local e13d1 = mreldif(e(wdidmainresults), `e13m0')
+use suite/data/dta_s_covars.dta, clear
+cap qui wooldid y i t ttre, att cluster(i) esprelength(1) espostlength(1) coarsecohortcontrols(c.x2)
+local rc13k = _rc
+local e13d2 .
+if `rc13k' == 0 & `rc13c' == 0 local e13d2 = mreldif(e(wdidmainresults), `e13m0')
+di "E13b one-row cells: rc controls=`rc13c' ccc_absorb=`rc13a' coarse=`rc13k' | mreldif ccc_absorb vs controls=`e13d1' coarse vs controls=`e13d2'"
+if `rc13c' != 0 | `rc13a' != 0 | `rc13k' != 0 | `e13d1' > 1e-10 | `e13d2' > 1e-10 {
+  di as error "E13b FAIL: with one-row cells ccc_absorb(x2) and coarsecohortcontrols(c.x2) must run and equal controls(c.x2)"
   local ++fails
 }
 

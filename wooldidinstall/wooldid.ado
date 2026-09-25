@@ -1389,15 +1389,22 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   ************ HANDLE REGULAR CONTROLS ****************
   * direct controls and direct fe don't require modification
 
-  * controls for coarse case - i.e., where we interacted them with the treatment dummies. ccc_absorb puts them into absorb - only viable for continuous controls of course
-  * the astute eye will notice that coarsecontrolinserter w/ categorical controls should partial out the main treatment effects
-  * this does not occur b/c this statement is placed toward the end of the regression statement, meaning multicollinearity forces drops among the controls
+  * controls for coarse case - i.e., where we interacted them with the treatment dummies. ccc_absorb puts the cell slopes into absorb - only viable for continuous controls of course
+  * each control enters once as a pooled regressor, and the treated cells are interacted with a copy of it
+  * centred at the cell's weighted mean and 0 on reference rows, so each cell dummy reads the cell's effect
+  * at the pooled slope rather than at a control value of zero (ruling 2026-09-25, F1a/F1b; see
+  * wooldid_cccentre). ccc_absorb's pooled columns go into coarsecontrolinserter, its centred slopes into
+  * ccc_absorbinserter. the sample is final here, and every replication re-centres on its own cells
   local coarsecontrolinserter
   local ccc_absorbinserter
-  if "`coarsecohortcontrols'" != "" local coarsecontrolinserter i.`_i'#i.`_t'#(`coarsecohortcontrols')
-
-  if "`ccc_absorb'" != "" {
-    local ccc_absorbinserter i.`_i'#i.`_t'#c.(`ccc_absorb')
+  if "`coarsecohortcontrols'`ccc_absorb'" != "" {
+    wooldid_cccentre , iv(`_i') tv(`_t') wt(`w') ifs(`ifstatement') coarse(`coarsecohortcontrols') cccabs(`ccc_absorb')
+    local wdccv
+    forval wdcck = 1/`wdcc_n' {
+      tempvar wdcc`wdcck'
+      local wdccv `wdccv' `wdcc`wdcck''
+    }
+    wooldid_cccentre , iv(`_i') tv(`_t') wt(`w') ifs(`ifstatement') coarse(`coarsecohortcontrols') cccabs(`ccc_absorb') names(`wdccv') fill
   }
 
   * handle interactive controls - these are closer to the object that wooldridge covers in his paper for covariates
@@ -13727,6 +13734,101 @@ version 16.0
   c_local max_t `max_t'
   c_local espl `espl'
   c_local espre `espre'
+end
+
+* ============================================================================
+* The centred coarse cohort controls (the author's ruling 2026-09-25, findings F1a and F1b
+* of the econometric review). coarsecohortcontrols() and ccc_absorb() give every treated
+* cohort-period cell its own slope on each control, while the reference period and the
+* control group share one pooled slope. Each control enters once as a pooled regressor on
+* its raw values, and the cells are interacted with a COPY of it that is 0 on reference rows
+* (_t == 0) and, on the rows of a cell (_t > 0, which is _i > 0: every cell of the event
+* window, pre-treatment cells included), equals the control less its weighted mean within
+* the (_i, _t) cell. The weights are the regression weights, so on the bootstrap count leg
+* they carry the resample's multiplicity. The column space is the uncentred form's, so the
+* fit is the same, but the cell dummy now reads the cell's average outcome less its predicted
+* untreated outcome at the pooled slope, and no longer the effect at a control value of zero:
+* the reported effects no longer move when a constant is added to a control or its units
+* change. The copies are not keyed on targetflag, so margins still cancels them and the effect
+* stays constant within a cell (the cell collapse and gteffects stay exact).
+* Factor controls are handled term by term: every column fvexpand lists for a token becomes
+* its own centred copy, except a pure-factor term at its base level, which is dropped because
+* centred indicators over every level sum to zero inside a cell. A factor interacted with a
+* continuous variable keeps its base-level slope, as Stata's own expansion does. A copy that
+* is zero on every sample row (a control with no variation inside any cell, or single-row
+* cells) is left out of the model: it has no column to carry.
+* The worker calls this twice, because the copies must be the worker's own tempvars to
+* survive until the regression and margins have run: first without fill, which returns
+* the number of copies in wdcc_n, then with fill and that many tempvar names, which fills them and
+* returns coarsecontrolinserter and ccc_absorbinserter. Called after the estimation sample
+* is final and inside every fit, so a permutation or bootstrap replication centres on its
+* own cells and weights. A subprogram because the worker sits at its compiled-size ceiling.
+cap prog drop wooldid_cccentre
+prog def wooldid_cccentre
+version 16.0
+  syntax , iv(name) tv(name) wt(string) ifs(string asis) [coarse(string) cccabs(string) names(string) FILL]
+  * the terms, in order: every non-base column of every coarsecohortcontrols() token, then
+  * each ccc_absorb() variable
+  local wdccterms
+  foreach wdcctok of local coarse {
+    qui fvexpand `wdcctok' if `ifs'
+    foreach wdccterm in `r(varlist)' {
+      * a component is continuous when it carries c. or no operator at all; a pure-factor
+      * term whose every component sits at its base (0b.g) is the dropped level. an omitted
+      * (o.) component marks a term that carries no column
+      local wdcccont 0
+      local wdccnonbase 0
+      local wdccomit 0
+      foreach wdcccomp in `=subinstr("`wdccterm'", "#", " ", .)' {
+        if substr("`wdcccomp'", 1, 2) == "c." | strpos("`wdcccomp'", ".") == 0 local wdcccont 1
+        else if regexm("`wdcccomp'", "^[0-9]+b\.") == 0 local wdccnonbase 1
+        if regexm("`wdcccomp'", "^[0-9]+b?o\.|^o\.") local wdccomit 1
+      }
+      if `wdccomit' | (!`wdcccont' & !`wdccnonbase') continue
+      local wdccterms `wdccterms' `=subinstr("`wdccterm'", "b.", ".", .)'
+    }
+  }
+  local wdccnc : word count `wdccterms'
+  local wdccterms `wdccterms' `cccabs'
+  local wdccn : word count `wdccterms'
+  if "`fill'" == "" {
+    c_local wdcc_n `wdccn'
+    exit
+  }
+  local wdcccell `ifs' & `tv' > 0 & `tv' < .
+  tempvar wdccden wdccnum wdcclo wdcchi
+  qui gegen double `wdccden' = sum(`wt') if `wdcccell', by(`iv' `tv')
+  local wdccco
+  local wdccca
+  forval wdcck = 1/`wdccn' {
+    local wdccterm : word `wdcck' of `wdccterms'
+    local wdccnm : word `wdcck' of `names'
+    local wdccsrc `wdccterm'
+    if strpos("`wdccterm'", ".") | strpos("`wdccterm'", "#") {
+      qui fvrevar `wdccterm'
+      local wdccsrc `r(varlist)'
+    }
+    qui gegen double `wdccnum' = sum((`wt') * (`wdccsrc')) if `wdcccell', by(`iv' `tv')
+    qui gegen double `wdcclo' = min(`wdccsrc') if `wdcccell', by(`iv' `tv')
+    qui gegen double `wdcchi' = max(`wdccsrc') if `wdcccell', by(`iv' `tv')
+    qui gen double `wdccnm' = 0
+    * exactly 0 in a cell where the column does not vary: sum(w*x)/sum(w) is not x to the last
+    * bit (3 x 0.1 / 3), and a residue of 1e-17 on a single-row cell would enter as a column
+    * collinear with that cell's dummy
+    qui replace `wdccnm' = `wdccsrc' - `wdccnum' / `wdccden' if `wdcccell' & `wdcclo' != `wdcchi'
+    qui drop `wdccnum' `wdcclo' `wdcchi'
+    qui count if `wdccnm' != 0 & `ifs'
+    if r(N) == 0 continue
+    if `wdcck' <= `wdccnc' local wdccco `wdccco' `wdccnm'
+    else local wdccca `wdccca' `wdccnm'
+  }
+  * the pooled columns: the tokens as the user wrote them, and each ccc_absorb() variable as
+  * an explicit regressor (one column each, so the memory case ccc_absorb() exists for is kept)
+  local wdccins `coarse'
+  if "`cccabs'" != "" local wdccins `wdccins' c.(`cccabs')
+  if "`wdccco'" != "" local wdccins `wdccins' i.`iv'#i.`tv'#c.(`wdccco')
+  c_local coarsecontrolinserter `wdccins'
+  if "`wdccca'" != "" c_local ccc_absorbinserter i.`iv'#i.`tv'#c.(`wdccca')
 end
 
 * ============================================================================
