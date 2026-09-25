@@ -179,9 +179,8 @@ The working rule, therefore, is **report it, do not police it**. The `coverage` 
 prints an `info:` line naming every option in that position together with its one fixture.
 That line is not a failure and several of its entries are correct by design —
 `permexact`/`permtci`/`permtstat` are on `dta_tiny` *because* tiny N makes permutation
-enumeration exact, and the display/compat switches (`verbose`, `regtol`,
-`cleanmatrices`, `emptycellsoverride`, `suppresssgprimaryeffects`) have no shape-dependent
-behaviour to expose. It exists so that the concentration is a quantity a reader can see and
+enumeration exact, and the display/compat switches (`verbose`, `regtol`) have no
+shape-dependent behaviour to expose. It exists so that the concentration is a quantity a reader can see and
 judge rather than something a future audit has to rediscover, and so that a second fixture
 landing for an option shows up as the line getting shorter.
 
@@ -220,8 +219,7 @@ Two cautions when reading it, both measurable and both real today:
   the config to a shard tier: empty → fast shards (600 s timeout), `1` → `*_slow` shards
   (1800 s; poisson-family, wide-ES-subgroup and the heavy bootstrap configs), `2` →
   `*_vslow` shards of ONE config each (3600 s; the v1.3-side outliers such as
-  `si20_lat_pois` at ~950 s). A config whose options include `cleanmatrices` is sharded
-  alone automatically (`*_cm`): it runs `clear mata` inside the worker and a do-loaded
+  `si20_lat_pois` at ~950 s). A config or prep must not run `clear mata`: a do-loaded
   ado cannot recover its kernels, so every later config in the same Stata process would
   silently lose the PS-62 e(V) splice and the simultaneous bands (SI-17/SI-18; the
   mkrun.py header has the full caution).

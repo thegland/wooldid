@@ -467,7 +467,7 @@ def analyze(cfg, d, opts):
         nsg = len(S["sglist"])
         S["nsg"] = nsg
         if nsg < 2: F(f"SG_ONE_LEVEL({nsg})")
-        if nsg >= 2 and "pwsgs" not in d["matnames"] and "suppresssgprimaryeffects" not in o:
+        if nsg >= 2 and "pwsgs" not in d["matnames"]:
             F("PWSGS_ABSENT")
         if "wdid_sgdegen" in d["scalar"]:
             F(f"SGDEGEN({int(sc(d,'wdid_sgdegen'))}:{d['macro'].get('wdid_sgdegenact','')})")
@@ -607,8 +607,7 @@ def _noflag(S, *prefixes):
 def surface(opt, S):
     o = S["opts"]; fl = S["flags"]
     if opt == "subgroups":
-        # suppresssgprimaryeffects withholds the per-subgroup rows by design; the pairwise table is then the surface
-        ok = S.get("nsg", 0) >= 2 and (S["sg"]["live"] > 0 or "suppresssgprimaryeffects" in o) and S["pw"]["live"] > 0
+        ok = S.get("nsg", 0) >= 2 and S["sg"]["live"] > 0 and S["pw"]["live"] > 0
         return ok, f"nsg={S.get('nsg')} sg_live={S['sg']['live']} pw_live={S['pw']['live']}"
     if opt == "jointtests":
         js = S.get("joint", {})

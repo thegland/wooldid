@@ -349,29 +349,31 @@ if `rc10a' != 0 | `r10a' != 8 | "`c10a'" != "att_i" | `id10' > 1e-10 | `rc10b' !
 }
 else dis as result "S10 PASS: e(histogramestimates) has one row per treated cohort, the requested columns, and reaggregates to att"
 
-* ---- S9 PS-62 follow-through: cleanmatrices must not take the splice down with it ----
-* cleanmatrices runs `clear mata' inside the worker, which drops wooldid's OWN Mata kernels
-* for the rest of the session whenever the ado was loaded with `do <path>' - which is how
-* this file loads it, and how the suite's dual-build shards load theirs. (An adopath-resolved
-* ado recovers on its own, because Stata re-reads the file when a Mata function is missing;
-* that asymmetry is why the refusal this combination once carried was removed - SI-17/SI-18.)
+* ---- S9 PS-62 follow-through: a `clear mata' before the call must not take the splice down ----
+* `clear mata' drops wooldid's OWN Mata kernels for the rest of the session whenever the ado
+* was loaded with `do <path>' - which is how this file loads it, and how the suite's dual-build
+* shards load theirs. (An adopath-resolved ado recovers on its own, because Stata re-reads the
+* file when a Mata function is missing; test_adopath pins that.) Until 2026-09-25 the
+* cleanmatrices option ran the clear inside the worker; the retired option's recovery
+* instruction is now to type it before the call, which reaches the same state here.
 * PS-62 put a Mata call on the mainline ANALYTIC path, where none had been, so before the
 * guard this exact call died r(3499) instead of estimating - the 501-config assessment caught
 * it, no cert leg did. The contract: the run completes and lands on the pre-PS-62 surface,
 * an e(V) with no blocks, rather than a half-spliced one or an error.
 * KEEP THIS LAST: it clears wooldid's Mata for everything after it.
 use `panel', clear
-cap qui wooldid y unit t ttre, att cluster(unit) cleanmatrices esprelength(2) espostlength(2)
+clear mata
+cap qui wooldid y unit t ttre, att cluster(unit) esprelength(2) espostlength(2)
 local s9rc = _rc
 local s9st = "`e(wdid_vcvstate)'"
 local s9vb = "`e(wdid_vblocks)'"
 cap confirm matrix e(V)
 local s9hasv = _rc == 0
 if `s9rc' != 0 | `s9hasv' != 1 | "`s9st'" != "analytic-diagonal" | "`s9vb'" != "" {
-  dis as error "S9 FAIL: cleanmatrices rc=`s9rc' hasV=`s9hasv' state=`s9st' blocks=[`s9vb']"
+  dis as error "S9 FAIL: clear mata then run rc=`s9rc' hasV=`s9hasv' state=`s9st' blocks=[`s9vb']"
   local ++fails
 }
-else dis as result "S9 PASS: cleanmatrices completes (rc `s9rc'), e(V) present, state=`s9st', no blocks"
+else dis as result "S9 PASS: clear mata then run completes (rc `s9rc'), e(V) present, state=`s9st', no blocks"
 
 if `fails' == 0 dis as result "STORED_ALL_PASS"
 else dis as error "STORED_FAILS=`fails'"

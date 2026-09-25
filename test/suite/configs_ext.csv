@@ -254,7 +254,6 @@ ext_bin_ext_customvce,extcase,binary_balanced.dta,,,,y cohort t ttre,att customv
 ext_bin_ext_impvalues,extcase,binary_balanced.dta,,,,y cohort t ttre,att impvalues cluster(cohort) esprelength(2) espostlength(2) safety(off),0,0,,0
 ext_bin_ext_altadv,extcase,binary_balanced.dta,,,,y cohort t ttre,att adversarial altmethod_adversarial esfixedbaseperiod esrelativeto(-2) esprelength(3) espostlength(3) safety(off),0,0,,0
 ext_bin_ext_verbose,extcase,binary_balanced.dta,,,,y cohort t ttre,att verbose esprelength(2) espostlength(2) safety(off),0,0,,0
-ext_bin_ext_cleanmatrices,extcase,binary_balanced.dta,,,ext_bin_ext_cleanmatrices,y cohort t ttre,att cleanmatrices esprelength(1) espostlength(1) safety(off),0,0,,0
 ext_bin_ext_saveplots,extcase,binary_balanced.dta,,,,y cohort t ttre,att esprelength(2) espostlength(2) makeplots saveplots(wdbt_saved) replace safety(off),0,0,,0
 ext_bin_ext_postestimation,extcase,binary_balanced.dta,,,,y cohort t ttre,att att_it esprelength(2) espostlength(2) safety(off),0,0,,0
 ext_cont_ext_elasticity_eyex,extcase,continuous_control_compact.dta,,,,y_positive_common cohort t ttre,att contreat(dose_common) contreatcontrols(basic) contreatelasticitytype(eyex) esprelength(2) espostlength(2) robust safety(off),0,198,,0
@@ -318,8 +317,7 @@ ext_cov10_rcs_twoway_cluster_c2,extcase,survey_rcs.dta,pw=survey_weight,,,y_rcs 
 ext_cov10_oos_controls_c1,extcase,binary_balanced.dta,,,,y_oos cohort t ttre_oos,att esprelength(3) espostlength(1) robust safety(off),0,0,,0
 ext_cov10_oos_controls_c2,extcase,binary_balanced.dta,,,,y_oos cohort t ttre_oos,att esprelength(3) espostlength(1) oostreatedcontrols(2) robust safety(off),0,0,,0
 ext_cov10_subgroup_preonly,extcase,binary_balanced.dta,,,,y cohort t ttre,att subgroups(sg_three) esprelength(2) espostlength(-999) robust safety(off),0,0,,0
-ext_cov10_suppress_sg,extcase,binary_balanced.dta,,,,y cohort t ttre,att subgroups(sg_three) suppresssgprimaryeffects esprelength(1) espostlength(1) robust safety(off),0,0,,0
-ext_cov10_technical_options,extcase,binary_balanced.dta,,,ext_cov10_technical_options,y cohort t ttre,att esprelength(1) espostlength(1) regtol(8) emptycellsoverride verbose robust safety(off),0,0,,0
+ext_cov10_technical_options,extcase,binary_balanced.dta,,,ext_cov10_technical_options,y cohort t ttre,att esprelength(1) espostlength(1) regtol(8) verbose robust safety(off),0,0,,0
 ext_cov10_binary_mixed_grain,extcase,binary_mixed_grain.dta,,,,y mixed_i_rich t ttre,att att_i esprelength(1) espostlength(1) cluster(cohort) safety(off),0,0,,0
 ext_cov10_bounded_outcome,extcase,binary_balanced.dta,,,,y_binary cohort t ttre,att att_it esprelength(1) espostlength(1) robust safety(off),0,0,,0
 ext_cov10_rare_binary,extcase,continuous_control_dense.dta,,,ext_cov10_rare_binary,y_rare cohort t ttre,att att_it esprelength(1) espostlength(1) robust safety(off),0,0,,0

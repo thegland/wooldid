@@ -47,10 +47,6 @@
  "badvals_if": [
   "qui replace i = -i if mod(i,13) == 0"
  ],
- "ext_bin_ext_cleanmatrices": [
-  "matrix WDBT_SENTINEL = (1, 2 \\ 3, 4)",
-  "mata: WDBT_SENTINEL_MATA = (1, 2, 3)"
- ],
  "ext_contract10_fractional_time": [
   "recast double t",
   "replace t = 1.5 if t == 1"

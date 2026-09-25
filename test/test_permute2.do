@@ -403,13 +403,9 @@ else {
   }
 }
 
-* ---- SI-17 checks REMOVED 2026-08-31 along with the refusal they asserted. The
-* r(3499) that motivated it reproduces only when wooldid is loaded with `do <path>`,
-* which is how this suite loads it; an adopath-resolved ado recovers because Stata
-* re-reads it when a mata function is missing. So permute()+cleanmatrices works for
-* installed users, and there is nothing here this harness can meaningfully assert -
-* asserting rc 0 would fail under `do`-loading, and asserting the refusal would pin
-* behaviour we have just removed. See SI-17/SI-18 in wooldid_standing_issues.md.
+* ---- SI-17 checks REMOVED 2026-08-31 along with the refusal they asserted, and the
+* cleanmatrices option itself was retired 2026-09-25. See SI-17/SI-18 in
+* wooldid_standing_issues.md.
 
 if `fails' == 0 dis as result "PERMUTE2_ALL_PASS"
 else dis as error "PERMUTE2_FAILS=`fails'"

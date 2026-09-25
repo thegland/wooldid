@@ -5,7 +5,8 @@
 * that they are now rejected by name. This file is the cert HOST for that pin:
 * test/suite/configs_ext.csv cannot carry it, because coverage_check.py treats an
 * option token it cannot resolve against the syntax line as FATAL (author ruling
-* 2026-09-11), so a retired NAME cannot appear in a config row at all.
+* 2026-09-11), so a retired NAME cannot appear in a config row at all. T1b pins the three
+* options retired 2026-09-25 (cleanmatrices, suppresssgprimaryeffects, emptycellsoverride).
 * Run from test/:  "<stata>" -e do test_si89.do   -> expect SI89_ALL_PASS
 
 clear all
@@ -68,6 +69,21 @@ foreach o in "poisexpresults" "poisson poisexpresults" "semielasticity" "poisson
   }
 }
 if `t1bad' == 0 dis as result "T1 PASS: retired poisexpresults/semielasticity -> r(198) in all 4 forms"
+else global pf = $pf + 1
+
+* ---- T1b: the options retired 2026-09-25 are rejected by name (rc 198) ----
+* the author's ruling on the deletion candidates (review_process/econ_review_2026-09-25.md
+* section 8). Stata's own parser raises 198 once the option leaves the syntax line; the
+* documented abbreviations clean and suppress are checked as well
+local t1bbad 0
+foreach o in "cleanmatrices" "clean" "suppresssgprimaryeffects" "suppress" "emptycellsoverride" {
+  cap wooldid y i t ttre, att robust `o'
+  if _rc != 198 {
+    dis as error "T1b FAIL: `o' -> rc " _rc " (wanted 198)"
+    local t1bbad = `t1bbad' + 1
+  }
+}
+if `t1bbad' == 0 dis as result "T1b PASS: retired cleanmatrices/suppresssgprimaryeffects/emptycellsoverride -> r(198) in all 5 forms"
 else global pf = $pf + 1
 
 * ---- T2: the retired contreatelasticitytype VALUES are refused, survivors still run ----

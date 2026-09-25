@@ -8,11 +8,10 @@ Usage:
            --outdir /abs/rundir [--dumpdir /abs/dumpdir]
            [--components core,trig,...] [--shard-size 15]
 
-Emits outdir/shard_<component>[_slow|_vslow][_cm]_<n>.do plus outdir/shards.manifest (one
+Emits outdir/shard_<component>[_slow|_vslow]_<n>.do plus outdir/shards.manifest (one
 line per shard: dofile|nconfigs|tier, tier = fast|slow|vslow). The configs' `slow' column
 routes: '' -> fast shards (600 s), '1' -> *_slow shards (1800 s), '2' -> *_vslow shards of
-ONE config each (3600 s); a config whose options include cleanmatrices is also sharded
-alone (*_cm, see the shard-grouping comment below). Each shard dumps one
+ONE config each (3600 s). Each shard dumps one
 <config>.csv per config, in the battery %21x format plus a "prov|<label>|<sha>"
 provenance line.
 
@@ -137,15 +136,16 @@ set more off
 set maxvar 20000
 set graphics off
 * CAUTION (harness-side half of a trap the ado documents from its own side): loading with
-* `do <path>' is the ONE load style under which wooldid cannot recover its own Mata kernels.
-* A config using cleanmatrices runs `clear mata' inside the worker; an adopath-resolved ado
-* recovers because Stata re-reads the file when a function is missing, and a do-loaded one
-* does not (SI-17/SI-18). The recovery path in the ado is a `cap mata:' that EXITS on
-* failure, so the kernel loss is swallowed rather than raised - the run keeps the older
-* analytic-diagonal e(V). Because this header runs once per SHARD and each shard then runs
-* up to --shard-size configs in the same Stata process, one cleanmatrices config can leave
-* every later config in that shard silently on the fallback path, and the per-config scrub
-* block below cannot undo it. Keep cleanmatrices configs isolated, or load by adopath.
+* `do <path>' is the ONE load style under which wooldid cannot recover its own Mata kernels
+* after a `clear mata'; an adopath-resolved ado recovers because Stata re-reads the file when
+* a function is missing, and a do-loaded one does not (SI-17/SI-18). The recovery path in the
+* ado is a `cap mata:' that EXITS on failure, so the kernel loss is swallowed rather than
+* raised - the run keeps the older analytic-diagonal e(V). Because this header runs once per
+* SHARD and each shard then runs up to --shard-size configs in the same Stata process, a
+* config or prep that clears Mata would leave every later config in that shard silently on
+* the fallback path, and the per-config scrub block below cannot undo it. None does today
+* (the cleanmatrices option that did was retired 2026-09-25); isolate one that ever does, or
+* load by adopath.
 do "{ADO}"
 {DUMPRES}
 '''
@@ -258,17 +258,13 @@ def main():
     # shard: group by (component, tier, isolated), chunk by shard_size.
     # tier: slow column '' -> fast (600 s), '1' -> slow (1800 s), '2' -> vslow (3600 s,
     # one config per shard - for the v1.3-side outliers such as si20_lat_pois at ~950 s).
-    # isolated: also one config per shard for cleanmatrices configs - SI-17/SI-18: a
-    # cleanmatrices config runs `clear mata' inside the worker and a do-loaded ado cannot
-    # recover its kernels, so every LATER config in the same Stata process silently runs
-    # on the analytic-diagonal e(V) fallback (see the HEADER caution), which the dual
-    # build cannot see because v1.3's off-diagonals are zero too. Today the only such
-    # config is last in its shard by accident of CSV row order.
+    # isolated: one config per shard. The cleanmatrices configs were isolated here too until
+    # that option was retired 2026-09-25 (see the HEADER caution).
     groups = {}
     for r in rows:
         sl = r.get("slow", "").strip()
         tier = "vslow" if sl == "2" else "slow" if sl == "1" else "fast"
-        iso = sl == "2" or "cleanmatrices" in r["options"]
+        iso = sl == "2"
         key = (r["component"], tier, iso)
         groups.setdefault(key, []).append(r)
     manifest = []
@@ -287,7 +283,7 @@ def main():
                                                  .replace("{DUMPDIR}", dumpdir)))
     for (comp, tier, iso), rs in sorted(groups.items()):
         csize = 1 if iso else shard_size
-        sfx = {"fast": "", "slow": "_slow", "vslow": "_vslow"}[tier] + ("_cm" if iso and tier != "vslow" else "")
+        sfx = {"fast": "", "slow": "_slow", "vslow": "_vslow"}[tier]
         for i in range(0, len(rs), csize):
             chunk = rs[i:i + csize]
             blocks = [b for b in (block(r) for r in chunk) if b is not None]

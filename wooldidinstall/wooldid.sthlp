@@ -92,7 +92,7 @@ with an informative error unless {opt safety(off)}. Store large onset codes, suc
 {synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt espre:length(int>=0)} {opt espost:length(int>=0)} {opt esr:elativeto(-int)}
 {opt joint:tests}   {opt adv:ersarial} {opt altmethod_adversarial} {opt makep:lots} {opt oos:treatedcontrols(int>=0)} {opt antic:ipation(int>=0)} {opt pretrendpow:er(numlist)}  {p_end}
 
-{synopt : {help wooldid##interactions:Subgroup Effects:}} {opt sub:groups(variable[>=0 int])} {opt suppress:sgprimaryeffects}  {p_end}
+{synopt : {help wooldid##interactions:Subgroup Effects:}} {opt sub:groups(variable[>=0 int])}  {p_end}
 
 {synopt : {help wooldid##continuous:Continuous Treatments:}} {opt contreat(variable[numerical])} {opt contreatelas:ticitytype(dydx|dyex)}  {opt contreatw:ithin}
 {opt contreatp:oly(+int)} {opt lattice(variable[+int] OR latticetype latticenum)} {opt latticeig:noreweights} {opt makec:fxplots} {opt cfxlattice(variable[+int])}
@@ -106,8 +106,8 @@ with an informative error unless {opt safety(off)}. Store large onset codes, suc
 {opt inter:activecontrols(varlist)} {p_end}
 
 {synopt : {help wooldid##technical:Technical Features:}}
-{opt update} {opt customw:eightmultiplier(variable[>=0 numerical])}  {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
-{opt ver:bose} {opt gte:ffects} {opt emptycellsoverride} {opt safety(on|off)} {p_end}
+{opt update} {opt customw:eightmultiplier(variable[>=0 numerical])} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
+{opt ver:bose} {opt gte:ffects} {opt safety(on|off)} {p_end}
 
 {marker description}{...}
 {title:Description of Estimation Approach}
@@ -368,8 +368,8 @@ and subgroup contrasts become bootstrap quantities. Point estimates are unchange
 replication re-estimates the full model. {it:bootstrap(standard)} is the pairs cluster bootstrap: the {it:cluster()} groups, or
 the observations when {it:cluster()} is not given, are resampled with replacement. {it:bootstrap(bayes)} is the Bayesian bootstrap: each replication draws one
 Dirichlet weight per cluster and multiplies that cluster's observations by it, so no cluster ever leaves the sample. Requires {it:reps()}. Refused with {it:permute()}, {it:impvalues},
-{it:unconditionalse}, {it:customvce()},
-{it:suppresssgprimaryeffects} and multi-way {it:cluster()}. {it:fastnose} is accepted with a caution and has no effect, since the replications already run in fast
+{it:unconditionalse}, {it:customvce()}
+and multi-way {it:cluster()}. {it:fastnose} is accepted with a caution and has no effect, since the replications already run in fast
 mode; with {it:boottstat} it is refused. {it:bootstrap(bayes)} with {it:att_it}, {it:att_i} or {it:att_itime} omits the cell-sampling component
 of the variance and is refused. Plots, {it:gteffects} cells, {it:jointtests}
 and {it:pretrendpower()} all follow the bootstrap. Only the {it:histogramcohorteffects} output is untouched: it draws the observed point estimates, which the bootstrap does not change. Under
@@ -438,7 +438,7 @@ as plain missing. That screen runs on every row the {it:if} expression keeps, in
 {it:permute()} can be refused once {it:permute()} is added; restrict the sample with {it:if}. An onset more than {it:oostreatedcontrols()} periods after the last period, net of
 {it:anticipation()}, is permuted as never-treated, as the estimation treats it, and a caution counts the clusters affected. Also requires {it:permreps()} or, for shuffle only,
 {it:permexact}. Not compatible with
-{it:impvalues}, {it:unconditionalse}, {it:contreatwithin}, {it:contreatcontrols(untreatedZero)}, {it:suppresssgprimaryeffects}, {it:pretrendpower()}, {it:simultaneousbands}
+{it:impvalues}, {it:unconditionalse}, {it:contreatwithin}, {it:contreatcontrols(untreatedZero)}, {it:pretrendpower()}, {it:simultaneousbands}
 or {it:bootstrap()}. A design that admits only one possible assignment is refused. With {it:subgroups()} the subgroup screens apply over the whole sample, since any cluster can be treated in
 a replication, and a unit split across subgroups, or labelled on some rows and missing on others, is refused whatever {it:safety()} is. Every p-value and interval the run reports is permutation-based, including the subgroup contrasts, the joint pre-trend, subgroup equality and adversarial tests, and the
 continuous-treatment plot cells. The subgroup equality tests and contrasts test the sharp null of no effect at any horizon, not equality of effects. P-values are two-sided equal-tailed, using the add-one form for sampled draws. Intervals are shift intervals at {it:level()}: the estimate minus the
@@ -657,9 +657,6 @@ weight, under a caution. Because subgroup values are
 embedded in the names of stored results and plots, values 8 or more digits long can exceed Stata's limits on names; recode ID-style codes to small integers first (for example
 {it:egen newsg = group(oldsg)}). With {it:esprelength()} greater than 0 and {it:espostlength()} 0, {it:wooldid} raises {it:espostlength()} to 1 under a caution, since subgroup
 estimation requires a post-treatment horizon; {it:espostlength(-999)} keeps the post-treatment window empty. Not compatible with {it:impvalues}. {p_end}
-
-{phang}{opt suppress:sgprimaryeffects}: Skips estimation of subgroup-specific treatment effects and computes only the differences in effects between SGs. This option should
-speed estimation if these treatment effects are not otherwise of interest. It is refused by {it:bootstrap()} and {it:permute()}. {p_end}
 
 {pstd} {ul: Description of Approach to Subgroup Effect Estimation:} Given a variable dividing cohorts i into different subgroups, {it:wooldid} will estimate treatment effects separately
 for each subgroup (i.e., each level of the SG variable). This is achieved without modification to the underlying
@@ -914,9 +911,6 @@ A running Stata session keeps using the copy it has already loaded, so the updat
 weight the observations (or if a weight would already be used, that weight is multiplied by this variable). This allows production of certain bespoke types of treatment effects.
 Values must be non-negative (negative values are rejected with an error, bypassable with {it:safety(off)}); missing values drop the observation. {p_end}
 
-{phang}{opt clean:matrices}: If specified, {it:wooldid} will clear out all matrices stored in Stata's main memory and in mata. Occasionally, {it:wooldid} enters a state where it repeatedly
-crashes for difficult to determine reasons (relating to {it:reghdfe} crashing and leaving certain content in mata). Doing this can sometimes recover {it:wooldid} from this problem. {p_end}
-
 {phang}{opt regtol(#)}: Specifies the convergence tolerance to be used by {it:reghdfe} and {it:ppmlhdfe}, as the negative base-ten exponent of the tolerance ({it:regtol(9)} means
 a tolerance of 1e-9). By default, {it:reghdfe} sets a value of 8; {it:wooldid} has a default of 9.
 You may wish to set this higher or lower; higher may be advisable in settings where you ask {it:reghdfe} to absorb interaction terms with many continuous variables -- as tends
@@ -950,10 +944,6 @@ ones: with {it:cluster()} at the level of {it:i} or coarser a treated cell lies 
 variance is not identified is reported with a missing standard error. Not available with {it:contreat()}, where the cohort-by-period coefficients are dose-zero intercepts rather than
 treatment effects; available under {it:fastnose}; under {it:bootstrap()} the cell inference is bootstrap-based, but a cell the caution counts is resampled whole, so its standard error stays understated; under {it:permute()} the cells carry no inference. {p_end}
 
-{phang}{opt emptycellsoverride}: By default, {it:wooldid} tells Stata to drop interaction terms that correspond with empty cells, which is achieved by the command
-{it:set emptycells drop}, which improves estimation efficiency in this setting. This option overrides this behavior and roughly doubles runtime. This should only be of interest in conjunction
-with the option {it:verbose}. {p_end}
-
 {phang}{opt safety(on|off)}: When {it:safety(off)} is not explicitly specified, {it:wooldid} will caution the user or halt estimation when {it:wooldid} is likely to yield unreliable estimates.
 Most important among these checks are tests for whether or not a variable intended to capture the treatment effect in a given i-t cell was dropped from the underlying regression for
 multicolinearity, as may occur if one's fixed effects or continuous treatment control variables partial out one of the main effects. Identification failures of this sort will generally be detected,
@@ -975,7 +965,7 @@ coarsening {it:i} works there. {it:lattice()} is the most expensive option, so p
 {pstd} Nearly all of a run is spent inside {help margins}, most of it in the delta-method variance calculation. {it:fastnose} skips that calculation entirely and is worth
 several times over when standard errors are not needed, and the default cell collapse (see {it:nofastcollapse}) shrinks the data each {it:margins} call sees; the two compose.
 Runs that must be evaluated on the full data ({it:unconditionalse}, {it:interactivecontrols()}, and the continuous-treatment forms listed under
-{it:nofastcollapse}) pay the full per-row cost. {it:emptycellsoverride} roughly doubles runtime and is rarely wanted. {p_end}
+{it:nofastcollapse}) pay the full per-row cost. {p_end}
 
 {marker output}{...}
 {title:Working With Output}
@@ -1008,8 +998,7 @@ matrices such as {it:e(b_es_att_s1)}, not these columns. {p_end}
 bounds (named {it:lb_95ci} and {it:ub_95ci}, or for the run's {it:level()}), and {it:relyr}. The pooled estimands sit under the equations {it:main} and {it:pretreatment}, and the
 event-study rows under {it:ES_att}, {it:ES_att_it}, {it:ES_ame} and {it:ES_ame_it}, named {it:post#} and {it:pre#}.{p_end}
 
-{synopt:{it:e(wdidsgresults_{it:sgcase})}} Primary and event study results for the subgroup {it:sgcase}, if subgroups are used and presentation of their
-primary results has not been suppressed.{p_end}
+{synopt:{it:e(wdidsgresults_{it:sgcase})}} Primary and event study results for the subgroup {it:sgcase}, if subgroups are used.{p_end}
 
 {synopt:{it:e(pwsgs)}} Pairwise differences between the subgroup-specific treatment effects, if subgroups are used, with the same columns less {it:relyr}. A row whose analytic
 contrast covariance is degenerate carries its point estimate with the inference columns missing (see {help wooldid##interactions:Subgroup Effects}). {p_end}
@@ -1331,7 +1320,9 @@ without {it:e(V)}, which can cause the functionality of certain post-estimation 
 under development, so assistance finding and correcting bugs is much appreciated. I am also happy to help and offer guidance on how to use this program. A longer
 guide to using {it:wooldid}, written for AI agents and advanced users, is at {browse "https://github.com/thegland/wooldid/blob/main/wooldidinstall/wooldid_agent_guide.md"}. {p_end}
 
-{pstd} Note: if you encounter unusual, hard to track down errors, try uninstalling and reinstalling {it:reghdfe} and {it:ftools} first. This can fix some problems. {p_end}
+{pstd} Note: if you encounter unusual, hard to track down errors, try uninstalling and reinstalling {it:reghdfe} and {it:ftools} first. This can fix some problems.
+If {it:wooldid} keeps failing after a {it:reghdfe} crash, type {cmd:clear mata} and {cmd:matrix drop _all} before the next call. They also remove your own
+matrices and Mata objects. {p_end}
 
 
 {marker citations}{...}

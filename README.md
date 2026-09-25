@@ -81,7 +81,6 @@ wooldid y i t ttre [if] [aw/pw=weights], options
 
 ##### Subgroup Effects: 
 - subgroups(_variable_) - variable whose levels specify subgroups for which estimates are to be produced
-- suppresssgprimaryeffects - do not produce main results for each subgroup, only compare subgroups to each other
 
 ##### Controls and Fixed Effects: controls() fe() timetrends coarsecohortcontrols()
 - controls(_fv varlist_) - specify control variables

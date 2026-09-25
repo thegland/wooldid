@@ -103,8 +103,6 @@ cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) un
 chk 5d 198 _rc
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) customvce(robust)
 chk 5e 198 _rc
-cap qui wooldid y unit t ttre, att att_it cluster(unit) bootstrap(standard) reps(50) suppresssgprimaryeffects subgroups(s)
-chk 5g 198 _rc
 cap qui wooldid y unit t ttre, att cluster(unit s) bootstrap(standard) reps(50)
 chk 5h 198 _rc
 

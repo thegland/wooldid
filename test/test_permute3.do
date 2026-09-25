@@ -512,8 +512,6 @@ if _rc == 0 {
 mkperm3 8 4 3
 cap wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(30) esfixedbaseperiod pretrendpower(80)
 xrc Q7a 198 _rc
-cap wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(30) subgroups(sg) suppresssgprimaryeffects
-xrc Q7b 198 _rc
 cap wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permute(shuffle) permreps(30) level(5)
 xrc Q7c 198 _rc
 cap wooldid y i t ttre, att cluster(i) esprelength(2) espostlength(2) permsave(x)

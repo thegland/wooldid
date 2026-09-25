@@ -218,7 +218,7 @@ version 16.0
     * themselves; reps run under fastnose (only coefficients are consumed) unless
     * permtstat, in which case each replication also produces a VCE so its own standard
     * errors can form its t-ratios
-    local wdp_ro `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `robust' `ccnoabsorb' `latticeignoreweights' `emptycellsoverride'
+    local wdp_ro `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `robust' `ccnoabsorb' `latticeignoreweights'
     if "`permtstat'" == "" local wdp_ro `wdp_ro' fastnose
     if "`cluster'" != "" local wdp_ro `wdp_ro' cluster(`cluster')
     if `"`customvce'"' != "" local wdp_ro `wdp_ro' customvce(`customvce')
@@ -435,7 +435,7 @@ version 16.0
     * boottstat is requested, in
     * which case each replication also has to produce a VCE so its own standard errors can
     * studentize its coefficients
-    local wdb_rohead `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `robust' `ccnoabsorb' `latticeignoreweights' `emptycellsoverride' `contreatwithin'
+    local wdb_rohead `att' `att_it' `att_itime' `att_i' `esfixedbaseperiod' `timetrends' `poisson' `robust' `ccnoabsorb' `latticeignoreweights' `contreatwithin'
     if "`boottstat'" == "" local wdb_rohead `wdb_rohead' fastnose
     if "`cluster'" != "" local wdb_rohead `wdb_rohead' cluster(`cluster')
     * the five covariate payloads are emitted twice: as given (wdb_rocov) and with the cohort
@@ -748,7 +748,7 @@ version 16.0
   set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) Level(real 0) dots(integer -1) rseed(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/] [aw fw pw / ] , [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric) CONTROLs(varlist fv) INTERactivecontrols(varlist numeric) TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric) ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name) POISson OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string) MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects regtol(integer 9) JOINTtests contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights CCNOabsorb CONTREATControls(string) VERbose CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string) CONTREATWithin replace altmethod_adversarial ADVersarial update PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) Level(real 0) dots(integer -1) rseed(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -760,7 +760,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * all parse-time validation and option normalization lives in wooldid_validate, which
   * re-parses `0' with a byte-identical copy of the syntax line above (guarded by
   * test/check_validate_sync.py) and returns its option/derived locals via c_local.
-  * called before cleanmatrices, so a rejected call does not clear user matrices/mata
   wooldid_validate `0'
   * level() applies to the analytic tables too. Every analytic interval comes from margins'
   * r(table) rows at c(level), so the level is set for the duration of this call and the
@@ -792,21 +791,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
 
 
-  * Clean the workspace if cleanmatrices is specified - this is helpful b/c sometimes reghdfe enters into a failure state
-  * that leaves junk matrices floating around in stata and mata which prevent further estimation. cleanmatrices should fix that.
-  if "`cleanmatrices'" != "" {
-    clear mata
-    matrix drop _all
-  }
-
- * Unless disabled by the user, set emptycells to drop -- greatly improves performance since structure of the reghdfe matrix
+ * set emptycells to drop -- greatly improves performance since structure of the reghdfe matrix
  * involves lots of empty cells in the interaction term.
- if "`emptycellsoverride'" == "" {
-    * note: set emptycells is program-scoped - stata automatically restores the caller's
-    * value when wooldid exits, including on error paths (cf. StataCorp's anova.ado);
-    * no manual capture/restore is needed here
-    set emptycells drop
- }
+ * note: set emptycells is program-scoped - stata automatically restores the caller's
+ * value when wooldid exits, including on error paths (cf. StataCorp's anova.ado);
+ * no manual capture/restore is needed here
+ set emptycells drop
 
 
   * extract the regression weights variable and setup macros for handling weights; if no weight variable, create one. require weights to be non-negative everywhere
@@ -3424,8 +3414,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`subgroups'" != "" {
     if "`verbose'" == "verbose" dis as text "Wooldid is now producing the final set of required margins calculations - those specific to particular subgroups."
 
-    * the suppress command will lead us to only produce estimates comparing the sgs, not generate sg-specific estimates
-    if "`suppresssgprimaryeffects'" == "" {
       foreach item in `att' `att_it' `att_i' `att_itime' {
         * posttreatment effect - same production method as before, but with an over(sg)  component
         tempname ___`item'_s
@@ -3702,7 +3690,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         }
       }
 
-    }
 
 
     * joint test the sg effect estimates against each other - are they the same or different?
@@ -3716,9 +3703,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     * is followed by est restore, and the pre-period pass is capture-wrapped because
     * pwcompare hard-errors (r111) where contrast(overjoint) merely no-ops when only one
     * subgroup level is realized in the pre-period subpopulation
-    * wdsglev collects, under suppresssgprimaryeffects only, the subgroup level rows of these
-    * passes and of the continuous-treatment passes below
-    tempname wdsglev
     if wordcount("`sglist'") > 1 {
       * F9: under fast mode the pairwise table keeps its point estimates ("." SE cells)
       * but no joint test runs: the pass is not posted (a chain test after a nose post
@@ -3754,19 +3738,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             matrix rownames `f9tab' = b se t pvalue ll ul
           }
           matrix `___`item'_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
-        }
-        * under suppresssgprimaryeffects no level table is built, and wooldid_sgdeg reads these
-        * level rows instead: the same slice, stacked under this pass's e(pwsgs) equation and
-        * posted hidden as e(wdid_sglev)
-        if "`suppresssgprimaryeffects'" != "" {
-          matrix `f9tab' = r(table)
-          if rowsof(`f9tab') < 6 {
-            matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
-            matrix rownames `f9tab' = b se t pvalue ll ul
-          }
-          matrix `f9tab' = `f9tab'[1..6,floor(`=colsof(r(b))'/2)+1..`=colsof(r(b))']'
-          matrix rownames `f9tab' = `item':
-          matrix `wdsglev' = nullmat(`wdsglev') \ `f9tab'
         }
         if "`sgpost'" != "" {
           wooldid_sgchain, half
@@ -3854,18 +3825,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               }
               matrix `___`item'_pre_s' = `f9tab'[1..6,`matrixstartgrab'..`=colsof(r(b))']'
             }
-            * the level rows for wooldid_sgdeg under suppresssgprimaryeffects (see the
-            * posttreatment twin)
-            if "`suppresssgprimaryeffects'" != "" {
-              matrix `f9tab' = r(table)
-              if rowsof(`f9tab') < 6 {
-                matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
-                matrix rownames `f9tab' = b se t pvalue ll ul
-              }
-              matrix `f9tab' = `f9tab'[1..6,floor(`=colsof(r(b))'/2)+1..`=colsof(r(b))']'
-              matrix rownames `f9tab' = pre_`item':
-              matrix `wdsglev' = nullmat(`wdsglev') \ `f9tab'
-            }
             * the pairwise rows are stacked into e(pwsgs) iff THIS flag is set - not iff
             * the joint p exists - so a chain-test failure after a successful pwcompare
             * cannot silently shorten e(pwsgs)
@@ -3901,7 +3860,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
 
     * handle the continuous treatments by sg
     if "`contreat'" != "" {
-      if "`suppresssgprimaryeffects'" == "" {
         foreach item in `att' `att_it' `att_i' `att_itime' {
           * posttreatment average marginal effect of the continuous treatment variable
           qui margins [`weight'=`w_`item''] , `contreatelasticitytype'(`contreat') subpop(if `ifstatement' & `targetflag'==1 & `t' >= `ttre'  ) noestimcheck over(`subgroups') `poismarginstextC' `marginsdof' `fcnoes'
@@ -4157,7 +4115,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           }
         }
 
-      }
 
 
 
@@ -4190,25 +4147,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 matrix `pwsgs_C`item''[`amer', `amej'] = .
               }
             }
-          }
-          * the level rows for wooldid_sgdeg under suppresssgprimaryeffects (see the binary
-          * twin), all of r(table) as in the level tables, and scrubbed as they are
-          if "`suppresssgprimaryeffects'" != "" {
-            matrix `f9tab' = r(table)
-            if rowsof(`f9tab') < 6 {
-              matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
-              matrix rownames `f9tab' = b se t pvalue ll ul
-            }
-            matrix `f9tab' = `f9tab'[1..6,1..`=colsof(r(b))']'
-            if `amescrub' {
-              forval amer = 1/`=rowsof(`f9tab')' {
-                forval amej = `amescrublo'/6 {
-                  matrix `f9tab'[`amer', `amej'] = .
-                }
-              }
-            }
-            matrix rownames `f9tab' = `=subinstr("`item'","att","ame",.)':
-            matrix `wdsglev' = nullmat(`wdsglev') \ `f9tab'
           }
           if "`sgpost'" != "" {
             wooldid_sgchain
@@ -4253,25 +4191,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                     matrix `prepwsgs_C`item''[`amer', `amej'] = .
                   }
                 }
-              }
-              * the level rows for wooldid_sgdeg under suppresssgprimaryeffects (see the
-              * posttreatment twin)
-              if "`suppresssgprimaryeffects'" != "" {
-                matrix `f9tab' = r(table)
-                if rowsof(`f9tab') < 6 {
-                  matrix `f9tab' = `f9tab' \ J(`=6-rowsof(`f9tab')', `=colsof(`f9tab')', .)
-                  matrix rownames `f9tab' = b se t pvalue ll ul
-                }
-                matrix `f9tab' = `f9tab'[1..6,1..`=colsof(r(b))']'
-                if `amescrub' {
-                  forval amer = 1/`=rowsof(`f9tab')' {
-                    forval amej = `amescrublo'/6 {
-                      matrix `f9tab'[`amer', `amej'] = .
-                    }
-                  }
-                }
-                matrix rownames `f9tab' = pre_`=subinstr("`item'","att","ame",.)':
-                matrix `wdsglev' = nullmat(`wdsglev') \ `f9tab'
               }
               * see the binary twin: stacking is gated on this flag, not the joint p
               local prepwok_C`item' 1
@@ -4410,7 +4329,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * with the success of the above, we should now repeat it by sg
 
   if "`subgroups'" != "" {
-    if "`suppresssgprimaryeffects'" == "" {
       local sgnum 0
       local sgmatricestodrop
       foreach sgcase in `sglist' {
@@ -4568,7 +4486,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         cap matrix drop `matdrop'
       }
 
-    }
 
     ******* give column names to the pwsgs matrices; their default rownames are ok i think with eq name modifications
     ******* also, stack them into one
@@ -4724,7 +4641,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     cap matrix drop `f8raw'
 
     * ---- subgroup scopes: one extra pass keyed on (_t, sg) covers every subgroup at once ----
-    if "`subgroups'" != "" & "`suppresssgprimaryeffects'" == "" {
+    if "`subgroups'" != "" {
       tempvar f8sin f8stagc f8stagi f8stagcl f8stagt f8snc f8snu f8sncl f8sn f8sw f8swi
       qui gen byte `f8sin' = (`esamp' == 1 & `targetflag' == 1 & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' < .)
       qui gegen byte   `f8stagc'  = tag(`_t' `subgroups' `ttre') if `f8sin'
@@ -4815,13 +4732,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * without giving any information about covariance (which we did not estimate anyway)
   * this means we will get the correct coef and SE when using esttab... but you won't be able to test estimates against each other, use lincom to combine estimates, etc.
   if "`subgroups'" != "" {
-    if "`suppresssgprimaryeffects'" == "" {
       foreach sgcase in `sglist' {
         matrix `ebformer' = `ebformer' \ `wdid_sg`sgcase''
         local rownamespool_sginj = subinstr("`rownamessg`sgcase''",":","_SG`sgcase'_",.)
         local rownamespool `rownamespool' `rownamespool_sginj'
       }
-    }
   }
 
   * SI-A4/R6: ereturn post cannot accept missing coefficients, so the voided ame
@@ -5173,7 +5088,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
  }
 
   if "`subgroups'" != "" {
-    if "`suppresssgprimaryeffects'" == "" {
       foreach sgcase in `sglist' {
         if "`suppressjointtests'" == "" {
           * post these as numeric scalars, matching the overall joint families, so a single loop
@@ -5200,7 +5114,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           }
         }
       }
-    }
     if wordcount("`sglist'") > 1 {
       ereturn matrix pwsgs = `pwsgs'
       foreach item in `att'  `att_it' `att_i' `att_itime' {
@@ -5221,17 +5134,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`histogramcohorteffects'" != "" ereturn matrix histogramestimates = `___hist'
 
   * ship remaining matrices into ereturn
-  if "`subgroups'" != "" & "`suppresssgprimaryeffects'" == "" {
+  if "`subgroups'" != "" {
     foreach sgcase in `sglist' {
       ereturn matrix wdidsgresults_`sgcase'  = `wdid_sg`sgcase''
     }
-  }
-  * in their place under suppresssgprimaryeffects, the subgroup level rows of the pairwise
-  * passes, which wooldid_sgdeg reads. hidden and separately named: display, esplots and the
-  * replication shells key on e(wdidsgresults_*) existing
-  if "`subgroups'" != "" & "`suppresssgprimaryeffects'" != "" & wordcount("`sglist'") > 1 {
-    cap confirm matrix `wdsglev'
-    if _rc == 0 ereturn hidden matrix wdid_sglev = `wdsglev'
   }
 
   ereturn matrix wdidmainresults = `wdidpooled'
@@ -5308,7 +5214,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   ereturn hidden local wdid_fcguard "`fcguard'"
   ereturn hidden local wdid_cetype "`contreatelasticitytype'"
   ereturn hidden local wdid_suppressjt "`suppressjointtests'"
-  ereturn hidden local wdid_suppresssgpe "`suppresssgprimaryeffects'"
   ereturn hidden local wdid_adversarial "`adversarial'"
   * the (family, subgroup) adversarial tests skipped for a dropped horizon, for
   * wooldid_permjnt; posted only when one was skipped
@@ -5393,11 +5298,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * all result matrices and scalars are shipped to e() above, before the display and plot
   * calls; only cleanup remains here
 
-  if "`cleanmatrices'" != "" {
-    clear mata
-    matrix drop _all
-  }
-
   if "`verbose'" != "verbose" | "`wdrepmode'" != "" qui est drop `wdfm'
   * clean up after ppmlhdfe. under verbose, retain _ppmlhdfe_d alongside the retained
   * ___wooldidfullmodel. note this alone does not make predict/margins replay work after est
@@ -5431,7 +5331,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) Level(real 0) dots(integer -1) rseed(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/] [aw fw pw / ] , [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric) CONTROLs(varlist fv) INTERactivecontrols(varlist numeric) TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric) ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name) POISson OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string) MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects regtol(integer 9) JOINTtests contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights CCNOabsorb CONTREATControls(string) VERbose CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string) CONTREATWithin replace altmethod_adversarial ADVersarial update PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) Level(real 0) dots(integer -1) rseed(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -5797,7 +5697,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * error 459 if that refusal is ever lifted, rather than silently downgrading them to a
   * caution - the failure the safetyinput split exists to prevent
   if "`permute'" != "" {
-    cap noi wooldid_permctl , yv(`y') permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safetyuser') psave(`permsave') level(`level') onc(`permonsetcohorts') ase(`permanalyticse') oostreatedcontrols(`oostreatedcontrols') anticipation(`anticipation') `replace'
+    cap noi wooldid_permctl , yv(`y') permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') sg(`subgroups') ivar(`i') tvar(`t') si(`safetyuser') psave(`permsave') level(`level') onc(`permonsetcohorts') ase(`permanalyticse') oostreatedcontrols(`oostreatedcontrols') anticipation(`anticipation') `replace'
     if _rc != 0 exit _rc   // exit, not error - the cap noi above already printed it
   }
 
@@ -5810,7 +5710,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * to conserve this program's compiled-size headroom. called UNCONDITIONALLY: with
   * bootstrap() absent it enforces the stray-companion screen and exits. si() carries the
   * user's own safety() value; no bootctl gate reads it
-  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') level(`level') dots(`dots') rseed(`rseed') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') ttrevar(`ttre_asgiven') `replace'
+  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') level(`level') dots(`dots') rseed(`rseed') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') ttrevar(`ttre_asgiven') `replace'
   if _rc != 0 exit _rc   // exit, not error - the cap noi above already printed it (the shell-header rule)
 
   * drop a redundant fastnose under bootstrap() (ruled 2026-09-21). wooldid_bootctl has
@@ -6356,7 +6256,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * already builds the lb_92p5ci column names with %9.0g, which is why those were always right
   * while the `set level' beside them was wrong.
   local level = strofreal(`level', "%9.0g")
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update pretrendpower fastnose nofastcollapse fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permstepdown permonsetcohorts simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps level dots rseed bootdf bootdisplay boottstat bootsave esprelengthraw {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose contreatelasticitytype contreatwithin replace altmethod_adversarial adversarial update pretrendpower fastnose nofastcollapse fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permstepdown permonsetcohorts simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps level dots rseed bootdf bootdisplay boottstat bootsave esprelengthraw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -6701,7 +6601,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) yv(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) side(string) onc(string) ase(string) oostreatedcontrols(integer 0) anticipation(integer 0) replace]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) yv(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) side(string) onc(string) ase(string) oostreatedcontrols(integer 0) anticipation(integer 0) replace]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -6739,17 +6639,11 @@ version 16.0
     dis as error "Error: permute() is not compatible with contreatcontrols(untreatedZero)."
     error 198
   }
-  * two more permute() refusals. pretrendpower: the Roth diagnostics are computed on an
+  * one more permute() refusal. pretrendpower: the Roth diagnostics are computed on an
   * event-study covariance and randomization inference produces none, so permute() refuses
-  * rather than substituting a permutation covariance. suppresssgprimaryeffects: mirrors
-  * bootctl - the suppressed subgroup entries are what the replication vectors need in
-  * order to permute the subgroup statistics
+  * rather than substituting a permutation covariance
   if `"`ptp'"' != "" {
     dis as error "Error: permute() is not compatible with pretrendpower()."
-    error 198
-  }
-  if "`ssg'" != "" {
-    dis as error "Error: permute() may not be combined with suppresssgprimaryeffects."
     error 198
   }
   if `level' != 0 & (`level' < 10 | `level' > 99.99) {
@@ -7205,7 +7099,7 @@ version 16.0
 *** the two programs - checked by test/check_validate_sync.py - and the call site need not
 *** change. Do not wire a gate onto them expecting one to already exist, and do not delete
 *** them while the call site still passes them.
-  syntax , [bootstrap(string) reps(integer 0) level(real 0) dots(integer -1) rseed(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ttrevar(varname) ifr(string asis) jt(string) ptp(string asis) replace]
+  syntax , [bootstrap(string) reps(integer 0) level(real 0) dots(integer -1) rseed(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ttrevar(varname) ifr(string asis) jt(string) ptp(string asis) replace]
 
   * rseed() and dots() are validated before the stray screen: both are shared with permute(),
   * whose runs leave this program at the screen's exit below. with neither engine given, an
@@ -7458,13 +7352,6 @@ version 16.0
     *   Bootstrap() may not be combined with customvce(); the reported standard errors would be bootstrap-
     *   based, contradicting the custom-VCE request.
     dis as error "Error: bootstrap() may not be combined with customvce()."
-    error 198
-  }
-  if "`ssg'" != "" {
-    * message detail trimmed from the user-facing text 2026-09-21, kept for reference:
-    *   Bootstrap() may not be combined with suppresssgprimaryeffects; the suppressed subgroup entries are
-    *   exactly what the replication vectors need in order to bootstrap the subgroup statistics.
-    dis as error "Error: bootstrap() may not be combined with suppresssgprimaryeffects."
     error 198
   }
   if wordcount("`clus'") > 1 {
@@ -7837,9 +7724,9 @@ version 16.0
   * single rownamespool the worker builds - main rows first, then each subgroup block in
   * e(wdid_sglist) order, which is the order walked here. The `continue' below (subgroup
   * table absent) would shift every later k while `acc', built from e(b), would not skip:
-  * silently mispairing every subsequent estimand. It cannot fire today because the only
-  * configuration that drops a subgroup table is suppresssgprimaryeffects, which
-  * bootstrap() refuses. If they ever do diverge the fix is a name check of
+  * silently mispairing every subsequent estimand. It cannot fire today because every run
+  * with subgroups() posts one table per realized subgroup. If they ever do diverge the fix
+  * is a name check of
   * `: colfullnames `acc'' against the walked row names, not a re-derivation
   local kk 0
   local rnames : rowfullnames `wm'
@@ -11004,7 +10891,7 @@ version 16.0
   }
   if `kk' != `K' {
     * structural mismatch between the stacked results matrices and e(b) - should be
-    * impossible (suppresssgprimaryeffects is refused with bootstrap); fail loudly
+    * impossible (every run with subgroups() posts one table per realized subgroup); fail loudly
     * rather than rewire misaligned inference
     dis as error "Error: something about your given data/specification has uncovered a novel wooldid bug; please report it with information about your situation and the following text:  bootstrap rewiring found `kk' results-matrix rows against `K' coefficient columns; the inference surfaces cannot be aligned. "
     error 459
@@ -12399,7 +12286,7 @@ version 16.0
     local wdsstud 0
     local wdsbwhy
     if "`mode'" == "bootstrap" {
-      * cap: see the note in wooldid_vsplice (cleanmatrices clears wooldid's own Mata kernels).
+      * cap: see the note in wooldid_vsplice (a `clear mata' before the call on a do-loaded build).
       * continue and not exit - the c(rngstate) restore at the end of this loop must run, or a
       * run that asked for a band would leak the fixed internal seed into the caller's stream.
       * With every family skipped the named caution below fires
@@ -12560,9 +12447,9 @@ version 16.0
     tempname WE
     matrix `WE' = e(V_es_`wdvk')
     local wdvn 0
-    * cleanmatrices runs `clear mata' at the top of the worker, which drops wooldid's own Mata
-    * kernels for the rest of the session. An adopath-resolved ado recovers, since Stata re-reads
-    * the file when a function is missing; a `do <path>' load - this project's harness - does not.
+    * a `clear mata' typed before the call drops wooldid's own Mata kernels. An adopath-resolved
+    * ado recovers, since Stata re-reads the file when a function is missing; a `do <path>' load
+    * - this project's harness - does not (test_si89 clears Mata between its runs).
     * So a missing kernel is caught rather than raised: the run keeps its analytic-diagonal e(V)
     * instead of dying r(3499). Exiting is right, not continuing: if the kernel is gone it is gone
     * for every family, and there is no state to restore here.
@@ -12634,35 +12521,6 @@ version 16.0
     tempname wsg`sg'
     matrix `wsg`sg'' = e(wdidsgresults_`sg')
     local wsgn`sg' : rowfullnames `wsg`sg''
-  }
-  * suppresssgprimaryeffects posts no level tables. The pairwise passes return the level
-  * margins beside the contrasts, and the worker then posts those rows as the hidden
-  * e(wdid_sglev), named by e(pwsgs) equation and margins level (pre_att:2.sg), with the
-  * continuous-treatment rows scrubbed as the level tables are. Each subgroup's rows are rebuilt
-  * here under the (eq, item) keys, the subgroup read off the level name rather than taken by
-  * position (a pre-period pass can realize only some subgroups), so the lookup below reads
-  * either source alike
-  cap confirm matrix e(wdid_sglev)
-  if _rc == 0 {
-    tempname lv lvr
-    matrix `lv' = e(wdid_sglev)
-    local lvn : rowfullnames `lv'
-    foreach sg of local sgl {
-      if "`wsgn`sg''" != "" continue
-      local kk 0
-      foreach wn of local lvn {
-        local ++kk
-        if !regexm("`wn'", "^([^:]+):([0-9]+)(bn?)?[.]") continue
-        if regexs(2) != "`sg'" continue
-        local weq = regexs(1)
-        local wit = subinstr("`weq'", "pre_", "", 1)
-        matrix `lvr' = `lv'[`kk', 1..2]
-        matrix rownames `lvr' = `=cond("`wit'" != "`weq'", "pretreatment", "main")':`wit'
-        if "`wsgn`sg''" == "" tempname wsg`sg'
-        matrix `wsg`sg'' = nullmat(`wsg`sg'') \ `lvr'
-        local wsgn`sg' : rowfullnames `wsg`sg''
-      }
-    }
   }
   local wdsgdn 0
   local wdsgdrows
@@ -12816,7 +12674,6 @@ version 16.0
   local customweightmultiplier `e(wdid_cwm)'
   local contreatelasticitytype `e(wdid_cetype)'
   local suppressjointtests `e(wdid_suppressjt)'
-  local suppresssgprimaryeffects `e(wdid_suppresssgpe)'
   local adversarial `e(wdid_adversarial)'
   local fastnose `e(wdid_fastnose)'
   local summarystats `e(wdid_sumstats)'
@@ -13043,7 +12900,6 @@ version 16.0
 
   * now show the sg results
   if "`subgroups'" != "" {
-    if "`suppresssgprimaryeffects'" == "" {
       foreach sgcase in `sglist' {
         dis as result  " "
         local poistext
@@ -13104,7 +12960,6 @@ version 16.0
         }
         dis as result " "
       }
-    }
     * having shown the main sg materials, show the pairwise comparisons
     if wordcount("`sglist'") > 1 {
       dis as result  "Pairwise Comparisons of Different Subgroups' Estimates: `elasinj'"
@@ -14983,9 +14838,9 @@ version 16.0
       * exact-fit floor falls as about 2.0e-7/sqrt(N) while residue rises linearly, and the two
       * classes meet near 8.5e6 rows. an N-aware floor is the shape of that remedy, not built.
       *
-      * the anchor is inline rather than a named Mata function on purpose: cleanmatrices runs
-      * `clear mata' at the top of the worker, so a named helper is already gone by the time
-      * this screen runs and the call dies with r(3499). editmissing covers a missing
+      * the anchor is inline rather than a named Mata function on purpose: a `clear mata' typed
+      * before the call removes a named helper from a build loaded with `do <path>' (test_si89
+      * does this), and the call would die with r(3499). editmissing covers a missing
       * coefficient and the trailing \ 0 covers an absent or all-missing e(b), which collapses
       * the predicate to max|e(V)| <= 0 - the exact-zero test this screen used to be, so
       * nothing that fired before can stop firing.
@@ -15206,7 +15061,6 @@ version 16.0
   local poisson `e(wdid_poisson)'
   local subgroups `e(wdid_sgvar)'
   local sglist `e(wdid_sglist)'
-  local suppresssgprimaryeffects `e(wdid_suppresssgpe)'
   local esfixedbaseperiod
   if "`e(estimate_type)'" == "fixed_reference_period" local esfixedbaseperiod esfixedbaseperiod
   tempname wdidpooled
@@ -15367,7 +15221,7 @@ version 16.0
     clear
 
     * repeat by SG if appropriate
-    if "`subgroups'" != "" & "`suppresssgprimaryeffects'" == "" {
+    if "`subgroups'" != "" {
       foreach sgcase in `sglist' {
         tempname wdidsgmat
         matrix `wdidsgmat' = e(wdidsgresults_`sgcase')
@@ -15515,7 +15369,7 @@ version 16.0
   * or relyr column that is not there is skipped: esplots then fails after the loop as before
   if "`es'" == "makeplots" & strpos("`: colfullnames e(b)'", "ES_") > 0 {
     local sgs
-    if "`e(wdid_sgvar)'" != "" & "`e(wdid_suppresssgpe)'" == "" local sgs `e(wdid_sglist)'
+    if "`e(wdid_sgvar)'" != "" local sgs `e(wdid_sglist)'
     tempname M
     forval k = 0/`: word count `sgs'' {
       if `k' == 0 {

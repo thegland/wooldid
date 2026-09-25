@@ -1,17 +1,18 @@
 * test_adopath.do - wooldid loaded the way an installed user loads it: resolved from the
 * adopath, never with `do'. Every other cert suite loads the ado with `do <path>', under which
-* cleanmatrices' `clear mata' drops wooldid's own Mata kernels for the rest of the session (see
-* test_stored S9 and the SI-17 note in test_permute2). Resolved from the adopath, Stata re-reads
-* the file when a Mata function is missing, so the same runs recover; nothing pinned that until
-* now (change audit 2026-09-22, cleanmatrices-cert-gap).
+* a `clear mata' drops wooldid's own Mata kernels for the rest of the session (see test_stored
+* S9). Resolved from the adopath, Stata re-reads the file when a Mata function is missing, so
+* the same runs recover. The legs below type `clear mata' and `matrix drop _all' before the
+* call, the recovery the help names since the cleanmatrices option (which ran the same two
+* commands inside the call) was retired 2026-09-25 (change audit 2026-09-22 found the gap).
 * Run from test/: stata-mp -e do test_adopath.do -> expect ADOPATH_ALL_PASS
 *
 * A0  the session resolves wooldid from ../wooldidinstall, not from an installed copy
-* A1  plain run (event study, subgroups, gteffects), then the same run with cleanmatrices:
-*     every compared e() matrix is identical and e(wdid_vcvstate) is the same analytic-blocks
-*     (under do-loading the cleanmatrices run falls back to analytic-diagonal)
-* A2  the plain run again after the cleanmatrices run: identical to the first
-* A3  permute() + cleanmatrices completes and matches permute() without it, same seed
+* A1  plain run (event study, subgroups, gteffects), then the same run after clear mata and
+*     matrix drop _all: every compared e() matrix is identical and e(wdid_vcvstate) is the
+*     same analytic-blocks (under do-loading the second run falls back to analytic-diagonal)
+* A2  the plain run again: identical to the first
+* A3  permute() after clear mata completes and matches permute() without it, same seed
 clear all
 set more off
 set graphics off
@@ -41,7 +42,7 @@ gen y = 2*(t>=ttre & ttre<.) + 0.1*unit + 0.05*t + 0.3*s*(t>=ttre & ttre<.) + rn
 tempfile panel
 save `panel'
 
-* matrices compared across runs. cleanmatrices runs `matrix drop _all' and `clear mata', so the
+* matrices compared across runs. the legs run `matrix drop _all' and `clear mata', so the
 * runs are kept with estimates store and read back afterwards
 local a1mats b V wdidmainresults gteffects wdidsgresults_1 wdidsgresults_2 b_es_att V_es_att b_es_att_it V_es_att_it
 cap program drop cmpest
@@ -76,23 +77,25 @@ program define cmpest, rclass
   return local bad `bad'
 end
 
-* ---- A1: plain vs cleanmatrices
+* ---- A1: plain vs after clear mata and matrix drop _all
 use `panel', clear
 cap noi wooldid y unit t ttre, att att_it cluster(unit) esprelength(2) espostlength(2) subgroups(s) gteffects
 local rc1a = _rc
 local vs1a "`e(wdid_vcvstate)'"
 qui estimates store a_plain
 use `panel', clear
-cap noi wooldid y unit t ttre, att att_it cluster(unit) esprelength(2) espostlength(2) subgroups(s) gteffects cleanmatrices
+clear mata
+matrix drop _all
+cap noi wooldid y unit t ttre, att att_it cluster(unit) esprelength(2) espostlength(2) subgroups(s) gteffects
 local rc1b = _rc
 local vs1b "`e(wdid_vcvstate)'"
 qui estimates store a_clean
 cmpest a_plain a_clean "`a1mats'"
 local w1 = r(worst)
 local b1 `r(bad)'
-dis "A1: plain rc=`rc1a' state=`vs1a' | cleanmatrices rc=`rc1b' state=`vs1b' | worst mreldif=`w1' problems=[`b1']"
+dis "A1: plain rc=`rc1a' state=`vs1a' | after clear mata rc=`rc1b' state=`vs1b' | worst mreldif=`w1' problems=[`b1']"
 if `rc1a' != 0 | `rc1b' != 0 | "`vs1a'" != "analytic-blocks" | "`vs1b'" != "`vs1a'" | `w1' != 0 | "`b1'" != "" {
-  dis as error "A1 FAIL: cleanmatrices under adopath loading must reproduce the plain run exactly"
+  dis as error "A1 FAIL: a run after clear mata under adopath loading must reproduce the plain run exactly"
   local ++fails
 }
 
@@ -105,27 +108,28 @@ qui estimates store a_after
 cmpest a_plain a_after "`a1mats'"
 local w2 = r(worst)
 local b2 `r(bad)'
-dis "A2: plain after cleanmatrices rc=`rc2' state=`vs2' | worst mreldif=`w2' problems=[`b2']"
+dis "A2: plain again rc=`rc2' state=`vs2' | worst mreldif=`w2' problems=[`b2']"
 if `rc2' != 0 | "`vs2'" != "`vs1a'" | `w2' != 0 | "`b2'" != "" {
-  dis as error "A2 FAIL: a plain run after a cleanmatrices run must reproduce the first plain run"
+  dis as error "A2 FAIL: a plain run after the clear mata run must reproduce the first plain run"
   local ++fails
 }
 
-* ---- A3: permute() + cleanmatrices (the SI-17 combination) completes and matches
+* ---- A3: permute() after clear mata (the SI-17 state) completes and matches
 use `panel', clear
 cap noi wooldid y unit t ttre, att cluster(unit) permute(shuffle) permreps(20) rseed(4242) dots(0)
 local rc3a = _rc
 qui estimates store a_perm
 use `panel', clear
-cap noi wooldid y unit t ttre, att cluster(unit) permute(shuffle) permreps(20) rseed(4242) dots(0) cleanmatrices
+clear mata
+cap noi wooldid y unit t ttre, att cluster(unit) permute(shuffle) permreps(20) rseed(4242) dots(0)
 local rc3b = _rc
 qui estimates store a_permc
 cmpest a_perm a_permc "b wdidmainresults"
 local w3 = r(worst)
 local b3 `r(bad)'
-dis "A3: permute rc=`rc3a' | permute + cleanmatrices rc=`rc3b' | worst mreldif=`w3' problems=[`b3']"
+dis "A3: permute rc=`rc3a' | permute after clear mata rc=`rc3b' | worst mreldif=`w3' problems=[`b3']"
 if `rc3a' != 0 | `rc3b' != 0 | `w3' != 0 | "`b3'" != "" {
-  dis as error "A3 FAIL: permute() with cleanmatrices must complete under adopath loading and match the run without it"
+  dis as error "A3 FAIL: permute() after clear mata must complete under adopath loading and match the run without it"
   local ++fails
 }
 
