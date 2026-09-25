@@ -206,3 +206,22 @@ round1_confirmed.txt (the 16 round-1 confirmations in full), round2_results.json
 lists with the verifiers' results and the held items), edits_applied.json (the 117 edits as applied,
 with each verifier's verdict), oldsyntax_removal_notes.md. Commits: aeec885 (oldsyntax), 16f5392
 (documentation corrections). Not run: the certification suite (documentation and an inert removal).
+
+## 8. Rulings given 2026-09-25 (multiple choice, in session)
+
+| item | ruling | state |
+|---|---|---|
+| coarsecohortcontrols() and ccc_absorb() report the effect at control value zero (F1a, F1b) | **Build the centred model**: each treated cell's slope on the control minus the cell's weighted mean, zero on reference rows; poisson path and the r(3200) retry included | to build |
+| partial dropped dose slopes attenuate the ame (CT-1) | **Drop the cells from the estimation sample** through the estimability checks (treated cohort-period cells with no within-cell variation in the dose), except untreatedZero's all-zero cells; text approved: "Caution: estimability checks found N treated cohort-period cell(s) with no within-cell variation in `contreat', causing them to be dropped." | to build |
+| e(vce) says oim or ols over a robust variance (POIS-1, SEB-05) | **Post robust** (e(vce) robust, e(vcetype) Robust) on the ppmlhdfe path and under pweights without cluster() or robust; oim stays for poisson on the unconditionalse path | to build |
+| one-row-cell containment screen has no ppmlhdfe arm (POIS-2) | **Add the arm**; the vzero remedy list stops offering robust to a run that already has it | to build |
+| permtstat caution trigger (PERM-1) | **Keep cluster() == i** | no change |
+| bootstrap resolution caution at reps() below 40 under bootdisplay(bc) and (bca) | **Skip it under bc and bca** | to build |
+| the seven ES-3 band edits beside the 2026-09-23 band ruling | **Keep the edits** | done (16f5392) |
+| example 0 now clusters by unit with i the onset cohort (SEB-06) | **Keep** | done (16f5392) |
+| deletion candidates (a) | **Delete**: cleanmatrices, bootalpha(), suppresssgprimaryeffects, ties, permrawp, emptycellsoverride, the e(perm_lb_*) and e(perm_ub_*) aliases. **Keep**: permside(), permanalyticse, altmethod_adversarial | to build |
+| new cautions | **Draft and build** CT-2 (lattice borrowed slope, by default), CT-3 (contreatwithin normalisation), ES-3 (analytic band at cluster() >= i), ES-6 (adversarial rank deficiency, df posted), SEB-05 (iid containment: the existing caution's trigger extends to plain OLS, no new text); **not** CT-9 | texts approved, to build |
+| CT-2 text | approved: "Caution: `n' treated cohort-period-by-lattice-bin piece(s) have no within-piece variation in `contreat', so their dose slopes are borrowed from another bin of the same cell and the ame includes those borrowed slopes. Coarsen the lattice or drop the affected cells." | |
+| CT-3 text | approved: "Caution: under contreatwithin, `n' period(s) have no untreated reference rows (`list'), so one treated cell's level effect in each was set to zero and the att there depends on that choice. Rely on the ame results." | |
+| ES-3 text | approved: "Caution: simultaneousbands is built from the analytic covariance with cluster() at the level of i or above, so the band is too narrow. bootstrap() gives a valid band." | |
+| ES-6 text | approved: "Caution: the event-study covariance for the adversarial test is rank-deficient (rank `k1' of `K'), so the test uses only the directions a generalized inverse retains and its degrees of freedom fall to `k1'." | |
