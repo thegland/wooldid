@@ -1986,6 +1986,10 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
     if "`verbose'" != "" dis "`regtype' `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'   `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `wdregvce'  "
     qui `regtype' `y' i.`i' i.`t' `fe'   `trendinjector' `contreatcontrolinserter' `contreatcontrolinserterFE'   `ccc_absorbinserter'   i.`_i'#i.`_t'#i.`targetflag'`contreatinj'  `controls'    `interinject'    `coarsecontrolinserter'  `weightinserter'   if   `ifstatement' ,  `wdregvce'
   }
+  * from here on vcespecifier only feeds e(wdid_vcespec), the header's Standard Errors field.
+  * ppmlhdfe, and reghdfe under pweights, estimated a robust variance without being asked, so
+  * the header names it as e(vce) does. set after the regression, so no command line changes
+  if "`vcespecifier'" == "" & "`unconditionalse'" == "" & ("`poisson'" == "poisson" | "`weight'" == "pweight") local vcespecifier vce(robust)
 
   * save the model; will be useful later
   * register the data-variable obligation with the shell's error-path cleanup epilogue
@@ -2119,10 +2123,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       * estimator's own conditional sampling sd (review_process/blue_sky_2026-09-18/fixprop/
       * proposals_LAT.md s0.3), so bootstrap()/permute() lead and conditional robust standard
       * errors are offered only to a run that has not already asked for a conditional VCE.
-      * impvalues is offered only where it is legal: it refuses without cluster().
+      * impvalues is offered only where it is legal: it refuses without cluster(). poisson on
+      * the ppmlhdfe path already has conditional robust standard errors (ppmlhdfe estimates
+      * them unasked; author ruling 2026-09-25, POIS-2), so it is not offered them either
       local wdr4alt "bootstrap() or permute()"
       if "`amescrubclus'" != "" local wdr4alt "impvalues dispersion inference, `wdr4alt', or a finer-than-cell clustering"
-      if "`amescrubclus'" == "" & "`robust'" == "" & "`customvce'" == "" & "`unconditionalse'" == "" local wdr4alt "`wdr4alt', or conditional robust standard errors"
+      if "`amescrubclus'" == "" & "`robust'" == "" & "`customvce'" == "" & "`unconditionalse'" == "" & "`poisson'" == "" local wdr4alt "`wdr4alt', or conditional robust standard errors"
       * both clauses are stated per case. on an exactly zero covariance the standard errors
       * really are missing. under the residue floor both would be false as written: the matrix
       * is not all zeros, and the standard errors print as numbers of order 1e-15
@@ -2382,8 +2388,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         cap drop `gtcct'
       }
       * a customvce() whose first word is robust (or an abbreviation of it), hc2 or hc3 is the
-      * same heteroskedasticity-robust meat as robust and shares its blind spot: a one-row cell
-      else if "`robust'" != "" | "`weight'" == "pweight" | inlist("`gtccvw'", "hc2", "hc3") | ("`gtccvw'" != "" & strpos("robust", "`gtccvw'") == 1) {
+      * same heteroskedasticity-robust meat as robust and shares its blind spot: a one-row cell.
+      * so is poisson on the ppmlhdfe path (no unconditionalse, no customvce()), which estimates a
+      * robust variance unasked (author ruling 2026-09-25, POIS-2). this arm sits below the
+      * cluster branch, so poisson with cluster() keeps the cluster count
+      else if "`robust'" != "" | "`weight'" == "pweight" | inlist("`gtccvw'", "hc2", "hc3") | ("`gtccvw'" != "" & strpos("robust", "`gtccvw'") == 1) | ("`poisson'" == "poisson" & "`unconditionalse'" == "" & "`customvce'" == "") {
         local gtcmode observation
         local gtcvce heteroskedasticity-robust
         tempvar gtcct2
@@ -5112,7 +5121,16 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       ereturn local vce `wdvce1'
       if !inlist("`wdvce1'", "ols", "oim", "opg", "unadjusted") ereturn local vcetype Robust
     }
-    else ereturn local vce = cond("`poisson'" == "poisson", "oim", "ols")
+    * reaching here means no unconditionalse, cluster(), robust or customvce(), so poisson ran
+    * on ppmlhdfe, which estimates a robust variance whatever it is asked, and pweights make
+    * reghdfe do the same. both are labelled what they are (author ruling 2026-09-25, POIS-1
+    * and SEB-05; the numbers were already robust and do not move). oim is left only to a
+    * customvce(oim), on the arm above
+    else if "`poisson'" == "poisson" | "`weight'" == "pweight" {
+      ereturn local vce robust
+      ereturn local vcetype Robust
+    }
+    else ereturn local vce ols
   }
 
   * return the joint  tests
@@ -7505,12 +7523,15 @@ version 16.0
   * this program and exits with error 459 - so a run that never executes is not advised about
   * its p-value resolution, and outside the cluster() block so it fires on every bootstrap()
   * run, clustered or not: the grid is set by reps() alone, not by the resampling unit. keep
-  * it here, above the few-cluster cautions in wooldid_bootrun
+  * it here, above the few-cluster cautions in wooldid_bootrun. the grid branch is skipped
+  * under bootdisplay(bc) and (bca): those p-values invert a shifted interval and sit off the
+  * 2/reps grid, as 27e277d and 6adca1b already say in the footer (author ruling 2026-09-25,
+  * no text change)
   if `reps' > 0 {
     local wdbgrid = cond("`bts'" != "", 2/(`reps' + 1), cond("`bdisp'" == "wald", 1/(`reps' + 1), 2/`reps'))
     if `wdbgrid' > .05 & "`bts'" != "" dis as text "Caution: with reps(`reps') the smallest studentized coefficient p-value this run can produce is " %5.3f `wdbgrid' " (2/(reps + 1)), above .05, so no coefficient p-value can reject at the 5% level; a p-value printed at that value is the resolution limit rather than evidence. Use at least 39 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002); failed replications are excluded, so the realized resolution can be coarser."
     else if `wdbgrid' > .05 & "`bdisp'" == "wald" dis as text "Caution: with reps(`reps') the joint, equality and adversarial p-values - one-sided add-one shares over their own completed replication counts - cannot fall below " %5.3f `wdbgrid' " (1/(reps + 1)), above .05, so none of them can reject at the 5% level; the coefficient p-values under bootdisplay(wald) are analytic and carry no such limit. Use at least 19 replications for a 5% joint test (roughly 50 for .02, 100 for .01 and 500 for .002); failed replications are excluded, so the realized resolution can be coarser."
-    else if `wdbgrid' > .05 dis as text "Caution: with reps(`reps') the coefficient p-values fall on a grid of " %5.3f `wdbgrid' " (2/reps), so the only value below .05 this run can produce is exactly 0, which records that no completed replication reached the far side of the null rather than strong evidence. Use at least 40 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002); failed replications are excluded, so the realized grid can be coarser. The joint, equality and adversarial p-values have floor 1/(reps + 1)."
+    else if `wdbgrid' > .05 & !inlist("`bdisp'", "bc", "bca") dis as text "Caution: with reps(`reps') the coefficient p-values fall on a grid of " %5.3f `wdbgrid' " (2/reps), so the only value below .05 this run can produce is exactly 0, which records that no completed replication reached the far side of the null rather than strong evidence. Use at least 40 replications for a 5% test (roughly 100 for .02, 200 for .01 and 1000 for .002); failed replications are excluded, so the realized grid can be coarser. The joint, equality and adversarial p-values have floor 1/(reps + 1)."
   }
 
 end

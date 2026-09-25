@@ -955,7 +955,7 @@ taken over the post-treatment rows ({it:relyr} at or above 0) or the pre-treatme
 {it:relyr}, it reproduces the event-study row under {it:w_att} or {it:w_att_it} only. {it:att_i} and {it:att_itime} report the {it:att_it} event study, so under {it:w_att_i} or
 {it:w_att_itime} a single {it:relyr} gives a custom aggregate that no reported row matches. The table therefore supports
 custom aggregations. With {it:subgroups()} a single full-sample table is returned. Standard errors are the regression's coefficient-level
-ones: with {it:cluster()} at the level of {it:i} or coarser a treated cell lies inside a single cluster, and under {it:robust}, pweights or a robust {it:customvce()} a cell may hold a single observation; either way its standard error is understated, which a caution reports; a cell whose
+ones: with {it:cluster()} at the level of {it:i} or coarser a treated cell lies inside a single cluster, and under {it:robust}, pweights, a robust {it:customvce()} or {it:poisson} on {it:ppmlhdfe}, whose variance is always robust, a cell may hold a single observation; either way its standard error is understated, which a caution reports; a cell whose
 variance is not identified is reported with a missing standard error. Not available with {it:contreat()}, where the cohort-by-period coefficients are dose-zero intercepts rather than
 treatment effects; available under {it:fastnose}; under {it:bootstrap()} the cell inference is bootstrap-based, but a cell the caution counts is resampled whole, so its standard error stays understated; under {it:permute()} the cells carry no inference. {p_end}
 
@@ -1039,7 +1039,7 @@ fixed effects in {it:fe()} meets condition Two, and a {it:cluster()} strictly fi
 {synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument. Not posted under {it:impvalues}.{p_end}
 
 {synopt:{it:e(gteffects)}} The cohort-by-relative-period table produced by the {it:gteffects} option; see that option for the column layout. {it:e(gt_ncontained)} counts the cells
-lying wholly inside a single cluster (a single observation under {it:robust}, pweights or a {it:customvce()} of robust, hc2 or hc3), whose standard errors are understated, and is posted only when such cells exist; on the same rule {it:e(gt_ndegen)} counts cells whose variance is not
+lying wholly inside a single cluster (a single observation under {it:robust}, pweights, a {it:customvce()} of robust, hc2 or hc3, or {it:poisson} on {it:ppmlhdfe}), whose standard errors are understated, and is posted only when such cells exist; on the same rule {it:e(gt_ndegen)} counts cells whose variance is not
 identified.{p_end}
 
 {synopt:{it:e(escomp)}} Event-study composition diagnostics, one row per reported horizon, aligned with the event-study rows of {it:e(wdidmainresults)}: {it:ncohorts},
@@ -1083,6 +1083,7 @@ them (see {help wooldid##continuous:contreat()}). Posted only when such cells ex
 
 {synopt:{it:e(N)}, {it:e(N_dropped)}, {it:e(Nclus)}} Estimation sample observation count, number of observations dropped from initially specified sample, and cluster count.
 {it:e(N_clust)}, {it:e(clustvar)}, {it:e(vce)} and {it:e(vcetype)} are the conventional variance-type entries, posted so that {it:estout} and {it:esttab} find what they expect;
+under {it:poisson} or pweights without {it:cluster()}, {it:robust}, {it:customvce()} or {it:unconditionalse} they read {it:robust} and {it:Robust}, the variance the regression estimates there;
 {it:e(vce_stage1)} records the first-stage type under {it:unconditionalse}. {it:e(level)} holds the confidence level in force, and {it:e(df_r)} the degrees of freedom of the reported t statistics. Under {it:cluster()}, or a {it:customvce()} of cluster, that is one less than the number of clusters, and under multi-way {it:cluster()} one less than the smallest cluster count. Otherwise it is the residual degrees of freedom. Under {it:poisson} it is missing, since the statistics are z. Under {it:bootstrap()} it follows {it:bootdf()} instead. Under {it:impvalues} {it:e(df_r)} is the smallest of the
 per-estimate values, which {it:e(imdf_min)} and {it:e(imdf_max)} bracket. {p_end}
 

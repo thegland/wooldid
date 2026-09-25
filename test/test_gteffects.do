@@ -270,6 +270,50 @@ if `rc12a' != 0 | `rc12b' != 0 | `nc12a' >= . | `nc12a' < 1 | `nc12b' != `nc12a'
   local ++fails
 }
 
+* ---- G12c (author ruling 2026-09-25, POIS-2): poisson on the ppmlhdfe path estimates a robust
+* variance unasked, so its one-row cells have robust's blind spot and must be counted as robust
+* counts them. a strictly positive count outcome keeps every one-row cell out of separation.
+* G12d: with cluster() the cluster branch still counts (the arm sits below it). G12e: on the
+* customvce(oim) path the variance is model-based and nothing is counted ----
+use "`DATA'/dta_path_onepercell", clear
+qui su y
+qui gen long gtyc = round(y - r(min)) + 1
+tempfile gt12pois
+qui save `gt12pois'
+qui log using gt_g12c.txt, text replace name(gt12c)
+cap noi wooldid gtyc i t ttre, att poisson esprelength(1) espostlength(1) gteffects
+local rc12c = _rc
+qui log close gt12c
+local nc12c = e(gt_ncontained)
+local vce12c "`e(vce)'"
+local cau12c = strpos(fileread("gt_g12c.txt"), "e(gteffects) cell(s) lie wholly inside a single observation") > 0
+cap erase gt_g12c.txt
+use `gt12pois', clear
+qui log using gt_g12d.txt, text replace name(gt12d)
+cap noi wooldid gtyc i t ttre, att poisson cluster(i) esprelength(1) espostlength(1) gteffects
+local rc12d = _rc
+qui log close gt12d
+local nc12d = e(gt_ncontained)
+local cau12d = strpos(fileread("gt_g12d.txt"), "e(gteffects) cell(s) lie wholly inside a single cluster") > 0
+cap erase gt_g12d.txt
+use `gt12pois', clear
+cap noi wooldid gtyc i t ttre, att poisson customvce(oim) esprelength(1) espostlength(1) gteffects
+local rc12e = _rc
+local nc12e = e(gt_ncontained)
+dis "G12c: poisson rc=`rc12c' ncontained=`nc12c' (robust count `nc12a') caution=`cau12c' vce=`vce12c' | G12d cluster(i) rc=`rc12d' ncontained=`nc12d' caution=`cau12d' | G12e customvce(oim) rc=`rc12e' ncontained=`nc12e'"
+if `rc12c' != 0 | `nc12c' != `nc12a' | `cau12c' != 1 | "`vce12c'" != "robust" {
+  dis as error "G12c FAIL: poisson on ppmlhdfe must count the one-observation cells as robust does"
+  local ++fails
+}
+if `rc12d' != 0 | `nc12d' >= . | `nc12d' < 1 | `cau12d' != 1 {
+  dis as error "G12d FAIL: poisson with cluster(i) must keep the cluster count and its caution"
+  local ++fails
+}
+if `rc12e' != 0 | `nc12e' < . {
+  dis as error "G12e FAIL: poisson with customvce(oim) must count nothing"
+  local ++fails
+}
+
 * ---- G13 (round 2, gteffects-table-format-and-floor; author ruling 2026-09-23): the printed
 * gteffects table takes the PS-3 per-column formats of the main, subgroup and pairwise tables
 * (wooldid_mlfmt), so p prints to three decimals and relyr as an integer. It used

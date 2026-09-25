@@ -1004,6 +1004,8 @@ local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
 local g30line = strpos(`"`lg'"', "p = 0 above means") > 0
 local g30res = strpos(`"`lg'"', "have resolution 2/") > 0
 local g30jt = strpos(`"`lg'"', "The joint, equality and adversarial p-values are add-one") > 0
+* G39h (author ruling 2026-09-25): the reps() grid caution is skipped under bc, checked below
+local g39hbc = strpos(`"`lg'"', "fall on a grid of") > 0
 di "G30g bc: att p = `p30g', p = 0 line `g30line', resolution clause `g30res', joint-test sentence `g30jt'"
 if `p30g' != 0 | `g30line' | `g30res' | !`g30jt' {
   di as error "G30g FAIL: under bootdisplay(bc) the p = 0 line and the resolution clause must be omitted and the joint-test sentence kept (att p `p30g', line `g30line', clause `g30res', joint `g30jt')"
@@ -1029,12 +1031,22 @@ local lg = subinstr(`"`lg'"', char(10) + "> ", "", .)
 local g30line = strpos(`"`lg'"', "p = 0 above means") > 0
 local g30res = strpos(`"`lg'"', "have resolution 2/") > 0
 local g30jt = strpos(`"`lg'"', "The joint, equality and adversarial p-values are add-one") > 0
+local g39hbca = strpos(`"`lg'"', "fall on a grid of") > 0
 di "G30h bca: att p = `p30h', accel = `a30h', p = 0 line `g30line', resolution clause `g30res', joint-test sentence `g30jt'"
 if `p30h' != 0 | `a30h' >= . | `g30line' | `g30res' | !`g30jt' {
   di as error "G30h FAIL: under bootdisplay(bca) the p = 0 line and the resolution clause must be omitted and the joint-test sentence kept (att p `p30h', accel `a30h', line `g30line', clause `g30res', joint `g30jt')"
   global BOOTG_FAILS = ${BOOTG_FAILS} + 1
 }
 cap erase boot_gates_g30.txt
+* G39h (author ruling 2026-09-25): the parse-time reps() caution that puts the coefficient
+* p-values on the 2/reps grid is skipped under bootdisplay(bc) and (bca), whose p-values sit off
+* that grid (27e277d, 6adca1b). Both G30g and G30h ran at reps(10), where it used to print;
+* G39a above keeps it under percentile
+di "G39h grid caution under bc=`g39hbc' bca=`g39hbca'"
+if `g39hbc' | `g39hbca' {
+  di as error "G39h FAIL: the 2/reps grid caution printed under bootdisplay(bc) or (bca) (bc=`g39hbc' bca=`g39hbca')"
+  global BOOTG_FAILS = ${BOOTG_FAILS} + 1
+}
 
 * G31 (F059/F063/F066, 2026-09-06) the reproducibility record and the resample columns:
 * e(boot_rngstate) is posted with or without rseed() and replays the draws exactly; the

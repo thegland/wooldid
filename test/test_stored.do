@@ -7,7 +7,9 @@
 * S2  PS-1: a clustered run posts e(N_clust), e(clustvar), e(vce)=cluster,
 *     e(vcetype)=Robust alongside the existing e(Nclus)
 * S3  PS-1: an unclustered OLS run posts e(vce)=ols and no e(clustvar); a poisson run
-*     posts e(vce)=oim
+*     posts e(vce)=robust, e(vcetype)=Robust (ruling 2026-09-25, POIS-1: ppmlhdfe's
+*     variance is robust unasked), and so does a pweighted linear run (SEB-05); the
+*     header's e(wdid_vcespec) says vce(robust) on both; customvce(oim) still posts oim
 * S4  PS-1: a bootstrap run relabels the variance as bootstrap/Bootstrap
 * S5  CS-54: e(boot_percentile_mainresults) exists and is element-identical to the
 *     legacy e(boot_pctl_mainresults)
@@ -93,12 +95,34 @@ local cvar3 = "`e(clustvar)'"
 use `panel', clear
 cap qui wooldid ycount unit t ttre, att poisson esprelength(2) espostlength(2)
 local rc3p = _rc
-local vce3p = "`e(vce)'"
-if "`vce3'" != "ols" | "`cvar3'" != "" | (`rc3p' == 0 & "`vce3p'" != "oim") {
-  dis as error "S3 FAIL: ols run vce=`vce3' clustvar=`cvar3'; poisson rc=`rc3p' vce=`vce3p'"
+local vce3p = "`e(vce)'|`e(vcetype)'|`e(wdid_vcespec)'"
+tempname b3p v3p
+if `rc3p' == 0 {
+  matrix `b3p' = e(b)
+  matrix `v3p' = e(V)
+}
+* the same poisson run with robust typed: the label was the only difference, so the numbers
+* must agree bit for bit
+use `panel', clear
+cap qui wooldid ycount unit t ttre, att poisson robust esprelength(2) espostlength(2)
+local rc3r = _rc
+local d3r = .
+if `rc3p' == 0 & `rc3r' == 0 local d3r = mreldif(`b3p', e(b)) + mreldif(`v3p', e(V))
+* pweights force a robust variance on the linear path
+use `panel', clear
+gen double pw = 1 + mod(unit, 3)
+qui wooldid y unit t ttre [pw=pw], att esprelength(2) espostlength(2)
+local vce3w = "`e(vce)'|`e(vcetype)'|`e(wdid_vcespec)'"
+* customvce(oim) under poisson keeps oim, on the customvce arm
+use `panel', clear
+cap qui wooldid ycount unit t ttre, att poisson customvce(oim) esprelength(2) espostlength(2)
+local rc3o = _rc
+local vce3o = "`e(vce)'|`e(vcetype)'"
+if "`vce3'" != "ols" | "`cvar3'" != "" | `rc3p' != 0 | "`vce3p'" != "robust|Robust|vce(robust)" | `rc3r' != 0 | `d3r' != 0 | "`vce3w'" != "robust|Robust|vce(robust)" | `rc3o' != 0 | "`vce3o'" != "oim|" {
+  dis as error "S3 FAIL: ols run vce=`vce3' clustvar=`cvar3'; poisson rc=`rc3p' vce=`vce3p' (robust-typed rc=`rc3r' reldif=`d3r'); pweight vce=`vce3w'; customvce(oim) rc=`rc3o' vce=`vce3o'"
   local ++fails
 }
-else dis as result "S3 PASS: unclustered vce=`vce3' (no clustvar); poisson rc=`rc3p' vce=`vce3p'"
+else dis as result "S3 PASS: unclustered vce=`vce3' (no clustvar); poisson vce=`vce3p' (same numbers as robust typed); pweight vce=`vce3w'; customvce(oim) vce=`vce3o'"
 
 * ---- S4/S5/S7b bootstrap
 use `panel', clear
