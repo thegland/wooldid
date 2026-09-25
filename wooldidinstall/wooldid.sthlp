@@ -142,7 +142,7 @@ For more on the different estimand-types available, see {help wooldid##specifyes
 {pstd} With respect to inference, there are several approaches to standard error estimation available. The default estimates standard errors in the underlying regression and then obtains
 standard errors on the treatment effects produced by the margins calculation using the delta method. These errors are conditional standard errors in the sense that they are conditional
 on the data: the difference in fitted values potentially depends on the value of various covariates, and this approach takes these values as fixed when performing the margins calculation.
-P-values are then obtained from a t-distribution with the residual degrees of freedom of the underlying regression.
+P-values are then obtained from a t-distribution with the degrees of freedom the underlying regression reports. Under {it:cluster()}, or a {it:customvce()} of cluster, that is one less than the number of clusters, and under multi-way {it:cluster()} one less than the smallest cluster count. Otherwise it is the residual degrees of freedom. Under {it:poisson} the regression reports none, and p-values come from the normal distribution.
 The alternative is to have {it:margins} produce unconditional standard errors (see the option {it:unconditional} in {help margins}), which account for sampling variation in covariates.
 For more on standard error computation, see {help wooldid##standarderrors:standard_errors}. {p_end}
 
@@ -174,7 +174,8 @@ within i-t cells, estimates of the effect of the continuous treatment variable c
 heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed.
 Note that this approach is a bit speculative and is not covered in Wooldridge (2025), though Wooldridge has
 {browse "https://twitter.com/jmwooldridge/status/1695115782739435922?s=61&t=pXC6R4euc7LaN6MMB5VApQ":informally suggested}
-handling continuous treatments using interactions between treated cell indicators and the continuous treatment variable. {p_end}
+handling continuous treatments using interactions between treated cell indicators and the continuous treatment variable. These within-cell effects compare units that
+received different doses. Reading them as the effect of a larger dose needs more than parallel trends; see {help wooldid##continuous:continuous_treatment}. {p_end}
 
 {pstd} The particular modification to the underlying regression used for estimation in the continuous treatment context is as follows: {p_end}
 {p2col 5 8 8 0 : Step 1 (Continuous):} Y_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt)) {p_end}
@@ -248,10 +249,14 @@ sample weight, so {it:att_i} and {it:att_itime} then no longer weight units equa
 {phang}{opt clus:ter(clusvars)}: Variable(s) specifying clustering level. Clustered standard errors are computed analytically. By default,
 regression estimation using this option will rely on either {help reghdfe} or, for poisson, {help ppmlhdfe}. Several variables give multi-way clustering on
 this default path; {it:unconditionalse}, {it:impvalues}, {it:bootstrap()} and {it:permute()} each require a single cluster variable. A cluster variable that leaves
-fewer than two clusters in the estimation sample stops the run with an error; a finer cluster variable, {it:robust} or {it:fastnose} are the ways out. {p_end}
+fewer than two clusters in the estimation sample stops the run with an error; a finer cluster variable, {it:robust} or {it:fastnose} are the ways out. Cluster at the level at which treatment is assigned, or coarser, and never below the unit whose rows are
+correlated over time. A state policy studied on county data needs {it:cluster(state)}, not {it:cluster(county)}. The discussion of what level to cluster at below adds a
+second condition specific to {it:wooldid}. {p_end}
 
 {phang}{opt rob:ust}: Heteroskedasticity robust standard errors; relevant only if cluster() is not specified. By default, regression estimation using this
-option will rely on either {it:reghdfe} or, for poisson, {it:ppmlhdfe}. {p_end}
+option will rely on either {it:reghdfe} or, for poisson, {it:ppmlhdfe}. Without {it:cluster()}, {it:robust} or {it:customvce()}, the linear regression reports conventional
+standard errors. These assume independent, homoskedastic errors. With pweights, or under {it:poisson}, the default is robust instead. None of these defaults allows for
+correlation within a unit over time. On panel data they usually overstate precision. Specify {it:cluster()} at the level at which treatment is assigned. {p_end}
 
 {phang}{opt uncond:itionalse}: Compute standard errors that account for sampling variation in covariates. This option also forces {it:wooldid} to abandon
 high dimensional fixed effect estimation packages for the underlying two-way fixed effect regression in favor of the commands {it:regress} and {it:poisson}.
@@ -298,8 +303,10 @@ result. {p_end}
 
 {phang}{opt simult:aneousbands}: Compute a simultaneous (sup-t) confidence band over each event study's horizons at {it:level()}, which covers every horizon of the
 family at once with that probability. The printed table keeps its pointwise intervals; the band endpoints are stored in {it:e(esband_*)} and drawn as a dashed pair on
-the event study plots. Without {it:bootstrap()} the band is simulated from the family's analytic event study covariance. Where the regression has residual degrees
+the event study plots. Without {it:bootstrap()} the band is simulated from the family's analytic event study covariance. Where the regression reports degrees
 of freedom it uses the same t distribution as the pointwise intervals. With {it:bootstrap()} it is taken from the replications.
+With {it:cluster()} at or above the level of {it:i} the standard errors in the analytic covariance are understated, so the band built without {it:bootstrap()} is too
+narrow, and no caution says so. Use {it:bootstrap()} or a {it:cluster()} strictly finer than the cohort-by-period cells there.
 Refused with {it:permute()}, whose multiplicity tool is {it:permstepdown} instead. No band is built under {it:fastnose} or for a family with fewer than
 two horizons with a usable variance, and a caution says so. {p_end}
 
@@ -313,7 +320,11 @@ With {it:cluster()} at the level of {it:i} or coarser, each treated cohort-by-pe
 cluster-robust covariance nothing within the cluster to identify. Several consequences are specific to {it:wooldid}: the analytic standard errors of the continuous treatment
 ({it:ame}) estimates are not identified and are reported as missing; the analytic joint pre-trend tests and the adversarial line test are not calibrated; pairwise
 subgroup contrasts can be degenerate; and the {it:att} rows' analytic standard errors are understated without a caution, the {it:gteffects} cells more so (a {it:gteffects} run counts the
-affected cells and cautions). The remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}. {p_end}
+affected cells and cautions). The analytic {it:simultaneousbands} band is scaled by those understated standard errors, so it is too narrow, also without a caution.
+The remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}; for the band only the first two, since
+{it:permute()} refuses it. A finer {it:cluster()} is a remedy only when it still sits at or above the level at which treatment is assigned (see {it:cluster()}). When no
+such level is finer than the cells, use {it:bootstrap()} or {it:permute()}. For the {it:gteffects} cells only the finer {it:cluster()} is a remedy. A cell inside one cluster
+is resampled whole, so its bootstrap standard error is understated too, and under {it:permute()} the cells carry no inference. {p_end}
 
 {pstd} {ul: Discussion of Unconditional Standard Errors:}
 The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates
@@ -323,8 +334,10 @@ in those observed values (i.e., unconditional standard errors; see the discussio
 covariates as fixed likely varies from context to context. {p_end}
 
 {pstd} Does using unconditional standard errors make a large difference? Wooldridge (2025) expresses the view that conditional and unconditional standard errors often should be similar.
-Intuitively, this ought to be true whenever samples are large enough that sampling variation in covariates is ignorable (more precisely, ignorable within cohort-time period cells).
-Unconditional standard errors may be more impactful, however, when samples are small, or when sample weights make particular observations very influential. Additionally, when
+They are similar when treatment effects vary little across cohort-time period cells, covariate values and treatment intensities.
+Where effects are heterogeneous the unconditional standard errors are larger, and the ratio between them does not shrink as the sample grows. The conditional standard errors describe
+the effect averaged over the treated observations in the sample. The unconditional standard errors describe the population average. Unconditional standard errors may also be
+more impactful when sample weights make particular observations very influential. Additionally, when
 using unconditional standard errors, subgroup-specific estimates (as obtained using {it:subgroups()} or when computing event study estimates) can be sensitive to data from observations
 outside the focal subgroup. On a technical basis, this is because {it:wooldid} uses the {it:subpopulation} features in {it:margins} when producing these subgroup estimates. {p_end}
 
@@ -441,7 +454,7 @@ equal-tailed quantiles of the permutation distribution. By default the run and t
 and {it:e(V)}, {it:e(b_es_*)} and {it:e(V_es_*)} are not posted; {it:permanalyticse} restores them. Quantities with no permutation distribution are left blank rather than filled
 analytically: the {it:gteffects} cells, whose keys are the onsets the replications reassign, and the continuous-treatment plot cells of the {it:baseTreated}, {it:byTreated} and {it:byTtre}
 lattice types. The {it:histogramcohorteffects} output is untouched: it draws the observed point estimates, which the permutations do not change. Replications that fail to estimate are excluded and counted in {it:e(perm_failed)}; the run is refused
-when fewer than max(20, half) complete. A caution prints when fewer than 6 clusters are ever treated, since the set of distinct assignments is then small whatever {it:permreps()} is. {p_end}
+when fewer than max(20, half) complete. A caution prints when fewer than 6 clusters are ever treated. With so few treated clusters the test's size rests on their being exchangeable in assignment with the others, and a few atypical treated clusters can mis-size it. Few treated clusters do not by themselves make the possible assignments few. Their number is in {it:e(perm_npossible)}. Under {it:permute(shuffle)} without {it:permstrata()} it is small only when there are few clusters in all or only one or two are treated, and strata make it smaller. {p_end}
 
 {phang}{opt permreps(#)}: Number of sampled reassignments, drawn with replacement; at least 20. Required unless {it:permexact} is specified. A sampled-draw p-value cannot fall below
 2/({it:permreps}+1) under the default convention, or 1/({it:permreps}+1) under {it:permabsp} or {it:permside()}, and a caution prints when that floor is above .05. A caution also prints when
@@ -461,8 +474,9 @@ probability under the design. {p_end}
 
 {phang}{opt permts:tat}: Randomize on t-ratios instead of coefficients: each replication's estimate over its own analytic standard error. The replications then compute standard errors, so
 the run is slower, and {it:fastnose} is refused. Intervals become the estimate minus the equal-tailed quantiles of the permuted t-ratios times the analytic standard error. The joint,
-equality and adversarial tests and the pairwise contrasts are unchanged. It protects against a treated cluster with unusually dispersed errors only where the cluster-robust standard error
-sees that cluster's own variance, which at {it:cluster()} equal to {it:i} it does not; a caution says so. {p_end}
+equality and adversarial tests and the pairwise contrasts are unchanged. It protects against a treated cluster with unusually dispersed errors only where each
+treated cohort-period cell contains several clusters. Under {it:permute()} that needs {it:permonsetcohorts} with a {it:cluster()} finer than {it:i}. Whenever {it:cluster()} nests {it:i} it does not protect,
+and at {it:cluster()} equal to {it:i} a caution says so. {p_end}
 
 {phang}{opt permt:ci}: Also report, for the pooled estimands, the symmetric inverted-|t| interval: the estimate plus or minus the {it:level()} quantile of the permuted absolute t-ratios
 times the observed standard error. Implies {it:permtstat}. {p_end}
@@ -481,7 +495,7 @@ or above it. The intervals stay the two-sided shift intervals. {p_end}
 draw reached the observed statistic; intervals are those of {it:permabsp}. {p_end}
 
 {phang}{opt permstep:down}: Report, for each family of two or more horizons, the Romano and Wolf max-|studentized| step-down computed from the same replications, which controls the
-family-wise error rate across the horizons. Post-treatment and pre-treatment horizons are adjusted as separate families. Results are stored in {it:e(perm_stepdown*)} and summarised in the
+family-wise error rate across the horizons under the sharp null of no effect at any horizon. Post-treatment and pre-treatment horizons are adjusted as separate families. Results are stored in {it:e(perm_stepdown*)} and summarised in the
 footer; a family whose step-down cannot be formed is silently not posted. {p_end}
 
 {phang}{opt permsa:ve(name)}: Write the permutation draws to {it:name}.dta in the working directory; {it:name} is a plain file name, and an existing file needs {it:replace}. One row per replication plus a row 0 with the
@@ -586,7 +600,8 @@ under the normal reference, both at the 5% level), and the bias such a trend wou
 Requires {it:esfixedbaseperiod} and at least one pre-treatment event-study coefficient. Refused with {it:impvalues}, {it:fastnose} and {it:permute()}, none of which produces the event-study covariance the diagnostics use; under
 {it:bootstrap()} the diagnostics use the bootstrap covariance. With {it:subgroups()} only the overall event studies are analysed, and when only {it:att_i} or {it:att_itime} is
 requested the reported block is the {it:att_it} event study. The diagnostics are skipped with a caution when the pre-period covariance block is unavailable (as under
-{it:timetrends}) or ill-conditioned. The {it:mdt_nis} column is computed for up to 4 pre-periods; for larger designs, pass {it:e(b_es_type)}, {it:e(V_es_type)} and
+{it:timetrends}) or ill-conditioned. When the block has partial rank, the diagnostics run on a generalized inverse under a caution; a singleton-cell design is the usual cause (see
+condition Two under {it:e(V_es_type)} in {help wooldid##output:Working with Output}). The {it:mdt_nis} column is computed for up to 4 pre-periods; for larger designs, pass {it:e(b_es_type)}, {it:e(V_es_type)} and
 {it:e(numpre_type)} to Roth's {help pretrends} package. Results are returned in {it:e(roth_power_type)} and companion scalars (see {help wooldid##output:Working with Output}). {p_end}
 
 {phang}{opt makep:lots}: Produce event study plots. No plot is drawn unless at least one event-study horizon is requested. {it:wooldid} names its graphs (for example
@@ -603,8 +618,9 @@ treatment count as treated periods rather than as clean pre-treatment periods. T
 {it:wooldid} with {it:ttre} replaced by {it:ttre} minus # (the convention of {it:did_imputation}'s {it:shift()} option): relative period 0 is # periods before the recorded
 onset, so you may wish to raise {it:espostlength()} by # to keep the same number of genuine post-treatment horizons. The value is expressed in the units of {it:t}, so on a
 biennial panel an odd value lands between observed periods and {it:wooldid} prints a caution. Units whose effective onset falls at or before their first usable period are dropped,
-with a caution; under {it:esfixedbaseperiod} the same applies to units whose shifted reference period is unusable. Too small a value leaves a visible residual pre-trend, while too
-large a value attenuates the estimated effects without any diagnostic, so prefer the smallest defensible value. With {it:subgroups(ttre)} the subgroup labels remain the recorded
+with a caution; under {it:esfixedbaseperiod} the same applies to units whose shifted reference period is unusable. Too small a value leaves anticipation in the reference period, which shows in the pre-treatment horizons when they are requested. Too
+large a value keeps the pre-trends clean but attenuates the pooled estimates, and the first post-treatment horizons, which then fall before any response, read near zero.
+A run without an event study shows neither, so request one and prefer the smallest defensible value. With {it:subgroups(ttre)} the subgroup labels remain the recorded
 onset values. The shift is recorded in {it:e(anticipation)}. Negative values are not allowed. {p_end}
 
 {pstd}{ul: Two Approaches to Estimation -- Pooled Reference Period vs Fixed Reference Period:} Difference-in-differences treatment effect estimates involve comparing average outcomes during
@@ -614,13 +630,21 @@ meaning that treated periods for a given cohort are compared to a reference peri
 in post-treatment periods to their outcomes in a particular pre-treatment reference period (specified in relative time period terms). By default, this pre-treatment reference period is the
 time period immediately prior to treatment (relative period -1), though the user can specify alternative behavior. For more on how this is implemented, see {help wooldid##description:Description}.{p_end}
 
+{pstd} The choice also changes the comparison group. Under the pooled reference period every untreated observation serves as a control. That includes never-treated cohorts, cohorts treated after the end of the sample,
+and the pre-treatment periods of cohorts not yet treated, apart from any pre-treatment horizons the run asks for. Parallel trends and no anticipation must then hold across all of those periods. Under {it:esfixedbaseperiod}
+each treated cohort's pre-treatment periods other than the reference period carry their own indicators, and the reference period only anchors that cohort's own level. If {it:timetrends} is also specified, the period immediately before the
+reference period carries no indicator either, and the two together anchor the cohort's level and trend. The period effects then come from never-treated cohorts and cohorts treated after the end of the sample alone. Cohorts not yet treated
+do not serve as controls. Parallel trends is needed only between each treated cohort and those cohorts, from the reference period on. This is the never-treated comparison of Callaway and Sant'Anna (2021)
+and Sun and Abraham (2021). The pooled default instead matches the imputation estimator of Borusyak, Jaravel, and Spiess (2023) under the conditions given in
+{help wooldid##comparison:Comparison with Related Estimators}. {p_end}
+
 {pstd} With respect to which type of reference period should be used, fixed reference periods offer the virtue of transparency: all treated cohorts are compared to one reference period,
 which is the same for all cohorts in relative time terms. By contrast, pooled reference periods can be more opaque, with different cohorts having reference periods that contain
 varying numbers of time periods. In exchange for reduced transparency, pooled reference periods offer the possibility of greater precision in treatment effect estimates, owing
 to the fact that they pool together more data and thus have greater opportunity to average out idiosyncratic variation in outcomes within the reference period. {p_end}
 
-{pstd} While there is no general solution to this transparency-precision tradeoff, use of a pooled reference period is likely disadvantageous whenever the outcome variable
-is evolving over time within the pre-treatment period. It also tends to be disadvantageous when one is seeking to estimate more pre-treatment event study style treatment effects
+{pstd} While there is no general solution to this tradeoff, use of a pooled reference period is likely disadvantageous whenever the outcomes of treated cohorts
+evolve differently from those of the comparison cohorts within the pre-treatment period. Trends shared by all cohorts are absorbed by the time fixed effects. It also tends to be disadvantageous when one is seeking to estimate more pre-treatment event study style treatment effects
 than can be estimated for all cohorts, as can occur if one has staggered treatment onset and wants to estimate the largest number of pre-treatment coefficients possible. In this case,
 cohorts with fewer observed pre-treatment periods will have their earliest observed period set as their reference period, even if this period is a period for which treatment effects are
 reported for other cohorts. If this issue combines with cohorts not being on the same outcome trends, the resulting event study plots may show treatment effect time paths that evolve in
@@ -669,9 +693,12 @@ the {it:missing} option matters, since without it rows with a missing subgroup v
 {it:att_i} and {it:att_itime} average over the split pseudo-units rather than over the original units. {p_end}
 
 {pstd} A special case to consider is the difference-in-differences-in-differences (triple diff) case. In the triple diff case, all cohorts are categorized into two groups, with both groups
-existing among treated cohorts and control cohorts. The target estimand may be thought of as the difference in the diff-in-diff estimates obtained separately for each of the two groups. To
-implement a triple diff design in {it:wooldid}, one can specify the variable containing the two triple diff groups as a SG variable and then manually specify inclusion of SG by period
-fixed effects (i.e., specifying {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}). The difference in SG level estimates returned will be the triple diff estimate. {p_end}
+existing among treated cohorts and control cohorts. The target estimand is the difference between the diff-in-diff estimates obtained separately for each of the two groups. To
+implement a triple diff design in {it:wooldid}, define {it:i} as the treatment onset cohort by group, for example {it:egen newi = group(ttre sgvarname), missing}. Specify the variable containing
+the two groups as the SG variable and add SG by period fixed effects, as in {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}. The contrast removes shocks that hit both groups
+in a treated cohort and period only when the two SG estimates weight the same onset-cohort-by-period cells in the same way. Use {it:att_it}, with both groups present in every treated
+onset-cohort-by-period cell. Its contrast is then the simple average of the cell-level triple differences. Under {it:att} each group weights its cells by the sample weight of its own observations,
+so that contrast keeps those shocks whenever the group shares of that weight differ across cells. {p_end}
 
 {marker continuous}{...}
 {dlgtab:Continuous Treatments}
@@ -706,7 +733,7 @@ represented at each lattice point. Lattice type options include: {p_end}
 {synoptset 20 tabbed}{...}
 {synopt : {it:all}} Quantiles are formed looking at the full, within-sample distribution of the continuous treatment variable, including values for untreated observations. {p_end}
 {synopt : {it:byTime}} Quantiles are formed using the distribution of the continuous treatment variable within each time period t separately. Observations will thus be placed in the
-lowest quantile bin if their value of {it:contreat} is in the lowest {it:latticenum}-th percent for their time period, even if their value would be high in the sample overall.  {p_end}
+lowest quantile bin if their value of {it:contreat} is in the lowest 1/{it:latticenum} of the distribution for their time period, even if their value would be high in the sample overall.  {p_end}
 {synopt : {it:byTreated}} Quantiles are formed separately in the treated and untreated groups. {p_end}
 {synopt : {it:byTtre}} Quantiles are formed separately for the control group and for each treatment onset cohort. {p_end}
 {synopt : {it:byCohort}} Quantiles are formed separately within each cohort i. {p_end}
@@ -759,7 +786,7 @@ substantive assumptions. See more on this topic in the description section below
 {synopt : {it:byTime}} Controls for the effect of contreat are interacted with time period (t) indicator variables. {p_end}
 {synopt : {it:untreatedZero}} Special option to formulate the regression to work when a continuous treatment variable is always equal to 0 outside of treated cohort-periods. Setting
 the continuous treatment variable to always equal 0 outside of treated cohort-periods can be an appropriate way to handle cases where the variable is unknowable or undefined outside
-of treated cohort-periods. If this option is specified when the always 0 condition is not met, {it:wooldid} will return poorly identified estimates. {p_end}
+of treated cohort-periods. If this option is specified when the always 0 condition is not met, the baseline effect of {it:contreat} is left out of the model, and {it:wooldid} will return biased estimates, however precise they appear. {p_end}
 
 {pstd} Each control type requires variation in {it:contreat} across the reference-period observations of every group for which it fits a baseline dose slope: the whole
 sample under {it:basic}, each treatment-status group under {it:byTreated}, each onset group under {it:byTtre}, each cohort under {it:byCohort} and each calendar period under
@@ -790,9 +817,11 @@ negative AME. In such cases, it may be wise to either use a coarser lattice or t
 this is especially the case when considering continuous treatment effects plots. {p_end}
 
 {pstd} Take care also not to over-saturate the specification with lattice terms. Each treated cohort-period cell must hold at least two distinct values of Contreat_jt within each
-lattice bin it occupies, since that is the only variation identifying that piece's slope; pieces without it are dropped for collinearity, the reported average marginal effect then
-averages only the pieces that survived, and the analytic standard errors can be far smaller than the estimates' sampling variability. A useful rule of thumb is that the number of
-units contributing to a treated cell should be several times the number of lattice bins. {p_end}
+lattice bin it occupies. That variation is all that identifies the piece's slope. A piece without it has no slope of its own. One slope term in that cell then drops for
+collinearity, and the piece takes the slope of another bin in the same cell. The reported average marginal effect and the plotted average marginal effects by bin include that
+borrowed slope. No caution prints unless {it:verbose} is given. Separately, a piece with no more observations than parameters is fitted exactly, and the analytic standard errors can
+then be far smaller than the estimates' sampling variability. A useful rule of thumb is that the number of units contributing to a treated cell should be several times the number of
+lattice bins. {p_end}
 
 {pstd} The function g(f(Contreat_jt)) is a control function of Contreat_jt intended to serve as the continuous treatment-equivalent of the binary treatment's fixed effects. As such, g()
 determines to a significant degree what source of variation is used to identify the effect of Contreat_jt. This leads to a complex set of choices: since average marginal effects of
@@ -814,15 +843,30 @@ makes other technical changes to the estimation process in order to facilitate t
 
 {pstd} If attempting to identify the average marginal effects of a continuous treatment variable without a strictly untreated control group (i.e., by exploiting within treated cohort
 variation in treatment intensity), the option {it:contreatwithin} should be specified. This will prevent {it:wooldid} from objecting to the presence of time periods without a control group
-and to the presence of i-t fixed effects (if specified). When specified, {it:wooldid} will still present ATT-type average treatment effects estimates, which in this case should essentially
-be the integral of the estimated average marginal effects across the distribution of the continuous treatment variable. Note: the control type {it:byTime} is refused in this case,
+and to the presence of i-t fixed effects (if specified). When specified, {it:wooldid} still reports att estimates, but read them with care. In a period where some unit is not yet treated,
+the att of a treated cell includes the level effect of treatment, measured against the untreated units of that period. In a period with no untreated reference rows, the level effects
+of the treated cells are not identified. {it:wooldid} then sets one cell's level effect in that period to zero and measures the other cells against it, without a message. The att there
+depends on which cell was set to zero. It can change when the cohorts are relabelled, and it can take the wrong sign. Rows moved into an {it:esprelength()} window also leave the
+reference pool, so the pretreatment att can be affected in the same way. The att and its event study can therefore shift sharply at the last treatment onset for this reason alone.
+The att is the integral of the estimated average marginal effects across the distribution of the continuous treatment variable only when {it:fe()} absorbs every cohort-period level
+effect, for example with i-t fixed effects. Even then, it extrapolates the estimated slope down to a dose of zero. Rely on the ame results under {it:contreatwithin}.
+Note: the control type {it:byTime} is refused in this case,
 since in the absence of an untreated group, the time period interactions will force {it:wooldid} to partial out genuine treatment effects for some group, threatening identification;
 {it:safety(off)} downgrades the refusal to a caution. {p_end}
 
+{pstd} {ul:What the ame Measures:} Within a treated cell, the ame compares units that received different doses. The choice of g() sets the parallel trends assumption: without treatment,
+units at different doses would have followed the same outcome path, apart from the dose effects g() allows for. Under that assumption the att is identified, and so is the att within
+each bin of the continuous treatment effects plots. The ame is the effect of a marginal increase in the dose only under a stronger condition: units at different doses would also have
+gained the same from treatment at any given dose. This is the strong parallel trends assumption of Callaway, Goodman-Bacon and Sant'Anna (2024). Without it, the ame also carries
+selection bias, since the units that took higher doses may simply be the units that gain more from treatment. The same applies to the ame within each bin and to differences in att
+across the bins of the continuous treatment effects plots. Under {it:contreatwithin} with no untreated group, the att is essentially the integral of the ame, so it needs the same
+stronger condition.
+{p_end}
+
 {pstd} {ul:Continuous Treatments and Cluster-Robust Standard Errors:} With {it:cluster()} at the level of {it:i} or coarser, every treated cohort-by-period cell lies within a single
 cluster, and the analytic standard errors of the ame-family quantities are then not identified. {it:wooldid} prints a caution, reports those standard errors, the ame joint tests and
-the ame adversarial p-values as missing, withholds {it:e(V_es_ame*)}, and draws the ame continuous treatment effects plots without confidence intervals; the att results are
-unaffected. A cell holding a single observation does not trigger this. Valid ame inference under such designs comes from {it:bootstrap()}, {it:permute()}, {it:impvalues}, {it:robust} (when errors are independent across observations), or a
+the ame adversarial p-values as missing, withholds {it:e(V_es_ame*)}, and draws the ame continuous treatment effects plots without confidence intervals. The att rows are still reported, but their analytic standard errors are
+understated in this design as well (see the Discussion of What Level to Cluster At under {help wooldid##standarderrors:Standard Errors}). A cell holding a single observation does not trigger this. Valid ame inference under such designs comes from {it:bootstrap()}, {it:permute()}, {it:impvalues}, {it:robust} (when errors are independent across observations), or a
 {it:cluster()} strictly finer than the cohort-by-period cells. {p_end}
 
 {marker controls}{...}
@@ -902,11 +946,13 @@ coefficient-level work ({it:lincom}, {it:test}), since its regressors are tempor
 aggregates, one row per estimated {it:i}-by-relative-period cell, read directly off the underlying regression. Columns: {it:i}, {it:onset}, {it:caltime}, {it:relyr}, {it:estimate},
 {it:se}, {it:p}, the interval bounds (named for the run's {it:level()}), {it:inwindow} (1 if the cell falls inside the reported event-study window), {it:nobs}, and the cell's total
 estimation weight under each requested estimand ({it:w_att}, {it:w_att_it}, {it:w_att_i}, {it:w_att_itime}). The weighted mean of {it:estimate} under one of these weight columns,
-taken over the post-treatment rows ({it:relyr} at or above 0), the pre-treatment rows, or a single {it:relyr}, reproduces the corresponding aggregate exactly, so the table supports
+taken over the post-treatment rows ({it:relyr} at or above 0) or the pre-treatment rows, reproduces the corresponding main or pretreatment row exactly. Taken over a single
+{it:relyr}, it reproduces the event-study row under {it:w_att} or {it:w_att_it} only. {it:att_i} and {it:att_itime} report the {it:att_it} event study, so under {it:w_att_i} or
+{it:w_att_itime} a single {it:relyr} gives a custom aggregate that no reported row matches. The table therefore supports
 custom aggregations. With {it:subgroups()} a single full-sample table is returned. Standard errors are the regression's coefficient-level
 ones: with {it:cluster()} at the level of {it:i} or coarser a treated cell lies inside a single cluster, and under {it:robust}, pweights or a robust {it:customvce()} a cell may hold a single observation; either way its standard error is understated, which a caution reports; a cell whose
 variance is not identified is reported with a missing standard error. Not available with {it:contreat()}, where the cohort-by-period coefficients are dose-zero intercepts rather than
-treatment effects; available under {it:fastnose}; under {it:bootstrap()} the cell inference is bootstrap-based, and under {it:permute()} the cells carry no inference. {p_end}
+treatment effects; available under {it:fastnose}; under {it:bootstrap()} the cell inference is bootstrap-based, but a cell the caution counts is resampled whole, so its standard error stays understated; under {it:permute()} the cells carry no inference. {p_end}
 
 {phang}{opt emptycellsoverride}: By default, {it:wooldid} tells Stata to drop interaction terms that correspond with empty cells, which is achieved by the command
 {it:set emptycells drop}, which improves estimation efficiency in this setting. This option overrides this behavior and roughly doubles runtime. This should only be of interest in conjunction
@@ -955,7 +1001,7 @@ prefix's table. The {it:bootstrap()} option is the supported route to bootstrap 
 
 {pstd} The coefficient vector {it:e(b)} and its covariance {it:e(V)} carry these column names, which are what {it:esttab}, {it:coefplot}, {it:lincom} and {it:test} address a
 coefficient by: {it:main_att} (the headline average treatment effect on the treated), {it:pretreatment_att} (the pooled pre-treatment average), {it:ES_att_pre#} and
-{it:ES_att_post#} (the event-study horizons, numbered outward from the reference period), and for the other estimand types the same names with {it:att} replaced by
+{it:ES_att_post#} (the event-study horizons, named by relative period: {it:pre#} is relative period -# and {it:post#} is relative period #, with {it:post0} the onset period; the reference period has no column), and for the other estimand types the same names with {it:att} replaced by
 {it:att_it}, {it:att_i}, {it:att_itime} or {it:ame}. Under {it:subgroups()} each subgroup's rows carry the infix {it:_SG{it:sgcase}_}, where {it:sgcase} is the
 value of the subgroup, as in {it:main_SG1_att}, {it:pretreatment_SG1_att} and {it:ES_att_SG1_post0}. The suffix {it:_s{it:sgcase}} names per-subgroup {it:e()}
 matrices such as {it:e(b_es_att_s1)}, not these columns. {p_end}
@@ -974,12 +1020,16 @@ contrast covariance is degenerate carries its point estimate with the inference 
 
 {synopt:{it:e(b_es_{it:type})}, {it:e(V_es_{it:type})}} The event study coefficient vector and its full variance-covariance matrix, labelled {it:pre#}/{it:post#} with the reference
 period omitted, per estimand type ({it:att}; {it:ame} under {it:contreat()}; and {it:att_it} or {it:ame_it} for the cell-weighted estimands, which share one event-study
-horizon block), with per-subgroup versions {it:e(b_es_{it:type}_s{it:sgcase})} and {it:e(V_es_{it:type}_s{it:sgcase})}. After {it:ereturn post} these matrices are valid inputs for
+horizon block), with per-subgroup versions {it:e(b_es_{it:type}_s{it:sgcase})} and {it:e(V_es_{it:type}_s{it:sgcase})}. After {it:ereturn post} with {it:dof(`=e(df_r)')} these matrices are valid inputs for
 {it:lincom} and {it:test}. A direct positional handoff to {it:honestdid} additionally requires {it:esfixedbaseperiod} with the default {it:esrelativeto(-1)}, no {it:timetrends},
 at least one pre- and one post-treatment coefficient, consecutive horizons, and a covariance with no degenerate rows; other geometries hand {it:honestdid} the wrong event-time
 geometry silently. The covariance is withheld, under a caution, when no horizon has an identified variance (typically {it:timetrends}) and for the ame families
 under the cell-containment caution; the coefficient vector still posts. Under {it:fastnose} the covariance is never computed, so it is not posted and no caution prints. Under {it:impvalues} neither matrix is posted. {it:e(es_ndegen_{it:type})} counts horizons whose variance is degenerate and is posted only when such rows
-exist. {p_end}
+exist. {it:Design conditions for every consumer of e(V_es_*)}: the analytic covariance inherits the design's identification, and neither condition shows in the matrix itself.
+One: a treated cohort-by-period cell that lies wholly inside one cluster adds none of its own variation (see {help wooldid##standarderrors:Standard Errors}).
+Two, singleton-cell designs: with a unit-level {it:i}, each treated cohort-by-period cell is a single observation, its residual is zero, and the covariance carries control-side
+variation only. This holds under {it:robust} as well. {it:honestdid} and {it:pretrendpower()} read this matrix directly and inherit both conditions. A coarser {it:i} with unit
+fixed effects in {it:fe()} meets condition Two, and a {it:cluster()} strictly finer than the cohort-by-period cells meets condition One. {p_end}
 
 {synopt:{it:e(numpre_{it:type})}} The number of pre-treatment relative periods in the corresponding event-study vector, provided for use as {it:honestdid}'s {it:numpre()} argument. Not posted under {it:impvalues}.{p_end}
 
@@ -1025,7 +1075,7 @@ the test can be found in objects with names like {it:e(joint_pre_att_allsgssame)
 
 {synopt:{it:e(N)}, {it:e(N_dropped)}, {it:e(Nclus)}} Estimation sample observation count, number of observations dropped from initially specified sample, and cluster count.
 {it:e(N_clust)}, {it:e(clustvar)}, {it:e(vce)} and {it:e(vcetype)} are the conventional variance-type entries, posted so that {it:estout} and {it:esttab} find what they expect;
-{it:e(vce_stage1)} records the first-stage type under {it:unconditionalse}. {it:e(level)} holds the confidence level in force, and {it:e(df_r)} the residual degrees of freedom; under {it:impvalues} {it:e(df_r)} is the smallest of the
+{it:e(vce_stage1)} records the first-stage type under {it:unconditionalse}. {it:e(level)} holds the confidence level in force, and {it:e(df_r)} the degrees of freedom of the reported t statistics. Under {it:cluster()}, or a {it:customvce()} of cluster, that is one less than the number of clusters, and under multi-way {it:cluster()} one less than the smallest cluster count. Otherwise it is the residual degrees of freedom. Under {it:poisson} it is missing, since the statistics are z. Under {it:bootstrap()} it follows {it:bootdf()} instead. Under {it:impvalues} {it:e(df_r)} is the smallest of the
 per-estimate values, which {it:e(imdf_min)} and {it:e(imdf_max)} bracket. {p_end}
 
 {synopt:R^2 measures} For standard estimation, these include e(r2), e(r2adj), e(r2_within), e(r2_withinadj). For poisson estimation, these include e(r2pseud), a pseudo-R^2 measure. {p_end}
@@ -1121,7 +1171,7 @@ an estimator. While {it:wooldid} does return a coefficient vector ({it:e(b)}) an
 the off-diagonal elements are 0 except within a single event-study family, so while {it:esttab} and the like will present correct estimates using these inputs, efforts to combine or
 otherwise test different estimates will not, in general, yield valid results ({it:e(wdid_vcvstate)} records what {it:e(V)} is on a given run). The event-study coefficients are
 additionally returned with a genuine full variance-covariance matrix in {it:e(b_es_{it:type})} and {it:e(V_es_{it:type})}, on which {it:lincom} and {it:test} are valid once they are copied to matrices and posted
-({it:matrix b = e(b_es_{it:type})}, {it:matrix V = e(V_es_{it:type})}, {it:ereturn post b V}). Under {it:bootstrap()} the posted {it:e(V)} is the replication covariance whenever one could be
+({it:matrix b = e(b_es_{it:type})}, {it:matrix V = e(V_es_{it:type})}, {it:ereturn post b V, dof(`=e(df_r)')}). The {it:dof()} option carries {it:e(df_r)}, so on an analytic run {it:test} and {it:lincom} use the same degrees of freedom as the printed event study. Without it they use the normal and the chi-squared, which are narrower than the table when clusters are few. Where {it:e(df_r)} is missing, {it:dof()} changes nothing. Under {it:bootstrap()} the posted {it:e(V)} is the replication covariance whenever one could be
 formed, which {it:e(wdid_vcvstate)} confirms by reading
 {it:bootstrap}. {p_end}
 
@@ -1149,7 +1199,9 @@ proves some equivalence results between their estimator and the Wooldridge estim
 {it:did_imputation} given that one uses the {it:att} estimand-type, uses a pooled reference period (i.e., not using {it:esfixedbaseperiod}), requests no
 pre-treatment horizons ({it:esprelength(0)}), does not use unconditional standard errors, and does not use controls. The {it:esprelength(0)} condition matters:
 the pooled reference period is formed from the horizons the run asks for, so requesting pre-treatment horizons removes them from the reference period and shifts every
-post-treatment estimate. With controls, {it:wooldid} and {it:did_imputation} will still yield the same results provided
+post-treatment estimate. The level of {it:i} matters as well. {it:did_imputation} uses unit fixed effects, so the estimates match only when {it:i} identifies
+individual units or every unit within an {it:i} is observed in the same periods. When {it:i} is coarser than the unit and its units are observed in different
+periods, the estimates differ, and adding the unit to {it:fe()} does not restore the match. With controls, {it:wooldid} and {it:did_imputation} will still yield the same results provided
 that each cohort-time period cell contains only 1 observation. In this 'fine cohorts' case, the inclusion of i-t cell indicators ensures that the included controls
 have their coefficients determined solely from the same portion of the sample as is used to estimate the regression in the BJS estimator. However, outside of special
 cases, results with controls will not match if cohorts are coarse (contain multiple observations per i-t cell). To assist in this case, the {it:wooldid} option
@@ -1160,15 +1212,19 @@ the spirit of BJS in that it increases the degree to which the effect of the con
 the portion of the sample where treatment effects are of interest. {p_end}
 
 {pstd} {ul:Comparing Output to csdid and xthdidregress:}
-The {it:gteffects} option returns the cohort-by-relative-period effects underlying {it:wooldid}'s aggregates, which are comparable to the group-time tables of
-{help csdid} and {help xthdidregress} when {it:i} indexes treatment cohorts. {p_end}
+The {it:gteffects} option returns the cohort-by-relative-period effects underlying {it:wooldid}'s aggregates. When {it:i} indexes treatment cohorts these are group-time effects, like the tables of
+{help csdid} and {help xthdidregress}, but by default they are not the same numbers. Under the default pooled reference period each cell uses the not-yet-treated observations as controls
+and the cohort's pre-treatment periods outside the requested event-study window as its baseline. With {it:esfixedbaseperiod} at the default {it:esrelativeto(-1)}, a balanced panel and no controls, the cells equal the group-time table
+of {help csdid} with its {it:long2} option. {p_end}
 
 {marker examples}{...}
 {title:Examples}
 
-{phang}0) Conventional diff-in-diff, targeting the ATT and clustering standard errors by cohort:{p_end}
+{pstd}Examples 1 to 10 omit {it:cluster()} for brevity. On panel data, add it at the level at which treatment is assigned.{p_end}
 
-{p 10 10} {cmd:wooldid y i t ttre, cluster(i) att}
+{phang}0) Conventional diff-in-diff, targeting the ATT, with {it:i} the treatment onset cohort, unit fixed effects, and standard errors clustered by unit:{p_end}
+
+{p 10 10} {cmd:wooldid y i t ttre, cluster(unit) fe(unit) att}
 
 {phang}1) Conventional diff-in-diff, targeting both ATT and ATT_it, with production of histogram showing cohort-i specific effects: {p_end}
 
@@ -1283,6 +1339,12 @@ guide to using {it:wooldid}, written for AI agents and advanced users, is at {br
 {title:Citations}
 
 {phang} Borusyak, Kirill, Xavier Jaravel, and Jann Spiess. Revisiting Event Study Designs: Robust and Efficient Estimation. Working Paper, 2023. {p_end}
+
+{phang} Callaway, Brantly, Andrew Goodman-Bacon, and Pedro H. C. Sant'Anna. Difference-in-Differences with a Continuous Treatment. NBER Working Paper 32117, 2024. {p_end}
+
+{phang} Callaway, Brantly and Pedro H. C. Sant'Anna. Difference-in-Differences with Multiple Time Periods. Journal of Econometrics, 2021, 225(2): 200-230. {p_end}
+
+{phang} Sun, Liyang and Sarah Abraham. Estimating Dynamic Treatment Effects in Event Studies with Heterogeneous Treatment Effects. Journal of Econometrics, 2021, 225(2): 175-199. {p_end}
 
 {phang} Rambachan, Ashesh and Jonathan Roth. A More Credible Approach to Parallel Trends. Review of Economic Studies, 2023, 90(5): 2555-2591. {p_end}
 
