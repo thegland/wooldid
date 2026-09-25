@@ -1887,7 +1887,15 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * its joint pre-trend test from the identical analytic e(V_es_*) - so one statistic gets
   * one rule: the gate covers either entry point and the message names whichever one asked
   * for it.
-  if ("`jointtests'" != "" | "`pretrendpower'" != "") & "`bootstrap'`permute'" == "" {
+  * ES-3 (author ruling 2026-09-25): the analytic simultaneous band is simulated from the same
+  * analytic e(V_es_*), so the containment count below also runs for simultaneousbands, and
+  * `jtcoarse' is handed to wooldid_esband, which cautions once a band is built. The joint-test
+  * caution itself keeps its own gate
+  * ES-6 (same ruling): the adversarial rank-deficiency caution is armed only on an analytic
+  * observed run; wooldid_advstat disarms it after it fires, so it prints once per run
+  local wdadvrkc = ("`bootstrap'`permute'`wdrepmode'" == "")
+  local jtcoarse
+  if ("`jointtests'" != "" | "`pretrendpower'" != "" | "`simultaneousbands'" != "") & "`bootstrap'`permute'" == "" {
     local jtclusvars
     if "`cluster'" != "" local jtclusvars `cluster'
     * does customvce() name a cluster VCE? the test is strpos of the FULL WORD in the
@@ -1913,7 +1921,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
       cap drop `jtt'
       if `jtni' > 0 & `jtnic' == `jtni' & "`jtcoarse'" == "" local jtcoarse `jtcv'
     }
-    if "`jtcoarse'" != "" {
+    if "`jtcoarse'" != "" & ("`jointtests'" != "" | "`pretrendpower'" != "") {
       * caution rather than refuse: the comparator packages run their pre-trend tests at
       * panel-level clustering with no gate, and wooldid's own help twice recommends the
       * clustering that trips this condition, so a hard error would send users into a
@@ -2302,7 +2310,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * the collinearity screens live in wooldid_ccscreen (worker compiled-size headroom); the gate
   * reads the user's own safety() value so an explicit safety(off) never enters, and sw()
   * hands in the working value, which contreatwithin sets to off to skip the dropped-dummy scan
-  if "`safetyinput'" != "off" wooldid_ccscreen , iv(`_i') tv(`_t') tf(`targetflag') wt(`w') es(`esamp') ifs(`ifstatement') mint(`min_t') ui(`i') ut(`t') lat(`lattice') ct(`contreat') cc(`contreatcontrols') ics(`interlist') icn(`interactivecontrols') sw(`safety') `verbose' `poisson' `fastnose'
+  if "`safetyinput'" != "off" wooldid_ccscreen , iv(`_i') tv(`_t') tf(`targetflag') wt(`w') es(`esamp') ifs(`ifstatement') mint(`min_t') ui(`i') ut(`t') lat(`lattice') ct(`contreat') cc(`contreatcontrols') ics(`interlist') icn(`interactivecontrols') sw(`safety') `verbose' `poisson' `fastnose' latv(`latticevar') rm(`wdrepmode')
 
 
 
@@ -2819,13 +2827,14 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
             local adversarial
           }
           if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose"     {
-            wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') fm(`wdfm')
+            wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') fm(`wdfm') rkc(`wdadvrkc')
             local advstatus `r(status)'
             * a gap-cancelled altmethod fit calls off adversarial as a whole (overall section);
             * the line is kept only beside its p-value ("ok"), never on its own
             if "`advstatus'" == "gapskip" local adversarial
             else if "`advstatus'" == "ok" {
               local adversarialP_`horizitem' = r(p)
+              local adversarialQ_`horizitem' = r(df)
               tempname adversarialB_`horizitem'
               matrix `adversarialB_`horizitem'' = r(line)
             }
@@ -3319,11 +3328,12 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               local adversarial
             }
             if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose" & `amescrub' == 0   {
-              wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') fm(`wdfm')
+              wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') fm(`wdfm') rkc(`wdadvrkc')
               local advstatus `r(status)'
               if "`advstatus'" == "gapskip" local adversarial
               else if "`advstatus'" == "ok" {
                 local adversarialP_C`horizitem' = r(p)
+                local adversarialQ_C`horizitem' = r(df)
                 tempname adversarialB_C`horizitem'
                 matrix `adversarialB_C`horizitem'' = r(line)
               }
@@ -3635,10 +3645,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               }
               else if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose"   {
                 if  `finaladvtest' > 2  {
-                  wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm')
+                  wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_s`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm') rkc(`wdadvrkc')
                   local advstatus `r(status)'
                   if "`advstatus'" == "ok" {
                     local adversarialP_`horizitem'_s`sgcase' = r(p)
+                    local adversarialQ_`horizitem'_s`sgcase' = r(df)
                     tempname adversarialB_`horizitem'_s`sgcase'
                     matrix `adversarialB_`horizitem'_s`sgcase'' = r(line)
                   }
@@ -4100,10 +4111,11 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 * skips this subgroup
                 if "`adversarial'" == "adversarial" & "`marginsdof'" != "nose" & `amescrub' == 0  {
                   if  `finaladvtest' > 1  {
-                    wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_Cs`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm')
+                    wooldid_advstat , b(`f2bmat') v(`f2vmat') relyr(`relyrcolumn_Cs`sgcase'') mint(`min_t') esrel(`esrelativeto') dfr(`df_r') esf(`esfixedbaseperiod') tt(`timetrends') alt(`altmethod_adversarial') sg(`sgcase') fm(`wdfm') rkc(`wdadvrkc')
                     local advstatus `r(status)'
                     if "`advstatus'" == "ok" {
                       local adversarialP_C`horizitem'_s`sgcase' = r(p)
+                      local adversarialQ_C`horizitem'_s`sgcase' = r(df)
                       tempname adversarialB_C`horizitem'_s`sgcase'
                       matrix `adversarialB_C`horizitem'_s`sgcase'' = r(line)
                     }
@@ -5082,7 +5094,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * bootstrap(), where wooldid_bootwire builds the band from the replications instead and
   * would otherwise overwrite this one; refused outright under permute() in wooldid_validate.
   * Body in a subprogram (worker size ceiling)
-  if "`simultaneousbands'" != "" & "`bootstrap'" == "" wooldid_esband , mode(analytic) level(`wdlvl') sgl(`sglist') dfr(`df_r')
+  if "`simultaneousbands'" != "" & "`bootstrap'" == "" wooldid_esband , mode(analytic) level(`wdlvl') sgl(`sglist') dfr(`df_r') jtc(`jtcoarse')
 
   * post the conventional names alongside wooldid's own, so estout, esttab and anything else
   * keying on Stata's usual cluster and variance entries finds them. pure addition: e(Nclus)
@@ -5153,6 +5165,9 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
          local typetext `type'
          if "`scenario'" == "_C" local typetext = subinstr("`typetext'","att","ame",.)
          if "`adversarialP`scenario'`type''" != "" ereturn scalar adversarial_pval_`typetext' = `adversarialP`scenario'`type''
+         * ES-6: the analytic test's numerator df, beside its p and only where that p is the
+         * analytic one (bootstrap() and permute() replace or blank it)
+         if "`adversarialQ`scenario'`type''" != "" & "`bootstrap'`permute'" == "" ereturn scalar adversarial_df_`typetext' = `adversarialQ`scenario'`type''
          if "`wdadvline'" == "1" ereturn matrix adversarial_line_`typetext' =   `adversarialB`scenario'`type''
        }
      }
@@ -5180,6 +5195,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                 local typetext `type'
                 if "`scenario'" == "_C" local typetext = subinstr("`typetext'","att","ame",.)
                 if "`adversarialP`scenario'`type'_s`sgcase''" != "" ereturn scalar adversarial_pval_`typetext'_s`sgcase' = `adversarialP`scenario'`type'_s`sgcase''
+                if "`adversarialQ`scenario'`type'_s`sgcase''" != "" & "`bootstrap'`permute'" == "" ereturn scalar adversarial_df_`typetext'_s`sgcase' = `adversarialQ`scenario'`type'_s`sgcase''
                 if "`wdadvline'" == "1" ereturn matrix adversarial_line_`typetext'_s`sgcase' =   `adversarialB`scenario'`type'_s`sgcase''
               }
             }
@@ -12387,7 +12403,7 @@ end
 cap prog drop wooldid_esband
 prog def wooldid_esband, eclass
 version 16.0
-  syntax , mode(string) [level(real 95) sgl(string) acc(string) obsb(string) nd(integer 10000) seacc(string) aseobs(string) dfr(string)]
+  syntax , mode(string) [level(real 95) sgl(string) acc(string) obsb(string) nd(integer 10000) seacc(string) aseobs(string) dfr(string) jtc(string)]
   if `level' <= 0 | `level' >= 100 local level = 95
   * the analytic engine's reference distribution: the regression's residual df, the df the
   * pointwise margins intervals use, or missing (normal) when there are none
@@ -12485,6 +12501,14 @@ version 16.0
   * names the HORIZON rather than only the family
   if `"`wdsnoband'"' != "" {
     dis as text "Caution: a simultaneous band was drawn for some event-study families and not others. No band for: `wdsnoband'The figures for those families show their pointwise intervals only, which are unaffected."
+  }
+  * ES-3 (author ruling 2026-09-25, approved text): the analytic band is scaled by the
+  * event-study analytic standard errors, which a cluster() (or cluster-type customvce())
+  * nesting every treated i understates, so the band is too narrow there. jtc() carries the
+  * nesting cluster variable from the worker's joint-test containment count; it is empty on
+  * every other run, and the bootstrap engine never passes it. Printed only once a band exists
+  if "`mode'" != "bootstrap" & "`jtc'" != "" {
+    dis as text "Caution: simultaneousbands is built from the analytic covariance with cluster() at the level of i or above, so the band is too narrow. bootstrap() gives a valid band."
   }
   * under boottstat the band is a genuine percentile-t - each replication's own standard
   * error in the denominator, the observed analytic ones in the endpoints - so it is on the
@@ -13399,7 +13423,7 @@ end
 cap prog drop wooldid_ccscreen
 prog def wooldid_ccscreen
 version 16.0
-  syntax , iv(name) tv(name) tf(name) wt(string) es(name) ifs(string asis) mint(real) ui(name) ut(name) [lat(string asis) ct(string) cc(string) ics(string) icn(string) sw(string) VERbose POISson FASTnose]
+  syntax , iv(name) tv(name) tf(name) wt(string) es(name) ifs(string asis) mint(real) ui(name) ut(name) [lat(string asis) ct(string) cc(string) ics(string) icn(string) sw(string) VERbose POISson FASTnose latv(string) rm(string)]
   * re-establish the worker's own names so the screen body below is byte-identical to
   * the code it replaced
   local _i `iv'
@@ -13553,7 +13577,9 @@ version 16.0
             * this implies it is not a main effect treatment dummy
             local problem_t = `problem_t' - `min_t' - 1
             if `catastrophe' == 0 dis as text  "Caution: a treatment period coefficient interacted with something (likely, a term implementing a continuous treatment variable or an interactive control variable) was dropped for multicollinearity."
-            if `catastrophe' == 0 & "`lattice'" != "" dis as text  "If using a lattice, this is likely innocuous."
+            * text replaced 2026-09-25 (author ruling, CT-2; card m349), kept for reference:
+            *   If using a lattice, this is likely innocuous.
+            if `catastrophe' == 0 & "`lattice'" != "" dis as text  "Under a lattice a dropped piece takes the slope of another bin in its cell, and the ame includes that borrowed slope."
             if `catastrophe' == 0 dis as text  "This could imply your results are not identified, depending on exactly what was dropped."
             if `catastrophe' == 0 dis as text  "Re-estimate with option verbose for details on what was dropped."
             if "`verbose'" != "" dis as text " "
@@ -13574,6 +13600,83 @@ version 16.0
   }
   if `catastrophe' > 0 dis as text "Note: the multicollinearity caution above was triggered `catastrophe' times total."
   if `bigcatastrophe' == 1 error 322
+
+  * CT-3 (author ruling 2026-09-25, approved text): under contreatwithin the dropped-dummy scan
+  * above is skipped (sw is off), which is deliberate. But in a calendar period with no
+  * untreated reference rows the treated cell dummies of that period sum to its time dummy, so
+  * the solver sets one cell's level effect to zero and measures the others against it: the
+  * att there depends on which cell that was, and moves when the cohorts are relabelled. The
+  * scan below names those periods. Stage 1 reads the coefficient names only: the dropped
+  * treated cell dummies, in the same token test and parse as the scan above. Stage 2 runs only
+  * if one was found: the calendar periods (`t', the user's own units) with no targetflag == 0
+  * row, then, for each such period, whether one of its treated cells is among the dropped.
+  * Rows in an esprelength() window carry targetflag == 1, so they are not reference rows.
+  * Observed run only
+  if "`sw'" == "off" & "`contreat'" != "" & "`rm'" == "" & strpos("`bvars'", "o.") != 0 {
+    local ct3cells
+    foreach ct3tok of local bvars {
+      if strpos("`ct3tok'", "o.") != 0 & strpos("`ct3tok'", "0b.") == 0 & strpos("`ct3tok'", "`_i'") != 0 & strpos("`ct3tok'", "`_t'") != 0 & (strpos("`ct3tok'", "1o.`targetflag'") != 0 | strpos("`ct3tok'", "1.`targetflag'") != 0) {
+        local ct3x = subinstr("`ct3tok'", "o.", ".", .)
+        foreach word in b. . `_i' `_t' `targetflag' {
+          local ct3x = subinstr("`ct3x'", "`word'", "", .)
+        }
+        local ct3x = subinstr("`ct3x'", "#", " ", .)
+        if wordcount("`ct3x'") == 3 {
+          local ct3cells `ct3cells' `=string(real(word("`ct3x'", 1))*1000000 + real(word("`ct3x'", 2)), "%21.0f")'
+        }
+      }
+    }
+    if "`ct3cells'" != "" {
+      tempvar ct3r ct3m ct3g ct3c
+      qui gen byte `ct3r' = `targetflag' == 0 if `esamp' & `ifstatement' & `w' > 0
+      qui gegen byte `ct3m' = max(`ct3r') if `esamp' & `ifstatement' & `w' > 0, by(`t')
+      qui gegen byte `ct3g' = tag(`t') if `ct3m' == 0
+      qui levelsof `t' if `ct3g' == 1, local(ct3per)
+      qui gen double `ct3c' = `_i'*1000000 + `_t' if `ct3m' == 0 & `targetflag' == 1
+      local ct3list
+      local ct3n 0
+      foreach ct3p of local ct3per {
+        qui levelsof `ct3c' if `t' == `ct3p' & `ct3c' < ., local(ct3pc)
+        local ct3hit 0
+        foreach ct3cc of local ct3pc {
+          if `: list posof "`=strtrim(string(`ct3cc', "%21.0f"))'" in ct3cells' > 0 local ct3hit 1
+        }
+        if `ct3hit' {
+          local ++ct3n
+          local ct3list = cond(`ct3n' == 1, "`ct3p'", "`ct3list', `ct3p'")
+        }
+      }
+      if `ct3n' > 0 dis as text "Caution: under contreatwithin, `ct3n' period(s) have no untreated reference rows (`ct3list'), so one treated cell's level effect in each was set to zero and the att there depends on that choice. Rely on the ame results."
+    }
+  }
+
+  * CT-2 (author ruling 2026-09-25, approved text, printed by default): under lattice() the
+  * dose enters as cell##bin##dose, so a treated cohort-period-by-lattice-bin piece whose rows
+  * carry a single dose value has no slope of its own. Its slope term, or another bin's, drops
+  * for collinearity, and the piece then takes the slope of another bin of the same cell, which
+  * the ame and the plotted bin effects include. The dropped token need not be the piece's own
+  * (the refuter's q1 probe: a single-valued base-bin piece took bin 3's slope, and it was bin
+  * 3's deviation that dropped), so the count keys on the pieces in the data, not on tokens,
+  * and a cell whose main slope is live does not clear its pieces. A piece counts when it has
+  * rows in the estimation sample, a single dose value, and that value nonzero (an empty piece
+  * or a structurally zero dose column is not a borrowed slope). Its cell must still carry a
+  * live dose term: with none, nothing is borrowed (every slope of that cell is dropped, the
+  * all-dropped and within-cell cases the screens around this one own). untreatedZero spells
+  * each piece's slope separately and refuses a dropped live one above, so it never gets here.
+  * The data pass runs only on a lattice run where some term was dropped. Observed run only
+  if "`lattice'" != "" & "`latv'" != "" & "`contreat'" != "" & "`cc'" != "untreatedZero" & "`rm'" == "" & strpos("`bvars'", "o.") != 0 {
+    tempvar ct2lo ct2hi ct2g ct2c
+    qui gegen double `ct2lo' = min(`contreat') if `esamp' & `ifstatement' & `targetflag' == 1 & `w' > 0, by(`_i' `_t' `latv')
+    qui gegen double `ct2hi' = max(`contreat') if `esamp' & `ifstatement' & `targetflag' == 1 & `w' > 0, by(`_i' `_t' `latv')
+    qui gegen byte `ct2g' = tag(`_i' `_t' `latv') if `ct2lo' == `ct2hi' & `ct2hi' != 0 & `ct2hi' < .
+    qui count if `ct2g' == 1
+    if r(N) > 0 {
+      qui gen double `ct2c' = `_i'*1000000 + `_t' if `ct2g' == 1
+      local ct2n 0
+      mata: st_local("ct2n", strofreal(wooldid_ct2count("`_i'", "`_t'", "`targetflag'", "`contreat'", "`ct2c'")))
+      if `ct2n' > 0 dis as text "Caution: `ct2n' treated cohort-period-by-lattice-bin piece(s) have no within-piece variation in `contreat', so their dose slopes are borrowed from another bin of the same cell and the ame includes those borrowed slopes. Coarsen the lattice or drop the affected cells."
+    }
+  }
 
   * when every treated-cell dose-slope term was dropped for multicollinearity (zero live
   * c.contreat treated terms while dropped ones exist, e.g. dose constant within each
@@ -14522,6 +14625,7 @@ end
 * (nothing - the gap backstop: the altmethod fit sample has no real pre-period coefficient).
 * The rest of the return contract, which the call sites branch on: r(p) and r(line) exist
 * only on "ok", so a line is never returned without its p-value (author ruling 2026-09-23).
+* r(df), the test's numerator degrees of freedom, exists on "ok" too (ES-6, 2026-09-25).
 * "nop" means no p-value was computable: esfixedbaseperiod was not in force (a pooled
 * reference has no single omitted period; the worker prints that caution once per run) or
 * the covariance was degenerate (cautioned here). "gapskip" obliges the caller to
@@ -14532,7 +14636,7 @@ end
 cap prog drop wooldid_advstat
 prog def wooldid_advstat, rclass
 version 16.0
-  syntax , b(string) v(string) relyr(string) mint(string) esrel(string) [dfr(string) esf(string) tt(string) alt(string) sg(string) fm(string)]
+  syntax , b(string) v(string) relyr(string) mint(string) esrel(string) [dfr(string) esf(string) tt(string) alt(string) sg(string) fm(string) rkc(string)]
   if "`fm'" == "" local fm ___wooldidfullmodel
 
   * gap backstop (altmethod): the planted reference row(s) always satisfy the pre-period
@@ -14596,10 +14700,26 @@ version 16.0
     }
     tempname advP
     local advpstat
+    local advq
+    local advk1
+    local advK
     mata: wooldid_advx("`b'", "`v'", "`relyr'", `esrel', ("`tt'"!=""), ("`alt'"!=""), `advdfr', "`advP'")
     if "`advpstat'" == "ok" {
       return scalar p = scalar(`advP')
+      if "`advq'" != "" return scalar df = `advq'
       local advstatus ok
+      * ES-6 (author ruling 2026-09-25, approved text): under the primary statistic a
+      * rank-deficient event-study covariance is whitened on its positive eigenvalues only,
+      * so the test runs on the retained directions. Once per run: the worker arms rkc() with
+      * 1 on an analytic observed run (no bootstrap(), no permute(), not a replication), and
+      * this program disarms it in the worker's scope after the first family that fires,
+      * since the text names no family
+      if "`rkc'" == "1" & "`advk1'" != "" & "`advK'" != "" {
+        if `advk1' < `advK' {
+          dis as text "Caution: the event-study covariance for the adversarial test is rank-deficient (rank `advk1' of `advK'), so the test uses only the directions a generalized inverse retains and its degrees of freedom fall to `advk1'."
+          c_local wdadvrkc 0
+        }
+      }
     }
     else {
       * covers rank-0/degenerate covariance (e.g. timetrends), missing entries, a
@@ -16126,6 +16246,7 @@ end
 *** chi2tail(q, W) otherwise (the wooldid_ptp convention).
 cap mata: mata drop wooldid_advx()
 cap mata: mata drop wooldid_advW()
+cap mata: mata drop wooldid_ct2count()
 cap mata: mata drop wooldid_bootadvr()
 cap mata: mata drop wooldid_bootadvobs()
 cap mata: mata drop wooldid_bootadvrel()
@@ -16272,6 +16393,70 @@ void wooldid_advx(string scalar bn, string scalar vn, string scalar rn,
     if (p >= .) return
     st_numscalar(pn, p)
     st_local("advpstat", "ok")
+    // ES-6 disclosure: the numerator df, and under the primary statistic the retained
+    // rank k1 of V against its dimension K, on the same eigenvalue tolerance wooldid_advW
+    // whitens on (V arrives here already symmetrised by that call). k1 < K means the
+    // statistic dropped the directions V calls exact; wooldid_advstat cautions on it
+    st_local("advq", strofreal(q))
+    if (alt == 0) {
+        lam = symeigenvalues(V)
+        scale = max(abs(lam))
+        k1 = sum(lam :> scale*1e-12)
+        st_local("advk1", strofreal(k1))
+        st_local("advK", strofreal(rows(V)))
+    }
+}
+
+// CT-2 (wooldid_ccscreen): counts the flagged lattice pieces whose treated cell still carries
+// a live dose-slope term. cv holds I*1000000 + T on one row per flagged piece (a piece with
+// rows, one dose value, nonzero) and is missing elsewhere. A term is a treated cell's dose term
+// when its name has the _i, _t and 1.targetflag factors and a c.<contreat> factor; it is live
+// when nothing in the name carries an omission flag. Components are matched by the whole
+// variable name after the dot, so one tempvar name can never match inside another. Stage one
+// reads the stripe of e(b), so no macro holds the column list.
+real scalar wooldid_ct2count(string scalar I, string scalar T, string scalar F,
+                             string scalar CT, string scalar cv)
+{
+    string matrix cs
+    string rowvector pc
+    string scalar tok, p, nm
+    real scalar n, k, j, d, ii, tt, hasf, hasd, m, cnt
+    real colvector live, fl
+    cs = st_matrixcolstripe("e(b)")
+    n = rows(cs)
+    live = J(n, 1, .)
+    m = 0
+    for (k = 1; k <= n; k++) {
+        tok = cs[k, 2]
+        if (strpos(tok, "o.") > 0) continue
+        pc = tokens(subinstr(tok, "#", " "))
+        ii = .
+        tt = .
+        hasf = 0
+        hasd = 0
+        for (j = 1; j <= cols(pc); j++) {
+            p = pc[j]
+            d = strpos(p, ".")
+            if (d == 0) continue
+            nm = substr(p, d + 1, .)
+            if (nm == I) ii = strtoreal(ustrregexra(substr(p, 1, d - 1), "[^0-9]", ""))
+            if (nm == T) tt = strtoreal(ustrregexra(substr(p, 1, d - 1), "[^0-9]", ""))
+            if (nm == F & ustrregexra(substr(p, 1, d - 1), "[^0-9]", "") == "1") hasf = 1
+            if (p == "c." + CT) hasd = 1
+        }
+        if (ii >= . | tt >= . | hasf == 0 | hasd == 0) continue
+        m++
+        live[m] = ii*1000000 + tt
+    }
+    fl = st_data(., cv)
+    fl = select(fl, fl :< .)
+    if (rows(fl) == 0 | m == 0) return(0)
+    live = uniqrows(live[1..m])
+    cnt = 0
+    for (k = 1; k <= rows(fl); k++) {
+        if (anyof(live, fl[k])) cnt++
+    }
+    return(cnt)
 }
 end
 

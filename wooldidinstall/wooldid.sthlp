@@ -306,7 +306,7 @@ family at once with that probability. The printed table keeps its pointwise inte
 the event study plots. Without {it:bootstrap()} the band is simulated from the family's analytic event study covariance. Where the regression reports degrees
 of freedom it uses the same t distribution as the pointwise intervals. With {it:bootstrap()} it is taken from the replications.
 With {it:cluster()} at or above the level of {it:i} the standard errors in the analytic covariance are understated, so the band built without {it:bootstrap()} is too
-narrow, and no caution says so. Use {it:bootstrap()} or a {it:cluster()} strictly finer than the cohort-by-period cells there.
+narrow, and a caution says so. Use {it:bootstrap()} or a {it:cluster()} strictly finer than the cohort-by-period cells there.
 Refused with {it:permute()}, whose multiplicity tool is {it:permstepdown} instead. No band is built under {it:fastnose} or for a family with fewer than
 two horizons with a usable variance, and a caution says so. {p_end}
 
@@ -584,7 +584,9 @@ event-study coefficients and their covariance matrix. It requires
 regression of {it:coef_rt} on {it:time_rt}, where {it:coef_rt} is the estimated coefficient in relative time period {it:rt} and includes a value of 0 for the reference period.
 The test is cancelled, with a caution, when the requested window holds fewer than one pre-treatment and one post-treatment horizon (fewer than three coefficients in all under
 {it:timetrends}), when the estimation sample fails to realize those horizons, or when the event-study covariance is degenerate; under {it:subgroups()} the {it:att} and {it:att_it} tests are skipped for any
-subgroup that lost a relative period as inestimable. Like {it:jointtests}, the test is sensitive to clustering: it is severely oversized unless each treated cohort-by-period cell
+subgroup that lost a relative period as inestimable. When the event-study covariance is rank-deficient but not degenerate, the test runs on the directions a generalized
+inverse retains, and without {it:bootstrap()} or {it:permute()} a caution gives the rank. The numerator degrees of freedom are stored in {it:e(adversarial_df_att)} and its twins.
+Like {it:jointtests}, the test is sensitive to clustering: it is severely oversized unless each treated cohort-by-period cell
 is spanned by many clusters, and clustering on {it:i} itself places every cell inside a single cluster. Where that condition is not met, use {it:permute()} or {it:bootstrap()}
 with {it:boottstat}, under which the adversarial p-value is a permutation or bootstrap quantity (without {it:boottstat} it is absent under {it:bootstrap()}). Refused with
 {it:impvalues} and with {it:fastnose}, except under {it:permute()}. {p_end}
@@ -825,7 +827,7 @@ this is especially the case when considering continuous treatment effects plots.
 {pstd} Take care also not to over-saturate the specification with lattice terms. Each treated cohort-period cell must hold at least two distinct values of Contreat_jt within each
 lattice bin it occupies. That variation is all that identifies the piece's slope. A piece without it has no slope of its own. One slope term in that cell then drops for
 collinearity, and the piece takes the slope of another bin in the same cell. The reported average marginal effect and the plotted average marginal effects by bin include that
-borrowed slope. No caution prints unless {it:verbose} is given. Separately, a piece with no more observations than parameters is fitted exactly, and the analytic standard errors can
+borrowed slope. A caution gives the number of such pieces, and {it:verbose} lists the dropped terms. Separately, a piece with no more observations than parameters is fitted exactly, and the analytic standard errors can
 then be far smaller than the estimates' sampling variability. A useful rule of thumb is that the number of units contributing to a treated cell should be several times the number of
 lattice bins. {p_end}
 
@@ -851,8 +853,8 @@ makes other technical changes to the estimation process in order to facilitate t
 variation in treatment intensity), the option {it:contreatwithin} should be specified. This will prevent {it:wooldid} from objecting to the presence of time periods without a control group
 and to the presence of i-t fixed effects (if specified). When specified, {it:wooldid} still reports att estimates, but read them with care. In a period where some unit is not yet treated,
 the att of a treated cell includes the level effect of treatment, measured against the untreated units of that period. In a period with no untreated reference rows, the level effects
-of the treated cells are not identified. {it:wooldid} then sets one cell's level effect in that period to zero and measures the other cells against it, without a message. The att there
-depends on which cell was set to zero. It can change when the cohorts are relabelled, and it can take the wrong sign. Rows moved into an {it:esprelength()} window also leave the
+of the treated cells are not identified. {it:wooldid} then sets one cell's level effect in that period to zero and measures the other cells against it, and a caution names those
+periods. The att there depends on which cell was set to zero. It can change when the cohorts are relabelled, and it can take the wrong sign. Rows moved into an {it:esprelength()} window also leave the
 reference pool, so the pretreatment att can be affected in the same way. The att and its event study can therefore shift sharply at the last treatment onset for this reason alone.
 The att is the integral of the estimated average marginal effects across the distribution of the continuous treatment variable only when {it:fe()} absorbs every cohort-period level
 effect, for example with i-t fixed effects. Even then, it extrapolates the estimated slope down to a dose of zero. Rely on the ame results under {it:contreatwithin}.
@@ -1072,7 +1074,8 @@ is the value of the subgroup. {p_end}
 are found in the scalars {it:e(adversarial_pval_att)}, {it:e(adversarial_pval_ame)}, {it:e(adversarial_pval_att_s[SG])}, etc.; they are posted only under {it:esfixedbaseperiod}
 and only when the event-study covariance is not degenerate. The fitted line is returned in matrices named {it:e(adversarial_line_att)}, {it:e(adversarial_line_att_it)},
 {it:e(adversarial_line_ame)}, {it:e(adversarial_line_ame_it)} and their {it:_s{it:sgcase}} twins, with columns {it:slope} and {it:intercept_rt0}; a test that fails returns
-neither the p-value nor the line. {p_end}
+neither the p-value nor the line. Without {it:bootstrap()} or {it:permute()}, the scalars {it:e(adversarial_df_att)}, {it:e(adversarial_df_att_it)}, {it:e(adversarial_df_ame)},
+{it:e(adversarial_df_ame_it)} and their {it:_s{it:sgcase}} twins hold the numerator degrees of freedom of each test the p-value was computed with. {p_end}
 
 {synopt: SG Effect Homogeneity Tests} For each estimate type (ATT, ATT_it, AME, etc.), the joint test that all subgroups have the same such post-treatment effect (namely, the
 same effect as the lowest numbered SG) may be found in the scalar {it:e(joint_att_allsgssame)} and analogously named scalars for other treatment effect types. For pre-treatment effects,
