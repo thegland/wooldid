@@ -1,0 +1,393 @@
+<title>wooldid Help Editor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--ground:#FBFAF6;--ink:#1C1F26;--muted:#5E6673;--rule:#D8D4C9;--link:#1F4E9E;--panel:#FFFFFF;--panel2:#F2EFE8;--edited:#FFF1B8;--editedline:#D9A400;--ok:#2E7D4F;--err:#A63D2F;--focus:#1F4E9E;--chip:#EAE6DC}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;--ground:#14171C;--ink:#E6E3DC;--muted:#9AA1AA;--rule:#2E343C;--link:#85B4E8;--panel:#1B1F25;--panel2:#22272E;--edited:#3E3510;--editedline:#D9A400;--ok:#7CC496;--err:#E48A7C;--focus:#85B4E8;--chip:#2A3038}}
+:root[data-theme="dark"]{color-scheme:dark;--ground:#14171C;--ink:#E6E3DC;--muted:#9AA1AA;--rule:#2E343C;--link:#85B4E8;--panel:#1B1F25;--panel2:#22272E;--edited:#3E3510;--editedline:#D9A400;--ok:#7CC496;--err:#E48A7C;--focus:#85B4E8;--chip:#2A3038}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:14.5px;line-height:1.55;padding-inline:16px;padding-block:0 90px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--ground);border-bottom:1px solid var(--rule);padding-block:.55rem;display:flex;flex-wrap:wrap;gap:.45rem .9rem;align-items:center}
+.bar h1{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:1.15rem;margin:0;line-height:1.2}
+.bar label{font-size:.8rem;color:var(--muted);display:flex;gap:.35rem;align-items:center}
+.bar input[type=search],.bar select{font:inherit;font-size:.85rem;padding:.28rem .45rem;border:1px solid var(--rule);border-radius:4px;background:var(--panel);color:var(--ink)}
+.bar input[type=search]{min-width:12rem;flex:1}
+.count{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.status{font-size:.76rem;padding:.14rem .55rem;border-radius:999px;border:1px solid var(--rule);color:var(--muted);white-space:nowrap}
+.status.ok{color:var(--ok);border-color:var(--ok)} .status.ro{color:var(--err);border-color:var(--err)}
+.btn{font:inherit;font-size:.8rem;padding:.28rem .6rem;border:1px solid var(--rule);border-radius:4px;background:var(--panel);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--link)} .btn:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.frame{display:grid;grid-template-columns:15rem minmax(0,1fr);gap:2rem;max-width:112ch;margin:0 auto;padding-top:1rem}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 3.6rem);align-self:start;max-height:calc(100vh - 5rem);overflow:auto;font-size:.82rem}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:.15rem 0;border-left:2px solid transparent;padding-left:.5rem}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--link);border-left-color:var(--link);outline:none}
+nav.toc .lab{font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 .4rem .5rem}
+.legend{font-size:.85rem;color:var(--muted);border:1px solid var(--rule);border-radius:4px;padding:.6rem .8rem;margin:0 0 1.2rem}
+.legend b{color:var(--ink);font-weight:500}
+main{min-width:0}
+.help{font-size:.95rem;line-height:1.6;max-width:92ch}
+.blk{position:relative;border-left:3px solid transparent;padding-left:.55rem;margin-left:-.55rem;border-radius:2px}
+.blk[data-kind="blank"]{height:.85rem} .blk[data-kind="meta"]{display:none}
+.blk.hit:not([data-kind="blank"]){background:var(--edited);border-left-color:var(--editedline)}
+.blk.hid{display:none}
+.blk .tools{position:absolute;right:0;top:-.1rem;display:none;gap:.3rem;z-index:2}
+.blk:hover .tools,.blk:focus-within .tools{display:flex}
+.tools .btn{font-size:.7rem;padding:.1rem .4rem}
+.blk .st{font-size:.7rem;color:var(--muted);margin-left:.4rem} .blk .st.ok{color:var(--ok)} .blk .st.bad{color:var(--err);font-weight:600}
+.ed{outline:none;min-height:1.2em}
+.ed:focus{box-shadow:0 0 0 2px var(--focus);border-radius:2px}
+.t{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:1.25rem;margin:1.6rem 0 .5rem;line-height:1.25;text-wrap:balance}
+.blk[data-kind="dlgtab"] .t{font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:1rem;font-weight:600;border-bottom:1px solid var(--rule);padding-bottom:.2rem;margin-top:1.4rem}
+.pstd{margin:0 0 0 2ch} .phang{margin:0 0 0 6ch;text-indent:-4ch} .phang2{margin:0 0 0 10ch;text-indent:-4ch} .pmore{margin:0 0 0 6ch} .pmore2{margin:0 0 0 10ch}
+.pn{margin:0} .row{display:grid;grid-template-columns:var(--c1,22ch) minmax(0,1fr);gap:0 1ch;margin-left:2ch}
+.row .c1{overflow-wrap:anywhere}
+.smcl-it{font-style:italic} .smcl-bf{font-weight:600} .smcl-ul{text-decoration:underline} .smcl-cmd,.smcl-inp{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.9em} .smcl-err{color:var(--err)} .smcl-res{color:var(--ink);font-weight:500} .smcl-hi{font-weight:600} .smcl-txt{color:var(--ink)}
+.smcl-opt{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.9em} .smcl-opt u{text-decoration:underline}
+.chip{color:var(--link);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--link) 45%,transparent);cursor:pointer;user-select:none}
+.chip.inert{cursor:default} .chip.anch{display:inline-block;width:0;height:0;overflow:hidden}
+a.ext{color:var(--link)}
+.chip.dir{display:inline-block;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.72em;background:var(--chip);color:var(--muted);border-radius:3px;padding:0 .3em;text-decoration:none;cursor:default}
+textarea.src{width:100%;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.8rem;line-height:1.45;padding:.5rem .6rem;border:1px solid var(--rule);border-radius:4px;background:var(--panel2);color:var(--ink);resize:vertical;min-height:4.5em;margin:.3rem 0}
+textarea.src:focus,input:focus,select:focus{outline:2px solid var(--focus);outline-offset:1px}
+.warn{font-size:.75rem;color:var(--err);margin:0 0 .3rem}
+.diffbox{width:100%;min-height:10rem;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.72rem;margin:0 0 1rem;border:1px solid var(--rule);border-radius:4px;background:var(--panel);color:var(--ink)}
+.alert{background:var(--err);color:#fff;padding:.6rem .9rem;border-radius:4px;margin:0 0 1rem;font-weight:500}
+.toast{position:fixed;left:50%;bottom:calc(1.5rem + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:.5rem .9rem;border-radius:999px;font-size:.85rem;z-index:20}
+.hl{background:color-mix(in srgb,var(--link) 22%,transparent)}
+@media (max-width:860px){.frame{grid-template-columns:1fr}nav.toc{position:static;max-height:none;border:1px solid var(--rule);border-radius:4px;padding:.5rem}nav.toc details summary{cursor:pointer;color:var(--ink)}.row{grid-template-columns:1fr;margin-left:0}.pstd,.phang,.phang2,.pmore,.pmore2{margin-left:0;text-indent:0}}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
+</style>
+<div class="bar">
+ <h1>wooldid Help Editor</h1>
+ <input type="search" id="q" placeholder="find text in the help" aria-label="find text in the help">
+ <label>Show <select id="fShow"><option value="">everything</option><option value="edited">edited blocks only</option><option value="unsynced">not in the shared record</option></select></label>
+ <span class="count" id="count"></span>
+ <span class="status" id="status">loading</span>
+ <button class="btn" id="retryAll" type="button">Retry unsaved</button>
+ <button class="btn" id="copyAll" type="button">Copy my edits</button>
+</div>
+<div class="frame">
+ <nav class="toc" id="toc" aria-label="Contents"></nav>
+ <main>
+  <div class="legend">This is <b>wooldid.sthlp</b> as Stata shows it, block by block. Click into any paragraph, heading or table cell and type; the block turns yellow and saves to the page's shared record as you go (the pill at the top right says who you are signed in as and whether the record is taking your edits). Italic, bold, code and underlined words can be edited in place. Links and other directives are fixed in this view; to change one, or to restructure a block, press <b>Source</b> on the block and edit its SMCL directly. <b>Revert</b> puts a block back to the shipped text. <b>Copy my edits</b> copies every changed block (original and new SMCL) to the clipboard for safekeeping. Make one small test edit first and check that its block says <b>saved</b>.</div>
+  <div id="alert" class="alert" hidden></div>
+  <textarea id="diffBox" class="diffbox" hidden spellcheck="false" aria-label="your edits as text"></textarea>
+  <div class="help" id="help"></div>
+ </main>
+</div>
+<span id="toast" class="toast" hidden></span>
+<script id="seed" type="application/json">__SEED__</script>
+<script>
+(function(){
+'use strict';
+const SEED = JSON.parse(document.getElementById('seed').textContent);
+const VER = SEED.meta.ver;
+const BLOCKS = SEED.blocks;
+const helpEl = document.getElementById('help');
+const statusEl = document.getElementById('status');
+const countEl = document.getElementById('count');
+const state = {edits: new Map(), synced: new Map(), db: null, user: null, me: null, readonly: false, stale: new Map()};
+const EDITABLE_KINDS = new Set(['pstd','phang','phang2','pmore','pmore2','p','synopt','p2col','title','dlgtab']);
+const STYLED = {it:'smcl-it',bf:'smcl-bf',ul:'smcl-ul',cmd:'smcl-cmd',err:'smcl-err',res:'smcl-res',txt:'smcl-txt',inp:'smcl-inp',hi:'smcl-hi',sf:'smcl-txt'};
+const LS_KEY = 'wooldid-help-edits:' + VER;
+
+/* ---------- SMCL parsing ---------- */
+function parseSMCL(s){
+  const nodes = []; let i = 0, buf = '';
+  while (i < s.length){
+    const ch = s[i];
+    if (ch === '{'){
+      const j = matchBrace(s, i);
+      if (j < 0){ buf += ch; i++; continue; }
+      if (buf){ nodes.push({t:'text', v: buf}); buf = ''; }
+      nodes.push(parseDirective(s.slice(i + 1, j), s.slice(i, j + 1)));
+      i = j + 1;
+    } else { buf += ch; i++; }
+  }
+  if (buf) nodes.push({t:'text', v: buf});
+  return nodes;
+}
+function matchBrace(s, i){
+  let d = 0;
+  for (let k = i; k < s.length; k++){
+    if (s[k] === '{') d++; else if (s[k] === '}'){ d--; if (d === 0) return k; }
+  }
+  return -1;
+}
+function parseDirective(inner, raw){
+  const m = /^([A-Za-z_*.][A-Za-z0-9_*.]*)/.exec(inner);
+  if (!m) return {t:'dir', name:'', arg:'', body:null, raw};
+  const name = m[1]; let rest = inner.slice(name.length);
+  if (name === '...' || name === '*') return {t:'dir', name, arg: rest, body: null, raw};
+  if (name === 'opt' || name === 'opth' || name === 'cmdab'){ return {t:'dir', name, arg: rest.replace(/^\s+/, ''), body: null, raw}; }
+  let arg = '', body = null;
+  let k = 0; while (k < rest.length && rest[k] === ' ') k++;
+  if (rest[k] === '"'){ let e = rest.indexOf('"', k + 1); if (e < 0) e = rest.length - 1; arg = rest.slice(k, e + 1); k = e + 1; while (k < rest.length && rest[k] === ' ') k++; }
+  else { let e = k, d = 0; while (e < rest.length){ const c = rest[e]; if (c === '{') d++; else if (c === '}') d--; else if (c === ':' && d === 0) break; e++; } arg = rest.slice(k, e).trim(); k = e; }
+  if (rest[k] === ':'){ body = rest.slice(k + 1); }
+  return {t:'dir', name, arg, body, raw};
+}
+
+/* ---------- SMCL rendering ---------- */
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function same(a, b){ return (a || '').replace(/\s+/g, ' ').trim() === (b || '').replace(/\s+/g, ' ').trim(); }
+function renderNodes(nodes){ return nodes.map(renderNode).join(''); }
+function renderNode(n){
+  if (n.t === 'text') return esc(n.v.replace(/\n/g, ' '));
+  const nm = n.name;
+  if (nm === '...' || nm === '*' || nm === 'p_end') return '';
+  if (STYLED[nm] && n.body !== null) return '<span class="' + STYLED[nm] + '" data-d="' + nm + '">' + renderNodes(parseSMCL(n.body)) + '</span>';
+  if (nm === 'opt' || nm === 'opth' || nm === 'cmdab'){
+    const a = n.arg; const c = a.indexOf(':');
+    let html;
+    if (c > 0) html = '<u>' + esc(a.slice(0, c)) + '</u>' + esc(a.slice(c + 1)); else html = esc(a);
+    return '<span class="smcl-opt chip inert" contenteditable="false" data-raw="' + esc(n.raw) + '">' + html + '</span>';
+  }
+  if (nm === 'help' || nm === 'helpb'){
+    const text = n.body !== null ? n.body : n.arg;
+    const tgt = n.arg;
+    return '<span class="chip" contenteditable="false" data-raw="' + esc(n.raw) + '" data-tgt="' + esc(tgt) + '" title="help ' + esc(tgt) + '">' + esc(text) + '</span>';
+  }
+  if (nm === 'browse'){
+    const url = n.arg.replace(/^"|"$/g, ''); const text = n.body !== null ? n.body : url;
+    return '<a class="ext" href="' + esc(url) + '" target="_blank" rel="noopener" contenteditable="false" data-raw="' + esc(n.raw) + '">' + esc(text) + '</a>';
+  }
+  if (nm === 'stata'){ const text = n.body !== null ? n.body : n.arg.replace(/^"|"$/g, ''); return '<span class="chip inert" contenteditable="false" data-raw="' + esc(n.raw) + '" title="runs in Stata">' + esc(text) + '</span>'; }
+  if (nm === 'marker') return '<span class="chip anch" id="mk-' + esc(n.arg) + '" contenteditable="false" data-raw="' + esc(n.raw) + '"></span>';
+  if (nm === 'c'){ const map = {'-(':'{', ')-':'}', '|':'|', 'S|':'$'}; return '<span class="chip inert" contenteditable="false" data-raw="' + esc(n.raw) + '">' + esc(map[n.arg] || n.arg) + '</span>'; }
+  if (nm === 'space'){ return '<span class="chip inert" contenteditable="false" data-raw="' + esc(n.raw) + '">' + '&nbsp;'.repeat(Math.max(1, parseInt(n.arg, 10) || 1)) + '</span>'; }
+  if (nm === 'break') return '<br contenteditable="false" data-raw="' + esc(n.raw) + '">';
+  if (nm === 'bind' && n.body !== null) return '<span class="chip inert" contenteditable="false" data-raw="' + esc(n.raw) + '" style="white-space:nowrap">' + esc(n.body) + '</span>';
+  return '<span class="chip dir" contenteditable="false" data-raw="' + esc(n.raw) + '">' + esc(n.raw) + '</span>';
+}
+
+/* ---------- block model: opener + cell1 + content + closer ---------- */
+function splitBlock(b){
+  const s = b.smcl; const k = b.kind;
+  if (!EDITABLE_KINDS.has(k)) return null;
+  const j = matchBrace(s, 0); if (j < 0) return null;
+  const head = parseDirective(s.slice(1, j), s.slice(0, j + 1));
+  let opener, cell1 = null, contentStart;
+  if (k === 'synopt' || k === 'p2col' || k === 'title' || k === 'dlgtab'){
+    const colon = s.indexOf(':', 1); if (colon < 0 || colon > j) return null;
+    opener = s.slice(0, colon + 1); cell1 = s.slice(colon + 1, j); contentStart = j + 1;
+  } else { opener = s.slice(0, j + 1); contentStart = j + 1; }
+  let closer = '', content;
+  if (k === 'title' || k === 'dlgtab'){ closer = s.slice(j); content = ''; cell1 = s.slice(opener.length, j); closer = s.slice(j); }
+  else {
+    const pe = s.lastIndexOf('{p_end}');
+    if (pe >= contentStart){ content = s.slice(contentStart, pe); closer = s.slice(pe); }
+    else { const nl = s.endsWith('\n') ? s.length - 1 : s.length; content = s.slice(contentStart, nl); closer = s.slice(nl); }
+  }
+  return {opener, cell1, content, closer};
+}
+function serialize(b, cell1Html, contentHtml){
+  const parts = splitBlock(b); if (!parts) return b.smcl;
+  let out = parts.opener;
+  if (parts.cell1 !== null) out += domToSMCL(cell1Html) + (b.kind === 'title' || b.kind === 'dlgtab' ? '' : '}');
+  if (!(b.kind === 'title' || b.kind === 'dlgtab')) out += domToSMCL(contentHtml);
+  return out + parts.closer;
+}
+function domToSMCL(el){
+  let out = '';
+  el.childNodes.forEach(n => {
+    if (n.nodeType === 3){ out += n.nodeValue.replace(/ /g, ' ').replace(/\{/g, '{c -(}').replace(/\}/g, '{c )-}'); return; }
+    if (n.nodeType !== 1) return;
+    if (n.dataset && n.dataset.raw !== undefined){ out += n.dataset.raw; return; }
+    if (n.dataset && n.dataset.d){ out += '{' + n.dataset.d + ':' + domToSMCL(n) + '}'; return; }
+    if (n.tagName === 'BR'){ out += ' '; return; }
+    out += domToSMCL(n);
+  });
+  return out;
+}
+
+/* ---------- render the page ---------- */
+let colWidth = 22;
+function blockHTML(b){
+  const parts = splitBlock(b);
+  const k = b.kind;
+  let inner = '';
+  if (k === 'blank' || k === 'meta'){
+    if (k === 'meta' && /^\{synoptset\s+(\d+)/.test(b.smcl)) colWidth = parseInt(/^\{synoptset\s+(\d+)/.exec(b.smcl)[1], 10);
+    if (k === 'meta' && /^\{marker\s+/.test(b.smcl)){ const mk = /^\{marker\s+([^}]+)\}/.exec(b.smcl)[1]; return '<div class="blk" data-idx="' + b.idx + '" data-kind="meta"></div><span id="mk-' + esc(mk) + '"></span>'; }
+    return '<div class="blk" data-idx="' + b.idx + '" data-kind="' + k + '"></div>';
+  }
+  if (!parts) return '<div class="blk" data-idx="' + b.idx + '" data-kind="raw"><pre class="smcl-cmd">' + esc(b.smcl) + '</pre></div>';
+  const tools = '<span class="tools"><button class="btn" type="button" data-act="src">Source</button><button class="btn" type="button" data-act="revert">Revert</button></span><span class="st" data-st></span>';
+  if (k === 'title' || k === 'dlgtab'){
+    inner = '<div class="t ed" contenteditable="true" spellcheck="true" data-part="cell1">' + renderNodes(parseSMCL(parts.cell1)) + '</div>';
+  } else if (k === 'synopt' || k === 'p2col'){
+    inner = '<div class="row" style="--c1:' + colWidth + 'ch"><div class="c1 ed" contenteditable="true" spellcheck="true" data-part="cell1">' + renderNodes(parseSMCL(parts.cell1)) + '</div><div class="ed" contenteditable="true" spellcheck="true" data-part="content">' + renderNodes(parseSMCL(parts.content)) + '</div></div>';
+  } else {
+    let cls = k === 'p' ? 'pn' : k; let style = '';
+    if (k === 'p'){ const m = /^\{p\s+(\d+)(?:\s+(\d+))?/.exec(parts.opener); if (m){ const a = +m[1], bb = m[2] !== undefined ? +m[2] : a; style = ' style="margin-left:' + bb + 'ch;text-indent:' + (a - bb) + 'ch"'; } }
+    inner = '<div class="' + cls + ' ed" contenteditable="true" spellcheck="true" data-part="content"' + style + '>' + renderNodes(parseSMCL(parts.content)) + '</div>';
+  }
+  return '<div class="blk" data-idx="' + b.idx + '" data-kind="' + k + '">' + tools + inner + '<div class="srcwrap" hidden></div></div>';
+}
+function renderAll(){
+  colWidth = 22;
+  helpEl.innerHTML = BLOCKS.map(blockHTML).join('');
+  buildTOC();
+}
+function buildTOC(){
+  const toc = document.getElementById('toc');
+  const items = [];
+  BLOCKS.forEach(b => { if (b.kind === 'meta'){ const m = /^\{viewerjumpto\s+"([^"]+)"\s+"[^"#]*##([^"]+)"/.exec(b.smcl); if (m) items.push({label: m[1], mk: m[2]}); } });
+  const list = items.map(it => '<a href="#mk-' + esc(it.mk) + '" data-mk="' + esc(it.mk) + '">' + esc(it.label) + '</a>').join('');
+  toc.innerHTML = window.matchMedia('(max-width:860px)').matches ? '<details><summary>Contents</summary>' + list + '</details>' : '<p class="lab">Contents</p>' + list;
+  toc.addEventListener('click', e => { const a = e.target.closest('a[data-mk]'); if (!a) return; e.preventDefault(); jump(a.dataset.mk); });
+}
+function jump(mk){ const el = document.getElementById('mk-' + mk); if (el){ const blk = el.closest('.blk') || el.nextElementSibling || el; (blk || el).scrollIntoView({behavior:'smooth', block:'start'}); } }
+helpEl.addEventListener('click', e => {
+  const chip = e.target.closest('.chip[data-tgt]');
+  if (chip){ const t = chip.dataset.tgt; const m = /##(.+)$/.exec(t); if (m) jump(m[1]); else toast('help ' + t + ' opens in Stata'); return; }
+  const btn = e.target.closest('button[data-act]'); if (!btn) return;
+  const blk = btn.closest('.blk'); const idx = +blk.dataset.idx;
+  if (btn.dataset.act === 'src') toggleSource(blk, idx);
+  if (btn.dataset.act === 'revert') revert(blk, idx);
+});
+
+/* ---------- editing ---------- */
+const timers = new Map();
+helpEl.addEventListener('input', e => {
+  const ed = e.target.closest('.ed'); if (!ed) return;
+  const blk = ed.closest('.blk'); const idx = +blk.dataset.idx;
+  clearTimeout(timers.get(idx));
+  timers.set(idx, setTimeout(() => commitFromDOM(blk, idx), 600));
+});
+helpEl.addEventListener('paste', e => {
+  const ed = e.target.closest('.ed'); if (!ed) return;
+  e.preventDefault(); const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+  document.execCommand('insertText', false, text);
+});
+helpEl.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('.ed')){ e.preventDefault(); document.execCommand('insertText', false, ' '); } });
+function currentSMCL(blk, b){
+  const c1 = blk.querySelector('[data-part="cell1"]'); const ct = blk.querySelector('[data-part="content"]');
+  return serialize(b, c1, ct);
+}
+function commitFromDOM(blk, idx){
+  const b = BLOCKS[idx]; const smcl = currentSMCL(blk, b);
+  applyEdit(blk, idx, smcl);
+}
+function applyEdit(blk, idx, smcl){
+  const b = BLOCKS[idx];
+  if (same(smcl, b.smcl)){ const had = state.edits.has(idx); state.edits.delete(idx); blk.classList.remove('hit'); persistLocal(); if (had) removeRemote(idx, blk); updateCount(); return; }
+  if (same(smcl, state.edits.get(idx))) return;
+  state.edits.set(idx, smcl); blk.classList.add('hit'); persistLocal(); saveRemote(idx, smcl, blk); updateCount();
+}
+function toggleSource(blk, idx){
+  const wrap = blk.querySelector('.srcwrap'); const b = BLOCKS[idx];
+  if (!wrap.hidden){ wrap.hidden = true; wrap.innerHTML = ''; return; }
+  const cur = state.edits.get(idx) || b.smcl;
+  wrap.hidden = false;
+  wrap.innerHTML = '<p class="warn" hidden></p><textarea class="src" spellcheck="false" aria-label="SMCL source of this block"></textarea><button class="btn" type="button" data-src="apply">Apply source</button> <button class="btn" type="button" data-src="close">Close</button>';
+  const ta = wrap.querySelector('textarea'); ta.value = cur;
+  wrap.querySelector('[data-src="close"]').onclick = () => { wrap.hidden = true; wrap.innerHTML = ''; };
+  wrap.querySelector('[data-src="apply"]').onclick = () => {
+    let v = ta.value; if (!v.endsWith('\n')) v += '\n';
+    const warn = wrap.querySelector('.warn'); const probs = [];
+    let d = 0; for (const ch of v){ if (ch === '{') d++; else if (ch === '}') d--; if (d < 0) break; }
+    if (d !== 0) probs.push('braces do not balance');
+    if (b.smcl.includes('{p_end}') && !v.includes('{p_end}')) probs.push('the shipped block ends with {p_end} and this does not');
+    if (probs.length){ warn.hidden = false; warn.textContent = 'Not applied: ' + probs.join('; ') + '.'; return; }
+    warn.hidden = true;
+    rerenderBlock(blk, idx, v); applyEdit(blk, idx, v); wrap.hidden = true; wrap.innerHTML = '';
+  };
+}
+function rerenderBlock(blk, idx, smcl){
+  const b = BLOCKS[idx]; const tmp = Object.assign({}, b, {smcl});
+  const html = blockHTML(tmp); const div = document.createElement('div'); div.innerHTML = html;
+  const fresh = div.firstElementChild; blk.replaceWith(fresh); return fresh;
+}
+function revert(blk, idx){
+  const b = BLOCKS[idx]; const fresh = rerenderBlock(blk, idx, b.smcl); applyEdit(fresh, idx, b.smcl);
+}
+
+/* ---------- persistence: localStorage mirror + shared record ---------- */
+function persistLocal(){ try { const o = {}; state.edits.forEach((v, k) => { o[k] = v; }); localStorage.setItem(LS_KEY, JSON.stringify(o)); } catch (e) {} }
+function loadLocal(){ try { const raw = localStorage.getItem(LS_KEY); if (!raw) return {}; return JSON.parse(raw) || {}; } catch (e) { return {}; } }
+function docId(idx){ return 'b' + idx; }
+function setSt(blk, cls, text){ const st = blk && blk.querySelector('[data-st]'); if (!st) return; st.className = 'st ' + cls; st.textContent = text; }
+async function saveRemote(idx, smcl, blk){
+  if (!state.db){ setSt(blk, 'bad', state.readonly ? 'not saved (read-only)' : 'not saved (record unavailable)'); return; }
+  const b = BLOCKS[idx]; setSt(blk, '', 'saving');
+  const body = {ver: VER, idx, line: b.line, kind: b.kind, hash: b.hash, smcl_original: b.smcl, smcl, edited_at: new Date().toISOString(), by: state.me || ''};
+  try {
+    await state.db.doc('edits/' + docId(idx)).set(body);
+    const back = await state.db.doc('edits/' + docId(idx)).get();
+    if (back.exists && back.data().smcl === smcl){ state.synced.set(idx, smcl); setSt(blk, 'ok', 'saved'); }
+    else setSt(blk, 'bad', 'not saved (read-back differs)');
+  } catch (e){ setSt(blk, 'bad', 'not saved (' + (e && e.code || 'error') + ')'); if (e && e.code === 'invalid_argument'){ state.readonly = true; showStatus(); } }
+  updateCount();
+}
+async function removeRemote(idx, blk){
+  if (!state.db) { setSt(blk, '', ''); return; }
+  try { await state.db.doc('edits/' + docId(idx)).delete(); state.synced.delete(idx); setSt(blk, '', 'reverted'); } catch (e){ setSt(blk, 'bad', 'revert not saved'); }
+}
+function blkOf(idx){ return helpEl.querySelector('.blk[data-idx="' + idx + '"]'); }
+document.getElementById('retryAll').onclick = () => { state.edits.forEach((smcl, idx) => { if (state.synced.get(idx) !== smcl) saveRemote(idx, smcl, blkOf(idx)); }); };
+document.getElementById('copyAll').onclick = async () => {
+  const out = {ver: VER, file: SEED.meta.file, edits: []};
+  state.edits.forEach((smcl, idx) => { const b = BLOCKS[idx]; out.edits.push({idx, line: b.line, kind: b.kind, hash: b.hash, original: b.smcl, smcl}); });
+  const text = JSON.stringify(out, null, 1);
+  const box = document.getElementById('diffBox');
+  try { await navigator.clipboard.writeText(text); toast('Copied ' + out.edits.length + ' edited block(s)'); }
+  catch (e){ box.hidden = false; box.value = text; box.select(); toast('Select the text below and copy it'); }
+};
+function updateCount(){
+  const n = state.edits.size; let unsynced = 0; state.edits.forEach((v, k) => { if (state.synced.get(k) !== v) unsynced++; });
+  countEl.textContent = n + ' of ' + SEED.meta.editable + ' blocks edited' + (unsynced ? ' (' + unsynced + ' not in the record)' : '');
+}
+function showStatus(){
+  if (!state.db){ statusEl.className = 'status ro'; statusEl.textContent = 'read-only: edits will not be saved'; return; }
+  if (state.readonly){ statusEl.className = 'status ro'; statusEl.textContent = 'record refused a write: edits will not be saved'; return; }
+  statusEl.className = 'status ok'; statusEl.textContent = 'saving edits to the shared record' + (state.meName ? ' as ' + state.meName : '');
+}
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 2600); }
+
+/* ---------- search and filters ---------- */
+function applyFilters(){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const show = document.getElementById('fShow').value;
+  helpEl.querySelectorAll('.blk').forEach(blk => {
+    const idx = +blk.dataset.idx; const b = BLOCKS[idx];
+    let ok = true;
+    if (show === 'edited') ok = state.edits.has(idx);
+    if (show === 'unsynced') ok = state.edits.has(idx) && state.synced.get(idx) !== state.edits.get(idx);
+    if (ok && q){ const text = (state.edits.get(idx) || b.smcl).toLowerCase(); ok = text.includes(q); }
+    if (b.kind === 'blank' || b.kind === 'meta') ok = !q && !show;
+    blk.classList.toggle('hid', !ok);
+  });
+}
+document.getElementById('q').addEventListener('input', applyFilters);
+document.getElementById('fShow').addEventListener('change', applyFilters);
+
+/* ---------- boot ---------- */
+renderAll();
+const local = loadLocal();
+Object.keys(local).forEach(k => { const idx = +k; const smcl = local[k]; if (BLOCKS[idx] && !same(smcl, BLOCKS[idx].smcl)){ state.edits.set(idx, smcl); const blk = blkOf(idx); if (blk){ const fresh = rerenderBlock(blk, idx, smcl); fresh.classList.add('hit'); setSt(fresh, 'bad', 'kept in this browser, not yet in the record'); } } });
+updateCount();
+(async () => {
+  try {
+    const user = window.claude && window.claude.use ? await window.claude.use('user') : null;
+    if (user){ try { state.me = await user.id(); const ps = await user.profiles([state.me]); state.meName = (ps && ps[state.me] && ps[state.me].name) || ''; } catch (e) {} }
+    const db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+    state.db = db; showStatus();
+    if (!db){ return; }
+    const snap = await db.collection('edits').where('ver', '==', VER).limit(1000).get();
+    snap.docs.forEach(d => {
+      const v = d.data(); const idx = +v.idx; const b = BLOCKS[idx]; if (!b) return;
+      if (v.hash !== b.hash){ state.stale.set(idx, v); return; }
+      const localV = state.edits.get(idx);
+      if (localV && !same(localV, v.smcl)){ return; }
+      if (same(v.smcl, b.smcl)){ return; }
+      state.edits.set(idx, v.smcl); state.synced.set(idx, v.smcl);
+      const blk = blkOf(idx); if (blk){ const fresh = rerenderBlock(blk, idx, v.smcl); fresh.classList.add('hit'); setSt(fresh, 'ok', 'saved'); }
+    });
+    state.edits.forEach((smcl, idx) => { if (state.synced.get(idx) !== smcl) saveRemote(idx, smcl, blkOf(idx)); });
+    if (state.stale.size) toast(state.stale.size + ' earlier edit(s) belong to a block that has since changed; press Copy my edits to keep them');
+    persistLocal(); updateCount();
+  } catch (e){ state.db = null; showStatus(); }
+})();
+})();
+</script>
