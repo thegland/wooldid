@@ -107,7 +107,7 @@ with an informative error unless {opt safety(off)}. Store large onset codes, suc
 
 {synopt : {help wooldid##technical:Technical Features:}}
 {opt update} {opt customw:eightmultiplier(variable[>=0 numerical])}  {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
-{opt ver:bose} {opt gte:ffects} {opt emptycellsoverride} {opt safety(on|off)}   {opt oldsyntax}  {p_end}
+{opt ver:bose} {opt gte:ffects} {opt emptycellsoverride} {opt safety(on|off)} {p_end}
 
 {marker description}{...}
 {title:Description of Estimation Approach}
@@ -355,7 +355,7 @@ and subgroup contrasts become bootstrap quantities. Point estimates are unchange
 replication re-estimates the full model. {it:bootstrap(standard)} is the pairs cluster bootstrap: the {it:cluster()} groups, or
 the observations when {it:cluster()} is not given, are resampled with replacement. {it:bootstrap(bayes)} is the Bayesian bootstrap: each replication draws one
 Dirichlet weight per cluster and multiplies that cluster's observations by it, so no cluster ever leaves the sample. Requires {it:reps()}. Refused with {it:permute()}, {it:impvalues},
-{it:unconditionalse}, {it:customvce()}, {it:oldsyntax},
+{it:unconditionalse}, {it:customvce()},
 {it:suppresssgprimaryeffects} and multi-way {it:cluster()}. {it:fastnose} is accepted with a caution and has no effect, since the replications already run in fast
 mode; with {it:boottstat} it is refused. {it:bootstrap(bayes)} with {it:att_it}, {it:att_i} or {it:att_itime} omits the cell-sampling component
 of the variance and is refused. Plots, {it:gteffects} cells, {it:jointtests}
@@ -433,7 +433,7 @@ as plain missing. That screen runs on every row the {it:if} expression keeps, in
 {it:permute()} can be refused once {it:permute()} is added; restrict the sample with {it:if}. An onset more than {it:oostreatedcontrols()} periods after the last period, net of
 {it:anticipation()}, is permuted as never-treated, as the estimation treats it, and a caution counts the clusters affected. Also requires {it:permreps()} or, for shuffle only,
 {it:permexact}. Not compatible with
-{it:impvalues}, {it:unconditionalse}, {it:contreatwithin}, {it:contreatcontrols(untreatedZero)}, {it:oldsyntax}, {it:suppresssgprimaryeffects}, {it:pretrendpower()}, {it:simultaneousbands}
+{it:impvalues}, {it:unconditionalse}, {it:contreatwithin}, {it:contreatcontrols(untreatedZero)}, {it:suppresssgprimaryeffects}, {it:pretrendpower()}, {it:simultaneousbands}
 or {it:bootstrap()}. A design that admits only one possible assignment is refused. With {it:subgroups()} the subgroup screens apply over the whole sample, since any cluster can be treated in
 a replication, and a unit split across subgroups, or labelled on some rows and missing on others, is refused whatever {it:safety()} is. Every p-value and interval the run reports is permutation-based, including the subgroup contrasts, the joint pre-trend, subgroup equality and adversarial tests, and the
 continuous-treatment plot cells. The subgroup equality tests and contrasts test the sharp null of no effect at any horizon, not equality of effects. P-values are two-sided equal-tailed, using the add-one form for sampled draws. Intervals are shift intervals at {it:level()}: the estimate minus the
@@ -920,11 +920,6 @@ constant within {it:i}, that weights and the {it:customweightmultiplier()} varia
 more than 100 distinct values (see {help wooldid##runtime:Runtime}), and halts with an informative error before estimation when the specification would exceed the current
 {help maxvar} setting. {it:safety(off)} skips these checks, and downgrades a number of refusals described elsewhere in this help to cautions. If a run changes your specification,
 {it:wooldid} says so whatever {it:safety()} is set to. Only {it:on} and {it:off} are accepted. {p_end}
-
-{phang}{opt oldsyntax}: In older versions, {it:wooldid} used the suffix {it:contemp} to flag the event study coefficient containing the period contemporaneous with treatment.
-This turned out to make {it:wooldid} relatively incompatible with the popular event study plot production program {help event_plot}, so the {it:contemp} suffix has been
-replaced with the suffix {it:post0}. This option reverts {it:wooldid} to using the older coefficient syntax, for compatibility with any older code that relies on it. It cannot be
-combined with {it:permute()} or {it:bootstrap()}. The event study matrices {it:e(b_es_*)}, {it:e(V_es_*)} and {it:e(esband_*)} keep the label {it:post0}. {p_end}
 
 {marker runtime}{...}
 {title:Runtime}

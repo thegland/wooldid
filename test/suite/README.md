@@ -179,7 +179,7 @@ The working rule, therefore, is **report it, do not police it**. The `coverage` 
 prints an `info:` line naming every option in that position together with its one fixture.
 That line is not a failure and several of its entries are correct by design —
 `permexact`/`permtci`/`permtstat` are on `dta_tiny` *because* tiny N makes permutation
-enumeration exact, and the display/compat switches (`verbose`, `oldsyntax`, `regtol`,
+enumeration exact, and the display/compat switches (`verbose`, `regtol`,
 `cleanmatrices`, `emptycellsoverride`, `suppresssgprimaryeffects`) have no shape-dependent
 behaviour to expose. It exists so that the concentration is a quantity a reader can see and
 judge rather than something a future audit has to rediscover, and so that a second fixture

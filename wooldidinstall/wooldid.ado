@@ -750,7 +750,7 @@ version 16.0
   set coeftabresults on
 
 * S5: this line must remain BYTE-IDENTICAL to the syntax line in wooldid_validate
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Execute update before running main program
   if "`update'" == "update" {
@@ -3562,7 +3562,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               local f2opt
               if "`marginsdof'" != "nose" local f2opt b(`f2bmat') v(`f2vmat')
               else if `f2bonly' local f2opt b(`f2bmat')
-              wooldid_sglbl , names(`names') tab(`f9tab') first(`matrixstartgrab') mint(`min_t') old(`oldsyntax') sg(`sgcase') tvar(`_t') strip(1.`targetflag') fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_s`sgcase'') lbl(relyrlist_s`sgcase'_`horizitem') f2l(f2rl_`horizitem'_s`sgcase') `f2opt'
+              wooldid_sglbl , names(`names') tab(`f9tab') first(`matrixstartgrab') mint(`min_t') sg(`sgcase') tvar(`_t') strip(1.`targetflag') fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_s`sgcase'') lbl(relyrlist_s`sgcase'_`horizitem') f2l(f2rl_`horizitem'_s`sgcase') `f2opt'
               if `wdsg_skip' {
                 local wdsgskip_`horizitem'_s`sgcase' 1
                 continue
@@ -4046,7 +4046,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
                   local namesC `sg1new'
                 }
                 * ---- end of the synthesized estimability marker ---------------------------
-                wooldid_sglbl , names(`namesC') tab(`f9tab') mint(`min_t') old(`oldsyntax') sg(`sgcase') tvar(`_t') kind(continuous-treatment) fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_Cs`sgcase'') lbl(relyrlist_s`sgcase'_`f2kC') f2l(f2rl_`f2kC'_s`sgcase') `f2optC'
+                wooldid_sglbl , names(`namesC') tab(`f9tab') mint(`min_t') sg(`sgcase') tvar(`_t') kind(continuous-treatment) fb(`ifstatement' & `targetflag'==1  & `_t' >= `horizonstarter' & `_t' <= `horizonend' & `subgroups' == `sgcase' & `_t' != 0) rel(`relyrcolumn_Cs`sgcase'') lbl(relyrlist_s`sgcase'_`f2kC') f2l(f2rl_`f2kC'_s`sgcase') `f2optC'
                 if `wdsg_skip' {
                   local wdsgskipC_`horizitem'_s`sgcase' 1
                   continue
@@ -4324,7 +4324,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         local relyr = `horiz' - `min_t' - 1
         local arelyr = abs(`relyr')
         if `relyr' >= 0 local name "post`relyr'"
-        if `relyr' == 0 & `oldsyntax' == 1 local name "contemp"
         if `relyr' < 0 local name "pre`arelyr'"
         local rownamespool `rownamespool' ES_att:`name'
       }
@@ -4336,7 +4335,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         local relyr = `horiz' - `min_t' - 1
         local arelyr = abs(`relyr')
         if `relyr' >= 0 local name "post`relyr'"
-        if `relyr' == 0 & `oldsyntax' == 1 local name "contemp"
         if `relyr' < 0 local name "pre`arelyr'"
         local rownamespool `rownamespool' ES_att_it:`name'
       }
@@ -4349,7 +4347,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           local relyr = `horiz' - `min_t' - 1
           local arelyr = abs(`relyr')
           if `relyr' >= 0 local name "post`relyr'"
-          if `relyr' == 0 & `oldsyntax' == 1 local name "contemp"
           if `relyr' < 0 local name "pre`arelyr'"
           local rownamespool `rownamespool' ES_ame:`name'
         }
@@ -4361,7 +4358,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
           local relyr = `horiz' - `min_t' - 1
           local arelyr = abs(`relyr')
           if `relyr' >= 0 local name "post`relyr'"
-          if `relyr' == 0 & `oldsyntax' == 1 local name "contemp"
           if `relyr' < 0 local name "pre`arelyr'"
           local rownamespool `rownamespool' ES_ame_it:`name'
         }
@@ -4643,7 +4639,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
         local f8rv = `relyrcolumn'[`f8i',1]
         local f8h  = `f8rv' + `min_t' + 1
         if `f8rv' < 0 local f8rn `f8rn' pre`=abs(`f8rv')'
-        else if `f8rv' == 0 & `oldsyntax' == 1 local f8rn `f8rn' contemp
         else local f8rn `f8rn' post`f8rv'
         matrix `f8m'[`f8i',8] = `f8rv'
         forval f8r = 1/`=rowsof(`f8raw')' {
@@ -4729,7 +4724,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
               local f8rv = `relyrcolumn_s`sgcase''[`f8i',1]
               local f8h  = `f8rv' + `min_t' + 1
               if `f8rv' < 0 local f8srn `f8srn' pre`=abs(`f8rv')'
-              else if `f8rv' == 0 & `oldsyntax' == 1 local f8srn `f8srn' contemp
               else local f8srn `f8srn' post`f8rv'
               matrix `f8sm'[`f8i',8] = `f8rv'
               forval f8r = 1/`=rowsof(`f8sraw')' {
@@ -5385,7 +5379,7 @@ prog def wooldid_validate
 version 16.0
 
 * S5: this line must remain BYTE-IDENTICAL to the worker's syntax line
-syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update oldsyntax PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
+syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_itime att_i CLUSter(varlist numeric) customvce(string) UNCONDitionalse  ROBust IMPvalues fe(varlist fv) COARSEcohortcontrols(string) ccc_absorb(varlist numeric)   CONTROLs(varlist fv) INTERactivecontrols(varlist numeric)  TIMETRENDs SUBgroups(varname numeric) CUSTOMWeightmultiplier(varname numeric)  ESPRElength(integer 0) ESPOSTlength(integer 0) SAVEplots(name)  POISson   OOStreatedcontrols(integer 0) ANTICipation(integer 0) ESFixedbaseperiod ESRelativeto(integer -1) safety(string)   MAKEPlots MAKECfxplots SUMmarystats HISTogramcohorteffects   regtol(integer 9)  JOINTtests SUPPRESSsgprimaryeffects contreat(varname numeric) CONTREATPoly(int 1) lattice(string) LATTICEIGnoreweights  CCNOabsorb CONTREATControls(string) VERbose   CFXPLOTTypes(string) cfxlattice(varname) makecfxplotsbysg cfxplotnose CONTREATELASticitytype(string)    CONTREATWithin CLEANmatrices   emptycellsoverride  replace  altmethod_adversarial ADVersarial update PRETRENDPOWer(numlist) FASTnose NOFASTCOLLAPSE GTEffects PERMute(string) PERMREPS(integer 0) PERMEXact PERMTStat PERMTci PERMSTRata(varname numeric) PERMPRobs(string asis) PERMSAve(string) PERMANalyticse PERMABsp PERMSide(string) PERMRAWp PERMSTEPdown PERMONSETcohorts SIMULTaneousbands BOOTstrap(string) reps(integer 0) ties Level(real 0) dots(integer -1) rseed(string) BOOTALPha(string) BOOTDf(string) BOOTDISPlay(string) BOOTTStat BOOTSAve(string)]
 
 * Verify that the packages wooldid requires (reghdfe, ftools, gtools) are installed before doing anything else
 * ppmlhdfe is deliberately not checked here: it is only required for poisson estimation and remains optional
@@ -5401,14 +5395,6 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   if "`missingpackages'" != "" error 198
 
   if "`verbose'" == "verbose" dis as text "Wooldid is processing input in preparation for regression estimation."
-
- * This controls the names we use for ES plots; the new syntax is more compatible with the program event_plot
- if "`oldsyntax'" == "oldsyntax" {
-    local oldsyntax 1
- }
- else {
-    local oldsyntax 0
- }
 
   **** Begin a block of checks that command info is correctly specified; error out if not. handle all syntax errors here
 
@@ -5760,7 +5746,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * error 459 if that refusal is ever lifted, rather than silently downgrading them to a
   * caution - the failure the safetyinput split exists to prevent
   if "`permute'" != "" {
-    cap noi wooldid_permctl , yv(`y') permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') os(`oldsyntax') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safetyuser') psave(`permsave') level(`level') onc(`permonsetcohorts') ase(`permanalyticse') oostreatedcontrols(`oostreatedcontrols') anticipation(`anticipation') `replace'
+    cap noi wooldid_permctl , yv(`y') permute(`permute') permreps(`permreps') `permexact' clus(`cluster') ttrevar(`ttre_asgiven') absp(`permabsp') side(`permside') rawp(`permrawp') permstrata(`permstrata') permprobs(`permprobs') impv(`impvalues') uncond(`unconditionalse') cw(`contreatwithin') ts(`permtstat') tc(`permtci') fn(`fastnose') cc(`contreatcontrols') ifr(`if') ptp(`pretrendpower') ssg(`suppresssgprimaryeffects') sg(`subgroups') ivar(`i') tvar(`t') si(`safetyuser') psave(`permsave') level(`level') onc(`permonsetcohorts') ase(`permanalyticse') oostreatedcontrols(`oostreatedcontrols') anticipation(`anticipation') `replace'
     if _rc != 0 exit _rc   // exit, not error - the cap noi above already printed it
   }
 
@@ -5773,7 +5759,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * to conserve this program's compiled-size headroom. called UNCONDITIONALLY: with
   * bootstrap() absent it enforces the stray-companion screen and exits. si() carries the
   * user's own safety() value; no bootctl gate reads it
-  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') os(`oldsyntax') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') ttrevar(`ttre_asgiven') `replace'
+  cap noi wooldid_bootctl , bootstrap(`bootstrap') reps(`reps') `ties' level(`level') dots(`dots') rseed(`rseed') bootalpha(`bootalpha') bootdf(`bootdf') bdisp(`bootdisplay') bts(`boottstat') bsave(`bootsave') pois(`poisson') permute(`permute') impv(`impvalues') uncond(`unconditionalse') cvce(`customvce') fn(`fastnose') ssg(`suppresssgprimaryeffects') attit(`att_it') atti(`att_i') attitime(`att_itime') si(`safetyinput') clus(`cluster') ivar(`i') ifr(`if') jt(`jointtests') ptp(`pretrendpower') ttrevar(`ttre_asgiven') `replace'
   if _rc != 0 exit _rc   // exit, not error - the cap noi above already printed it (the shell-header rule)
 
   * drop a redundant fastnose under bootstrap() (ruled 2026-09-21). wooldid_bootctl has
@@ -6319,7 +6305,7 @@ syntax [varlist(numeric default=none)] [if/]  [aw fw pw / ]  ,  [att att_it att_
   * already builds the lb_92p5ci column names with %9.0g, which is why those were always right
   * while the `set level' beside them was wrong.
   local level = strofreal(`level', "%9.0g")
-  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update oldsyntax pretrendpower fastnose nofastcollapse fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp permstepdown permonsetcohorts simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw {
+  foreach wdv_ret in att att_it att_itime att_i cluster customvce unconditionalse robust impvalues fe coarsecohortcontrols ccc_absorb controls interactivecontrols timetrends subgroups customweightmultiplier esprelength espostlength saveplots poisson oostreatedcontrols anticipation esfixedbaseperiod esrelativeto safety makeplots makecfxplots summarystats histogramcohorteffects regtol jointtests suppresssgprimaryeffects contreat contreatpoly lattice latticeignoreweights ccnoabsorb contreatcontrols verbose cfxplottypes cfxlattice makecfxplotsbysg cfxplotnose contreatelasticitytype contreatwithin cleanmatrices emptycellsoverride replace altmethod_adversarial adversarial update pretrendpower fastnose nofastcollapse fcon fcskip gteffects permute permreps permexact permtstat permtci permstrata permprobs permsave permanalyticse permabsp permside permrawp permstepdown permonsetcohorts simultaneousbands y i t ttre_asgiven safetyinput suppressjointtests latticenum latticetype esposttrip cfxpost cfxpre cfxrelyrlist bootstrap reps ties level dots rseed bootalpha bootdf bootdisplay boottstat bootsave esprelengthraw {
     c_local `wdv_ret' `"``wdv_ret''"'
   }
 
@@ -6620,7 +6606,7 @@ end
 cap prog drop wooldid_permctl
 prog def wooldid_permctl
 version 16.0
-  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) yv(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) os(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) side(string) rawp(string) onc(string) ase(string) oostreatedcontrols(integer 0) anticipation(integer 0) replace]
+  syntax , [permute(string) permreps(integer 0) PERMEXact clus(varlist) ttrevar(varname) yv(varname) permstrata(varname numeric) permprobs(string asis) impv(string) uncond(string) cw(string) ts(string) tc(string) fn(string) cc(string asis) ifr(string asis) ptp(string asis) ssg(string) sg(varname numeric) ivar(varname) tvar(varname) si(string) psave(string) level(real 0) absp(string) side(string) rawp(string) onc(string) ase(string) oostreatedcontrols(integer 0) anticipation(integer 0) replace]
 
   local permmethod `permute'
   if "`permmethod'" != "shuffle" & "`permmethod'" != "probabilities" {
@@ -6655,10 +6641,6 @@ version 16.0
   * token. contreat in general stays allowed - the null is timing-as-if-random given dose
   if `"`cc'"' == "untreatedZero" {
     dis as error "Error: permute() is not compatible with contreatcontrols(untreatedZero)."
-    error 198
-  }
-  if "`os'" == "1" {
-    dis as error "Error: permute() is not compatible with oldsyntax."
     error 198
   }
   * two more permute() refusals. pretrendpower: the Roth diagnostics are computed on an
@@ -7126,7 +7108,7 @@ version 16.0
 *** the two programs - checked by test/check_validate_sync.py - and the call site need not
 *** change. Do not wire a gate onto them expecting one to already exist, and do not delete
 *** them while the call site still passes them.
-  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) os(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ttrevar(varname) ifr(string asis) jt(string) ptp(string asis) replace]
+  syntax , [bootstrap(string) reps(integer 0) ties level(real 0) dots(integer -1) rseed(string) bootalpha(string) bootdf(string) bdisp(string) bts(string) bsave(string) pois(string) permute(string) impv(string) uncond(string) cvce(string asis) fn(string) ssg(string) attit(string) atti(string) attitime(string) si(string) clus(varlist) ivar(varname) ttrevar(varname) ifr(string asis) jt(string) ptp(string asis) replace]
 
   * rseed() and dots() are validated before the stray screen: both are shared with permute(),
   * whose runs leave this program at the screen's exit below. with neither engine given, an
@@ -7396,12 +7378,6 @@ version 16.0
     *   Bootstrap() may not be combined with customvce(); the reported standard errors would be bootstrap-
     *   based, contradicting the custom-VCE request.
     dis as error "Error: bootstrap() may not be combined with customvce()."
-    error 198
-  }
-  * oldsyntax arrives NORMALIZED to 0/1 (validate rewrites it early) - gate on "1",
-  * never on nonempty (the permctl precedent; a nonempty gate fires on every run)
-  if "`os'" == "1" {
-    dis as error "Error: bootstrap() is not available under oldsyntax."
     error 198
   }
   if "`ssg'" != "" {
@@ -14212,7 +14188,7 @@ end
 * rclass and wipes it
 cap prog drop wooldid_sglbl
 prog def wooldid_sglbl
-  syntax , names(string) tab(name) mint(real) old(integer) sg(string) tvar(name) fb(string asis) rel(name) lbl(name) [f2l(name) b(name) v(name) first(integer 1) strip(string) kind(string)]
+  syntax , names(string) tab(name) mint(real) sg(string) tvar(name) fb(string asis) rel(name) lbl(name) [f2l(name) b(name) v(name) first(integer 1) strip(string) kind(string)]
   local kk = cond("`kind'" == "", "", "`kind' ")
   local keep
   local droplbl
@@ -14281,16 +14257,13 @@ prog def wooldid_sglbl
     * here does not error - it relabels every horizon of this subgroup's event study (pre1
     * printed as post0), and those labels then drive rowname membership and the f2l column
     * labels. The drop caution's labels use the identical line, so the two must stay in step.
-    * NOTE the r == 0 case under oldsyntax appends TWO tokens to `lbls' (post0 AND contemp)
-    * on purpose: the ES row for relative period 0 is named contemp under oldsyntax, and
-    * lbl() is a MEMBERSHIP list consumed by a strpos() test, so both spellings must pass.
+    * lbl() is a MEMBERSHIP list consumed by a strpos() test.
     * Never index lbl() positionally and never take a column count from it - f2l() is the
     * strict one-token-per-kept-column list. (The worker records what positional use costs:
     * a namelist shorter than the matrix makes Stata pad by repeating the LAST name, r(0)
     * and no warning, shifting every later row onto the next quantity's label)
     local r = `w' - `mint' - 1
     if `r' >= 0 local lbls `lbls' post`r'
-    if `r' == 0 & `old' == 1 local lbls `lbls' contemp
     if `r' < 0 local lbls `lbls' pre`=abs(`r')'
     local f2lbls `f2lbls' `=cond(`r' < 0, "pre" + strofreal(abs(`r')), "post" + strofreal(`r'))'
     if "`relcol'" == "" local relcol `r'
@@ -18684,15 +18657,13 @@ void wooldid_permadvline(string scalar cmpname, string scalar colslist, string s
 }
 
 // PS-45 (author ruling 2026-09-07): the relative period a horizon label names. The F2
-// labels are pre#/post#; e(V)'s own row for relative period 0 reads "contemp" under
-// oldsyntax. Anything else - including the "it_post0" tail a shorter family prefix picks
-// up from a longer family's row name - returns missing, which is what makes the
-// prefix-plus-parse column scan below self-disambiguating
+// labels are pre#/post#. Anything else - including the "it_post0" tail a shorter family
+// prefix picks up from a longer family's row name - returns missing, which is what makes
+// the prefix-plus-parse column scan below self-disambiguating
 real scalar wooldid_esrelx(string scalar s)
 {
   if (substr(s, 1, 4) == "post") return(strtoreal(substr(s, 5, .)))
   if (substr(s, 1, 3) == "pre") return(-strtoreal(substr(s, 4, .)))
-  if (s == "contemp") return(0)
   return(.)
 }
 
@@ -19009,7 +18980,7 @@ real scalar wooldid_vspl(string scalar vn, string scalar en, string scalar px)
   string matrix vs, es
   real colvector idx
   real scalar n, m, i, j, a, b, nsp
-  string scalar want, want2
+  string scalar want
   V = st_matrix(vn)
   E = st_matrix(en)
   if (rows(V) < 2 | rows(E) < 2) return(0)
@@ -19021,12 +18992,8 @@ real scalar wooldid_vspl(string scalar vn, string scalar en, string scalar px)
   idx = J(m, 1, 0)
   for (j = 1; j <= m; j++) {
     want = px + es[j, 2]
-    // under oldsyntax the e(V) row for relative period 0 is named "contemp" while the
-    // F2 label is always "post0"; without this alias the family half-splices in silence
-    want2 = (es[j, 2] == "post0" ? px + "contemp" : "")
     for (i = 1; i <= n; i++) {
       if (vs[i, 2] == want) idx[j] = i
-      else if (want2 != "" & vs[i, 2] == want2) idx[j] = i
     }
   }
   for (j = 1; j <= m; j++) {

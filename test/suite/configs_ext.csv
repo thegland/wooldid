@@ -318,7 +318,6 @@ ext_cov10_rcs_twoway_cluster_c2,extcase,survey_rcs.dta,pw=survey_weight,,,y_rcs 
 ext_cov10_oos_controls_c1,extcase,binary_balanced.dta,,,,y_oos cohort t ttre_oos,att esprelength(3) espostlength(1) robust safety(off),0,0,,0
 ext_cov10_oos_controls_c2,extcase,binary_balanced.dta,,,,y_oos cohort t ttre_oos,att esprelength(3) espostlength(1) oostreatedcontrols(2) robust safety(off),0,0,,0
 ext_cov10_subgroup_preonly,extcase,binary_balanced.dta,,,,y cohort t ttre,att subgroups(sg_three) esprelength(2) espostlength(-999) robust safety(off),0,0,,0
-ext_cov10_oldsyntax,extcase,binary_balanced.dta,,,,y cohort t ttre,att esprelength(1) espostlength(1) oldsyntax robust safety(off),0,0,,0
 ext_cov10_suppress_sg,extcase,binary_balanced.dta,,,,y cohort t ttre,att subgroups(sg_three) suppresssgprimaryeffects esprelength(1) espostlength(1) robust safety(off),0,0,,0
 ext_cov10_technical_options,extcase,binary_balanced.dta,,,ext_cov10_technical_options,y cohort t ttre,att esprelength(1) espostlength(1) regtol(8) emptycellsoverride verbose robust safety(off),0,0,,0
 ext_cov10_binary_mixed_grain,extcase,binary_mixed_grain.dta,,,,y mixed_i_rich t ttre,att att_i esprelength(1) espostlength(1) cluster(cohort) safety(off),0,0,,0

@@ -109,8 +109,6 @@ cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) un
 chk 5d 198 _rc
 cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) customvce(robust)
 chk 5e 198 _rc
-cap qui wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) oldsyntax
-chk 5f 198 _rc
 cap qui wooldid y unit t ttre, att att_it cluster(unit) bootstrap(standard) reps(50) suppresssgprimaryeffects subgroups(s)
 chk 5g 198 _rc
 cap qui wooldid y unit t ttre, att cluster(unit s) bootstrap(standard) reps(50)
@@ -284,8 +282,8 @@ use `panel', clear
 cap qui wooldid y unit t ttre, att cluster(unit) esprelength(1) espostlength(1)
 chk 13 0 _rc
 
-* ---- message grading: rcs alone can mask wrong-path failures (the oldsyntax
-* normalization bug rode under matching 198s). capture output and assert the
+* ---- message grading: rcs alone can mask wrong-path failures (a normalization
+* bug once rode under matching 198s). capture output and assert the
 * EXPECTED message printed for the tail-reaching and caution shapes.
 cap prog drop logh
 prog def logh
@@ -363,9 +361,6 @@ qui log using boot_gates_m3.smcl, replace name(m3) smcl
 * footer rather than a message about nesting
 cap noi wooldid y s t ttre, att_it cluster(unit) bootstrap(standard) reps(50) rseed(70107)
 logh m3 Bootstrap Inference
-qui log using boot_gates_m4.smcl, replace name(m4) smcl
-cap noi wooldid y unit t ttre, att cluster(unit) bootstrap(standard) reps(50) oldsyntax rseed(70108)
-logh m4 not available under oldsyntax
 qui log using boot_gates_m5.smcl, replace name(m5) smcl
 cap noi wooldid y unit t ttre, att_it cluster(s) bootstrap(standard) reps(20) rseed(8)
 logh m5 Bootstrap Inference
