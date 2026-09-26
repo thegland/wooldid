@@ -22,6 +22,7 @@ scalar|N_dropped|+0.0000000000000X-3ff
 scalar|wdid_vblockn|+1.e000000000000X+003
 scalar|wdid_fcncell|+1.1a00000000000X+009
 scalar|level|+1.7c00000000000X+006
+scalar|adversarial_df_att|+1.4000000000000X+002
 scalar|adversarial_pval_att|+1.4320da1b5f6d6X-024
 scalar|N_clust|+1.4000000000000X+006
 macro|wdid_replayv|2

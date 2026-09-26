@@ -11,8 +11,6 @@ scalar|perm_absp|+0.0000000000000X-3ff
 scalar|perm_p_att|+1.8618618618618X-004
 scalar|perm_bandlo_att|-1.64fd8110b1860X-003
 scalar|perm_bandhi_att|+1.156adda213f98X-004
-scalar|perm_lb_att|-1.64fd8110b1860X-003
-scalar|perm_ub_att|+1.156adda213f98X-004
 scalar|perm_sd_att|+1.0c1eea670aee7X-004
 scalar|perm_precaveat|+0.0000000000000X-3ff
 scalar|N|+1.b000000000000X+007

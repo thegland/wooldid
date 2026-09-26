@@ -11,8 +11,6 @@ scalar|perm_absp|+0.0000000000000X-3ff
 scalar|perm_p_att|+1.8618618618618X-004
 scalar|perm_bandlo_att|-1.aea0db88f0d9fX+000
 scalar|perm_bandhi_att|+1.240b2d5185a7aX+001
-scalar|perm_lb_att|-1.aea0db88f0d9fX+000
-scalar|perm_ub_att|+1.240b2d5185a7aX+001
 scalar|perm_sd_att|+1.1b0990cf0f6f4X+000
 scalar|perm_tlb_att|+1.7afa4d117ce65X-001
 scalar|perm_tub_att|+1.e5cb1e7dca24bX-001

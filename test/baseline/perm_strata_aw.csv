@@ -11,14 +11,10 @@ scalar|perm_absp|+0.0000000000000X-3ff
 scalar|perm_p_att|+1.8618618618618X-005
 scalar|perm_bandlo_att|-1.b4d5672dbe648X-002
 scalar|perm_bandhi_att|+1.7d0608f4d42e8X-001
-scalar|perm_lb_att|-1.b4d5672dbe648X-002
-scalar|perm_ub_att|+1.7d0608f4d42e8X-001
 scalar|perm_sd_att|+1.3ce548b0f729fX-002
 scalar|perm_p_att_it|+1.8618618618618X-005
 scalar|perm_bandlo_att_it|-1.4125d6479c738X-002
 scalar|perm_bandhi_att_it|+1.6617f7ade2468X-001
-scalar|perm_lb_att_it|-1.4125d6479c738X-002
-scalar|perm_ub_att_it|+1.6617f7ade2468X-001
 scalar|perm_sd_att_it|+1.1f8537035a9e3X-002
 scalar|perm_precaveat|+1.0000000000000X+000
 scalar|wdid_fcncell|+1.9400000000000X+006
