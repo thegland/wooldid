@@ -6924,8 +6924,9 @@ version 16.0
   * axes - onset not being exchangeable in assignment, which is the design assumption and
   * cannot be diagnosed here; treated clusters heterogeneous in size or error variance, which
   * the coefficient statistic does not guard against (the caution below says so at
-  * cluster() = i); and, diagnosably, too few ever-treated clusters, which makes the set of
-  * distinct assignments small, a limit no replication count can lift because the draws repeat
+  * cluster() = i); and, diagnosably, too few ever-treated clusters, where the test leans on onset having been assigned
+  * exchangeably across clusters and a treated cluster that is atypical in variance can
+  * oversize it
   if "`ts'" == "" & "`clus'" == "`ivar'" dis as text "Caution: cluster() is at the i level and the permuted statistic is the coefficient itself. Randomization inference presumes clusters are exchangeable in assignment, not alike in variance, so the coefficient statistic carries no protection against a treated cluster whose errors are unusually dispersed; permtstat protects only when the cluster-robust standard error can see the treated clusters' own variance, which needs several clusters inside each treated cohort-period cell."
   * the clusters whose onset the design recoded to never-treated (an onset as given, missing
   * as the design onset), counted once each
@@ -6942,7 +6943,7 @@ version 16.0
   qui count if `wdpttag' == 1
   local wdpntc = r(N)
   cap drop `wdpttag'
-  if `wdpntc' > 0 & `wdpntc' < 6 dis as text "Caution: only `wdpntc' of the resampling clusters are ever treated, so the number of distinct onset assignments is small: sampled draws will repeat and the set of p-values the run can produce is coarse however large permreps() is. permexact enumerates the assignments and reports the exact floor instead."
+  if `wdpntc' > 0 & `wdpntc' < 6 dis as text "Caution: only `wdpntc' of the resampling clusters are ever treated. The permutation test then rests heavily on onset having been assigned exchangeably across clusters, and a treated cluster that is atypical in variance can oversize it; permtstat protects only when several clusters lie inside each treated cohort-period cell."
   if "`clus'" != "`ivar'" & "`onc'" == "" {
     tempvar cgrp cmin cmax
     qui gegen double `cgrp' = group(`clus') if `insmp'

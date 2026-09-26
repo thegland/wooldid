@@ -253,3 +253,11 @@ as real_boot_bayes without bootalpha(size), keeping the second-fixture coverage 
 bootsave() and level(90) (its old-versus-new subset run is recorded below when it returns). Not built: the SEB-05 iid
 containment extension, for the reason under G3; the author should withdraw that ruling.
 
+**Rulings, 2026-09-25 evening.** SEB-05's ruled extension of the containment screen to the plain OLS variance is
+WITHDRAWN on the probe result (section 9, G3). Card m175 (the few-treated-clusters permutation caution) takes the drafted
+text under option (a): "Caution: only `wdpntc' of the resampling clusters are ever treated. The permutation test then rests
+heavily on onset having been assigned exchangeably across clusters, and a treated cluster that is atypical in variance can
+oversize it; permtstat protects only when several clusters lie inside each treated cohort-period cell." (built below).
+The real component's old-versus-new subset with real_boot_bayes: 6 of 6 shards, 23 configs, unexplained 0; real_boot_bayes
+is judged on its rc pair (198 against 0) as its predecessor was.
+
