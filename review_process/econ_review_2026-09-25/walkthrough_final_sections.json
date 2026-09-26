@@ -1,0 +1,1952 @@
+[
+ {
+  "area": "What is being estimated, and from what",
+  "title": "What is being estimated, and from what",
+  "intro": "This section covers what wooldid reports and the sample it comes from: the four estimands, the reference period and comparison group, the checks on timing and subgroups, how controls enter, and the cell tables behind every average. Continuous-treatment identification is in Continuous treatments, and inference is in the sections on analytic standard errors, the bootstrap and randomization inference. The aim throughout is that every reported number is a defined average of effects the data identify, and that wooldid says so when it changes or drops something, apart from the three adjustments under safety(off) listed in How the program talks to you, and what was removed.",
+  "items": [
+   {
+    "heading": "The four estimands, and their restrictions gathered in one place",
+    "kind": "documentation stance",
+    "what_changed": "The four estimands keep their version 1.3 definitions, now shown side by side in the guide. att weights each treated observation by its sample weight. att_it weights each treated cohort-by-period cell equally, a cohort being one value of the panel identifier i. att_i weights each cohort equally. att_itime weights cohorts equally, then periods within each cohort.",
+    "why": "wooldid estimates one effect per treated cell and averages them. An estimand is a choice of weights, which matters only when effects differ across cells.",
+    "decision": "The author kept the four definitions. The help now gathers the restrictions on the three cell-weighted estimands into one paragraph, and the guide shows the four side by side.",
+    "what_you_notice": "No number moves. The paragraph covers unconditionalse, bootstrap(bayes), makecfxplots and split subgroups. The bootstrap(bayes) refusal is told in The bootstrap engine. Sources: drop commit 40e1913.",
+    "sources": [
+     "wooldid_agent_guide.md estimand table and cell-weighted paragraph (lines 168-193)",
+     "wooldid.sthlp Specifying the Estimand(s), closing paragraph (lines 240-244)",
+     "review_process/changes_review_2026-09-22.md s2b R-A (#214)",
+     "commits 07dd933, 61f246e, 40e1913"
+    ]
+   },
+   {
+    "heading": "The reference period sets the comparison group, and the pooled reference stays the default",
+    "kind": "design decision",
+    "what_changed": "By default wooldid compares each treated cohort's treated periods with all its untreated periods pooled. With esfixedbaseperiod it uses one pre-treatment period, by default the one just before onset. The help now explains that this choice sets the comparison group, and so the parallel-trends assumption the estimate needs.",
+    "why": "Parallel trends means treated and comparison units would have followed the same path without treatment. Under the pooled reference every untreated row is a control, including the pre-treatment periods of later-treated cohorts. Parallel trends must hold across all of them. Under the fixed reference the period effects come only from never-treated cohorts and cohorts first treated after the sample, the comparison of Callaway and Sant'Anna (2021). The pooled version matches the imputation estimator of Borusyak, Jaravel and Spiess (2023) under the conditions given in the did_imputation item below. A test that changed only one later-treated cohort's early outcomes moved the pooled att from 1.8456 to 1.895 and left the fixed-reference att unchanged. Pooling uses more periods and can be more precise, at the price of the stronger assumption.",
+    "decision": "The author kept the pooled default, unlabelled on screen. He declined four alternatives: the fixed reference as default, a note on pooled runs, a relabelled plot tick, and a caution or refusal when pooled results go to honestdid, a user-written Stata command for sensitivity analysis of event studies to violations of parallel trends. He later added the help paragraph on what each reference assumes.",
+    "what_you_notice": "No number moves. Two tools require esfixedbaseperiod: the adversarial pre-trend test's p-value and pretrendpower(). The honestdid conditions are documented, not enforced.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s E (PS-34), s B (BS-7)",
+     "review_process/practice_sweep_2026-09-06.md PS-34 (at c1d8979^)",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt ident:F2; round1_results.json ident:F5",
+     "commits 16f5392, f3bc328",
+     "wooldid.sthlp esfixedbaseperiod entry (line 546); Event Study Estimation, comparison-group paragraph and disadvantage paragraph (~lines 614-640)",
+     "wooldid_agent_guide.md Decision rules, 'Pooled or fixed reference period' (line 410)",
+     "review_process/rulings_2026-09-07.md s.E (PS-34)",
+     "review_process/practice_sweep_2026-09-06.md at c1d8979^ (PS-34)",
+     "review_process/econ_review_2026-09-25.md s3 (ident:F2), s4",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt (ident:F2)",
+     "commit 16f5392",
+     "wooldidinstall/wooldid.sthlp:616-630",
+     "wooldidinstall/wooldid.sthlp e(b_es_type) entry, honestdid conditions (~line 1009)"
+    ]
+   },
+   {
+    "heading": "Event-study windows count periods, and a widened window is announced whatever safety() says",
+    "kind": "design decision",
+    "what_changed": "esprelength() and espostlength() set how many horizons, or periods since onset, the event study reports. They count consecutive relative periods, observed or not, and the help now says so. With subgroups(), pre-treatment horizons and no post-treatment horizon, wooldid raises espostlength() to 1, and now announces it under safety(off) too.",
+    "why": "Requested pre-treatment horizons leave the pooled reference, so the counting rule is part of the estimator. On a panel observed every second year, a request for two pre-treatment horizons reaches one. A raised espostlength() reports a horizon nobody asked for, which changes what is estimated.",
+    "decision": "The author declined windows defined by observed horizons, and horizons with no data still drop without a message. He had the widened window announced under any setting. He kept the caution about a unit's first period forced into its reference silent under safety(off), one of three such adjustments listed in How the program talks to you, and what was removed.",
+    "what_you_notice": "No number moves. Under safety(off), \"Caution: espostlength set to 1\" now prints. On a gapped panel, widen the window.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s B (BS-36), s H (P6)",
+     "commit 20c0ec9 (fix 2)",
+     "review_process/held_for_ruling_2026-09-13.md item 8B",
+     "test/suite/degeneracy_expected.csv row ext_b4_h55_p",
+     "wooldid.ado lines 5617-5627 (the raise and its comment); v1.3 ado lines 245-249",
+     "wooldid.ado wooldid_reltime forced-reference branch (~lines 13620-13660)",
+     "wooldid.sthlp esprelength()/espostlength() entries (lines 552-558)",
+     "review_process/rulings_2026-09-07.md s.B (BS-36)",
+     "review_process/bug_sweep_2026-09-06.md at c1d8979^ (BS-36, U7)",
+     "wooldidinstall/wooldid.sthlp:552-556",
+     "wooldidinstall/wooldid_agent_guide.md:411 (Window)",
+     "review_process/held_for_ruling_2026-09-13.md item 8 (8A, 8B)",
+     "test/suite/degeneracy_expected.csv:142 (ext_b4_h55_p)",
+     "wooldid_old_bug_report_2026-09-13.md ~l.5176"
+    ]
+   },
+   {
+    "heading": "New option anticipation(#) moves the effective onset earlier",
+    "kind": "new feature",
+    "what_changed": "anticipation(#) moves each unit's effective onset # periods before the recorded onset ttre. This equals replacing ttre with ttre minus # by hand. The shift also moves the rule for which late-treated cohorts serve as controls. Negative values are refused.",
+    "why": "Difference in differences assumes no response before onset. Otherwise anticipation periods enter the baseline, pulling the estimate toward zero. With effects starting one, two or three periods early, the default call understated them by about 22, 44 and 66 percent. Shifting the onset without the control rule left a 12 percent bias.",
+    "decision": "anticipation() was on the author's approved list of new features, and he kept it when dropping it was later proposed. It follows the shift() option of did_imputation, a user-written Stata command implementing the Borusyak, Jaravel and Spiess imputation estimator.",
+    "what_you_notice": "No default result moves. The shift is stored in e(anticipation). Relative period 0 sits # periods before the recorded onset, so raise espostlength() by #.",
+    "sources": [
+     "wooldid_solved_issues.md F4 (anticipation)",
+     "commits 1f521f6, e73287d, 2269068, d9e1a1f, 16f5392 (F10 wording)",
+     "review_process/econ_review_2026-09-25/round1_results.json ident:F10",
+     "wooldid.ado lines 987-995 (the shift), wooldid_anticgrid (6274), wooldid_anticesf (6292), reltime caution (13581)",
+     "wooldid.sthlp oostreatedcontrols() and anticipation() entries (~lines 596-612)",
+     "commit 1f521f6",
+     "commit e73287d",
+     "review_process/econ_review_2026-09-25.md s3 (ident:F10)",
+     "wooldidinstall/wooldid.sthlp:607-616",
+     "wooldid_solved_issues.md F4 and the 2026-08-19 author rulings (KEEP anticipation(), NFANT-00 rejected)"
+    ]
+   },
+   {
+    "heading": "Timing data is checked before estimation, and rows the if() rule drops are counted",
+    "kind": "changed behaviour",
+    "what_changed": "Before estimating, wooldid now checks the data. ttre must be constant within each i, with no missing mix. t minus ttre must be a whole number. i must not exceed 2,147,483,647 on treated units. Subgroups must be constant within cells. customweightmultiplier() must not be negative. A model needing more variables than Stata's maxvar limit stops early. A caution fires when i takes over 100 values. Rows where if() is nonzero but not exactly 1 are counted.",
+    "why": "An onset that varies within a unit splits it, so part becomes its own control. In tests three such rows moved one horizon by 41 percent. An off-grid onset labels the onset period pre-treatment.",
+    "decision": "safety(off) skips the checks on onset, grid, subgroups, weights and the variable count. It cannot lift the limit on i, which is Stata's own factor-variable limit. Two counts print under either setting: the rows if() excludes, and subgroup values of eight or more digits. For large i codes the author first chose internal renumbering, then a plain refusal once that change proved large. Eight-digit subgroup values make a run fail late while naming results. There he kept an early caution over an internal index, for the same reason.",
+    "what_you_notice": "Some do-files now stop with a named error. Rows the if() rule excludes enter the dropped-observation total. No valid run moves.",
+    "sources": [
+     "wooldid_solved_issues.md F13, S5 part 3",
+     "review_process/changes_review_2026-09-22.md s2b D3",
+     "review_process/rulings_2026-09-07.md s A (BS-37)",
+     "commits c4d7e62, 7dab7b7, 671dba1, f187d7d, 270854d, 5fc3ce5, 07f63ae, 5f5dc6c",
+     "wooldid.ado onset-constancy screen (~lines 1015-1041), customweightmultiplier() domain (965), grid caution (6090), wooldid_ifrule (6369-6376)",
+     "wooldid.sthlp Syntax: if rule (line 61), i, t, ttre entries (lines 65-75); customweightmultiplier() entry",
+     "c4d7e62",
+     "083ea89",
+     "e2b5fad",
+     "wooldidinstall/wooldid.ado 1033, 1759-1765",
+     "wooldidinstall/wooldid.sthlp 74, 947-954",
+     "v1.3 wooldid.ado line 381",
+     "review_process/changes_review_2026-09-22.md s2b D2, D3"
+    ]
+   },
+   {
+    "heading": "When wooldid matches did_imputation, csdid and jwdid, stated exactly",
+    "kind": "documentation stance",
+    "what_changed": "Several Stata commands estimate staggered difference in differences: did_imputation, the imputation estimator of Borusyak, Jaravel and Spiess (2023); csdid, a user-written Callaway and Sant'Anna estimator; xthdidregress, Stata's own group-by-time command; and jwdid, another implementation of Wooldridge's regression approach. The help states when wooldid reproduces the first three; it does not compare wooldid with jwdid. Matching did_imputation needs att, the pooled reference, no controls, no unconditionalse, esprelength(0), and each i holding one unit or units observed in the same periods. gteffects cells, described below, equal csdid's long2 table under esfixedbaseperiod at the default reference period on a balanced panel without controls.",
+    "why": "Users must tell bugs from definitions. Requested pre-treatment horizons leave the pooled reference: at esprelength(4) a test differed from did_imputation by 0.048, at esprelength(0) by 4e-8.",
+    "decision": "The esprelength(0) condition corrected the documentation. Testing showed that balance within each i is enough, so the help asks for that rather than a fully balanced panel.",
+    "what_you_notice": "No number moves. Adding the unit to fe() does not restore that match.",
+    "sources": [
+     "review_process/held_for_ruling_2026-09-13.md item 13 (T-BJS1)",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt ident:F3; round1_results.json ident:F9",
+     "commits 6fe814d, 16f5392",
+     "wooldid.sthlp Comparison to Related Estimators (lines 1167-1207)",
+     "commit 6fe814d",
+     "review_process/econ_review_2026-09-25.md s3 (ident:F3)",
+     "commit 16f5392",
+     "wooldidinstall/wooldid.sthlp:1185-1193"
+    ]
+   },
+   {
+    "heading": "Choices kept on purpose where wooldid differs from common practice",
+    "kind": "design decision",
+    "what_changed": "No behaviour changed. Four departures stand. First, the run stops when every unit is treated inside the window. csdid falls back on not-yet-treated units automatically, and jwdid uses them by default. safety(off) lifts the refusal. Second, covariates enter only through the outcome regression. There is no doubly robust version, which also weights by each unit's estimated chance of treatment. Third, estimands are fixed at estimation time. Fourth, cohort still means one value of i.",
+    "why": "Under a fixed reference, a panel with no never-treated or late cohort is not identified. Under the pooled reference the run can proceed on the not-yet-treated rows, and does so under safety(off); the author kept the refusal there as well. Each cohort-by-period cell has its own effect, so the outcome model is nearly fully flexible. Doubly robust weighting adds most when covariates vary within cells.",
+    "decision": "The author kept all four. He declined a caution in place of the refusal under the pooled reference, a statement on doubly robust estimation, and a box mapping i and ttre onto other commands' terms.",
+    "what_you_notice": "No number moves. The ttre entry says some cohort must be never-treated or first treated after the window.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s E (PS-63, PS-47, PS-48, PS-83)",
+     "review_process/practice_sweep_2026-09-06.md PS-47, PS-48, PS-63, PS-83 (at c1d8979^)",
+     "wooldid.ado calendar-support screen (~line 13673)",
+     "wooldid.sthlp ttre entry (line 73)"
+    ]
+   },
+   {
+    "heading": "Coarse cohort controls are centred, so each cell reports its effect at its own average control value",
+    "kind": "changed behaviour",
+    "what_changed": "coarsecohortcontrols() and ccc_absorb() give each treated cell its own slope on each control, and reference rows a pooled slope. Each cell slope now multiplies the control minus its weighted cell mean. That copy is zero on reference rows. Under ccc_absorb() the pooled slope enters the regression and only the centred slopes are absorbed.",
+    "why": "An uncentred slope reads each cell's effect at a control value of zero, possibly far outside the data. With a true att of 2.00, the uncentred model reported negative 0.53, and negative 49.4 after adding 100 to the control. Centring keeps the fit. Each cell's effect becomes its average outcome minus the predicted untreated outcome at the pooled slope, the imputation idea of Borusyak, Jaravel and Spiess (2023). The test then gave 1.930, as did did_imputation to three decimals.",
+    "decision": "The author chose among four options: build the centred model, document the effect at zero, refuse uncentred controls, or leave it. He chose the centred model, poisson included, although it moves every estimate.",
+    "what_you_notice": "Every estimate from these options moves, unless a control already averaged zero in every treated cell. Shifting or recoding a control no longer changes the result.",
+    "sources": [
+     "review_process/econ_review_2026-09-25.md s5 item 1, s8, s9 G1",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt ident:F1a, ident:F1b",
+     "commits f9b588f, a88777c",
+     "wooldid.ado wooldid_cccentre (line 13753)",
+     "wooldid.sthlp coarsecohortcontrols() entry (~line 884); ccc_absorb() entry (~line 925)",
+     "commit f9b588f",
+     "review_process/rulings_2026-09-07.md s B (ccc_absorb)",
+     "commit a88777c",
+     "wooldid.ado wooldid_cccentre ~13752-13820",
+     "wooldid.sthlp ccc_absorb() entry (~l.923-929)"
+    ]
+   },
+   {
+    "heading": "interactivecontrols() gives slopes to treated cells only, so the reference-period effect is zero by construction",
+    "kind": "changed behaviour",
+    "what_changed": "interactivecontrols() lets effects vary with a control through per-cell slopes on the control demeaned within cohort. The slopes now cover treated cells only, so the reference-period effect is zero by construction.",
+    "why": "The reference cell's slope was an exact sum of other terms. The solver had to drop one column, and its choice set the reported numbers. Reordering terms moved a joint pre-trend p-value from 0.051 to 0.639. Joint tests, honestdid and the plots assume a zero reference.",
+    "decision": "The author required the mechanism to be settled before anything changed. He then had the model itself corrected rather than the joint tests alone.",
+    "what_you_notice": "Results move where the demeaned control does not average zero over reference rows: time-varying controls, weights or unbalanced panels. A caution names a control with no within-cell variation.",
+    "sources": [
+     "wooldid_solved_issues.md SI-20",
+     "wooldid_ado_review.md SI-20 mechanism and measurements",
+     "commits 1df8613, a252da9, 49c9fc3, 4b98e04",
+     "review_process/rulings_2026-09-07.md s B (BS-38)",
+     "wooldid.ado line 1436 (1.targetflag), wooldid_icscreen (line 14391)",
+     "wooldid.sthlp interactivecontrols() entry (~line 890)"
+    ]
+   },
+   {
+    "heading": "The triple-difference recipe uses att_it, with i defined as onset cohort by group",
+    "kind": "documentation stance",
+    "what_changed": "Version 1.3 said to difference two subgroup estimates, naming no estimand. The help and the guide now say: define i as onset cohort crossed with group, use att_it, and make sure both groups appear in every treated cell.",
+    "why": "A triple difference must remove shocks both groups share within a treated cell. Under att each group weights a cell by its own share of observations, so a shared shock survives, scaled by the gap in weights. In a noiseless test with true effect 1, att returned 3.84 and att_it returned 1.",
+    "decision": "The author had the econometric errors in the help corrected, and this recipe was one of them.",
+    "what_you_notice": "No number moves. The guide's worked example now uses att_it.",
+    "sources": [
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt ident:F4",
+     "review_process/econ_review_2026-09-25/edits_applied.json",
+     "commit 16f5392",
+     "wooldid.sthlp triple-diff paragraph (~line 681)",
+     "wooldid_agent_guide.md line 475 and worked example"
+    ]
+   },
+   {
+    "heading": "Subgroups must be made of whole units, and split or partly labelled units are refused",
+    "kind": "changed behaviour",
+    "what_changed": "wooldid now refuses a subgroup that varies within a cohort-by-period cell, a unit that changes subgroup over time, and a treated unit labelled on only some rows. Under safety(off), outside permute(), a split unit enters each subgroup by its share of sample weight.",
+    "why": "Subgroups only choose which rows the averaging step uses, so all subgroups share the same cell effects. A subgroup varying within a cell only reweights them, and the contrast measures who is in each group: a true threefold difference was reported as zero. A split unit also counts as a fraction of a unit under the cell-weighted estimands.",
+    "decision": "The within-cell refusal came first, with the timing checks. The author then directed that a unit split across subgroups over time be refused outright, with share weighting kept only under safety(off). He later ruled that partly labelled units be refused too. Asked to remove the safety(off) escape from all three screens, he kept it for the two in the main run and removed it only under permute(), which screens more strictly; see Randomization inference: permute() and its companion options.",
+    "what_you_notice": "Subgroup variables that split units stop the run with an error. Valid runs do not move.",
+    "sources": [
+     "review_process/open_ticket_sgshareweight_2026-09-21.md",
+     "review_process/changes_review_2026-09-22.md s2 R-B, s2b, s4",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R16",
+     "wooldid_solved_issues.md F13",
+     "commits c4d7e62, e5445c4, 1c09efa, 8443694, 402b324, 29b5952, fddfddd",
+     "wooldid.ado wooldid_sgdom (line 13829, refusal at 13908), wooldid_permctl (line 6602)",
+     "wooldid.sthlp subgroups() entry and containment paragraph (~lines 652-679)"
+    ]
+   },
+   {
+    "heading": "New option gteffects returns the cohort-by-period effects behind every average, with estimands fixed at estimation time",
+    "kind": "new feature",
+    "what_changed": "gteffects stores e(gteffects), one row per estimated cohort-by-relative-period cell, read from the regression. Each row gives the estimate, standard error, p-value, interval, observation count and the cell's weight under each requested estimand. Averaging the post-treatment rows with a weight column reproduces the main result. Tables of up to 200 rows print. The option is refused under contreat().",
+    "why": "Every estimand averages these cells, so the table shows what each average is made of. When i is the onset cohort, the cells are the group-time effects known from csdid. Under contreat() the cell coefficients are intercepts at a dose of zero, not effects. Under interactivecontrols() the cells are approximate, because the interaction coefficients absorb control variation.",
+    "decision": "The author kept estimands fixed at estimation time, with no re-aggregation menu and no calendar-time aggregate. The weight columns are the route to a custom average.",
+    "what_you_notice": "No existing number moves. The guide says the cells are approximate under interactivecontrols(), and the help entry does not. How contained and residue cells are reported is told in Analytic standard errors and what they can and cannot see.",
+    "sources": [
+     "wooldid_solved_issues.md F3",
+     "commits b65b91b, 6d2f33b, a49499b, 86bc498",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R10",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt se:SEB-01",
+     "review_process/rulings_2026-09-07.md s E (PS-48)",
+     "wooldid.sthlp gteffects entry (lines 933-946); e(gt_ncontained) (line 1021)",
+     "review_process/rulings_2026-09-07.md s B (BS-38)",
+     "wooldidinstall/wooldid_agent_guide.md gteffects reading notes (line 911)"
+    ]
+   },
+   {
+    "heading": "New event-study composition table e(escomp)",
+    "kind": "new feature",
+    "what_changed": "Every event-study run stores e(escomp), one row per horizon. Each row counts the cohorts, units, clusters and observations behind it, and its share of treated weight under att and att_it. Per-subgroup versions and reference-pool scalars come with it.",
+    "why": "Late horizons come only from early cohorts, so a jump in the profile can reflect who is averaged rather than a change in effects. In one test dataset a worsening pre-trend, with p of 0.021, was such a switch. The table is a diagnostic, not a test.",
+    "decision": "The author approved the table as a new feature, on by default. Appending columns to the event-study matrix was rejected, because other code relies on its layout. He approved skipping the table inside bootstrap and permutation replications.",
+    "what_you_notice": "summarystats displays the new matrix. No number moves.",
+    "sources": [
+     "wooldid_solved_issues.md F8",
+     "commits d87adfd, 6daf251",
+     "wooldid.sthlp e(escomp) entry (lines 1025-1029)",
+     "commit d87adfd",
+     "commit 1727d6e",
+     "commit 5848422 (DOC-03)",
+     "wooldidinstall/wooldid.sthlp:1025-1030",
+     "wooldid_solved_issues.md F8 (near line 278) and NFCOMP-01 note"
+    ]
+   },
+   {
+    "heading": "The averaging step runs on one row per cell by default, with one switch to turn it off",
+    "kind": "changed behaviour",
+    "what_changed": "The regression still runs on the full data, so coefficients, variance and clustering are unchanged. The averaging step uses margins, Stata's command for averaging predictions and their derivatives over the sample. It now runs by default on one row per cohort-by-period-by-treatment cell carrying the cell's summed weight. This cell collapse covers binary and dose runs, poisson, subgroups, customvce() and replications. nofastcollapse turns it off.",
+    "why": "When no term lets the effect vary within a cell, one weighted row gives the same average as all rows. A dose effect is a straight line in the dose within a cell, so the weighted mean dose reproduces it. A squared dose does not. Under poisson the dose derivatives are now exact rather than numerical, which let the collapse cover contreatelasticitytype(dyex). On a panel of about 30,000 rows the whole run was 35 to 40 percent faster, and about half the time was saved at 475,000 rows.",
+    "decision": "The author made the collapse the default the day it appeared. He allowed each extension after measurement. interactivecontrols() stayed out after errors of 23 to 37 percent. customvce() came in once its differences proved to be margins' own noise. For subgroups he chose to check each result for a numerically singular direction, one with no measured variance, and rerun uncollapsed when one appears; under safety(off) the run keeps the collapsed result and prints a caution. Dose subgroup reads stay unchecked, since the problem arises on no known design and checking would cost a covariance read per call. fastcollapse and fullprecisionslow were removed with no alias.",
+    "what_you_notice": "Runs are faster. Results match an uncollapsed run to the accuracy of margins itself. An ineligible request prints a caution naming the option responsible.",
+    "sources": [
+     "review_process/cell_collapse_2026-08-31.md, cell_collapse_followup_2026-09-01.md, cell_collapse_subgroups_2026-09-01.md, cell_collapse_contreat_2026-09-02.md",
+     "review_process/changes_review_2026-09-22.md s2b",
+     "commits 1eea605, 111ecbb, 4b224f0, 05c4248, 01a7f7a, f1a2b94, cd46002",
+     "wooldid.ado wooldid_fcol (line 6413), validate gate (lines 5790-5872)",
+     "wooldid.sthlp nofastcollapse entry (lines 294-303)",
+     "review_process/option_consolidation_2026-09-16.md",
+     "commits 851c503, 38f0362, cd46002",
+     "wooldid.ado validate caution (line 5862)",
+     "review_process/changes_review_2026-09-22.md s.2b, s.3a customvce-collapse-heldout",
+     "commit cd46002",
+     "wooldid.sthlp 269-274, 293-302",
+     "review_process/cell_collapse_contreat_2026-09-02.md header and s6a",
+     "commit 4b224f0",
+     "commit 01a7f7a",
+     "commit f1a2b94",
+     "wooldid.ado wooldid_fcol ~6413-6480 and call site ~2503-2525",
+     "wooldid.sthlp nofastcollapse entry (~l.293-298)",
+     "commits 32517df, 01a7f7a",
+     "review_process/rulings_2026-09-07.md s D (F012)",
+     "review_process/changes_review_2026-09-22.md s4 left as they stand"
+    ]
+   }
+  ]
+ },
+ {
+  "area": "Analytic standard errors and what they can and cannot see",
+  "title": "Analytic standard errors and what they can and cannot see",
+  "intro": "This section covers the standard errors wooldid computes from the regression itself. The variable i names the groups whose treated rows get their own dummy in each period; the help now steers users toward onset cohorts, the units that start treatment in the same period. A treated cell holds the treated rows that share a level of i and a calendar period. The att is the average effect of treatment on the treated, and the ame is the average marginal effect of a continuous dose. A cluster-robust variance adds up residuals cluster by cluster. Each treated cell's own dummy forces its residuals to sum to zero, so that variance can be blind to the cell's own noise. The items say where the blind spot lies, what is withheld inside it, how the stored variance is labelled, and which choices were kept.",
+  "items": [
+   {
+    "heading": "The default variance is stated, and the stored labels name the variance actually used",
+    "kind": "documentation stance",
+    "what_changed": "The help now states the variance a run gets without cluster(), robust or customvce(). It is conventional least squares on the linear path, and robust under poisson or with pweights, which are sampling weights. e(vce) and e(vcetype) now read robust and Robust on those two paths. Examples 1 to 10 say they omit cluster() only for brevity.",
+    "why": "ppmlhdfe, the Stata command wooldid calls for Poisson models with many fixed effects, computes a robust variance even when not asked. So does a regression with pweights. The old labels were oim and ols. Stata stores oim for the likelihood-based variance from the observed information matrix, and ols for the conventional least-squares variance under independent errors of equal variance. Neither described what was computed. No default allows for correlation within a unit over time.",
+    "decision": "The author kept the default variance and chose to state it. He chose the robust label over the old one. oim now appears only through customvce(), the option that passes a variance choice of the user's own to regress, as customvce(oim).",
+    "what_you_notice": "No estimate or standard error moves. Poisson and pweighted headers name a robust variance. wooldid also fills e(N_clust) and e(clustvar), so table commands such as esttab print the cluster count.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s.E (PS-33, PS-1)",
+     "commit 605d6d7",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md non-number-moving batch (VCV-3)",
+     "commit e2b5fad",
+     "review_process/econ_review_2026-09-25.md s.3 SEB-05, s.4, s.5 item 3, s.8, s.9 G3 (POIS-1)",
+     "commit 73c4246",
+     "commit 16f5392",
+     "wooldid.ado 5015-5060",
+     "wooldid.sthlp 142-145, 256-259, 1066-1069, 1212",
+     "wooldid_agent_guide.md ch.4 Decision rules, rule 1"
+    ]
+   },
+   {
+    "heading": "Where to set i and where to cluster: onset cohorts as i, unit fixed effects, and clustering at or above the level of assignment",
+    "kind": "documentation stance",
+    "what_changed": "The help no longer calls the estimator most efficient when i is set at the clustering level. The i entry now says not to default to the finest level: coarsen i, no coarser than onset cohorts, and put unit fixed effects in fe(), a separate intercept for each unit. The guide names the onset cohort as the recommended default. The cluster() entry says to cluster at or above the level where treatment is assigned. Example 0 now reads cluster(unit) fe(unit) att, with i the onset cohort.",
+    "why": "With i the unit and one row per unit and period, cluster(unit) puts every treated cell inside one cluster. The variance then sees only the noise on the control side. A simulation of 500 draws with 40 clusters measured the cost. With i the unit, pooled att standard errors were 0.66 to 0.80 of the true spread, and nominal 95 percent intervals covered 79 to 88 percent of the time. With i the onset cohort they covered 93 to 95 percent. Clusters finer than the level of assignment ignore the correlation a shared assignment creates, as Abadie, Athey, Imbens and Wooldridge (2023) set out.",
+    "decision": "The author removed the efficiency sentence outright. He did not narrow it or add a measured range, and the simulation confirmed his choice. He had the i entry steer users to a coarser i and kept the new example 0. At cluster() at or above i, the help says the att rows' analytic standard errors are understated and that no caution prints. It names a finer cluster(), bootstrap() or permute() as the remedies, the finer cluster() only when it still sits at or above the level of assignment. bootstrap() resamples whole clusters. permute() compares the estimate with estimates under reshuffled treatment onsets.",
+    "what_you_notice": "No number changes. Runs with a coarser i are much faster.",
+    "sources": [
+     "review_process/held_for_ruling_2026-09-13.md items 4 and 6",
+     "review_process/se_coverage_2026-09-14/README.md",
+     "review_process/se_coverage_2026-09-14/RESULTS_G40.txt",
+     "review_process/econ_review_2026-09-25.md s.3 SEB-03, SEB-05, SEB-06; s.4; s.8",
+     "review_process/econ_review_2026-09-25/round1_results.json ident:F7",
+     "commits b121deb, 6fe814d, 8ca8ba0, 07dd933, 16f5392",
+     "v1.3 wooldid.sthlp line 62 (removed sentence) and example 0 line 712",
+     "wooldid.sthlp 65-67, 243, 249-260, 318-327, 956-968, 1212-1216",
+     "wooldid_agent_guide.md 'The finest-i trap' (lines 86-104), ch.2 line 95, ch.4 rule 2"
+    ]
+   },
+   {
+    "heading": "No number is given for how many clusters each cell needs",
+    "kind": "design decision",
+    "what_changed": "The joint pre-trend tests, the adversarial line test and the subgroup contrasts offer a finer cluster() as a remedy. The line test asks whether all event-study estimates lie on one straight line through the reference period. The three runtime cautions, and the help entries for the two tests, add that the finer cluster must leave many clusters inside each treated cell. No number is given or checked.",
+    "why": "With six or more clusters per cell the line test rejected a true null near the nominal 5 percent. With two it rejected about three times as often, and with one about ten times. The cut-off moves with the design.",
+    "decision": "The author declined a numeric rule twice: on 2026-08-27, when the sizes were measured and he asked for documentation with no runtime test, and on 2026-09-20, when a clusters-per-cell check with its own caution was proposed. One number would claim a calibration nobody has.",
+    "what_you_notice": "No number moves, and no count of clusters per cell is printed.",
+    "sources": [
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R19, 'Closed without building' (FIX-PERM-2b)",
+     "commit 1c09efa",
+     "commit 07c15c6 (measured 6/2/1 clusters-per-cell sizes)",
+     "wooldid.ado 1911-1933",
+     "wooldid.sthlp 560-566, 578-582"
+    ]
+   },
+   {
+    "heading": "The binary att rows carry no caution at cluster() at or above i, and robust does not escape the blind spot",
+    "kind": "design decision",
+    "what_changed": "With cluster() at the level of i or coarser, the binary att standard errors are understated. wooldid prints no caution, and the help and the guide say so. They add that robust does not escape it when i is the unit with one row per unit and period. Each treated cell is then a single row whose own dummy sets its residual to zero.",
+    "why": "The zero residual comes from the cell dummies, so any variance built from residuals inherits it. A simulation gave a robust att standard error of 0.212 against a true spread of 0.257. The conventional least-squares variance pools residuals across cells and is not blind this way.",
+    "decision": "The author chose no caution for standard binary runs. The ordinary call, i the unit with cluster(unit), meets the condition, so a caution would fire on almost every run. For the same reason he declined one on every design with single-row cells.",
+    "what_you_notice": "No number changes. The guide's advice on robust is reversed. pretrendpower(), Roth's pre-trend power analysis, now names single-row cells as the usual cause when its pre-period covariance is rank-deficient, that is, when some of its directions carry no variance.",
+    "sources": [
+     "commit 4c8e15b",
+     "review_process/amese/R1_design_note.md 'Scope boundaries' item 1",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md 'Ruled: take no action' (PTP Leg 3), R14 and PTP Proposal 2",
+     "review_process/blue_sky_2026-09-18/fix_proposal_status.md PTP section",
+     "review_process/se_coverage_2026-09-14/README.md",
+     "review_process/econ_review_2026-09-25.md s.3 SEB-02, s.4",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt SEB-02 probe",
+     "commits 9c915f3, e2b5fad, 16f5392",
+     "wooldid.ado 11828-11859",
+     "wooldid.sthlp 318-327, 594, 1013-1017",
+     "wooldid_agent_guide.md ch.4 rules 3 and 4"
+    ]
+   },
+   {
+    "heading": "Continuous-treatment standard errors are withheld when a treated cell sits inside one cluster",
+    "kind": "changed behaviour",
+    "what_changed": "Under contreat(), the continuous-treatment option, with a clustered variance, wooldid checks each treated cell with two or more rows. If any lies wholly inside one cluster, every ame standard error, test, p-value and interval is reported as missing, and e(V_es_ame*), the stored ame event-study covariance, is not posted. Point estimates and all att results still post. safety(off), which lifts most of wooldid's refusals, does not lift this one.",
+    "why": "The ame comes from how outcomes move with the dose inside each cell. The cell's own intercept and dose slope force its residual sums to zero, so a cluster holding the whole cell carries none of its noise. What remains is the variance of the shared baseline dose slope, repeated across every ame quantity. In simulation the true sampling variance was about five times larger. A single-row cell is fitted exactly and is not counted.",
+    "decision": "The author chose this check on cells over a rank test. A rank test would miss matrices of full rank that are still blind to within-cell noise. He declined to withhold the att inference too, since that would fire on nearly every binary run. He later stopped counting single-row cells, which had withheld valid standard errors. The check does not cover the conventional least-squares variance, for the reason in the gteffects item below.",
+    "what_you_notice": "Blank ame columns replace the numbers v1.3 printed, and a caution counts the cells. The help and the guide list the valid routes: bootstrap() without boottstat, permute(), impvalues, which t-tests separate estimates from each cluster, robust when errors are independent across rows, or a cluster() finer than the cells. boottstat divides each bootstrap draw by its analytic standard error, so it gives the ame rows nothing here. The caution itself names bootstrap standard errors, Ibragimov-Muller p-values and randomization inference.",
+    "sources": [
+     "review_process/amese/R1_design_note.md",
+     "commit 1186f72 (INV-1 diagnosis)",
+     "commits 7054878, ea69544, 294513a, bb651ef, b6f1a54, 6fe9494",
+     "review_process/change_audit_2026-09-22/findings.json amedetect-onerow-cell, containment-remedy-fails-boottstat",
+     "review_process/changes_review_2026-09-22.md s.2b and s.3a (amedetect-onerow-cell)",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md non-number-moving batch (LAT L1)",
+     "review_process/econ_review_2026-09-25.md s.8, s.9 G3 and the evening rulings (SEB-05)",
+     "wooldid.ado 2086-2098, 14573-14610",
+     "wooldid.sthlp 318-327, 859-864, 1012",
+     "wooldid_agent_guide.md line 644"
+    ]
+   },
+   {
+    "heading": "A destroyed covariance is reported, not repaired: the explicit-dummy refit is gone",
+    "kind": "removal",
+    "what_changed": "Stata sometimes zeroes a variance matrix it judges non-symmetric or numerically singular, meaning it cannot be inverted reliably. wooldid used to refit the model with every fixed effect as an explicit dummy, to salvage some standard errors. That refit is gone. wooldid now detects an all-zero matrix or one that is only rounding residue, and a caution says no standard error in the run is identified. Under clustering it also cautions when three or more standard errors agree to about twelve digits while their estimates differ.",
+    "why": "A zero matrix is a symptom. The refit could not see a contained cell's noise either, so what it salvaged had no sound basis. Its solve over hundreds of redundant columns also delayed the user learning the specification was broken.",
+    "decision": "Once the author weighed the refit's cost by itself, he removed it. He kept detection, with a conservative floor for residue. He kept three fallbacks of another kind: the poisson retry, a guard on the default cell collapse, and a cheap subgroup joint-test fallback. The caution now names the cause that applied: cell containment on a clustered run, and on a run that clustered nothing it says so, adding that with lattice() the usual cause is treated cells split into too few distinct dose values. lattice() splits the dose into bins inside each cell. The caution ranks bootstrap() and permute() above robust standard errors, and offers robust ones only to a run that has not already asked for a conditional variance. On the design that prints it, a simulation put the conditional robust standard error at 0.017 of the true spread. Since 2026-09-25 it no longer offers them to a poisson run, whose variance is already robust.",
+    "what_you_notice": "Point estimates stand. An all-zero matrix prints missing standard errors. Residue prints numbers near 1e-15, and the caution says to read none of them.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s.J (AMESE R4, other fallbacks)",
+     "review_process/amese/R1_design_note.md 'Generalizable guards'",
+     "commits b801282, 3743aec, 7054878, c545f03, bb651ef, 52dc8c9, dd8bfc0",
+     "commit 65466b0 (GTE-3 residue floor)",
+     "commit e2b5fad (LAT L1)",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md non-number-moving batch, LAT L1 section and branch table",
+     "review_process/blue_sky_2026-09-18/fixprop/proposals_LAT.md s.0.3",
+     "review_process/blue_sky_2026-09-18/HELD_FOR_RULING_2026-09-20.md item 3",
+     "review_process/econ_review_2026-09-25.md s.3 POIS-2, s.8, s.9 G3",
+     "commit 73c4246",
+     "wooldid.ado 2100-2137, 4753-4758, 14783-14812",
+     "wooldid.sthlp 1012, 1315-1317"
+    ]
+   },
+   {
+    "heading": "Known all-zero covariances left as they are",
+    "kind": "design decision",
+    "what_changed": "Two known routes to an all-zero covariance were left as they are. contreatpoly(2), which adds the square of the dose, can return one when the dose is not centred, as v1.3 did. A lattice() run with an all-zero covariance that follows the caution's advice to use bootstrap() posts no e(V).",
+    "why": "Both are outcomes the zero-covariance caution already reports on the run that produces them. The point estimates stand, and the user is told that no standard error is identified.",
+    "decision": "The author chose to leave both as they are. On the lattice path he declined to post e(V) again after the bootstrap.",
+    "what_you_notice": "No number moves. The contreatpoly(2) run prints the zero-covariance caution with missing standard errors. The lattice() run that follows the advice posts bootstrap results without e(V), the stored covariance. The lattice(all 3) case and the poisson case under untreatedZero are covered in the section Continuous treatments.",
+    "sources": [
+     "review_process/changes_review_2026-09-22.md s.4 rulings table (contreatpoly(2) all-zero VCE; lattice() all-zero VCE and bootstrap)",
+     "review_process/held_for_ruling_2026-09-13.md item 5"
+    ]
+   },
+   {
+    "heading": "gteffects cell inference: contained cells are counted, residue cells are blanked, and bootstrap is not named as a cure",
+    "kind": "changed behaviour",
+    "what_changed": "gteffects reports an estimate for each treated cohort and period since onset. wooldid now counts the cells lying wholly inside one cluster, or single-row cells under robust, pweights, a robust customvce() or poisson on ppmlhdfe. The count is in e(gt_ncontained), and a caution says bootstrap() does not repair those cells. Cells whose variance is only rounding residue show blank inference columns, counted in e(gt_ndegen).",
+    "why": "A cluster bootstrap draws a contained cell whole, so its own noise never varies. In a simulation with no true effect the bootstrap cell standard errors were 0.19 to 0.32 against a true spread of 1.12. Residue cells had printed p-values near 1e-45. Two relative floors separate residue from real variances cleanly.",
+    "decision": "The author added the poisson arm, since ppmlhdfe is robust even when not asked. He also considered extending the count to the conventional least-squares variance, and decided against it after a simulation: over 400 simulated datasets its cell standard errors matched the true spread at a ratio of 0.999, against 0.549 for robust, so the caution would have been false. He removed a note above the table on 2026-09-21.",
+    "what_you_notice": "Residue cells no longer print as ordinary rows, and point estimates do not move. Under boottstat the blanking also moves the p-values of healthy cells.",
+    "sources": [
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md non-number-moving batch (GTE-4) and R10 (GTE-1)",
+     "review_process/blue_sky_2026-09-18/fix_proposal_status.md GTE-1",
+     "commits e2b5fad, 86bc498, 73c4246, 16f5392, b838d4c, 1c09efa, 1323749",
+     "review_process/econ_review_2026-09-25.md s.3 SEB-01, s.5 item 4 (POIS-2), s.8, s.9 G3 and the evening rulings (SEB-05)",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt SEB-01 probe",
+     "wooldid.ado 2353-2400, 4890-4906",
+     "wooldid.sthlp 318-327, 1020-1023"
+    ]
+   },
+   {
+    "heading": "Subgroup contrasts whose standard error is only rounding residue are blanked",
+    "kind": "changed behaviour",
+    "what_changed": "On the analytic path wooldid computes the implied correlation between the two subgroup estimates in each contrast. Above 0.99, the contrast's inference and any equality test that uses it are reported as missing, with a caution. The point estimate stays.",
+    "why": "A contrast's variance is the two variances minus twice their covariance. When cells sit inside clusters these nearly cancel and leave rounding residue. Across the battery's subgroup runs the withheld equality p-values ran from 1.1e-12 down to 3.3e-88.",
+    "decision": "The author chose to blank the rows with a caution and confirmed 0.99 as the cut on 2026-09-10. A cut at 0.999 caught only one of two degenerate rows, at 0.9994 and 0.9972. The same data under robust sat near 0.5. The permute() use of this check is told in the section Randomization inference.",
+    "what_you_notice": "Affected rows print blank inference columns where they printed numbers. safety(off) keeps the numbers.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s.A BS-15",
+     "review_process/held_for_ruling_2026-09-09.md s.BS-15",
+     "commit cfac3f5",
+     "review_process/changes_review_2026-09-22.md ruling table D4, s.3a permute-pairwise-se-analytic-undisclosed",
+     "commit 189af00",
+     "wooldid.ado 12476-12620",
+     "wooldid.sthlp 664-672, 1004"
+    ]
+   },
+   {
+    "heading": "Redundant absorbed copies of the dose no longer cost degrees of freedom",
+    "kind": "changed behaviour",
+    "what_changed": "Under contreat() with contreatcontrols(), wooldid adds exact copies of the dose to steer which column the collinearity check drops. v1.3 absorbed them too. A 2026-09-05 change put a pooled copy into absorb() beside the lattice and per-group copies, and reghdfe, the Stata command wooldid calls for linear models with many fixed effects, counted each absorbed copy as a parameter. Now only the finest copy is absorbed.",
+    "why": "A column that copies one already in the model adds no information. It should not cost a degree of freedom.",
+    "decision": "Three options were put: accept the count, skip the pooled copy only when a per-group control is present, or pin the count so it could not drift. The author chose none as put: fix the model and absorb only the finest copy, so the count is right.",
+    "what_you_notice": "Against the 2026-09-05 build, the standard errors, p-values and intervals of every row on lattice and per-group-control designs move by about a tenth to a quarter of one percent, the att rows included, and e(df_r) rises by the copies no longer charged. Point estimates do not move.",
+    "sources": [
+     "review_process/held_for_ruling_2026-09-13.md item 1",
+     "commits 6fe814d, 64c03dd, 81b3ce2",
+     "wooldid.ado 1520-1545 (DF-1 comment)"
+    ]
+   },
+   {
+    "heading": "The degrees-of-freedom rule is stated for every path",
+    "kind": "documentation stance",
+    "what_changed": "The help names the reference distribution on each path. Under cluster() it is t with one less than the number of clusters, using the smallest count under several cluster variables. Otherwise it is the residual degrees of freedom. Poisson uses the normal, and bootstrap() follows bootdf(), the option that sets the bootstrap's reference distribution. The recipe for hand tests posts with dof(e(df_r)).",
+    "why": "With few clusters this t is noticeably wider than the normal. It is the standard choice, as Cameron and Miller (2015) summarise. Without dof(), test and lincom, Stata's commands for tests after estimation, use the normal.",
+    "decision": "The author chose to document one engine difference, not rescale it. reghdfe and the regress path used by customvce() and unconditionalse count fixed effects nested in the cluster differently, and regress is the conservative side.",
+    "what_you_notice": "No number changes.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s.B BS-13",
+     "review_process/econ_review_2026-09-25.md s.3 SEB-12, SEB-13; s.4",
+     "commits 16f5392, e26b3dd, 07dd933",
+     "v1.3 wooldid.sthlp line 130",
+     "wooldid.sthlp 145, 1006-1008, 1066-1069, 1159-1165",
+     "wooldid_agent_guide.md line 221 (cluster() degrees-of-freedom note)"
+    ]
+   },
+   {
+    "heading": "impvalues posts its own degrees of freedom and names the method",
+    "kind": "changed behaviour",
+    "what_changed": "impvalues replaces the analytic standard errors with Ibragimov and Muller inference, which t-tests separate estimates from each cluster. Each row uses t with one less than the number of clusters contributing to it. e(df_r) is now the smallest of these, and e(imdf_min) and e(imdf_max) hold the range.",
+    "why": "The old e(df_r) was the regression's, such as 79 where the table used 49. Hand tests on the stored results then gave smaller p-values than the table.",
+    "decision": "The author weighed the maximum, the minimum and a missing value. A missing value would push test and lincom to the normal. He chose the minimum, which is conservative for every row.",
+    "what_you_notice": "The printed table does not move. e(df_r) falls, hand tests match the table, and the header names the method.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s.A BS-10, s.E PS-20",
+     "commits 92e083b, b121deb",
+     "wooldid.ado 2615-2636, 5188, 12202, 12760",
+     "wooldid.sthlp 276-284, 1068"
+    ]
+   },
+   {
+    "heading": "impvalues reports the equally weighted mean over clusters, and refuses a cluster finer than i",
+    "kind": "changed behaviour",
+    "what_changed": "Under impvalues the reported estimate is the mean of the cluster estimates with each cluster weighted equally, whatever estimand was asked for. With cohort clustering, att gives the same numbers as att_i, the simple average of cohort effects. A cluster() finer than i, or one that cuts across it, now stops the run with an error.",
+    "why": "Ibragimov and Muller need independent cluster estimates, roughly normal, with a common mean. Their equally weighted mean then earns a t reference even with few clusters. Reweighting toward att's weights would give that up. When several clusters share a level of i, their estimates are reweightings of the same coefficients. Nominal 95 percent intervals then covered 38 percent of the time for a nested cluster and 25 percent for a crossing one.",
+    "decision": "Recomputing the estimand weights was dropped once the author judged the method cannot be reweighted. He declined a refusal of other estimands and a caution at the table. For finer clusters he turned a caution into an error on 2026-09-20, and on 2026-09-23 made it an error that safety(off) does not lift.",
+    "what_you_notice": "No estimate moves. Finer or crossing clusters now stop, where v1.3 printed intervals far too narrow. The check can refuse more than it needs to.",
+    "sources": [
+     "review_process/feature_tickets_2026-09-15.md T4 ('REVISED 2026-09-15')",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R1",
+     "review_process/changes_review_2026-09-22.md s.2 R-A, s.2b",
+     "commits 2d41a22, bc1b14b, ef305a4, 1c09efa, 9527a70, 61f246e",
+     "v1.3 wooldid.sthlp 247-252",
+     "wooldid.ado 1815-1856",
+     "wooldid.sthlp 268-284",
+     "wooldid_agent_guide.md ch.4 impvalues entry"
+    ]
+   },
+   {
+    "heading": "Conditional and unconditional standard errors differ when effects vary, whatever the sample size",
+    "kind": "documentation stance",
+    "what_changed": "unconditionalse gives standard errors that also count sampling variation in the covariates. The help no longer says they match the conditional ones in large samples. It says they match only when effects vary little across cells, covariates and doses.",
+    "why": "The extra term is the spread of unit-level effects across the treated sample, which does not fade with sample size. With cohort effects of 0 and 4 the ratio was 2.23 at 60 units and 2.29 at 600. The choice is the target, sample or population, as Abadie, Athey, Imbens and Wooldridge (2020) set out.",
+    "decision": "On 2026-09-07 he chose to have the help document, not change, how fe() behaves on this path: it is entered as written under a caution, so unit effects belong in controls() with i. prefixes.",
+    "what_you_notice": "No number changes.",
+    "sources": [
+     "review_process/econ_review_2026-09-25.md s.3 SEB-04",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt SEB-04 probe",
+     "review_process/rulings_2026-09-07.md s.B BS-1",
+     "commit 16f5392",
+     "v1.3 wooldid.sthlp 267-269",
+     "wooldid.sthlp 261-267, 329-342",
+     "wooldid_agent_guide.md ch.4 rule 5"
+    ]
+   }
+  ]
+ },
+ {
+  "area": "The bootstrap engine",
+  "title": "The bootstrap engine",
+  "intro": "Version 1.3 had no bootstrap. Now bootstrap() fits the whole model again on many resamples, data sets made from the original by drawing its clusters at random or by reweighting them, and each such fit is one replication. Three themes run through the changes: a bootstrap run shows only bootstrap inference, the engine was checked draw by draw against Stata's own commands, and a construction that cannot be made right is refused or disclosed.",
+  "items": [
+   {
+    "heading": "A bootstrap of its own that replaces the analytic inference",
+    "kind": "new feature",
+    "what_changed": "bootstrap(standard) or bootstrap(bayes), with reps(), fits the full model again in every replication. Every printed standard error, p-value, interval, joint test and plot becomes a bootstrap quantity. The analytic covariance is kept as e(V_analytic).",
+    "why": "A cluster is a group of rows whose errors may be correlated. When cluster() sits at or above the cohort variable i, each treated cell lies inside one cluster, and the cluster-robust formula cannot learn that cell's noise. In one simulation with 24 clusters, the analytic standard error was 0.87 of the true spread and the cluster bootstrap 0.97.",
+    "decision": "The author chose to replace the analytic numbers, not print a bootstrap block beside them. He would have preferred Stata's bootstrap prefix and bayesboot, a user-written Stata command for the Bayesian bootstrap. But the prefix refuses weighted commands and drops replications that lose a horizon, and bayesboot passes its weights as importance weights, which wooldid does not accept. He accepted an engine inside wooldid if it matched them. Seeded, its replications match the prefix to 14 decimal places.",
+    "what_you_notice": "New options appear: bootstrap(), reps(), bootdisplay(), bootdf(), boottstat and bootsave(). Point estimates never move.",
+    "sources": [
+     "review_process/bootstrap_plan.md s1-s5, s11 Q1 at c1d8979^",
+     "review_process/bootstrap_report_2026-08-30.md s1-s3 (design A ratios 0.869 / 0.967; match table s2) at c1d8979^",
+     "wooldid_ado_review.md L112-118, L138-152",
+     "project memory note wooldid-bootstrap-display-rulings (plot versus table case, author's words 2026-09-04)",
+     "commits 4b08962, 8cfd915, 1ad2f65, d3d9e99, 8d8316f, 133b11b, 1561386",
+     "review_process/bootstrap_coverage_2026-09-02.md entries 1-2",
+     "wooldid.sthlp L365-376",
+     "wooldid.ado wooldid_bootrun header ~9932-9941"
+    ]
+   },
+   {
+    "heading": "The standard mode is the pairs cluster bootstrap, checked against Stata's bootstrap",
+    "kind": "design decision",
+    "what_changed": "bootstrap(standard) draws whole clusters with replacement, so one cluster can be drawn twice and another not at all. Without cluster(), it draws single rows. Stata's bsample command makes the draws, in the same order as Stata's bootstrap prefix.",
+    "why": "Each drawn cluster brings its outcomes and regressors together, hence the name pairs cluster bootstrap, and keeps the dependence inside it. For att and ame, a cluster drawn twice carries a weight of 2, which matches copying it to machine precision at far less cost.",
+    "decision": "Drawing with bsample let every replication be checked against Stata's bootstrap, which was the author's condition for the engine. On one panel run without cluster(), resampling whole units gave a standard error 1.5 times the row-level one. He chose no caution for this.",
+    "what_you_notice": "The footer says cluster bootstrap or observation level bootstrap. Point estimates do not move.",
+    "sources": [
+     "review_process/bootstrap_plan.md s3, s9, s13 A17 at c1d8979^",
+     "review_process/bootstrap_report_2026-08-30.md s2 (9e-16 weighting identity) at c1d8979^",
+     "review_process/quality_review_2026-09-05.md s4d F057, s9 at c1d8979^",
+     "commits d3d9e99, 97742e2, 81ae024",
+     "wooldid.sthlp L368-369",
+     "wooldid.ado footer L13144"
+    ]
+   },
+   {
+    "heading": "Replications are counted estimate by estimate",
+    "kind": "design decision",
+    "what_changed": "Replications are stored by coefficient name. A resample that loses a horizon or a subgroup still counts for every other estimate. e(boot_navail) gives the count behind each standard error.",
+    "why": "Stata's prefix keeps only replications in which every coefficient survived. That understates the spread of the horizons most likely to vanish. An exact 0 for the ame, the average marginal effect of the dose, from a resample with no dose variation is not an estimate.",
+    "decision": "The author counted per estimate and treated that 0 as missing.",
+    "what_you_notice": "Failed replications are counted in e(boot_failed). A caution names any estimate present in fewer than half of the completed replications. Point estimates do not move.",
+    "sources": [
+     "review_process/bootstrap_plan.md s4, s11 Q4, s13 A12, A17 at c1d8979^",
+     "review_process/bootstrap_report_2026-08-30.md s2 (prefix discards) at c1d8979^",
+     "commit 55581ea (within-cell dose screen)",
+     "wooldid.sthlp reps() entry L383-384",
+     "wooldid.ado cautions L10763, L11613-11615"
+    ]
+   },
+   {
+    "heading": "att_i, att_it and att_itime resample whole cells, under a rule that respects how i and cluster() relate",
+    "kind": "design decision",
+    "what_changed": "A cell is one value of i in one period, and these estimands weight treated cells equally. For them each replication copies the drawn clusters instead of weighting them. When each unit of i lies inside one cluster, every copy gets a fresh unit code, and that code replaces i wherever i is named in fe(), controls() and the other model options; a variable that encodes i under another name keeps its codes. When cluster() is finer than i or cuts across it, units keep their identity.",
+    "why": "A weight constant within a cluster cancels out of a cell average, so weighting would miss the variance from which cells were drawn. Fresh codes restore it, but would split a unit that spans two clusters.",
+    "decision": "In August the author chose copying over refusing these estimands and over running them on weights with a caution, and the copying leg refused any cluster() that did not nest i. In September he retired that refusal. His principle: i says which cohorts the effects average over, and cluster() is a claim about dependence. So finer clusters run, under the identity rule. One straddling unit puts the whole run under that rule, which he chose to disclose.",
+    "what_you_notice": "When a unit of i falls in two or more clusters and one of these estimands is requested, a caution says their standard errors can be too small. e(boot_reid) and e(boot_nstraddle) are stored on every run. Point estimates do not move.",
+    "sources": [
+     "review_process/bootstrap_plan.md s1 'estimand fork', s7, s11 Q2, s12 A1 at c1d8979^",
+     "review_process/feature_tickets_2026-09-15.md 'The principle', T2, T3",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R13",
+     "review_process/open_ticket_bootreid_covariates_2026-09-21.md",
+     "review_process/changes_review_2026-09-22.md s1 bootreid probe; round-2 rulings #277",
+     "commits d3d9e99, 456f636, 07d7c6b, e619702, c8c4e2c (coverage 142/150 and 149/150), c24ab48, 9d841dc",
+     "wooldid.ado wooldid_bootrun nesting block ~10047-10100; wooldid_bootctl 'no nesting screen here'",
+     "wooldid.sthlp L377-381",
+     "commit 9d841dc (straddle caution only with a cell-weighted estimand)",
+     "wooldid.sthlp 766-767",
+     "wooldid.ado 10100"
+    ]
+   },
+   {
+    "heading": "The Bayesian bootstrap has one convention, and it is refused for the estimands that weight cells equally",
+    "kind": "design decision",
+    "what_changed": "bootstrap(bayes) never drops a cluster. Each replication gives every cluster a random weight from a flat Dirichlet distribution, so the weights sum to one. It multiplies a cluster's rows and any user weight. With att_i, att_it or att_itime it stops with an error under every safety() setting.",
+    "why": "This is the Bayesian bootstrap of Rubin (1981) over clusters. Its weights match the pairs bootstrap's in mean and nearly in variance. Reweighting never adds or removes a cell, so the cell-weighted estimands miss the variance from sampling cells.",
+    "decision": "The author first adopted bayesboot's convention, which sets each cluster's Dirichlet parameter to its row count and so treats panel rows as independent evidence. He reversed it the same day, when simulated standard errors came out at 0.28 to 0.39 of the true spread. He kept it only as bootalpha(size), later deleted. He also closed the safety(off) escape that had let the combination run with a caution.",
+    "what_you_notice": "bayes standard errors ran 6 to 10 percent below the pairs bootstrap's in simulation, so bootstrap(standard) is the better calibrated choice. Point estimates do not move.",
+    "sources": [
+     "review_process/bootstrap_report_2026-08-30.md s3-s4 (size ratios 0.275 / 0.389; bayes equal 0.877 vs standard 0.967, '6-10% below standard') at c1d8979^",
+     "review_process/research_2026-09-06/F058_bootstrap.md s3 (paired 0.942 vs 1.039)",
+     "review_process/quality_review_2026-09-05.md F001, s9 at c1d8979^",
+     "review_process/held_for_ruling_2026-09-13.md header; commit 6fe814d message (9.36 SDs, size convention)",
+     "review_process/bootstrap_plan.md s11 Q2, Q3 at c1d8979^",
+     "review_process/changes_review_2026-09-22.md s2 R-A, s2b",
+     "review_process/econ_review_2026-09-25.md SEB-08, s6, s8, s9 G6; econ_review_2026-09-25/round2_results.json SEB-08",
+     "commits 58e4467 (2026-08-30), c9b47d8 (2026-09-06), 6fe814d (2026-09-14), 61f246e, c2338a2 (2026-09-25)",
+     "wooldid.ado wooldid_bootrun header ~9938-9941; wooldid_bootctl cell-weighted gate",
+     "wooldid.sthlp L369-374"
+    ]
+   },
+   {
+    "heading": "Four ways to read the draws: percentile by default, one standard error for all four, and a p-value for the bias corrected forms",
+    "kind": "design decision",
+    "what_changed": "bootdisplay() picks the p-value and interval printed. percentile, the default, reads them from the ranks of the draws. bc shifts the percentiles to correct median bias, where most draws fall on one side of the estimate. bca also corrects skewness, from a jackknife that drops one cluster at a time; it needs cluster(). wald uses a normal or t approximation.",
+    "why": "Percentile intervals keep the asymmetry of the sampling distribution. The standard deviation of the draws is the standard error other software reports. The bc and bca p-value is the smallest level at which their interval excludes zero, so the two always agree.",
+    "decision": "The author first preferred a standard error backed out of the percentile interval. He chose the common convention over his own preference. So without boottstat the standard error column is always the standard deviation of the draws. He declined wald as the default, although Stata's prefix uses it. He judged a jackknife for every cell not worth its cost, so under bca the gteffects cells, the table of effects by cohort and period, show the bc family.",
+    "what_you_notice": "The estimate plus or minus a critical value times the standard error need not reproduce an interval. The statistic column reads t_wald or z_wald under the rank displays. The display never moves an estimate or a standard error.",
+    "sources": [
+     "wooldid_ado_review.md L146",
+     "review_process/held_for_ruling_2026-09-09.md PS-2 reading 1",
+     "project memory note wooldid-bootstrap-display-rulings (2026-09-04 reversal, 'consulted others')",
+     "review_process/quality_review_2026-09-05.md F030, F053, s9 at c1d8979^",
+     "commits 1561386, 0c0f917",
+     "wooldid.sthlp bootdisplay() entry L397-404",
+     "commit 1561386",
+     "review_process/econ_review_2026-09-25.md SEB-10",
+     "wooldid.ado pfloor program comment L12146-12156",
+     "wooldid_agent_guide.md ch.5 p-value map, bc/bca row",
+     "wooldid.sthlp reps() entry L387",
+     "review_process/quality_review_2026-09-05.md F067, s9 at c1d8979^",
+     "review_process/rulings_2026-09-07.md s D 'bca cells'",
+     "commits 366ec87, d9280e7",
+     "wooldid.ado wooldid_bootctl bca without cluster() refusal",
+     "wooldid.sthlp bootdisplay() entry L398-404"
+    ]
+   },
+   {
+    "heading": "Which p-values add one, and what a p-value of 0 means",
+    "kind": "design decision",
+    "what_changed": "A percentile p-value is twice the smaller tail share of the draws and can be exactly 0; so can the bc and bca p-values, which invert their intervals. Studentized p-values, from boottstat below, add one to the tail count and to the replications, so they are never 0. Joint and equality tests use a one-sided share with one added.",
+    "why": "Adding one treats the observed statistic as one more draw from the null. Without it, the studentized tail rejected 6 percent of the time at a stated 5. Percentile draws are centred at the estimate, so adding one there would only be conservative.",
+    "decision": "The author chose the split over one convention everywhere. He refused a minimum reps(), since small runs help time a specification. A 0 stays 0 in the table and in e(): no draw reached the far side of the null, which speaks to resolution, not evidence. Under bootdisplay(bc) and bootdisplay(bca) he skipped the caution below reps(40), because those p-values do not fall on a fixed grid.",
+    "what_you_notice": "Below reps(40), a caution beginning Caution: with reps( says that the percentile p-values fall on a grid of 2 over reps, so the only value below .05 the run can produce is exactly 0. Under boottstat it names the smallest p-value, 2 over reps plus one. Under bootdisplay(wald) it fires below reps(20), for the joint tests. No number moves.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s A F033, s D 'p = 0 cells', s H CS-1, CS-20, 'The add-one case'",
+     "review_process/quality_review_2026-09-05.md F038 (6 vs 36 of 35,646), F030, s9 at c1d8979^",
+     "review_process/bootstrap_plan.md s11 Q4 at c1d8979^",
+     "review_process/changes_review_2026-09-22.md round-2 rulings (p-floor line under bc, bca)",
+     "review_process/econ_review_2026-09-25.md s8",
+     "commits 2f24ce9, ff5d254, 27e277d, 6adca1b, 5dad5ab, 2be7e16, 73c4246",
+     "wooldid_agent_guide.md ch.5 'Which p-value is which'",
+     "wooldid.sthlp reps() entry L383-387",
+     "wooldid.ado wooldid_bootctl grid caution"
+    ]
+   },
+   {
+    "heading": "The wald family uses t with G minus 1 degrees of freedom when clustered",
+    "kind": "design decision",
+    "what_changed": "bootdf() sets the reference distribution for the wald family. With cluster(), the default is t with G minus 1 degrees of freedom, G being the clusters with rows in the fit. Otherwise it is the normal. e(df_r) follows the choice.",
+    "why": "With a few dozen clusters the bootstrap standard error is itself noisy, so 1.96 standard errors either side covered 81 percent at a stated 95 in one simulation. At 24 clusters the t value is 2.069, about 5.6 percent wider. An empty cluster changes nothing, yet was drawn in place of live ones.",
+    "decision": "Stata's prefix uses the normal. The author first offered the t reference as a choice, with the normal as the default, and two days later made it the default whenever cluster() is given. He refused bootdf(clusters) without cluster() rather than fall back silently.",
+    "what_you_notice": "Clustered runs print t statistics and slightly wider wald intervals. Where the fit drops whole clusters, bootstrap standard errors move, by about 5 percent in one design.",
+    "sources": [
+     "review_process/bootstrap_report_2026-08-30.md s3 (81% coverage, 2.069 at G=24), s7 item 5 at c1d8979^",
+     "review_process/bootstrap_coverage_2026-09-02.md entry 18",
+     "review_process/quality_review_2026-09-05.md F040, s9 at c1d8979^",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R7 (estimation-sample clusters, about 5 percent)",
+     "commits 4906bd3, 4b224f0, e3bdf87",
+     "wooldid.ado L560 default; wooldid_bootctl bootdf(clusters) refusal; wooldid_bootrun sample-concept block ~9948-9985",
+     "wooldid.sthlp bootdf() entry L389-395"
+    ]
+   },
+   {
+    "heading": "boottstat, an optional studentized bootstrap, with no bias corrected form and no edited standard errors",
+    "kind": "new feature",
+    "what_changed": "boottstat bootstraps the t statistic instead of the coefficient, a percentile-t bootstrap. Each replication's estimate is centred at the observed one and divided by that replication's own analytic standard error. The standard error column shows se_analytic and the statistic t_pt. bootdisplay(bc) and bootdisplay(bca) are refused with it. A replication whose standard errors all fall below a hundred millionth of the outcome's standard deviation is left out of every studentized result.",
+    "why": "Percentile-t is valid only when each replication's standard error uses the same calculation as the observed one. So under cluster() a duplicated cluster is copied row by row rather than carried as a weight; as a weight it would inflate replication standard errors about 1.4 times. For the same reason it is refused with poisson and bootstrap(bayes). A bias corrected studentized form shifted against the bias and undid the correction percentile-t already makes. A resample with too few clusters can fit exactly and make t explode.",
+    "decision": "The author made boottstat optional, since every replication must then estimate its variance. He withdrew the bias corrected form rather than ship an unverified repair. He refused to raise tiny standard errors to a floor. Such draws are excluded and counted instead.",
+    "what_you_notice": "Runs are several times slower. e(boot_novar) counts excluded draws. Point estimates do not move.",
+    "sources": [
+     "wooldid_ado_review.md L138-148",
+     "project memory note wooldid-bootstrap-display-rulings ('I want the CI in all its asymmetry')",
+     "commit 1561386 (Layer 2; sqrt(2) inflation removed)",
+     "review_process/feature_tickets_2026-09-15.md T3",
+     "review_process/research_2026-09-06/F058_bootstrap.md s5 (10 of 10; by-name matrices)",
+     "commits 8884e44 (card m236, caution on realized degeneracy), 6fe9494 (ame under cell containment)",
+     "wooldid.ado wooldid_bootctl boottstat refusals and comments ~7254-7300; wooldid_bootrun fweight comment ~10124-10147",
+     "wooldid.sthlp boottstat entry L406-414",
+     "review_process/quality_review_2026-09-05.md F003, s9 at c1d8979^",
+     "commits 5581fb2, 366ec87",
+     "wooldid.ado wooldid_bootctl bc/bca with boottstat refusal comment",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R4, R9",
+     "wooldid.ado wooldid_bootrun viability verdict L10392-10402 (cuts 1e-8, 1e-5), cautions L10784-10796",
+     "wooldid.sthlp stored results L1116-1117"
+    ]
+   },
+   {
+    "heading": "Joint and equality tests are bootstrap rank tests, and the adversarial test needs boottstat",
+    "kind": "design decision",
+    "what_changed": "Under bootstrap(), the joint pre-trend test and the test of equal effects across subgroups are rank tests. Each ranks the distance of the estimates from zero, scaled by the bootstrap covariance, among the same distances from replications centred at the estimate. The adversarial pre-trend test is bootstrapped only under boottstat.",
+    "why": "Centring at the estimate makes the draws behave like draws under the null, so no chi-squared approximation is needed. With clustering at or above i the analytic joint test fails, so this matters most there. The adversarial test needs each replication's own covariance, which only boottstat computes.",
+    "decision": "The author first had a chi-squared test on the bootstrap covariance, as Stata's prefix gives. His rule that a joint test is absent unless it is itself bootstrapped made him withdraw it, so without boottstat the joint test was absent. The rank test was built later to give one. For the adversarial test without boottstat, he rejected showing the analytic value or a fitted line without a p-value.",
+    "what_you_notice": "e(boot_jt_absent), e(boot_sgjt_absent) and e(boot_adv_absent) flag withheld tests. No point estimate moves.",
+    "sources": [
+     "review_process/quality_review_2026-09-05.md F034, s9 at c1d8979^",
+     "wooldid_ado_review.md L144",
+     "review_process/rulings_2026-09-07.md s J",
+     "review_process/changes_review_2026-09-22.md round-2 rulings (line-only cases)",
+     "review_process/research_2026-09-06/F058_bootstrap.md s6 (0 of 24; 4.3 percent)",
+     "commits 8d8316f, 1561386, bd8ee3c, d9280e7, bab1f93, 7c32fdb",
+     "wooldid_agent_guide.md ch.5 p-value map (joint row)",
+     "wooldid.sthlp boottstat entry L409-410, adversarial entry L579-580"
+    ]
+   },
+   {
+    "heading": "Simultaneous event-study bands from the replications",
+    "kind": "new feature",
+    "what_changed": "A sup-t band is meant to cover every horizon at once. With simultaneousbands, a bootstrap run forms one from the replications. It takes each replication's largest standardized deviation across horizons, and uses an upper quantile of those maxima. Under boottstat each deviation is divided by that replication's own standard error.",
+    "why": "Reading many horizons at once needs a correction for multiple comparisons, and a band from the same draws gives one. Under boottstat every other interval is percentile-t, so a band on another scale would not compare with its neighbours. Replications with no usable variance are left out.",
+    "decision": "The author chose the percentile-t band under boottstat. He rejected a floor on small replication standard errors. He left the step-down procedure, which adjusts each horizon's p-value for the others, to permute().",
+    "what_you_notice": "Bootstrap plots show dashed band lines, and e(esband_engine) reads bootstrap or bootstrap-studentized. When one horizon has no usable standard error, no bootstrap band is built for that event study, where the analytic band drops the horizon and bands the rest. The option and the analytic band are in Event studies, pre-trend tests and bands. No point estimate moves.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s G, s I",
+     "review_process/held_for_ruling_2026-09-09.md PS-45",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R4",
+     "commit 53d6337 (caution on the analytic band at cluster() at or above i)",
+     "wooldid.sthlp simultaneousbands entry L302-311, stored results L1038",
+     "review_process/held_for_ruling_2026-09-09.md (ruling table; PS-45 section)",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R4, R9",
+     "review_process/blue_sky_2026-09-18/fix_proposal_status.md (BAND-1/BAND-2 corrections)",
+     "wooldidinstall/wooldid.ado:10784, 10796",
+     "wooldidinstall/wooldid.ado wooldid_bootband header (l.18906-18930)"
+    ]
+   },
+   {
+    "heading": "What e(V), e(p) and the interval matrices hold after a bootstrap run",
+    "kind": "design decision",
+    "what_changed": "e(V) is the full bootstrap covariance from the replications complete in every estimate. Its diagonal is rescaled to the bootstrap standard deviations. The event-study blocks e(V_es_*) are rebuilt from the replications too. e(p), e(ci_l) and e(ci_u) carry the displayed family.",
+    "why": "A covariance formed pair by pair from different replications can fail to be invertible, and a test run by hand would then silently drop a restriction. Rescaling keeps every correlation. Without e(p) and the interval matrices, table commands rebuilt the wald family from e(V), and a paper's table could disagree with its log.",
+    "decision": "The author kept the bootstrap covariance in e(V) even under boottstat. He posted the displayed family, as permute() already did. Without boottstat he kept the plain se and p column names, although permute() prints se_analytic, t_perm and p_perm, because the two engines' columns hold different kinds of quantity.",
+    "what_you_notice": "A caution with e(boot_V_shortfall) fires when e(V) rests on fewer than half the completed replications. No point estimate moves.",
+    "sources": [
+     "review_process/bootstrap_plan.md s1 (e(V) decision), s13 A11 at c1d8979^",
+     "review_process/rulings_2026-09-07.md s E PS-2",
+     "review_process/held_for_ruling_2026-09-09.md PS-2",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R8",
+     "review_process/changes_review_2026-09-22.md round-2 rulings (bootstrap esttab), L321",
+     "commits 179f415, 1f11d5b, 2e8d07a",
+     "wooldid.ado wooldid_bootfin diagonal rescale L16657-16728; footer L13198-13208; caution L11559",
+     "wooldid.sthlp stored results L1105-1122",
+     "review_process/rulings_2026-09-07.md s.H CS-74",
+     "wooldid.sthlp stored results L1125 (permute columns se_analytic, t_perm, p_perm)"
+    ]
+   },
+   {
+    "heading": "A caution when few clusters are treated, and no wild cluster bootstrap",
+    "kind": "design decision",
+    "what_changed": "When fewer than 6 clusters are ever treated, a caution beginning Caution: only gives their count. It says the bootstrap is badly sized and boottstat is no cure. It points to permute() or to boottest, a user-written Stata command for the wild cluster bootstrap on a single regression. The guide advises the bootstrap when the analytic covariance fails and clusters number in the tens.",
+    "why": "With few treated clusters, many resamples draw none and fail. MacKinnon and Webb (2017, 2018) find the pairs cluster bootstrap badly sized there. A gteffects cell inside one cluster is resampled whole or not at all, so its bootstrap standard error is understated like the analytic one. Under that containment the ame rows have no analytic standard error at all.",
+    "decision": "A wild cluster bootstrap keeps every cluster and flips the signs of its residuals at random. It would need wooldid's averaging step run again on every draw, which is a separate engine. The author chose a caution naming the alternatives. He had the guide say that only bootstrap() without boottstat gives the ame rows inference under containment, since boottstat divides by the very standard errors containment removes.",
+    "what_you_notice": "The caution counts treated clusters. No number moves.",
+    "sources": [
+     "review_process/quality_review_2026-09-05.md F050, s9 at c1d8979^",
+     "review_process/econ_review_2026-09-25.md SEB-08, SEB-09",
+     "commit 9bcb462",
+     "wooldid.ado wooldid_bootrun few-treated caution ~10019-10040",
+     "wooldid.sthlp bootstrap() entry L376-378",
+     "review_process/econ_review_2026-09-25.md SEB-01, s4",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt L84-106",
+     "commits 16f5392, 6fe9494",
+     "wooldid.sthlp L318-327, L945",
+     "wooldid_agent_guide.md ch.5 'When and how', reps() L274, L286"
+    ]
+   },
+   {
+    "heading": "How the bootstrap constructions were checked by simulation",
+    "kind": "design decision",
+    "what_changed": "The author had the bootstrap checked by simulation on two designs. One had 24 clusters of equal size. The other had 12 clusters of unequal size, with the effect growing with cluster size. Coverage is the share of simulated data sets whose interval contains the true effect.",
+    "why": "A simulation is the only direct check that an interval covers at its stated rate. Each figure carries a Monte Carlo error, the noise from simulating few data sets.",
+    "decision": "One gap reached two Monte Carlo errors. On the unequal design, the analytic clustered interval covered 82.8 percent at a stated 95, and the bootstrap that copies clusters 96.4 percent. Copying gave standard errors about 5 percent wider than weighting, in the predicted direction; that size is not established. The author kept the constructions.",
+    "what_you_notice": "Nothing in the output changes.",
+    "sources": [
+     "review_process/research_2026-09-06/F058_bootstrap.md s1 (82.8 percent, n=29), s2 (87.5 percent, n=24), s6 (joint tests), s7 (96.4 percent, n=28; ratio 1.046), 'Surfaces off by more than 2 MC standard errors'",
+     "review_process/quality_review_2026-09-05.md F030, F058, s9 at c1d8979^"
+    ]
+   },
+   {
+    "heading": "pretrendpower() works under the bootstrap",
+    "kind": "changed behaviour",
+    "what_changed": "pretrendpower() now runs with bootstrap(), on the bootstrap event-study covariance. The power diagnostics of Roth (2022), and the pre-trend slope, use it. Where that covariance is missing for a family, the diagnostic is skipped with a caution.",
+    "why": "The refusal existed only because the diagnostic ran before the bootstrap covariance existed. Roth's formulas take a covariance as input. Where the analytic one is unreliable, the bootstrap one is the natural input.",
+    "decision": "The author declined a power calculation simulated from the draws and kept Roth's normal formulas. The slope is a least squares fit weighted by the covariance, and he kept it estimated again under the bootstrap covariance.",
+    "what_you_notice": "The slope and power figures differ from an analytic run's.",
+    "sources": [
+     "wooldid_ado_review.md L144",
+     "review_process/bootstrap_plan.md s13 A13 at c1d8979^",
+     "review_process/bootstrap_coverage_2026-09-02.md entries 4, 19",
+     "review_process/quality_review_2026-09-05.md F039 (slope -.0221 analytic vs -.0141 at reps(100)), s9 at c1d8979^",
+     "project memory note wooldid-bootstrap-display-rulings (2026-09-04, simulated power calculation declined)",
+     "commits 1561386, 1a66218",
+     "wooldid.ado caution L11377",
+     "wooldid.sthlp L374-375, L592"
+    ]
+   },
+   {
+    "heading": "latticeignoreweights forms the lattice again on each resample",
+    "kind": "changed behaviour",
+    "what_changed": "A generated lattice is a set of dose bins formed from quantiles of the treatment. Under bootstrap() with latticeignoreweights, each replication now forms those bins on its own resample. It drops the user's weight but keeps the replication's draw count or Dirichlet weight.",
+    "why": "When wooldid forms the bins from the data, they are part of the estimator. Each replication must form them again from its own data, the ordinary bootstrap of a statistic with estimated bins.",
+    "decision": "The alternative was to keep each replication's bins at the original sample's. The author rejected it.",
+    "what_you_notice": "Bootstrap standard errors, p-values and intervals move on these runs. Point estimates do not. The lattice itself is in Continuous treatments.",
+    "sources": [
+     "review_process/changes_review_2026-09-22.md round-2 rulings (latticeignoreweights)",
+     "commit a977d58",
+     "wooldid.ado ~1291-1295",
+     "wooldid.sthlp latticeignoreweights entry L745-746",
+     "review_process/changes_review_2026-09-22.md s4",
+     "wooldid.sthlp latticeignoreweights entry (~l.745-746)"
+    ]
+   },
+   {
+    "heading": "The draws are kept in bootsave(), and a failed write does not throw away the run",
+    "kind": "new feature",
+    "what_changed": "bootsave(name) writes every replication's estimates to name.dta. It has a row for the observed estimates and empty rows for failed replications. Under boottstat the replication standard errors are saved too. One column per cluster holds its draw count or Dirichlet weight. The file holds the seed and the random number state, which every run also stores in e(boot_rngstate).",
+    "why": "Saved draws let users compute any statistic of them and check wooldid's inference by hand. They can replay a run exactly, even one run without a seed, and see which clusters drove a result.",
+    "decision": "The author asked for the saved draws. A failed write keeps the run. That behaviour and the limit on storing large draw matrices are in How the program talks to you, and what was removed.",
+    "what_you_notice": "dots() projects the run time after the fifth replication. No number moves.",
+    "sources": [
+     "wooldid_ado_review.md L150",
+     "review_process/quality_review_2026-09-05.md F059, F063, F066, s9 at c1d8979^",
+     "review_process/changes_review_2026-09-22.md s2 R-D, R-E, s2b, round-2 rulings",
+     "commits 1561386, 1c502f8, 9d1047e, 61f246e, 98ab2fb, fb27352, d9280e7",
+     "wooldid.sthlp bootsave() L416-420, dots() L422-423, rseed() L425-428, reps() L384-385"
+    ]
+   },
+   {
+    "heading": "What bootstrap() will not combine with",
+    "kind": "design decision",
+    "what_changed": "bootstrap() is refused with permute(), impvalues, unconditionalse, customvce() and cluster() on more than one variable. It needs at least two clusters. fastnose with a plain bootstrap now gives a caution that it has no effect. With boottstat it is still refused.",
+    "why": "permute() runs its own replication loop. impvalues weights clusters equally, unlike the replications. unconditionalse and customvce() ask for another standard error. Several clustering variables leave no single unit to resample. boottstat needs the standard errors fastnose switches off.",
+    "decision": "The author kept each remaining refusal as a real conflict. He turned the fastnose error into a caution, since typing a speed option already in force should not stop a run.",
+    "what_you_notice": "No number moves.",
+    "sources": [
+     "review_process/bootstrap_plan.md s6 at c1d8979^",
+     "review_process/bootstrap_coverage_2026-09-02.md entry 17",
+     "review_process/changes_review_2026-09-22.md docs-fastnose-bootstrap-refusal",
+     "wooldid.ado wooldid_bootctl interaction refusals and fastnose block ~7318-7360",
+     "wooldid.sthlp bootstrap() entry L370-373, fastnose entry L289-290"
+    ]
+   },
+   {
+    "heading": "Stata's own bootstrap and jackknife prefixes work, as a secondary route",
+    "kind": "changed behaviour",
+    "what_changed": "bootstrap _b, cluster(): wooldid and jackknife _b: wooldid now run. Typing wooldid alone afterwards shows the prefix's table. The help lists the limits, no weights and no svy among them, and names bootstrap() as the supported route.",
+    "why": "The prefixes switch off the results table that wooldid reads from margins, Stata's command for averaging predictions over the sample. So before this change every replication failed.",
+    "decision": "The author wanted wooldid to work with Stata's own commands where possible. He rejected replaying wooldid's analytic tables after a prefix run, because they would show numbers the prefix did not produce.",
+    "what_you_notice": "The prefixes work, and a bare wooldid after them shows the prefix's standard errors. wooldid's own numbers do not move.",
+    "sources": [
+     "wooldid_ado_review.md L116",
+     "review_process/bootstrap_plan.md s1, s8 at c1d8979^",
+     "review_process/bootstrap_report_2026-08-30.md s2 'The built-in prefix route' at c1d8979^",
+     "review_process/changes_review_2026-09-22.md round-2 rulings (bare wooldid after the prefix)",
+     "commits 4b08962, 23ea9e9, a3e2ce0",
+     "wooldid.sthlp L983-986",
+     "review_process/changes_review_2026-09-22.md s4",
+     "wooldidinstall/wooldid.ado 10-18, 113-124",
+     "wooldidinstall/wooldid.sthlp 983-986"
+    ]
+   }
+  ]
+ },
+ {
+  "area": "Randomization inference",
+  "title": "Randomization inference: permute() and its companion options",
+  "intro": "Version 1.3 had no randomization inference. permute() now reassigns treatment onset dates across clusters, reruns the whole estimator on each reassignment, and tests the sharp null that treatment had no effect on any unit at any time. Every number a permute() run reports is a permutation quantity or is left blank, and the outside benchmark is ritest, a user-written Stata command for randomization inference that reports the absolute-value share of draws as its p-value.",
+  "items": [
+   {
+    "heading": "A new way to get p-values: randomization inference over onset dates",
+    "kind": "new feature",
+    "what_changed": "permute(shuffle) reassigns the observed onset dates across clusters and keeps the number of clusters at each date fixed. Never treated counts as one more label. Each reassignment is a full wooldid run. permreps(#) sets how many to sample, and permexact lists every one.",
+    "why": "Cluster-robust standard errors let errors correlate within a cluster, and they need many clusters. MacKinnon and Webb (2020) show they can reject a true null far too often when few clusters are treated. A randomization test needs no large number of clusters. If treatment affected no one, and onset was assigned exchangeably, meaning any cluster could have received any onset, then every reassignment was as likely as the observed one. The rank of the observed estimate then gives an exact p-value.",
+    "decision": "The plan the author commissioned runs the loop around the whole command, so each replication uses the same code as the reported estimate. It rejected a stripped-down loop that would duplicate the estimation pipeline and could drift from it. His brief required a check that every cluster sits inside one onset group, refusals with impvalues, unconditionalse and contreatwithin, and that every run report the number of possible assignments. bootstrap() is refused too, so a run reports one kind of inference.",
+    "what_you_notice": "New options permute(), permreps() and permexact. e(perm_npossible) holds the number of possible assignments, and e(perm_failed) counts failed replications. No v1.3 number moves, since the option is new.",
+    "sources": [
+     "wooldid_ado_review.md at 125bbd0~1 (F6 brief, l.61)",
+     "review_process/f6_permutation_plan.md at 0561c09 s3",
+     "commits 125bbd0, 86d37cb, 9f31b47, b544c55, e350220, 533052c, 099d93b",
+     "wooldid.ado l.221-222, 6612, 6625, 7320, 18220-18223",
+     "wooldid.sthlp l.433-440, 1131-1132, 1279-1282"
+    ]
+   },
+   {
+    "heading": "The cluster is the unit that was randomized, and permonsetcohorts lets i be only the onset grouping",
+    "kind": "design decision",
+    "what_changed": "permute() moves the onset of each cluster() unit. Each cluster must have one onset and hold whole units of i. permonsetcohorts lifts the second rule when the user states that i is only the onset grouping. The program checks that statement and rebuilds i from the drawn onsets. Clusters whose onset falls after the last period are permuted as never treated, and a caution counts them.",
+    "why": "A randomization test must reshuffle what was actually randomized. A cluster with two onsets, or a unit of i split across clusters, has no single onset to move. The help advises onset cohorts as i with finer clusters, and permonsetcohorts lets that design use permute(). The clusters that draw onset k form cohort k, so the estimate keeps its meaning. The shuffle now treats late onsets as the estimation does.",
+    "decision": "The author required the user to state the grouping, since wooldid cannot tell it from a real unit such as a firm. He refused the option with subgroups(), where a rebuilt cohort would mix subgroups. A control constant within the observed cohorts drops out of the observed fit but stays live inside the rebuilt cohorts, so it leaves the estimate unchanged and changes the null distribution. A screen for it was proposed. He ruled it not shipped, as too unusual an edge case, and left it to the user's design.",
+    "what_you_notice": "A cluster with two onsets stops with 'permute() requires each cluster have at most one treatment onset time period.' e(perm_irebuilt) records a rebuild. No v1.3 number moves.",
+    "sources": [
+     "F6 brief",
+     "f6_permutation_plan.md s2",
+     "a785318 (NFPERM-03)",
+     "f8671ed",
+     "533052c",
+     "a9f9997",
+     "8443694",
+     "changes_review_2026-09-22.md s2b (perm-window-labels) and s3a",
+     "wooldid.ado l.6824, 6937, 6959",
+     "wooldid.sthlp l.435-439",
+     "feature_tickets_2026-09-15.md (principle, T1, 'Ruled: no display line', option name)",
+     "a8e2753, c3cc515, 38e6711, 85de3ab, 84da86f",
+     "8ca8ba0",
+     "blue_sky_2026-09-18/HELD_FOR_RULING_2026-09-20.md s2",
+     "66d6680",
+     "changes_review_2026-09-22.md l.69",
+     "wooldid.ado l.290, 6897",
+     "wooldid.sthlp l.494-497",
+     "review_process/changes_review_2026-09-22.md s4",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md (Ruled: take no action, perm-inert)",
+     "review_process/blue_sky_2026-09-18/mechanisms.md (fineclus-perm-FP1)"
+    ]
+   },
+   {
+    "heading": "permstrata() and permute(probabilities): stratified shuffles and a user-stated assignment design",
+    "kind": "new feature",
+    "what_changed": "permstrata(varname) confines the shuffle to clusters in the same stratum. The number of possible assignments becomes the product of the counts within strata. permute(probabilities) with permprobs() draws each cluster's onset from probabilities the user states, one row per cluster. Rows must sum to 1 within 1e-6. permreps() is required and permexact is refused.",
+    "why": "The reassignments should match how onset was really assigned. If onset was assigned among large states and separately among small ones, a shuffle across sizes adds assignments that could not have happened. The test can then reject too often or too seldom. Some designs are not a fair shuffle at all, because a cluster was likelier to adopt early. If the observed assignment has probability zero under the stated design, the p-value is only a tail probability, and a caution says so.",
+    "decision": "The author asked for both designs. permstrata() applies to the shuffle only. Under the probabilities design the user writes any strata into the probabilities. A tighter tolerance on the row sums was considered and rejected: it would refuse hand-rounded rows such as .3333333 written three times.",
+    "what_you_notice": "New options permstrata(), permute(probabilities) and permprobs(). A design with only one possible assignment, such as strata that each hold one onset or probability rows that are all certain, is refused before any replication runs. No v1.3 number moves.",
+    "sources": [
+     "F6 brief",
+     "0561c09:review_process/f6_permutation_plan.md l.26-27",
+     "125bbd0",
+     "86d37cb",
+     "df70e81 (NFPERM-09)",
+     "wooldid.ado l.7054, 8573, 15695",
+     "wooldid.sthlp l.459-460",
+     "9f31b47",
+     "df70e81 (NFPERM-05/06/09)",
+     "permute_coverage_2026-09-02.md s4 ruling 10",
+     "wooldid.ado l.15802-15803, 15810, 15957",
+     "wooldid.sthlp l.462-465"
+    ]
+   },
+   {
+    "heading": "Sampled draws and exact enumeration: floors, resolution cautions, and the 65,534-assignment cap",
+    "kind": "design decision",
+    "what_changed": "permreps() must be at least 20. A sampled run is refused when fewer than 20, or fewer than half the requested draws, complete. permexact lists every assignment, cautions above 1,000 and is refused above 65,534. Its p-values are exact shares over the M assignments, with a smallest value of 2/M. When some assignments fail, they stay exact shares over those that completed.",
+    "why": "A sampled p-value sits on a grid set by the number of draws. At 20 draws the default cannot fall below .095, so nothing can reject at 5 percent. A caution says so below 39 draws. Draws repeat, so a second caution suggests permexact when permreps() exceeds a tenth of the possible assignments. Under enumeration the observed assignment stays in the set, so failures cost resolution, not validity.",
+    "decision": "The review proposed raising the floor to 40. The author kept 20 and added the caution, so a quick check stays possible. The enumeration cap was 10,000 at first. He asked for a caution that safety(off) could lift. He then chose the machine limit, since a Stata matrix holds at most 65,534 rows. Above 10,000 completed replications, sampled or enumerated, the draw matrices are not stored and a caution points to permsave(); the shared large-matrices caution is told in 'How the program talks to you, and what was removed'.",
+    "what_you_notice": "Exact runs of up to 65,534 assignments now run. e(perm_n) shows the draws each p-value rests on. No v1.3 number moves.",
+    "sources": [
+     "F6 brief",
+     "f6_permutation_plan.md s7",
+     "099d93b",
+     "0139ba3 (F036)",
+     "0743f29 (BS-20)",
+     "quality_review_2026-09-05.md s9",
+     "86d37cb",
+     "df70e81 (NFPERM-09)",
+     "wooldid.ado l.6686-6690, 6708-6709, 8882, 9296, 15677",
+     "wooldid.sthlp l.448-453",
+     "64e591b",
+     "rulings_2026-09-07.md s.A (BS-23)",
+     "7e30e85",
+     "a785318 (NFPERM-01)",
+     "4484493",
+     "wooldid.ado l.413, 13120, 15665, 15672",
+     "wooldid.sthlp l.455-457",
+     "review_process/open_ticket_permexact_cap_2026-09-21.md"
+    ]
+   },
+   {
+    "heading": "The default p-value is equal-tailed with the observed assignment counted; permabsp and permside() are the alternatives",
+    "kind": "design decision",
+    "what_changed": "The default p-value is twice the smaller of the two one-sided tail shares, capped at 1. Each sampled tail share counts the observed assignment: one plus the draws at or beyond it, over one plus the number of draws. permabsp reports the absolute-value share and switches the interval to the matching symmetric form. permside(left) or permside(right) gives a one-sided p-value.",
+    "why": "An absolute-value p-value assumes the null distribution is symmetric around zero, and with staggered onsets it often is not. Under the sharp null the observed statistic and the draws are exchangeable, meaning every ordering of them is equally likely. Counting the observed assignment then keeps the rejection rate at or below the nominal level for any number of draws. The default is Rosenbaum's equal-tailed rule. ritest and Stata's own permute command report the absolute-value share without the added one. permabsp is that statistic in the add-one form, and the plain share can be recovered from it.",
+    "decision": "The author chose the equal-tailed default and asked for permabsp and permside() as alternatives. A calibration of the test's size, written in advance, had assumed the absolute-value rule. He declined to switch the default back and had the calibration amended. On 2026-09-25 permside() was put to him as a deletion candidate and he kept it. permrawp existed only during development, as told in 'How the program talks to you, and what was removed'.",
+    "what_you_notice": "Under the default, permutation p-values never fall below two over one more than permreps(), or 2/M under permexact; under permabsp and permside() the floors are half that. e(perm_p_lo) and e(perm_p_hi) always hold the one-sided shares. No v1.3 number moves.",
+    "sources": [
+     "1561386",
+     "dc3f345",
+     "rulings_2026-09-07.md s.H (CS-1 and 'The add-one case')",
+     "81c284b",
+     "quality_review_2026-09-05.md F033, F052",
+     "wooldid.ado l.9226",
+     "wooldid_agent_guide.md l.324-340",
+     "wooldid.sthlp l.444, 451-452",
+     "310fa61",
+     "0743f29 (BS-22, BS-25)",
+     "quality_review_2026-09-05.md s9 (F052, F064)",
+     "rulings_2026-09-07.md s.D",
+     "econ_review_2026-09-25.md s6 and s8",
+     "925615e",
+     "wooldid.ado l.6621, 9176-9180, 13073",
+     "wooldid_agent_guide.md l.333-340",
+     "wooldid.sthlp l.479-484",
+     "review_process/held_for_ruling_2026-09-13.md item 3"
+    ]
+   },
+   {
+    "heading": "Intervals are shift intervals, and the help says where they hold",
+    "kind": "design decision",
+    "what_changed": "Each interval is a shift interval: the estimate minus the upper and lower level() quantiles of the null draws. A quantile here is the point that cuts off a tail at the chosen level. When the central level() band of the draws excludes zero, the interval is blank, the p-value stands, and e(perm_offcentre) lists the coefficient.",
+    "why": "Percentiles of the null draws show where the estimate would fall with no effect. The shift interval takes the estimate's sampling error to have that null distribution. Near a zero effect that holds. But the draws relabel outcomes that carry the real effect, so their spread grows with it. On a 12-cluster example with the analytic standard error fixed at .38, the 95 percent width was 1.9, 4.7 and 18.3 at true effects of 0, 5 and 20.",
+    "decision": "The brief had asked for the 5th and 95th percentiles of the draws as the interval; those are kept as the null band, and the reported interval became the shift interval. The author declined an exact inversion of the test, at twice the run time for the pooled effect and 20 to 40 times under permtstat or poisson. He had the help say the interval is reliable only near a zero effect.",
+    "what_you_notice": "Intervals follow level(). The null draws' own band is in e(perm_bandlo_*) and e(perm_bandhi_*). No v1.3 number moves.",
+    "sources": [
+     "wooldid_ado_review.md at 1561386 l.4",
+     "f6_permutation_plan.md s5.3",
+     "1561386",
+     "310fa61",
+     "b04029e",
+     "quality_review_2026-09-05.md s4c F035, F041 and s9",
+     "research_2026-09-06/F058_permutation.md s6.6-6.7",
+     "rulings_2026-09-07.md s.H (CS-57, CS-58)",
+     "605d6d7",
+     "econ_review_2026-09-25.md s6 and s8",
+     "925615e",
+     "wooldid.ado l.9154, 13121",
+     "wooldid.sthlp l.444-445, 499-501, 1134"
+    ]
+   },
+   {
+    "heading": "permtstat and permtci: randomizing on t-ratios, and when that helps",
+    "kind": "new feature",
+    "what_changed": "permtstat ranks each replication's t-ratio, the estimate over its own analytic standard error, instead of the raw estimate. permtci adds an interval for the pooled estimands from the permuted absolute t-ratios, and it implies permtstat. At cluster() equal to i, a caution says permtstat gives no protection.",
+    "why": "Dividing by each assignment's own standard error makes the statistic less sensitive to noisy treated clusters, as MacKinnon and Webb (2020) recommend. That needs a standard error that sees those clusters' variance. The regression fits each treated cohort-period cell exactly, so a cluster filling a cell has residuals summing to zero there. A cluster-robust variance then has nothing to measure.",
+    "decision": "The author kept the caution's trigger at cluster() equal to i and declined to widen it to every cluster holding whole units of i. He approved wordings that ask for several clusters inside each treated cell rather than many observations. He kept permtci although permtstat with permabsp gives the same interval.",
+    "what_you_notice": "permtstat runs are slower. The permtci endpoints are in e(perm_tlb_*) and e(perm_tub_*). No v1.3 number moves.",
+    "sources": [
+     "F6 brief",
+     "b544c55",
+     "4ba355d",
+     "20c0ec9",
+     "310fa61",
+     "a785318 (NFPERM-08)",
+     "quality_review_2026-09-05.md s5 F049, s9",
+     "blue_sky_2026-09-18/RULINGS_LEDGER.md R19",
+     "econ_review_2026-09-25.md PERM-1 and s8",
+     "changes_review_2026-09-22.md (09-24 rulings: permtci kept)",
+     "16f5392",
+     "wooldid.ado l.6679, 6914-6920",
+     "wooldid_agent_guide.md l.378-384",
+     "wooldid.sthlp l.467-474"
+    ]
+   },
+   {
+    "heading": "What the test assumes, stated plainly, and permute()'s own caution about few treated clusters",
+    "kind": "design decision",
+    "what_changed": "The help and guide say the test assumes onset was assigned exchangeably, so any cluster could have received any onset. This is stronger than parallel trends, the assumption that groups would have moved alike without treatment. With fewer than six ever-treated clusters, permute() prints 'Caution: only N of the resampling clusters are ever treated.' The caution says the test then rests heavily on exchangeable assignment. An atypical treated cluster can make it reject a true null too often, and permtstat protects only when several clusters lie inside each treated cell.",
+    "why": "The pairs cluster bootstrap resamples whole clusters as interchangeable random draws. It fails with few or atypical treated clusters. Randomization inference treats clusters as interchangeable in who got treated. It fails when treated clusters are noisier or quieter than the rest. Moving to permute() because treated clusters are few trades one assumption for the other. Few treated clusters do not make assignments few: 5 treated among 30 clusters give 142,506.",
+    "decision": "The author chose a caution written from the permutation test's own way of failing over a copy of the bootstrap's few-cluster cautions. He held that the two engines need not match for its own sake, and each difference must trace to what a bootstrap and a randomization test are. He also had three incidental differences removed. The plot-data file is now written on the analytic path too, both engines' compatibility lists share one shape with reasons in the guide's engine-compatibility table, and the fast-mode help entry lists the options that refuse it.",
+    "what_you_notice": "At cluster() equal to i a caution prints even without permtstat. It says the coefficient statistic has no protection against a treated cluster with unusually dispersed errors. No number moves.",
+    "sources": [
+     "rulings_2026-09-07.md s.I",
+     "research_2026-09-08/engine_parity.md",
+     "4ba355d",
+     "20c0ec9",
+     "81c284b",
+     "econ_review_2026-09-25.md PERM-2, PERM-3, PERM-5, PERM-7, s5 item 8, s8 and s9",
+     "16f5392",
+     "wooldid.ado l.6921-6945",
+     "wooldid_agent_guide.md l.378",
+     "wooldid.sthlp l.449",
+     "20c0ec9 (P7 accident 3)",
+     "317673b",
+     "review_process/econ_review_2026-09-25.md closing rulings (m175)",
+     "review_process/rulings_2026-09-07.md s.I (the accidents)",
+     "wooldidinstall/wooldid_agent_guide.md engine-compatibility table"
+    ]
+   },
+   {
+    "heading": "Fast mode by default, with permanalyticse to restore analytic standard errors",
+    "kind": "design decision",
+    "what_changed": "Under permute(), the observed run and the replications skip analytic standard errors by default. The se_analytic column is blank, and e(V), e(b_es_*) and e(V_es_*) are not posted. permanalyticse computes the analytic standard errors for the observed run and shows them for reference.",
+    "why": "A test on coefficients needs only point estimates, so standard errors in every replication waste time. In the few-cluster setting the analytic standard errors often carry no information. Printing them beside permutation p-values invites confusion.",
+    "decision": "The author made fast mode the default. He accepted that honestdid, a user-written Stata command for sensitivity analysis of event studies to violations of parallel trends, has nothing to read after permute(). He kept permanalyticse when its removal was considered. fastnose is accepted with permute() and refused with permtstat, permtci or permanalyticse, as told in 'How the program talks to you, and what was removed'.",
+    "what_you_notice": "permute() runs are fast, with a blank se_analytic column. permanalyticse or permtstat brings back e(V). No v1.3 number moves.",
+    "sources": [
+     "wooldid_ado_review.md at 1561386 l.4",
+     "1561386",
+     "e26b3dd (CS-23)",
+     "8443694",
+     "changes_review_2026-09-22.md s2b",
+     "econ_review_2026-09-25.md s6, s8",
+     "wooldid.ado l.6679",
+     "wooldid.sthlp l.445-446, 476-477"
+    ]
+   },
+   {
+    "heading": "Every p-value and interval is a permutation quantity, or blank, and each tests the sharp null",
+    "kind": "design decision",
+    "what_changed": "Every p-value and interval a permute() run reports comes from the draws. That covers the pooled estimands, event-study horizons, pretreatment rows, subgroup estimates and contrasts, continuous-treatment effects, joint tests and plots. The cohort-by-period cells of gteffects and the plot cells binned by treatment status are blank. pretrendpower() is refused.",
+    "why": "A permutation p-value needs a statistic defined the same way in every draw. Those gteffects cells are indexed by onset date, so reassigning onset changes what they are. pretrendpower() needs a sampling covariance, and the draws describe relabelling instead. The sharp null has two consequences in staggered designs. Pre-period p-values rise toward 1 as the true effect grows, because a draw that moves onset later counts treated periods as pretreatment. A common nonzero effect alone can make the subgroup tests reject.",
+    "decision": "The author ruled that no p-value of any other kind may show under permute(), so coverage is by permutation wherever a distribution exists and blank elsewhere. He allowed the multi-way joint tests and the subgroup comparison tests to be skipped outside permtstat. The coverage review argued against skipping, since the package's own error text sends users to permute() for joint inference, and they were covered in both modes on a fixed yardstick, as told in the next item. He kept the pretreatment rows, with the null stated where they print.",
+    "what_you_notice": "The subgroup equality lines name the sharp null of no effect at any horizon. A footer explains the pre-period caveat, and e(perm_precaveat) is 1 when such rows print. No v1.3 number moves.",
+    "sources": [
+     "82ec697 (SI-19)",
+     "permute_coverage_2026-09-02.md s4-s5 (rulings 5, 6, 7)",
+     "bootstrap_coverage_2026-09-02.md l.1378",
+     "research_2026-09-08/engine_parity.md",
+     "wooldid_ado_review.md at 1561386 l.4 and l.202-203",
+     "1561386",
+     "a45480b",
+     "changes_review_2026-09-22.md s2b",
+     "wooldid.ado l.5682, 6646, 13117-13118",
+     "wooldid.sthlp l.443-448, 766-767",
+     "permute_coverage_2026-09-02.md s4 rulings 1 and 11",
+     "6e82d56",
+     "quality_review_2026-09-05.md s2 F005",
+     "changes_review_2026-09-22.md s2b (perm-sgeq-uncentred; equality test and pairwise contrasts)",
+     "66d6680",
+     "econ_review_2026-09-25.md PERM-6",
+     "wooldid.ado l.12987, 13111, 13116",
+     "wooldid.sthlp l.443-444, 499-504, 671-672"
+    ]
+   },
+   {
+    "heading": "Joint tests become permutation tests on a fixed yardstick",
+    "kind": "design decision",
+    "what_changed": "Under permute(), the joint pretrend test, the subgroup equality test and the adversarial test of whether effects lie on a line become one-sided permutation tests of a quadratic form, a weighted sum of squared coefficients. The weights come from the covariance of the permutation draws, computed once and held fixed. The replication statistics are stored in e(perm_jointW), e(perm_sgW) and e(perm_advW).",
+    "why": "The analytic joint tests need an analytic covariance, which fast mode lacks and which carries no information when each treated cell is one cluster. A permutation test is exact for any statistic fixed in advance. The weights treat every assignment alike, so a poor choice costs power, not validity.",
+    "decision": "The author had allowed these tests to be skipped outside permtstat. Skipping would have contradicted the package's advice to use permute() for joint inference, so the fixed-yardstick construction was built for both modes and stands. Under permute() the adversarial test tests the sharp null, while its analytic version tests the line itself.",
+    "what_you_notice": "jointtests and adversarial work on the default fast path. The tests are the same whether the run ranks coefficients or t-ratios. No v1.3 number moves.",
+    "sources": [
+     "wooldid_ado_review.md at 1561386 l.4",
+     "permute_coverage_2026-09-02.md s4 rulings 1 and 3",
+     "1561386",
+     "4484493",
+     "25727a6 (BS-12)",
+     "b86b08b",
+     "7c32fdb",
+     "changes_review_2026-09-22.md (09-24 rulings)",
+     "wooldid.ado l.9660, 13082",
+     "wooldid.sthlp l.564-566, 1044-1045"
+    ]
+   },
+   {
+    "heading": "Subgroups under permute(): screens over the whole sample with no escape, and residue pairwise standard errors disclosed",
+    "kind": "design decision",
+    "what_changed": "With subgroups() under permute(), the subgroup screens run over the whole sample, untreated units included. A unit split across subgroups, a unit labelled on some rows only, and a subgroup varying within one cell of i and t are refused whatever safety() says. With permtstat or permanalyticse, a caution counts pairwise contrasts whose analytic standard error is rounding residue, a tiny number left when two nearly equal terms cancel.",
+    "why": "Under reassignment any unit can become treated. Replications would split such units silently, and the reference distribution would not match the observed statistic. The contrasts' permutation p-values do not use the analytic standard error, so they stay valid. Only the number printed beside them is meaningless.",
+    "decision": "The author allowed no escape from the screens under permute(). Outside permute() the split-unit and partial-label screens stay switchable, as told in 'Where the safety(off) line falls: five checks that now always hold, and two left switchable'. He chose to disclose the residue and keep the contrasts.",
+    "what_you_notice": "Subgroup designs that run under safety(off) without permute() are refused with it. e(wdid_sgdegenact) reads perm when the residue check fires. The fast default flags nothing. No v1.3 number moves.",
+    "sources": [
+     "1561386",
+     "8443694",
+     "402b324",
+     "fddfddd",
+     "changes_review_2026-09-22.md s2b and 09-24 rulings",
+     "wooldid.sthlp l.243, 442-443, 655, 677",
+     "189af00",
+     "changes_review_2026-09-22.md D4 (l.77, 134, 164-166)",
+     "test/test_sgdegen.do G11",
+     "wooldid.sthlp l.668-671"
+    ]
+   },
+   {
+    "heading": "permstepdown adjusts for many horizons at once, and is opt-in",
+    "kind": "new feature",
+    "what_changed": "permstepdown reports step-down adjusted p-values after Romano and Wolf (2005) for each event-study family of two or more horizons, from the same draws. Post-treatment and pretreatment horizons form separate families. simultaneousbands is refused under permute().",
+    "why": "Separate p-values do not control the chance of at least one false rejection across horizons, the family-wise error rate. The step-down does, at no extra computing cost. Pooling pre and post horizons would change every post-treatment adjusted p-value, and the families answer different questions. Control holds under the sharp null. Real effects at some horizons leak into other horizons' draws.",
+    "decision": "The author ruled the step-down built on 2026-09-06 as a default output. On 2026-09-07 he made it opt-in, since it printed on every run with two or more post-treatment horizons. He split the families. He kept the step-down for permute() only, and the bootstrap has simultaneous bands instead, as told in 'Event studies, pre-trend tests and bands'.",
+    "what_you_notice": "Adjusted p-values are in e(perm_stepdown) and e(perm_stepdown_pre), summarised in the footer. No v1.3 number moves.",
+    "sources": [
+     "4bf3af7",
+     "7a158ea",
+     "rulings_2026-09-07.md s.G and s.I (PS-45)",
+     "research_2026-09-06/F058_permutation.md s6.5",
+     "econ_review_2026-09-25.md PERM-4",
+     "16f5392",
+     "wooldid.ado l.5667",
+     "wooldid_agent_guide.md l.396",
+     "wooldid.sthlp l.310, 486-488, 1129"
+    ]
+   },
+   {
+    "heading": "esttab shows the permutation p-values and intervals, with no invented covariance",
+    "kind": "design decision",
+    "what_changed": "Every permute() run posts e(p), e(ci_l) and e(ci_u) from the permutation results. esttab, a user-written Stata command that builds tables from stored results, reads these first. It prints the same p-values and intervals as wooldid. No e(se) is posted, and in fast mode no e(V).",
+    "why": "Without e(V), esttab printed an empty standard-error row under a footer claiming standard errors. It wrote that claim into .tex and .csv files. Posting the numbers the permutation produced fixes the table without inventing a variance.",
+    "decision": "The author first named an all-zero covariance as the remedy, on condition that it worked. Tested, it made things worse: esttab printed zero-width intervals, and commands that now refuse would print zero standard errors. He chose to post e(p), e(ci_l) and e(ci_u) and nothing else. He extended this to every permute() run, because under permanalyticse esttab had switched silently to analytic p-values.",
+    "what_you_notice": "esttab tables from permute() runs show permutation p-values and intervals. They have no standard-error row unless analytic standard errors were computed. No v1.3 number moves.",
+    "sources": [
+     "rulings_2026-09-07.md s.E (PS-46)",
+     "held_for_ruling_2026-09-09.md (PS-46 options)",
+     "research_2026-09-10/permute_fastmode_esttab.md s6",
+     "8cb3e56",
+     "ef61840",
+     "a45480b",
+     "81c284b",
+     "changes_review_2026-09-22.md s2b (perm-esttab-analytic-under-ase)",
+     "wooldid.ado l.9272-9280",
+     "wooldid.sthlp l.288, 1135-1137"
+    ]
+   },
+   {
+    "heading": "Reproducing a run: rseed(), the random-number state, permsave(), and the stored draw matrices",
+    "kind": "new feature",
+    "what_changed": "rseed(#) is accepted under permute() and stored in e(perm_seed). The random-number state before the first draw is always stored in e(perm_rngstate). permsave(name) writes name.dta with one row per replication, a row 0 for the observed estimates, and one column per cluster holding its drawn onset. e(permdist_b) holds the coefficient draws.",
+    "why": "A sampled p-value changes with the draws, so the seed lets anyone reproduce the reported number. The onset columns make every p-value checkable by hand. The file has no row limit.",
+    "decision": "The plan offered a separate seed option and dropped it. rseed() was at first refused under permute() and was opened to it during the 2026-09-05 quality review; the author then ruled that the random-number state be stored on every run. A failed write is a caution at his instruction, so the run's results are kept. He had ruled the name e(permdist) misleading, with a note in the help that e(permdist_b) is the true twin of the bootstrap draw matrix. That note is gone from the help, the matrix is still posted, and the 2026-09-25 deletion review kept it: it holds the pooled estimands' draws on the permuted statistic's scale, t-ratios under permtstat, so it is not an alias of e(permdist_b).",
+    "what_you_notice": "permsave(name, replace) is refused before the replications run. Overwriting needs the separate replace option. No v1.3 number moves.",
+    "sources": [
+     "f6_permutation_plan.md s1, s5.5",
+     "d81fb85",
+     "quality_review_2026-09-05.md s9 F059",
+     "wooldid_ado_review.md at 1561386 l.4",
+     "1561386",
+     "8443694",
+     "open_ticket_savefail_caution_2026-09-21.md",
+     "98ab2fb",
+     "wooldid.sthlp l.425-427, 490-492",
+     "review_process/rulings_2026-09-07.md s.H (CS-58)",
+     "review_process/econ_review_2026-09-25.md s6 (Considered and kept: e(permdist))"
+    ]
+   }
+  ]
+ },
+ {
+  "area": "Continuous treatments",
+  "title": "Continuous treatments",
+  "intro": "This section covers contreat(), where each treated unit receives a dose. wooldid gives each treated cell, one onset cohort in one calendar period, its own intercept and dose slope, and reports the att, the average effect of treatment, and the ame, the average marginal effect of one more unit of dose. The theme is that a dose slope can only be learned from dose variation, so where the data lack it or the variance formula cannot see it, wooldid now says so or stops. The centring of coarse cohort controls and the withheld ame standard errors are told in the sections What is being estimated, and from what, and Analytic standard errors and what they can and cannot see.",
+  "items": [
+   {
+    "heading": "Treated cells with no variation in the dose: the ame is missing when every slope drops, and cells leave the sample when some do",
+    "kind": "changed behaviour",
+    "what_changed": "When some treated cells have a dose that takes one value on every row, wooldid drops them from the estimation sample and estimates the att and the ame on the rest. A caution beginning \"Caution: estimability checks found\" gives their count, stored in e(contreat_ndropcells); their rows are added to e(N_dropped), the run's count of dropped observations. When no treated cell after onset varies, nothing is dropped and every ame result is missing, but the att is reported.",
+    "why": "A cell's dose slope is learned only from rows with different doses. With one dose value the regression drops the slope as redundant, and the averaging step read it as a zero at the cell's full weight. One constructed case gave an ame of .72 against a true 1.00, with a p-value near zero.",
+    "decision": "The author chose to drop the cells from the estimation sample. The att and the ame are then estimated on the same cells. He declined reporting the whole ame as missing, averaging only the cells with a slope, and documenting the problem. Cells with a zero dose throughout are exempt under every contreatcontrols() type, because the help endorses recording the dose as zero before onset, and such runs would otherwise stop. Cells before onset are dropped only when one of them varies. A cell after onset with a zero dose throughout is kept, and its zero slope enters the ame.",
+    "what_you_notice": "The att and the ame move on runs that had such cells. safety(off) silences the caution but still drops the cells; where no cell varies, it prints zeros in the ame rows. Under contreatcontrols(untreatedZero) such designs are refused instead.",
+    "sources": [
+     "commit 4b7848e (SI-A4/R6)",
+     "commit b6f1a54",
+     "commit 55581ea",
+     "commit 3b5712a",
+     "commit 16f5392 (dose:CT-5)",
+     "review_process/econ_review_2026-09-25.md s3 (dose:CT-1, dose:CT-5), s5 item 2, s8, s9 G2",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt dose:CT-1",
+     "review_process/changes_review_2026-09-22.md s2b and s3a (ccscreen-contreatwithin-amevoid, uz-cellconstant-dose-refuse-vs-amevoid)",
+     "wooldid.ado wooldid_dosecells ~6320-6360 and call site ~1254-1263",
+     "wooldid.ado wooldid_ccscreen amevoid block ~13486-13510",
+     "wooldid.sthlp contreat() entry (~l.694-703)",
+     "wooldid_agent_guide.md s2 'The finest-i trap' (~l.92)"
+    ]
+   },
+   {
+    "heading": "Each baseline dose slope must be identified before the run proceeds",
+    "kind": "changed behaviour",
+    "what_changed": "Each treated cell's dose effect is measured against a baseline dose slope fitted on reference rows. wooldid now checks each group that contreatcontrols() gives its own baseline slope: the whole sample under basic, each treatment status under byTreated, each onset group under byTtre, each period under byTime. A group with fewer than two reference rows, or whose reference-row dose spread is at most 1/100,000 of the dose's sample standard deviation, stops the run with Stata error code r(459). Between 1/100,000 and 1/1,000 a caution says the group's slope is nearly unidentified.",
+    "why": "Without dose variation a group's slope is unidentified and the solver picks one arbitrarily. Near that edge answers are wrong, not noisy: one byTime case with a spread of 4.4 parts in 10,000 gave an att of -150.3 against a true 2.56, with no warning.",
+    "decision": "The author made this a refusal that safety(off) cannot lift, following the existing byCohort check, and later gave it the same caution band. It applies under contreatwithin too, since contreatwithin does not supply the missing variation. He kept the refusal where the never-treated group's dose is zero or constant under byTreated or byTtre, although that group's baseline slope then reaches no treated cell.",
+    "what_you_notice": "Some designs v1.3 ran now stop, most often byTime with never-treated units at a constant dose after the last onset. Bootstrap and permutation draws are checked too. Passing runs give the same numbers.",
+    "sources": [
+     "commit 7e61af6 (byCohort screen)",
+     "commit bb651ef",
+     "commit 1c09efa",
+     "commit 2d3621e (band caution)",
+     "review_process/amese/GROUP_B_PATCHES.md",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R11 and 'The R11 configs_ext follow-up'",
+     "review_process/changes_review_2026-09-22.md s2b (ccref-nevergroup-false-refusal: keep) and s4 (band caution)",
+     "review_process/change_audit_2026-09-22/findings.json ccref-nevergroup-false-refusal",
+     "wooldid.ado wooldid_amescreen mode(ccref) and fragility band ~14601-14715, call site ~1791",
+     "wooldid.sthlp contreatcontrols() paragraph on reference-period variation (~l.783-788)"
+    ]
+   },
+   {
+    "heading": "untreatedZero means no baseline dose effect on every engine",
+    "kind": "changed behaviour",
+    "what_changed": "Under contreatcontrols(untreatedZero), the poisson, customvce() and unconditionalse paths no longer add a pooled dose control shared by all rows, leaving each treated cell's own slope. A treated cell with a nonzero dose whose slope drops stops every path with r(322), and a dose constant within each cohort stays refused.",
+    "why": "Under untreatedZero the dose is zero outside treated cells, so a pooled dose column is the sum of the cells' slope columns, and one cell's slope was dropped instead. One model's ame was 0.26 on the explicit path and 30.23 on the default.",
+    "decision": "The author chose that every path fit the default model, refusals included. ppmlhdfe, the user-written Stata command wooldid calls for Poisson models with many fixed effects, can post an all-zero covariance for this model even when the model is correct. He asked for a fix to be built only if it kept the point estimates and matched Stata's poisson standard errors. None met that bar: Stata's posting step replaces the singular covariance, off symmetry by about 3e-16, with zeros. Nothing was built, and such runs print the all-zero covariance caution.",
+    "what_you_notice": "Point estimates on the poisson, customvce() and unconditionalse paths now come from the model without the pooled dose control, the model the reghdfe path already fitted. Some runs stop with r(322); safety(off) lifts it.",
+    "sources": [
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R5, 'R5 / DEF-2 scope correction', 'DEF-2 out of the anti-spam gate'",
+     "commits 1c09efa, 63c62d8, 90c8d43, 3b5712a, 16f5392",
+     "review_process/changes_review_2026-09-22.md s3c (U13), row uz-cellconstant-dose-refuse-vs-amevoid, s4 (poisson + untreatedZero all-zero V)",
+     "review_process/change_audit_2026-09-22/findings.json uz-cellconstant-dose-refuse-vs-amevoid",
+     "review_process/econ_review_2026-09-25.md s3 (dose:CT-9), s5 item 7, s8",
+     "wooldid.ado untreatedZero branch ~1556-1600; DEF-2 refusal ~13300-13345, error 322 ~13407; permute refusal ~6632-6640",
+     "wooldid.sthlp contreat() entry (~l.697); untreatedZero synopt (~l.781-783)"
+    ]
+   },
+   {
+    "heading": "Poisson with a dose: controls entered directly, and a caution when ppmlhdfe drops the pooled dose slope",
+    "kind": "changed behaviour",
+    "what_changed": "ppmlhdfe cannot absorb a slope on a one-level factor. Under plain contreatcontrols(basic), the pooled dose control and any ccc_absorb() controls enter the Poisson regression directly. If ppmlhdfe drops the pooled dose slope as redundant with the fixed effects, a caution beginning \"Caution: ppmlhdfe dropped the pooled\" says to subtract the dose's mean and rerun.",
+    "why": "Direct entry fits the same model. ppmlhdfe drops a regressor whose variation after the fixed effects is tiny next to its size, as with a dose of large mean and small spread. The ame then goes wrong silently: .52 against .24 in one example.",
+    "decision": "The author asked whether any absorbed spelling worked; none did. He first kept ccc_absorb() on plain basic absorbed, then chose direct entry a day later. For the dropped slope he chose a caution, skipped where unit fixed effects carry the dose. He kept two limits and documented them. After Stata error code r(3200), wooldid retries but leaves fe() absorbed, so a one-level fe() term still stops the run. A one-level lattice() at contreatpoly(1) still prints the collinearity caution.",
+    "what_you_notice": "Numbers do not move.",
+    "sources": [
+     "review_process/changes_review_2026-09-22.md s4 rows on ppmlhdfe, v5, ccc_absorb, dropped pooled slope; 'The v5 probe'; 'Docs audit 2026-09-24'",
+     "commit 3033408",
+     "commit efc0671",
+     "commit b6301b0",
+     "commit 7068bcd (docs audit)",
+     "wooldid.ado ~1606-1650 and ~2018-2058",
+     "wooldid.sthlp poisson entry (~l.528-541), ccnoabsorb and ccc_absorb() entries"
+    ]
+   },
+   {
+    "heading": "Lattices: a help warning against too many bins, and a caution when a bin borrows another bin's slope",
+    "kind": "changed behaviour",
+    "what_changed": "lattice() gives each treated cell a separate dose slope in each bin; one bin inside one cell is a piece. The help now warns against too many bins. A default caution counts pieces whose dose takes one value and says their slopes are borrowed from another bin of the cell.",
+    "why": "A single-value piece cannot identify its slope, so it takes another bin's, and the ame averages that in. The over-saturation warning added to the help on 2026-09-20 said such pieces were dropped and the ame averaged only the survivors; that was wrong, and the 2026-09-25 review corrected it. A piece with 1 plus contreatpoly observations or fewer is fitted exactly, so no variance built from residuals sees its noise. This explained why lattice(all 3) on realistic cells of 5 to 12 units returned an all-zero covariance, under robust too.",
+    "decision": "The author declined a runtime check keyed to the fit, which counted pieces fitted exactly or read which terms had dropped, and asked for the help warning instead. On measurement that check also fired on a healthy design with a whole-number dose. On the all-zero covariance he had chosen neither to accept it as a documented outcome nor to add a caution before a diagnosis; the exact-fit finding is that diagnosis. On 2026-09-25 he approved the borrowed-slope caution in his own wording. It counts pieces whose dose takes a single value, not pieces fitted exactly or terms dropped, so it does not reverse the earlier decline.",
+    "what_you_notice": "No numbers move.",
+    "sources": [
+     "review_process/blue_sky_2026-09-18/HELD_FOR_RULING_2026-09-20.md item 1 (Lat L3 ruling) and 'What died on measurement'",
+     "review_process/blue_sky_2026-09-18/fix_proposal_status.md s4 LAT L1-L5 (L3 rounds 1 and 2)",
+     "review_process/held_for_ruling_2026-09-13.md item 5",
+     "review_process/blue_sky_2026-09-18/closes_held_item_5.md",
+     "review_process/econ_review_2026-09-25.md s3 (dose:CT-2), s4, s5 item 7, s8, s9 G4",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt dose:CT-2",
+     "commit 16f5392",
+     "commit 53d6337",
+     "wooldid.ado CT-2 block ~13470-13484",
+     "wooldid.sthlp lattice over-saturation paragraph (~l.812-819)"
+    ]
+   },
+   {
+    "heading": "contreatwithin no longer switches off every check",
+    "kind": "changed behaviour",
+    "what_changed": "contreatwithin allows dose designs with no untreated group, and in v1.3 it switched off every safety check. Now it relaxes the estimability checks that need an untreated group: the requirement for one, the removal of periods with no comparison unit, the scan for dropped treatment dummies, the event-study range checks, and the limit of makecfxplots to the att. Every check keyed to the safety() value the user typed still runs, including the data checks, the variable-count check and the all-slopes-dropped check, and the baseline dose checks run whatever safety() says.",
+    "why": "Choosing a design without an untreated group says nothing about whether the data are sound or the dose slopes identified. A contreatwithin run whose every slope dropped used to print zeros as the ame.",
+    "decision": "The author chose to restore the variable-count check under contreatwithin and to run the dose checks under it. He had the effective safety value settled before any message that depends on it prints. contreatwithin with byTime stays refused and becomes a caution only when the user typed safety(off). permute() refuses contreatwithin.",
+    "what_you_notice": "No numbers move on runs that pass. Some runs v1.3 completed now stop or print a caution.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s E (P6) and s H",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R11 and non-number-moving batch (G2)",
+     "review_process/changes_review_2026-09-22.md s2b",
+     "commit b6f1a54",
+     "commit fd483d6",
+     "c4d7e62",
+     "20c0ec9 (P6 fix 1)",
+     "e26b3dd (CS-98)",
+     "e2b5fad",
+     "a4b972f",
+     "083ea89",
+     "wooldid.ado ~5584-5600, ~5891-5910, ~6628-6631, ~920-935",
+     "wooldidinstall/wooldid.sthlp 242-243, 709-711",
+     "wooldid_agent_guide.md safety chapter, ch.12",
+     "v1.3 wooldid.ado ~309-322"
+    ]
+   },
+   {
+    "heading": "Under contreatwithin, rely on the ame, and a caution names periods where the att rests on an arbitrary choice",
+    "kind": "changed behaviour",
+    "what_changed": "The v1.3 help said the att under contreatwithin should essentially be the integral of the ame over the distribution of the dose. The help now says the att is that integral only when fe() absorbs every cohort-period level effect, and to rely on the ame. A caution beginning \"Caution: under contreatwithin,\" names the periods with no untreated reference rows and says the att there depends on an arbitrary choice.",
+    "why": "In such a period the treated cell dummies add up to the period dummy, so the solver sets one cell's level to zero. The att then depends on which cell: one test gave 1.472, and 3.304 with cohorts relabelled, while the ame stayed at 1.001.",
+    "decision": "The author chose a caution over documentation alone and approved its wording.",
+    "what_you_notice": "No numbers move. The caution appears on contreatwithin runs with such periods.",
+    "sources": [
+     "review_process/econ_review_2026-09-25.md s3 (dose:CT-3), s4, s5 item 7, s8, s9 G4",
+     "review_process/econ_review_2026-09-25/round1_confirmed.txt dose:CT-3",
+     "commit 16f5392",
+     "commit 53d6337",
+     "wooldid.ado CT-3 block ~13409-13455; calendar-support check gated on contreatwithin (~13673)",
+     "wooldid.sthlp contreatwithin paragraph (~l.838-849)",
+     "v1.3 wooldid.sthlp ~l.510-514"
+    ]
+   },
+   {
+    "heading": "What the ame measures: strong parallel trends",
+    "kind": "documentation stance",
+    "what_changed": "The help has a new paragraph, What the ame Measures. Parallel trends, that treated and untreated units would have moved alike without treatment, identifies the att and the att within each dose bin. The ame is the effect of a dose increase only under strong parallel trends: units at different doses would also have gained the same from any given dose.",
+    "why": "Within a cell the ame compares units at different doses. Units may sort into doses by how much they stand to gain, and the slope then mixes the dose response with that sorting. Callaway, Goodman-Bacon and Sant'Anna (2024) name the condition.",
+    "decision": "The author corrected the help under his standing instruction to fix econometric statements.",
+    "what_you_notice": "No numbers move. The caveat also covers att differences across bins and the contreatwithin att.",
+    "sources": [
+     "review_process/econ_review_2026-09-25.md s1 intro, s3 (dose:CT-4), s4, findings table row dose:CT-4",
+     "commit 16f5392",
+     "wooldid.sthlp 'What the ame Measures' (~l.850-857)",
+     "wooldid_agent_guide.md s9 decision rule 1"
+    ]
+   },
+   {
+    "heading": "Only dydx and dyex remain, poisson results stay on the log scale, and the dividing forms are gone",
+    "kind": "removal",
+    "what_changed": "contreatelasticitytype() accepts only dydx, the change in y per unit of dose, and dyex, the change in y per proportional change in dose. semielasticity, poisexpresults, eyex and eydx are removed, and a do-file naming them stops with an error. Under poisson the model is linear in the log of the expected outcome, called the linear index, and a difference on it is a proportional change. There dydx is the semi-elasticity and dyex the elasticity, and the output is now titled Semi-elasticities and Elasticities.",
+    "why": "The removed forms divide by the predicted outcome. reghdfe, the user-written Stata command wooldid calls for linear models with many fixed effects, predicts without the absorbed fixed effects, so the divisor was wrong. Against a fit with explicit dummies they were off by 7.21 percent for semielasticity, 7.34 percent with ccc_absorb() by subgroup and 15.10 percent under timetrends, where the two engines also differed by 13.12 percent. On the count scale the point estimates were right, but the standard error poisexpresults gave for the att left out the variance of the absorbed fixed effects. It was about 23 percent too small on a realistic count panel and did not shrink with sample size.",
+    "decision": "The author chose removal. He judged that rescuing the features would take too much, with some of the problems upstream of wooldid. A repair of the default path gave standard errors that disagreed with the explicit-dummy fit by 10 to 14 percent on dense cells and up to six times on sparse ones. Repairing poisexpresults would have needed a refit with explicit dummies.",
+    "what_you_notice": "dydx and dyex numbers do not move. Poisson titles change, and results in expected counts are no longer available.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s A (BS-6)",
+     "commit da65424",
+     "commit 1c09efa",
+     "commit 066b6d1",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R2, R3, R6 (ELAS mooted), 'Ruled: take no action' (clean margins operators)",
+     "review_process/blue_sky_2026-09-18/fix_proposal_status.md s4 ELAS P1/P2",
+     "review_process/blue_sky_2026-09-18/execution_2026-09-20.md s1",
+     "review_process/open_ticket_poisexp_dydx_2026-09-19.md (close-out)",
+     "review_process/econ_review_2026-09-25.md s3 (pois:POIS-5)",
+     "review_process/changes_review_2026-09-22.md s4 rulings (poisson dyex/dydx titles reversed)",
+     "wooldid.sthlp contreatelasticitytype() entry (~l.705-708), poisson entry (~l.528-531)",
+     "wooldid.ado ~5780 comment, ~6194; titles ~2554, ~12701, ~15191"
+    ]
+   },
+   {
+    "heading": "Dose tests need many observations per cell",
+    "kind": "documentation stance",
+    "what_changed": "The help's jointtests entry says that under a continuous treatment the tests need many observations per cohort-by-period cell. No runtime check was added.",
+    "why": "With few rows per cell the analytic standard errors of the ame are too small; at six observations per cell they ran about a fifth below the estimates' sampling spread. The test then rejects too often: in simulation the adversarial line test on the ame rejected 40.2 percent of the time at six observations per cell and 11.0 percent at fifty, against a nominal 5 percent.",
+    "decision": "A rule set before the simulation said to withdraw the ame adversarial test. The author kept the test, stopped at documentation and left the cell-size judgement to the user.",
+    "what_you_notice": "No numbers move. The help carries the warning.",
+    "sources": [
+     "commit ad3efce (AB campaign report)",
+     "commit d249ed4 (AB22)",
+     "commit 9ee0cd8",
+     "test/suite/mc/REPORT_ADVBOUND_2026-08-26.md s4",
+     "commit 3221f7c",
+     "commit 6ccceec",
+     "commit 07dd933",
+     "wooldid.sthlp jointtests entry (~l.560-566)"
+    ]
+   },
+   {
+    "heading": "How permute(), bootstrap() and gteffects treat a dose, and when cfxplotnose is overridden",
+    "kind": "design decision",
+    "what_changed": "permute() works with contreat(): it moves onset dates, each unit keeps its dose, and the ame rows carry permutation p-values and intervals. It refuses contreatwithin and contreatcontrols(untreatedZero). gteffects is refused under contreat(). cfxplotnose, which skips standard errors on the dose plots, is dropped with a caution under permtstat, permtci or boottstat.",
+    "why": "The test of no effect for anyone is valid when onset timing is as good as random given the dose. Under untreatedZero a moved onset puts a nonzero dose where the model assumes zero, and contreatwithin has no comparison group. Under a dose, gteffects would show intercepts at zero dose, not cell effects. Studentized methods divide each draw by its standard error, so they need the plot cells' standard errors.",
+    "decision": "The author chose to override cfxplotnose rather than leave the plot cells blank. Refusing contreat() under permute() was considered and not taken: the test is of the sharp null, valid when onset timing is as good as random given the dose. An early build left the ame rows without permutation p-values and intervals; they were brought in because the containment caution already sent such designs to randomization inference.",
+    "what_you_notice": "No point estimate moves. Plot cells that were blank now carry replication inference.",
+    "sources": [
+     "wooldid.ado permute refusals ~6628-6641",
+     "wooldid.ado gteffects refusal ~5449",
+     "wooldid.ado cfxplotnose cautions ~5682, ~5690",
+     "review_process/changes_review_2026-09-22.md s2b and s4",
+     "commit a45480b",
+     "commit 516038c",
+     "commit 7849439",
+     "df70e81 (NFPERM-15)",
+     "F6 brief",
+     "f6_permutation_plan.md s2 item 7, R3",
+     "permute_coverage_2026-09-02.md s4 ruling 4",
+     "quality_review_2026-09-05.md s9 F043",
+     "econ_review_2026-09-25.md PERM-7",
+     "wooldid.sthlp cfxplotnose entry (~l.766-767), l.240, 440-441"
+    ]
+   }
+  ]
+ },
+ {
+  "area": "Event studies, pre-trend tests and bands",
+  "title": "Event studies, pre-trend tests and bands",
+  "intro": "An event study estimates one effect for each period counted from treatment onset, called a horizon, and measures each against a reference period set to zero. A pre-trend is a gap between treated and comparison units that already shows before onset. Every pre-trend statistic in this section is either calibrated for the design it runs on, or the program or its help says where it is not. The choice of reference period, the window rule, anticipation() and e(escomp) are told in What is being estimated, and from what; the bootstrap band in The bootstrap engine; and the permutation step-down in Randomization inference: permute() and its companion options.",
+  "items": [
+   {
+    "heading": "Under a fixed reference, the pretreatment row is a placebo over the whole pre-period",
+    "kind": "design decision",
+    "what_changed": "Under esfixedbaseperiod, the pretreatment row averages every pre-treatment horizon that can be estimated, not only the window set by esprelength(). The joint pre-trend test on the same run covers only that window.",
+    "why": "Under a fixed reference every pre-treatment horizon keeps its own coefficient, so their average is a well-defined placebo. A placebo is an effect measured before treatment that should be zero if trends are parallel. A shock four or more periods before onset once gave the row a p-value of essentially zero, while the joint test gave 0.82.",
+    "decision": "The author chose to document the row as a placebo over the whole pre-period. He declined to restrict it to the window, which would have changed e(b) on every fixed-reference run.",
+    "what_you_notice": "No number moves. The help entry for esfixedbaseperiod says what each summary covers.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s.B (BS-7)",
+     "review_process/bug_sweep_2026-09-06.md at c1d8979^ (BS-7)",
+     "wooldidinstall/wooldid.sthlp:562-563"
+    ]
+   },
+   {
+    "heading": "The joint pre-trend test under clustering at or above i is computed, with a caution that its p-value is not calibrated",
+    "kind": "changed behaviour",
+    "what_changed": "jointtests tests whether all pre-treatment horizons are zero together. With cluster() at the level of i or coarser, the test is still computed and printed. A caution follows that opens \"Caution: jointtests was combined with analytic clustered SEs\". It says the p-value is not calibrated and names permute(), bootstrap(), or a cluster() strictly finer than the cells with many clusters in each. pretrendpower() prints the same caution.",
+    "why": "Each treated cell's own dummy forces its residuals to sum to zero. A cluster-robust variance sums residuals cluster by cluster, so a cell inside one cluster adds none of its own noise, and the p-value comes out too small. A true null was rejected 11 to 66 percent of the time at a nominal 5 percent.",
+    "decision": "The author first made this a hard error. He downgraded it to a caution because the refusal hit clustering at i, the design the help recommends, and comparable Stata commands run the test with no gate. When the blue-sky review of 2026-09-18 raised the joint tests again, he ruled to leave them alone.",
+    "what_you_notice": "The p-value is unchanged. Runs clustered at i or coarser now print the caution before the results table.",
+    "sources": [
+     "commit 878fd22",
+     "commits 0f4006d, b121deb, 52fd319, 07c15c6",
+     "review_process/rulings_2026-09-07.md s.A (BS-9), s.E (PS-64), s.K",
+     "review_process/practice_sweep_2026-09-06.md at c1d8979^ (PS-64)",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md 'Ruled: take no action' (jointtests: leave it alone), R19, FIX-PERM-2a",
+     "review_process/changes_review_2026-09-22.md s.3a jtscreen-domain-nevertreated",
+     "wooldidinstall/wooldid.ado:1860-1935",
+     "wooldidinstall/wooldid.sthlp:560-573, 578-582"
+    ]
+   },
+   {
+    "heading": "New option pretrendpower() reports how much a clean pre-trend test is worth",
+    "kind": "new feature",
+    "what_changed": "pretrendpower() takes power levels in percent, such as pretrendpower(80). Power is the chance that a test detects a violation of a given size. For each overall event study it reports the fitted linear pre-trend through the reference period and the smallest such trend that two pre-tests would detect with that power. One is the joint test, and the other asks whether any single pre-treatment coefficient is significant. It also reports the bias that trend would cause in the pooled estimate if it continued after onset. The option requires esfixedbaseperiod and stores e(roth_power_*).",
+    "why": "Roth (2022) showed that pre-tests often have little power. A clean pre-test reassures only if it could have detected a violation large enough to matter.",
+    "decision": "The author built the option on fixed rules. Both pre-tests are 5 percent tests whatever level() is. The any-coefficient test uses the normal distribution throughout, as Roth does. The joint test uses the F distribution, which allows for the variance being estimated, where Roth uses chi-squared. When the blue-sky review proposed further departures from Roth, he ruled that new work follows Roth and that the shipped departure stands. That departure powers the joint test wooldid prints, and with few clusters its size is closer to nominal than the chi-squared's.",
+    "what_you_notice": "A new option, so no existing number moves. A printed note states the fixed 5 percent size.",
+    "sources": [
+     "commit f9fd239",
+     "commit 5848422 (NFPTP-03)",
+     "commit 642084e",
+     "commit 6d8bedd",
+     "commit c7bad2c",
+     "review_process/rulings_2026-09-07.md s.A (BS-11)",
+     "review_process/bug_sweep_2026-09-06.md at c1d8979^ (BS-11)",
+     "review_process/changes_review_2026-09-22.md s2b (ptp-nis-tcrit-normal-law; pretrendpower() note)",
+     "review_process/econ_review_2026-09-25.md s6 ('Considered and kept')",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R14, 'Ruled: take no action' (PTP Leg 3), PTP Proposal 2",
+     "wooldidinstall/wooldid.sthlp:314-316, 588-600",
+     "wooldidinstall/wooldid.ado:11995, 12001"
+    ]
+   },
+   {
+    "heading": "The adversarial test's null is one line through the reference period, with only its slope free",
+    "kind": "changed behaviour",
+    "what_changed": "adversarial tests whether every event-study coefficient, before and after onset, lies on one straight line through the reference period, with only the slope estimated. Under the pooled reference the run prints \"Caution: the adversarial pre-trend test failed: it needs esfixedbaseperiod.\" Under bootstrap() a p-value is reported only with boottstat, the bootstrap that divides each replication by its own standard error. Under permute() it is a permutation p-value.",
+    "why": "Under a fixed reference every coefficient is a difference from the reference period, so a linear path gives a line through that period. A free intercept cannot see a shift that moves every coefficient alike, the shift an unusual reference period produces. The v1.3 statistic rejected too often because it ignored the fitted line's sampling error, and that is fixed. The corrected test with a free intercept had a size of .0508 for the null it stated.",
+    "decision": "The author asked for a simulation. It showed that the free-intercept test had exactly 5 percent power against a reference-period shift of any size. He adopted the null with only the slope free. Its statistic is at least as large against every alternative, and the one degree of freedom it spends costs at most a few points of power.",
+    "what_you_notice": "Every adversarial p-value moved, including under boottstat and permute().",
+    "sources": [
+     "commit 4fcf127",
+     "commit 25727a6",
+     "wooldid_old_bug_report_2026-09-13.md S2, S3 (NFADV items), S4",
+     "review_process/held_for_ruling_2026-09-13.md item 10",
+     "review_process/rulings_2026-09-07.md s.C, s.J (BS-12)",
+     "review_process/research_2026-09-08/adversarial_null.md",
+     "wooldidinstall/wooldid.sthlp:575-586"
+    ]
+   },
+   {
+    "heading": "The adversarial test's clustering conditions are documented and left to the user",
+    "kind": "design decision",
+    "what_changed": "wooldid does not check how many clusters span each cell before running the adversarial test. The help says the test rejects a true null far too often unless many clusters span each treated cell. It notes that clustering on i puts every cell in one cluster. It points to permute(), or to bootstrap() with boottstat.",
+    "why": "The mechanism is the joint test's. At a nominal 5 percent the size was 4.5 percent with six clusters per cell, 18.0 with two and 72.5 with one. The permutation version held 3.5. With every cell inside one cluster, the boottstat p-value rejected none of 40 planted breaks.",
+    "decision": "The author left the judgement to the user. He declined a run-time gate at about six clusters per cell. He left that boottstat p-value alone, declining to withhold or document it.",
+    "what_you_notice": "No number moves and no caution is added.",
+    "sources": [
+     "commit ad3efce",
+     "commit 07c15c6",
+     "commit 1639f62",
+     "commit 6ccceec",
+     "commit b1d2ea3",
+     "commit d77a726",
+     "wooldid_old_bug_report_2026-09-13.md dispositions table (items 1 and 4)",
+     "review_process/changes_review_2026-09-22.md s3a (adv-boot-remedy-measured-inert)",
+     "review_process/change_audit_2026-09-22/findings.json (U09_ptp_bands|adv-boot-remedy-measured-inert)",
+     "wooldidinstall/wooldid.sthlp:582-586",
+     "wooldidinstall/wooldid_agent_guide.md:446"
+    ]
+   },
+   {
+    "heading": "An adversarial test that cannot run is dropped with a caution, and a test with no p-value reports no partial result",
+    "kind": "changed behaviour",
+    "what_changed": "The adversarial test needs one pre-treatment and one post-treatment horizon. Under timetrends, which adds a linear trend for each cohort, it needs three coefficients. When the window cannot supply them, the test is dropped with a caution that opens \"Caution: adversarial pre-trend testing was dropped\". When the data fall short, the test is cancelled with its own caution. When no p-value can be formed, no line is printed or stored, and a caution opens \"Caution: the adversarial pre-trend test failed\". This happens with a degenerate covariance, under bootstrap() without boottstat, and with too few usable replications or permutations.",
+    "why": "A requested test used to vanish without a word. Refusal would break loops that apply one set of options across many specifications. A line with no p-value invites judging the pre-trend by eye.",
+    "decision": "The author first chose to refuse a window too narrow. He chose the caution when refusal proved to stop a large share of existing specifications. He ruled that a test with no p-value has failed and should say so.",
+    "what_you_notice": "e(adversarial_line_*) is absent when there is no p-value. No number moves.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s.A (BS-9), s.E (PS-64), s.H (CS-38), s.K",
+     "commit 5f9fd41",
+     "commit e26b3dd",
+     "commit bab1f93",
+     "commit 7c32fdb",
+     "commit f647cc1",
+     "review_process/changes_review_2026-09-22.md s4 rulings (card #25 and siblings; adversarial line-only rows)",
+     "wooldidinstall/wooldid.ado:1231, 6156-6170, 7999, 8008, 9660, 14533-14534",
+     "wooldidinstall/wooldid.sthlp:568-575",
+     "wooldidinstall/wooldid_agent_guide.md ch.12 refuse / caution / skip policy"
+    ]
+   },
+   {
+    "heading": "A caution when the adversarial covariance is rank-deficient, with the degrees of freedom the test used",
+    "kind": "changed behaviour",
+    "what_changed": "A covariance is rank-deficient when some combination of the coefficients has no measured variance. The adversarial test then runs on the directions a generalized inverse keeps. A generalized inverse stands in for the inverse of a matrix that has none. On analytic runs a caution opens \"Caution: the event-study covariance for the adversarial test is rank-deficient\". It gives the rank and the degrees of freedom the test used, which are stored in e(adversarial_df_*). For the usual null those are one fewer than the rank, since the slope is fitted.",
+    "why": "Dropping the unmeasured directions gives the standard generalized-inverse Wald test. It has the right size when the covariance is right, and its only loss is power. But it checks fewer restrictions than the user asked for, and nothing said so.",
+    "decision": "The review found the reduced test correctly sized and advised against cancelling it. The author ruled a caution that names the rank and the degrees of freedom, and had the degrees of freedom stored. The text he approved put the rank in the degrees-of-freedom slot; the built caution prints the degrees of freedom the test used.",
+    "what_you_notice": "A new caution and a new stored result. No p-value moves.",
+    "sources": [
+     "review_process/econ_review_2026-09-25.md s3 (es:ES-6), s5 item 7, s8 (ES-6 text), s9 (G4 and the verification paragraph)",
+     "commit 53d6337",
+     "commit f556138",
+     "wooldidinstall/wooldid.ado:5083, 5110, 14524",
+     "wooldidinstall/wooldid.sthlp:576-582"
+    ]
+   },
+   {
+    "heading": "The adversarial test keeps its name and placement, and altmethod_adversarial is kept",
+    "kind": "design decision",
+    "what_changed": "The adversarial p-value still prints beneath the joint pre-trend test under the same name, with no reading guide. altmethod_adversarial is kept. It projects a line from the pre-treatment coefficients and the reference period and tests whether the post-treatment coefficients follow it. Given without adversarial, it now stops with an error.",
+    "why": "Because the slope is fitted, a linear trend that continues after onset is part of the null. A rejection means no single line fits the whole path. altmethod_adversarial asks the narrower question of whether the post-treatment path continues the pre-treatment trend, and in the August calibration campaign it had the better size of the two.",
+    "decision": "The author kept the label and placement. He declined a reading guide in the output and in the help. When the same help sentence was questioned again on 2026-09-25, the earlier decision was kept. He weighed removing altmethod_adversarial and kept it.",
+    "what_you_notice": "altmethod_adversarial without adversarial stops with an error. No number moves.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s.E (PS-19)",
+     "review_process/practice_sweep_2026-09-06.md at c1d8979^ (PS-19)",
+     "review_process/econ_review_2026-09-25.md s3 (es:ES-2), s6, s8",
+     "commit 4fcf127",
+     "commit 5848422 (NFADV-07)",
+     "commit ad3efce",
+     "wooldidinstall/wooldid.sthlp:583-585"
+    ]
+   },
+   {
+    "heading": "A subgroup horizon that cannot be estimated is dropped with a caution, and that subgroup's line test is skipped",
+    "kind": "changed behaviour",
+    "what_changed": "margins is Stata's command for averaging predictions and their derivatives over the sample; wooldid uses it to turn the regression into the att and the ame. When margins marks a subgroup's horizon as not estimable, wooldid drops it from that subgroup's binary or dose event study and names it in a caution. A subgroup that loses every horizon has its event study skipped. One that loses any horizon has its adversarial test skipped.",
+    "why": "margins marks such a horizon as omitted, and the number beside the mark is not an estimate. The other horizons stay valid. The adversarial test needs a complete grid of relative periods.",
+    "decision": "The author let the run proceed rather than refuse it, and disclosed which subgroups lost rows. Under permute() he skipped that adversarial test too. fastnose, the fast mode that computes no standard errors, printed dose rows by subgroup that carried the regression's zeros and that the full run drops. He had a cheap check drop those rows without computing a variance.",
+    "what_you_notice": "Some subgroup tables and e(b) have fewer rows, with a caution naming them. Kept rows do not move.",
+    "sources": [
+     "commit c014be7",
+     "commit f69a095",
+     "commit 1a52a8e",
+     "commit 268786f",
+     "commit b86b08b",
+     "commit 49bfb52 (BS-8)",
+     "commit 20c431d",
+     "commit 3e03179",
+     "commit 1c09efa (R15 SG-1)",
+     "review_process/rulings_2026-09-07.md s D",
+     "review_process/held_for_ruling_2026-09-13.md item 2",
+     "review_process/changes_review_2026-09-22.md s4 rulings (adversarial p under permute() for a subgroup whose pre horizons were dropped)",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R15 (SG-1), 'Ruled: take no action' (structural zero: leave it)",
+     "review_process/blue_sky_2026-09-18/mechanisms.md (fastnose subgroup ame rows)",
+     "review_process/blue_sky_2026-09-18/fixprop/author_followups.json entry 7",
+     "wooldid_ado_review.md 'Project Chunk - SI7'",
+     "test/suite/ledger.csv (SI7-sg-m, SI7-eb-m)",
+     "test/suite/degeneracy_expected.csv:191",
+     "wooldidinstall/wooldid.ado:3629, 14302",
+     "wooldidinstall/wooldid.sthlp:578-580"
+    ]
+   },
+   {
+    "heading": "New option simultaneousbands, and the analytic band's t law, missing floor and caution under clustering at i",
+    "kind": "new feature",
+    "what_changed": "simultaneousbands builds a band at level() that covers every horizon of an event study at once. Without bootstrap() it is simulated from the analytic covariance. The draws follow a multivariate t distribution with the regression's degrees of freedom, as the pointwise intervals do. Under poisson they are normal. The critical value has no floor. The band is stored in e(esband_*) and drawn as a dashed pair on the plots. The option is off by default and refused under permute(). With bootstrap() the band comes from the replications, as The bootstrap engine tells.",
+    "why": "Judging a whole event study at once needs a band that holds jointly, following Montiel Olea and Plagborg-Møller (2019). A normal distribution had put the band inside the pointwise intervals it should widen. With cluster() at or above i the analytic standard errors are understated, and the band inherits that.",
+    "decision": "The author first tied the band to a wider study of the covariance, until the band proved to need only the event-study block. He chose the multivariate t. A floor at the pointwise quantile was added and removed the same day. He preferred that users see the band approach failing over a more sensible result of a fundamentally different kind. He added the caution for clustering at i. He kept the seven corrections the 2026-09-25 review made to the band's description in the help and the guide.",
+    "what_you_notice": "No existing number moves. A band narrower than the pointwise intervals is left visible as a sign that the approach is not working. Runs clustered at i or coarser print \"Caution: simultaneousbands is built from the analytic covariance with cluster() at the level of i or above, so the band is too narrow. bootstrap() gives a valid band.\"",
+    "sources": [
+     "review_process/rulings_2026-09-07.md s.E (PS-45 note), s.G (PS-45), s.I",
+     "review_process/practice_sweep_2026-09-06.md at c1d8979^ (PS-45)",
+     "commit 8ea5a25",
+     "commit 7a158ea",
+     "commit 87efb0c",
+     "commit 6d8bedd",
+     "commit c7bad2c",
+     "commit 558f18d",
+     "commit 16f5392",
+     "commit 53d6337",
+     "review_process/changes_review_2026-09-22.md s2b (esband-normal-law-vs-t-pointwise; analytic band floor), s3a, s4 rulings (band coverage 0.90 at 10 clusters)",
+     "review_process/change_audit_2026-09-22/findings.json (0.880 coverage under the normal law)",
+     "review_process/econ_review_2026-09-25.md s3 (es:ES-3, SEB-01), s5 item 7, s8 (seven ES-3 band edits kept; ES-3 text), s9 (G4)",
+     "wooldidinstall/wooldid.ado:5010, 12340-12355, 18815-18888",
+     "wooldidinstall/wooldid.sthlp:304-311, 323"
+    ]
+   },
+   {
+    "heading": "The event-study vector and its full covariance are stored, and e(V) carries each event study's own block",
+    "kind": "new feature",
+    "what_changed": "For each event-study estimand and subgroup, wooldid stores the coefficients in e(b_es_*), labelled pre# and post#, their full covariance in e(V_es_*), and the number of pre-treatment horizons in e(numpre_*). On analytic runs each event study's covariance block also goes into e(V). Covariances between event studies, or with a pooled estimate, stay zero. The hidden result e(wdid_vcvstate) says what e(V) holds. Under fastnose the vector is stored without the covariance.",
+    "why": "All horizons of an event study come from one margins call, so their joint covariance already existed, and v1.3 threw it away. A test across horizons needs it. Without it, Stata's lincom and test commands could not compare horizons. Nor could honestdid, a user-written Stata command for sensitivity analysis of event studies to violations of parallel trends. The delta method gets a standard error for a quantity computed from estimated coefficients by linearizing it around the estimates. Three modes have no delta-method covariance at all: impvalues, unconditionalse and fastnose. And the pooled estimate is a combination of the horizons, so a covariance across every estimate would always be rank-deficient. A full matrix was therefore not feasible.",
+    "decision": "The author doubted a real covariance could be posted and asked first whether a full matrix was feasible. It was not, so he chose the event-study blocks, a stored marker and help text over a printed footer. The help said fastnose stores the vector, and he made that true. He silenced the no-variance caution under fastnose, which computes no variance by design. For degenerate rows he chose a help sentence naming e(es_ndegen_*), over withholding e(numpre_*).",
+    "what_you_notice": "Horizons of one event study now covary in e(V). No estimate or standard error moves. An unidentified row shows a missing standard error.",
+    "sources": [
+     "commit d4b2118",
+     "commit 6fe814d",
+     "commit d6e902f",
+     "commit f5cd92b",
+     "commit a366c46",
+     "commits 47defa0, c53e25b, 6549594, 605d6d7, 5dad5ab",
+     "review_process/rulings_2026-09-07.md s.E (PS-62), s.F, s.H CS-4",
+     "review_process/held_for_ruling_2026-09-09.md (PS-62 sentinel)",
+     "review_process/practice_sweep_2026-09-06.md at c1d8979^ (PS-62)",
+     "review_process/held_for_ruling_2026-09-13.md items 11 (T-FN1), 12",
+     "review_process/changes_review_2026-09-22.md s2b (D1 fastnose-nohorizon-caution-spam)",
+     "wooldidinstall/wooldid.ado:4775-4812, 4869, 4986-5000, 12220, 12470",
+     "wooldidinstall/wooldid.sthlp:1003-1019, 1098-1100, 1157-1165, 1260-1273, 1313-1317"
+    ]
+   },
+   {
+    "heading": "The conditions for a correct honestdid hand-off are documented, and wooldid does not police them",
+    "kind": "documentation stance",
+    "what_changed": "The help lists what a direct hand-off to honestdid needs. The run must use esfixedbaseperiod at the default reference period just before onset, with no timetrends. It needs a pre-treatment and a post-treatment horizon, consecutive horizons, and a covariance with no degenerate rows. The help warns that other layouts give honestdid the wrong timing without an error.",
+    "why": "honestdid reads the vector by position and cannot tell when the layout is wrong. In one measurement it accepted a covariance with a zeroed post-treatment row and returned the same interval as the clean run.",
+    "decision": "The author chose to document the conditions rather than guard the hand-off. He had honestdid's behaviour pinned in a test, so a new honestdid version that behaves differently is noticed. He declined refusing to pass pooled results, as What is being estimated, and from what tells.",
+    "what_you_notice": "Nothing changes at the hand-off, and no number moves.",
+    "sources": [
+     "review_process/held_for_ruling_2026-09-13.md item 12 (T-HD2)",
+     "wooldid_old_bug_report_2026-09-13.md ~l.5174-5176",
+     "commit 6fe814d",
+     "commit 16f5392",
+     "review_process/econ_review_2026-09-25.md s3 (es:ES-5, se:SEB-13), s4",
+     "wooldidinstall/wooldid.sthlp:1003-1019, 1162, 1260-1273"
+    ]
+   }
+  ]
+ },
+ {
+  "area": "How the program talks to you, and what was removed",
+  "title": "How the program talks to you, and what was removed",
+  "intro": "This section covers how wooldid tells you what it did, and which options left the program. Two ideas run through it: a user never gets a different estimate from the one asked for without being told, and an option earns its place only if it does something nothing else does. It covers safety(), the messages, the help and the guide, redisplay, fast mode, the removed options and the options kept on purpose.",
+  "items": [
+   {
+    "heading": "safety() has a stated meaning, and five checks now hold whatever it says",
+    "kind": "design decision",
+    "what_changed": "A questionable specification now has one of three outcomes. It is refused with a named error, reported without inference, or computed in full under a caution naming the risk and the remedy. A result without inference shows its standard error, p-value and interval blank. Five cases are refused whatever safety() says: impvalues with a cluster() finer than i or crossing it, bootstrap(bayes) with att_it, att_i or att_itime, and under permute() a unit whose subgroup changes over time, a subgroup varying within a unit-by-period cell, and a unit labelled on some rows only. A treated unit whose i code exceeds 2,147,483,647 is also refused.",
+    "why": "Some checks guard against an estimate that may be unreliable, a risk an informed analyst can accept. Others guard against a wrong number, as each of the five does. A zero standard error would read as perfect precision.",
+    "decision": "The author chose that safety(off) accepts a risk, never a wrong number. He left the two subgroup screens outside permute() switchable, which matches his own message text telling users they may specify safety(off). He kept the within-cell screen beside the split-unit screen, although the second catches most of what the first does. The mechanisms are told where each check lives: the subgroup screens in What is being estimated, and from what; impvalues in Analytic standard errors and what they can and cannot see; bootstrap(bayes) in The bootstrap engine; the permute() screens in the randomization inference section.",
+    "what_you_notice": "Runs that used safety(off) to pass any of the five cases now stop with an error. No reported number moves.",
+    "sources": [
+     "review_process/rulings_2026-09-07.md section H (CS-25/CS-40, P6)",
+     "5dad5ab",
+     "81c284b",
+     "b42b71f",
+     "dd8bfc0",
+     "wooldidinstall/wooldid_agent_guide.md ch.12",
+     "wooldidinstall/wooldid.sthlp 947-954",
+     "1c09efa (R1)",
+     "61f246e",
+     "ed6a0da",
+     "402b324",
+     "8443694",
+     "5fc3ce5",
+     "0c0bbc8",
+     "7ad7568",
+     "review_process/open_ticket_sgshareweight_2026-09-21.md",
+     "review_process/changes_review_2026-09-22.md s2 R-B, s2b R-A, s4",
+     "wooldidinstall/wooldid.sthlp 242-244, 278-279, 373-374, 443"
+    ]
+   },
+   {
+    "heading": "Changes to what is estimated are announced, with three adjustments that stay silent under safety(off)",
+    "kind": "design decision",
+    "what_changed": "The widening of espostlength under subgroups() is announced under any setting, as told in What is being estimated, and from what. Three other adjustments happen under either setting but print their caution only under default safety. They are the drop of periods with no comparison unit, the drop of treated cells with no dose variation, and the fold of a requested pre-treatment period into the reference period in a panel too short to separate them.",
+    "why": "safety(off) exists to let a run past a screen, not to hide what was estimated.",
+    "decision": "The author chose that the espostlength announcement prints under any setting. For the reference-period fold the author kept the silence under safety(off). The two drops follow the same pattern. The help states without exception that a run which changes your specification says so.",
+    "what_you_notice": "Under safety(off) the three adjustments pass without a caution, though e(contreat_ndropcells) still counts the dropped dose cells. No reported number moves.",
+    "sources": [
+     "20c0ec9 (P6 fix 2)",
+     "review_process/held_for_ruling_2026-09-13.md item 8B",
+     "test/suite/degeneracy_expected.csv row ext_b4_h55_p",
+     "55581ea",
+     "wooldidinstall/wooldid.ado 1083-1086, 5624-5626, 6355, 13622-13655",
+     "wooldidinstall/wooldid.sthlp 701, 953-954",
+     "wooldidinstall/wooldid_agent_guide.md ch.12 lines 736, 750"
+    ]
+   },
+   {
+    "heading": "No check was removed to save time",
+    "kind": "design decision",
+    "what_changed": "The checks that safety() controls were timed at about five percent of a run, measured on one panel across three run lengths. None was removed. The guide says the checks are cheap, that switching them off can be worth it once a specification is settled, and that this is no reason to switch them off while a specification is still being developed.",
+    "why": "Most checks stand between the user and a wrong number that would appear with no error. Such a check is never redundant, however rarely it fires.",
+    "decision": "The author set a three-part test for removing a check. It must cost real computation. It must guard against something rarer than about one run in a hundred. It must duplicate a failure Stata would report later anyway. The core checks that the model can be estimated stay whatever they cost. One check met all three parts, the count of variables before estimation that pre-empts Stata's own r(907). Dropping it would save 11 to 25 milliseconds a run, so it stays. Every other check guards against a wrong number Stata would never report.",
+    "what_you_notice": "Nothing changes in the output. No reported number moves.",
+    "sources": [
+     "review_process/guard_cost_2026-09-16.md",
+     "f8b4a64",
+     "a0c9bf3",
+     "bbb7c4f",
+     "063be5d",
+     "wooldidinstall/wooldid_agent_guide.md line 734"
+    ]
+   },
+   {
+    "heading": "Messages follow one convention, and the cautions were cut to what happened, what it means and what to do",
+    "kind": "changed behaviour",
+    "what_changed": "Every message that stops a run begins 'Error:', and every caution begins 'Caution:'. The word 'Warning' is gone. Two informational notes remain. Stata's return codes r(...) are its numbered error codes, such as r(198) for a syntax error and r(907) for too many variables. wooldid's own errors name their cause, and the number that follows is Stata's code. Forty-three cautions were cut to what happened, what it means and what to do, with their conditions unchanged. Fourteen notes and five cautions were deleted.",
+    "why": "A user scanning a log must see at once whether a run stopped or only raised a flag. v1.3 used Error, Warning, Caution and Note with no fixed meaning, and printed Warning in the error colour for a message that stopped nothing. Cautions that repeat textbook econometrics bury the ones that matter, and a false caution is worse than none.",
+    "decision": "The author rewrote the error messages himself, most to one short line saying what is wrong and what to do. He marked the fourteen note deletions himself on the review page. The cautions went under his instruction to remove textbook material and false claims. He chose short messages over ones that explain their reasoning.",
+    "what_you_notice": "Logs are shorter. Each remaining caution fires in the same situations as before. No reported number moves.",
+    "sources": [
+     "357f82a",
+     "9527a70",
+     "1323749",
+     "2cd48f4",
+     "925615e",
+     "wooldid_ado_review.md lines 3-7",
+     "wooldid_ado_review.md 'Documentation update' section",
+     "ed6a0da",
+     "76f2f38",
+     "c24ab48",
+     "v1.3 wooldid.ado lines 528, 548, 582, 671",
+     "wooldidinstall/wooldid.ado 191, 13406"
+    ]
+   },
+   {
+    "heading": "A failed write of the draws keeps the run, and draw matrices above 10,000 rows are not stored",
+    "kind": "changed behaviour",
+    "what_changed": "If bootsave() or permsave() cannot write the draws to a file, the run still prints its tables. It posts the return code in e(boot_save_rc) or e(perm_save_rc), with a caution below the tables. Above 10,000 completed replications the matrices of draws, such as e(bootdist) and e(permdist), are not posted. A caution says so and points to bootsave() or permsave(). Exact enumeration is allowed up to 65,534 assignments, the most rows a Stata matrix can hold.",
+    "why": "A long run should not be lost because a side file failed to write. The return code keeps the failure visible to a script. A user who needs the draws learns at the end of the run that they are missing.",
+    "decision": "The author chose to keep the results when only the side file failed. He left one check fatal: a file that appears under the save name while the replications run still stops the run. He set the enumeration limit at the matrix ceiling, a machine limit that safety(off) has no part in, over an error that safety(off) could lift. He approved the bootstrap caution's wording; the permutation caution's wording is still a draft awaiting his.",
+    "what_you_notice": "Exact runs with 10,001 to 65,534 assignments now run. No reported number moves.",
+    "sources": [
+     "review_process/open_ticket_savefail_caution_2026-09-21.md",
+     "ed6a0da",
+     "c127296",
+     "61f246e",
+     "98ab2fb",
+     "54440de",
+     "review_process/changes_review_2026-09-22.md s2b R-C, R-D, R-E, s3b",
+     "review_process/open_ticket_permexact_cap_2026-09-21.md",
+     "64e591b",
+     "wooldidinstall/wooldid.sthlp 420, 452-457, 1110"
+    ]
+   },
+   {
+    "heading": "The help was cut back to usage, and a long guide covers the rest",
+    "kind": "documentation stance",
+    "what_changed": "The help had grown to about 46,900 words. It was rebuilt from the 2024 text to about 19,700 words, and stands at about 22,600 after the entries added since, about 1,600 of them the econometric corrections of 2026-09-25. A separate guide of about 73,000 words ships with the package. Its second chapter opens with the case against setting i at the finest level in the data. Three chapters open with decision rules: on the variance and where to cluster, on when to permute, and on the continuous-treatment control types. Chapter 12 says what safety() controls. Chapter 14 lists every error, caution and note with the conditions under which it prints, generated from the program's code.",
+    "why": "A user opens the help to learn how to run the command. What stays is where wooldid departs from what an applied econometrician expects. Detailed advice still helps someone setting up many runs, or an AI agent writing them. A hand-kept list of several hundred messages drifts from the code.",
+    "decision": "The author asked for the pare-down and for the second, longer document, and asked that it leave out internal testing detail. The method, restoring the 2024 text and adding to it rather than compressing the long version in place, was the builder's choice. He ruled that backward compatibility is not a goal for the help.",
+    "what_you_notice": "The help is less than half its former length, and links to the guide. net get wooldid copies the guide to the working directory. No reported number moves.",
+    "sources": [
+     "07dd933",
+     "4167d10",
+     "dd8bfc0",
+     "ebceb98",
+     "ff7d978",
+     "wooldid_ado_review.md 'Documentation update' and 'Final code comment review'",
+     "review_process/econ_review_2026-09-25.md section 4",
+     "08b0b7d",
+     "b0c58d0",
+     "8d3ae94",
+     "a6295e6",
+     "c725ddf",
+     "review_process/tools/gen_messages_chapter.py",
+     "wooldidinstall/wooldid.sthlp 52, 1321",
+     "wooldidinstall/wooldid_agent_guide.md ch.14"
+    ]
+   },
+   {
+    "heading": "Typing wooldid alone redisplays the last results, and a failed call leaves your previous results in place",
+    "kind": "new feature",
+    "what_changed": "Typing wooldid with nothing after it prints the stored tables and diagnostics again. It works after estimates restore and with no data in memory. Plots are not redrawn and estimation cautions are not repeated. A call that fails at any stage restores the results that were in e() before it, so redisplay shows them.",
+    "why": "Stata's estimation commands behave this way. A user recovers the tables without paying again for a long bootstrap or permutation run, and never acts on half-built results after a failure.",
+    "decision": "The author chose that only an empty command line triggers redisplay. Stata's usual test would also catch the call wooldid, update and mistyped options, which must reach wooldid itself. Results stored under a different display version are refused rather than shown wrongly.",
+    "what_you_notice": "In v1.3 a bare wooldid was an error. Options on the redisplay line are refused. No reported number moves.",
+    "sources": [
+     "76564b1",
+     "2a33a60",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R3",
+     "wooldidinstall/wooldid.ado 3-138",
+     "wooldidinstall/wooldid.sthlp 42, 979-980",
+     "d349bb1",
+     "f7c1fd2",
+     "7e150db",
+     "4130833",
+     "029b96c",
+     "bfbaa81",
+     "review_process/changes_review_2026-09-22.md s4"
+    ]
+   },
+   {
+    "heading": "fastnose: point estimates only, with the same rows as a full run",
+    "kind": "new feature",
+    "what_changed": "fastnose runs every margins call without computing variances. margins is Stata's command for averaging predictions over the sample, which turns the regression into the att and the ame. Tables keep the rows of a full run, with standard errors, p-values and intervals blank. The header reads 'Standard Errors: not computed (fast mode)'. e(V) is not posted. fastnose is refused with unconditionalse, pretrendpower(), boottstat, permtstat, permtci, permanalyticse, adversarial and jointtests. The last two are accepted under permute(), which already runs in fast mode. With impvalues or bootstrap() it prints a caution and has no effect.",
+    "why": "Nearly all of a run is spent on the delta method inside margins. The delta method gets a standard error for a quantity computed from estimated coefficients by linearizing it around the estimates. Point estimates suffice to compare specifications. An option whose whole output is a variance would print only blanks.",
+    "decision": "The author made fast mode something a user must ask for, and labelled it in the header. He chose a caution over a refusal where fastnose changes nothing.",
+    "what_you_notice": "Point estimates equal a full run's. test and lincom refuse. The help asks for a full re-run before reporting.",
+    "sources": [
+     "fc0cadb",
+     "ed6f77b",
+     "6fe814d",
+     "e26b3dd (CS-23)",
+     "20c431d",
+     "ca17eb4",
+     "1c09efa (R15)",
+     "8443694",
+     "f5cd92b",
+     "9527a70",
+     "6cb8b68",
+     "review_process/rulings_2026-09-07.md section H",
+     "wooldidinstall/wooldid.sthlp 284, 286-291, 372-373, 965-966"
+    ]
+   },
+   {
+    "heading": "Removed: oldsyntax, cleanmatrices, emptycellsoverride and suppresssgprimaryeffects",
+    "kind": "removal",
+    "what_changed": "Four v1.3 options are gone with no alias. A do-file naming one stops with r(198). oldsyntax renamed the onset event-study row from post0 back to contemp. cleanmatrices ran clear mata and matrix drop _all around the call. emptycellsoverride turned off wooldid's use of set emptycells drop, a Stata setting that removes interaction cells with no observations from a regression. suppresssgprimaryeffects skipped each subgroup's own estimates and reported only the differences between subgroups.",
+    "why": "oldsyntax served do-files written before v1.3 renamed the row for event_plot, a user-written Stata command for event-study plots that expects particular row names. It carried a second naming scheme through every row label. Mata is Stata's matrix programming language, and clear mata removes every Mata object in the session, the user's own and wooldid's own routines alike. The recovery cleanmatrices offered is two commands a user can type, choosing what to lose. emptycellsoverride changed no estimate and made the run about five times slower. suppresssgprimaryeffects made subgroup runs only about 1.8 times faster: each subgroup's main estimates now come from the same calculation as the differences, and only their event-study and dose-effect passes were saved. A difference also reads better beside its levels.",
+    "decision": "The author chose deletion for all four, over keeping them for compatibility. cleanmatrices took three steps. He first ruled to refuse it with permute(), where clearing Mata mid-run had destroyed wooldid's own routines after a successful estimation. He withdrew that refusal the next day, once the crash proved to occur only when the program is loaded from a do-file, as the test harnesses load it, and never for an installed copy. He deleted the option on 2026-09-25 because the recovery it offered is two commands a user can type.",
+    "what_you_notice": "Do-files naming these options must drop them, and the onset row is post0. The help's Bugs section gives the two commands for a session a failed regression has left broken. Runs that never used them give identical numbers. subgroups() runs now always report each subgroup's estimates.",
+    "sources": [
+     "aeec885",
+     "review_process/econ_review_2026-09-25.md sections 1, 6, 8, 9 (G8)",
+     "review_process/econ_review_2026-09-25/oldsyntax_removal_notes.md",
+     "d0c2380",
+     "6693e2f",
+     "d70ae95",
+     "637062e",
+     "review_process/changes_review_2026-09-22.md s2b",
+     "v1.3 wooldid.sthlp 578-580",
+     "wooldidinstall/wooldid.sthlp 1323-1325"
+    ]
+   },
+   {
+    "heading": "Options that existed only during development: bootalpha(), ties, permrawp and the perm_lb/perm_ub aliases",
+    "kind": "removal",
+    "what_changed": "Several options added during development were removed before any release. bootalpha() chose how the Bayesian bootstrap weighted clusters. ties half-counted bootstrap draws exactly equal to the observed estimate when forming the bias-correction constant. permrawp reported a permutation p-value that left the observed assignment out of the count. e(perm_lb_*) and e(perm_ub_*) duplicated e(perm_bandlo_*) and e(perm_bandhi_*). fastcollapse and fullprecisionslow gave way to nofastcollapse.",
+    "why": "ties did nothing. Exact ties do not occur for the continuous estimates wooldid reports, and a probe on five clusters, where identical resamples do recur, showed it changed nothing there either. The reasons for dropping bootalpha() are told in The bootstrap engine, and for permrawp in the randomization inference section. The collapse switch is told in What is being estimated, and from what.",
+    "decision": "The author chose deletion in each case. He deleted ties once it was shown to change nothing. He deleted the aliases rather than deprecating them, because no released do-file depends on them.",
+    "what_you_notice": "Nothing changes for users of v1.3, and no reported number moves. Development do-files naming these options stop with an error.",
+    "sources": [
+     "c2338a2",
+     "9d2ca83",
+     "8d8316f",
+     "a168f82",
+     "925615e",
+     "dc3f345",
+     "605d6d7",
+     "38f0362",
+     "review_process/econ_review_2026-09-25.md sections 6, 8, 9 (G6, G7)",
+     "review_process/rulings_2026-09-07.md section H (CS-1, CS-57)",
+     "review_process/option_consolidation_2026-09-16.md",
+     "wooldid_ado_review.md L114",
+     "wooldidinstall/wooldid.sthlp 452-457, 478-481"
+    ]
+   },
+   {
+    "heading": "Kept after being considered for removal: permside(), permanalyticse, altmethod_adversarial and permtci",
+    "kind": "design decision",
+    "what_changed": "These four options remain unchanged.",
+    "why": "permside() is the only way to put a one-sided permutation p-value in the printed column and in e(p). permanalyticse is the one-call way to get analytic standard errors beside permutation p-values. honestdid, a user-written Stata command for sensitivity analysis of event studies to violations of parallel trends, needs the covariance it posts. altmethod_adversarial tests a different null from the primary line test. permtci adds a symmetric interval from the permuted t-ratios while the equal-tailed p-value stays; the alternative, permtstat with permabsp, would switch the p-value to the absolute-value convention.",
+    "decision": "The author kept all four, over having users read one-sided p-values from stored results or run the analytic specification separately.",
+    "what_you_notice": "No change, and no reported number moves.",
+    "sources": [
+     "review_process/econ_review_2026-09-25.md sections 6, 8",
+     "review_process/econ_review_2026-09-25/round1_results.json deletion_synthesis",
+     "review_process/changes_review_2026-09-22.md section 4 (permtci)",
+     "wooldidinstall/wooldid.sthlp 473-474, 476-477, 483, 583"
+    ]
+   },
+   {
+    "heading": "level() is accepted on the analytic path",
+    "kind": "new feature",
+    "what_changed": "v1.3 had no level() option, and intervals followed Stata's set level. level() arrived with the replication engines and was at first refused on analytic runs. level(#) now sets every reported interval, analytic, bootstrap() and permute() alike. It takes values from 10 to 99.99 with at most two decimals, defaults to c(level), and is stored in e(level). The session's own level is restored after every call.",
+    "why": "A level chosen per command is the Stata convention, and it leaves later commands alone.",
+    "decision": "The author ruled to accept level() on the analytic path, to post e(level), and to check the value against the session's setting, over leaving the option refused there while analytic intervals followed set level alone.",
+    "what_you_notice": "Interval columns are labelled for the level in force. Interval bounds move when a level other than the default is typed. Point estimates, standard errors and p-values do not.",
+    "sources": [
+     "review_process/quality_review_2026-09-05.md s5 and s9 (F054), at c1d8979^",
+     "301b706 (v1.3 syntax line, no level option)",
+     "1c09efa",
+     "review_process/blue_sky_2026-09-18/RULINGS_LEDGER.md R17",
+     "wooldidinstall/wooldid.sthlp 313-316, 1068",
+     "wooldidinstall/wooldid.ado 157, 6242-6252"
+    ]
+   }
+  ]
+ }
+]
