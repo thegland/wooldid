@@ -260,4 +260,8 @@ heavily on onset having been assigned exchangeably across clusters, and a treate
 oversize it; permtstat protects only when several clusters lie inside each treated cohort-period cell." (built below).
 The real component's old-versus-new subset with real_boot_bayes: 6 of 6 shards, 23 configs, unexplained 0; real_boot_bayes
 is judged on its rc pair (198 against 0) as its predecessor was.
+Card m175's text is built as 317673b (test_permute passes; the caution's opener, which the tests grep for, is unchanged).
+The three review artifacts stand at: message page version 10 (363 cards; every 2026-09-25 text built and marked; 5 cards
+with my wording awaiting review, all forced by deletions or rulings); help editor version 4 (help at f556138); the changes
+walk-through (published separately). Final tree: 317673b.
 
