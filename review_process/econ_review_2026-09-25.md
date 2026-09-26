@@ -263,5 +263,7 @@ is judged on its rc pair (198 against 0) as its predecessor was.
 Card m175's text is built as 317673b (test_permute passes; the caution's opener, which the tests grep for, is unchanged).
 The three review artifacts stand at: message page version 10 (363 cards; every 2026-09-25 text built and marked; 5 cards
 with my wording awaiting review, all forced by deletions or rulings); help editor version 4 (help at f556138); the changes
-walk-through (published separately). Final tree: 317673b.
+walk-through at https://claude.ai/artifact/Bt3fxAfth3rtrqkW2yGsDb (private; 7 sections, 97 items, about 18,000 words; its long first
+draft and the critic report that shaped it are kept in this directory, and the final sections JSON with the renderer
+review_process/tools/walkthrough/render_walk.py). Final tree: 317673b.
 
