@@ -8,7 +8,7 @@ This program offers a suite of tools in Stata for implementing difference-in-dif
 - Estimation of subgroup/treatment-arm specific effects, including comparisons of effects across subgroups, tests for homogeneity of treatment effects across subgroups, and subgroup specific pre-trend tests
 - Estimation of the average marginal treatment effect of a continuous treatment variable (experimental) 
 - Production of event study plots, histograms of treatment effects by cohorts, and plots of treatment effects across the distribution of a continuous treatment variable
-- Inference using clustered standard errors, using unconditional standard errors, using Ibragimov and Muller (2010) style cluster-robust inference, and using Conley-Taber-spirit randomization (permutation) inference for settings with few treated clusters
+- Inference using clustered standard errors, using unconditional standard errors, using Ibragimov and Muller (2010) style cluster-robust inference, using randomization (permutation) inference over the assignment of treatment onset for settings with few treated clusters, and using cluster bootstrap inference (resampling or Bayesian)
 - Roth (2022) pre-trend power diagnostics and a cohort-by-relative-period effects table (gteffects)
 - Estimation of treatment effect elasticities and of treatment effects using poisson estimation 
 

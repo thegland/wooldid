@@ -4,7 +4,30 @@ d wooldid: Estimation of Difference-in-Differences Treatment Effects with Stagge
 d
 d Author: Thomas A. Hegland, Agency for Healthcare Research and Quality, thomas.hegland@ahrq.hhs.gov
 d
-d wooldid offers a set of tools for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2025) and the high dimensional fixed effects estimators developed by Correia (2017). Features include estimation of various types of average treatment effects, comparison of treatment effects across subgroups, estimation of event study style estimates and related parallel trends assumption tests (including Roth (2022) pre-trend power diagnostics and a calibrated composite-null linearity test), estimation of average and marginal treatment effects in the presence of a continuous treatment (or treatment intensity) variable [experimental], anticipation windows, a cohort-by-relative-period effects table, replay of stored results, and a fast point-estimates-only mode. This suite also can produce event study plots, histograms of treatment effects by cohort, and plots of treatment effects across the distribution of a specified continuous treatment variable. Options for inference include inference using standard analytic clustered standard errors, standard errors that account for sampling variation in covariates (unconditional standard errors), Ibragimov and Muller (2010) style cluster-robust inference, Conley-Taber-spirit randomization (permutation) inference for settings with few treated clusters, and cluster bootstrap standard errors in both a resampling and a Bayesian (Dirichlet reweighting) flavor.
+d wooldid offers a set of tools for implementing difference-in-differences
+d style analyses with staggered treatment onset using the two-way fixed
+d effects approach proposed in Wooldridge (2025) and the high dimensional
+d fixed effects estimators developed by Correia (2017). Features include
+d estimation of various types of average treatment effects, comparison of
+d treatment effects across subgroups, estimation of event study style
+d estimates and related parallel trends assumption tests (including Roth
+d (2022) pre-trend power diagnostics and a test that all event study
+d effects lie on one line through the reference period), simultaneous
+d confidence bands for event studies, estimation of average and marginal
+d treatment effects in the presence of a continuous treatment (or
+d treatment intensity) variable [experimental], anticipation windows, a
+d cohort-by-relative-period effects table, replay of stored results, and a
+d fast point-estimates-only mode. This suite also can produce event study
+d plots, histograms of treatment effects by cohort, and plots of treatment
+d effects across the distribution of a specified continuous treatment
+d variable. Options for inference include standard analytic clustered
+d standard errors, standard errors that account for sampling variation in
+d covariates (unconditional standard errors), Ibragimov and Muller (2010)
+d style cluster-robust inference, randomization (permutation) inference
+d over the assignment of treatment onset for settings with few treated
+d clusters, and cluster bootstrap inference in both a resampling and a
+d Bayesian (Dirichlet reweighting) flavor, with percentile,
+d bias-corrected, accelerated and studentized intervals.
 d
 d KW: difference-in-differences
 d KW: did
