@@ -14521,7 +14521,7 @@ version 16.0
       * since the text names no family
       if "`rkc'" == "1" & "`advk1'" != "" & "`advK'" != "" {
         if `advk1' < `advK' {
-          dis as text "Caution: the event-study covariance for the adversarial test is rank-deficient (rank `advk1' of `advK'), so the test uses only the directions a generalized inverse retains and its degrees of freedom fall to `advk1'."
+          dis as text "Caution: the event-study covariance for the adversarial test is rank-deficient (rank `advk1' of `advK'), so the test uses only the directions a generalized inverse retains and its degrees of freedom fall to `advq'."
           c_local wdadvrkc 0
         }
       }

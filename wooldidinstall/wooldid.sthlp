@@ -574,7 +574,7 @@ regression of {it:coef_rt} on {it:time_rt}, where {it:coef_rt} is the estimated 
 The test is cancelled, with a caution, when the requested window holds fewer than one pre-treatment and one post-treatment horizon (fewer than three coefficients in all under
 {it:timetrends}), when the estimation sample fails to realize those horizons, or when the event-study covariance is degenerate; under {it:subgroups()} the {it:att} and {it:att_it} tests are skipped for any
 subgroup that lost a relative period as inestimable. When the event-study covariance is rank-deficient but not degenerate, the test runs on the directions a generalized
-inverse retains, and without {it:bootstrap()} or {it:permute()} a caution gives the rank. The numerator degrees of freedom are stored in {it:e(adversarial_df_att)} and its twins.
+inverse retains, and without {it:bootstrap()} or {it:permute()} a caution gives the rank and the degrees of freedom the test used. The numerator degrees of freedom are stored in {it:e(adversarial_df_att)} and its twins.
 Like {it:jointtests}, the test is sensitive to clustering: it is severely oversized unless each treated cohort-by-period cell
 is spanned by many clusters, and clustering on {it:i} itself places every cell inside a single cluster. Where that condition is not met, use {it:permute()} or {it:bootstrap()}
 with {it:boottstat}, under which the adversarial p-value is a permutation or bootstrap quantity (without {it:boottstat} it is absent under {it:bootstrap()}). Refused with
