@@ -311,7 +311,7 @@ the summary-statistics entry was wrong before the trim (it claimed thirteen scal
 **Message page.** Every one of the 363 cards is set unreviewed, in the shared record and in the page's embedded seed
 (version 11, 2026-09-26). Nothing else on the cards changed.
 
-**Help editor.** Version 5 carries the help at 248ac1a (`review_process/tools/help_editor/blocks_248ac1a.json`). The
+**Help editor.** Version 6 carries the help at f7b975d, which is 248ac1a less one stray blank line that two adjacent deletions left (`review_process/tools/help_editor/blocks_f7b975d.json`; version 5 carried 248ac1a for a few minutes). The
 editor's record held no edits when it was rebuilt, so nothing was carried over or went stale.
 
 **Tidy-up.** Deleted: the battery scratch directories test/runB2 to test/runB5, the store dumps test/run_store*, and 108
