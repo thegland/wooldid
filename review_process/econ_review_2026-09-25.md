@@ -241,3 +241,15 @@ with each verifier's verdict), oldsyntax_removal_notes.md. Commits: aeec885 (old
 | chapter 14, coverage count, merge fix | c725ddf, 08f5e99, 29a66a9 | | |
 
 Not built: the SEB-05 iid containment extension (see G3). Held: card m175's text (your option (a); a proposal is on the card).
+
+**Verification of the merged tree (29a66a9), 2026-09-25 evening.** Full run: old-versus-new 110 of 110 shards, 560 configs
+compared, unexplained 0, stale ledger 0; cert 47 of 47; newfeat 13 of 13; coverage OK; degeneracy OK. Battery: 16 configs
+differed, exactly the pre-registered movers and nothing else: the five adversarial configs gain e(adversarial_df_att)
+(adv_altb 2, adv_gapa 4, adv_gapb 4, adv_r2001 2, esf_adv 5); boot_bayes_sgjt loses the ties token from its command line and
+the boot_alpha and boot_ties macros with no number moving; the ten permute() configs lose the e(perm_lb_*) and e(perm_ub_*)
+scalars. Those 16 baselines were re-blessed. Follow-ups built the same evening: the adversarial rank-deficiency caution now
+prints the degrees of freedom the test used (its last slot carried the rank); the stateyear Bayesian bootstrap config returns
+as real_boot_bayes without bootalpha(size), keeping the second-fixture coverage of bootdf(clusters), bootdisplay(bca),
+bootsave() and level(90) (its old-versus-new subset run is recorded below when it returns). Not built: the SEB-05 iid
+containment extension, for the reason under G3; the author should withdraw that ruling.
+
