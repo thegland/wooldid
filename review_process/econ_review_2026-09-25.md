@@ -267,3 +267,61 @@ walk-through at https://claude.ai/artifact/Bt3fxAfth3rtrqkW2yGsDb (private; 7 se
 draft and the critic report that shaped it are kept in this directory, and the final sections JSON with the renderer
 review_process/tools/walkthrough/render_walk.py). Final tree: 317673b.
 
+
+## 10. 2026-09-26: help trim pass, message reset, tidy-up
+
+The author asked for "another trim pass on the help file and then update the artifact", for every message card to be
+marked unreviewed for a full second pass, and for "other environment tidying up tasks".
+
+**Help trim (248ac1a).** 20,254 words to 15,337, measured without SMCL tags (22,631 to 17,595 by wc). One opus agent mapped
+52 topics repeated across sections, 30 textbook passages and 25 maintainer passages (`trim_2026-09-26/dupmap.json`). Four
+opus trimmers each proposed replacements for one range of blocks. Four verifiers checked each proposal against the original
+block, the ado and the corrections made since the 2026-09-21 pare-down: 139 accepted, 26 repaired, 0 rejected. The first
+verifier ran on Fable; the other three were rerun on Opus after the Fable usage limit stopped them. Six paragraphs went:
+four merged into a neighbour and two that restated an option entry, including the 2024 "Comment on Cohorts Treated After
+Sample End" (both of its facts stand in the oostreatedcontrols() and anticipation() entries). Everything is keyed by block
+hash; `apply_trim.py` reproduces the file from the JSON in `trim_2026-09-26/`.
+
+| section | words before | after |
+|---|---|---|
+| opening paragraph | 237 | 201 |
+| Description | 1,749 | 834 |
+| Specify estimand | 597 | 303 |
+| Standard errors | 1,968 | 1,519 |
+| bootstrap() | 1,082 | 922 |
+| permute() | 1,330 | 1,203 |
+| Supporting features | 609 | 502 |
+| Event study | 2,033 | 1,559 |
+| Subgroups | 777 | 592 |
+| Continuous treatment | 3,272 | 2,331 |
+| Controls | 648 | 426 |
+| Technical | 894 | 700 |
+| Runtime | 184 | 159 |
+| Working with output | 2,661 | 2,245 |
+| Comparison | 689 | 415 |
+| Bugs and assistance | 452 | 323 |
+
+Syntax, Examples, Citations, Author and Disclaimer were not touched. Gates: the sets of option names, e() names, markers and
+internal link targets are unchanged; braces balance; Stata's smcl2txt translator reads the file; test/check_validate_sync.py
+passes. Register: semicolons 167 to 10; prose parentheticals 210 to 65 (the 2024 file had 129 in half the words); "i.e.",
+"e.g.", "etc." and "note that" 23 to 0. The raw count of "(" per 1,000 words rose from 56 to 61 because option names such
+as cluster() stay while prose goes. Three hand corrections and one removed false clause are listed in the commit message;
+the summary-statistics entry was wrong before the trim (it claimed thirteen scalars on every contreat() run).
+
+**Message page.** Every one of the 363 cards is set unreviewed, in the shared record and in the page's embedded seed
+(version 11, 2026-09-26). Nothing else on the cards changed.
+
+**Help editor.** Version 5 carries the help at 248ac1a (`review_process/tools/help_editor/blocks_248ac1a.json`). The
+editor's record held no edits when it was rebuilt, so nothing was carried over or went stale.
+
+**Tidy-up.** Deleted: the battery scratch directories test/runB2 to test/runB5, the store dumps test/run_store*, and 108
+regenerable sentinel files that test/.gitignore lists. review_process/README.md gained a table of the six records at the
+repository root (bce8050). The 39 agent worktrees under .claude/worktrees (1.1 GB) and their 41 worktree-* branches are
+archived at ~/.claude/projects/-Users-hegland-Documents-Research-wooldid-dev/archive/worktrees_2026-09-26/ (a git bundle
+of every commit bugfixes lacks, and each worktree's uncommitted diff), but removing them was refused by the session's
+permission check and is left to the author:
+
+    cd /Users/hegland/Documents/Research/wooldid_dev
+    for w in $(git worktree list --porcelain | awk '/^worktree /{print $2}' | tail -n +2); do git worktree remove --force "$w"; done
+    git worktree prune
+    git branch -D $(cat ~/.claude/projects/-Users-hegland-Documents-Research-wooldid-dev/archive/worktrees_2026-09-26/branch_list.txt)

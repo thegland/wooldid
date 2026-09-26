@@ -1,0 +1,432 @@
+{
+ "group": "G3",
+ "verdicts": [
+  {
+   "idx": 227,
+   "hash": "1476b91223c8",
+   "verdict": "accept",
+   "reason": "Semicolon to full stop; fixed reference period, the pretreatment row averaging every estimable pre-period, and the joint test on the requested window all kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 229,
+   "hash": "f06467e91293",
+   "verdict": "accept",
+   "reason": "Default -1, the error for onset or later, and the no-effect caution without esfixedbaseperiod all kept; the dropped lead clause is restated by the last sentence.",
+   "cite": "ado 6209: under esfixedbaseperiod the reference period must lie strictly before onset"
+  },
+  {
+   "idx": 231,
+   "hash": "e7fba803785c",
+   "verdict": "accept",
+   "reason": "All three claims kept: the full span under esfixedbaseperiod, consecutive integer periods rather than realized horizons, and the widen-the-request remedy for gapped panels.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 233,
+   "hash": "9d38ba118f65",
+   "verdict": "accept",
+   "reason": "Raise to 1 under a caution, -999 and the error for other negatives kept; the reason moved in from [262] is the original's own words.",
+   "cite": "ado 5610-5626: the espostlength(-999) exemption and 'Caution: espostlength set to 1 due to use of subgroups in conjunction with esprelength > 0.'"
+  },
+  {
+   "idx": 235,
+   "hash": "5b7214b41416",
+   "verdict": "accept",
+   "reason": "Horizon minimums, the caution that the p-value is not calibrated, the remedies, the continuous-treatment requirement and the refusals are kept. The comma now scopes the permute exception to fastnose alone, which matches the ado; impvalues is refused outright. The mechanism is at [149], which G1's verdict keeps ('the saturated cell dummies leave the cluster-robust covariance nothing within the cluster to identify'). The new link goes to an allowed marker.",
+   "cite": "ado 1933 (the jointtests caution under clustering at i or above); ado 5469-5470 (impvalues refused); ado 6132-6141 (fastnose refused with jointtests unless permute() is in fast mode)"
+  },
+  {
+   "idx": 237,
+   "hash": "4d116cf4cbf6",
+   "verdict": "fixed_replace",
+   "new_smcl": "{phang}{opt adv:ersarial}: Tests the joint hypothesis that all estimated relative time period-specific effects fall on a single line through the reference period, with the slope that fits them best. This null is adversarial toward finding pre-trend violations. The p-value comes from a minimum-distance test on the event-study coefficients and their covariance matrix. Requires {it:esfixedbaseperiod}. The default pooled reference period has no single omitted period, so there the test fails with a caution and nothing is returned. Under {it:timetrends} two periods are normalized to zero and the null reduces to every coefficient being zero. Beside each p-value, {it:wooldid} returns the unweighted OLS line through the coefficients, with 0 at the reference period. The test is cancelled with a caution when the window holds fewer than one pre-treatment and one post-treatment horizon, or fewer than three coefficients in all under {it:timetrends}, when the sample fails to realize those horizons, or when the event-study covariance is degenerate. Under {it:subgroups()} the {it:att} and {it:att_it} tests are skipped for any subgroup that lost a relative period as inestimable. A rank-deficient but not degenerate covariance gives a test at reduced rank, and without {it:bootstrap()} or {it:permute()} a caution gives the rank and the degrees of freedom used. The numerator degrees of freedom are stored in {it:e(adversarial_df_att)} and its twins. Like {it:jointtests}, the test is severely oversized unless many clusters span each treated cohort-by-period cell, which clustering on {it:i} never gives. There, use {it:permute()}, or {it:bootstrap()} with {it:boottstat}. Without {it:boottstat} the test is absent under {it:bootstrap()}. Refused with {it:impvalues}, and with {it:fastnose} except under {it:permute()}. {p_end}\n",
+   "reason": "The trimmer's cuts are right: generalized-inverse detail, the OLS notation, and the permutation/bootstrap-quantity clause, which survives at [183] and [172] (G2). One meaning change: 'a caution gives the rank and degrees of freedom used, which are stored in e(adversarial_df_att)' ties storage to the rank-deficient case and implies the rank is stored too. The ado posts the numerator df whenever the analytic test succeeded, full rank or not, and never posts the rank. The fix restores the original's separate sentence. Everything else is kept.",
+   "cite": "ado 5083: 'if \"`adversarialQ...'\" != \"\" & \"`bootstrap'`permute'\" == \"\" ereturn scalar adversarial_df_...' (posted on every successful analytic test); ado 14513-14515 (df returned whenever advpstat is ok); ado 14523-14525 (rank caution only when advk1 < advK). Original: 'The numerator degrees of freedom are stored in {it:e(adversarial_df_att)} and its twins.'"
+  },
+  {
+   "idx": 239,
+   "hash": "2387988d7ea4",
+   "verdict": "accept",
+   "reason": "Projection from the pre-period coefficients and the reference period, the modifier-of-adversarial error, and both requirements kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 241,
+   "hash": "59d022fbcbab",
+   "verdict": "accept",
+   "reason": "Power levels in (5,100), the four diagnostics, mdt_wald and mdt_nis at 5%, requirements, the three refusals, the bootstrap covariance, the subgroup and att_it scope, the skip and partial-rank cautions, the 4-pre-period limit with the pretrends handoff, and e(roth_power_type) are all kept. The refusal reason is internals. The second link repeats one two sentences earlier.",
+   "cite": "ado 11633/11641/11645/11654 (impvalues refusal, esfixedbaseperiod and esprelength requirements, integer levels in (5,100)); ado 6142 (fastnose); ado 6646 (permute); ado 11856 (partial-rank caution); ado 11980 (mdt_nis omitted above 4 pre-periods)"
+  },
+  {
+   "idx": 243,
+   "hash": "91a3675950d0",
+   "verdict": "accept",
+   "reason": "Register only; all three facts kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 245,
+   "hash": "61000ef2a939",
+   "verdict": "accept",
+   "reason": "Default as never-treated controls, the T-period window, the pre-treatment contribution, the esfixedbaseperiod drop, the shifted onset under anticipation(), and the error for negatives are kept. The 'out-of-sample treated controls' label is in the guide (line 454). G1's delete of [110] relies on this block and its claims survive here.",
+   "cite": "guide line 454 keeps the label"
+  },
+  {
+   "idx": 247,
+   "hash": "c0cdd74f9f44",
+   "verdict": "accept",
+   "reason": "Every caution, drop, remedy and e(anticipation) is kept, including the since-pare-down '+' correction on too small and too large values. 'Which then fall before any response' is the reason the first horizons read near zero, and the behaviour it explains survives.",
+   "cite": "ado 6284 (off-grid caution); ado 6309 (units whose shifted reference period is unusable are dropped with a caution)"
+  },
+  {
+   "idx": 249,
+   "hash": "b9667b18ee58",
+   "verdict": "accept",
+   "reason": "Pooled default, fixed reference at -1 unless esrelativeto() sets another, the textbook opener cut, and the circular link to Description dropped, all as the dupmap asked. The added normalization sentence is copied from [97] and is true: the plot plants a zero at min(relyr)-1 for the pooled reference. G1 accepted [97] with the same sentence kept ('Its event study is normalized to 0 in the earliest period reported'), so the fact now appears twice. The assembler can drop one copy; the dupmap wanted it once.",
+   "cite": "ado 15115-15129: under no esfixedbaseperiod a reference observation is added at relyr = min - 1 with estimate, lb and ub set to 0"
+  },
+  {
+   "idx": 251,
+   "hash": "48d92e0fcf93",
+   "verdict": "accept",
+   "reason": "Recent correction kept whole; only two sentences joined and 'instead' dropped. The comparison group under each approach, the timetrends anchor, and the CS/SA and BJS equivalences are all intact.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 253,
+   "hash": "484677baddbb",
+   "verdict": "fixed_replace",
+   "new_smcl": "{pstd} A fixed reference period is transparent: every cohort is compared to the same relative period. A pooled one can be more precise, since it averages over more periods, but different cohorts' reference periods then hold different numbers of periods. A pooled period is likely a poor choice when treated cohorts' outcomes evolve differently from the comparison cohorts' before treatment. Trends shared by all cohorts are absorbed by the time fixed effects. It also tends to be a poor choice when requesting more pre-treatment horizons than every cohort can supply. A cohort with fewer observed pre-treatment periods then takes its earliest observed period as its reference period, even where other cohorts report an effect for that period. With differing outcome trends, the event study can then show counterintuitive time paths that hide even severe parallel trends violations. {p_end}\n",
+   "reason": "The merge of [253] and [255] is right, and every fact of [255] survives. But the rewrite turned two hedged judgements into flat ones: 'is likely disadvantageous whenever' became 'is a poor choice when', and 'also tends to be disadvantageous' became 'is also a poor choice'. The 'likely' sits inside a since-pare-down '+' line, so it is protected substance. The fix restores both hedges and keeps everything else.",
+   "cite": "since_paredown.diff '+' line: 'use of a pooled reference period is likely disadvantageous whenever the outcomes of treated cohorts evolve differently from those of the comparison cohorts within the pre-treatment period'; original [255]: 'It also tends to be disadvantageous when one is seeking to estimate more pre-treatment event study style treatment effects than can be estimated for all cohorts'"
+  },
+  {
+   "idx": 255,
+   "hash": "1401b1ef227d",
+   "verdict": "accept",
+   "reason": "Delete allowed for pstd. All four claims, including the '+' correction on differential trends and 'Trends shared by all cohorts are absorbed by the time fixed effects', are carried by [253] as fixed in this file.",
+   "cite": "see [253]"
+  },
+  {
+   "idx": 257,
+   "hash": "b31bc32c8919",
+   "verdict": "accept",
+   "reason": "Same facts: the three cell-weighted estimands coincide for relative-period estimates, differ only in cells outside the period, and event studies report att and att_it, with att_it shown for att_i and att_itime.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 262,
+   "hash": "442663761989",
+   "verdict": "fixed_replace",
+   "new_smcl": "{phang}{opt sub:groups()}: Specifies the subgroup (SG) variable, whose levels define the subgroups for which {it:wooldid} computes separate estimates. The SG variable must hold non-negative integers or missing values on the observations of treated units, and its levels must be collections of cohorts i. Observations with missing values belong to no subgroup and are ignored in subgroup computations. A unit is left out only if it is missing on all of its rows. A treated unit split across subgroups, or labelled on some rows and missing on others, is refused. With {it:safety(off)}, except under {it:permute()}, such a unit enters each of its subgroups weighted by its labelled share of sample weight there, under a caution. A split unit then no longer carries equal weight in {it:att_i} and {it:att_itime}. Subgroup values are embedded in the names of stored results and plots, so values 8 or more digits long can exceed Stata's limits on names. Recode ID-style codes to small integers first, for example with {it:egen newsg = group(oldsg)}. With {it:esprelength()} greater than 0, an {it:espostlength()} of 0 is raised to 1 under a caution (see {it:espostlength()}). Not compatible with {it:impvalues}. {p_end}\n",
+   "reason": "The trimmer's cuts are right: the espostlength detail is at [233], and the split-unit rule moved here from [266] as the dupmap asked. The last sentence is the problem. 'A partly labelled unit also draws a caution' implies a split unit proceeds silently under safety(off), but the ado cautions both. Its estimand clause was also hung on both cases, while the ado describes them differently: a split unit leaves att and att_it as usual, and a partly labelled unit also loses its equal cell weight. The fix puts the caution on both kinds of unit and ties the att_i/att_itime consequence to the split unit, as the original [266] did. The partly labelled unit keeps the original [262] wording, share weighting under a caution.",
+   "cite": "ado 13929: 'Caution: the subgroup variable ... splits some units of `i' across multiple subgroups over time; proceeding under safety(off) using share weighting. att_i and att_itime enter a split unit into each subgroup weighted by its share...'; ado 13985: 'Caution: ... is missing on ... row(s) of treated units ... proceeding under safety(off) using share weighting ... rather than with the equal unit (att_i, att_itime) or equal cell (att_it) weighting'; ado 13906-13908 (split unit: by-subgroup att and att_it as usual)"
+  },
+  {
+   "idx": 264,
+   "hash": "b14322c4b916",
+   "verdict": "accept",
+   "reason": "Every behaviour is kept: margins within each subgroup, the unchanged regression, pairwise contrasts with p-values, the equality test against the lowest SG, few-cluster failure, and degenerate contrasts reported without inference under a caution. The since-pare-down '+' lines on permute() and boottstat are kept with 'residue' renamed 'degenerate', as are the three remedies. G1's [93] and G2's [172] rely on this block for the contrasts and their degeneracy, and both survive here.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 266,
+   "hash": "57eaf72e8433",
+   "verdict": "accept",
+   "reason": "The refusal, the within-cell consequence (a '+' correction), the egen remedy with its missing note, and the pseudo-unit warning are kept. The share-weighting sentence moved to [262], its dupmap home, which keeps the permute() exception.",
+   "cite": "ado 13888-13911 (safety(off) skips the within-cell screen off permute()); ado 6994-6997 (refused under permute())"
+  },
+  {
+   "idx": 268,
+   "hash": "138aab7060be",
+   "verdict": "accept",
+   "reason": "Textbook definition shortened. The implementation correction, i defined by onset cohort by group, SG by period fixed effects, att_it with both groups in every cell, and the att caveat, is kept verbatim.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 273,
+   "hash": "7df9acaba122",
+   "verdict": "accept",
+   "reason": "Recent correction kept in full, only split into sentences: missing doses dropped, the no-variation case reported as missing under default safety and refused under untreatedZero, the partial cell drop with its caution, e(contreat_ndropcells), e(N_dropped), safety(off) keeping the drop, the zero-dose and same-side exemptions, and gteffects unavailable.",
+   "cite": "ado 13508 (ame not identified caution when every dose-slope term drops)"
+  },
+  {
+   "idx": 275,
+   "hash": "00c3cedc062b",
+   "verdict": "accept",
+   "reason": "dydx default, dyex, the poisson titling ('+' line) and 'Only dydx and dyex are accepted' are kept. The dropped clause about the removed eyex/eydx forms is a dated-change note, and the acceptance rule already tells a user with old code what fails.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 277,
+   "hash": "8a8707fd5c08",
+   "verdict": "accept",
+   "reason": "All original clauses are kept. The added claim moved in from [339] is true: contreatwithin with contreat() sets the working safety off, and the dropped-cohort-period-dummy objection, the one that i-t fixed effects trigger, is skipped when the working safety is off.",
+   "cite": "ado 5592: 'if \"`contreatwithin'\" == \"contreatwithin\" & \"`contreat'\" != \"\" local safety off'; ado 13263-13264: the dropped-dummy check is 'also skipped when the working safety value is off (contreatwithin with contreat())'; ado 13374 names i-t FE; ado 1199 (the no-control-group check is gated on contreatwithin)"
+  },
+  {
+   "idx": 279,
+   "hash": "578ac309968a",
+   "verdict": "accept",
+   "reason": "Parenthetical into a sentence. 'Up to the given degree' replaces 'of the specified degree' and is the correct reading: the polynomial holds every power from 1 to p.",
+   "cite": "help block [326] and its merge into [322]: 'f(Contreat_jt) = beta_it1*Contreat_jt^1 + beta_it2*Contreat_jt^2 + ... + beta_itp*Contreat_jt^p, where p is the polynomial order specified in contreatpoly(p)'"
+  },
+  {
+   "idx": 281,
+   "hash": "a33e5dc82bb5",
+   "verdict": "accept",
+   "reason": "Same content: the variable form with its integer rule and missing drop, the quantile form with latticenum above 1, weights used, no lattice meaning one bin, the runtime cost, the contreat() requirement and the basic partialling.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 283,
+   "hash": "c4923405c657",
+   "verdict": "fixed_replace",
+   "new_smcl": "{phang} {it:latticetype:} The groups within which the {it:latticenum} quantiles of {it:contreat} are formed. Type names are case-sensitive. The choice matters for interpretation, as of {it:makecfxplots} output, and for feasibility: clustered standard errors often fail unless multiple clusters are represented at each lattice point. The types are: {p_end}\n",
+   "reason": "Register cuts are fine, but 'fail unless several clusters are represented' raises the condition in the original, 'fail if multiple clusters are not represented', from more than one to several. The fix restores 'multiple' and keeps the rest.",
+   "cite": "original: 'clustered standard error computation will often fail if multiple clusters are not represented at each lattice point'"
+  },
+  {
+   "idx": 285,
+   "hash": "fa3e2d4de2f4",
+   "verdict": "accept",
+   "reason": "Same fact, shorter.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 286,
+   "hash": "91c9769f2b87",
+   "verdict": "accept",
+   "reason": "Within-period quantiles and the 1/latticenum correction ('+' line) kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 293,
+   "hash": "3219bfe550fb",
+   "verdict": "accept",
+   "reason": "Same cut-point rule, shorter.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 294,
+   "hash": "071cf9d2823d",
+   "verdict": "accept",
+   "reason": "'As baseTreated' carries the cut-point rule from [293]; the reference-period base is kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 295,
+   "hash": "e3c9c5052219",
+   "verdict": "accept",
+   "reason": "'As baseTreated' carries the cut-point rule from [293]; the treated-period base is kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 296,
+   "hash": "e49c17c5a01e",
+   "verdict": "accept",
+   "reason": "'As baseTreated' carries the cut-point rule from [293]; the full pre-treatment base is kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 298,
+   "hash": "a743b790cfba",
+   "verdict": "accept",
+   "reason": "Ignoring weights and the bootstrap multiplicity ('+' line) kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 300,
+   "hash": "40e425f593c3",
+   "verdict": "accept",
+   "reason": "Bins of the lattice or cfxlattice(), the att-only rule with its safety(off) and contreatwithin exceptions ('+' line), the validity conditions, the contreat() requirement and the impvalues refusal are all kept.",
+   "cite": "ado 5592-5595 (contreatwithin sets the working safety off, which is what releases the other estimands' plots)"
+  },
+  {
+   "idx": 302,
+   "hash": "0f98e5a2052e",
+   "verdict": "accept",
+   "reason": "Default, integer rule, the margins omission caution and the no-effect caution are kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 304,
+   "hash": "14a106e93a90",
+   "verdict": "accept",
+   "reason": "Three plot types, the post default, the pre requirement, the silent drop outside the window, the fixed-base rule, and the error for any other entry are kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 306,
+   "hash": "91652a4523cb",
+   "verdict": "accept",
+   "reason": "Same facts, including e(cfxitem_type_sgN).",
+   "cite": "none needed"
+  },
+  {
+   "idx": 308,
+   "hash": "b7387e1e7ee2",
+   "verdict": "accept",
+   "reason": "Semicolon only; the '+' correction on both engines is kept verbatim.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 310,
+   "hash": "ea393b625857",
+   "verdict": "accept",
+   "reason": "Same claims: f(Contreat_jt) interacted with fixed-effect-like indicators, sets the reference dose effect, required, choose with care.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 312,
+   "hash": "023220b107d0",
+   "verdict": "accept",
+   "reason": "'untreatedZero alone' carries 'cannot be paired with any other type'.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 313,
+   "hash": "3ed054e6b329",
+   "verdict": "accept",
+   "reason": "'i.e.' parenthetical removed; the paren count falls from 2 to 1.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 314,
+   "hash": "d6f67a918677",
+   "verdict": "fixed_replace",
+   "new_smcl": "{synopt : {it:byTreated}} Controls for the effect of contreat are interacted with indicators for the treatment group and the control group. {p_end}\n",
+   "reason": "Content is fine, but the new row uses the notation f(Contreat_jt), so the paren count rises from 0 to 1. The fix keeps the trimmer's shortening with the original subject.",
+   "cite": "original: 'Controls for the effect of contreat are interacted with indicators for membership in the treatment group and in the control group.'"
+  },
+  {
+   "idx": 315,
+   "hash": "68b6373fc849",
+   "verdict": "fixed_replace",
+   "new_smcl": "{synopt : {it:byTtre}} Controls for the effect of contreat are interacted with indicators for each treatment onset group and the control group. {p_end}\n",
+   "reason": "Content is fine, but the f(Contreat_jt) notation raises the paren count from 0 to 1. The fix keeps the trimmer's shortening with the original subject.",
+   "cite": "original: 'Controls for the effect of contreat are interacted with indicators for membership in each treatment onset group and in the control group.'"
+  },
+  {
+   "idx": 316,
+   "hash": "bb04b38f253f",
+   "verdict": "fixed_replace",
+   "new_smcl": "{synopt : {it:byCohort}} Controls for the effect of contreat are interacted with cohort (i) indicators. {p_end}\n",
+   "reason": "Content is fine, but the f(Contreat_jt) notation raises the paren count from 1 to 2. The fix keeps the trimmer's shortening with the original subject.",
+   "cite": "original: 'Controls for the effect of contreat are interacted with cohort (i) membership indicators.'"
+  },
+  {
+   "idx": 317,
+   "hash": "e4ca514e1f85",
+   "verdict": "fixed_replace",
+   "new_smcl": "{synopt : {it:byTime}} Controls for the effect of contreat are interacted with time period (t) indicators. {p_end}\n",
+   "reason": "Content is fine, but the f(Contreat_jt) notation raises the paren count from 1 to 2. The fix keeps the trimmer's shortening with the original subject.",
+   "cite": "original: 'Controls for the effect of contreat are interacted with time period (t) indicator variables.'"
+  },
+  {
+   "idx": 318,
+   "hash": "01ab873395dd",
+   "verdict": "accept",
+   "reason": "Same condition and the '+' bias warning verbatim ('the baseline effect of contreat is left out of the model ... biased estimates, however precise they appear').",
+   "cite": "none needed"
+  },
+  {
+   "idx": 320,
+   "hash": "60c9a84025ea",
+   "verdict": "accept",
+   "reason": "Both thresholds and the byTime case are kept ('+' lines); semicolons only.",
+   "cite": "ado 1791 (ccrtol(1e-5), the refusal cut); ado 14665 and 14711 (the 1/1000 caution band)"
+  },
+  {
+   "idx": 322,
+   "hash": "b2d7e1047656",
+   "verdict": "fixed_replace",
+   "new_smcl": "{pstd} {ul:On Specifying contreatcontrols() and lattice:} With a continuous treatment the regression is:\nY_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt))\nEach treated i-t cell gets its own treatment effect intercept and its own effect of the continuous treatment through f(), which can be made flexible where that effect may be non-linear within a cell. The options {it:contreatpoly()} and {it:lattice()} set f(), in general a stepwise function of contreat. Without a lattice, f(Contreat_jt) = beta_it1*Contreat_jt^1 + beta_it2*Contreat_jt^2 + ... + beta_itp*Contreat_jt^p, where p is set by {it:contreatpoly(p)}. With a lattice, f(Contreat_jt) = sum_over_l_in_L[L_l + L_l * Poly(Contreat_jt)], where L_l is 1 for observations in lattice bin l and 0 otherwise, and Poly(Contreat_jt) holds the requested polynomial terms of Contreat_jt. {p_end}\n",
+   "reason": "The merge of [322], [324] and [326] is right. It keeps the equation, the per-cell intercept and slope, the non-linear case, the stepwise f() and both f() formulas, and it stands alone without the Description link. But the merged paren count rises from 14 to 15. The fix restores the original lead-in ('when estimating the effects of a continuous treatment variable') in place of 'Under contreat()', which brings the count back to 14. The equation is still also printed at Description [102], which G1 left untouched. The dupmap said to cut it here if [102] kept it, so the assembler may want to decide which copy stays.",
+   "cite": "original [322]: 'the regression equation wooldid adopts when estimating the effects of a continuous treatment variable is:'"
+  },
+  {
+   "idx": 324,
+   "hash": "90d033231373",
+   "verdict": "accept",
+   "reason": "Delete allowed for pstd. The per-cell intercept and slope and the non-linear f() are carried by [322]. The binary-treatment analogy is textbook.",
+   "cite": "see [322]"
+  },
+  {
+   "idx": 326,
+   "hash": "f1bd08a1eff3",
+   "verdict": "accept",
+   "reason": "Delete allowed for pstd. Both f() formulas and the stepwise remark are carried by [322].",
+   "cite": "see [322]"
+  },
+  {
+   "idx": 328,
+   "hash": "0f49c085d1b9",
+   "verdict": "accept",
+   "reason": "The two lattice effects, the finer-i analogy, what the ame misses, the identification threat, ame and att disagreeing even in sign, and the coarser-lattice or att remedy are kept. The worked example is in the guide verbatim.",
+   "cite": "guide line 584: 'if within each i-t cell, Y = -Contreat + 100*floor(Contreat/10) ... positive ATT coupled with a negative AME'"
+  },
+  {
+   "idx": 330,
+   "hash": "91df2ec56bfc",
+   "verdict": "accept",
+   "reason": "Recent correction kept: two distinct values per piece, the collinearity drop, the borrowed slope in the ame and plots, the caution count, the verbose listing, the exact fit, and the rule of thumb.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 332,
+   "hash": "2ce2c6b7db1c",
+   "verdict": "accept",
+   "reason": "Merge of [332] and [333]. The control-function role, g() setting the reference dose effect, and the basic and byCohort formulas are kept. The per-type interactions are in the rows [313]-[317]. The unit fixed effects analogy is in the guide.",
+   "cite": "guide line 590 keeps the analogy and the per-type list"
+  },
+  {
+   "idx": 333,
+   "hash": "5032093eb053",
+   "verdict": "accept",
+   "reason": "Delete allowed for pstd. Every claim is carried by [332] or by the rows [313]-[317], and the analogy by the guide.",
+   "cite": "see [332]; guide line 590"
+  },
+  {
+   "idx": 335,
+   "hash": "a80516db0fd1",
+   "verdict": "accept",
+   "reason": "byTime's role, alone or combined, and the worked formula are kept. The definition is in the byTime row [317].",
+   "cite": "none needed"
+  },
+  {
+   "idx": 337,
+   "hash": "f4f2e49fd29d",
+   "verdict": "accept",
+   "reason": "g() = 0, identification only from within treated cohort-periods, and the narrow-use rule are kept. 'Other technical changes' is vague internals, and its user-facing effects are stated at [273] and at permute() [183].",
+   "cite": "none needed"
+  },
+  {
+   "idx": 339,
+   "hash": "05cbe31b2a85",
+   "verdict": "accept",
+   "reason": "Every att caveat ('+' lines), the ame recommendation, and the byTime refusal with its safety(off) downgrade are kept. The opening restatement is at [277], which now also carries the i-t fixed effects clause.",
+   "cite": "ado 5894-5897 (byTime refused under contreatwithin, a caution under safety(off)); ado 13455 (the caution naming periods without untreated reference rows)"
+  },
+  {
+   "idx": 341,
+   "hash": "924f21ad94c7",
+   "verdict": "accept",
+   "reason": "Recent correction kept. The last sentence is now conditional ('Where the att under contreatwithin is the integral of the ame'), which matches the condition [339] states and which the dupmap asked for. The claim that that att needs the strong assumption survives.",
+   "cite": "help [339]: 'The att is the integral ... only when fe() absorbs every cohort-period level effect'"
+  },
+  {
+   "idx": 343,
+   "hash": "7822b15a1670",
+   "verdict": "accept",
+   "reason": "Every behaviour is kept: ame SEs missing, joint tests and adversarial p-values missing, e(V_es_ame*) withheld, plots without CIs, understated att SEs ('+' line), the singleton-cell exemption, and the remedies. The mechanism is at [149], and the link goes to an allowed marker.",
+   "cite": "ado 4866-4871 (e(V_es_ame*) withheld under cell containment)"
+  }
+ ],
+ "summary": {
+  "accepted": 50,
+  "fixed": 9,
+  "rejected": 0
+ }
+}

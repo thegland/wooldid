@@ -1,0 +1,258 @@
+{
+ "group": "G1",
+ "verdicts": [
+  {
+   "idx": 33,
+   "hash": "2fa412b6c111",
+   "verdict": "accept",
+   "reason": "Register only. Every feature in the original list survives: the estimand types, subgroup comparison, event studies and parallel trends tests, the experimental continuous treatment, the three plot kinds, the five inference options, anticipation(), gteffects, pretrendpower(), fastnose and replay. The retained ' -- ' after {bf:wooldid} is the 2024 file's own device (2a2da17 uses ' -- ' six times, including this header), not a banned spaced hyphen or em-dash.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 39,
+   "hash": "7c877a719e88",
+   "verdict": "accept",
+   "reason": "Both links, the update command and the net get fact survive. The since-pare-down '+' text (ancillary file copied by net get wooldid) is kept whole.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 82,
+   "hash": "ba8c28d9d6fe",
+   "verdict": "accept",
+   "reason": "Same content. 'does not currently accommodate reversible treatment' becomes 'Treatment must be irreversible', with the once-treated clause kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 84,
+   "hash": "09ad30f9576d",
+   "verdict": "accept",
+   "reason": "The two-step mechanism survives: cohort and time fixed effects, one indicator per i-t cell to be estimated, margins converting the coefficients, fitted minus counterfactual fitted value for every treated observation, then averaged. Only the tutorial framing goes. The cut estimand sentence is the opening of block 90.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 88,
+   "hash": "5b7588f0f41a",
+   "verdict": "accept",
+   "reason": "Same glossary: i, t, j (possibly equal to or more numerous than cohorts), Z, Tz_it, TreatedFlag_it, fe_i, fe_t, Y_jt. No condition changed.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 90,
+   "hash": "58dac15a35b4",
+   "verdict": "accept",
+   "reason": "The ATT definition (fitted less counterfactual with TreatedFlag_it set to 0, over TreatedFlag_it equal to 1, with sample weights) and the two routes to other estimands (reweighting, restricting to a subgroup or period) both survive, with the estimands link.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 91,
+   "hash": "3e13f50954aa",
+   "verdict": "accept",
+   "reason": "The delta-method default, the conditional reading, the t distribution, the poisson normal case and the unconditional alternative survive. The degrees-of-freedom rule added since the pare-down (cluster minus one, smallest cluster count under multi-way, residual otherwise) is at block 426 verbatim, which the new text links through the output marker; poisson z statistics confirmed at ado 4326. The margins unconditional pointer survives at block 151 (new text keeps 'vce(unconditional) in {help margins}').",
+   "cite": "block 426: 'Under cluster(), or a customvce() of cluster, that is one less than the number of clusters, and under multi-way cluster() one less than the smallest cluster count. Otherwise it is the residual degrees of freedom. Under poisson it is missing, since the statistics are z.'; ado 4326 (z column under poisson)"
+  },
+  {
+   "idx": 93,
+   "hash": "a4a861348c5b",
+   "verdict": "accept",
+   "reason": "poisson, controls and fixed effects, and within-subgroup margins survive. The pairwise contrasts and the equality joint test are stated at block 264 ('all possible pairwise comparisons ... A joint test of the hypothesis that all SGs share the same effect').",
+   "cite": "block 264 states the pairwise comparisons and the joint equality test"
+  },
+  {
+   "idx": 95,
+   "hash": "a7f4f3f792a9",
+   "verdict": "accept",
+   "reason": "Mechanism survives: margins by relative period, extra indicators for pre-treatment horizons, equation unchanged with only Z growing. The two test nulls are stated at their homes: block 235 (jointtests, all pre-treatment effects zero) and block 237 (adversarial, all effects on a single best-fit line).",
+   "cite": "blocks 235 and 237 state both nulls"
+  },
+  {
+   "idx": 97,
+   "hash": "77ab05b27417",
+   "verdict": "accept",
+   "reason": "Both approaches survive with their mechanism: onset pulled earlier by just enough periods, no extra (i,t) pairs, pooled reference period, normalization to 0 in the earliest reported period; under esfixedbaseperiod every treated (i,t) pair except the reference period, default the period before treatment, saturated regression. Naming esfixedbaseperiod is correct (ado syntax line 751, ESRelativeto default -1). The user-specified alternative reference period survives at block 249 ('though the user can specify alternative behavior') and the esrelativeto() entry.",
+   "cite": "ado 751: ESFixedbaseperiod ESRelativeto(integer -1); block 249"
+  },
+  {
+   "idx": 99,
+   "hash": "8a2dccfc44ce",
+   "verdict": "accept",
+   "reason": "The extension, the experimental status ([experimental] in block 33), the Wooldridge link and the strong-parallel-trends pointer added since the pare-down all survive. 'compare units that received different doses' opens block 341 ('Within a treated cell, the ame compares units that received different doses').",
+   "cite": "block 341 first sentence"
+  },
+  {
+   "idx": 101,
+   "hash": "dd1942cae90b",
+   "verdict": "accept",
+   "reason": "Lead-in only.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 104,
+   "hash": "dd9c2e5bcf28",
+   "verdict": "accept",
+   "reason": "f(), g(), same margins calculation for ATT, the AME shifting Contreat_jt rather than TreatedFlag_it, effects along the dose distribution and the proportional-change reading all survive. 'varies arbitrarily across observations' is definitional.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 106,
+   "hash": "ac17845c298f",
+   "verdict": "accept",
+   "reason": "Full IM mechanism survives: unchanged regression, each effect (ATT or continuous) computed within each cluster, simple average, t-test of the cluster estimates, pointer to standard errors.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 108,
+   "hash": "864cd2a47ad2",
+   "verdict": "accept",
+   "reason": "All five drop rules survive with the same conditions: missing data, zero weights, treated cohorts not observed before treatment, or in the reference period under esfixedbaseperiod, periods with no untreated or not-yet-treated unit, and under timetrends cohorts with too few pre-treatment periods.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 110,
+   "hash": "7856ee255b2b",
+   "verdict": "accept",
+   "reason": "Delete is allowed for a pstd block. All three claims are stated at their option entries: block 245 opens 'By default, wooldid uses cohorts treated after the end of the sample the same way as never-treated control cohorts' and says such cohorts may contribute to pre-treatment effects under the option; block 247 opens 'Treats the effective treatment onset as ttre minus #, so that periods in which units may respond in anticipation ... count as treated periods rather than as clean pre-treatment periods'.",
+   "cite": "blocks 245 and 247"
+  },
+  {
+   "idx": 118,
+   "hash": "0f64492a2c3e",
+   "verdict": "accept",
+   "reason": "Default status, combinability with the other three estimands, regression weights times customweightmultiplier(), and the margins-only clause added since the pare-down all survive.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 120,
+   "hash": "35a8f82e2305",
+   "verdict": "accept",
+   "reason": "Definition (unweighted mean of cell effects), cell effects using their own observations' sample weights, and the fine-cohort consequence survive. The w/W_it formula and 'w is 1 without weights' are in the guide.",
+   "cite": "guide line 185: 'by w/W_it where w is an observation's sample weight and W_it is the total sample weight'"
+  },
+  {
+   "idx": 122,
+   "hash": "2d6ecab5c9d8",
+   "verdict": "accept",
+   "reason": "Definition, the two weight bases (share of the cohort's post-treatment weight, or of its pre-treatment weight outside the reference period) and the timetrends exclusion survive in words. The w/W_ipre and w/W_ipost formula is in the guide.",
+   "cite": "guide line 187: 'reweighting observations by either w/W_ipre or w/W_ipost'"
+  },
+  {
+   "idx": 124,
+   "hash": "a0339432e701",
+   "verdict": "accept",
+   "reason": "Two-level definition survives: cell effects with sample weights as for att_it, cohort effect as the unweighted mean of its observed post-treatment cells or its pre-treatment non-reference cells, ATT_itime as the unweighted mean of cohort effects. The w/(W_it * T_iprepost) formula is in the guide.",
+   "cite": "guide line 189: 'reweighting observations by w/(W_it * T_iprepost)'"
+  },
+  {
+   "idx": 126,
+   "hash": "715a06fc50f8",
+   "verdict": "accept",
+   "reason": "Register only. Every refusal and condition of the since-pare-down text survives unchanged: unconditionalse refused unless safety(off) (ado 5371), bootstrap(bayes) refused outright (ado 7377), makecfxplots att-only unless safety(off) or contreatwithin, split subgroups refused, and share weighting under safety(off) except under permute() (ado 13929).",
+   "cite": "ado 5371, 7377, 13929"
+  },
+  {
+   "idx": 131,
+   "hash": "a8cdd8d8285f",
+   "verdict": "accept",
+   "reason": "Every rule and refusal survives: analytic clustered SEs, multi-way clustering, single cluster for unconditionalse (ado 5405), impvalues (5418), bootstrap() and permute(); fewer than two clusters stops with an error and a finer variable, robust or fastnose are the ways out (ado 2066-2070: the gate is skipped under fastnose); the clustering rule added since the pare-down (at assignment level or coarser, never below the correlated unit) and the pointer to the discussion. Two cuts: the reghdfe/ppmlhdfe engine sentence (named at help lines 528, 869 and 872, and implied by block 37) and the state/county example, which illustrates the retained rule and is textbook. 'on the default path' now lacks its antecedent; wording only.",
+   "cite": "lost words: 'A state policy studied on county data needs {it:cluster(state)}, not {it:cluster(county)}.'; ado 2066-2070, 5405, 5418"
+  },
+  {
+   "idx": 133,
+   "hash": "e0254b28b492",
+   "verdict": "fixed_replace",
+   "reason": "The cut is right (the engine sentence is at help lines 528, 869, 872) and the since-pare-down default-SE correction survives: conventional SEs without cluster(), robust or customvce(); robust default under pweights or poisson (block 426 confirms the robust posting); no default allows within-unit correlation; precision overstated on panels. But the correction's closing remedy sentence 'Specify cluster() at the level at which treatment is assigned' was dropped, leaving the caution with no remedy in this entry. Restored verbatim. Parentheses stay at the original 4.",
+   "cite": "lost words: 'Specify {it:cluster()} at the level at which treatment is assigned.' (since_paredown.diff line 259)",
+   "new_smcl": "{phang}{opt rob:ust}: Heteroskedasticity robust standard errors, relevant only without {it:cluster()}. Without {it:cluster()}, {it:robust} or {it:customvce()}, the\nlinear regression reports conventional standard errors, which assume independent, homoskedastic errors. With pweights, or under {it:poisson}, the default is robust instead.\nNone of these defaults allows for correlation within a unit over time, so on panel data they usually overstate precision. Specify {it:cluster()} at the level at which\ntreatment is assigned. {p_end}"
+  },
+  {
+   "idx": 135,
+   "hash": "a21b1bc4572e",
+   "verdict": "fixed_replace",
+   "reason": "Substance is complete: regress/poisson path and slower (ado 5423 caution text), fe()/ccc_absorb() entered as written under a caution (5389-5391), requires robust or clustered SEs with a single cluster variable (5431, 5405), customvce() or pweights qualify (5431 comment and condition), refused with att_i/att_it/att_itime unless safety(off) (5371), aweights caution (5377), refused with impvalues (5416), fastnose (6109), bootstrap() (7348), permute() (6625), collapse off (5867). The trimmer's text raised the '(' count from 7 to 8 by writing '{it:cluster()}' for the original 'a single cluster variable'; the original phrase is restored and the count returns to 7.",
+   "cite": "ado 5371, 5377, 5405, 5416, 5431, 6109, 6625, 7348, 5867",
+   "new_smcl": "{phang}{opt uncond:itionalse}: Compute standard errors that account for sampling variation in covariates. The regression then runs through {it:regress} or\n{it:poisson} rather than the high dimensional fixed effects packages, which is usually slower. {it:fe()} and {it:ccc_absorb()} are not absorbed on this path.\n{it:wooldid} cautions and enters them as written, so put them in {it:controls()} with your own {it:i.} prefixes. Requires {it:robust} or clustered standard errors\nwith a single cluster variable. A robust or clustered {it:customvce()}, or pweights, also qualify. Unless {it:safety(off)} is specified, it is refused with\n{it:att_i}, {it:att_it} and {it:att_itime} and cautions with aweights. It is refused with {it:impvalues}, {it:fastnose}, {it:bootstrap()} and {it:permute()}. It\nturns the default cell collapse off. {p_end}"
+  },
+  {
+   "idx": 137,
+   "hash": "8b2010f86d49",
+   "verdict": "accept",
+   "reason": "Same facts: regress/poisson with the text passed unchanged into vce(), broader SE methods, incompatible with robust or cluster() (ado 5422), fe()/ccc_absorb() entered as written under a caution (5389), refused with impvalues (5416) and bootstrap() (7355), not combinable with permute() since it needs cluster(). The since-pare-down deletion of 'turns the default cell collapse off' does not return.",
+   "cite": "ado 5416, 5422, 7355"
+  },
+  {
+   "idx": 139,
+   "hash": "f5f986b59ae9",
+   "verdict": "accept",
+   "reason": "Every clause survives: single cluster at i or coarser, finer or cross-cutting cluster refused with its reason (ado 1852, unconditional since the pare-down), estimand change to the cluster-equally-weighted mean, att equal to att_i under cohort clustering, per-row t with clusters minus one and e(df_r) the smallest (ado 4812-4822), refusals with subgroups (5442), jointtests (5470), makecfxplots (5457), adversarial (5385), customvce()/unconditionalse (5416), pretrendpower() (11633), bootstrap() (7328), permute() (6612), fastnose accepted with a caution and no effect (6123), and the absent e(b_es_*), e(V_es_*), e(numpre_*) and honestdid handoff.",
+   "cite": "ado 1852, 4812-4822, 5385, 5416, 5442, 5457, 5470, 6123, 6612, 7328, 11633"
+  },
+  {
+   "idx": 141,
+   "hash": "c8e9b0f67965",
+   "verdict": "accept",
+   "reason": "Register only. The refusal list matches the ado: unconditionalse (6109), pretrendpower() (6142), boottstat (7339), permtstat/permtci/permanalyticse (6679), adversarial (6134) and jointtests (6138), the last two accepted under permute() (fnperm at 6131). The impvalues and bootstrap() cautions (6123, 7342), the no-band case (12334) and the re-run advice survive.",
+   "cite": "ado 6109-6142, 6679, 7339, 7342, 12334"
+  },
+  {
+   "idx": 143,
+   "hash": "e6be5fcc3986",
+   "verdict": "accept",
+   "reason": "The mechanism, the full-data regression, the 1e-6 bound, the eligibility list, the skip caution naming the option (ado 5862-5867: interactivecontrols(), contreatpoly(>1), contreat-in-controls, unconditionalse) and the three turn-off cases survive. The since-pare-down removal of lattice(), makecfxplots and customvce() from the ineligible list does not return. The measurement conditions for the 1e-6 case are in the guide.",
+   "cite": "guide line 245: 'differ by up to about 1e-6 relative on standard errors' with sampling weights, controls and an event-study window; ado 5862-5867"
+  },
+  {
+   "idx": 145,
+   "hash": "37cc9f238bf2",
+   "verdict": "accept",
+   "reason": "Every source, caution, remedy and refusal survives: e(esband_*), dashed pair on the plots, analytic simulation with the pointwise t distribution where df are reported, bootstrap from replications, the too-narrow caution under cluster() at or above i (ado 12353), the bootstrap or strictly-finer-cluster remedy, refused with permute() (5667), no band under fastnose or fewer than two usable horizons with a caution (12334). Two cuts, both deliberate accepts: 'covers every horizon of the family at once with that probability' is the meaning of 'simultaneous', which the retained first sentence carries; the understated-standard-error mechanism is restored once, at block 149 (see that verdict), since the trimmer's two citations pointed at each other.",
+   "cite": "ado 5667, 12334, 12353"
+  },
+  {
+   "idx": 147,
+   "hash": "fa05ea073f4e",
+   "verdict": "accept",
+   "reason": "Register only. Domain 10 to 99.99 with two decimals (ado 6242-6243), c(level) default, lb_#ci/ub_#ci (ado 4325), e(level) and the fixed 5% pre-test sizes survive.",
+   "cite": "ado 4325, 6242-6243"
+  },
+  {
+   "idx": 149,
+   "hash": "19953e1d4d34",
+   "verdict": "fixed_replace",
+   "reason": "The cut is right: the gteffects bootstrap and permute detail is at block 375 ('a cell the caution counts is resampled whole, so its standard error stays understated; under permute() the cells carry no inference'), and 'also without a caution' about the band was false (ado 12353 prints 'Caution: simultaneousbands is built from the analytic covariance with cluster() at the level of i or above, so the band is too narrow'). The att rows really do carry no caution (the only understated-SE cautions are the gteffects ones at 4895 and 4905). One loss: the band's mechanism, 'scaled by those understated standard errors', was dropped here citing 145, while 145 dropped the same mechanism citing 149. Restored in one clause, naming the event study standard errors as the ado comment at 12348-12350 does. Every consequence and remedy is otherwise unchanged.",
+   "cite": "lost words: 'is scaled by those understated standard errors, so it is too narrow'; ado 12348-12353, 4895, 4905; block 375",
+   "new_smcl": "{pstd} {ul: Discussion of What Level to Cluster At:}\nWith {it:cluster()} at the level of {it:i} or coarser, each treated cohort-by-period cell lies wholly inside one cluster, and the saturated cell dummies leave the\ncluster-robust covariance nothing within the cluster to identify. The analytic standard errors of the {it:ame} estimates are then not identified and are reported as\nmissing. The analytic joint pre-trend tests and the adversarial line test are not calibrated. Pairwise subgroup contrasts can be degenerate. The {it:att} rows'\nanalytic standard errors are understated without a caution, and the {it:gteffects} cells more so, which a {it:gteffects} run counts under a caution. The analytic\n{it:simultaneousbands} band is scaled by the understated event study standard errors, so it is too narrow. The remedies are a {it:cluster()} strictly finer than the\ncohort-by-period cells, {it:bootstrap()}, or {it:permute()}. {it:permute()} refuses the band, and for the {it:gteffects} cells only the finer {it:cluster()} is a\nremedy. A finer {it:cluster()} is a remedy only when it still sits at or above the level at which treatment is assigned. When no such level is finer than the cells,\nuse {it:bootstrap()} or {it:permute()}. {p_end}"
+  },
+  {
+   "idx": 151,
+   "hash": "0a502b3200eb",
+   "verdict": "accept",
+   "reason": "Same distinction: effects depend on coefficients and observed covariate and dose values, default delta-method SEs take them as given, unconditional SEs account for their sampling variation with the margins vce(unconditional) reference, context-dependent choice. This block is now the home of the margins pointer that block 91 dropped.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 153,
+   "hash": "e41dd976889f",
+   "verdict": "accept",
+   "reason": "Every sentence of the since-pare-down correction survives: similar when effects vary little across cells, covariates and intensities; larger under heterogeneity with a ratio that does not shrink; sample-average versus population-average reading; weights making observations influential; subgroup and event study sensitivity to outside observations. The subpopulation reason is in the guide.",
+   "cite": "guide line 304: 'wooldid uses the subpopulation features in margins when producing these subgroup estimates'"
+  },
+  {
+   "idx": 155,
+   "hash": "53a0fafdf7bc",
+   "verdict": "accept",
+   "reason": "Caution, refusal and weight sensitivity survive with the same conditions: oversized tests with aweights or non-ATT estimands, aweights problem intermittent and shared with hdidregress, caution with aweights (ado 5377) and stop with a non-ATT estimand (ado 5371) unless safety(off). The dropped cause is the author's own speculation about the margins weights, which is maintainer-level.",
+   "cite": "ado 5371, 5377"
+  },
+  {
+   "idx": 157,
+   "hash": "7c407725f253",
+   "verdict": "accept",
+   "reason": "When-to-use (few, heterogeneous clusters), the independence assumption, the two settings where it is plausible, the wooldid-specific reading over treated post-treatment cells with the fe() cluster-by-time remedy, and the shared-control and shared-reference-period caveat all survive.",
+   "cite": "none needed"
+  }
+ ],
+ "summary": {
+  "accepted": 32,
+  "fixed": 3,
+  "rejected": 0
+ }
+}

@@ -1,0 +1,236 @@
+{
+ "group": "G4",
+ "verdicts": [
+  {
+   "idx": 389,
+   "hash": "ff57659d71aa",
+   "verdict": "accept",
+   "reason": "Register pass. est save / est restore compatibility survives at 458. The e(wdid_*) 'state that replay uses' gloss is internal. Both '+' corrections kept: the missing() check with the boottstat example, and a failed call leaving e() as it was.",
+   "cite": "Block 458: 'Compatible Post-Estimation Commands: estimates save, estimates store, estimates restore, esttab'. ado 4993/9245/11486 post wdid_vcvstate as hidden."
+  },
+  {
+   "idx": 391,
+   "hash": "1d59dd23c77e",
+   "verdict": "fixed_replace",
+   "new_smcl": "{pstd} Stata's {help bootstrap} and {help jackknife} prefixes work with {it:_b}, as in {it:bootstrap _b, reps(200) cluster(i): wooldid y i t ttre, att cluster(i)}.\nThe point estimates are those of the plain run. A {it:cluster()} given to {it:wooldid} must name the prefix's {it:cluster()} variable. The prefix refuses any other,\nincluding its own {it:idcluster()} variable. The {it:bootstrap} prefix does not allow weights, and {it:svy} is not supported. After a prefix, typing {it:wooldid} alone\nshows the prefix's table. The {it:bootstrap()} option is the supported route to bootstrap inference. {p_end}\n",
+   "reason": "The cut of the semicolons is right, but 'including its idcluster() variable' is part of a '+' block added since the pare-down and is the non-obvious case: a user following the usual prefix idiom would name the prefix's idcluster() variable in wooldid's cluster(). Restored as the tail of the refusal sentence. Parentheses 7, equal to the original.",
+   "cite": "Original: 'the prefix refuses any other, including its {it:idcluster()} variable' (diff '+' line 984-985). Guide line 907: 'Stata's prefix parser refuses any other, including the prefix's own idcluster() variable (... r(198))'."
+  },
+  {
+   "idx": 393,
+   "hash": "4d16b4ca74e5",
+   "verdict": "accept",
+   "reason": "Parentheticals turned into sentences. Every naming rule from the '+' lines kept: pre#/post# by relative period, post0 the onset, no reference column, the _SG{sgcase}_ infix with examples, and the _s{sgcase} suffix naming matrices not columns.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 403,
+   "hash": "774dee81329d",
+   "verdict": "fixed_replace",
+   "new_smcl": "{synopt:{it:e(b_es_{it:type})}, {it:e(V_es_{it:type})}} The event study coefficient vector and its full covariance matrix, labelled {it:pre#} and {it:post#}\nwith the reference period omitted, for each estimand type: {it:att}, {it:ame} under {it:contreat()}, and {it:att_it} or {it:ame_it} for the cell-weighted estimands, which\nshare one horizon block. The per-subgroup versions are {it:e(b_es_{it:type}_s{it:sgcase})} and {it:e(V_es_{it:type}_s{it:sgcase})}. They are valid for {it:lincom} and\n{it:test} once posted, as shown under Incompatible Post-Estimation Commands below. A direct positional handoff to {it:honestdid} also requires {it:esfixedbaseperiod} with\nthe default {it:esrelativeto(-1)}, no {it:timetrends}, at least one pre- and one post-treatment coefficient, consecutive horizons, and a covariance with no degenerate rows.\nAny other layout hands {it:honestdid} the wrong event times without warning. The covariance is withheld, under a caution, when no horizon has an identified variance,\ntypically under {it:timetrends}, and for the ame families under the cell-containment caution. The vector still posts. Under {it:fastnose} the covariance is never\ncomputed, so it is not posted and no caution prints. Under {it:impvalues} neither matrix is posted. {it:e(es_ndegen_{it:type})} counts horizons whose variance is\ndegenerate and is posted only when there are any. Two design conditions shape the analytic matrix without showing in it, and {it:honestdid} and {it:pretrendpower()} inherit both. One:\na treated cohort-by-period cell wholly inside one cluster adds none of its own variation, see {help wooldid##standarderrors:Standard Errors}. A {it:cluster()} strictly finer than the cells avoids this. Two: with a unit-level\n{it:i} each treated cell is a single observation with a zero residual, so the covariance carries control-side variation only, under {it:robust} as well. A coarser {it:i}\nwith unit fixed effects in {it:fe()} avoids it. {p_end}\n",
+   "reason": "Cuts accepted, including the dof() recipe moving to its home at 460. Two repairs. (1) The rewrite dropped 'analytic' from the design conditions, so they now read as properties of e(V_es_*) on every run. Under bootstrap() e(V_es_*) is replaced by the replication covariance and the analytic one moves to hidden e(V_es_analytic_*), so condition Two (zero residual in singleton cells) is not established for it. 'analytic' restored. (2) The pointer from condition One to the Standard Errors discussion restored as a plain link, no parenthesis.",
+   "cite": "Original: 'the analytic covariance inherits the design's identification, and neither condition shows in the matrix itself' and '(see {help wooldid##standarderrors:Standard Errors})'. ado 11363-11365: under bootstrap() 'ereturn hidden matrix V_es_analytic_`fk'' then 'ereturn matrix V_es_`fk' = `evnew''."
+  },
+  {
+   "idx": 407,
+   "hash": "7e64fd5fb91b",
+   "verdict": "accept",
+   "reason": "The parenthetical became 'or holding a single observation under robust, pweights, customvce() robust/hc2/hc3, or poisson on ppmlhdfe', which matches the ado's two containment modes. 'Posted only when such cells exist' now covers both scalars, as the original's 'on the same rule' did.",
+   "cite": "ado 2371-2392 (gtcmode cluster, else observation under robust, pweight, hc2/hc3, customvce robust, poisson without unconditionalse or customvce); 4893-4904 post gt_ncontained only if >0 and gt_ndegen only if >0."
+  },
+  {
+   "idx": 409,
+   "hash": "190e1897238c",
+   "verdict": "accept",
+   "reason": "Semicolon removed. Every column and scalar name kept. 'summarystats displays the table' matches the ado.",
+   "cite": "ado 12766-12767: the escomp table prints only under summarystats; 4915-4925 post the named scalars."
+  },
+  {
+   "idx": 411,
+   "hash": "1e20b24a8879",
+   "verdict": "accept",
+   "reason": "Parentheticals turned into clauses. Every name and gloss kept. GLS is an acronym from the original, not emphasis.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 415,
+   "hash": "170b4ed8d4b1",
+   "verdict": "accept",
+   "reason": "Lead-in shortened.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 416,
+   "hash": "10b7e9a10315",
+   "verdict": "accept",
+   "reason": "Every scalar name, its estimand family and the continuous-only condition kept. The analytic margins p-value and the bootstrap/permute rank p-value with their statistic names kept. AME is an acronym from the original.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 418,
+   "hash": "d8c73412c656",
+   "verdict": "accept",
+   "reason": "The repeated test description became 'the same tests', which points to 416 directly above. All four names and the sgcase meaning kept.",
+   "cite": "Block 416: 'The joint tests of the pre-treatment event-study effects are in the scalars ...'."
+  },
+  {
+   "idx": 420,
+   "hash": "a3393af62c1c",
+   "verdict": "accept",
+   "reason": "Semicolons removed and sentences reordered. Every name, the esfixedbaseperiod and non-degenerate conditions, the failed-test rule and the df scalars from the '+' lines kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 422,
+   "hash": "ca396a05b66e",
+   "verdict": "accept",
+   "reason": "The example list '(ATT, ATT_it, AME, etc.)' dropped. 'For each estimate type' and 'its analogues for the other types' carry it. The lowest-numbered-SG reference, the pre-treatment names and the missing-on-degenerate rule kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 426,
+   "hash": "66c3c5fcef40",
+   "verdict": "accept",
+   "reason": "Semicolons into full stops. The e(df_r) rule added since the pare-down kept whole, and the vce/vcetype robust labelling under poisson or pweights.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 432,
+   "hash": "1e860d6b8222",
+   "verdict": "accept",
+   "reason": "'when requested' tied to summarystats, which the ado confirms. Every column, row and scalar name kept. Not introduced by the trim: under contreatcontrols(untreatedZero) the contreatpre_ scalars and the pretreatment and control rows are not posted, so 'Thirteen' is ten there. The summarystats entry at help line 524 already states the row omission.",
+   "cite": "ado 4945 'if \"`summarystats'\" != \"\" { ereturn matrix summarystats'; 4957 untreatedZero guard; 14244-14249 row construction."
+  },
+  {
+   "idx": 434,
+   "hash": "e0eecb5b6229",
+   "verdict": "accept",
+   "reason": "The naming pattern rewritten in short sentences. Every item and type code, the _sg suffix, e(wdid_cfxmats), and both '+' additions kept: missing entries for all-dropped bins, and the saveplots() write failure with hidden e(wdid_cfxsave_rc). CFX is the original label.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 436,
+   "hash": "504b95db0e09",
+   "verdict": "accept",
+   "reason": "Shortened. The same meaning: e(sample) marks the estimation sample and shows the dropped observations.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 444,
+   "hash": "a98f5cc876da",
+   "verdict": "accept",
+   "reason": "Parenthetical turned into sentences. Every name kept. 'All are hidden results' is true of every name in the block.",
+   "cite": "ado 4993/9245/11486/12471-12473 (wdid_vcvstate, wdid_vblocks, wdid_vblockn as hidden) and 5208-5214 (wdid_fcol, fcncell, fcskip, fcguard as hidden)."
+  },
+  {
+   "idx": 448,
+   "hash": "12f6899b57ff",
+   "verdict": "fixed_replace",
+   "new_smcl": "{synopt:{it:Bootstrap inference}} Under {it:bootstrap()}, {it:e()} also holds the following. Run records:\n{it:e(boot_reps)}, {it:e(boot_completed)}, {it:e(boot_failed)}, {it:e(boot_jk_completed)}, {it:e(boot_level)}, {it:e(boot_N_V)}, {it:e(boot_method)}, {it:e(boot_display)},\n{it:e(boot_stat)}, {it:e(boot_tstat)}, {it:e(boot_seed)}, {it:e(boot_rngstate)}, and {it:e(boot_df)} when the reference distribution is a t. {it:e(boot_save_rc)} is posted\nwhen a {it:bootsave()} write failed. {it:e(boot_nstraddle)} and {it:e(boot_reid)} record whether the replications re-identified duplicated units, and {it:e(boot_covsub)},\npresent only when that happened, counts the covariate terms rewritten to the fresh unit code. Covariance: {it:e(V_boot)}, also posted as {it:e(V)}, with the analytic one\nkept as {it:e(V_analytic)}, and the replication means {it:e(b_boot)} and bias {it:e(bias_boot)}. {it:e(boot_v_posted)}, {it:e(boot_V_shortfall)} and {it:e(boot_ves_failed)}\nrecord whether the covariance and the event-study covariances were rebuilt from the replications. Draws, up to 10,000 replications: {it:e(bootdist)}, and under {it:boottstat} {it:e(bootdist_se)} and,\nfor the subgroup contrasts, {it:e(bootdist_pwse)}. Families aligned to {it:e(b)}: {it:e(boot_ci_percentile)}, {it:e(boot_ci_normal)}, {it:e(boot_ci_bc)}, {it:e(boot_ci_bca)},\n{it:e(boot_p_percentile)}, {it:e(boot_p_bc)} and {it:e(boot_p_bca)}, with {it:e(boot_z0)} and {it:e(boot_accel)}. Per-family tables: {it:e(boot_pctl_mainresults)}, also\nunder the alias {it:e(boot_percentile_mainresults)}, {it:e(boot_bc_mainresults)}, {it:e(boot_bca_mainresults)}, {it:e(boot_wald_mainresults)} and\n{it:e(boot_tpctl_mainresults)}, with their {it:_pwsgs} and {it:_sgresults_{it:sgcase}} twins, {it:e(boot_{it:family}_gteffects)} for the cell table and\n{it:e(boot_{it:family}_{it:cfxname})} for the cfx matrices. Test statistics: {it:e(boot_jointW)}, {it:e(boot_jointWobs)}, {it:e(boot_advW)}, {it:e(boot_advWobs)},\n{it:e(boot_sgW)} and {it:e(boot_sgWobs)}, and the studentized records {it:e(boot_tstud)} and {it:e(boot_tstud_pwsgs)}. Families formed and tests withheld, with the reason:\n{it:e(boot_jt_family)}, {it:e(boot_gteffects_family)}, {it:e(boot_adv_absent)}, {it:e(boot_bc_absent)}, {it:e(boot_jt_absent)}, {it:e(boot_sgjt_absent)} and\n{it:e(boot_sgjt_reason)}. Per estimate: {it:e(boot_navail)} counts the replications available, and {it:e(boot_novar)} and {it:e(boot_sesmall)} those with no, or a very\nsmall, standard error under {it:boottstat}. Hidden: {it:e(boot_ptails)}, {it:e(boot_comparator)}, {it:e(boot_ase_obs)}, {it:e(V_es_analytic_{it:type})} and\n{it:e(df_r_analytic)}. {it:e(p)}, {it:e(ci_l)} and {it:e(ci_u)} hold the displayed family, so {it:esttab} reports the printed p-values and intervals. The standard errors\nand statistics it reports come from {it:e(V)}. {p_end}\n",
+   "reason": "Regrouping accepted and every e() name kept; the dropped 'reported tables carry the bootstrap inference' is at 164 and 'e(df_r) is aligned' at 426 ('Under bootstrap() it follows bootdf()'). One repair: the new Draws group attaches the boottstat condition to e(bootdist_se) only, which now states outright that e(bootdist_pwse) is posted without boottstat. The ado posts it only under boottstat with subgroups. The 10,000 cap on e(bootdist) itself is verified.",
+   "cite": "ado 8184 'local wdbpwts = (\"`bts'\" != \"\" & \"`pwseacc'\" != \"\")' and 8433 'cap ereturn matrix bootdist_pwse' inside 'if `wdbpwts''; 585 passes pwseacc only when boottstat is set; 8175 the block requires e(pwsgs). ado 681 caps e(bootdist) and e(bootdist_se) at 10,000."
+  },
+  {
+   "idx": 450,
+   "hash": "3cf43c446b38",
+   "verdict": "fixed_replace",
+   "new_smcl": "{synopt:{it:Permutation inference}} Under {it:permute()} the reported tables carry the permutation inference, in the columns {it:se_analytic}, {it:t_perm},\n{it:p_perm} and the interval. The observed analytic tables are kept hidden as {it:e(perm_analytic_mainresults)}, {it:e(perm_analytic_sgresults_{it:sgcase})} and\n{it:e(perm_analytic_pwsgs)}. {it:e()} also holds the following. One named column per coefficient of {it:e(b)}: {it:e(perm_p)}, {it:e(perm_ci)} with rows {it:ll} and\n{it:ul}, {it:e(perm_se_shift)}, {it:e(perm_p_lo)}, {it:e(perm_p_hi)}, {it:e(perm_p_se)}, {it:e(perm_p_ci)}, {it:e(perm_sd)}, {it:e(perm_n)}, {it:e(perm_nullband)},\n{it:e(perm_comparator_b)}, {it:e(perm_ase_obs)}, under {it:permtstat} {it:e(perm_comparator_se)}, and under {it:permstepdown} {it:e(perm_stepdown)} with its family, pre-treatment and subgroup variants. The ame\nstep-down tables are {it:e(perm_Cstepdown)} and {it:e(perm_Cstepdown_i)}. Draws, up to 10,000 replications: {it:e(permdist_b)}, and under {it:permtstat}\n{it:e(permdist_se)}. Test statistics: {it:e(perm_jointW)}, {it:e(perm_sgW)} and {it:e(perm_advW)}, with their observed twins {it:e(perm_jointWobs)}, {it:e(perm_sgWobs)}\nand {it:e(perm_advWobs)}. Run records: {it:e(perm_reps)}, {it:e(perm_completed)}, {it:e(perm_failed)}, {it:e(perm_npossible)}, {it:e(perm_npossible_str)},\n{it:e(perm_level)}, {it:e(perm_exact)}, {it:e(perm_method)}, {it:e(perm_stat)}, {it:e(perm_pconv)}, {it:e(perm_seed)}, {it:e(perm_rngstate)}, {it:e(perm_analyticse)},\n{it:e(perm_absp)}, {it:e(perm_adv)}, {it:e(perm_precaveat)}, {it:e(perm_irebuilt)}, {it:e(perm_blank)}, {it:e(perm_gt_blank)}, {it:e(perm_cfx_blank)},\n{it:e(perm_offcentre)}, {it:e(perm_incomplete)} and {it:e(perm_addone)}, and {it:e(perm_save_rc)} when a {it:permsave()} write failed. Pooled-estimand scalars:\n{it:e(perm_p_{it:est})}, {it:e(perm_bandlo_{it:est})}, {it:e(perm_bandhi_{it:est})}, {it:e(perm_sd_{it:est})}, and under {it:permtci} {it:e(perm_tlb_{it:est})} and\n{it:e(perm_tub_{it:est})}, with {it:e(perm_comparator)} and {it:e(permdist)}. Hidden: {it:e(perm_kernel)},\n{it:e(perm_pwsgs_kernel)}, and behind each cfx matrix {it:e(perm_analytic_{it:cfxname})}, {it:e(permdist_{it:cfxname})}, {it:e(permcmp_{it:cfxname})}, and under\n{it:permtstat} {it:e(permdistse_{it:cfxname})} and {it:e(permcmpse_{it:cfxname})}. {it:e(p)}, {it:e(ci_l)} and {it:e(ci_u)} are posted, so {it:esttab} reports the\npermutation p-values and intervals. Where {it:e(V)} is posted, the standard errors and t statistics it reports are the analytic ones. {p_end}\n",
+   "reason": "Regrouping accepted and every e() name kept. One repair: the rewrite moved e(perm_comparator_se) from the neutral 'Further records' list into the pooled-estimand group, which says it is a pooled-estimand scalar. It is the per-coefficient standard-error twin of e(perm_comparator_b), one column per coefficient of e(b), so it moves to the per-coefficient group with its permtstat condition.",
+   "cite": "ado 9185-9189: 'if `ts' { ... matrix colnames `cmps2' = `obn' ; ereturn matrix perm_comparator_se' next to 'ereturn matrix perm_comparator_b' with the same colnames `obn' as e(perm_p) (9147)."
+  },
+  {
+   "idx": 452,
+   "hash": "fda555aa278d",
+   "verdict": "accept",
+   "reason": "Delete of a pstd block is allowed. Every claim is carried by the saveplots() entry at 216 (and by G2's proposal for 216): .gph files of every graph, .dta files of the event study plot data, files named from name, saved to Stata's working directory. The '+' change here was only STATA to Stata.",
+   "cite": "Block 216: 'Save all graphs generated to .gph files beginning with {it:name}. Also saves .dta files ... containing the data used to generate any requested event study plots ... everything is saved to Stata's working directory.'"
+  },
+  {
+   "idx": 454,
+   "hash": "723297085159",
+   "verdict": "accept",
+   "reason": "Kept the reserved-name warning. 'stage 1' dropped. The regression and estimates restore access are also at 373.",
+   "cite": "Block 373: 'This option also stores the underlying regression model used by wooldid to ___wooldidfullmodel; this model can be accessed using estimates restore'."
+  },
+  {
+   "idx": 456,
+   "hash": "6e45a9c30659",
+   "verdict": "accept",
+   "reason": "Tutorial register cut. The matlist and svmat tips, the svmat example, the event_plot stubs and the missing reference-period 0 kept. The external help link and 'ATT' come from the original.",
+   "cite": "ado 5134: e(histogramestimates) is posted under histogramcohorteffects, so the example stands."
+  },
+  {
+   "idx": 460,
+   "hash": "4c72ca52d4bb",
+   "verdict": "fixed_replace",
+   "new_smcl": "{pstd} {ul:Incompatible Post-Estimation Commands:} {it:lincom}, {it:test}, and other commands that need a valid covariance matrix from the estimator.\n{it:e(b)} and {it:e(V)} are for display. On an analytic run the off-diagonal elements of {it:e(V)} are 0 except within a single event-study family. {it:esttab} and the\nlike present correct estimates from them, but combining or testing different estimates is not, in general, valid. Under {it:bootstrap()} the posted {it:e(V)} is the replication covariance whenever one could be\nformed, and {it:e(wdid_vcvstate)} then reads {it:bootstrap}.\nThe event-study coefficients also come with a full covariance matrix in {it:e(b_es_{it:type})} and {it:e(V_es_{it:type})}. {it:lincom} and {it:test} are valid on them\nonce they are copied and posted: {it:matrix b = e(b_es_{it:type})}, {it:matrix V = e(V_es_{it:type})}, {it:ereturn post b V, dof(`=e(df_r)')}. The {it:dof()} option\ncarries {it:e(df_r)}, so on an analytic run they use the degrees of freedom of the printed event study. Without it they use the normal and the chi-squared, which are\nnarrower than the table when clusters are few. Where {it:e(df_r)} is missing, {it:dof()} changes nothing. {p_end}\n",
+   "reason": "Reordering and the vcvstate cut accepted (e(wdid_vcvstate) is defined at 444). The dropped sentence 'Where e(df_r) is missing, dof() changes nothing' is a '+' line since the pare-down and is not textbook: 426 says e(df_r) is missing under poisson, so a poisson user copying the recipe posts dof(.) and needs to know it is harmless. Restored.",
+   "cite": "Original: 'Where {it:e(df_r)} is missing, {it:dof()} changes nothing.' (diff '+' line 1163). Verified in Stata 19 (g4verify/stata/dofmiss.log): 'ereturn post b V, dof(.)' returns rc 0 and test gives the same chi2 p = .0455 as without dof()."
+  },
+  {
+   "idx": 465,
+   "hash": "6364a369daa5",
+   "verdict": "fixed_replace",
+   "new_smcl": "{pstd} {ul:Comparing Output to hdidregress twfe:}\nThe Stata 18 command {help hdidregress} has an option for Wooldridge (2025) style estimates. {it:hdidregress twfe} with the option\n{it:notyet}, which lets not-yet-treated cohorts serve as controls, should be comparable to {it:wooldid} with {it:att}, a pooled reference period without\n{it:esfixedbaseperiod}, unconditional standard errors, and sample weights, if any, that do not vary within units. The two still differ under some kinds of panel imbalance, for example when a\ntreatment onset group contains several cohorts and some are not observed in periods when others are. {it:wooldid} then averages over the observed cohort-periods only. If cohorts 1 and 2 share\nan onset and cohort 2 is observed for 2 post-treatment periods to cohort 1's 3, the two agree on the first 2 periods. For the third, {it:wooldid} reports the effect\nboth would report without cohort 2, and {it:hdidregress} does not. To match estimates with controls, adjust the {it:wooldid}\ncontrols by hand. For example, a control that is constant within cohorts must be entered as {it:i.t#c.control} to replicate including it in {it:hdidregress}. {p_end}\n",
+   "reason": "Cuts accepted (Mundlak remark and regress/margins detail describe the other command's internals; every comparability condition, the imbalance example and the controls advice survive). One repair: 'has an option for implementing' became 'implements', which says the whole command is a Wooldridge estimator. Only its twfe option is, which is why the next sentence names hdidregress twfe. Restored.",
+   "cite": "Original: 'The Stata 18 command {help hdidregress} has an option for implementing Wooldridge (2025) style estimates.'"
+  },
+  {
+   "idx": 467,
+   "hash": "ab1fadfb4ab9",
+   "verdict": "fixed_replace",
+   "new_smcl": "{pstd} {ul:Comparing Output to did_imputation:}\nThe Borusyak, Jaravel, and Spiess (2023) imputation estimator is implemented in {help did_imputation}. For binary treatments, {it:wooldid} gives the same estimates\nwith {it:att}, a pooled reference period without {it:esfixedbaseperiod}, no pre-treatment horizons, that is {it:esprelength(0)}, no unconditional standard errors and no\ncontrols. The pooled reference period is formed from the horizons the run asks for, so requesting pre-treatment horizons removes them from it and shifts every\npost-treatment estimate. The level of {it:i} matters as well. {it:did_imputation} uses unit fixed effects, so\nthe estimates match only when {it:i} identifies individual units or every unit within an {it:i} is observed in the same periods. Otherwise they differ, and adding the\nunit to {it:fe()} does not restore the match. With controls the estimates still\nmatch when each cohort-period cell holds a single observation. With coarse cohorts, several observations per cell, they do not match outside special cases. {it:coarsecohortcontrols()}\ndoes not restore the match there, but it arguably comes closer to the spirit of {it:did_imputation}. It makes the controls' effect more independent between the\ntreated cells on one side and the control and reference observations on the other. {p_end}\n",
+   "reason": "Every match condition, the level-of-i correction and the fine/coarse-cohort rule survive, and the coarsecohortcontrols() mechanism is at 354. One repair: the last sentence turned a hedged, partial claim ('arguably ... closer to the spirit of BJS in that it increases the degree to which the effect of the controls is independent between the control/reference portion ... and the portion where treatment effects are of interest') into an unhedged, total one ('it is closer ... the controls' effect in the treated cells no longer comes from the control and reference observations'). Block 354 says each reported effect is taken 'at the pooled slope', which is estimated on the reference period and control group, so a reader can take the new sentence to say the opposite of what the option does. The original's hedge and symmetric framing restored in two short sentences.",
+   "cite": "Original: 'it arguably reflects an approach closer to the spirit of BJS in that it increases the degree to which the effect of the controls is independent between the control/reference portion of the sample and the portion of the sample where treatment effects are of interest'. Block 354: 'The control slopes are pooled across the reference period and the control group. Each treated cohort-period gets its own slope. Each reported effect is the cell's average outcome less its predicted untreated outcome at the pooled slope.'"
+  },
+  {
+   "idx": 550,
+   "hash": "2cf837d79bd7",
+   "verdict": "accept",
+   "reason": "fe() is what wooldid passes to reghdfe's absorb(), so 'placing them in fe() yourself' carries the original instruction in wooldid's own terms. The esfixedbaseperiod advice kept. The original {p 10 10} block has no {p_end}, and neither does the rewrite.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 552,
+   "hash": "6987a6be6fa8",
+   "verdict": "accept",
+   "reason": "Semicolon removed. The regtol() and ccnoabsorb remedies, the 'regtol() does not repair it' point, caution against refusal, and the examine-or-drop remedy kept. What ccnoabsorb does is at 369. Dropping 'treated' does not widen the claim wrongly: the non-byCohort screen cautions on groups, including the control group, as well.",
+   "cite": "ado 14778 (byCohort: 'treated cohort(s) ... below 1/1000 ... regtol() does not reach it') and 14711 (other types: 'group(s) have reference-period or control-group variation ... below 1/1000'). Block 369 carries the absorb() mechanism."
+  },
+  {
+   "idx": 554,
+   "hash": "2d476308b492",
+   "verdict": "fixed_replace",
+   "new_smcl": "{p 10 10}   The identification checks are not complete. With a binary treatment {it:wooldid} almost always detects a treatment effect partialled out by a\nfixed effect, and it often does with a continuous treatment that has no lattice and no polynomial terms. With a lattice or polynomial terms, and especially in an\nunbalanced panel, it is unlikely to detect important treatment effects partialled out by controls or fixed effects. Specify fixed effects and {it:contreatcontrols}\nwith care under a continuous treatment.\n",
+   "reason": "Rewrite accepted: the binary, plain continuous and lattice/polynomial detection rates and the unbalanced-panel warning keep their strength. Only mechanical: {it:contreatcontrols()} raised the '(' count from 0 to 1. Reverted to the original token {it:contreatcontrols}.",
+   "cite": "Original token '{it:contreatcontrols}'; rule 1 ('(' count must not rise)."
+  },
+  {
+   "idx": 556,
+   "hash": "f9980270d429",
+   "verdict": "accept",
+   "reason": "Semicolon removed. The partial-e(V) placeholder rule, the negative-diagonal reading, the no-e(V) case and the caution in both cases kept.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 558,
+   "hash": "76b8f89b9ed0",
+   "verdict": "accept",
+   "reason": "The dashes and the 'still under development' remark removed. The bug-report invitation and the offer of guidance kept. The agent-guide link survives at block 39, which G1's verified proposal keeps.",
+   "cite": "Block 39 (G1 verdict accept): 'A longer guide for AI agents and advanced users is at {browse \"https://github.com/thegland/wooldid/blob/main/wooldidinstall/wooldid_agent_guide.md\"}'."
+  },
+  {
+   "idx": 560,
+   "hash": "9600dfff5c8d",
+   "verdict": "fixed_replace",
+   "new_smcl": "{pstd} If you encounter unusual errors that are hard to track down, try uninstalling and reinstalling {it:reghdfe} and {it:ftools} first. If {it:wooldid} keeps failing after a\n{it:reghdfe} crash, type {cmd:clear mata} and {cmd:matrix drop _all} before the next call. These also remove your own matrices and Mata objects. {p_end}\n",
+   "reason": "Aside and wording cut accepted, and the '+' lines (clear mata, matrix drop _all, and that they remove the user's own matrices and Mata objects) kept. One repair: 'uninstalling and reinstalling' became 'reinstalling'. Uninstalling first is a distinct step of the remedy, since an install with replace does not remove files a stale version left behind. Restored.",
+   "cite": "Original: 'try uninstalling and reinstalling {it:reghdfe} and {it:ftools} first.'"
+  }
+ ],
+ "summary": {
+  "accepted": 22,
+  "fixed": 9,
+  "rejected": 0
+ }
+}

@@ -1,0 +1,295 @@
+{
+ "group": "G2",
+ "verdicts": [
+  {
+   "idx": 164,
+   "hash": "4578643ddb4d",
+   "verdict": "accept",
+   "reason": "Every refusal, the fastnose caution and boottstat refusal, the bayes refusal for cell-weighted estimands, the few-treated caution, the no-wild-bootstrap pointer, the non-nesting caution and the fresh-unit-code rule with its five option names survive; the corrections on lines 370-381 keep their substance. Dropped echoes verified at their homes: histogram untouched at 214, cfxplotnose under boottstat at 308, fastnose reason at 141. 'With replacement' is the definition of the pairs bootstrap. {help boottest} is a pre-existing external link carried from the original.",
+   "cite": "ado 7337-7343 (fastnose: caution under bootstrap(), error 198 with boottstat); ado 7366-7378 (bayes with att_it/att_i/att_itime refused 'under every safety() setting'); ado 10040-10041 (caution when r(N) < 6 treated clusters); ado 11322 (ereturn hidden matrix V_analytic); ado 10466-10497 (under nesting each drawn copy gets fresh unit codes and payloads naming i get the fresh code); help 141, 214, 308 confirm the moved claims, and each home is kept in its proposal (141 in proposals_G1, accepted in verdicts_G1; 214 in proposals_G2; 308 in proposals_G3)"
+  },
+  {
+   "idx": 166,
+   "hash": "127b8ca1885b",
+   "verdict": "accept",
+   "reason": "Register only. Every floor (2/n percentile, 2/(n+1) boottstat, 1/(n+1) joint), the .05 caution, the 10,000 posting cap with its caution, bootsave() writing regardless, the bc/bca inversion and the exact-0 printing all survive, matching the corrected lines 384-387.",
+   "cite": "ado 681 (bootstrap caution above the 10,000 posting cap, 'Use bootsave()'); ado 11495 (e(boot_failed))"
+  },
+  {
+   "idx": 168,
+   "hash": "d90eee6cfcc3",
+   "verdict": "accept",
+   "reason": "The dropped negative sentence is entailed by 'Only the Wald family p-values and intervals change'. The ado confirms bootdf() reaches only the Wald statistics and the pairwise contrasts' Wald p-values and intervals, never the rank-based joint tests or the bootstrap standard error. Defaults, the cluster() refusal, e(df_r) and the footer note survive.",
+   "cite": "ado 560 (default clusters with cluster(), else normal); ado 7226-7227 (bootdf(clusters) requires cluster()); ado 7705-7711 and 8234-8248 (wdbdf used only for t/z critical values and Wald p-values)"
+  },
+  {
+   "idx": 170,
+   "hash": "3042b002db70",
+   "verdict": "fixed_replace",
+   "new_smcl": "{phang}{opt bootdisp:lay(spec)}: Which p-value and confidence interval the printed tables carry. Refused without {it:bootstrap()}. {it:percentile} is the default.\n{it:bc} is the bias-corrected percentile method. {it:bca} is bias-corrected and accelerated, requires {it:cluster()}, and costs {it:G} extra fits for its delete-one-cluster\njackknife. {it:wald} is a normal or t approximation set by {it:bootdf()}. Every family except {it:bca} is computed and stored in {it:e()} on every run. This option only\nchooses what is displayed. It never changes the reported standard error, the standard deviation of the bootstrap distribution. The percentile and bias-corrected intervals\nare not symmetric about the estimate, and the {it:t_wald} or {it:z_wald} column beside them is for reference only. The percentile and bias-corrected p-values can print exactly 0, meaning no completed replication fell beyond the null. Under {it:percentile} a line under the table\ngives the resolution. Under {it:bootdisplay(bca)} the {it:gteffects} and continuous treatment\ncells carry the {it:bc} family. With {it:boottstat} only {it:percentile} is available. {p_end}\n",
+   "reason": "The trimmer dropped 'Those two p-values can print exactly 0, meaning no completed replication fell beyond the null'. That left the protected correction on line 403 ('under percentile a line under the table gives the resolution') with no antecedent for 'the resolution', and it lost the user-facing meaning of a printed 0. Restored as one sentence without a semicolon. The trimmer's other cuts are kept.",
+   "cite": "Original: 'Those two p-values can print exactly 0, meaning no completed replication fell beyond the null; under {it:percentile} a line under the table gives the resolution.' (diff + line 403)"
+  },
+  {
+   "idx": 172,
+   "hash": "b2923a8eea67",
+   "verdict": "accept",
+   "reason": "Every label (se_analytic, t_pt), the coverage list, the adversarial-absent rule, all five refusals, the slowdown and the turn-off advice at cluster() at or above i survive. The degenerate pairwise-contrast mechanism is stated at its home, 264.",
+   "cite": "help 264: 'with clustering at the level of the cohort variable i or above, the analytic standard error of a pairwise contrast can be degenerate'; home verified in proposals_G3"
+  },
+  {
+   "idx": 174,
+   "hash": "8695e5cbb53c",
+   "verdict": "accept",
+   "reason": "Register only. The file layout, row 0, failed-replication rows, se_* under boottstat, the w_ columns, the characteristics, and the e(boot_save_rc) correction on line 420 all survive.",
+   "cite": "ado 599 (ereturn local boot_save_rc)"
+  },
+  {
+   "idx": 176,
+   "hash": "5ac65b2e1dbc",
+   "verdict": "accept",
+   "reason": "'Requires bootstrap() or permute()' carries the refusal. The ado raises error 198 for dots() without either.",
+   "cite": "ado 7134 and 7139-7142 (dots() added to the stray list when neither bootstrap() nor permute(); error 198)"
+  },
+  {
+   "idx": 178,
+   "hash": "de5dbc7ec7db",
+   "verdict": "accept",
+   "reason": "The refusal is carried by 'Requires'. The seed range, e(boot_seed)/e(perm_seed) and the rngstate replay survive.",
+   "cite": "ado 7135 and 7139-7142 (rseed() stray without bootstrap() or permute(); error 198); ado 7116 (range 0 to 2,147,483,647)"
+  },
+  {
+   "idx": 183,
+   "hash": "3f89b6bf6d90",
+   "verdict": "fixed_replace",
+   "new_smcl": "{phang}{opt perm:ute(method)}: Randomization inference over the assignment of treatment onset, for settings with few treated clusters. {it:shuffle} permutes the\nobserved onset labels across clusters, holding the count at each onset fixed. {it:probabilities} draws each cluster's onset from the probabilities in {it:permprobs()}.\nRequires {it:permreps()} or, for shuffle only, {it:permexact}. Requires a single {it:cluster()} variable, the randomization unit, that nests {it:i} unless\n{it:permonsetcohorts} is specified. Every cluster must sit inside one treatment-onset group. The never-treated are their own group, coded as plain missing. This screen covers\nevery row the {it:if} expression keeps, even rows later dropped for a missing outcome or weight. A specification that runs without {it:permute()} can therefore be refused\nwith it. Restrict the sample with {it:if}. An onset more than {it:oostreatedcontrols()} periods after the last period, net of {it:anticipation()}, is permuted as\nnever-treated, as the estimation treats it, and a caution counts the clusters affected. Refused with {it:impvalues}, {it:unconditionalse}, {it:contreatwithin},\n{it:contreatcontrols(untreatedZero)}, {it:pretrendpower()}, {it:simultaneousbands} and {it:bootstrap()}, and when the design admits only one possible assignment. With\n{it:subgroups()} the subgroup screens apply over the whole sample. A unit split across subgroups, or labelled on some rows and missing on others, is refused whatever\n{it:safety()} is. Every p-value and interval is permutation-based, including the subgroup contrasts, the\njoint pre-trend, subgroup equality and adversarial tests, and the continuous-treatment plot cells. The subgroup contrasts and equality tests test the sharp null of no effect\nat any horizon, not equality of effects. P-values are two-sided and equal-tailed, with the add-one form for sampled draws. Intervals are shift intervals at {it:level()}:\nthe estimate minus the equal-tailed quantiles of the permutation distribution. By default the run and the replications are in fast mode. The {it:se_analytic} column is\nthen blank, and {it:e(V)}, {it:e(b_es_*)} and {it:e(V_es_*)} are not posted. {it:permanalyticse} restores them. The {it:gteffects} cells, whose onsets the replications reassign, and the\ncontinuous-treatment plot cells of the {it:baseTreated}, {it:byTreated} and {it:byTtre} lattice types have no permutation distribution. They are left blank, not filled\nanalytically. Replications that fail to estimate are excluded and counted in {it:e(perm_failed)}. The run is refused when fewer than max(20,\nhalf) complete. A caution prints when fewer than 6 clusters are ever treated. The test's size then rests on their being exchangeable in assignment with the others, and a\nfew atypical treated clusters can mis-size it. Few treated clusters do not by themselves make the possible assignments few. The number of possible assignments is in {it:e(perm_npossible)}. Under {it:permute(shuffle)} without {it:permstrata()} it is\nsmall only when there are few clusters in all or only one or two are treated. Strata make it smaller. {p_end}\n",
+   "reason": "The trimmer dropped 'Few treated clusters do not by themselves make the possible assignments few.' That sentence is the correction (diff + line 449) of the deleted wrong claim that the caution fires 'since the set of distinct assignments is then small whatever permreps() is'. The sentence on when e(perm_npossible) is small implies it, but the correction's thesis should stand explicitly next to the few-treated caution so the old reading cannot return. Restored, 11 words, no parenthesis or semicolon. All other cuts are kept. The oostreatedcontrols(), split-subgroup, sharp-null and exchangeability corrections all survive.",
+   "cite": "Original: 'Few treated clusters do not by themselves make the possible assignments few. Their number is in {it:e(perm_npossible)}.' (diff + line 449, replacing - '...since the set of distinct assignments is then small whatever permreps() is'); ado 6946 (caution text on exchangeability); ado 6612-6646, 5666-5667, 7321, 8574 (refusals); ado 8883 (max(20, R/2))"
+  },
+  {
+   "idx": 185,
+   "hash": "6a2ca4c513d8",
+   "verdict": "accept",
+   "reason": "Register only. At least 20, both floors, the .05 caution and the 10 percent caution survive.",
+   "cite": "ado 6686-6690 (error when permreps() < 20); ado 6709 (floor caution above .05); ado 15678 (permreps exceeds 10% of possible assignments)"
+  },
+  {
+   "idx": 187,
+   "hash": "40989f0e2771",
+   "verdict": "accept",
+   "reason": "The 65,534 figure, the 1,000 caution, the 10,000 posting cap and permsave() survive. The dropped clause about Stata's matrix row limit is a maintainer reason for the cap.",
+   "cite": "ado 15666-15667 (capexact = 65534, capwarn = 1000); ado 413 (10,000 posting cap caution)"
+  },
+  {
+   "idx": 189,
+   "hash": "ba34f9bcbe89",
+   "verdict": "accept",
+   "reason": "Register only. No fact changed.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 191,
+   "hash": "6606b7651028",
+   "verdict": "accept",
+   "reason": "Register only. The syntax, never-treated coding including late onsets, the sum-to-1 rule, the permreps() requirement, the permexact refusal and the zero-probability caution survive.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 193,
+   "hash": "889d3b834498",
+   "verdict": "accept",
+   "reason": "Only the reason for the slowdown was dropped. The protection conditions from the correction (lines 467-471) survive intact.",
+   "cite": "ado 6920 (caution for permtstat at cluster() equal to i)"
+  },
+  {
+   "idx": 197,
+   "hash": "2f3b84a7173b",
+   "verdict": "accept",
+   "reason": "Register only.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 199,
+   "hash": "5a0b36902420",
+   "verdict": "accept",
+   "reason": "Register only. The definition, the interval rule, the unchanged tests and the permside() exclusion survive.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 203,
+   "hash": "ebe3975e779e",
+   "verdict": "accept",
+   "reason": "Register only. The sharp-null family-wise statement from the correction survives.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 205,
+   "hash": "5310c041f7ba",
+   "verdict": "accept",
+   "reason": "Register only. The layout and the e(perm_save_rc) correction survive.",
+   "cite": "ado 359 (ereturn local perm_save_rc)"
+  },
+  {
+   "idx": 207,
+   "hash": "77b15474bc0c",
+   "verdict": "accept",
+   "reason": "Register only. The late-onset rule under the two cluster() regimes (the correction on lines 494-497) survives.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 209,
+   "hash": "bb6feefd5a15",
+   "verdict": "accept",
+   "reason": "Only the mechanism clause was dropped. The widening, near-null calibration, the permtstat scope, the e(perm_se_shift) warning and the pre-period caution survive. The + lines are a rewrap of the - line, so the correction content here is the text that survives.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 214,
+   "hash": "f2c47c0b2cf3",
+   "verdict": "accept",
+   "reason": "Only 'for the user to manipulate' was dropped. The corrected bootstrap/permute sentence (line 511) survives verbatim.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 216,
+   "hash": "6e2f14be5e29",
+   "verdict": "accept",
+   "reason": "The two file-naming statements were merged. The Stata-name rule, the 32-character limit, the no-directory rule, the _cfx.dta file and the working-directory location from the correction survive.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 218,
+   "hash": "04637e63b638",
+   "verdict": "accept",
+   "reason": "Register only. The error, the _cfx.dta caution exception and the before-replications timing survive with unchanged conditions.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 220,
+   "hash": "b43f924c57bd",
+   "verdict": "accept",
+   "reason": "Rows, the contreatwithin and untreatedZero omissions, the reference-group share and the e(escomp) display survive.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 222,
+   "hash": "e4215d97a275",
+   "verdict": "fixed_replace",
+   "new_smcl": "{phang}{opt pois:son}: Estimate by poisson regression, with {it:ppmlhdfe} in place of {it:reghdfe}, or Stata's {it:poisson} in place of {it:regress} under\n{it:unconditionalse} or {it:customvce()}. Treatment effects are differences in linear predictions, as from {it:predict(xb)}. It suits an outcome with natural zeros that\none would otherwise log, and groups that share parallel trends only in proportions. Accepts pweights but not aweights. Refused with a negative outcome and with\n{it:boottstat}. {it:ppmlhdfe} cannot absorb a slope on a one-level factor or a factor with two or more slopes. So under plain {it:contreatcontrols(basic)}, with no\n{it:lattice()} and no other control type, the pooled dose control and, without {it:ccnoabsorb}, any {it:ccc_absorb()} controls enter the regression explicitly. So do the\ncontinuous treatment controls under {it:contreatpoly()} above 1 with a {it:lattice()} or another control type. If {it:ppmlhdfe} still fails with r(3200), as a one-level term in {it:fe()} or a one-level\n{it:lattice()} can make it, {it:wooldid} retries once with the {it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. {it:fe()} stays\nabsorbed, so a term there that made the first fit fail stops the run with r(3200). {it:ppmlhdfe} can drop an explicit pooled dose control as collinear with the fixed effects\nwhen the dose's mean is large relative to its spread. {it:wooldid} then prints a caution. Subtracting the mean from the dose avoids it, though under\n{it:contreatelasticitytype(dyex)} that also changes the elasticity, which scales by the dose. A treated cohort-period cell whose outcome is zero on every row is perfect\nseparation. {it:wooldid} names the cell and exits. Coarsen {it:i}, drop the cohort, or specify {it:safety(off)}, which excludes the separated cells from the estimated\neffects. The variable name {it:_ppmlhdfe_d} is reserved on poisson runs. {p_end}\n",
+   "reason": "Two narrowings are corrected. First, the new text says 'a one-level term there stops the run'. The original said 'a term there that made the first fit fail', and in the ado any first-fit r(3200) triggers the retry with fe() still absorbed, so any fe() term that failed the first fit stops the run. Second, the fe() cause of r(3200) was dropped from the retry sentence. Both are restored. 'No other control type' for the four byX types was checked and kept: the types are basic, byTreated, byTtre, byCohort, byTime and untreatedZero, and untreatedZero cannot be paired with basic. The '(' count stays below the original 18.",
+   "cite": "Original: 'as a one-level term in {it:fe()} or a one-level {it:lattice()} can make it' and '{it:fe()} stays absorbed, so a term there that made the first fit fail stops the run with r(3200)' (diff + lines 536-537); ado 1952-1958 (any _rc == 3200 retries with absorb(i.i i.t fe) only); ado 5553-5562 (control types; untreatedZero cannot pair); ado 1605-1615 (explicit entry only when the absorb spelling is exactly the pooled null set)"
+  },
+  {
+   "idx": 348,
+   "hash": "f9d94bd76609",
+   "verdict": "accept",
+   "reason": "Register only. The engine list is unchanged.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 350,
+   "hash": "1decced90757",
+   "verdict": "accept",
+   "reason": "Register only. The categorical reading, slope notation, and the regress bare-name rule with its i. remedy survive.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 352,
+   "hash": "ebd2b6ffe2f0",
+   "verdict": "accept",
+   "reason": "The 'even when they are specified manually' clause was dropped, but 'This option is required for heterogeneous time trend controls to work' still covers manually built trends. Known Issues (550) tells users to let timetrends build them. Every check the option performs and the cluster-on-i caution survive.",
+   "cite": "help 550: 'do not manually specify time-trend variables ... let {it:timetrends} build them'; the G4 proposal keeps 'let {it:timetrends} build the trend terms'"
+  },
+  {
+   "idx": 354,
+   "hash": "9bf61a78a1ad",
+   "verdict": "accept",
+   "reason": "Register only. The centring-invariance correction (lines 883-887) survives, and nothing of the deleted 'partialled out' wording returns.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 356,
+   "hash": "e17001a5b3f0",
+   "verdict": "accept",
+   "reason": "The one-control equivalence is methodology and is kept in the guide. The reported-not-partialled distinction, the within-cell variation condition and its caution, and the cell-collapse note survive.",
+   "cite": "wooldid_agent_guide.md line 638 carries 'When using only one interactive control, ATTs obtained using this option should be similar...'"
+  },
+  {
+   "idx": 358,
+   "hash": "5bf17bbb3c8e",
+   "verdict": "accept",
+   "reason": "The same three facts in shorter sentences: no dose variable itself among the controls, a renamed copy is fine, and pair with basic or any type other than untreatedZero.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 365,
+   "hash": "d8389dc7f488",
+   "verdict": "accept",
+   "reason": "The added clause 'It scales the margins weights only, not the regression weights' is a dupmap-homed claim (echo at 118), and the ado confirms it: the regression weight is w alone, and the multiplier enters only the estimand/margins weights. The negative-value error with safety(off) bypass and the missing-value rule survive.",
+   "cite": "ado 815 (weightinserter [weight = w]); ado 820-822 ('cwm is deliberately NOT folded into w'); ado 2151 and 2209-2229 (w_att* = w * customweightmultiplier); ado 962-965 (negative values error unless safety(off))"
+  },
+  {
+   "idx": 367,
+   "hash": "49623003721a",
+   "verdict": "accept",
+   "reason": "Defaults, meaning and the regress/poisson no-effect survive. The ' -- ' dash was removed.",
+   "cite": "ado 751 (regtol(integer 9)); ado 1952/1966 (tol(1e-regtol) passed to ppmlhdfe and reghdfe only)"
+  },
+  {
+   "idx": 369,
+   "hash": "1e0e29d5ffde",
+   "verdict": "accept",
+   "reason": "Register only. The poisson exception from the correction on line 920 survives as its own sentence.",
+   "cite": "none needed"
+  },
+  {
+   "idx": 371,
+   "hash": "627be045ac44",
+   "verdict": "fixed_replace",
+   "new_smcl": "{phang}{opt ccc_absorb()}: A version of {it:coarsecohortcontrols()} for continuous variables. The pooled control slopes enter the regression. The treated\ncells' own slopes, on the control centred at each cell's mean, are passed to the {it:absorb()} statement. The reported effects are those of {it:coarsecohortcontrols()}.\nIt is often slower but can save memory in the main regression. Be extra careful that specifications with {it:ccc_absorb()} are identified, since not all identification\nfailures are detected. Under {it:contreat()}, naming the treatment variable itself here turns the default cell collapse off. See {it:nofastcollapse}. On some\n{it:poisson} runs these slopes enter the regression explicitly. See {it:poisson}. {p_end}\n",
+   "reason": "Every line of this block is a correction since the pare-down. The old text said the controls go to absorb(). The correction says the pooled control slopes enter the regression and only the cells' own slopes, centred at each cell's mean, are absorbed. The trimmer kept the absorbed-slopes half and dropped the pooled-slope half and the centring. The centring is what makes 'the reported effects are those of coarsecohortcontrols()' true. Both are restored. 'Under poisson some of these slopes' became 'On some poisson runs these slopes', which matches the original's run-level condition. The exact poisson conditions stay at their home, 222. The other cuts are kept, and the deleted unit-level-variable error sentence does not return.",
+   "cite": "Original: 'The pooled control slopes enter the regression. The treated cells' own slopes, on the control centred at each cell's mean, are passed to the {it:absorb()} statement.' (diff + lines 923-924); ado 1391-1396 and 13812-13818 (pooled ccc_absorb columns go to coarsecontrolinserter as explicit regressors, centred slopes to ccc_absorbinserter)"
+  },
+  {
+   "idx": 373,
+   "hash": "e81b017c0c3b",
+   "verdict": "accept",
+   "reason": "The ___wooldidfullmodel store and the coefficient-level-only limit survive. The implementation reason was dropped.",
+   "cite": "ado 741 (local wdfm ___wooldidfullmodel)"
+  },
+  {
+   "idx": 375,
+   "hash": "5b45dda763a3",
+   "verdict": "fixed_replace",
+   "new_smcl": "{phang}{opt gte:ffects}: Returns in {it:e(gteffects)} the cohort-by-relative-period effect estimates underlying {it:wooldid}'s aggregates, one row per estimated\n{it:i}-by-relative-period cell, read directly off the underlying regression. The table is printed when it has at most 200 rows. Columns: {it:i}, {it:onset}, {it:caltime},\n{it:relyr}, {it:estimate}, {it:se}, {it:p}, the interval bounds named for the run's {it:level()}, {it:inwindow}, which is 1 inside the reported event-study window,\n{it:nobs}, and the cell's total estimation weight under each requested estimand: {it:w_att}, {it:w_att_it}, {it:w_att_i} and {it:w_att_itime}. The table supports custom\naggregations. The weighted mean of {it:estimate} under a weight column, over the post-treatment rows ({it:relyr} at or above 0) or the pre-treatment rows, reproduces the\ncorresponding main or pretreatment row exactly. Over a single {it:relyr} it reproduces the event-study row under {it:w_att} or {it:w_att_it} only, since {it:att_i} and {it:att_itime}\nreport the {it:att_it} event study. With {it:subgroups()} one full-sample table is returned. Standard errors are the regression's coefficient-level ones. A cell's standard\nerror is understated, and a caution reports it, when the cell lies inside one cluster, as with {it:cluster()} at the level of {it:i} or coarser. The same holds for a cell\nwith a single observation under {it:robust}, pweights, a robust {it:customvce()} or {it:poisson} on {it:ppmlhdfe}. A cell whose variance is not identified has a missing\nstandard error. Not available with {it:contreat()}, where the cell coefficients are dose-zero intercepts rather than treatment effects. Available under {it:fastnose}. Under\n{it:bootstrap()} the cell inference is bootstrap-based, but a cell the caution counts is resampled whole, so its standard error stays understated. Under {it:permute()} the\ncells carry no inference. {p_end}\n",
+   "reason": "One word is restored. 'Reproduces the main or pretreatment row' lost 'corresponding'. Without it the reader cannot tell that each weight column reproduces its own estimand's row, which is the point of the identity for custom aggregation. The trimmer's other cuts are kept. Both understated-SE conditions, the bootstrap-whole caveat and the permute rule (the corrections on lines 939-945) survive, and the deleted 'or a single relyr reproduces the aggregate' claim does not return. The dropped 'whose variance is always robust' reason is not kept at 407 by the G4 proposal, but the guide (line 911) keeps it.",
+   "cite": "Original: 'reproduces the corresponding main or pretreatment row exactly' (diff + line 939); ado 13022 (printed when gtrows <= 200)"
+  },
+  {
+   "idx": 377,
+   "hash": "6314d1eda53b",
+   "verdict": "accept",
+   "reason": "Every check, the >100 caution, the maxvar halt, the safety(off) downgrade and 'changes are always reported' survive. {help maxvar} is a pre-existing external link.",
+   "cite": "ado 1760 (caution when i has more than 100 levels); ado 962-965 (customweightmultiplier non-negative)"
+  },
+  {
+   "idx": 382,
+   "hash": "c1296fa95236",
+   "verdict": "accept",
+   "reason": "The lattice cost claim is at its home, 281 ('A lattice is the most expensive option in runtime terms'). The latticenum advice and every runtime driver survive.",
+   "cite": "help 281; home verified in proposals_G3 ('A lattice is the most expensive option in runtime terms')"
+  },
+  {
+   "idx": 384,
+   "hash": "cfa196623a40",
+   "verdict": "accept",
+   "reason": "The full-data list is replaced by a pointer to its home. nofastcollapse (293-298) lists interactivecontrols(), contreatpoly() above 1, the contreat() variable in controls/coarse/fe/ccc_absorb, and unconditionalse. The deleted customvce() and emptycellsoverride do not return. {help margins} is a pre-existing external link.",
+   "cite": "help 293-298 (nofastcollapse ineligibility list); the list is kept in proposals_G1 (hash e6be5fcc3986, accepted in verdicts_G1)"
+  }
+ ],
+ "summary": {
+  "accepted": 35,
+  "fixed": 5,
+  "rejected": 0
+ }
+}

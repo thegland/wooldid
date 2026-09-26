@@ -1,0 +1,856 @@
+{
+ "repeats": [
+  {
+   "topic": "Cluster at the level of i or coarser: each treated cohort-by-period cell sits inside one cluster, so analytic SEs, joint and adversarial tests, contrasts and the analytic band are unreliable; remedies are a cluster() strictly finer than the cells, bootstrap(), permute(). Echoes: [131] \"The discussion of what level to cluster at below adds a\"; [145] \"standard errors in the analytic covariance are understated\"; [172] \"With {it:cluster()} at or above the level of {it:i} the analytic pairwise\"; [235] \"the saturated cohort-by-period dummies leave the test's covariance degenerate\"; [237] \"it is severely oversized unless each treated cohort-by-period cell\"; [343] \"every treated cohort-by-period cell lies within a single\"; [375] \"a treated cell lies inside a single cluster\"; [403] \"One: a treated cohort-by-period cell that lies wholly inside one cluster\"; [536] \"the route to a calibrated joint test when clustering at or above the cohort level\". Trimmer note: Each echo keeps its own behaviour fact: what wooldid does there (caution printed, SE missing, test printed with a caution, band too narrow) and any refusal. Drop only the mechanism (why a cell inside one cluster breaks the covariance) and the repeated remedy list. CONFLICT: [149] says the analytic band is too narrow 'also without a caution', but [145] says 'a caution says so' and wooldid.ado line 12353 prints that caution. [145] is right; the [149] trimmer must drop 'also without a caution'. [536] is an Examples caption outside the four ranges.",
+   "home_idx": 149,
+   "echo_idxs": [
+    131,
+    145,
+    172,
+    235,
+    237,
+    343,
+    375,
+    403,
+    536
+   ],
+   "pointer": "With {it:cluster()} at the level of {it:i} or coarser this analytic result is not reliable. See {help wooldid##standarderrors:What Level to Cluster At}"
+  },
+  {
+   "topic": "Degrees of freedom of the reported t statistics (one less than the cluster count, smallest count under multi-way clustering, residual df otherwise, none under poisson). Echoes: [91] \"one less than the number of clusters, and under multi-way\". Trimmer note: [91] repeats the [426] e(df_r) rule nearly word for word. Both were added as corrections, so the rule must survive once, at [426]. [91] keeps one sentence saying p-values come from a t distribution, normal under poisson.",
+   "home_idx": 426,
+   "echo_idxs": [
+    91
+   ],
+   "pointer": "P-values come from a t distribution with the degrees of freedom stored in {it:e(df_r)}. See {help wooldid##output:Working with Output}"
+  },
+  {
+   "topic": "Pooled versus fixed reference period: what each compares against and how the event study is normalized. Echoes: [97] \"The default pooled reference period approach is conceptually similar\". Trimmer note: [97] (Description, 172 words) restates [249]. One fact appears only in [97]: pooled-reference event studies are normalized to 0 in the earliest reported period. Keep that one sentence somewhere. [249] ends with a pointer back to Description, which becomes circular once [97] is cut. Drop that pointer.",
+   "home_idx": 249,
+   "echo_idxs": [
+    97
+   ],
+   "pointer": "Event studies use a pooled reference period by default or a fixed one under {it:esfixedbaseperiod}. See {help wooldid##eventstudy:Two Approaches to Estimation}"
+  },
+  {
+   "topic": "The continuous-treatment regression equation and the definitions of f() and g(). Echoes: [102] \"Y_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt))\"; [104] \"where f() is a flexible function of Contreat_jt, and where\". Trimmer note: [322] restates the [102] equation character for character and opens 'As discussed here'. The home is the Continuous Treatments section, so [101]-[104] in Description can drop to a two-sentence summary and a pointer. If G1 keeps the [102] equation, G3 should instead cut the equation from [322] and keep its pointer. Unique facts in [104] that must survive in one place: the AME is computed by shifting the dose rather than the treatment flag, and effects can be reported along the dose distribution (makecfxplots) and as an elasticity (contreatelasticitytype). [322] must stand alone if Description loses the equation, so it drops its 'As discussed here'.",
+   "home_idx": 322,
+   "echo_idxs": [
+    102,
+    104
+   ],
+   "pointer": "Under {it:contreat()} each treated cell also gets its own slope in a flexible function of the dose, with dose controls set by {it:contreatcontrols()}. See {help wooldid##continuous:Continuous Treatments}"
+  },
+  {
+   "topic": "What each contreatcontrols() type interacts f(Contreat_jt) with. Echoes: [333] \"implemented by including interactions between f(Contreat_jt) and then either a constant ({it:basic})\"; [335] \"{it:byTime} can be specified to add interactions between time period indicator variables and f(Contreat_jt) to g()\". Trimmer note: The synopt rows [313]-[317] under the option already define each type. [333] and [335] define them again. Keep one worked g() formula (the byCohort or the byCohort-plus-byTime one) and the point that g() sets the reference dose slope.",
+   "home_idx": 310,
+   "echo_idxs": [
+    333,
+    335
+   ],
+   "pointer": "Each control type interacts f(Contreat_jt) with the indicators listed under {it:contreatcontrols()}. See {help wooldid##continuous:Continuous Treatments}"
+  },
+  {
+   "topic": "untreatedZero: when to use it and that misuse biases the estimates. Echoes: [337] \"If the continuous treatment variable is not meaningfully defined outside of treated cohort-periods\". Trimmer note: [337] keeps its one unique fact: g() = 0, so the slope is identified from within-cell variation only. Its closing warning repeats the [318] bias warning.",
+   "home_idx": 318,
+   "echo_idxs": [
+    337
+   ],
+   "pointer": "{it:untreatedZero} sets g() to zero, so dose slopes come from within treated cells only. See {help wooldid##continuous:Continuous Treatments}"
+  },
+  {
+   "topic": "contreatwithin: what it relaxes. Echoes: [339] \"This will prevent {it:wooldid} from objecting to the presence of time periods without a control group\". Trimmer note: [339] keeps the att caveats and the byTime refusal. Both are corrections. CHECK: [341] ends 'the att is essentially the integral of the ame' while [339] says it is the integral 'only when {it:fe()} absorbs every cohort-period level effect'. Keep the [339] condition and do not let [341] state it without the condition.",
+   "home_idx": 277,
+   "echo_idxs": [
+    339
+   ],
+   "pointer": "{it:contreatwithin} lets the run proceed without an untreated group. See {help wooldid##continuous:Continuous Treatments}"
+  },
+  {
+   "topic": "The ame needs strong parallel trends to be read as the effect of a larger dose. Echoes: [99] \"These within-cell effects compare units that received different doses\". Trimmer note: [99] already ends in a pointer to [341]. It can drop the sentence [341] opens with and keep the pointer.",
+   "home_idx": 341,
+   "echo_idxs": [
+    99
+   ],
+   "pointer": "Reading the ame as the effect of a larger dose needs more than parallel trends. See {help wooldid##continuous:Continuous Treatments}"
+  },
+  {
+   "topic": "Ibragimov and Muller inference: estimate within each cluster, average, t-test the cluster estimates. Echoes: [106] \"this approach has the margins calculation compute that effect separately within each cluster\"; [157] \"The virtue of the Ibragimov and Muller approach is that it can significantly improve\". Trimmer note: [139] opens with the same idea sentence as [106]. [157] is the discussion under Standard Errors and keeps its wooldid-specific facts: independence of cluster estimates is assumed, and a cluster's estimate uses its treated post-treatment cells alone. The textbook virtue sentence can go.",
+   "home_idx": 139,
+   "echo_idxs": [
+    106,
+    157
+   ],
+   "pointer": "{it:impvalues} estimates each effect within each cluster and t-tests the cluster estimates. See {help wooldid##standarderrors:Standard Errors}"
+  },
+  {
+   "topic": "Subgroup estimation: margins run within each subgroup, with pairwise contrasts and a joint equality test. Echoes: [93] \"Effects specific to particular subgroups may be estimated simply by performing the margins calculation within a specified subgroup\". Trimmer note: [93] also names pairwise comparisons and joint tests. [264] defines both. The triple-diff use named in [93] is covered by [268].",
+   "home_idx": 264,
+   "echo_idxs": [
+    93
+   ],
+   "pointer": "Subgroup effects, their pairwise contrasts and a joint equality test are described under {help wooldid##interactions:Subgroup Effects}"
+  },
+  {
+   "topic": "Event-study joint pre-trend test and adversarial line test described in the Description. Echoes: [95] \"can supplement the standard treatment effect estimates with joint tests of the hypothesis that all\". Trimmer note: [95] also restates the adversarial null of [237]. Keep the [95] mechanism: event-study effects are margins over relative-period subsets, and pre-period effects need extra cell indicators.",
+   "home_idx": 235,
+   "echo_idxs": [
+    95
+   ],
+   "pointer": "Joint pre-trend and adversarial line tests are described under {help wooldid##eventstudy:Event Study Estimation}"
+  },
+  {
+   "topic": "oostreatedcontrols(): cohorts treated after the sample end are controls by default. Echoes: [110] \"allows the user to specify that cohorts of this type should instead be handled more like cohorts treated within-sample\". Trimmer note: The whole of [110] echoes [245] and [247]. It can shrink to one sentence and two links, or go.",
+   "home_idx": 245,
+   "echo_idxs": [
+    110
+   ],
+   "pointer": "Cohorts treated after the sample ends are controls unless {it:oostreatedcontrols()} is set. See {help wooldid##eventstudy:Event Study Estimation}"
+  },
+  {
+   "topic": "anticipation(): effective onset is ttre minus #. Echoes: [110] \"treats the effective onset as {it:ttre} - #\". Trimmer note: Same block [110] as the oostreatedcontrols entry.",
+   "home_idx": 247,
+   "echo_idxs": [
+    110
+   ],
+   "pointer": "{it:anticipation()} moves the effective onset earlier. See {help wooldid##eventstudy:Event Study Estimation}"
+  },
+  {
+   "topic": "A unit split across subgroups is refused, and under safety(off) outside permute() it enters each subgroup by its weight share, so att_i and att_itime no longer weight units equally. Echoes: [126] \"A {it:subgroups()} variable that splits a unit across subgroups over time is refused\"; [266] \"Except under {it:permute()}, {it:safety(off)} lets such a run proceed\"; [183] \"a unit split across subgroups, or labelled on some rows and missing on others, is refused whatever {it:safety()} is\". Trimmer note: [183] keeps its refusal because it is permute's refused-when, in a short clause. [266] keeps the within-cell consequence (contrasts cannot show within-cell differences) and the egen remedy with its 'missing' note. The safety(off) share-weighting sentence is stated three times. Keep it once, at [262].",
+   "home_idx": 262,
+   "echo_idxs": [
+    126,
+    183,
+    266
+   ],
+   "pointer": "A unit split across subgroups is refused. See {help wooldid##interactions:Subgroup Effects}"
+  },
+  {
+   "topic": "unconditionalse is refused with att_it, att_i and att_itime unless safety(off), and cautions with aweights. Echoes: [126] \"{it:unconditionalse} is refused for them unless {it:safety(off)} is specified\"; [155] \"stop estimation if using them with a non-ATT estimand\". Trimmer note: [155] keeps the reason in one or two sentences: size distortion under aweights and under non-ATT estimands. The refusal itself lives at [135].",
+   "home_idx": 135,
+   "echo_idxs": [
+    126,
+    155
+   ],
+   "pointer": "{it:unconditionalse} is refused for them. See {help wooldid##standarderrors:Standard Errors}"
+  },
+  {
+   "topic": "bootstrap(bayes) is refused with the cell-weighted estimands. Echoes: [126] \"{it:bootstrap(bayes)} is refused for them\". Trimmer note: [126] is a summary block. Its first sentence, on the ame labels, is unique. Its other sentences echo [135], [164], [300] and [262]. The trimmer can reduce it to the ame sentence plus one sentence naming the options that treat cell-weighted estimands differently, with links.",
+   "home_idx": 164,
+   "echo_idxs": [
+    126
+   ],
+   "pointer": "{it:bootstrap(bayes)} is refused for them. See {help wooldid##bootstrap:Bootstrap Standard Errors}"
+  },
+  {
+   "topic": "makecfxplots is produced for att only unless safety(off) or contreatwithin. Echoes: [126] \"{it:makecfxplots} produces its plots and the {it:e(cfx*)} matrices for {it:att} only\". Trimmer note: Same [126] summary block.",
+   "home_idx": 300,
+   "echo_idxs": [
+    126
+   ],
+   "pointer": "{it:makecfxplots} plots {it:att} only. See {help wooldid##continuous:Continuous Treatments}"
+  },
+  {
+   "topic": "Conditional versus unconditional standard errors: delta method, covariates taken as given. Echoes: [91] \"These errors are conditional standard errors in the sense that they are conditional\". Trimmer note: [91] and [151] both explain the conditional delta-method SE and the margins unconditional alternative. The e(df_r) sentences in [91] are handled by the degrees-of-freedom entry.",
+   "home_idx": 151,
+   "echo_idxs": [
+    91
+   ],
+   "pointer": "Unconditional standard errors are discussed under {help wooldid##standarderrors:Standard Errors}"
+  },
+  {
+   "topic": "fastnose is accepted with a caution and has no effect under impvalues and bootstrap(), because they already skip variance estimation. Echoes: [139] \"{it:fastnose} is accepted with a caution and has no effect\"; [164] \"{it:fastnose} is accepted with a caution and has no effect, since the replications already run in fast\". Trimmer note: Keep the acceptance fact at each echo as a bare clause, since it says what happens there. Drop the reason, which [141] gives.",
+   "home_idx": 141,
+   "echo_idxs": [
+    139,
+    164
+   ],
+   "pointer": "{it:fastnose} is accepted there with a caution. See {help wooldid##standarderrors:Standard Errors}"
+  },
+  {
+   "topic": "histogramcohorteffects draws the observed point estimates under bootstrap() and permute(). Echoes: [164] \"Only the {it:histogramcohorteffects} output is untouched\"; [183] \"The {it:histogramcohorteffects} output is untouched\". Trimmer note: Stated three times. [214] carries it.",
+   "home_idx": 214,
+   "echo_idxs": [
+    164,
+    183
+   ],
+   "pointer": "The histogram shows the observed estimates. See {help wooldid##supporting:Supporting Features}"
+  },
+  {
+   "topic": "cfxplotnose is dropped with a caution under boottstat, and under permtstat or permtci. Echoes: [164] \"{it:boottstat}, which needs their standard errors, drops {it:cfxplotnose} with a caution\". Trimmer note: [308] states both engines.",
+   "home_idx": 308,
+   "echo_idxs": [
+    164
+   ],
+   "pointer": "{it:boottstat} overrides {it:cfxplotnose}. See {help wooldid##continuous:Continuous Treatments}"
+  },
+  {
+   "topic": "With subgroups() and esprelength() above 0, espostlength(0) is raised to 1 under a caution, and espostlength(-999) keeps the window empty. Echoes: [262] \"{it:wooldid} raises {it:espostlength()} to 1 under a caution\". Trimmer note: Word-for-word duplicate across ranges.",
+   "home_idx": 233,
+   "echo_idxs": [
+    262
+   ],
+   "pointer": "An empty post-treatment window is raised to one horizon. See {help wooldid##eventstudy:Event Study Estimation}"
+  },
+  {
+   "topic": "att_i and att_itime report the att_it event study. Echoes: [241] \"when only {it:att_i} or {it:att_itime} is requested the reported block is the {it:att_it} event study\"; [375] \"{it:att_i} and {it:att_itime} report the {it:att_it} event study\". Trimmer note: [403] and [416] say the same in e() meanings. Keep those as they are. [241] keeps a short clause, because it is pretrendpower's applies-when.",
+   "home_idx": 257,
+   "echo_idxs": [
+    241,
+    375
+   ],
+   "pointer": "Event studies for {it:att_i} and {it:att_itime} are reported as {it:att_it}. See {help wooldid##eventstudy:Invalid Estimands}"
+  },
+  {
+   "topic": "Degenerate analytic pairwise subgroup contrasts under clustering at i or above: reported without inference under a caution. Echoes: [149] \"pairwise subgroup contrasts can be degenerate\"; [172] \"the studentized contrasts and the subgroup equality test may be absent or unstable\". Trimmer note: [172] keeps a short 'use the plain bootstrap for contrasts there', which is boottstat's turn-off-when. [401] and [422] e() meanings stay.",
+   "home_idx": 264,
+   "echo_idxs": [
+    149,
+    172
+   ],
+   "pointer": "Pairwise contrasts can be degenerate there. See {help wooldid##interactions:Subgroup Effects}"
+  },
+  {
+   "topic": "ame analytic SEs are not identified with cluster() at i or coarser: reported missing, e(V_es_ame*) withheld. Echoes: [149] \"the analytic standard errors of the continuous treatment\"; [403] \"for the ame families under the cell-containment caution\". Trimmer note: [403] keeps its 'withheld' clause because it is the e() meaning. [149] can drop the ame clause.",
+   "home_idx": 343,
+   "echo_idxs": [
+    149,
+    403
+   ],
+   "pointer": "For the ame see {help wooldid##continuous:Continuous Treatments and Cluster-Robust Standard Errors}"
+  },
+  {
+   "topic": "gteffects cell SEs understated when a cell sits in one cluster or holds one observation, still understated under bootstrap(), no inference under permute(). Echoes: [149] \"For the {it:gteffects} cells only the finer {it:cluster()} is a remedy\"; [407] \"(a single observation under {it:robust}, pweights, a {it:customvce()} of robust, hc2 or hc3\". Trimmer note: [407] keeps the e(gt_ncontained) and e(gt_ndegen) meanings but can point to gteffects for the robust-case list. [183] keeps its 'left blank' clause, because it is permute's behaviour.",
+   "home_idx": 375,
+   "echo_idxs": [
+    149,
+    407
+   ],
+   "pointer": "Cell standard errors are understated in these designs. See {help wooldid##technical:gteffects}"
+  },
+  {
+   "topic": "unconditionalse and customvce() estimate through regress or poisson, so fe() is not absorbed and a bare name reads as continuous. Echoes: [135] \"{it:fe()} and {it:ccc_absorb()} cannot be absorbed on this path\"; [137] \"Like {it:unconditionalse}, it cannot absorb {it:fe()}\". Trimmer note: [350] does not mention ccc_absorb() or the caution. So [135] and [137] keep 'fe() and ccc_absorb() are entered as written under a caution' as one short sentence each. They drop the explanation and the i.-prefix advice that [350] gives.",
+   "home_idx": 350,
+   "echo_idxs": [
+    135,
+    137
+   ],
+   "pointer": "{it:fe()} and {it:ccc_absorb()} are then entered as written. See {help wooldid##controls:Controls and Fixed Effects}"
+  },
+  {
+   "topic": "Default estimation goes through reghdfe, or ppmlhdfe under poisson. Echoes: [131] \"By default, regression estimation using this option will rely on either\"; [133] \"By default, regression estimation using this option will rely on either\". Trimmer note: The sentence is identical in [131] and [133] and is not specific to either option. Drop it from both. The regress path is stated at [135], [137] and [350].",
+   "home_idx": 37,
+   "echo_idxs": [
+    131,
+    133
+   ],
+   "pointer": "Estimation runs through {help reghdfe} or {help ppmlhdfe}. See {help wooldid##description:Description}"
+  },
+  {
+   "topic": "Cluster at the level at which treatment is assigned. Echoes: [133] \"Specify {it:cluster()} at the level at which treatment is assigned\"; [474] \"add it at the level at which treatment is assigned\". Trimmer note: [133]'s default-SE caution is a correction. Keep 'the defaults allow no within-unit correlation and overstate precision on panel data' as one sentence, and let the rule itself live at [131]. [474] is in Examples, outside the four ranges.",
+   "home_idx": 131,
+   "echo_idxs": [
+    133,
+    474
+   ],
+   "pointer": "Cluster at the level at which treatment is assigned. See {help wooldid##standarderrors:Standard Errors}"
+  },
+  {
+   "topic": "Coarsen i to cohorts and put unit fixed effects in fe() for speed. Echoes: [50] \"Coarser cohort definitions tend to enable much faster estimation\". Trimmer note: [50] is in Syntax, outside the four ranges. It also keeps its separate fact that a coarse i needs unit fe() on panels unbalanced within cohorts.",
+   "home_idx": 382,
+   "echo_idxs": [
+    50
+   ],
+   "pointer": "Coarsening {it:i} is the largest speedup. See {help wooldid##runtime:Runtime}"
+  },
+  {
+   "topic": "lattice() is the most expensive option. Echoes: [382] \"{it:lattice()} is the most expensive option\". Trimmer note: [382] keeps 'prefer the smallest latticenum'. [281] carries the cost fact and already links to Runtime. Keep one of the two.",
+   "home_idx": 281,
+   "echo_idxs": [
+    382
+   ],
+   "pointer": "A lattice is the costliest option. See {help wooldid##continuous:Continuous Treatments}"
+  },
+  {
+   "topic": "Cell collapse: which options switch it off and which runs pay the full per-row cost. Echoes: [384] \"and the continuous-treatment forms listed under\"; [135] \"it turns the default cell collapse off\"; [356] \"This option also turns the default cell collapse off\"; [371] \"turns the default cell collapse off (see {it:nofastcollapse})\". Trimmer note: [143] lists every ineligible case. The one-clause notes at [135], [356] and [371] are applies-when facts and may stay as clauses. Cut them only if they grow. [384] can shrink to 'the cell collapse shrinks each margins call' with a link.",
+   "home_idx": 143,
+   "echo_idxs": [
+    135,
+    356,
+    371,
+    384
+   ],
+   "pointer": "It turns the default cell collapse off. See {help wooldid##standarderrors:Standard Errors}"
+  },
+  {
+   "topic": "verbose stores the underlying regression as ___wooldidfullmodel. Echoes: [454] \"the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called\". Trimmer note: [454] keeps one sentence, the reserved-name warning ('do not store your own estimates under it'). [373] lacks that warning.",
+   "home_idx": 373,
+   "echo_idxs": [
+    454
+   ],
+   "pointer": "{it:verbose} stores the underlying regression as {it:___wooldidfullmodel}, a reserved name. See {help wooldid##technical:Technical Features}"
+  },
+  {
+   "topic": "saveplots() writes the event-study data and .gph files to the working directory. Echoes: [452] \"if saveplots() is specified, a dataset containing the information used to produce event study plots\". Trimmer note: The whole of [452] echoes [216].",
+   "home_idx": 216,
+   "echo_idxs": [
+    452
+   ],
+   "pointer": "{it:saveplots()} also writes the plotted data. See {help wooldid##supporting:Supporting Features}"
+  },
+  {
+   "topic": "Link to the agent guide. Echoes: [558] \"A longer guide to using {it:wooldid}, written for AI agents\". Trimmer note: The URL appears twice.",
+   "home_idx": 39,
+   "echo_idxs": [
+    558
+   ],
+   "pointer": "A longer guide is linked under {help wooldid##description:the header}"
+  },
+  {
+   "topic": "e(V) is for display, and lincom and test work on e(b_es_*) and e(V_es_*) after ereturn post with dof(). Echoes: [403] \"After {it:ereturn post} with {it:dof(`=e(df_r)')} these matrices are valid inputs for\". Trimmer note: [460] gives the recipe and the dof() reasoning. [403] keeps 'valid for lincom and test once posted' as a clause.",
+   "home_idx": 460,
+   "echo_idxs": [
+    403
+   ],
+   "pointer": "They are valid for {it:lincom} and {it:test} once posted. See {help wooldid##output:Working with Output}"
+  },
+  {
+   "topic": "honestdid handoff conditions. Echoes: [516] \"and a fixed reference period at the default {it:esrelativeto(-1)}\". Trimmer note: [516] is an Examples caption outside the four ranges and already points to [403]. [139] keeps 'the honestdid handoff is unavailable' as impvalues' refusal.",
+   "home_idx": 403,
+   "echo_idxs": [
+    516
+   ],
+   "pointer": "The {it:honestdid} conditions are listed under {help wooldid##output:Working with Output}"
+  },
+  {
+   "topic": "poisson: which dose and ccc_absorb() controls enter the regression explicitly, and the r(3200) retry. Echoes: [369] \"except on the {it:poisson} paths that already enter them explicitly\"; [371] \"With {it:poisson} on the {it:ppmlhdfe} path the cell slopes stay absorbed\". Trimmer note: Both echoes already point to poisson. [371] can reduce its clause to that pointer. The mechanism is maintainer-level, see the maintainer entry for [222].",
+   "home_idx": 222,
+   "echo_idxs": [
+    369,
+    371
+   ],
+   "pointer": "Under {it:poisson} some of these enter the regression explicitly. See {help wooldid##supporting:Supporting Features}"
+  },
+  {
+   "topic": "The adversarial test is absent under bootstrap() without boottstat. Echoes: [172] \"without {it:boottstat} the adversarial tests are reported as absent\"; [389] \"as the adversarial test is under {it:bootstrap()} without {it:boottstat}\". Trimmer note: [389] uses it as its worked example of an absent test. Keep 'for example' and drop the conditions. [172] can keep the fact as a clause.",
+   "home_idx": 237,
+   "echo_idxs": [
+    172,
+    389
+   ],
+   "pointer": "Without {it:boottstat} the adversarial test is absent. See {help wooldid##eventstudy:Event Study Estimation}"
+  },
+  {
+   "topic": "adversarial requires esfixedbaseperiod. Echoes: [239] \"It requires {it:esfixedbaseperiod}\"; [492] \"which requires {it:esfixedbaseperiod}, so here it fails with a caution\". Trimmer note: altmethod_adversarial already requires adversarial, so the esfixedbaseperiod clause in [239] is implied. Example 4 in [492], outside the four ranges, shows a command whose adversarial test fails. The author may prefer adding esfixedbaseperiod or dropping adversarial there. Leave that decision to him.",
+   "home_idx": 237,
+   "echo_idxs": [
+    239,
+    492
+   ],
+   "pointer": "It modifies {it:adversarial}. See {help wooldid##eventstudy:Event Study Estimation}"
+  },
+  {
+   "topic": "adversarial degrees of freedom stored in e(adversarial_df_*). Echoes: [237] \"The numerator degrees of freedom are stored in {it:e(adversarial_df_att)} and its twins\". Trimmer note: [420] lists every name.",
+   "home_idx": 420,
+   "echo_idxs": [
+    237
+   ],
+   "pointer": "Results are stored as listed under {help wooldid##output:Working with Output}"
+  },
+  {
+   "topic": "Identification failures are not all detected, especially with a lattice or polynomial dose. Echoes: [554] \"The automatic tests for model identification that {it:wooldid} implements are not fully comprehensive\". Trimmer note: [371]'s 'not all cases of identification failure are detected' is ccc_absorb's own warning. Keep it.",
+   "home_idx": 377,
+   "echo_idxs": [
+    554
+   ],
+   "pointer": "The identification checks are not complete for continuous treatments. See {help wooldid##technical:safety()}"
+  },
+  {
+   "topic": "Numerical instability with continuous-treatment controls: raise regtol() or use ccnoabsorb. Echoes: [552] \"specify either a higher {it:regtol()} or the option {it:ccnoabsorb}, which keeps the continuous treatment controls out of\". Trimmer note: [367] and [369] each state their own remedy. The Known Issues entry restates both.",
+   "home_idx": 369,
+   "echo_idxs": [
+    552
+   ],
+   "pointer": "Try a higher {it:regtol()} or {it:ccnoabsorb}. See {help wooldid##technical:Technical Features}"
+  },
+  {
+   "topic": "Near-zero dose variation in the reference period: caution, then refusal. Echoes: [552] \"when a treated cohort carries almost no variation in the dose across its untreated or reference-period observations\". Trimmer note: Same [552] block as the regtol entry. Keep the point that regtol() does not repair it.",
+   "home_idx": 320,
+   "echo_idxs": [
+    552
+   ],
+   "pointer": "Near-constant doses in the reference period are cautioned or refused. See {help wooldid##continuous:Continuous Treatments}"
+  },
+  {
+   "topic": "Let timetrends build the cohort trends rather than specifying them by hand. Echoes: [550] \"do not manually specify time-trend variables for inclusion in the fixed effects\". Trimmer note: CHECK: [352] says the option is 'required for heterogeneous time trend controls to work, even when they are specified manually', which implies manual trends are allowed alongside it. [550] says not to specify them. Reconcile the two when trimming. [550]'s esfixedbaseperiod conditioning note is unique.",
+   "home_idx": 352,
+   "echo_idxs": [
+    550
+   ],
+   "pointer": "Let {it:timetrends} build the trend terms. See {help wooldid##controls:Controls and Fixed Effects}"
+  },
+  {
+   "topic": "e(df_r) under bootstrap() follows bootdf(). Echoes: [448] \"{it:e(df_r)} is aligned to the reported reference distribution\". Trimmer note: [426] also states it as the e(df_r) meaning. Keep that one.",
+   "home_idx": 168,
+   "echo_idxs": [
+    448
+   ],
+   "pointer": "{it:e(df_r)} follows {it:bootdf()}. See {help wooldid##bootstrap:Bootstrap Standard Errors}"
+  },
+  {
+   "topic": "Draw matrices are not posted above 10,000 replications. Echoes: [448] \"(up to 10,000 replications)\"; [450] \"(up to 10,000 replications)\". Trimmer note: [187] states the permexact case. The e() lists may keep the bare condition once each rather than per matrix.",
+   "home_idx": 166,
+   "echo_idxs": [
+    448,
+    450
+   ],
+   "pointer": "Draw matrices are posted up to 10,000 replications. See {help wooldid##bootstrap:Bootstrap Standard Errors}"
+  },
+  {
+   "topic": "permute() runs in fast mode by default, and permtstat or permanalyticse restore SEs. Echoes: [532] \"the run is a fast (no standard error) run unless {it:permtstat} or {it:permanalyticse} is added\". Trimmer note: [532] is an Examples caption outside the four ranges. [141] keeps its accept-under-permute clause.",
+   "home_idx": 183,
+   "echo_idxs": [
+    532
+   ],
+   "pointer": "Permutation runs are point-estimate runs by default. See {help wooldid##permute:Randomization Inference}"
+  },
+  {
+   "topic": "The escomp table is displayed under summarystats. Echoes: [409] \"The table is displayed when {it:summarystats} is specified\". Trimmer note: Small.",
+   "home_idx": 220,
+   "echo_idxs": [
+    409
+   ],
+   "pointer": "It is displayed under {it:summarystats}. See {help wooldid##supporting:Supporting Features}"
+  },
+  {
+   "topic": "pretrendpower() pre-test sizes are fixed at 5%. Echoes: [147] \"The pre-test sizes reported by {it:pretrendpower()} are fixed at 5%\". Trimmer note: Small. Keep it at [147] if level() is where a reader looks for it, else at [241].",
+   "home_idx": 241,
+   "echo_idxs": [
+    147
+   ],
+   "pointer": "{it:pretrendpower()} uses 5% pre-tests. See {help wooldid##eventstudy:Event Study Estimation}"
+  },
+  {
+   "topic": "customweightmultiplier() multiplies the margins weights only. Echoes: [118] \"multiplied by the {it:customweightmultiplier()} variable if one is specified\". Trimmer note: [365] does not say 'not the regression weights'. Keep that clause in one place, preferably [365].",
+   "home_idx": 365,
+   "echo_idxs": [
+    118
+   ],
+   "pointer": "A {it:customweightmultiplier()} variable scales these weights. See {help wooldid##technical:Technical Features}"
+  },
+  {
+   "topic": "Step 1 regression unchanged, step 2 margins restricted to the subgroup. Echoes: [264] \"This is achieved without modification to the underlying regression specification in step 1\". Trimmer note: Overlaps with the subgroup-mechanics entry that has [93] as its echo.",
+   "home_idx": 84,
+   "echo_idxs": [
+    264
+   ],
+   "pointer": "The margins step runs within each subgroup. See {help wooldid##description:Description}"
+  }
+ ],
+ "textbook": [
+  {
+   "idx": 84,
+   "note": "The two-step logic (saturated cohort-by-period TWFE, then margins averaging fitted minus counterfactual predictions) is Wooldridge's (2021, 2025) extended TWFE and imputation reading. Keep a few sentences of what wooldid does, drop the tutorial register ('Broadly speaking', 'To flesh this out')."
+  },
+  {
+   "idx": 88,
+   "note": "Notation glossary for the Step 1 regression (i, t, j, Z, Tz_it, TreatedFlag_it). A Wooldridge reader knows it. One sentence defining Z and TreatedFlag_it suffices."
+  },
+  {
+   "idx": 90,
+   "note": "ATT as the weighted average of fitted minus counterfactual fitted values over treated observations, and other estimands by reweighting. This is the standard imputation reading of the ETWFE estimator."
+  },
+  {
+   "idx": 91,
+   "note": "Delta-method SEs from margins taken conditional on covariates versus margins' vce(unconditional). Textbook, and [151] repeats it. The e(df_r) sentences are corrections, keep them once at [426]."
+  },
+  {
+   "idx": 151,
+   "note": "Conditional versus unconditional SEs (covariates fixed versus sampled). Wooldridge (2025) discusses this directly."
+  },
+  {
+   "idx": 153,
+   "note": "When conditional and unconditional SEs differ, sample versus population average. Wooldridge (2025) material. The four middle sentences were added as a correction: compress, but keep 'unconditional is larger under heterogeneity and the gap does not shrink with n' and 'conditional describes the sample treated average'."
+  },
+  {
+   "idx": 157,
+   "note": "The virtue and cost of Ibragimov and Muller (2010), better with few heterogeneous clusters and needing independent cluster estimates. Textbook. Keep the wooldid-specific sentence that a cluster's estimate uses its treated post-treatment cells alone."
+  },
+  {
+   "idx": 249,
+   "note": "Opening sentence: what a DiD estimate compares, treated periods against a pre-treatment reference. Textbook."
+  },
+  {
+   "idx": 253,
+   "note": "Fixed reference is transparent while pooled is more precise because it averages more periods. A generic efficiency-versus-transparency point."
+  },
+  {
+   "idx": 255,
+   "note": "'Trends shared by all cohorts are absorbed by the time fixed effects' is textbook, but it was added as a correction, so compress rather than drop. The rest of [255], on the pooled reference with unequal pre-periods, is wooldid-specific."
+  },
+  {
+   "idx": 268,
+   "note": "Definition of the triple difference, the first two sentences ('In the triple diff case, all cohorts are categorized into two groups', 'The target estimand is the difference'). The implementation sentences are corrections and stay."
+  },
+  {
+   "idx": 324,
+   "note": "The analogy that each cell gets its own intercept and dose slope, as in the binary case. Generic motivation."
+  },
+  {
+   "idx": 332,
+   "note": "g() as a control function analogous to fixed effects, and many identification approaches exist. Methodology exposition."
+  },
+  {
+   "idx": 333,
+   "note": "'These options are analogous to specifying different types of unit fixed effects'. Methodology analogy, and it repeats the [313]-[317] rows."
+  },
+  {
+   "idx": 335,
+   "note": "'analogous to that of the second diff in the binary difference-in-differences case'. Methodology analogy."
+  },
+  {
+   "idx": 341,
+   "note": "Strong parallel trends of Callaway, Goodman-Bacon and Sant'Anna (2024) and the selection-bias reading of dose slopes. The whole block is a recent correction: keep the claim in two or three short sentences, and drop the textbook elaboration on bins."
+  },
+  {
+   "idx": 133,
+   "note": "Conventional SEs assume independent homoskedastic errors and overstate precision on panels (Bertrand, Duflo and Mullainathan). Added as a correction: keep one sentence."
+  },
+  {
+   "idx": 131,
+   "note": "'A state policy studied on county data needs cluster(state)' is the textbook clustering example (Abadie et al.). Added as a correction: the rule stays, the example can go."
+  },
+  {
+   "idx": 222,
+   "note": "'Poisson regression is useful when one would like to use log(y) as an outcome but y contains natural 0s, or when ... parallel trends in proportions' is textbook (Wooldridge 2023 nonlinear DiD)."
+  },
+  {
+   "idx": 164,
+   "note": "Definitions of the pairs cluster bootstrap and the Bayesian (Dirichlet) bootstrap. Textbook, but short. Keep one clause each."
+  },
+  {
+   "idx": 170,
+   "note": "Definitions of percentile, bias-corrected and BCa intervals and of a normal or t Wald interval. Textbook. Name the families and keep only the wooldid facts (bca needs cluster() and G jackknife fits, all but bca are stored)."
+  },
+  {
+   "idx": 172,
+   "note": "What a percentile-t bootstrap is ('The object bootstrapped is each replication's t statistic'). Textbook."
+  },
+  {
+   "idx": 145,
+   "note": "'which covers every horizon of the family at once with that probability' is the textbook sup-t band definition."
+  },
+  {
+   "idx": 203,
+   "note": "'controls the family-wise error rate' is the textbook Romano-Wolf description. Short, so it can stay as a clause."
+  },
+  {
+   "idx": 241,
+   "note": "Roth (2022) minimal detectable trend and bias definitions. Keep the column names and requirements and let the citation carry the concepts."
+  },
+  {
+   "idx": 209,
+   "note": "Why a shift interval is calibrated only near the null (inversion of a sharp-null test). Keep the wooldid-specific staggered-onset caution about pre-period p-values."
+  },
+  {
+   "idx": 328,
+   "note": "AME versus ATT under lattice intercepts, with the worked example 'Y = -Contreat + 100*floor(Contreat/10)'. Methodology better suited to the agent guide. Keep a two-sentence warning."
+  },
+  {
+   "idx": 465,
+   "note": "'Its implementation takes the Mundlak approach'. Textbook equivalence of Mundlak and TWFE."
+  },
+  {
+   "idx": 467,
+   "note": "'Wooldridge (2025) proves some equivalence results', and the fine-cohorts explanation of why controls then match BJS. Methodology. The match conditions, including the correction on the level of i, stay."
+  },
+  {
+   "idx": 95,
+   "note": "Event-study effects as margins over relative-period subsets, and the pre-trend and line tests. A standard event-study reading, and it repeats [235] and [237]."
+  }
+ ],
+ "maintainer": [
+  {
+   "idx": 143,
+   "note": "Testing detail: 'typically machine precision, but up to about 1e-6 relative on standard errors with sampling weights, controls and an event-study window, where neither run is exact'. Implementation: 'the collapse preserves the data and so holds an extra copy of it'. Keep the turn-off-when conditions: undetectable treatment interactions, memory limits, exact reproduction."
+  },
+  {
+   "idx": 164,
+   "note": "Implementation: 'each replication gives the drawn copies of a cluster fresh unit codes, and {it:i} is replaced by that code wherever its name appears in', and the merged-on-i caveat. Keep the user rule in one sentence: a variable that encodes i under another name is not re-identified."
+  },
+  {
+   "idx": 187,
+   "note": "'which is the largest number of rows a Stata matrix can hold and so the point at which the replication accumulators stop working'. The limit 65,534 stays and the reason goes."
+  },
+  {
+   "idx": 222,
+   "note": "ppmlhdfe internals: which dose and ccc_absorb() terms enter explicitly, 'one variable per term when it has two or more', and the r(3200) retry sequence. Keep the user facts (refusals, the r(3200) stop from fe(), the mean-centring caution, the separation exit, the reserved _ppmlhdfe_d) and compress the mechanics to one sentence."
+  },
+  {
+   "idx": 275,
+   "note": "Dated change: 'the older {it:eyex} and {it:eydx} forms have been removed'. Drop it. 'Only dydx and dyex are accepted' says enough."
+  },
+  {
+   "idx": 153,
+   "note": "'On a technical basis, this is because {it:wooldid} uses the {it:subpopulation} features in {it:margins}'. Implementation. Keep the user fact that subgroup unconditional SEs draw on rows outside the subgroup."
+  },
+  {
+   "idx": 155,
+   "note": "Simulation finding and speculation: 'tests using unconditional standard errors sometimes appear to be incorrectly sized' and 'The issue with non-ATT estimands likely is related to the margins calculation'. Keep the caution and refusal behaviour."
+  },
+  {
+   "idx": 264,
+   "note": "'(its standard error is rounding residue rather than an estimated variance)' and 'the caution then counts the rows whose {it:se_analytic} is residue'. Implementation language, so say 'degenerate' once."
+  },
+  {
+   "idx": 337,
+   "note": "'makes other technical changes to the estimation process'. Vague internals. Keep 'use only in this narrow case'."
+  },
+  {
+   "idx": 371,
+   "note": "'The pooled control slopes enter the regression. The treated cells' own slopes, on the control centred at each cell's mean, are passed to the {it:absorb()} statement.' This is how ccc_absorb is built. Keep 'same effects as coarsecohortcontrols(), less memory'."
+  },
+  {
+   "idx": 373,
+   "note": "'since its regressors are temporary variables that no longer exist after {it:wooldid} returns'. Implementation reason. Keep the limitation, coefficient-level work only."
+  },
+  {
+   "idx": 389,
+   "note": "'and the {it:e(wdid_*)} state that replay uses'. Internals."
+  },
+  {
+   "idx": 444,
+   "note": "e(wdid_vcvstate), e(wdid_vblocks), e(wdid_vblockn), e(wdid_fcol), e(wdid_fcskip), e(wdid_fcguard), e(wdid_fcncell) are internal state. Every name stays with a few-word meaning."
+  },
+  {
+   "idx": 448,
+   "note": "Hidden diagnostics such as e(boot_nstraddle), e(boot_reid), e(boot_covsub), e(boot_ptails), e(boot_comparator), e(boot_ase_obs), e(boot_V_shortfall), e(boot_ves_failed), e(boot_jk_completed) and e(boot_v_posted). Every name must survive. Compress the framing into role groups and drop the per-name parentheticals, which make 87 parentheses in one block."
+  },
+  {
+   "idx": 450,
+   "note": "Hidden internals such as e(perm_kernel), e(perm_pwsgs_kernel), e(perm_offcentre), e(perm_pconv), e(perm_addone), e(perm_irebuilt), e(permcmp_*) and e(permcmpse_*). Every name stays. Compress the framing as for [448]."
+  },
+  {
+   "idx": 411,
+   "note": "'the hidden {it:e(roth_cellmax_{it:type})} records the largest treated cell size when the pre-period covariance was rank-deficient'. A diagnostic internal. Keep the name with a short meaning."
+  },
+  {
+   "idx": 434,
+   "note": "The hidden 'e(wdid_cfxsave_rc)' and 'e(wdid_cfxmats)'. Keep the names, shorten the text."
+  },
+  {
+   "idx": 120,
+   "note": "Implementation of the estimand by reweighting margins with w/W_it. The definition (a simple mean of cell effects) stays and the weight formula can go to the guide. The same applies to [122] (w/W_ipre, w/W_ipost) and [124] (w/(W_it * T_iprepost))."
+  },
+  {
+   "idx": 122,
+   "note": "Weight formula w/W_ipre and w/W_ipost, implementation. Keep the timetrends exclusion of the pre-reference period, which is a correction."
+  },
+  {
+   "idx": 124,
+   "note": "Weight formula w/(W_it * T_iprepost), implementation."
+  },
+  {
+   "idx": 237,
+   "note": "'the test runs on the directions a generalized inverse retains'. Linear-algebra implementation. Keep 'runs on reduced rank under a caution'."
+  },
+  {
+   "idx": 241,
+   "note": "'the diagnostics run on a generalized inverse under a caution'. Implementation. Keep the caution fact."
+  },
+  {
+   "idx": 391,
+   "note": "'the prefix refuses any other, including its {it:idcluster()} variable'. Probe-level detail from benchmarking the prefix."
+  },
+  {
+   "idx": 320,
+   "note": "Thresholds '1/100000 of the sample standard deviation' and '1/1000'. Implementation constants. Keep them only if the author wants the numbers user-visible, since the caution and refusal behaviour must stay either way."
+  },
+  {
+   "idx": 183,
+   "note": "'That screen runs on every row the {it:if} expression keeps, including rows the estimator later drops for a missing outcome or weight'. Implementation order. Keep the user consequence, that permute() can refuse a run that otherwise works, and the if remedy."
+  }
+ ],
+ "longest": [
+  {
+   "idx": 183,
+   "words": 498,
+   "note": "The permute() entry holds design, the sample-screen order, oos handling, the full refusal list, subgroup screens, p-value and interval definitions, fast mode, blank quantities, the histogram echo, failed replications and exchangeability. Can go: the histogram sentence (home [214]), the subgroup split detail (home [262]), the screen-order explanation (to one sentence), and the three closing sentences on e(perm_npossible) (to one). 5 semicolons and 22 parentheses."
+  },
+  {
+   "idx": 467,
+   "words": 347,
+   "note": "The did_imputation comparison. Can go: 'Wooldridge (2025) proves some equivalence results', the fine-cohorts mechanism, and the closing 'arguably reflects ... spirit of BJS' (to one clause). Keep every match condition, including the recent level-of-i correction."
+  },
+  {
+   "idx": 164,
+   "words": 338,
+   "note": "The bootstrap() entry. Can go: the fastnose clause (home [141]), the histogram sentence (home [214]), the cfxplotnose sentence (home [308]), and the fresh-unit-code mechanics (maintainer, one sentence). Keep the refusals, the few-treated-clusters caution and remedy, and the non-nesting caution. 6 semicolons and 21 parentheses."
+  },
+  {
+   "idx": 222,
+   "words": 336,
+   "note": "The poisson entry. Can go: the textbook log(y) sentence, and the ppmlhdfe absorb and explicit-entry mechanics and r(3200) retry compressed to one or two sentences. Keep the refusals (aweights, negative outcome, boottstat), the collinear dose caution with the centring remedy and its dyex effect, the separation exit, and _ppmlhdfe_d reserved."
+  },
+  {
+   "idx": 237,
+   "words": 330,
+   "note": "The adversarial entry. Can go: the df storage sentence (home [420]), the clustering-sensitivity mechanism (home [149]), and the generalized-inverse detail (to a clause). Keep the null definition, the esfixedbaseperiod requirement, the cancellation conditions, the subgroup skip, bootstrap and boottstat availability, and the refusals."
+  },
+  {
+   "idx": 339,
+   "words": 311,
+   "note": "contreatwithin with no untreated group. Mostly recent corrections, 205 of 311 words. Can go: the opening restatement of [277] and the 'Note:' aside register. Keep every att caveat and the byTime refusal, and split them into short sentences."
+  },
+  {
+   "idx": 465,
+   "words": 311,
+   "note": "The hdidregress comparison. Can go: the worked cohort 1 and 2 example (to one sentence) and 'takes the Mundlak approach'. Keep the conditions for comparability and the controls advice."
+  },
+  {
+   "idx": 448,
+   "words": 298,
+   "note": "The bootstrap e() inventory, with 87 parentheses. Every name must survive. Group the names by role (run records, covariance, draws, families, tests, withheld flags, hidden) with one short label per group, not per name."
+  },
+  {
+   "idx": 264,
+   "words": 290,
+   "note": "Subgroup approach. Can go: the step-1 and step-2 restatement (home [84]), the 'rounding residue' mechanism, and the remedy list repeated from [149]. Keep the pairwise and joint-test definitions, the few-clusters failure, and the degenerate-contrast behaviour under default, safety(off), permute() and boottstat."
+  },
+  {
+   "idx": 375,
+   "words": 283,
+   "note": "gteffects. Can go: the understated-SE mechanism (home [149]) and the list of robust cases (kept in [407]). The weight-column reproduction rules can be tightened to two sentences. Keep the columns, the contreat() refusal, and the bootstrap and permute behaviour. 5 semicolons."
+  },
+  {
+   "idx": 403,
+   "words": 279,
+   "note": "e(b_es_*) and e(V_es_*). Can go: the lincom/test recipe (home [460]). The 'Design conditions' paragraph can shrink to two sentences. Keep the honestdid conditions and when the matrices are withheld or absent, since that is the e() meaning."
+  },
+  {
+   "idx": 328,
+   "words": 254,
+   "note": "Lattice versus AME. Methodology: move the worked Y = -Contreat + 100*floor(...) example and the finer-i analogy to the guide. Keep the warning that AMEs omit the lattice intercept jumps and can disagree with the ATT."
+  },
+  {
+   "idx": 241,
+   "words": 248,
+   "note": "pretrendpower. Can go: the Roth concept definitions (the citation carries them), 'none of which produces the event-study covariance', and the generalized-inverse detail. Keep the requirements, refusals, subgroup and att_i behaviour, the up-to-4 limit for mdt_nis with the pretrends handoff, and the e() pointer."
+  },
+  {
+   "idx": 247,
+   "words": 234,
+   "note": "anticipation. Can go: '(the convention of did_imputation's shift() option)', and the too-small and too-large guidance, which can shrink but is a correction. Keep the biennial caution, the drop conditions, the subgroups(ttre) labels and e(anticipation)."
+  },
+  {
+   "idx": 149,
+   "words": 228,
+   "note": "The cluster-level hub. Drop 'also without a caution' about the band, which contradicts [145] and wooldid.ado line 12353. The remedies are listed three times, keep them once. The gteffects detail can go (home [375]). 4 semicolons and 14 parentheses."
+  },
+  {
+   "idx": 139,
+   "words": 226,
+   "note": "impvalues. Can go: the idea sentence, also in [106] and [157]. Keep the refusal list, the finer-cluster refusal, the estimand change, the df rule and the absent e() matrices."
+  },
+  {
+   "idx": 273,
+   "words": 221,
+   "note": "contreat. Mostly recent correction, 182 of 221 words. Tighten 'The cells checked are the ones that carry a dose slope ...' and the zero-dose exceptions into short sentences. No content can go."
+  },
+  {
+   "idx": 356,
+   "words": 216,
+   "note": "interactivecontrols. Can go: 'When using only one interactive control, ATTs obtained ... should be similar to' the continuous-treatment equivalent (methodology), and the coarsecohortcontrols comparison (to a clause)."
+  },
+  {
+   "idx": 450,
+   "words": 213,
+   "note": "The permute e() inventory, with 78 parentheses. Treat it as [448]: group by role, keep every name."
+  },
+  {
+   "idx": 460,
+   "words": 208,
+   "note": "Incompatible post-estimation commands. The dof() explanation runs four sentences. Keep the recipe and 'Without it they use the normal', and drop the rest."
+  },
+  {
+   "idx": 143,
+   "words": 201,
+   "note": "nofastcollapse. Can go: the precision numbers and the extra-copy mechanism (maintainer). Keep the ineligible list and the three turn-off-when cases."
+  },
+  {
+   "idx": 251,
+   "words": 199,
+   "note": "A recent correction, 198 of 199 words. Keep the content and cut it into shorter sentences. The CS/SA and BJS mappings stay."
+  },
+  {
+   "idx": 262,
+   "words": 198,
+   "note": "subgroups. Can go: the espostlength raise (home [233]). Keep the split-unit refusal and safety(off) weighting here as the home."
+  },
+  {
+   "idx": 377,
+   "words": 196,
+   "note": "safety(). The list of checks can become a shorter list, and 'Most important among these checks' can be tightened. Keep every check named, the maxvar halt, the >100 i caution, and 'changes to your specification are always reported'."
+  },
+  {
+   "idx": 389,
+   "words": 191,
+   "note": "Working with Output intro. The hidden-state aside ('the e(wdid_*) state that replay uses') goes. The missing() advice and the failed-call behaviour stay, since both are corrections."
+  },
+  {
+   "idx": 157,
+   "words": 190,
+   "note": "Ibragimov and Muller discussion. Drop the textbook virtue and cost, and keep the wooldid-specific reading and the shared-control caveat."
+  },
+  {
+   "idx": 84,
+   "words": 187,
+   "note": "Description step 1 and 2. Tutorial register and textbook. Can shrink by half."
+  },
+  {
+   "idx": 341,
+   "words": 185,
+   "note": "What the ame measures. Entirely a recent correction. Cut it into short sentences. Nothing can go except the bin elaboration, and the [339] condition on the integral must be kept."
+  },
+  {
+   "idx": 268,
+   "words": 183,
+   "note": "Triple diff. The first two sentences are textbook. The rest is a recent correction on att_it versus att weighting and stays, in shorter sentences."
+  },
+  {
+   "idx": 281,
+   "words": 183,
+   "note": "lattice. Can go: the runtime-cost clause, which [382] repeats, and 'as though you specified a lattice variable that is always 1' shortened. Keep the variable requirements, the missing-drop rule, the weight use and the basic-control partialling."
+  },
+  {
+   "idx": 95,
+   "words": 182,
+   "note": "Description event studies. It echoes [235] and [237] and can shrink to two sentences: margins over relative-period subsets, and extra indicators for pre-periods."
+  },
+  {
+   "idx": 91,
+   "words": 181,
+   "note": "Conditional SE plus the e(df_r) rule (echo of [426]) and the unconditional alternative (echo of [151])."
+  },
+  {
+   "idx": 33,
+   "words": 175,
+   "note": "Front-page feature list. Could drop the option parentheticals, 10 parentheses."
+  },
+  {
+   "idx": 255,
+   "words": 175,
+   "note": "Pooled reference drawbacks. Keep the unequal-pre-period mechanism. The shared-trends sentence is a correction, compress it."
+  },
+  {
+   "idx": 97,
+   "words": 172,
+   "note": "Description of the two reference-period approaches, all echo of [249]. Keep the earliest-period-normalized-to-0 fact once."
+  },
+  {
+   "idx": 145,
+   "words": 168,
+   "note": "simultaneousbands. Can go: the sup-t definition clause. Keep the analytic, t and bootstrap sources, the cluster-at-i caution (it does print, per wooldid.ado line 12353), the permute refusal and the fastnose and one-horizon no-band cases."
+  }
+ ]
+}

@@ -1,0 +1,609 @@
+{
+ "group": "G2",
+ "words_before": 5143,
+ "words_after": 4236,
+ "proposals": [
+  {
+   "idx": 164,
+   "hash": "4578643ddb4d",
+   "action": "replace",
+   "new_smcl": "{phang}{opt boot:strap(mode)}: Bootstrap inference. Every reported standard error, test statistic, p-value and confidence interval becomes a bootstrap quantity,\nincluding the joint tests, subgroup contrasts, plots, {it:gteffects} cells and {it:pretrendpower()}. Point estimates are unchanged, and the analytic covariance is kept in\nthe hidden {it:e(V_analytic)}. Each replication re-estimates the full model. {it:bootstrap(standard)} is the pairs cluster bootstrap, resampling the {it:cluster()} groups,\nor the observations without {it:cluster()}. {it:bootstrap(bayes)} is the Bayesian bootstrap. It multiplies each cluster's observations by a Dirichlet weight, so no cluster\never leaves the sample. Requires {it:reps()}. Refused with {it:permute()}, {it:impvalues}, {it:unconditionalse}, {it:customvce()} and multi-way {it:cluster()}.\n{it:fastnose} is accepted with a caution and has no effect. With {it:boottstat} it is refused. {it:bootstrap(bayes)} is refused with {it:att_it}, {it:att_i} and\n{it:att_itime}, since it omits the cell-sampling component of their variance. {it:wooldid} cautions when fewer than 6 clusters are treated. Neither mode is a remedy for few\ntreated clusters, and no wild cluster bootstrap is offered. Use {it:permute()} there, or {help boottest} on the underlying regression outside {it:wooldid}. When\n{it:cluster()} does not nest {it:i}, some unit spans two clusters and a cell-weighted estimand is requested, a caution says its standard errors may be understated. The\nremedies are a finer {it:i} or a {it:cluster()} that nests {it:i}. When {it:cluster()} nests {it:i} and the run carries {it:att_it}, {it:att_i}, {it:att_itime} or\n{it:boottstat}, each drawn copy of a cluster gets fresh unit codes, also where {it:i} is named in {it:fe()}, {it:controls()}, {it:interactivecontrols()},\n{it:coarsecohortcontrols()} or {it:ccc_absorb()}. A variable that encodes {it:i} under another name, or was merged in on {it:i}, keeps its original codes. {p_end}\n",
+   "words_before": 338,
+   "words_after": 257,
+   "dropped": [
+    {
+     "claim": "histogramcohorteffects output is untouched under bootstrap(): it draws the observed point estimates",
+     "survives_at": "214"
+    },
+    {
+     "claim": "Under cfxplotnose the continuous treatment cells still get bootstrap inference; boottstat drops cfxplotnose with a caution",
+     "survives_at": "308"
+    },
+    {
+     "claim": "fastnose has no effect because the replications already run in fast mode (the reason)",
+     "survives_at": "141"
+    },
+    {
+     "claim": "resampling is 'with replacement' (definition of the pairs bootstrap)",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "the replacement of i by the fresh code is a name substitution, so a variable merged in on i 'is not found' (mechanism wording shortened; the user rule and the five option names stay)",
+     "survives_at": "guide"
+    }
+   ],
+   "reason": "Echoes of the histogram, cfxplotnose and fastnose homes removed, list of what becomes a bootstrap quantity merged into one sentence, six semicolons turned into full stops."
+  },
+  {
+   "idx": 166,
+   "hash": "127b8ca1885b",
+   "action": "replace",
+   "new_smcl": "{phang}{opt reps(#)}: Number of bootstrap replications. Required with {it:bootstrap()} and refused without it. There is no minimum, so a small value can time\na specification. Replications that fail to estimate are excluded and counted in {it:e(boot_failed)}. Above 10,000 completed replications the draw matrices are not posted,\nand a caution says so. {it:bootsave()} writes them regardless. With {it:n} completed replications the smallest printable p-value is 2/{it:n} for the percentile coefficient\np-values, 2/({it:n}+1) under {it:boottstat}, and 1/({it:n}+1) for the joint tests. A caution names the limit whenever it exceeds .05. The {it:bc} and {it:bca} p-values\ninvert their intervals and have no such limit. They can fall below 2/{it:n}, and they and the percentile p-values can print exactly 0. {p_end}\n",
+   "words_before": 128,
+   "words_after": 117,
+   "dropped": [
+    {
+     "claim": "The percentile p-values 'can print exactly 0' is now folded into the bc/bca sentence rather than stated as a clause of the floor list",
+     "survives_at": "166"
+    }
+   ],
+   "reason": "Register only: the floor list split into sentences, no fact removed."
+  },
+  {
+   "idx": 168,
+   "hash": "d90eee6cfcc3",
+   "action": "replace",
+   "new_smcl": "{phang}{opt bootd:f(spec)}: The reference distribution for the Wald family of bootstrap statistics. Refused without {it:bootstrap()}. {it:bootdf(normal)} uses\nstandard normal critical values and reports z statistics. {it:bootdf(clusters)} uses the t distribution with {it:G}-1 degrees of freedom, {it:G} the number of clusters in\nthe estimation sample, and is refused without {it:cluster()}. A positive integer sets the degrees of freedom directly. The default is {it:bootdf(clusters)} with\n{it:cluster()} and {it:bootdf(normal)} otherwise. Only the Wald family p-values and intervals change, and under {it:boottstat} nothing printed does. {it:e(df_r)} follows\nthe same choice, so {it:test} or {it:lincom} run afterwards on {it:e(V)} reproduces the Wald family. Under the default {it:bootdisplay(percentile)} that is not the printed\np-value, and the footer says so. {p_end}\n",
+   "words_before": 129,
+   "words_after": 114,
+   "dropped": [
+    {
+     "claim": "The bootstrap standard errors, the other families and the joint tests do not change with bootdf()",
+     "survives_at": "168 ('Only the Wald family p-values and intervals change')"
+    }
+   ],
+   "reason": "Removed the sentence that restates 'only the Wald family changes' in the negative; semicolons to full stops."
+  },
+  {
+   "idx": 170,
+   "hash": "3042b002db70",
+   "action": "replace",
+   "new_smcl": "{phang}{opt bootdisp:lay(spec)}: Which p-value and confidence interval the printed tables carry. Refused without {it:bootstrap()}. {it:percentile} is the default.\n{it:bc} is the bias-corrected percentile method. {it:bca} is bias-corrected and accelerated, requires {it:cluster()}, and costs {it:G} extra fits for its delete-one-cluster\njackknife. {it:wald} is a normal or t approximation set by {it:bootdf()}. Every family except {it:bca} is computed and stored in {it:e()} on every run. This option only\nchooses what is displayed. It never changes the reported standard error, the standard deviation of the bootstrap distribution. The percentile and bias-corrected intervals\nare not symmetric about the estimate, and the {it:t_wald} or {it:z_wald} column beside them is for reference only. Under {it:percentile} a line under the table\ngives the resolution. Under {it:bootdisplay(bca)} the {it:gteffects} and continuous treatment\ncells carry the {it:bc} family. With {it:boottstat} only {it:percentile} is available. {p_end}\n",
+   "words_before": 170,
+   "words_after": 136,
+   "dropped": [
+    {
+     "claim": "A p-value printed as exactly 0 means no completed replication fell beyond the null",
+     "survives_at": "166 (can print exactly 0) and textbook (meaning)"
+    },
+    {
+     "claim": "bc is 'from the percentile ranks of the draws' / textbook definitions of the families",
+     "survives_at": "textbook"
+    }
+   ],
+   "reason": "Family definitions reduced to names plus the wooldid facts (bca needs cluster() and G jackknife fits, all but bca stored), zero-p fact left at its home in reps()."
+  },
+  {
+   "idx": 172,
+   "hash": "b2923a8eea67",
+   "action": "replace",
+   "new_smcl": "{phang}{opt bootts:tat}: A studentized, or percentile-t, bootstrap of each replication's t statistic on its own analytic standard error. Refused without\n{it:bootstrap()}. The reported standard error is the analytic one, labelled {it:se_analytic}, and the statistic is labelled {it:t_pt}. The p-value and the interval come\nfrom the ranks of the studentized draws, and the interval is not symmetric about the estimate. Studentization covers every coefficient, the {it:gteffects} and continuous\ntreatment cells and the subgroup contrasts. The joint pre-trend, subgroup equality and {it:adversarial} tests are bootstrapped as test statistics. Without {it:boottstat}\nthe adversarial tests are reported as absent. Refused with {it:bootstrap(bayes)}, {it:poisson}, {it:bootdisplay(wald)}, {it:bootdisplay(bc)} and {it:bootdisplay(bca)}.\nIt is materially slower, since every replication estimates its own variance. With {it:cluster()} at or above the level of {it:i} the studentized contrasts and the subgroup\nequality test may be absent or unstable. Use the plain bootstrap for them there. {p_end}\n",
+   "words_before": 169,
+   "words_after": 144,
+   "dropped": [
+    {
+     "claim": "The analytic pairwise contrast standard errors can be degenerate with cluster() at or above i (the mechanism behind absent/unstable studentized contrasts)",
+     "survives_at": "264"
+    },
+    {
+     "claim": "'The object bootstrapped is each replication's t statistic ... rather than the coefficient' (definition of percentile-t)",
+     "survives_at": "textbook, kept as one clause"
+    }
+   ],
+   "reason": "Percentile-t definition cut to one clause and the degenerate-contrast mechanism left to its Subgroup Effects home; the turn-off advice stays."
+  },
+  {
+   "idx": 174,
+   "hash": "8695e5cbb53c",
+   "action": "replace",
+   "new_smcl": "{phang}{opt bootsa:ve(name)}: Also write the replication draws to {it:name}.dta in the working directory. Refused without {it:bootstrap()}. {it:name} is a plain\nfile name, and an existing file is overwritten only with {it:replace}. The file has a row {it:_rep} = 0 with the observed estimates and one row per replication, {it:_rep} =\n1 to {it:reps()}, with the coefficients under their {it:e(b)} names. A failed replication's row is all missing. Under {it:boottstat} the replication analytic standard\nerrors are added as {it:se_*}. With {it:cluster()}, one {it:w_} column per cluster records how many times it was drawn, or its Dirichlet weight under {it:bootstrap(bayes)}.\nThe file's characteristics record the engine, seed and random-number state. If the file cannot be written, the run still completes with a caution and posts the return code\nin {it:e(boot_save_rc)}. {p_end}\n",
+   "words_before": 134,
+   "words_after": 129,
+   "dropped": [],
+   "reason": "Register only: semicolons to full stops and the row layout stated once."
+  },
+  {
+   "idx": 176,
+   "hash": "5ac65b2e1dbc",
+   "action": "replace",
+   "new_smcl": "{phang}{opt dots(#)}: Show a progress dot every {it:#} replications. The default is 1, and {it:dots(0)} suppresses the display. After the fifth replication a\nprojected runtime for the loop is printed on the dots line. Requires {it:bootstrap()} or {it:permute()}. {p_end}\n",
+   "words_before": 44,
+   "words_after": 39,
+   "dropped": [
+    {
+     "claim": "dots() 'is refused with neither' bootstrap() nor permute()",
+     "survives_at": "176 ('Requires bootstrap() or permute()')"
+    }
+   ],
+   "reason": "Semicolon to full stop and the refusal folded into 'Requires'."
+  },
+  {
+   "idx": 178,
+   "hash": "de5dbc7ec7db",
+   "action": "replace",
+   "new_smcl": "{phang}{opt rseed(#)}: Seed for the bootstrap or permutation draws, an integer between 0 and 2,147,483,647 passed to {it:set seed}. Requires {it:bootstrap()}\nor {it:permute()}. The seed is stored in {it:e(boot_seed)} or {it:e(perm_seed)}. The random-number state before the first draw is always stored in {it:e(boot_rngstate)} or\n{it:e(perm_rngstate)}, so a run without {it:rseed()} can be replayed with {it:set rngstate} before repeating the call. {p_end}\n",
+   "words_before": 66,
+   "words_after": 61,
+   "dropped": [
+    {
+     "claim": "rseed() 'is refused with neither' bootstrap() nor permute()",
+     "survives_at": "178 ('Requires bootstrap() or permute()')"
+    }
+   ],
+   "reason": "The refusal folded into 'Requires'."
+  },
+  {
+   "idx": 183,
+   "hash": "3f89b6bf6d90",
+   "action": "replace",
+   "new_smcl": "{phang}{opt perm:ute(method)}: Randomization inference over the assignment of treatment onset, for settings with few treated clusters. {it:shuffle} permutes the\nobserved onset labels across clusters, holding the count at each onset fixed. {it:probabilities} draws each cluster's onset from the probabilities in {it:permprobs()}.\nRequires {it:permreps()} or, for shuffle only, {it:permexact}. Requires a single {it:cluster()} variable, the randomization unit, that nests {it:i} unless\n{it:permonsetcohorts} is specified. Every cluster must sit inside one treatment-onset group. The never-treated are their own group, coded as plain missing. This screen covers\nevery row the {it:if} expression keeps, even rows later dropped for a missing outcome or weight. A specification that runs without {it:permute()} can therefore be refused\nwith it. Restrict the sample with {it:if}. An onset more than {it:oostreatedcontrols()} periods after the last period, net of {it:anticipation()}, is permuted as\nnever-treated, as the estimation treats it, and a caution counts the clusters affected. Refused with {it:impvalues}, {it:unconditionalse}, {it:contreatwithin},\n{it:contreatcontrols(untreatedZero)}, {it:pretrendpower()}, {it:simultaneousbands} and {it:bootstrap()}, and when the design admits only one possible assignment. With\n{it:subgroups()} the subgroup screens apply over the whole sample. A unit split across subgroups, or labelled on some rows and missing on others, is refused whatever\n{it:safety()} is. Every p-value and interval is permutation-based, including the subgroup contrasts, the\njoint pre-trend, subgroup equality and adversarial tests, and the continuous-treatment plot cells. The subgroup contrasts and equality tests test the sharp null of no effect\nat any horizon, not equality of effects. P-values are two-sided and equal-tailed, with the add-one form for sampled draws. Intervals are shift intervals at {it:level()}:\nthe estimate minus the equal-tailed quantiles of the permutation distribution. By default the run and the replications are in fast mode. The {it:se_analytic} column is\nthen blank, and {it:e(V)}, {it:e(b_es_*)} and {it:e(V_es_*)} are not posted. {it:permanalyticse} restores them. The {it:gteffects} cells, whose onsets the replications reassign, and the\ncontinuous-treatment plot cells of the {it:baseTreated}, {it:byTreated} and {it:byTtre} lattice types have no permutation distribution. They are left blank, not filled\nanalytically. Replications that fail to estimate are excluded and counted in {it:e(perm_failed)}. The run is refused when fewer than max(20,\nhalf) complete. A caution prints when fewer than 6 clusters are ever treated. The test's size then rests on their being exchangeable in assignment with the others, and a\nfew atypical treated clusters can mis-size it. The number of possible assignments is in {it:e(perm_npossible)}. Under {it:permute(shuffle)} without {it:permstrata()} it is\nsmall only when there are few clusters in all or only one or two are treated. Strata make it smaller. {p_end}\n",
+   "words_before": 498,
+   "words_after": 415,
+   "dropped": [
+    {
+     "claim": "wooldid reassigns onset dates across clusters, re-estimates every requested quantity under each reassignment, and ranks the observed estimates (what a permutation test does)",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "The subgroup screens apply over the whole sample 'since any cluster can be treated in a replication' (the reason)",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "histogramcohorteffects output is untouched under permute()",
+     "survives_at": "214"
+    },
+    {
+     "claim": "'Few treated clusters do not by themselves make the possible assignments few' (restated by the sentence on when e(perm_npossible) is small)",
+     "survives_at": "183"
+    },
+    {
+     "claim": "the gteffects cells' 'keys are the onsets the replications reassign' shortened to 'whose onsets the replications reassign'",
+     "survives_at": "183"
+    }
+   ],
+   "reason": "Removed the textbook description of a permutation test and the histogram echo, compressed the screen-order explanation and the closing e(perm_npossible) sentences, five semicolons to full stops."
+  },
+  {
+   "idx": 185,
+   "hash": "6a2ca4c513d8",
+   "action": "replace",
+   "new_smcl": "{phang}{opt permreps(#)}: Number of sampled reassignments, drawn with replacement. At least 20. Required unless {it:permexact} is specified. A sampled-draw\np-value cannot fall below 2/({it:permreps}+1) under the default convention, or 1/({it:permreps}+1) under {it:permabsp} or {it:permside()}. A caution prints when that floor\nis above .05, and another when {it:permreps()} exceeds 10 percent of the possible assignments. {p_end}\n",
+   "words_before": 58,
+   "words_after": 55,
+   "dropped": [],
+   "reason": "Register only: semicolons to full stops, the two cautions joined."
+  },
+  {
+   "idx": 187,
+   "hash": "40989f0e2771",
+   "action": "replace",
+   "new_smcl": "{phang}{opt permex:act}: Enumerate every distinct assignment instead of sampling. Only with {it:permute(shuffle)}, and not together with {it:permreps()}. A\ncaution prints above 1,000 assignments, and enumeration is refused above 65,534. Above 10,000 enumerated assignments the draw matrices are not posted, and a caution says so.\n{it:permsave()} writes them regardless. P-values are then plain shares over the {it:M} assignments, with a floor of 2/{it:M}, or 1/{it:M} under {it:permabsp}. {p_end}\n",
+   "words_before": 90,
+   "words_after": 67,
+   "dropped": [
+    {
+     "claim": "65,534 'is the largest number of rows a Stata matrix can hold and so the point at which the replication accumulators stop working'",
+     "survives_at": "maintainer"
+    }
+   ],
+   "reason": "Dropped the maintainer reason for the 65,534 cap; the number stays."
+  },
+  {
+   "idx": 189,
+   "hash": "ba34f9bcbe89",
+   "action": "replace",
+   "new_smcl": "{phang}{opt permstr:ata(varname)}: Confine the shuffle to within strata of a numeric variable, so each onset group keeps its composition across strata. Every\ncluster must sit inside a single stratum, with no missing values. Only with {it:permute(shuffle)}. Under {it:permute(probabilities)} express strata through {it:permprobs()}\ninstead. {p_end}\n",
+   "words_before": 45,
+   "words_after": 44,
+   "dropped": [],
+   "reason": "Register only: semicolon to full stop."
+  },
+  {
+   "idx": 191,
+   "hash": "6606b7651028",
+   "action": "replace",
+   "new_smcl": "{phang}{opt permpr:obs(spec)}: The assignment-probability design for {it:permute(probabilities)}. Write it as {it:(onsetvar level level ...)} followed by one\n{it:(clustervalue p p ...)} group per cluster. The first group names the timing variable and lists every in-sample onset level. The never-treated, including onsets after\nthe last period, are {it:.}. Each later group gives one cluster's probabilities over those levels, nonnegative and summing to 1. Every cluster value must appear exactly\nonce. Requires {it:permreps()}. {it:permexact} is refused. A caution prints if the observed assignment has zero probability under the design. {p_end}\n",
+   "words_before": 87,
+   "words_after": 88,
+   "dropped": [],
+   "reason": "Register only: the syntax and the never-treated coding split into sentences."
+  },
+  {
+   "idx": 193,
+   "hash": "889d3b834498",
+   "action": "replace",
+   "new_smcl": "{phang}{opt permts:tat}: Randomize on t-ratios instead of coefficients: each replication's estimate over its own analytic standard error. The run is slower, and\n{it:fastnose} is refused. Intervals become the estimate minus the equal-tailed quantiles of the permuted t-ratios times\nthe analytic standard error. The joint, equality and adversarial tests and the pairwise contrasts are unchanged. It protects against a treated cluster with unusually\ndispersed errors only where each treated cohort-period cell contains several clusters. Under {it:permute()} that needs {it:permonsetcohorts} with a {it:cluster()} finer\nthan {it:i}. Whenever {it:cluster()} nests {it:i} it does not protect, and at {it:cluster()} equal to {it:i} a caution says so. {p_end}\n",
+   "words_before": 110,
+   "words_after": 103,
+   "dropped": [
+    {
+     "claim": "'The replications then compute standard errors', the reason the run is slower",
+     "survives_at": "textbook"
+    }
+   ],
+   "reason": "Dropped the reason for the slowdown; the protection conditions from the correction stay verbatim in substance."
+  },
+  {
+   "idx": 197,
+   "hash": "2f3b84a7173b",
+   "action": "replace",
+   "new_smcl": "{phang}{opt perman:alyticse}: Without {it:permtstat}, compute the analytic standard errors anyway and show them in the {it:se_analytic} column for reference.\nThe p-values and intervals remain permutation-based, and the posted {it:e(V)} is analytic. {it:fastnose} is refused. {p_end}\n",
+   "words_before": 35,
+   "words_after": 35,
+   "dropped": [],
+   "reason": "Register only: semicolon to full stop."
+  },
+  {
+   "idx": 199,
+   "hash": "5a0b36902420",
+   "action": "replace",
+   "new_smcl": "{phang}{opt permab:sp}: Report absolute-value permutation p-values instead of equal-tailed ones: the share of replications whose absolute statistic is at or\nabove the observed one. Intervals become the estimate plus or minus the {it:level()} quantile of the permuted absolute statistics, so p-value and interval agree. The joint,\nequality and adversarial tests are unchanged. {it:permabsp} and {it:permside()} may not be combined. {p_end}\n",
+   "words_before": 62,
+   "words_after": 60,
+   "dropped": [],
+   "reason": "Minor tightening; 'keep agreeing' to 'agree'."
+  },
+  {
+   "idx": 203,
+   "hash": "ebe3975e779e",
+   "action": "replace",
+   "new_smcl": "{phang}{opt permstep:down}: Report, for each family of two or more horizons, the Romano and Wolf max-|studentized| step-down computed from the same\nreplications. It controls the family-wise error rate across the horizons under the sharp null of no effect at any horizon. Post-treatment and pre-treatment horizons are\nseparate families. Results are stored in {it:e(perm_stepdown*)} and summarised in the footer. A family whose step-down cannot be formed is silently not posted. {p_end}\n",
+   "words_before": 72,
+   "words_after": 70,
+   "dropped": [],
+   "reason": "Register only: the long sentence split, semicolon to full stop."
+  },
+  {
+   "idx": 205,
+   "hash": "5310c041f7ba",
+   "action": "replace",
+   "new_smcl": "{phang}{opt permsa:ve(name)}: Write the permutation draws to {it:name}.dta in the working directory. {it:name} is a plain file name, and an existing file needs\n{it:replace}. Rows: one per replication plus a row 0 with the observed estimates. Columns: one per coefficient of {it:e(b)}, the replication standard errors under\n{it:permtstat}, and one {it:onset_clustervalue} per cluster holding its onset in each replication. If the file cannot be written, the run still completes with a caution\nand posts the return code in {it:e(perm_save_rc)}. {p_end}\n",
+   "words_before": 82,
+   "words_after": 80,
+   "dropped": [],
+   "reason": "Register only: semicolons to full stops."
+  },
+  {
+   "idx": 207,
+   "hash": "77b15474bc0c",
+   "action": "replace",
+   "new_smcl": "{phang}{opt permonset:cohorts}: Assert that {it:i} is the treatment-onset grouping, one level of {it:i} per distinct onset with the never-treated a single level.\nOn that assertion a {it:cluster()} finer than {it:i} is accepted, and each replication rebuilds {it:i} from the onsets it drew. Onsets after the last period belong to the\nnever-treated level under a {it:cluster()} finer than {it:i}. At {it:cluster()} equal to {it:i} they keep a level of their own, and nothing is rebuilt. The assertion is\nchecked and the run stops if it fails. {it:safety(off)} does not lift the check. Compatible with {it:permstrata()} and {it:permute(probabilities)}, not with\n{it:subgroups()}. {p_end}\n",
+   "words_before": 100,
+   "words_after": 100,
+   "dropped": [],
+   "reason": "Register only: semicolons to full stops."
+  },
+  {
+   "idx": 209,
+   "hash": "bb6feefd5a15",
+   "action": "replace",
+   "new_smcl": "{pstd} {ul: Discussion of Permutation Intervals and Pre-Treatment Tests:} The shift interval widens as the true effect grows and is calibrated only near the\nnull. {it:permtstat} removes that growth for the post-treatment rows only. The implied standard error in {it:e(perm_se_shift)} is not a sampling standard error. Every\npre-treatment p-value, including the joint pre-trend tests, tests the sharp null of no effect at any horizon. In staggered designs the reassigned onsets move post-treatment\noutcomes into the draws' pre-treatment horizons, so the pre-period p-values rise toward 1 as the true effect grows. A large pre-period p-value is then not by itself\nevidence of no pre-trend. With a single onset date this does not arise. {p_end}\n",
+   "words_before": 131,
+   "words_after": 113,
+   "dropped": [
+    {
+     "claim": "The permutation distribution of a coefficient is generated by relabelling outcomes that carry the true effect (why the shift interval widens and is calibrated only near the null)",
+     "survives_at": "textbook"
+    }
+   ],
+   "reason": "Kept the behaviour (widens with the true effect, calibrated only near the null) and the wooldid-specific pre-period caution, dropped the mechanism."
+  },
+  {
+   "idx": 214,
+   "hash": "f2c47c0b2cf3",
+   "action": "replace",
+   "new_smcl": "{phang}{opt hist:ogramcohorteffects}: Produce a histogram of cohort i-specific treatment effects, and return those effects in {it:e(histogramestimates)}. Under\n{it:att_it} or {it:att_itime}, the column averages each cohort's cell effects. With {it:contreat()}, average marginal effects are histogrammed and appended to the matrix.\nUnder {it:bootstrap()} and {it:permute()}, the histogram draws the observed point estimates, which neither engine changes, and uses no covariance. {p_end}\n",
+   "words_before": 63,
+   "words_after": 59,
+   "dropped": [
+    {
+     "claim": "'for the user to manipulate'",
+     "survives_at": "textbook"
+    }
+   ],
+   "reason": "Aside dropped, semicolon to full stop."
+  },
+  {
+   "idx": 216,
+   "hash": "6e2f14be5e29",
+   "action": "replace",
+   "new_smcl": "{phang}{opt save:plots(name)}: Save every graph as a .gph file, and the data behind any event study plots as .dta files, one per subgroup, all under names\nbeginning with {it:name}. With {it:makecfxplots} the plotted points are saved as {it:name}_cfx.dta. A suffix on each file name identifies the graph or dataset. {it:name}\nmust be a Stata name, so it takes no directory part and at most 32 characters. Everything is saved to Stata's working directory. {p_end}\n",
+   "words_before": 97,
+   "words_after": 74,
+   "dropped": [
+    {
+     "claim": "'it begins the name of every graph and dataset file written' (restated by the first sentence)",
+     "survives_at": "216"
+    }
+   ],
+   "reason": "Merged the two file-naming statements and dropped the restatement."
+  },
+  {
+   "idx": 218,
+   "hash": "04637e63b638",
+   "action": "replace",
+   "new_smcl": "{phang}{opt replace}: Overwrite any existing files named by {it:saveplots()}, {it:permsave()} or {it:bootsave()}. Without it an existing file is an error, raised\nunder {it:permute()} and {it:bootstrap()} before the replications run. The exception is {it:name}_cfx.dta on a run without {it:bootstrap()} or {it:permute()}, which gets a\ncaution. {p_end}\n",
+   "words_before": 48,
+   "words_after": 45,
+   "dropped": [],
+   "reason": "Register only: the exception made its own sentence."
+  },
+  {
+   "idx": 220,
+   "hash": "b43f924c57bd",
+   "action": "replace",
+   "new_smcl": "{phang}{opt sum:marystats}: Present summary statistics of the outcome and any {it:contreat()} variable: overall, in the treatment group before and after\ntreatment, and in the control group. {it:contreatwithin} omits the control group rows, and {it:contreatcontrols(untreatedZero)} omits the pre-treatment and control group\nrows for the dose. Without a fixed reference period, and with pre-treatment horizons requested, the size of the reference group relative to the rest of the pre-treatment\nperiod is also shown. With event study horizons, the event study composition table {it:e(escomp)} is also displayed, overall and per subgroup. {p_end}\n",
+   "words_before": 108,
+   "words_after": 89,
+   "dropped": [
+    {
+     "claim": "summary statistics 'Compute and present' wording",
+     "survives_at": "220"
+    }
+   ],
+   "reason": "Tightened the list of rows; semicolon to full stop."
+  },
+  {
+   "idx": 222,
+   "hash": "e4215d97a275",
+   "action": "replace",
+   "new_smcl": "{phang}{opt pois:son}: Estimate by poisson regression, with {it:ppmlhdfe} in place of {it:reghdfe}, or Stata's {it:poisson} in place of {it:regress} under\n{it:unconditionalse} or {it:customvce()}. Treatment effects are differences in linear predictions, as from {it:predict(xb)}. It suits an outcome with natural zeros that\none would otherwise log, and groups that share parallel trends only in proportions. Accepts pweights but not aweights. Refused with a negative outcome and with\n{it:boottstat}. {it:ppmlhdfe} cannot absorb a slope on a one-level factor or a factor with two or more slopes. So under plain {it:contreatcontrols(basic)}, with no\n{it:lattice()} and no other control type, the pooled dose control and, without {it:ccnoabsorb}, any {it:ccc_absorb()} controls enter the regression explicitly. So do the\ncontinuous treatment controls under {it:contreatpoly()} above 1 with a {it:lattice()} or another control type. If {it:ppmlhdfe} still fails with r(3200), as a one-level\n{it:lattice()} can make it, {it:wooldid} retries once with the {it:ccc_absorb()} and continuous treatment controls moved out of the absorbed effects. {it:fe()} stays\nabsorbed, so a one-level term there stops the run with r(3200). {it:ppmlhdfe} can drop an explicit pooled dose control as collinear with the fixed effects\nwhen the dose's mean is large relative to its spread. {it:wooldid} then prints a caution. Subtracting the mean from the dose avoids it, though under\n{it:contreatelasticitytype(dyex)} that also changes the elasticity, which scales by the dose. A treated cohort-period cell whose outcome is zero on every row is perfect\nseparation. {it:wooldid} names the cell and exits. Coarsen {it:i}, drop the cohort, or specify {it:safety(off)}, which excludes the separated cells from the estimated\neffects. The variable name {it:_ppmlhdfe_d} is reserved on poisson runs. {p_end}\n",
+   "words_before": 336,
+   "words_after": 266,
+   "dropped": [
+    {
+     "claim": "'rather than multicollinearity' after perfect separation",
+     "survives_at": "guide"
+    },
+    {
+     "claim": "the ccc_absorb() controls stay absorbed elsewhere, 'one variable per term when it has two or more'",
+     "survives_at": "maintainer"
+    },
+    {
+     "claim": "'as the retry below enters them' and 'as under ccnoabsorb' comparisons",
+     "survives_at": "maintainer"
+    },
+    {
+     "claim": "the byTreated, byTtre, byCohort, byTime list is now 'no other control type'",
+     "survives_at": "222"
+    }
+   ],
+   "reason": "Compressed the ppmlhdfe absorb mechanics while keeping every refusal, the explicit-entry conditions, the r(3200) retry and fe() stop, the collinear-dose caution with its centring remedy and dyex effect, the separation exit and the reserved name."
+  },
+  {
+   "idx": 348,
+   "hash": "f9d94bd76609",
+   "action": "replace",
+   "new_smcl": "{phang}{opt control:s()}: Passed unmodified as controls to the regression command: {it:reghdfe}, {it:ppmlhdfe} under {it:poisson}, and {it:regress} or\n{it:poisson} under {it:customvce()} or {it:unconditionalse}. {p_end}\n",
+   "words_before": 31,
+   "words_after": 23,
+   "dropped": [],
+   "reason": "Register only: parenthetical list turned into the sentence."
+  },
+  {
+   "idx": 350,
+   "hash": "1decced90757",
+   "action": "replace",
+   "new_smcl": "{phang}{opt fe()}: Passed unmodified to {it:reghdfe}'s absorb statement as fixed effects. Variables are read as categorical, and i.X##c.X2 notation is\npermitted for heterogeneous slopes and the like. Under {it:customvce()} or {it:unconditionalse} estimation runs through {it:regress}, where a bare variable name is read as\ncontinuous. Write the {it:i.} prefix explicitly there. {p_end}\n",
+   "words_before": 74,
+   "words_after": 51,
+   "dropped": [],
+   "reason": "Register only; the 'and the like' kept, semicolon removed."
+  },
+  {
+   "idx": 352,
+   "hash": "ebd2b6ffe2f0",
+   "action": "replace",
+   "new_smcl": "{phang}{opt timetrend:s}: Control for cohort-specific time trends, i.i##c.t. This option is required for heterogeneous time trend controls to work. It also\nupdates {it:wooldid}'s estimability checks, drops cohorts without enough pre-treatment data to estimate a trend, and, with a fixed reference period, makes the two\nreference periods normalized to 0 chronologically adjacent. It adds no trends in a continuous treatment variable. With {it:cluster()} on {it:i}, the cohort trend terms\ntypically leave the covariance unidentified. {it:wooldid} says so and reports the estimates without standard errors. The same specification under {it:robust} is\nunaffected. {p_end}\n",
+   "words_before": 132,
+   "words_after": 91,
+   "dropped": [
+    {
+     "claim": "'Importantly', and that the option is required 'even when they are specified manually'",
+     "survives_at": "550 (Known Issues says let timetrends build the trend terms)"
+    }
+   ],
+   "reason": "Aside and the manual-trend clause that conflicts with Known Issues [550] removed; every check the option performs and the cluster-on-i caution stay."
+  },
+  {
+   "idx": 354,
+   "hash": "9bf61a78a1ad",
+   "action": "replace",
+   "new_smcl": "{phang}{opt coarse:cohortcontrols()}: Includes the specified controls and their interactions with every Tz_it dummy in the model, one for each cohort-time\nperiod with an estimated treatment effect. With {it:esfixedbaseperiod} that is every estimable treated cohort by relative time period. The control slopes are pooled across\nthe reference period and the control group, and each treated cohort-period gets its own slope. Each reported effect is the cell's average outcome less its predicted\nuntreated outcome at the pooled slope, so it does not depend on where the control is centred or on its units. Cohort by time period interactions you specify yourself\ndiffer, because they do not pool the reference period and the control group. Every coarse cohort control must use factor notation, {it:c.} for continuous and {it:i.} for\ncategorical. {p_end}\n",
+   "words_before": 134,
+   "words_after": 128,
+   "dropped": [],
+   "reason": "Register only, the correction's substance intact: parenthetical made a sentence, 'So it does not depend' joined to its premise."
+  },
+  {
+   "idx": 356,
+   "hash": "e17001a5b3f0",
+   "action": "replace",
+   "new_smcl": "{phang}{opt inter:activecontrols()}: Includes the specified variables in two capacities. They enter as controls interacted with time period indicators. They\nare also de-meaned by cohort {it:i} and interacted with every Tz_it dummy, so treatment effects vary linearly with them. Unlike {it:coarsecohortcontrols()}, that variation\nis reported as part of the treatment effects rather than partialled out. This most closely mimics the approach to covariates in Wooldridge (2025). The treatment-effect\nslopes exist only where a control varies within cohort-by-period cells. Where it does not, for example a unit-level control with a unit-level {it:i}, the run is identical\nto {it:controls(i.t#c.x)} and {it:wooldid} prints a caution naming the control. This option also turns the default cell collapse off. See {it:nofastcollapse}. {p_end}\n",
+   "words_before": 216,
+   "words_after": 116,
+   "dropped": [
+    {
+     "claim": "With only one interactive control, ATTs should be similar to specifying it as a continuous treatment plus controls interacting it with time dummies",
+     "survives_at": "guide"
+    },
+    {
+     "claim": "'This is achieved by including interactions...' implementation sentence (now one clause)",
+     "survives_at": "356"
+    }
+   ],
+   "reason": "Dropped the methodological equivalence and the implementation restatement, turned the parentheticals into sentences."
+  },
+  {
+   "idx": 358,
+   "hash": "5bf17bbb3c8e",
+   "action": "replace",
+   "new_smcl": "{pstd} {ul:Caution Regarding Continuous Treatment Variables and Controls:} Controls you build from a continuous treatment variable must not include that variable\nitself, which can distort {it:wooldid}'s margins calculation. A control with identical values under a different name is fine. Pair such controls with\n{it:contreatcontrols(basic)}, or any control type other than {it:untreatedZero}. {p_end}\n",
+   "words_before": 97,
+   "words_after": 52,
+   "dropped": [
+    {
+     "claim": "the recommendation is phrased as 'It is recommended'",
+     "survives_at": "358"
+    }
+   ],
+   "reason": "Three sentences say the same three facts in the author's short register."
+  },
+  {
+   "idx": 365,
+   "hash": "d8389dc7f488",
+   "action": "replace",
+   "new_smcl": "{phang}{opt customw:eightmultiplier(varname)}: Weights the observations in the margins calculation, multiplying any sample weight, to produce bespoke\ntreatment effects. It scales the margins weights only, not the regression weights. See step 2 under {help wooldid##description:Description}. Negative values are an error\nunless {it:safety(off)} is specified. Missing values drop the observation. {p_end}\n",
+   "words_before": 69,
+   "words_after": 49,
+   "dropped": [
+    {
+     "claim": "'(see step 2 here)' link text",
+     "survives_at": "365 (link kept, text 'Description')"
+    }
+   ],
+   "reason": "Added the dupmap-homed clause that the multiplier scales the margins weights only, not the regression weights; parentheticals to sentences."
+  },
+  {
+   "idx": 367,
+   "hash": "49623003721a",
+   "action": "replace",
+   "new_smcl": "{phang}{opt regtol(#)}: The convergence tolerance for {it:reghdfe} and {it:ppmlhdfe}, as the negative base-ten exponent: {it:regtol(9)} means a tolerance of\n1e-9. The {it:wooldid} default is 9, where {it:reghdfe}'s own is 8. A higher value may help when many interaction terms with continuous variables are absorbed, as with\ncontinuous treatments. It has no effect under {it:unconditionalse} or {it:customvce()}, which estimate through {it:regress} or {it:poisson}. {p_end}\n",
+   "words_before": 93,
+   "words_after": 63,
+   "dropped": [
+    {
+     "claim": "'You may wish to set this higher or lower'",
+     "survives_at": "textbook"
+    }
+   ],
+   "reason": "Hedge dropped and the ' -- ' dash removed; defaults, meaning and the regress/poisson no-effect stay."
+  },
+  {
+   "idx": 369,
+   "hash": "1e0e29d5ffde",
+   "action": "replace",
+   "new_smcl": "{phang}{opt ccno:absorb}: Enter the continuous treatment controls in the main regression rather than in the {it:absorb()} option of {it:reghdfe} or\n{it:ppmlhdfe}, where they go by default. Some {it:poisson} runs already enter them explicitly. See {it:poisson}. Under certain conditions this improves estimation stability\nand keeps variables from being dropped wrongly. {p_end}\n",
+   "words_before": 68,
+   "words_after": 50,
+   "dropped": [],
+   "reason": "Register only: the parenthetical pointer made a sentence."
+  },
+  {
+   "idx": 371,
+   "hash": "627be045ac44",
+   "action": "replace",
+   "new_smcl": "{phang}{opt ccc_absorb()}: A version of {it:coarsecohortcontrols()} for continuous variables that passes the treated cells' own slopes to the {it:absorb()}\nstatement. The reported effects are those of {it:coarsecohortcontrols()}. It is often slower but can save memory in the main regression. Be extra careful that\nspecifications with {it:ccc_absorb()} are identified, since not all identification failures are detected. Under {it:contreat()}, naming the treatment variable itself here\nturns the default cell collapse off. See {it:nofastcollapse}. Under {it:poisson} some of these slopes enter the regression explicitly. See {it:poisson}. {p_end}\n",
+   "words_before": 141,
+   "words_after": 84,
+   "dropped": [
+    {
+     "claim": "The pooled control slopes enter the regression; the cells' slopes are on the control centred at each cell's mean",
+     "survives_at": "maintainer"
+    },
+    {
+     "claim": "'or under certain other circumstances' (memory benefit)",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "the exact poisson conditions (plain contreatcontrols(basic) without ccnoabsorb, and the r(3200) retry)",
+     "survives_at": "222"
+    }
+   ],
+   "reason": "Implementation detail left to the guide and the poisson conditions left to their home; the identification warning and the cell-collapse note stay."
+  },
+  {
+   "idx": 373,
+   "hash": "e81b017c0c3b",
+   "action": "replace",
+   "new_smcl": "{phang}{opt ver:bose}: Print the regression command {it:wooldid} uses and progress reports throughout. The regression itself runs quietly. The underlying\nregression is also stored as {it:___wooldidfullmodel}. {it:estimates restore} can recover it for coefficient-level work only, such as {it:lincom} and {it:test}. {p_end}\n",
+   "words_before": 64,
+   "words_after": 40,
+   "dropped": [
+    {
+     "claim": "'since its regressors are temporary variables that no longer exist after wooldid returns'",
+     "survives_at": "maintainer"
+    }
+   ],
+   "reason": "Kept the coefficient-level-only limitation, dropped the implementation reason."
+  },
+  {
+   "idx": 375,
+   "hash": "5b45dda763a3",
+   "action": "replace",
+   "new_smcl": "{phang}{opt gte:ffects}: Returns in {it:e(gteffects)} the cohort-by-relative-period effect estimates underlying {it:wooldid}'s aggregates, one row per estimated\n{it:i}-by-relative-period cell, read directly off the underlying regression. The table is printed when it has at most 200 rows. Columns: {it:i}, {it:onset}, {it:caltime},\n{it:relyr}, {it:estimate}, {it:se}, {it:p}, the interval bounds named for the run's {it:level()}, {it:inwindow}, which is 1 inside the reported event-study window,\n{it:nobs}, and the cell's total estimation weight under each requested estimand: {it:w_att}, {it:w_att_it}, {it:w_att_i} and {it:w_att_itime}. The table supports custom\naggregations. The weighted mean of {it:estimate} under a weight column, over the post-treatment rows ({it:relyr} at or above 0) or the pre-treatment rows, reproduces the\nmain or pretreatment row exactly. Over a single {it:relyr} it reproduces the event-study row under {it:w_att} or {it:w_att_it} only, since {it:att_i} and {it:att_itime}\nreport the {it:att_it} event study. With {it:subgroups()} one full-sample table is returned. Standard errors are the regression's coefficient-level ones. A cell's standard\nerror is understated, and a caution reports it, when the cell lies inside one cluster, as with {it:cluster()} at the level of {it:i} or coarser. The same holds for a cell\nwith a single observation under {it:robust}, pweights, a robust {it:customvce()} or {it:poisson} on {it:ppmlhdfe}. A cell whose variance is not identified has a missing\nstandard error. Not available with {it:contreat()}, where the cell coefficients are dose-zero intercepts rather than treatment effects. Available under {it:fastnose}. Under\n{it:bootstrap()} the cell inference is bootstrap-based, but a cell the caution counts is resampled whole, so its standard error stays understated. Under {it:permute()} the\ncells carry no inference. {p_end}\n",
+   "words_before": 283,
+   "words_after": 255,
+   "dropped": [
+    {
+     "claim": "'(and prints, for tables of up to 200 rows)' now its own sentence",
+     "survives_at": "375"
+    },
+    {
+     "claim": "Under w_att_i or w_att_itime a single relyr 'gives a custom aggregate that no reported row matches' (implied by 'under w_att or w_att_it only')",
+     "survives_at": "375"
+    },
+    {
+     "claim": "the robust-case variance of ppmlhdfe 'is always robust'",
+     "survives_at": "407"
+    }
+   ],
+   "reason": "Five semicolons to full stops and the weight-column rules tightened; every column, both understated-SE conditions with their robust list, the contreat() refusal and the bootstrap and permute behaviour stay."
+  },
+  {
+   "idx": 377,
+   "hash": "6314d1eda53b",
+   "action": "replace",
+   "new_smcl": "{phang}{opt safety(on|off)}: By default {it:wooldid} cautions or halts when it is likely to yield unreliable estimates. The main check is whether an i-t cell's treatment\nvariable was dropped for multicollinearity, as when fixed effects or continuous treatment controls partial out a main effect. Such failures are generally detected, but not always for a continuous treatment with a lattice or polynomial terms. Default safety also checks that onset is\nconstant within {it:i}, that weights and the {it:customweightmultiplier()} variable are non-negative, and that lattice variables are non-negative integers. It cautions when\n{it:i} takes more than 100 distinct values. See {help wooldid##runtime:Runtime}. It halts with an informative error before estimation if the specification would exceed\nthe current {help maxvar} setting. {it:safety(off)} skips these checks, and downgrades a number of refusals described elsewhere in this help to cautions. If a run changes\nyour specification, {it:wooldid} says so whatever {it:safety()} is set to. Only {it:on} and {it:off} are accepted. {p_end}\n",
+   "words_before": 196,
+   "words_after": 155,
+   "dropped": [
+    {
+     "claim": "'Most important among these checks' wording",
+     "survives_at": "377"
+    }
+   ],
+   "reason": "Tightened the check descriptions; every check, the >100 caution, the maxvar halt and 'changes are always reported' stay."
+  },
+  {
+   "idx": 382,
+   "hash": "c1296fa95236",
+   "action": "replace",
+   "new_smcl": "{pstd} Runtime is driven by the number of cohort-by-period interaction cells {it:wooldid} builds, roughly the number of distinct values of {it:i} times the number\nof relative periods in the event-study window. It grows faster than linearly in that count, while sample size, subgroup count and event-study width each cost only\nlinearly. Coarsening {it:i} is therefore normally the single largest speedup: define {it:i} as cohorts or treatment onset groups and put unit fixed effects in {it:fe()}.\nDropping observations buys little, so subsampling is a poor way to shorten a long {it:bootstrap()} or {it:permute()} run. Shrinking the window or coarsening {it:i} works\nthere. With {it:lattice()}, prefer the smallest {it:latticenum} that answers the question. {p_end}\n",
+   "words_before": 123,
+   "words_after": 112,
+   "dropped": [
+    {
+     "claim": "lattice() is the most expensive option",
+     "survives_at": "281"
+    }
+   ],
+   "reason": "Lattice cost left at its Continuous Treatments home; the latticenum advice stays."
+  },
+  {
+   "idx": 384,
+   "hash": "cfa196623a40",
+   "action": "replace",
+   "new_smcl": "{pstd} Nearly all of a run is spent inside {help margins}, most of it in the delta-method variance calculation. {it:fastnose} skips that calculation and saves\nseveral times over when standard errors are not needed. The default cell collapse shrinks the data each {it:margins} call sees, and the two compose. Runs the collapse\nskips, listed under {it:nofastcollapse}, pay the full per-row cost. {p_end}\n",
+   "words_before": 77,
+   "words_after": 62,
+   "dropped": [
+    {
+     "claim": "'(see nofastcollapse)' after the cell collapse",
+     "survives_at": "384 (the next sentence cites nofastcollapse)"
+    }
+   ],
+   "reason": "Semicolon and parenthetical removed; full-data list replaced by its home under nofastcollapse (customvce() not re-added)."
+  }
+ ]
+}

@@ -1,0 +1,487 @@
+{
+ "group": "G1",
+ "words_before": 4899,
+ "words_after": 3152,
+ "proposals": [
+  {
+   "idx": 33,
+   "hash": "2fa412b6c111",
+   "action": "replace",
+   "new_smcl": "{pstd} {bf:wooldid} -- Suite for difference-in-differences analyses with staggered treatment onset, using the two-way fixed effects approach of Wooldridge (2025)\nand the high dimensional fixed effects estimators of Correia (2017). It estimates several types of average treatment effect, compares effects across subgroups,\nproduces event study estimates and parallel trends tests, and estimates average and marginal effects of a continuous treatment or treatment intensity variable [experimental].\nIt draws event study plots, histograms of cohort effects, and plots of effects across the distribution of a continuous treatment. Inference options are analytic\nclustered standard errors, unconditional standard errors that account for sampling variation in covariates, Ibragimov and Muller (2010) cluster-robust inference,\nbootstrap standard errors, and randomization inference for settings with few treated clusters. Other features include {it:anticipation()} windows, a {it:gteffects}\ntable of cohort-by-period effects, {it:pretrendpower()} diagnostics, a point-estimates-only {it:fastnose} mode, and replay of the stored results by typing {it:wooldid} alone. {p_end}\n",
+   "words_before": 175,
+   "words_after": 148,
+   "dropped": [],
+   "reason": "Register only: the option names move out of parentheses into the nouns they name, and the long feature sentences are split."
+  },
+  {
+   "idx": 39,
+   "hash": "7c877a719e88",
+   "action": "replace",
+   "new_smcl": "{pstd}{ul:Github Link:} {browse \"https://github.com/thegland/wooldid/\"}. The command {it:wooldid, update} updates this program from that page. A longer guide\nfor AI agents and advanced users is at {browse \"https://github.com/thegland/wooldid/blob/main/wooldidinstall/wooldid_agent_guide.md\"}. It is also an ancillary file of the package,\ncopied to the working directory by {cmd:net get wooldid}. {p_end}\n",
+   "words_before": 52,
+   "words_after": 46,
+   "dropped": [],
+   "reason": "Register: removes the spaced dash and the semicolon, keeps both links and the net get fact."
+  },
+  {
+   "idx": 82,
+   "hash": "ba8c28d9d6fe",
+   "action": "replace",
+   "new_smcl": "{pstd}\n{bf:wooldid} estimates difference-in-differences treatment effects in the vein of Wooldridge (2025), with extensions for continuous treatments and for effects by\nsubgroup or treatment arm. Treatment must be irreversible: once treated, cohorts must remain treated.{p_end}\n",
+   "words_before": 48,
+   "words_after": 35,
+   "dropped": [],
+   "reason": "Register: drops 'various types of' and the double dash."
+  },
+  {
+   "idx": 84,
+   "hash": "09ad30f9576d",
+   "action": "replace",
+   "new_smcl": "{pstd}\n{it:wooldid} works in two steps. Step 1 estimates the underlying two-way fixed effects regression. At baseline this regresses the outcome on cohort fixed effects,\ntime fixed effects, and one indicator for each cohort-period (i-t) cell whose treatment effect is to be estimated. Step 2 uses {help margins} to turn the coefficients\non those indicators into the treatment effects of interest. For every treated observation it takes the difference between the fitted value and the counterfactual\nfitted value without treatment, and then averages these differences. The underlying regression is: {p_end}\n",
+   "words_before": 187,
+   "words_after": 90,
+   "dropped": [
+    {
+     "claim": "Tutorial framing ('Broadly speaking', 'To flesh this out', 'Various averages ... various types of user-specified average treatment effects')",
+     "survives_at": "90"
+    }
+   ],
+   "reason": "Keeps the two-step mechanism in plain sentences and drops the tutorial register."
+  },
+  {
+   "idx": 88,
+   "hash": "5b7588f0f41a",
+   "action": "replace",
+   "new_smcl": "{pstd} where i indexes cohorts, t time periods and j individual units, which may coincide with cohorts or be more numerous. Z is the set of (i,t) pairs where i is a\ntreated cohort and t is one of its treated periods. Tz_it is 1 in the cell z=(iz,tz) of Z and 0 otherwise, and TreatedFlag_it is 1 for any observation in a cell of Z.\nfe_i and fe_t are cohort and time fixed effects, and Y_jt is the outcome. {p_end}\n",
+   "words_before": 109,
+   "words_after": 81,
+   "dropped": [],
+   "reason": "Same glossary in shorter sentences."
+  },
+  {
+   "idx": 90,
+   "hash": "58dac15a35b4",
+   "action": "replace",
+   "new_smcl": "{pstd} The margins calculation in step 2 depends on the estimands requested. The overall average treatment effect averages, over all observations with TreatedFlag_it\nequal to 1, the fitted value less the counterfactual fitted value with TreatedFlag_it set to 0, applying any sample weights. Other estimands reweight this average,\nor restrict it to a subgroup or time period. See {help wooldid##specifyestimand:estimands}. {p_end}\n",
+   "words_before": 137,
+   "words_after": 61,
+   "dropped": [],
+   "reason": "Same content in half the words."
+  },
+  {
+   "idx": 91,
+   "hash": "3e13f50954aa",
+   "action": "replace",
+   "new_smcl": "{pstd} By default, standard errors come from the underlying regression and pass through the margins calculation by the delta method. They are conditional\nstandard errors: they take the observed covariate values as fixed. P-values use a t distribution with the degrees of freedom stored in {it:e(df_r)}, described under\n{help wooldid##output:Working with Output}. Under {it:poisson} they use the normal distribution. {it:unconditionalse} instead accounts for sampling variation in\ncovariates. See {help wooldid##standarderrors:standard_errors}. {p_end}\n",
+   "words_before": 181,
+   "words_after": 71,
+   "dropped": [
+    {
+     "claim": "Under cluster(), or a customvce() of cluster, the degrees of freedom are one less than the number of clusters, under multi-way cluster() one less than the smallest cluster count, otherwise the residual degrees of freedom",
+     "survives_at": "426"
+    },
+    {
+     "claim": "The unconditional alternative is margins' unconditional option",
+     "survives_at": "151"
+    }
+   ],
+   "reason": "The degrees-of-freedom rule is stated in full at its e(df_r) home, so this block keeps one sentence pointing there."
+  },
+  {
+   "idx": 93,
+   "hash": "a4a861348c5b",
+   "action": "replace",
+   "new_smcl": "{pstd} The approach extends with little change. {it:poisson} swaps the regression command without changing the equation or the margins step. Controls and fixed\neffects enter the regression without changing the margins step. Subgroup effects come from running the margins step within each subgroup, and {it:wooldid} can test\nwhether subgroup effects differ, for example across treatment arms, as interaction terms would in a traditional difference-in-differences. See\n{help wooldid##interactions:subgroups}. {p_end}\n",
+   "words_before": 146,
+   "words_after": 68,
+   "dropped": [
+    {
+     "claim": "Pairwise comparisons of subgroup effects are computed with margins, with a joint test that all subgroups have the same effect",
+     "survives_at": "264"
+    }
+   ],
+   "reason": "Keeps what changes and what does not for each extension and leaves the subgroup test details to their home."
+  },
+  {
+   "idx": 95,
+   "hash": "a7f4f3f792a9",
+   "action": "replace",
+   "new_smcl": "{pstd} Event study estimates run the margins step on the observations in each period relative to treatment. Pre-treatment effects also need extra indicators,\nfor the cohort-periods of treated cohorts in the pre-treatment horizons requested. The equation is unchanged: only the set Z grows. The joint pre-trend tests and the\nadversarial line test are described under {help wooldid##eventstudy:event_study}.{p_end}\n",
+   "words_before": 182,
+   "words_after": 57,
+   "dropped": [
+    {
+     "claim": "Joint test that all pre-treatment relative period effects are zero",
+     "survives_at": "235"
+    },
+    {
+     "claim": "Test that all relative period effects fall on a single line, the line of best fit through the estimates",
+     "survives_at": "237"
+    }
+   ],
+   "reason": "Keeps the event-study mechanism and points to the tests' home instead of restating their nulls."
+  },
+  {
+   "idx": 97,
+   "hash": "77ab05b27417",
+   "action": "replace",
+   "new_smcl": "{pstd} Event studies use a pooled reference period by default. It pulls each treated cohort's onset earlier by just enough periods to estimate the requested\nhorizons, adds no more (i,t) pairs to Z than needed, and so may pool several periods into each cohort's reference period. Its event study is normalized to 0 in the\nearliest period reported. Under {it:esfixedbaseperiod}, Z holds every (i,t) pair of the treated cohorts except the reference period, by default the period just before\ntreatment. The regression is then saturated with i-t indicators, and every effect is measured against that one period. See {help wooldid##eventstudy:event_study}. {p_end}\n",
+   "words_before": 172,
+   "words_after": 101,
+   "dropped": [
+    {
+     "claim": "The pooled approach is 'conceptually similar to estimating results like normal'",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "The fixed reference period may be some other user-specified period",
+     "survives_at": "249"
+    }
+   ],
+   "reason": "Keeps the mechanism of both approaches and the earliest-period normalization, which only this block states, and drops the framing."
+  },
+  {
+   "idx": 99,
+   "hash": "8a2dccfc44ce",
+   "action": "replace",
+   "new_smcl": "{pstd} With more change, the approach handles continuous treatments and treatment intensity. When cohorts are coarse, so that cells hold several units, and the\ndose varies within i-t cells, the effect of the dose can be estimated within each treated cell, using a flexible function of the dose where needed. This extension is\nexperimental and is not covered in Wooldridge (2025), though Wooldridge has\n{browse \"https://twitter.com/jmwooldridge/status/1695115782739435922?s=61&t=pXC6R4euc7LaN6MMB5VApQ\":informally suggested}\ninteractions between treated cell indicators and the continuous treatment. Reading these within-cell effects as the effect of a larger dose needs more than parallel\ntrends. See {help wooldid##continuous:continuous_treatment}. {p_end}\n",
+   "words_before": 161,
+   "words_after": 96,
+   "dropped": [
+    {
+     "claim": "These within-cell effects compare units that received different doses",
+     "survives_at": "341"
+    }
+   ],
+   "reason": "Keeps the extension, its experimental status, the Wooldridge link and the strong-parallel-trends pointer, and drops the sentence its home opens with."
+  },
+  {
+   "idx": 101,
+   "hash": "dd1942cae90b",
+   "action": "replace",
+   "new_smcl": "{pstd} The continuous treatment regression is: {p_end}\n",
+   "words_before": 20,
+   "words_after": 7,
+   "dropped": [],
+   "reason": "Register: the lead-in sentence says the same in five words."
+  },
+  {
+   "idx": 104,
+   "hash": "dd9c2e5bcf28",
+   "action": "replace",
+   "new_smcl": "{pstd} where Contreat_jt is the continuous treatment, f() is a flexible function of it, and g() interacts f() with fixed-effect-like indicators. Average treatment\neffects use the same margins calculation as before. The average marginal effect shifts Contreat_jt rather than TreatedFlag_it. {it:wooldid} can also report average\ntreatment effects along the distribution of the dose, and the effect of a proportional rather than a unit change in the dose. See {help wooldid##continuous:continuous_treatment}. {p_end}\n",
+   "words_before": 150,
+   "words_after": 71,
+   "dropped": [
+    {
+     "claim": "Contreat_jt potentially varies arbitrarily across observations",
+     "survives_at": "textbook"
+    }
+   ],
+   "reason": "Keeps the definitions of f() and g() and the three facts only this block states: the AME shifts the dose, effects along the dose distribution, and the proportional form."
+  },
+  {
+   "idx": 106,
+   "hash": "ac17845c298f",
+   "action": "replace",
+   "new_smcl": "{pstd} {it:wooldid} also offers Ibragimov and Muller (2010) cluster-robust inference. The regression is unchanged, but the margins step computes each effect,\naverage treatment effect or effect of a continuous treatment, separately within each cluster. The estimate is the simple average of the cluster estimates, and\ninference t-tests them. See {help wooldid##standarderrors:standard_errors}. {p_end}\n",
+   "words_before": 107,
+   "words_after": 52,
+   "dropped": [],
+   "reason": "Keeps the full mechanism and drops 'A final feature available' and 'modifies the margins calculation significantly'."
+  },
+  {
+   "idx": 108,
+   "hash": "864cd2a47ad2",
+   "action": "replace",
+   "new_smcl": "{pstd}\n{ul: Comment on Sample Formation, Cohorts Treated Prior to Sample Start:} The estimation sample can be smaller than your sample. {it:wooldid} drops observations with\nmissing data or zero weights, treated cohorts not observed before treatment, or not observed in the reference period under {it:esfixedbaseperiod}, and time periods\nin which no untreated or not yet treated unit is observed. Under {it:timetrends} it also drops cohorts with too few pre-treatment periods to estimate a trend. {p_end}\n",
+   "words_before": 104,
+   "words_after": 75,
+   "dropped": [],
+   "reason": "Same drop rules, fewer words and no parentheses."
+  },
+  {
+   "idx": 110,
+   "hash": "7856ee255b2b",
+   "action": "delete",
+   "new_smcl": "",
+   "words_before": 97,
+   "words_after": 0,
+   "dropped": [
+    {
+     "claim": "By default, cohorts treated after the end of the sample are handled like never-treated cohorts",
+     "survives_at": "245"
+    },
+    {
+     "claim": "oostreatedcontrols() lets such cohorts be handled like cohorts treated within the sample and contribute to pre-treatment event study estimates",
+     "survives_at": "245"
+    },
+    {
+     "claim": "anticipation(#) treats the effective onset as ttre minus #, so anticipatory periods count as treated rather than pre-treatment",
+     "survives_at": "247"
+    }
+   ],
+   "reason": "Every claim restates the oostreatedcontrols() and anticipation() entries under Event Study Estimation."
+  },
+  {
+   "idx": 118,
+   "hash": "0f64492a2c3e",
+   "action": "replace",
+   "new_smcl": "{phang}{opt att}: Estimate average treatment effects on the treated (ATT). This is the default, and it may be combined with {it:att_it}, {it:att_i} and {it:att_itime}.\nThe margins calculation, step 2 in {help wooldid##description:Description}, weights observations by the regression's sample weights, if any, times any\n{it:customweightmultiplier()} variable. That multiplier enters the margins weights only, not the regression weights.{p_end}\n",
+   "words_before": 84,
+   "words_after": 56,
+   "dropped": [],
+   "reason": "Same facts, including the margins-only multiplier, in fewer words."
+  },
+  {
+   "idx": 120,
+   "hash": "35a8f82e2305",
+   "action": "replace",
+   "new_smcl": "{phang}{opt att_it}: Estimate the simple, unweighted mean of the cohort-period (i-t) cell treatment effects (ATT_it). Each cell's effect uses the sample weights\nof its own observations. With fine cohorts, where each cell holds one observation, this ignores the sample weights.{p_end}\n",
+   "words_before": 140,
+   "words_after": 40,
+   "dropped": [
+    {
+     "claim": "Implemented by reweighting the margins data by w/W_it, with w the observation's sample weight (1 without weights) and W_it the cell's total weight",
+     "survives_at": "guide"
+    }
+   ],
+   "reason": "Keeps the definition and the fine-cohort consequence and leaves the weight formula to the guide."
+  },
+  {
+   "idx": 122,
+   "hash": "2d6ecab5c9d8",
+   "action": "replace",
+   "new_smcl": "{phang}{opt att_i}: Estimate the simple, unweighted mean of the cohort-specific treatment effects (ATT_i). Each observation is weighted by its share of its cohort's\nsample weight in the post-treatment period, or in the pre-treatment period outside the reference period. Under {it:timetrends} the period immediately before the\nreference period is also normalized to zero and excluded from the pre-treatment weight.{p_end}\n",
+   "words_before": 132,
+   "words_after": 58,
+   "dropped": [
+    {
+     "claim": "The weight formula w/W_ipre or w/W_ipost, with w equal to 1 without weights",
+     "survives_at": "guide"
+    }
+   ],
+   "reason": "Keeps the definition, the pre and post weight bases and the timetrends correction, and leaves the formula to the guide."
+  },
+  {
+   "idx": 124,
+   "hash": "a0339432e701",
+   "action": "replace",
+   "new_smcl": "{phang}{opt att_itime}: Estimate the simple average across cohorts of each cohort's simple average cell effect (ATT_itime). Cell effects use sample weights,\nas for {it:att_it}. Each cohort's effect is the unweighted mean of its cell effects in the post-treatment periods in which it is observed, or in its pre-treatment\nperiods outside the reference period. ATT_itime is the unweighted mean of these cohort effects.{p_end}\n",
+   "words_before": 152,
+   "words_after": 62,
+   "dropped": [
+    {
+     "claim": "The weight formula w/(W_it * T_iprepost), with T_iprepost the count of observed post-treatment, or pre-treatment non-reference, periods of the cohort",
+     "survives_at": "guide"
+    }
+   ],
+   "reason": "Keeps the two-level definition and which periods enter, and leaves the formula to the guide."
+  },
+  {
+   "idx": 126,
+   "hash": "715a06fc50f8",
+   "action": "replace",
+   "new_smcl": "{pstd}Under {it:contreat()} each requested estimand is also reported as the average marginal effect of the continuous treatment, labelled {it:ame}, {it:ame_it}, {it:ame_i} and {it:ame_itime}.\nBecause {it:att_it}, {it:att_i} and {it:att_itime} weight cells or cohorts equally rather than observations, some options treat them differently. {it:unconditionalse} is\nrefused for them unless {it:safety(off)} is specified, and {it:bootstrap(bayes)} is refused for them. {it:makecfxplots} produces its plots and the {it:e(cfx*)}\nmatrices for {it:att} only unless {it:safety(off)} or {it:contreatwithin} is specified. A {it:subgroups()} variable that splits a unit across subgroups over time is refused.\nExcept under {it:permute()}, {it:safety(off)} admits such a unit by its weight share in each subgroup, and {it:att_i} and {it:att_itime} then no longer weight units equally.{p_end}\n",
+   "words_before": 113,
+   "words_after": 111,
+   "dropped": [],
+   "reason": "Register only: the semicolon becomes a full stop. Every refusal stays because this is the estimands' own summary of them."
+  },
+  {
+   "idx": 131,
+   "hash": "a8cdd8d8285f",
+   "action": "replace",
+   "new_smcl": "{phang}{opt clus:ter(clusvars)}: Variable(s) specifying the clustering level. Clustered standard errors are computed analytically. Several variables give multi-way\nclustering on the default path. {it:unconditionalse}, {it:impvalues}, {it:bootstrap()} and {it:permute()} each require a single cluster variable. A cluster variable that\nleaves fewer than two clusters in the estimation sample stops the run with an error. A finer cluster variable, {it:robust} or {it:fastnose} are the ways out. Cluster at\nthe level at which treatment is assigned, or coarser, and never below the unit whose rows are correlated over time. The discussion of what level to cluster at below\nadds a second condition specific to {it:wooldid}. {p_end}\n",
+   "words_before": 130,
+   "words_after": 102,
+   "dropped": [
+    {
+     "claim": "By default the regression runs through reghdfe, or ppmlhdfe for poisson",
+     "survives_at": "37"
+    },
+    {
+     "claim": "Example: a state policy studied on county data needs cluster(state), not cluster(county)",
+     "survives_at": "textbook"
+    }
+   ],
+   "reason": "Keeps every rule and refusal and drops the estimator sentence and the textbook example."
+  },
+  {
+   "idx": 133,
+   "hash": "e0254b28b492",
+   "action": "replace",
+   "new_smcl": "{phang}{opt rob:ust}: Heteroskedasticity robust standard errors, relevant only without {it:cluster()}. Without {it:cluster()}, {it:robust} or {it:customvce()}, the\nlinear regression reports conventional standard errors, which assume independent, homoskedastic errors. With pweights, or under {it:poisson}, the default is robust instead.\nNone of these defaults allows for correlation within a unit over time, so on panel data they usually overstate precision. {p_end}\n",
+   "words_before": 86,
+   "words_after": 58,
+   "dropped": [
+    {
+     "claim": "By default the regression runs through reghdfe, or ppmlhdfe for poisson",
+     "survives_at": "37"
+    },
+    {
+     "claim": "Specify cluster() at the level at which treatment is assigned",
+     "survives_at": "131"
+    }
+   ],
+   "reason": "Keeps the default-SE correction in two sentences and leaves the clustering rule to cluster()."
+  },
+  {
+   "idx": 135,
+   "hash": "a21b1bc4572e",
+   "action": "replace",
+   "new_smcl": "{phang}{opt uncond:itionalse}: Compute standard errors that account for sampling variation in covariates. The regression then runs through {it:regress} or\n{it:poisson} rather than the high dimensional fixed effects packages, which is usually slower. {it:fe()} and {it:ccc_absorb()} are not absorbed on this path.\n{it:wooldid} cautions and enters them as written, so put them in {it:controls()} with your own {it:i.} prefixes. Requires {it:robust} or a single {it:cluster()} variable. A robust or clustered {it:customvce()}, or pweights, also\nqualify. Unless {it:safety(off)} is specified, it is refused with {it:att_i}, {it:att_it} and {it:att_itime} and cautions with aweights. It is refused with\n{it:impvalues}, {it:fastnose}, {it:bootstrap()} and {it:permute()}. It turns the default cell collapse off. {p_end}\n",
+   "words_before": 140,
+   "words_after": 107,
+   "dropped": [],
+   "reason": "Keeps every requirement, refusal and the i.-prefix advice in shorter sentences."
+  },
+  {
+   "idx": 137,
+   "hash": "8b2010f86d49",
+   "action": "replace",
+   "new_smcl": "{phang}{opt customvce()}: Estimate the underlying regression with {help regress} or {help poisson} and pass the text unchanged into their {it:vce()} option.\nThis allows standard error methods that the default high dimensional fixed effects packages do not offer. Not compatible with {it:robust} or {it:cluster()}: specify\nthe clustering or robustness inside the {it:vce()} text itself. Like {it:unconditionalse}, it cannot absorb {it:fe()} or {it:ccc_absorb()}, which are entered as\nwritten under a caution. Refused with {it:impvalues} and {it:bootstrap()}. It cannot be combined with {it:permute()}, which needs a {it:cluster()} variable to\nrandomize over. {p_end}\n",
+   "words_before": 115,
+   "words_after": 89,
+   "dropped": [],
+   "reason": "Same facts in shorter sentences."
+  },
+  {
+   "idx": 139,
+   "hash": "f5f986b59ae9",
+   "action": "replace",
+   "new_smcl": "{phang}{opt imp:values}: Ibragimov and Muller (2010) style cluster-robust inference for all estimates. Each effect is estimated within each cluster, the\ncluster estimates are averaged, and inference t-tests them against 0. Requires a single cluster variable at the level of {it:i} or coarser. A {it:cluster()} finer\nthan {it:i}, or one that cuts across it, is refused, since the cluster estimates are then re-weightings of the same coefficients and the reported standard error is\nfar too small. The target estimand changes: the cluster estimates are averaged with equal weight, so what is reported is the cluster-equally-weighted mean whatever\nestimand was requested. Clustering at the cohort level, for example, makes {it:att} equal to {it:att_i}. Each reported row uses a t distribution with degrees of\nfreedom one less than the number of clusters contributing to that row, and {it:e(df_r)} is the smallest of these. Not allowed with subgroups or with {it:jointtests},\n{it:makecfxplots}, {it:adversarial}, {it:customvce()}, {it:unconditionalse}, {it:pretrendpower()}, {it:bootstrap()} and {it:permute()}. {it:fastnose} is accepted with\na caution and has no effect. No event study vector or covariance is returned: {it:e(b_es_*)}, {it:e(V_es_*)} and {it:e(numpre_*)} are absent, and the {it:honestdid}\nhandoff is unavailable. {p_end}\n",
+   "words_before": 226,
+   "words_after": 186,
+   "dropped": [],
+   "reason": "Merges the idea sentence into one line and keeps every refusal, the estimand change, the degrees-of-freedom rule and the absent e() results."
+  },
+  {
+   "idx": 141,
+   "hash": "c8e9b0f67965",
+   "action": "replace",
+   "new_smcl": "{phang}{opt fast:nose}: Fast exploratory mode, for specification search on large panels. Every {it:margins} call runs without variance estimation, so only point\nestimates are produced. Standard errors, test statistics, p-values, confidence intervals, joint tests and plot confidence bands are omitted and display as missing.\n{it:e(V)} is not posted, so {it:test} and {it:lincom} refuse, and {it:esttab} prints an empty inference row. Refused with {it:unconditionalse}, {it:pretrendpower()},\n{it:boottstat}, {it:permtstat}, {it:permtci}, {it:permanalyticse}, {it:adversarial} and {it:jointtests}. The last two are accepted under {it:permute()}, where fast mode\nis already the default. With {it:impvalues} or {it:bootstrap()} it is accepted with a caution and has no effect, since {it:impvalues} already runs {it:margins} without\nvariance estimation and the bootstrap replications already run in fast mode. {it:simultaneousbands} is accepted but no band is built. Re-run the chosen specification\nwithout {it:fastnose} before reporting results. {p_end}\n",
+   "words_before": 137,
+   "words_after": 133,
+   "dropped": [],
+   "reason": "Register only: the semicolons and the colon chain become full stops. It is the home of the no-effect reason, so nothing is dropped."
+  },
+  {
+   "idx": 143,
+   "hash": "e6be5fcc3986",
+   "action": "replace",
+   "new_smcl": "{phang}{opt nofastcollapse}: Turns off the default cell collapse, which speeds up {it:wooldid} considerably by evaluating the {it:margins} calls on one row per\ncohort-by-period-by-treatment cell rather than on every observation. The regression itself still runs on the full data. Results agree with an uncollapsed run to\n{it:margins}' own accuracy, typically machine precision, but up to about 1e-6 relative on standard errors. The collapse applies to binary and continuous\ntreatments, to poisson, to subgroups and inside {it:bootstrap()} and {it:permute()} replications. It is skipped, with a caution naming the option responsible, under\n{it:interactivecontrols()}, {it:contreatpoly()} above 1, the {it:contreat()} variable also appearing inside {it:controls()}, {it:coarsecohortcontrols()}, {it:fe()} or\n{it:ccc_absorb()}, and {it:unconditionalse}. Disable it yourself when controls or fixed effects interact with treatment in a way {it:wooldid} cannot detect, such as a\ncontrol built from a renamed copy of the treatment variable, since the collapse assumes the treatment effect is constant within a cell. Disable it also when memory is\ntight, since the collapse holds an extra copy of the data, and when you need byte-for-byte reproduction of an uncollapsed result. {p_end}\n",
+   "words_before": 201,
+   "words_after": 176,
+   "dropped": [
+    {
+     "claim": "The 1e-6 worst case arises with sampling weights, controls and an event-study window, where neither run is exact",
+     "survives_at": "guide"
+    }
+   ],
+   "reason": "Keeps the 1e-6 bound, the ineligible list and the three turn-off cases, and leaves the measurement conditions to the guide."
+  },
+  {
+   "idx": 145,
+   "hash": "37cc9f238bf2",
+   "action": "replace",
+   "new_smcl": "{phang}{opt simult:aneousbands}: Compute a simultaneous (sup-t) confidence band over each event study's horizons at {it:level()}. The printed table keeps its\npointwise intervals. The band endpoints are stored in {it:e(esband_*)} and drawn as a dashed pair on the event study plots. Without {it:bootstrap()} the band is\nsimulated from the family's analytic event study covariance, on the same t distribution as the pointwise intervals where the regression reports degrees of freedom.\nWith {it:bootstrap()} it is taken from the replications. With {it:cluster()} at or above the level of {it:i} the analytic band is too narrow, and a caution says so.\nUse {it:bootstrap()} or a {it:cluster()} strictly finer than the cohort-by-period cells there. Refused with {it:permute()}, which offers {it:permstepdown} instead. No\nband is built under {it:fastnose} or for a family with fewer than two horizons with a usable variance, and a caution says so. {p_end}\n",
+   "words_before": 168,
+   "words_after": 141,
+   "dropped": [
+    {
+     "claim": "The band covers every horizon of the family at once with probability level()",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "The analytic band is too narrow because the standard errors in the analytic covariance are understated there",
+     "survives_at": "149"
+    }
+   ],
+   "reason": "Drops the sup-t definition and the mechanism and keeps every source, caution, remedy and refusal."
+  },
+  {
+   "idx": 147,
+   "hash": "fa05ea073f4e",
+   "action": "replace",
+   "new_smcl": "{phang}{opt level(#)}: Confidence level for every reported confidence interval, including the plots, the {it:gteffects} cells and the {it:bootstrap()} and\n{it:permute()} intervals. It must lie between 10 and 99.99 with at most two digits after the decimal point. The default is {it:c(level)}, normally 95. The interval\ncolumns of the stored results are labelled {it:lb_#ci} and {it:ub_#ci} for the level in force, which is stored in {it:e(level)}. The pre-test sizes reported by\n{it:pretrendpower()} are fixed at 5%. {p_end}\n",
+   "words_before": 78,
+   "words_after": 76,
+   "dropped": [],
+   "reason": "Register only: the semicolon becomes a full stop."
+  },
+  {
+   "idx": 149,
+   "hash": "19953e1d4d34",
+   "action": "replace",
+   "new_smcl": "{pstd} {ul: Discussion of What Level to Cluster At:}\nWith {it:cluster()} at the level of {it:i} or coarser, each treated cohort-by-period cell lies wholly inside one cluster, and the saturated cell dummies leave the\ncluster-robust covariance nothing within the cluster to identify. The analytic standard errors of the {it:ame} estimates are then not identified and are reported as\nmissing. The analytic joint pre-trend tests and the adversarial line test are not calibrated. Pairwise subgroup contrasts can be degenerate. The {it:att} rows'\nanalytic standard errors are understated without a caution, and the {it:gteffects} cells more so, which a {it:gteffects} run counts under a caution. The analytic\n{it:simultaneousbands} band is too narrow. The remedies are a {it:cluster()} strictly finer than the cohort-by-period cells, {it:bootstrap()}, or {it:permute()}.\n{it:permute()} refuses the band, and for the {it:gteffects} cells only the finer {it:cluster()} is a remedy. A finer {it:cluster()} is a remedy only when it still sits\nat or above the level at which treatment is assigned. When no such level is finer than the cells, use {it:bootstrap()} or {it:permute()}. {p_end}\n",
+   "words_before": 228,
+   "words_after": 175,
+   "dropped": [
+    {
+     "claim": "The analytic band is too narrow 'also without a caution' (removed as false: wooldid prints a caution, as block 145 says)",
+     "survives_at": "145"
+    },
+    {
+     "claim": "A cell inside one cluster is resampled whole, so its bootstrap standard error is understated too, and under permute() the gteffects cells carry no inference",
+     "survives_at": "375"
+    },
+    {
+     "claim": "The band is scaled by the understated standard errors",
+     "survives_at": "145"
+    }
+   ],
+   "reason": "Keeps every consequence and remedy once, drops the gteffects bootstrap detail its home states, and removes the false 'without a caution' about the band."
+  },
+  {
+   "idx": 151,
+   "hash": "0a502b3200eb",
+   "action": "replace",
+   "new_smcl": "{pstd} {ul: Discussion of Unconditional Standard Errors:}\nThe effects {it:wooldid} reports depend on the regression coefficients and also on the observed values of any covariates or continuous treatment. The default\ndelta-method standard errors take those values as given. Unconditional standard errors also account for their sampling variation, as in the discussion of\n{it:vce(unconditional)} in {help margins}. Which is appropriate likely varies from context to context. {p_end}\n",
+   "words_before": 122,
+   "words_after": 66,
+   "dropped": [],
+   "reason": "Same distinction in shorter sentences, keeping the margins reference."
+  },
+  {
+   "idx": 153,
+   "hash": "e41dd976889f",
+   "action": "replace",
+   "new_smcl": "{pstd} Wooldridge (2025) expects conditional and unconditional standard errors often to be similar. They are similar when treatment effects vary little\nacross cohort-time period cells, covariate values and treatment intensities. Where effects are heterogeneous the unconditional standard errors are larger, and the ratio\nbetween them does not shrink as the sample grows. The conditional standard errors describe the effect averaged over the treated observations in the sample. The\nunconditional standard errors describe the population average. They also matter more when sample weights make particular observations very influential. With\nunconditional standard errors, subgroup and event study estimates can be sensitive to observations outside the focal subgroup. {p_end}\n",
+   "words_before": 152,
+   "words_after": 106,
+   "dropped": [
+    {
+     "claim": "The subgroup sensitivity arises because wooldid uses margins' subpopulation features for subgroup estimates",
+     "survives_at": "guide"
+    }
+   ],
+   "reason": "Keeps every sentence of the correction and drops the implementation reason for the subgroup sensitivity."
+  },
+  {
+   "idx": 155,
+   "hash": "53a0fafdf7bc",
+   "action": "replace",
+   "new_smcl": "{pstd} {ul: Caution Regarding Unconditional Standard Errors When Used with Certain Weights and Estimands:} With aweights, or with estimands other than the ATT,\ntests using unconditional standard errors are sometimes badly oversized, rejecting the null hypothesis at very high rates. The aweights problem does not always occur, but where\nit does it affects {help hdidregress} as well. Unless {it:safety(off)} is specified, {it:wooldid} therefore cautions against unconditional standard errors with aweights\nand stops estimation if they are used with a non-ATT estimand. Unconditional standard errors tend to be highly sensitive to the choice of weights. {p_end}\n",
+   "words_before": 150,
+   "words_after": 95,
+   "dropped": [
+    {
+     "claim": "The non-ATT problem likely comes from margins using weights different from those of the regression",
+     "survives_at": "maintainer"
+    }
+   ],
+   "reason": "Keeps the caution, the refusal and the weight sensitivity and drops the speculation about the cause."
+  },
+  {
+   "idx": 157,
+   "hash": "7c407725f253",
+   "action": "replace",
+   "new_smcl": "{pstd} {ul: Discussion of Ibragimov and Muller-Style Inference:}\nThe approach can improve on analytic clustered standard errors when clusters are few and very heterogeneous in size. It assumes the cluster-specific estimates are\nindependent. That is most plausible when a continuous treatment's effect is estimated from within-cluster variation only, or in a bespoke design where clusters contain\nboth treated and control units and do not share time fixed effects. {it:wooldid} reads each cluster's estimate over its treated post-treatment cells alone, so control\nunits inside a cluster do not give it its own control arm unless, for example, cluster-by-time effects are placed in {it:fe()}. In the standard design {it:wooldid}\nstill reports IM-style estimates, though the shared control group, and a shared reference period without {it:esfixedbaseperiod}, likely violate the independence\nassumption. {p_end}\n",
+   "words_before": 190,
+   "words_after": 129,
+   "dropped": [],
+   "reason": "Keeps the when-to-use, the independence condition, the wooldid-specific reading and the shared-control caveat in shorter sentences."
+  }
+ ]
+}

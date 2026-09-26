@@ -1,0 +1,842 @@
+{
+ "group": "G3",
+ "words_before": 6503,
+ "words_after": 4838,
+ "proposals": [
+  {
+   "idx": 227,
+   "hash": "1476b91223c8",
+   "action": "replace",
+   "new_smcl": "{phang}{opt esf:ixedbaseperiod}: Use a fixed reference period rather than a pooled one. The {it:pretreatment} row of the results table then averages every estimable pre-treatment period, not only the window named by {it:esprelength()}. The joint pre-trend test uses the requested window. {p_end}\n",
+   "words_before": 46,
+   "words_after": 41,
+   "dropped": [],
+   "reason": "Semicolon to full stop, slight tightening."
+  },
+  {
+   "idx": 229,
+   "hash": "f06467e91293",
+   "action": "replace",
+   "new_smcl": "{phang}{opt esr:elativeto(-integer)}: The relative time period used as the fixed reference period. The default is -1, the period immediately before treatment. The onset period or later is an error. Without {it:esfixedbaseperiod} this option has no effect and a caution is printed. {p_end}\n",
+   "words_before": 54,
+   "words_after": 42,
+   "dropped": [],
+   "reason": "Semicolon to full stop and a shorter lead clause."
+  },
+  {
+   "idx": 231,
+   "hash": "e7fba803785c",
+   "action": "replace",
+   "new_smcl": "{phang}{opt espre:length(integer)}: The number of pre-treatment relative time period-specific effects to be estimated. Under {it:esfixedbaseperiod}, any pre-treatment request presents every relative period between the {it:esrelativeto()} period and treatment onset. This option and {it:espostlength()} count consecutive integer relative periods, not realized horizons. On a panel whose relative periods have gaps, such as a biennial panel, the reported window can then be shorter than requested. Widen the request until it reaches the horizons you want. {p_end}\n",
+   "words_before": 87,
+   "words_after": 74,
+   "dropped": [],
+   "reason": "Long sentences split, parenthetical removed."
+  },
+  {
+   "idx": 233,
+   "hash": "9d38ba118f65",
+   "action": "replace",
+   "new_smcl": "{phang}{opt espost:length(integer)}: The number of post-treatment relative time period-specific effects to be estimated. With {it:subgroups()} and {it:esprelength()} greater than 0, a value of 0 is raised to 1 under a caution, since subgroup estimation needs a post-treatment horizon. {it:espostlength(-999)} keeps the post-treatment window empty. Other negative values are an error. {p_end}\n",
+   "words_before": 44,
+   "words_after": 51,
+   "dropped": [],
+   "reason": "Home of the subgroup raise to 1; absorbs its reason from [262], semicolons to full stops."
+  },
+  {
+   "idx": 235,
+   "hash": "5b7214b41416",
+   "action": "replace",
+   "new_smcl": "{phang}{opt joint:tests}: Calculate joint significance tests of all requested pre-treatment relative time period-specific effects. At least two pre-treatment horizons must fall in the estimation window, or three under {it:esfixedbaseperiod} with {it:timetrends} and the default {it:esrelativeto(-1)}. With fewer, no test is produced. With analytic standard errors clustered at the level of {it:i} or above, the test's p-value is severely oversized, and {it:wooldid} prints the test with a caution that its p-value is not calibrated (see {help wooldid##standarderrors:Standard Errors}). The remedies are {it:bootstrap()}, {it:permute()}, or a {it:cluster()} strictly finer than the cohort-by-period cells that leaves many clusters inside each cell. Under a continuous treatment the tests also require many observations per cohort-by-period cell. Refused with {it:impvalues}, and with {it:fastnose} except on the fast path {it:permute()} takes by default. Under {it:bootstrap()} and {it:permute()} the reported joint test is a bootstrap or permutation test. {p_end}\n",
+   "words_before": 161,
+   "words_after": 141,
+   "dropped": [
+    {
+     "claim": "These tests are unusually sensitive to how standard errors are clustered.",
+     "survives_at": "235 (the oversized-p-value sentence says it concretely)"
+    },
+    {
+     "claim": "Mechanism: the saturated cohort-by-period dummies leave the test's covariance degenerate when clustering at i or above.",
+     "survives_at": "149"
+    }
+   ],
+   "reason": "Mechanism moved to the clustering discussion by link; behaviour, caution, remedies and refusals kept."
+  },
+  {
+   "idx": 237,
+   "hash": "4d116cf4cbf6",
+   "action": "replace",
+   "new_smcl": "{phang}{opt adv:ersarial}: Tests the joint hypothesis that all estimated relative time period-specific effects fall on a single line through the reference period, with the slope that fits them best. This null is adversarial toward finding pre-trend violations. The p-value comes from a minimum-distance test on the event-study coefficients and their covariance matrix. Requires {it:esfixedbaseperiod}. The default pooled reference period has no single omitted period, so there the test fails with a caution and nothing is returned. Under {it:timetrends} two periods are normalized to zero and the null reduces to every coefficient being zero. Beside each p-value, {it:wooldid} returns the unweighted OLS line through the coefficients, with 0 at the reference period. The test is cancelled with a caution when the window holds fewer than one pre-treatment and one post-treatment horizon, or fewer than three coefficients in all under {it:timetrends}, when the sample fails to realize those horizons, or when the event-study covariance is degenerate. Under {it:subgroups()} the {it:att} and {it:att_it} tests are skipped for any subgroup that lost a relative period as inestimable. A rank-deficient but not degenerate covariance gives a test at reduced rank, and without {it:bootstrap()} or {it:permute()} a caution gives the rank and degrees of freedom used, which are stored in {it:e(adversarial_df_att)} and its twins. Like {it:jointtests}, the test is severely oversized unless many clusters span each treated cohort-by-period cell, which clustering on {it:i} never gives. There, use {it:permute()}, or {it:bootstrap()} with {it:boottstat}. Without {it:boottstat} the test is absent under {it:bootstrap()}. Refused with {it:impvalues}, and with {it:fastnose} except under {it:permute()}. {p_end}\n",
+   "words_before": 330,
+   "words_after": 254,
+   "dropped": [
+    {
+     "claim": "The OLS line is written as coef_rt regressed on time_rt, with coef_rt including 0 for the reference period.",
+     "survives_at": "237 (said without the notation); guide"
+    },
+    {
+     "claim": "Under a rank-deficient covariance the test runs on the directions a generalized inverse retains.",
+     "survives_at": "maintainer (kept as 'at reduced rank')"
+    },
+    {
+     "claim": "Under permute() or bootstrap() with boottstat the adversarial p-value is a permutation or bootstrap quantity.",
+     "survives_at": "183 (every permute p-value, adversarial included); 172 (boottstat bootstraps the adversarial test)"
+    },
+    {
+     "claim": "Clustering on i places every cell inside a single cluster (mechanism).",
+     "survives_at": "149"
+    }
+   ],
+   "reason": "Generalized-inverse detail cut to 'reduced rank', OLS notation dropped, long sentences split; every condition, caution and refusal kept."
+  },
+  {
+   "idx": 239,
+   "hash": "2387988d7ea4",
+   "action": "replace",
+   "new_smcl": "{phang}{opt altmethod_adversarial}: An alternative form of the test above. It projects a trend from the pre-treatment coefficients and the reference period, then tests whether the post-treatment coefficients jointly fall in line with it, allowing for the uncertainty in the projection. It modifies {it:adversarial} and is an error without it. It requires {it:esfixedbaseperiod} and at least one pre-treatment coefficient beyond the reference period. {p_end}\n",
+   "words_before": 70,
+   "words_after": 63,
+   "dropped": [],
+   "reason": "Parenthetical folded in, shorter wording; both requirements kept."
+  },
+  {
+   "idx": 241,
+   "hash": "59d022fbcbab",
+   "action": "replace",
+   "new_smcl": "{phang}{opt pretrendpow:er(numlist)}: Reports Roth (2022) pre-trend power diagnostics for each requested power level, in percent as integers strictly between 5 and 100, as in {it:pretrendpower(50 80)}. The diagnostics are a GLS estimate of the linear pre-trend slope with its standard error and confidence interval, the smallest linear pre-trend each pre-test would detect with that power, and the bias such a trend would imply for the pooled estimand if it continued after onset. {it:mdt_wald} is for the joint pre-trend test and {it:mdt_nis} for the test that any pre-period coefficient is individually significant under the normal reference, both at the 5% level. Requires {it:esfixedbaseperiod} and at least one pre-treatment event-study coefficient. Refused with {it:impvalues}, {it:fastnose} and {it:permute()}. Under {it:bootstrap()} the diagnostics use the bootstrap covariance. With {it:subgroups()} only the overall event studies are analysed. When only {it:att_i} or {it:att_itime} is requested the reported block is the {it:att_it} event study. The diagnostics are skipped with a caution when the pre-period covariance block is unavailable, as under {it:timetrends}, or ill-conditioned. A block of partial rank gives diagnostics at reduced rank under a caution, usually from a singleton-cell design (see condition Two under {it:e(V_es_type)} in {help wooldid##output:Working with Output}). The {it:mdt_nis} column is computed for up to 4 pre-periods. For larger designs, pass {it:e(b_es_type)}, {it:e(V_es_type)} and {it:e(numpre_type)} to Roth's {help pretrends} package. Results are returned in {it:e(roth_power_type)} and companion scalars. {p_end}\n",
+   "words_before": 248,
+   "words_after": 226,
+   "dropped": [
+    {
+     "claim": "impvalues, fastnose and permute() are refused because none produces the event-study covariance the diagnostics use.",
+     "survives_at": "maintainer"
+    },
+    {
+     "claim": "Under partial rank the diagnostics run on a generalized inverse.",
+     "survives_at": "maintainer (kept as 'at reduced rank')"
+    },
+    {
+     "claim": "Second pointer to Working with Output for the companion scalars.",
+     "survives_at": "241 (the same link stands two sentences earlier); 418"
+    }
+   ],
+   "reason": "Parentheticals and semicolons into sentences; the reason for the refusals, the generalized-inverse detail and a repeated link dropped."
+  },
+  {
+   "idx": 243,
+   "hash": "91a3675950d0",
+   "action": "replace",
+   "new_smcl": "{phang}{opt makep:lots}: Produce event study plots. No plot is drawn unless at least one event-study horizon is requested. {it:wooldid} names its graphs, for example {it:att_fullmodel}, and overwrites its own prior graphs of the same name on each run. It does not clear other graphs from memory. {p_end}\n",
+   "words_before": 47,
+   "words_after": 47,
+   "dropped": [],
+   "reason": "Semicolon and parenthetical removed."
+  },
+  {
+   "idx": 245,
+   "hash": "61000ef2a939",
+   "action": "replace",
+   "new_smcl": "{phang}{opt oos:treatedcontrols(integer)}: By default, cohorts treated after the end of the sample serve as never-treated controls. With a value of T, cohorts treated within T periods of the end of the sample are handled like other treated cohorts, and can then contribute to pre-treatment relative period effects. Under {it:esfixedbaseperiod} such cohorts are dropped if their reference period is not usable. With {it:anticipation()} the window applies to the shifted onset. Negative values are not allowed. {p_end}\n",
+   "words_before": 119,
+   "words_after": 75,
+   "dropped": [
+    {
+     "claim": "Such cohorts are termed 'out-of-sample treated controls'.",
+     "survives_at": "guide"
+    }
+   ],
+   "reason": "Restatement and the i.e. parenthetical cut; all behaviour kept."
+  },
+  {
+   "idx": 247,
+   "hash": "c0cdd74f9f44",
+   "action": "replace",
+   "new_smcl": "{phang}{opt antic:ipation(integer)}: Treats the effective treatment onset as {it:ttre} minus #, so periods of anticipatory response count as treated rather than as clean pre-treatment periods. This equals re-running {it:wooldid} with {it:ttre} minus # in place of {it:ttre}, as {it:did_imputation}'s {it:shift()} option does. Relative period 0 is then # periods before the recorded onset, so you may wish to raise {it:espostlength()} by # to keep the same number of genuine post-treatment horizons. The value is in the units of {it:t}. On a biennial panel an odd value lands between observed periods and {it:wooldid} prints a caution. Units whose effective onset falls at or before their first usable period are dropped with a caution, as are, under {it:esfixedbaseperiod}, units whose shifted reference period is unusable. Too small a value leaves anticipation in the reference period, which shows in the pre-treatment horizons. Too large a value keeps the pre-trends clean but attenuates the pooled estimates, and the first post-treatment horizons read near zero. A run without an event study shows neither, so request one and prefer the smallest defensible value. With {it:subgroups(ttre)} the subgroup labels remain the recorded onset values. The shift is recorded in {it:e(anticipation)}. Negative values are not allowed. {p_end}\n",
+   "words_before": 234,
+   "words_after": 199,
+   "dropped": [
+    {
+     "claim": "The shift is applied before relative time is constructed.",
+     "survives_at": "247 (implied by the equivalence to re-running with ttre minus #)"
+    },
+    {
+     "claim": "Under too large a value the first post-treatment horizons fall before any response.",
+     "survives_at": "textbook (kept: they read near zero)"
+    }
+   ],
+   "reason": "Semicolons and parentheticals into sentences, two explanatory clauses cut; all cautions, drops and e(anticipation) kept."
+  },
+  {
+   "idx": 249,
+   "hash": "b9667b18ee58",
+   "action": "replace",
+   "new_smcl": "{pstd}{ul: Two Approaches to Estimation, Pooled versus Fixed Reference Period:} By default, {it:wooldid} compares each cohort's treated periods to a pooled reference period holding all of that cohort's pre-treatment observations. Event study estimates on this default are normalized to 0 in the earliest period reported, the pooled reference period. Under {it:esfixedbaseperiod}, every estimate compares treated cohorts' post-treatment outcomes to their outcome in one pre-treatment reference period, relative period -1 unless {it:esrelativeto()} sets another. {p_end}\n",
+   "words_before": 150,
+   "words_after": 74,
+   "dropped": [
+    {
+     "claim": "Difference-in-differences estimates compare treated periods to a pre-treatment reference period.",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "Pointer to Description for how this is implemented.",
+     "survives_at": "description (circular once Description points here)"
+    }
+   ],
+   "reason": "Textbook opener and circular pointer cut; absorbs the earliest-period normalization fact from [97]; ' -- ' in the heading replaced."
+  },
+  {
+   "idx": 251,
+   "hash": "48d92e0fcf93",
+   "action": "replace",
+   "new_smcl": "{pstd} The choice also changes the comparison group. Under the pooled reference period every untreated observation serves as a control: never-treated cohorts, cohorts treated after the end of the sample, and the pre-treatment periods of cohorts not yet treated, apart from any pre-treatment horizons the run asks for. Parallel trends and no anticipation must then hold across all of those periods. Under {it:esfixedbaseperiod} each treated cohort's pre-treatment periods other than the reference period carry their own indicators, and the reference period only anchors the cohort's own level. With {it:timetrends}, the period just before the reference period carries no indicator either, and the two anchor the cohort's level and trend. The period effects then come from never-treated cohorts and cohorts treated after the end of the sample alone. Cohorts not yet treated do not serve as controls. Parallel trends is needed only between each treated cohort and those cohorts, from the reference period on. This is the never-treated comparison of Callaway and Sant'Anna (2021) and Sun and Abraham (2021). The pooled default matches the imputation estimator of Borusyak, Jaravel, and Spiess (2023) under the conditions given in {help wooldid##comparison:Comparison with Related Estimators}. {p_end}\n",
+   "words_before": 199,
+   "words_after": 192,
+   "dropped": [],
+   "reason": "A recent correction: kept whole, two sentences joined and a few words tightened."
+  },
+  {
+   "idx": 253,
+   "hash": "484677baddbb",
+   "action": "replace",
+   "new_smcl": "{pstd} A fixed reference period is transparent: every cohort is compared to the same relative period. A pooled one can be more precise, since it averages over more periods, but different cohorts' reference periods then hold different numbers of periods. A pooled period is a poor choice when treated cohorts' outcomes evolve differently from the comparison cohorts' before treatment. Trends shared by all cohorts are absorbed by the time fixed effects. It is also a poor choice when requesting more pre-treatment horizons than every cohort can supply. A cohort with fewer observed pre-treatment periods then takes its earliest observed period as its reference period, even where other cohorts report an effect for that period. With differing outcome trends, the event study can then show counterintuitive time paths that hide even severe parallel trends violations. {p_end}\n",
+   "words_before": 107,
+   "words_after": 135,
+   "dropped": [
+    {
+     "claim": "There is no general solution to the transparency-precision tradeoff.",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "Pooled precision comes from averaging out idiosyncratic variation within the reference period.",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "All content of [255]: pooled is disadvantageous when treated and comparison cohorts evolve differently pre-treatment; shared trends are absorbed by time fixed effects; requesting more pre-treatment horizons than all cohorts have sets some cohorts' reference to their earliest observed period; combined with differing trends this can obscure severe violations.",
+     "survives_at": "253"
+    }
+   ],
+   "reason": "Merged [253] and [255] into one paragraph; textbook framing cut, the correction on differential trends and the unequal-pre-period mechanism kept."
+  },
+  {
+   "idx": 255,
+   "hash": "1401b1ef227d",
+   "action": "delete",
+   "new_smcl": "",
+   "words_before": 175,
+   "words_after": 0,
+   "dropped": [
+    {
+     "claim": "Pooled reference is disadvantageous when treated cohorts' outcomes evolve differently from comparison cohorts' pre-treatment.",
+     "survives_at": "253"
+    },
+    {
+     "claim": "Trends shared by all cohorts are absorbed by the time fixed effects.",
+     "survives_at": "253"
+    },
+    {
+     "claim": "Requesting more pre-treatment horizons than all cohorts can supply sets a cohort's reference to its earliest observed period, even one reported for other cohorts.",
+     "survives_at": "253"
+    },
+    {
+     "claim": "Combined with differing outcome trends, event study plots can show counterintuitive paths that obscure even severe parallel trends violations.",
+     "survives_at": "253"
+    }
+   ],
+   "reason": "Merged into [253]."
+  },
+  {
+   "idx": 257,
+   "hash": "b31bc32c8919",
+   "action": "replace",
+   "new_smcl": "{pstd}{ul: Invalid Estimands:} For relative-period estimates the estimand types {it:att_i}, {it:att_itime} and {it:att_it} coincide. Each weights every cohort's contribution to a relative period equally, and they differ only in cells outside that period. Event studies therefore report only {it:att} and {it:att_it}, and a request for {it:att_i} or {it:att_itime} shows the {it:att_it} results. {p_end}\n",
+   "words_before": 91,
+   "words_after": 53,
+   "dropped": [],
+   "reason": "Same facts in fewer words."
+  },
+  {
+   "idx": 262,
+   "hash": "442663761989",
+   "action": "replace",
+   "new_smcl": "{phang}{opt sub:groups()}: Specifies the subgroup (SG) variable, whose levels define the subgroups for which {it:wooldid} computes separate estimates. The SG variable must hold non-negative integers or missing values on the observations of treated units, and its levels must be collections of cohorts i. Observations with missing values belong to no subgroup and are ignored in subgroup computations. A unit is left out only if it is missing on all of its rows. A treated unit split across subgroups, or labelled on some rows and missing on others, is refused. With {it:safety(off)}, except under {it:permute()}, such a unit enters each of its subgroups weighted by its labelled share of sample weight there, so {it:att_i} and {it:att_itime} no longer weight units equally. A partly labelled unit also draws a caution. Subgroup values are embedded in the names of stored results and plots, so values 8 or more digits long can exceed Stata's limits on names. Recode ID-style codes to small integers first, for example with {it:egen newsg = group(oldsg)}. With {it:esprelength()} greater than 0, an {it:espostlength()} of 0 is raised to 1 under a caution (see {it:espostlength()}). Not compatible with {it:impvalues}. {p_end}\n",
+   "words_before": 198,
+   "words_after": 190,
+   "dropped": [
+    {
+     "claim": "For estimates to be valid, a cohort i cannot be split across multiple subgroups.",
+     "survives_at": "262 (levels must be collections of cohorts i; a split unit is refused)"
+    },
+    {
+     "claim": "The espostlength raise happens because subgroup estimation requires a post-treatment horizon; espostlength(-999) keeps the window empty.",
+     "survives_at": "233"
+    }
+   ],
+   "reason": "Home of the split-unit rule: states the share weighting once, with its consequence for att_i and att_itime; the espostlength detail points to its home."
+  },
+  {
+   "idx": 264,
+   "hash": "b14322c4b916",
+   "action": "replace",
+   "new_smcl": "{pstd} {ul: Description of Approach to Subgroup Effect Estimation:} {it:wooldid} estimates treatment effects for each level of the SG variable by running the margins step within that subgroup. The regression itself is unchanged. It also reports every pairwise difference between the subgroups' overall and pre-treatment effects, each with a p-value, and a joint test that all SGs share the effect of the lowest-numbered SG. Clustered standard errors for a subgroup estimate can fail when the subgroup holds few clusters, or only one. With clustering at the level of {it:i} or above, the analytic standard error of a pairwise contrast can be degenerate. {it:wooldid} then reports that contrast, and the across-subgroup equality test covering it, without inference, under a caution naming the count. With {it:safety(off)} they are reported as computed. Under {it:permute()} the contrasts are permuted as coefficient differences and stand, and the caution counts the rows whose {it:se_analytic} is degenerate. Under {it:boottstat} each contrast is studentized by that standard error, and a caution says so when it is degenerate. The remedies are {it:permute()}, {it:bootstrap()} without {it:boottstat}, or a {it:cluster()} strictly finer than the cohort-by-period cells. {p_end}\n",
+   "words_before": 290,
+   "words_after": 186,
+   "dropped": [
+    {
+     "claim": "Step 1 of the Description is unmodified and the step 2 margins calculations run in the subgroup subsamples (with a link to Description).",
+     "survives_at": "264 (said in one sentence without the link); 93"
+    },
+    {
+     "claim": "Example pairs: SG 1 vs 2, 1 vs 3, 2 vs 3.",
+     "survives_at": "264 ('every pairwise difference')"
+    },
+    {
+     "claim": "A degenerate contrast standard error is rounding residue rather than an estimated variance.",
+     "survives_at": "maintainer (said as 'degenerate')"
+    }
+   ],
+   "reason": "Step 1/2 restatement, example pairs and 'rounding residue' internals cut; every behaviour under default, safety(off), permute() and boottstat and the remedies kept."
+  },
+  {
+   "idx": 266,
+   "hash": "57eaf72e8433",
+   "action": "replace",
+   "new_smcl": "{pstd} A subgroup variable that varies within a cohort-by-period cell, or over time within a unit, is refused with an informative error. Where it varies within a cell and {it:safety(off)} lets the run proceed, every subgroup estimate only reweights the same pooled cell effects. Contrasts then cannot show within-cell differences, and can come back identical when the true effects differ. The usual remedy is to define {it:i} at the finer level over which the subgroup varies, for example {it:egen newi = group(i sg), missing}. Without {it:missing}, rows with a missing subgroup value would be dropped from the estimation sample. Splitting {it:i} this way makes {it:att_i} and {it:att_itime} average over the split pseudo-units rather than over the original units. {p_end}\n",
+   "words_before": 164,
+   "words_after": 119,
+   "dropped": [
+    {
+     "claim": "Except under permute(), safety(off) enters a split unit into each subgroup weighted by its share of sample weight, changing what att_i and att_itime mean.",
+     "survives_at": "262"
+    }
+   ],
+   "reason": "Share-weighting sentence moved to its home [262]; refusal, within-cell consequence and the egen remedy kept."
+  },
+  {
+   "idx": 268,
+   "hash": "138aab7060be",
+   "action": "replace",
+   "new_smcl": "{pstd} A triple difference is a special case. Its target is the difference between the diff-in-diff estimates of two groups, each present among both treated and control cohorts. Define {it:i} as the treatment onset cohort by group, for example {it:egen newi = group(ttre sgvarname), missing}. Specify the group variable as the SG variable and add SG by period fixed effects, as in {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}. The contrast removes shocks that hit both groups in a treated cohort and period only when the two SG estimates weight the same onset-cohort-by-period cells in the same way. Use {it:att_it}, with both groups present in every treated onset-cohort-by-period cell. Its contrast is then the simple average of the cell-level triple differences. Under {it:att} each group weights its cells by the sample weight of its own observations, so that contrast keeps those shocks whenever the group shares of that weight differ across cells. {p_end}\n",
+   "words_before": 183,
+   "words_after": 148,
+   "dropped": [],
+   "reason": "Textbook definition of the triple difference shortened; the implementation correction kept whole."
+  },
+  {
+   "idx": 273,
+   "hash": "7df9acaba122",
+   "action": "replace",
+   "new_smcl": "{phang}{opt contreat(varname)}: The continuous treatment variable. It must be defined for all observations, set to 0 where it has no natural value in untreated cohort-periods. Observations on which it is missing are dropped from the estimation sample. If no treated cohort-period cell has dose variation that identifies its dose slope, for example with a dose constant within each cohort, the within-cell average marginal effects are not identified. Under default safety {it:wooldid} says so, reports the ame results as missing and continues with the att results. Under {it:contreatcontrols(untreatedZero)} that design is refused instead. If only some treated cells lack within-cell dose variation, their dose slopes are not identified either and would enter the ame as zeros. {it:wooldid} drops those cells from the estimation sample with a caution, so the att and the ame are estimated on the remaining cells. The cells checked are those that carry a dose slope, which include the pre-treatment periods under {it:esfixedbaseperiod}. The number dropped is stored in {it:e(contreat_ndropcells)}, and their observations are counted in {it:e(N_dropped)}. {it:safety(off)} silences the caution but keeps the drop. A cell whose dose is zero throughout is never dropped. No cell is dropped when no cell on its side of treatment onset has dose variation. Under {it:contreatcontrols(untreatedZero)} the check does not run. Not available with {it:gteffects}. {p_end}\n",
+   "words_before": 221,
+   "words_after": 215,
+   "dropped": [],
+   "reason": "A recent correction: content kept, semicolons and long sentences split."
+  },
+  {
+   "idx": 275,
+   "hash": "00c3cedc062b",
+   "action": "replace",
+   "new_smcl": "{phang}{opt contreatelas:ticitytype(dydx|dyex)}: The type of marginal effect of the continuous treatment. {it:dydx}, the default, reports the change in y per unit change in the dose. {it:dyex} reports the change in y per proportional change in the dose. Under {it:poisson} results are on the linear index, where {it:dydx} already gives the semi-elasticity of E[y] and {it:dyex} the elasticity, and the tables and plots are titled that way. Only {it:dydx} and {it:dyex} are accepted. {p_end}\n",
+   "words_before": 93,
+   "words_after": 73,
+   "dropped": [
+    {
+     "claim": "The older eyex and eydx forms have been removed.",
+     "survives_at": "maintainer (dated change; 'Only dydx and dyex are accepted' stands)"
+    }
+   ],
+   "reason": "Dated-change clause dropped, parenthetical folded in."
+  },
+  {
+   "idx": 277,
+   "hash": "8a8707fd5c08",
+   "action": "replace",
+   "new_smcl": "{phang}{opt contreatw:ithin}: Use only within-treated-cohort variation in the continuous treatment. It lifts the checks that stop estimation when there are no untreated cohorts, and stops {it:wooldid} objecting to i-t fixed effects in {it:fe()}. It also skips the sample cleaning that drops time periods with no control cohort. The data-integrity checks and the dose-slope check under {it:contreat()} still run unless {it:safety(off)} is given. Requires {it:contreat()}. {p_end}\n",
+   "words_before": 77,
+   "words_after": 65,
+   "dropped": [],
+   "reason": "Home of contreatwithin: parenthetical into a sentence; absorbs the i-t fixed effects clause from [339]."
+  },
+  {
+   "idx": 279,
+   "hash": "578ac309968a",
+   "action": "replace",
+   "new_smcl": "{phang}{opt contreatp:oly(integer)}: Includes polynomial terms in {it:contreat} up to the given degree, a positive integer. The default is 1. Be cautious using higher degree polynomials. {p_end}\n",
+   "words_before": 25,
+   "words_after": 26,
+   "dropped": [],
+   "reason": "Parenthetical into a sentence."
+  },
+  {
+   "idx": 281,
+   "hash": "a33e5dc82bb5",
+   "action": "replace",
+   "new_smcl": "{phang}{opt lattice(latticevar OR latticetype latticenum)}: Specifies a lattice variable, whose groups of observations let the effect of {it:contreat} vary, even within cohort-periods and within the reference period. Given a variable name, that variable is the lattice. It must be numeric and contain only non-negative integers, and observations on which it is missing are dropped from the estimation sample. Given a lattice type and a lattice number, {it:wooldid} builds the lattice from {it:latticenum} quantiles, an integer greater than 1, formed within the groups the {it:latticetype} names (see below). Sample weights are used in building it. Without {it:lattice()} the whole sample is a single lattice bin. A lattice is the most expensive option in runtime terms (see {help wooldid##runtime:Runtime}). Requires {it:contreat()}. When a lattice is combined with {it:contreatcontrols(basic)}, the baseline dose level is partialled out within each lattice level. {p_end}\n",
+   "words_before": 183,
+   "words_after": 138,
+   "dropped": [],
+   "reason": "Same content in shorter sentences; the runtime cost stays here as its home."
+  },
+  {
+   "idx": 283,
+   "hash": "c4923405c657",
+   "action": "replace",
+   "new_smcl": "{phang} {it:latticetype:} The groups within which the {it:latticenum} quantiles of {it:contreat} are formed. Type names are case-sensitive. The choice matters for interpretation, as of {it:makecfxplots} output, and for feasibility: clustered standard errors often fail unless several clusters are represented at each lattice point. The types are: {p_end}\n",
+   "words_before": 61,
+   "words_after": 47,
+   "dropped": [],
+   "reason": "Parenthetical and e.g. folded in."
+  },
+  {
+   "idx": 285,
+   "hash": "fa3e2d4de2f4",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:all}} Quantiles are formed over the whole within-sample distribution of the continuous treatment variable, untreated observations included. {p_end}\n",
+   "words_before": 23,
+   "words_after": 20,
+   "dropped": [],
+   "reason": "Slightly shorter."
+  },
+  {
+   "idx": 286,
+   "hash": "91c9769f2b87",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:byTime}} Quantiles are formed within each time period t separately. An observation is in the lowest bin if its {it:contreat} is in the lowest 1/{it:latticenum} of its period's distribution, even if its value is high in the sample overall. {p_end}\n",
+   "words_before": 59,
+   "words_after": 42,
+   "dropped": [],
+   "reason": "Slightly shorter; the 1/latticenum correction kept."
+  },
+  {
+   "idx": 293,
+   "hash": "3219bfe550fb",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:baseTreated}} Quantiles are formed within the treated group, and their cut points define the lattice points for the rest of the sample. {p_end}\n",
+   "words_before": 28,
+   "words_after": 25,
+   "dropped": [],
+   "reason": "Shorter wording of the cut-point rule."
+  },
+  {
+   "idx": 294,
+   "hash": "071cf9d2823d",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:baseTreatedRef}} As {it:baseTreated}, with the quantiles formed within the treated group's reference period. {p_end}\n",
+   "words_before": 32,
+   "words_after": 16,
+   "dropped": [
+    {
+     "claim": "The quantile ranges then define lattice points for the rest of the sample.",
+     "survives_at": "293 (via 'As baseTreated')"
+    }
+   ],
+   "reason": "Repeated cut-point sentence replaced by a reference to baseTreated."
+  },
+  {
+   "idx": 295,
+   "hash": "e3c9c5052219",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:baseTreatedPost}} As {it:baseTreated}, with the quantiles formed within the treatment group's treated period. {p_end}\n",
+   "words_before": 32,
+   "words_after": 16,
+   "dropped": [
+    {
+     "claim": "The quantile ranges then define lattice points for the rest of the sample.",
+     "survives_at": "293 (via 'As baseTreated')"
+    }
+   ],
+   "reason": "Repeated cut-point sentence replaced by a reference to baseTreated."
+  },
+  {
+   "idx": 296,
+   "hash": "e49c17c5a01e",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:baseTreatedPre}} As {it:baseTreated}, with the quantiles formed within the treatment group's full pre-treatment period. {p_end}\n",
+   "words_before": 33,
+   "words_after": 17,
+   "dropped": [
+    {
+     "claim": "The quantile ranges then define lattice points for the rest of the sample.",
+     "survives_at": "293 (via 'As baseTreated')"
+    }
+   ],
+   "reason": "Repeated cut-point sentence replaced by a reference to baseTreated."
+  },
+  {
+   "idx": 298,
+   "hash": "a743b790cfba",
+   "action": "replace",
+   "new_smcl": "{phang}{opt latticeig:noreweights}: Ignore sample weights when forming the lattice quantiles. Under {it:bootstrap()} each replication's resampling multiplicity is kept, so its lattice is formed on the resample. {p_end}\n",
+   "words_before": 37,
+   "words_after": 27,
+   "dropped": [],
+   "reason": "Shorter lead sentence."
+  },
+  {
+   "idx": 300,
+   "hash": "40e425f593c3",
+   "action": "replace",
+   "new_smcl": "{phang}{opt makec:fxplots}: Plot the average marginal effect of {it:contreat} and the average treatment effect within each bin of the lattice variable or, if given, the {it:cfxlattice()} variable. One of the two must be present. The plots are produced for {it:att} only unless {it:safety(off)} or {it:contreatwithin} is specified. They are sure to be valid only for {it:att}. For other estimands they may be valid if the bins do not cut across cohorts, or, for {it:att_it}, across cohort-periods. Requires {it:contreat()}. Not compatible with {it:impvalues}. {p_end}\n",
+   "words_before": 93,
+   "words_after": 83,
+   "dropped": [],
+   "reason": "Parenthetical and semicolons into sentences; the validity reason put after the rule."
+  },
+  {
+   "idx": 302,
+   "hash": "0f98e5a2052e",
+   "action": "replace",
+   "new_smcl": "{phang}{opt cfxlattice(varname)}: The variable whose bins the continuous treatment effects plots use. The default is the lattice variable. It must be numeric and contain only non-negative integers on treated observations. Where it is missing on treated observations, {it:margins} omits those observations from the plotted averages and {it:wooldid} prints a caution. Without {it:makecfxplots} the option has no effect and draws a caution. {p_end}\n",
+   "words_before": 74,
+   "words_after": 62,
+   "dropped": [],
+   "reason": "Semicolon into a full stop, shorter lead."
+  },
+  {
+   "idx": 304,
+   "hash": "14a106e93a90",
+   "action": "replace",
+   "new_smcl": "{phang}{opt cfxplott:ypes(pre post integers)}: The cfxplots to produce. {it:post} plots effects across the continuous treatment within the post-treatment period, {it:pre} within the pre-treatment period, and an integer within that relative period. The default is {it:post}. {it:pre} requires {it:esfixedbaseperiod} or {it:esprelength()} greater than 0. Without {it:esfixedbaseperiod} an integer must lie within the requested event-study window, and entries outside it are dropped without a message. With {it:esfixedbaseperiod} any integer is accepted except the reference period itself, which is dropped. Any other entry is an error. {p_end}\n",
+   "words_before": 133,
+   "words_after": 84,
+   "dropped": [],
+   "reason": "Three parallel sentences folded into one; semicolon removed."
+  },
+  {
+   "idx": 306,
+   "hash": "91652a4523cb",
+   "action": "replace",
+   "new_smcl": "{phang}{opt makecfxplotsbysg}: Produce the continuous treatment effects plots for each subgroup. Without both {it:makecfxplots} and {it:subgroups()} it has no effect and prints nothing. Each subgroup's plot data is returned in {it:e(cfxitem_type_sgN)}, where N is the subgroup value. {p_end}\n",
+   "words_before": 41,
+   "words_after": 38,
+   "dropped": [],
+   "reason": "Slightly shorter."
+  },
+  {
+   "idx": 308,
+   "hash": "b7387e1e7ee2",
+   "action": "replace",
+   "new_smcl": "{phang}{opt cfxplotnose}: Do not estimate standard errors for the cfxplots, which speeds estimation. Dropped, with a caution, under {it:permute()} with {it:permtstat} or {it:permtci} and under {it:bootstrap()} with {it:boottstat}, which need them. Otherwise the plot cells keep their replication inference under both engines. {p_end}\n",
+   "words_before": 42,
+   "words_after": 43,
+   "dropped": [],
+   "reason": "Semicolon removed; content unchanged."
+  },
+  {
+   "idx": 310,
+   "hash": "ea393b625857",
+   "action": "replace",
+   "new_smcl": "{phang}{opt contreatc:ontrols(controltype)}: The controls for {it:contreat}. Each is f(Contreat_jt), the function that captures the dose effect within treated i-t cells, interacted with a set of fixed-effect-like indicators such as time period or cohort. They set the reference dose effect against which the effect in treated cohort-periods is measured. This option is required with a continuous treatment. Choose it with care, since the types make very different substantive assumptions (see below). {p_end}\n",
+   "words_before": 116,
+   "words_after": 71,
+   "dropped": [],
+   "reason": "Same claims, shorter sentences, parentheticals folded in."
+  },
+  {
+   "idx": 312,
+   "hash": "023220b107d0",
+   "action": "replace",
+   "new_smcl": "{phang} {it:conttreatcontroltype}: {it:untreatedZero} alone, or one or more of {it:basic}, {it:byTreated}, {it:byTtre}, {it:byCohort} and {it:byTime}. {p_end}\n",
+   "words_before": 25,
+   "words_after": 16,
+   "dropped": [],
+   "reason": "Parenthetical and semicolon removed."
+  },
+  {
+   "idx": 313,
+   "hash": "3ed054e6b329",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:basic}} f(Contreat_jt) is added without interactions. {p_end}\n",
+   "words_before": 18,
+   "words_after": 9,
+   "dropped": [],
+   "reason": "i.e. parenthetical removed."
+  },
+  {
+   "idx": 314,
+   "hash": "d6f67a918677",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:byTreated}} f(Contreat_jt) is interacted with indicators for the treatment group and the control group. {p_end}\n",
+   "words_before": 25,
+   "words_after": 17,
+   "dropped": [],
+   "reason": "Shorter."
+  },
+  {
+   "idx": 315,
+   "hash": "68b6373fc849",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:byTtre}} f(Contreat_jt) is interacted with indicators for each treatment onset group and the control group. {p_end}\n",
+   "words_before": 26,
+   "words_after": 18,
+   "dropped": [],
+   "reason": "Shorter."
+  },
+  {
+   "idx": 316,
+   "hash": "bb04b38f253f",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:byCohort}} f(Contreat_jt) is interacted with cohort (i) indicators. {p_end}\n",
+   "words_before": 17,
+   "words_after": 11,
+   "dropped": [],
+   "reason": "Shorter."
+  },
+  {
+   "idx": 317,
+   "hash": "e4ca514e1f85",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:byTime}} f(Contreat_jt) is interacted with time period (t) indicators. {p_end}\n",
+   "words_before": 18,
+   "words_after": 12,
+   "dropped": [],
+   "reason": "Shorter."
+  },
+  {
+   "idx": 318,
+   "hash": "01ab873395dd",
+   "action": "replace",
+   "new_smcl": "{synopt : {it:untreatedZero}} For a continuous treatment that is always 0 outside treated cohort-periods, which suits a dose that is unknowable or undefined there. If the dose is not always 0 outside treated cohort-periods, the baseline effect of {it:contreat} is left out of the model, and {it:wooldid} will return biased estimates, however precise they appear. {p_end}\n",
+   "words_before": 92,
+   "words_after": 56,
+   "dropped": [],
+   "reason": "Two sentences on the same condition merged; the bias warning kept."
+  },
+  {
+   "idx": 320,
+   "hash": "60c9a84025ea",
+   "action": "replace",
+   "new_smcl": "{pstd} Each control type needs variation in {it:contreat} across the reference-period observations of every group for which it fits a baseline dose slope. That is the whole sample under {it:basic}, each treatment-status group under {it:byTreated}, each onset group under {it:byTtre}, each cohort under {it:byCohort} and each calendar period under {it:byTime}. If any group lacks it the run stops. Under {it:byTime} this happens whenever never-treated units carry a zero or constant dose in the periods after the last onset. A group whose variation is below 1/100000 of the sample standard deviation of {it:contreat} is refused as well. One between that and 1/1000 of it draws a caution instead, since its baseline dose slope is nearly unidentified and the estimates can be wrong rather than noisy. {p_end}\n",
+   "words_before": 122,
+   "words_after": 125,
+   "dropped": [],
+   "reason": "Semicolons into full stops; both thresholds kept."
+  },
+  {
+   "idx": 322,
+   "hash": "b2d7e1047656",
+   "action": "replace",
+   "new_smcl": "{pstd} {ul:On Specifying contreatcontrols() and lattice:} Under {it:contreat()} the regression is:\nY_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt))\nEach treated i-t cell gets its own treatment effect intercept and its own effect of the continuous treatment through f(), which can be made flexible where that effect may be non-linear within a cell. The options {it:contreatpoly()} and {it:lattice()} set f(), in general a stepwise function of contreat. Without a lattice, f(Contreat_jt) = beta_it1*Contreat_jt^1 + beta_it2*Contreat_jt^2 + ... + beta_itp*Contreat_jt^p, where p is set by {it:contreatpoly(p)}. With a lattice, f(Contreat_jt) = sum_over_l_in_L[L_l + L_l * Poly(Contreat_jt)], where L_l is 1 for observations in lattice bin l and 0 otherwise, and Poly(Contreat_jt) holds the requested polynomial terms of Contreat_jt. {p_end}\n",
+   "words_before": 45,
+   "words_after": 129,
+   "dropped": [
+    {
+     "claim": "The equation was introduced 'as discussed here' with a link to Description.",
+     "survives_at": "102 (Description); this block now stands alone"
+    },
+    {
+     "claim": "[324]: each i-t cell gets its own intercept and marginal effect, as each cell gets its own effect in the binary case; f() can be more complicated if effects may be non-linear within large cells.",
+     "survives_at": "322"
+    },
+    {
+     "claim": "[326]: f() is set by contreatpoly() and lattice(), is in general stepwise, with the polynomial and lattice formulas.",
+     "survives_at": "322"
+    }
+   ],
+   "reason": "Merged [322], [324] and [326] into one self-standing block that keeps the equation and both f() formulas."
+  },
+  {
+   "idx": 324,
+   "hash": "90d033231373",
+   "action": "delete",
+   "new_smcl": "",
+   "words_before": 89,
+   "words_after": 0,
+   "dropped": [
+    {
+     "claim": "Each i-t cell gets its own treatment effect intercept and its own marginal effect of the continuous treatment.",
+     "survives_at": "322"
+    },
+    {
+     "claim": "This mirrors each cell getting its own effect under a binary treatment.",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "If cells are large enough that the dose effect may be non-linear within them, f() can be more complicated.",
+     "survives_at": "322"
+    }
+   ],
+   "reason": "Merged into [322]."
+  },
+  {
+   "idx": 326,
+   "hash": "f1bd08a1eff3",
+   "action": "delete",
+   "new_smcl": "",
+   "words_before": 101,
+   "words_after": 0,
+   "dropped": [
+    {
+     "claim": "contreatpoly() and lattice() determine f(), in general a stepwise function of contreat.",
+     "survives_at": "322"
+    },
+    {
+     "claim": "Without a lattice f() is a polynomial of order p from contreatpoly(p).",
+     "survives_at": "322"
+    },
+    {
+     "claim": "With a lattice f() = sum over bins of L_l + L_l * Poly(Contreat_jt), L_l the bin indicator.",
+     "survives_at": "322"
+    }
+   ],
+   "reason": "Merged into [322]."
+  },
+  {
+   "idx": 328,
+   "hash": "0f49c085d1b9",
+   "action": "replace",
+   "new_smcl": "{pstd} A lattice lets the dose slope vary within i-t cells, and it also adds treatment effect intercepts within cells, much as a finer {it:i} would. Average marginal effects do not capture those intercept jumps, nor the cell intercepts themselves. With many lattice groups the intercepts can absorb nearly all of the dose effect and threaten identification of the ame. The ame and the att can also disagree, even in sign. In such cases use a coarser lattice or rely on the att, which does capture the intercepts, above all in the continuous treatment effects plots. {p_end}\n",
+   "words_before": 254,
+   "words_after": 97,
+   "dropped": [
+    {
+     "claim": "Worked example: Y = -Contreat + 100*floor(Contreat/10) within each cell gives a positive ATT and a negative AME.",
+     "survives_at": "guide"
+    },
+    {
+     "claim": "Before the lattice, the marginal effect could not vary within i-t cells.",
+     "survives_at": "textbook"
+    }
+   ],
+   "reason": "Methodology and the worked example left to the guide; the ame-versus-att warning and remedies kept."
+  },
+  {
+   "idx": 330,
+   "hash": "91df2ec56bfc",
+   "action": "replace",
+   "new_smcl": "{pstd} Do not over-saturate the specification with lattice terms. Each treated cohort-period cell must hold at least two distinct values of Contreat_jt within each lattice bin it occupies. That variation is all that identifies the piece's slope. Without it, one slope term in that cell drops for collinearity and the piece takes the slope of another bin in the same cell. The reported average marginal effect and the plotted average marginal effects by bin include that borrowed slope. A caution gives the number of such pieces, and {it:verbose} lists the dropped terms. Separately, a piece with no more observations than parameters is fitted exactly, and the analytic standard errors can then be far smaller than the estimates' sampling variability. As a rule of thumb, the units contributing to a treated cell should number several times the lattice bins. {p_end}\n",
+   "words_before": 157,
+   "words_after": 139,
+   "dropped": [],
+   "reason": "A recent correction: kept whole, two sentences merged."
+  },
+  {
+   "idx": 332,
+   "hash": "2ce2c6b7db1c",
+   "action": "replace",
+   "new_smcl": "{pstd} The control function g(f(Contreat_jt)) plays for the dose the role the fixed effects play for a binary treatment. It largely decides which variation identifies the dose effect, since it sets the reference dose effect against which the effects in treated cells are measured. Each control type adds f(Contreat_jt) interacted with the indicators listed under {it:contreatcontrols()}. For example, {it:basic} gives g(f(Contreat_jt)) = f(Contreat_jt), and {it:byCohort} gives g(f(Contreat_jt)) = sum_over_i[fe_i * f(Contreat_jt)]. {p_end}\n",
+   "words_before": 74,
+   "words_after": 72,
+   "dropped": [
+    {
+     "claim": "Because the ame can be identified from within cohort-period variation alone, many approaches to identification exist.",
+     "survives_at": "textbook"
+    },
+    {
+     "claim": "[333]: basic, byTreated, byTtre and byCohort are analogous to unit fixed effects.",
+     "survives_at": "guide"
+    },
+    {
+     "claim": "[333]: each type interacts f(Contreat_jt) with a constant, a treated indicator, onset-group indicators or cohort indicators.",
+     "survives_at": "313-316"
+    },
+    {
+     "claim": "[333]: the basic and byCohort g() formulas.",
+     "survives_at": "332"
+    },
+    {
+     "claim": "[333]: the g() options set the reference effect against which dose effects in treated cells are estimated.",
+     "survives_at": "332"
+    }
+   ],
+   "reason": "Merged [332] and [333]; the per-type definitions already stand in the rows [313]-[317]."
+  },
+  {
+   "idx": 333,
+   "hash": "5032093eb053",
+   "action": "delete",
+   "new_smcl": "",
+   "words_before": 124,
+   "words_after": 0,
+   "dropped": [
+    {
+     "claim": "basic, byTreated, byTtre and byCohort are analogous to types of unit fixed effects.",
+     "survives_at": "guide"
+    },
+    {
+     "claim": "They interact f(Contreat_jt) with a constant, a treated indicator, onset-group indicators or cohort indicators.",
+     "survives_at": "313-316"
+    },
+    {
+     "claim": "basic gives g = f(Contreat_jt); byCohort gives g = sum_over_i[fe_i * f(Contreat_jt)].",
+     "survives_at": "332"
+    },
+    {
+     "claim": "g() sets the reference dose effect for treated cells.",
+     "survives_at": "332"
+    }
+   ],
+   "reason": "Merged into [332]."
+  },
+  {
+   "idx": 335,
+   "hash": "a80516db0fd1",
+   "action": "replace",
+   "new_smcl": "{pstd} {it:byTime} partials out period-specific effects of the dose, much as the second difference does for a binary treatment. It can be specified alone or with another control type. With {it:byCohort} and {it:byTime}, g() = sum_over_i[fe_i*f(Contreat_jt)] + sum_over_t[fe_t*f(Contreat_jt)]. {p_end}\n",
+   "words_before": 92,
+   "words_after": 39,
+   "dropped": [
+    {
+     "claim": "byTime adds interactions between time period indicators and f(Contreat_jt) to g().",
+     "survives_at": "317"
+    }
+   ],
+   "reason": "Definition repeated from the byTime row cut; the worked formula kept."
+  },
+  {
+   "idx": 337,
+   "hash": "f4f2e49fd29d",
+   "action": "replace",
+   "new_smcl": "{pstd} With {it:untreatedZero}, g() = 0, so the dose slopes are identified only from variation within treated cohort-periods. Use it only for a continuous treatment that is not meaningfully defined outside treated cohort-periods. {p_end}\n",
+   "words_before": 76,
+   "words_after": 34,
+   "dropped": [
+    {
+     "claim": "untreatedZero makes other technical changes to the estimation process.",
+     "survives_at": "maintainer"
+    }
+   ],
+   "reason": "Vague internals cut; the one unique fact and the narrow-use rule kept."
+  },
+  {
+   "idx": 339,
+   "hash": "05cbe31b2a85",
+   "action": "replace",
+   "new_smcl": "{pstd} To identify the average marginal effects from dose variation within treated cohorts, without a strictly untreated control group, specify {it:contreatwithin}. {it:wooldid} still reports att estimates, but read them with care. In a period where some unit is not yet treated, a treated cell's att includes the level effect of treatment, measured against that period's untreated units. In a period with no untreated reference rows, the treated cells' level effects are not identified. {it:wooldid} then sets one cell's level effect in that period to zero, measures the other cells against it, and names those periods in a caution. The att there depends on which cell was set to zero. It can change when the cohorts are relabelled, and it can take the wrong sign. Rows moved into an {it:esprelength()} window also leave the reference pool, so the pretreatment att can be affected the same way. The att and its event study can therefore shift sharply at the last treatment onset for this reason alone. The att is the integral of the estimated average marginal effects across the dose distribution only when {it:fe()} absorbs every cohort-period level effect, for example with i-t fixed effects. Even then, it extrapolates the estimated slope down to a dose of zero. Rely on the ame results under {it:contreatwithin}. The control type {it:byTime} is refused here, since without an untreated group the time period interactions would partial out genuine treatment effects for some group. {it:safety(off)} downgrades the refusal to a caution. {p_end}\n",
+   "words_before": 311,
+   "words_after": 246,
+   "dropped": [
+    {
+     "claim": "contreatwithin stops wooldid objecting to periods without a control group and to i-t fixed effects.",
+     "survives_at": "277"
+    }
+   ],
+   "reason": "Opening restatement of [277] cut, 'Note:' aside and semicolon removed; every att caveat and the byTime refusal kept."
+  },
+  {
+   "idx": 341,
+   "hash": "924f21ad94c7",
+   "action": "replace",
+   "new_smcl": "{pstd} {ul:What the ame Measures:} Within a treated cell, the ame compares units that received different doses. The choice of g() sets the parallel trends assumption: without treatment, units at different doses would have followed the same outcome path, apart from the dose effects g() allows for. That identifies the att, and the att within each bin of the continuous treatment effects plots. The ame is the effect of a marginal increase in the dose only under a stronger condition: units at different doses would also have gained the same from treatment at any given dose. This is the strong parallel trends assumption of Callaway, Goodman-Bacon and Sant'Anna (2024). Without it, the ame also carries selection bias, since the units that took higher doses may simply be those that gain more from treatment. The same holds for the ame within each bin and for differences in att across bins. Where the att under {it:contreatwithin} is the integral of the ame, it needs the same stronger condition. {p_end}\n",
+   "words_before": 185,
+   "words_after": 167,
+   "dropped": [],
+   "reason": "A recent correction: kept in full; the last sentence now carries the condition stated in [339]."
+  },
+  {
+   "idx": 343,
+   "hash": "7822b15a1670",
+   "action": "replace",
+   "new_smcl": "{pstd} {ul:Continuous Treatments and Cluster-Robust Standard Errors:} With {it:cluster()} at the level of {it:i} or coarser, the analytic standard errors of the ame-family quantities are not identified. {it:wooldid} prints a caution, reports those standard errors, the ame joint tests and the ame adversarial p-values as missing, withholds {it:e(V_es_ame*)}, and draws the ame continuous treatment effects plots without confidence intervals. The att rows are still reported, but their analytic standard errors are understated in this design as well (see {help wooldid##standarderrors:What Level to Cluster At}). A cell holding a single observation does not trigger this. Valid ame inference then comes from {it:bootstrap()}, {it:permute()}, {it:impvalues}, {it:robust} when errors are independent across observations, or a {it:cluster()} strictly finer than the cohort-by-period cells. {p_end}\n",
+   "words_before": 139,
+   "words_after": 120,
+   "dropped": [
+    {
+     "claim": "Every treated cohort-by-period cell lies within a single cluster (mechanism).",
+     "survives_at": "149"
+    }
+   ],
+   "reason": "Mechanism clause cut and the cross-reference shortened; every behaviour, e() name and remedy kept."
+  }
+ ]
+}
