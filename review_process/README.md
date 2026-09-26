@@ -50,3 +50,21 @@ was meant to stop.
 lines - "nothing in it has been decided", "OPEN, ruled, NOT started", "Nothing below is implemented
 yet" - that were accurate when typed and badly wrong within days. If you write a status claim into
 a document that will outlive the week, date it and say what would make it false.
+
+## The records at the repository root
+
+Six markdown files sit beside `README.md` at the root. They stay there because `test/suite/ledger.csv`,
+the `test/suite/PREREG_*.md` documents and several records in this directory cite them by that path.
+All but the first are historical: a status line in them is true only as of the file's last change.
+
+| file | what it is | last changed |
+|---|---|---|
+| `wooldid_ado_review.md` | the author's own work file: his reviews and the instructions for each chunk of work. Its uncommitted edits are his; agents never stage it | live |
+| `wooldid_old_bug_report.md` | the 2026-08-23 full assessment run's report: every old-vs-new difference attributed to a documented fix or intended change | 2026-08-24 |
+| `wooldid_old_bug_report_2026-09-13.md` | the same report for the 2026-09-13 assessment run, superseded by the 559-config dual-build run | 2026-09-20 |
+| `wooldid_standing_issues.md` | the bug-fixing work list derived from the 2026-08-23 report, with status annotations to 2026-09-06 | 2026-09-06 |
+| `wooldid_solved_issues.md` | the issues from `wooldid_ado_review.md` that were solved or attempted, and how | 2026-09-08 |
+| `wooldid_issue_file_rejections.md` | the external review tickets that were rejected, with the reason for each | 2026-08-19 |
+
+The live records are `open_defects.md` (nothing under OPEN as of 2026-09-26), the `open_ticket_*.md` files
+(every one BUILT or CLOSED as of 2026-09-26), `changes_review_2026-09-22.md` and `econ_review_2026-09-25.md`.
