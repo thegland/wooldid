@@ -701,7 +701,6 @@ draws a caution instead, since its baseline dose slope is nearly unidentified an
 Y_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt))
 Each treated i-t cell gets its own treatment effect intercept and its own effect of the continuous treatment through f(), which can be made flexible where that effect may be non-linear within a cell. The options {it:contreatpoly()} and {it:lattice()} set f(), in general a stepwise function of contreat. Without a lattice, f(Contreat_jt) = beta_it1*Contreat_jt^1 + beta_it2*Contreat_jt^2 + ... + beta_itp*Contreat_jt^p, where p is set by {it:contreatpoly(p)}. With a lattice, f(Contreat_jt) = sum_over_l_in_L[L_l + L_l * Poly(Contreat_jt)], where L_l is 1 for observations in lattice bin l and 0 otherwise, and Poly(Contreat_jt) holds the requested polynomial terms of Contreat_jt. {p_end}
 
-
 {pstd} A lattice lets the dose slope vary within i-t cells, and it also adds treatment effect intercepts within cells, much as a finer {it:i} would. Average marginal
 effects do not capture those intercept jumps, nor the cell intercepts themselves. With many lattice groups the intercepts can absorb nearly all of the dose effect and
 threaten identification of the ame. The ame and the att can also disagree, even in sign. In such cases use a coarser lattice or rely on the att, which does capture the
