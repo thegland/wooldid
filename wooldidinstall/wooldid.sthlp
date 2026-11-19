@@ -13,6 +13,8 @@
 {viewerjumpto "All Options" "wooldid##options"}{...}
 {viewerjumpto "Specifying the Estimand(s)" "wooldid##specifyestimand"}{...}
 {viewerjumpto "Standard Errors" "wooldid##standarderrors"}{...}
+{viewerjumpto "Bootstrap" "wooldid##bootstrap"}{...}
+{viewerjumpto "Randomization Inference" "wooldid##randinf"}{...}
 {viewerjumpto "Supporting Features" "wooldid##supporting"}{...}
 {viewerjumpto "Event Studies" "wooldid##eventstudy"}{...}
 {viewerjumpto "Subgroup Effects" "wooldid##interactions"}{...}
@@ -30,10 +32,9 @@
 
 {pstd} {bf:wooldid} -- Suite for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2021)
 and the high dimensional fixed effects estimators developed by Correia (2017). Features include estimation of various types of average treatment effects, comparison of treatment effects
-across subgroups, estimation of event study style estimates and related parallel trends assumption tests, and estimation of average and marginal treatment effects in the presence of a
-continuous treatment (or treatment intensity) variable [experimental]. This suite also can produce event study plots, histograms of treatment effects by cohort, and plots of treatment
-effects across the distribution of a specified continuous treatment variable. Options for inference include inference using standard analytic clustered standard errors, inference using
-standard errors on average treatment effects that account for sampling variation in covariates (unconditional standard errors),
+across subgroups, estimation of event study style estimates, parallel trends assumption tests, and estimation of average and marginal treatment effects in the presence of a
+continuous treatment (or treatment intensity) variable. This suite also can produce event study plots, histograms of treatment effects by cohort, and plots of treatment
+effects across the distribution of a specified continuous treatment variable. Options for inference include analytic SEs, bootstrap (standard and Bayesian), randomization inference,
 and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
 
 {pstd}{ul:Shortcuts:} {help wooldid##description:Description}, {help wooldid##options:Options}, {help wooldid##output:Working with Output},
@@ -52,32 +53,41 @@ at this link. {p_end}
 {title:Syntax}
 
 {phang}{cmd: wooldid} {it:y i t ttre} [if] [aw/pw=weights] [{cmd:,} {help wooldid##specifyestimand:estimands} {help wooldid##standarderrors:standard_errors}
+{help wooldid##bootstrap:boostrap} {help wooldid##randinf:randomization_inference}
 {help wooldid##supporting:supporting_features} {help wooldid##eventstudy:event_study} {help wooldid##interactions:subgroup_effects} {help wooldid##continuous:continuous_treatment}
 {help wooldid##controls:controls_and_FE} {help wooldid##technical:technical_features} ]{p_end}
 
 {synoptset 22 tabbed}{...}
 {synopt : {it:y}}Outcome variable. {p_end}
-{synopt : {it:i}}Cohort identifier; must consist of integers greater than 0. Cohorts can be fine (i = individual units) or coarse (i = collections of individual units), but should be no coarser
-than to consist of treatment onset cohorts. Coarser cohort definitions tend to enable faster estimation, and you can specify coarse cohorts
- alongside unit-level fixed effects. Simulations suggest the estimator is most statistically efficient when {it:i} is set at the level at which you cluster. {p_end}
+{synopt : {it:i}}Cohort identifier; represents collections of units allowed to have different treatment effects by year. Cohorts must either group units 
+by year of treatment onset, or must be subsets of such treatment onset groups. Coarser cohort definitions allow for faster estimation and more stable 
+estimation of SEs with clusters (cohorts should not be finer than clusters, and ideally should be coarser). Setting cohorts equal to the unit-level identifier, 
+in general, yields poor results (unit FE can be included separately). The cohort variable i must consist only of integers greater than 0. {p_end}
 {synopt : {it:t}}Time period identifier; must consist of integers greater than 0.{p_end}
 {synopt : {it:ttre}}Variable containing cohort-specific dates of treatment onset; missing indicates never-treated cohorts, cohorts treated before the sample begins are dropped. {p_end}
 
 {phang} {ul:Options by Purpose:} {p_end}
 {synoptset 1 tabbed }{...}
-{synopt : {help wooldid##specifyestimand:Specifying the Estimand(s):}} {opt att} {opt att_it} {opt att_i} {opt att_itime} {opt semi:elasticitiy} {p_end}
+{synopt : {help wooldid##specifyestimand:Specifying the Estimand(s):}} {opt att} {opt att_it} {opt att_i} {opt att_itime} {p_end}
 
-{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt uncond:itionalse} {opt customvce(customstring)} {opt imp:values}  {p_end}
+{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt imp:values} 
+{opt simult:aneousbands} {opt level(#)} {opt fast:nose} {p_end}
+
+{synopt : {help wooldid##bootstrap:Bootstrap Inference:}} {opt boot:strap(standard|bayes)} {opt reps(#)} {opt bootdisp:lay(spec)} 
+{opt bootdf(spec)} {opt bootsave(name)}    {p_end}
+
+{synopt : {help wooldid##randinf:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt reps(#)} {opt permex:act} {opt permprobs(spec)} 
+{opt permonset:cohorts}   {opt permstr:ata(variable[integer])}  {opt permt:stat} {opt permtci} {opt permside(left|right} {opt permabs} {opt permsave(name)  {p_end}
 
 {synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem)} {opt replace} {opt sum:marystats}
-{opt pois:son} {opt poisexp:results}  {p_end}
+{opt pois:son}    {p_end}
 
 {synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt espre:length(int>=0)} {opt espost:length(int>=0)} {opt esr:elativeto(-int)}
- {opt joint:tests}   {opt adv:ersarial} {opt makep:lots} {opt oos:treatedcontrols(int>=0)}  {p_end}
+ {opt pretrend:test(numlist)}  {opt makep:lots} {opt oos:treatedcontrols(int>=0)}   {p_end}
 
-{synopt : {help wooldid##interactions:Subgroup Effects:}} {opt subgroups(variable[>=0 int])} {opt suppress:sgprimaryeffects}  {p_end}
+{synopt : {help wooldid##interactions:Subgroup Effects:}} {opt subgroups(variable[>=0 int])}  {p_end}
 
-{synopt : {help wooldid##continuous:Continuous Treatments:}} {opt contreat(variable[numerical])} {opt contreatelas:ticitytype(dydx, eydx, dyex, or eyex)}  {opt contreatw:ithin}
+{synopt : {help wooldid##continuous:Continuous Treatments:}} {opt contreat(variable[numerical])} {opt contreatelas:ticity}  {opt contreatw:ithin}
 {opt contreatp:oly(+int)} {opt lattice(variable[+int] OR latticetype latticenum)} {opt latticeig:noreweights} {opt makec:fxplots} {opt cfxlattice(variable[+int])}
 {opt cfxplott:ypes(post, pre, and/or integers specifying relative time periods)} {opt makecfxplotsbysg}  {opt cfxplotnose}  {opt contreatc:ontrols(conttreatcontroltype)}  {p_end}
 {phang3} {it:-latticetype}: {it:all}, {it:byTime}, {it:byTreated}, {it:byTtre}, {it:byCohort}, {it:byTreatedByTime}, {it:byTtreByTime}, {it:byCohortByTime}, {it:baseTreated}, {it:baseTreatedRef},
@@ -89,8 +99,8 @@ than to consist of treatment onset cohorts. Coarser cohort definitions tend to e
 {opt inter:activecontrols(varlist)} {p_end}
 
 {synopt : {help wooldid##technical:Technical Features:}}
-{opt update} {opt customw:eightmultiplier(variable[>=0 numerical])}  {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
-{opt ver:bose} {opt emptycellsoverride} {opt safety(off)}   {opt oldsyntax}  {p_end}
+{opt update} {opt rseed(#)} {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
+{opt ver:bose} {opt: nofast:collapse} {opt safety(off)}    {p_end}
 
 
 
@@ -122,14 +132,12 @@ specified by the user. The overall average treatment effect would be obtained by
   TreatedFlag_it is equal to 1), subtracting the counterfactual fitted values for these observations that set TreatedFlag_it to 0, and then taking the average of these differences
   (applying any sample weights). To target estimands other than the overall average treatment effect, this procedure can be modified by either
   introducing a set of weights (or modifying the pre-existing sample weights) when averaging the computed differences in the margins calculation or by restricting the sample so that the
-  average only contains observations from a subgroup or time period of interest. The margins calculation can also be modified here to compute effects in terms of semi-elasticities.
+  average only contains observations from a subgroup or time period of interest. 
 For more on the different estimand-types available, see {help wooldid##estimands:estimands}. {p_end}
  {pstd} With respect to inference, there are several approaches to standard error estimation available. The default estimates standard errors in the underlying regression and then obtains
- standard errors on the treatment effects produced by the margins calculation using the delta method. These errors are conditional standard errors in the sense that they are conditional
- on the data: the difference in fitted values potentially depends on the value of various covariates, and this approach takes these values as fixed when performing the margins calculation.
- Given these standard errors, p-values are then obtained using a t-distribution of same degrees of freedom as the residual number of degrees of freedom in the underlying regression model.
- The alternative is to have {it:margins} produce unconditional standard errors (see the option {it:unconditional} in {help margins}), which account for sampling variation in covariates.
- For more on standard error computation, see {help wooldid##standarderrors:standard_errors}. {p_end}
+ standard errors on the treatment effects produced by the margins calculation using the delta method. Given these standard errors, p-values are then obtained using a t-distribution of 
+same degrees of freedom as the residual number of degrees of freedom in the underlying regression model. For more on standard error computation, 
+see {help wooldid##standarderrors:standard_errors}. {p_end}
 
 {pstd} This overall approach can be extended to cover many additional use cases with little or no modification. The user can switch from standard regression to poisson regression without
 requiring any essential modification to the regression equation or margins procedure. Additional controls and fixed effects can be added to the underlying regression without requiring
@@ -142,9 +150,7 @@ traditional difference-in-differences would have provided. See {help wooldid##in
 restricted to the subsample of observations corresponding with particular periods relative to treatment. If effects in periods prior to treatment are of interest, this requires modifying
 the underlying regression with additional treatment indicator variables for cohort-periods that correspond with the relative time period of interest in treated cohorts. The regression equation
 itself remains the same: only the set of (i,t) pairs appearing in Z changes for this approach. The margins calculations involved also remain similar, though may be performed on varying
-subsets of the data by relative period. When computing event study estimates, {it:wooldid} can supplement the standard treatment effect estimates with joint tests of the hypothesis that all
-pre-treatment relative time period effects are zero, as well as of the hypothesis that all relative time period effects fall on a single line (namely, the line of best fit through the
-estimated relative time period effects). For more on this topic, see {help wooldid##eventstudy:event_study}.{p_end}
+subsets of the data by relative period. For more on this topic, see {help wooldid##eventstudy:event_study}.{p_end}
 
 {pstd} In terms of implementing event study-style estimates, {it:wooldid} offers two approaches. The default pooled reference period approach is conceptually similar to estimating results like
 normal, but with the treatment onset date for all treated cohorts pulled earlier in time by just enough periods to estimate all requested relative time period effects. With this approach, we
@@ -169,8 +175,8 @@ g() consists of interactions between various fixed effects-like indicator variab
 as before. The average
 marginal effect of the continuous treatment variable can be computed similar to the main margins calculation, but comparing differences in fitted values after modifying the variable
 Contreat_jt rather than modifying the variable TreatedFlag_it. In addition to overall and event study style estimates, {it:wooldid} can also compute average treatment effect estimates
-at varying points along the distribution of the continuous treatment variable. It can also compute various types of elasticity estimates in lieu of standard estimates of the effect
-of the continuous treatment variable. For more detail on options related to continuous treatments, see {help wooldid##continuous:continuous_treatment}. {p_end}
+at varying points along the distribution of the continuous treatment variable. For more detail on options related to continuous treatments, 
+see {help wooldid##continuous:continuous_treatment}. {p_end}
 
 {pstd} A final feature available in {it:wooldid} is its implementation of Ibragimov and Muller (2010) style cluster robust inference. This approach estimates the same underlying
 regression as normal, but then modifies the margins calculation significantly. In particular, for any treatment effect requested (be it an average treatment effect or an effect of
@@ -222,10 +228,6 @@ but reweighting observations by w/(W_it * T_iprepost), where w is an observation
 (depending on the time period) either the number of post-treatment time periods in which a cohort-i is observed or the number of pre-treatment, non-reference period time periods in which a
 cohort i is observed. If weights are not used, w is taken to have a value of 1 for all observations.{p_end}
 
-{phang}{opt semi:elasticity}: Compute treatment effect estimates in terms of semi-elasticities (% change in y / unit change in x). This is achieved by adjusting the margins calculation
-to present the average percentage change, rather than the average level difference, between the two sets of predicted outcomes. This is implemented using the
-{it:eydx} option of the {help margins} command. Note that for estimation to succeed, this option tends to require large samples and a y-variable that is not sparsely distributed. {p_end}
-
 
 {marker standarderrors}{...}
 {dlgtab:Standard Errors}
@@ -236,40 +238,22 @@ regression estimation using this option will underlying rely on either {help reg
 {phang}{opt rob:ust}: Heteroskedasticity robust standard errors; relevant only if cluster() is not specified. By default, regression estimation using this
 option will underlyingly rely on either {it:reghdfe} or, for poisson, {it:ppmlhdfe}. {p_end}
 
-{phang}{opt uncond:itionalse}: Compute standard errors that account for sampling variation in covariates. This option also forces {it:wooldid} to abandon
-high dimensional fixed effect estimation packages for the underlying two-way fixed effect regression in favor of the commands {it:regress} and {it:poisson}.
-As such, this option should be slower to use on average. This option requires specifying either robust or clustered standard errors. {p_end}
-
-{phang}{opt customvce()}: Forces {it:wooldid} to switch to using either the {help regress} or {help poisson} command for underlying regression estimation,
-and then passes the user specified text without modification into the {it:vce()} option for these commands. This allows specifying a broader set of
-standard error calculation methods than allowed by the default high dimensional fixed effects estimation packages used by {it:wooldid}. {p_end}
-
 {phang}{opt imp:values}: Implements Ibragimov and Muller (2010) style cluster-robust inference for all estimates. The idea behind the Ibragimov and Muller approach is to compute
 cluster-specific treatment effect estimates, present their average as one's final treatment effect estimate, and conduct inference by t-testing the cluster-specific estimates against 0.
 Using IM-style inference requires specifying a single cluster variable and is not compatible with the {it:unconditionalse} option. IM-style inference implicitly changes {it:wooldid}'s
 target estimand. For example, if clustering at the cohort level, IM-style inference will cause {it:att} to yield the same effect estimates as {it:att_i}. Note that {it:wooldid} does not adjust the
 weights used for computing different estimands when IM-style inference is requested: in general, IM-style inference will yield incorrect results for non-att estimands if clusters cross-cut cohorts
-or (worse) cohort-time period cells. IM-style inference is not currently allowed with the use of subgroups, the option {it:jointtests}, and the option {it:makecfxplots}. {p_end}
+or (worse) cohort-time period cells. IM-style inference is not currently allowed with the use of subgroups or the option {it:makecfxplots}. {p_end}
 
-{pstd} {ul: Discussion of Unconditional Standard Errors:}
-The overall treatment effect estimates presented by {it:wooldid} depend on not just the coefficients from the underlying regression, but also on the observed values of any included covariates
-or continuous treatment variables. The standard errors {it:wooldid} presents for these final estimates are produced during the margins calculation stage
-using the delta method, taking the observed values of the relevant variables as given (i.e., conditional on those values). This contrasts with approaches that aim to account for sampling variation
-in those observed values (i.e., unconditional standard errors; see the discussion of {it:vce(unconditional)} in {help margins}). Whether one should wish to take the observed values of one's
-covariates as fixed likely varies from context to context. {p_end}
+{phang}{opt simult:aneousbands}: Compute a sup-t simultaneous confidence band for the event study relative-year effect estimates. Obtained via bootstrap, if used. Otherwise, it 
+is simulated from the analytic event study covariance. {p_end}
 
-{pstd} Does using unconditional standard errors make a large difference? Wooldridge (2021) expresses the view that conditional and unconditional standard errors often should be similar.
-Intuitively, this ought to be true whenever samples are large enough that sampling variation in covariates is ignorable (more precisely, ignorable within cohort-time period cells).
-Unconditional standard errors may be more impactful, however, when samples are small, or when sample weights make particular observations very influential. Additionally, when
-using unconditional standard errors, subgroup-specific estimates (as obtained using {it:subgroups()} or when computing event study estimates) can be sensitive to data from observations
-outside the focal subgroup. On a technical basis, this is because {it:wooldid} uses the {it:subpopulation} features in {it:margins} when producing these subgroup estimates. {p_end}
+{phang}{opt level(#)}: Confidence level for reported confidence intervals; default 95%.   {p_end}
 
-{pstd} {ul: Caution Regarding Unconditional Standard Errors When Used with Certain Weights and Estimands:} When using aweights and estimands other than the ATT, tests using unconditional
-standard errors sometimes appear to be incorrectly sized, rejecting the null hypothesis at extraordinarily high rates. The issue with non-ATT estimands likely is related to the margins
-calculation doing computations on predicted values using different weights (weights modified to hit non-ATT estimands) than used in the initial regression. The issue with using aweights does
-not always occur, though when it proves to be an issue it tends to result in poorly sized test statistics for both {it:wooldid} and {help hdidregress}. Given these issues, if {it:safety(off)}
-is not specified, {it:wooldid} will warn against using unconditional standard errors with aweights and stop estimation if using them with a non-ATT estimand. Broadly speaking, unconditional
-standard errors tend to be highly sensitive to one's choice of weights. {p_end}
+{phang}{opt fast:nose}: Forego standard error estimation for an increase in estimation speed. {p_end}
+
+  
+
 
 {pstd} {ul: Discussion of Ibragimov and Muller-Style Inference:}
 The virtue of the Ibragimov and Muller approach is that it can significantly improve on analytic clustered standard errors when the number of clusters is small and when the clusters are
@@ -300,8 +284,6 @@ pre-treatment period will also be shown. {p_end}
 are presented in terms of differences in linear predictions (the poisson {it:predict(xb)} option). Poisson regression is especially useful in situations where one would like to use
 log(y) as an outcome, but where y contains natural 0s, as well as when treatment and control groups are only on parallel trends in proportions (e.g., one group is always 2x the other). {p_end}
 
-{phang}{opt poisexp:results}: When implementing poisson, present treatment effects in terms of differences in exponentiated linear predictions (the poisson "number of events" or {it:predict(n)}
-option). Results of this sort will thus not have a log-type interpretation. {p_end}
 
 
 {marker eventstudy}{...}
@@ -317,22 +299,8 @@ prior to treatment.  {p_end}
 
 {phang}{opt espost:length(integer)}: The number of post-treatment relative time period-specific effects to be estimated. {p_end}
 
-{phang}{opt joint:tests}: Calculate joint statistical significance tests of all requested pre-treatment relative time period-specific effects. Caution: simulations suggest these
-tests tend to be particularly sensitive to whether you have a sufficient number of clusters in your sample for standard error estimation. {p_end}
-
-{phang}{opt adv:ersarial}: Tests the joint hypothesis that all estimated relative time period-specific effects fall on a single line, where the line is chosen rather adversarially.
-Specifically, the line against which estimates are tested is that chosen by the OLS regression of {it:coef_rt} on {it:time_rt} where {it:coef_rt} is the estimated coefficient in
-relative time period
-{it:rt} and where {it:time_rt} is equal to the relative time period. Note that the variable {it:coef_rt} includes values of 0 for the reference period (or periods, if {it:timetrends} and
-{it:esfixedbaseperiod} are specified). The final p-values presented are from the F-test of the the joint null hypothesis that all non-reference period relative-time period specific effects
-are equal to the fitted values from the OLS best fit line. These tests will not be conducted if an insufficient number of relative time period-specific treatment effects are requested
-(either overall, or within specific subgroups). {p_end}
-
-{phang}{opt altmethod_adversarial}: Alternate method of implementing the test above, which projects a trend forward using the pre-treatment coefficients only, and
-then which only tests to see if the post-treatment coefficients collectively fall in line with the projected values. This likely reflects a weaker test than 
-the primary implementaiton, but may be preferred under certain circumstances. {p_end}
-
-altmethod_adversarial
+{phang}{opt pretrend:test(numlist}: Reports Roth (2022) pre-trend power diagnostics for each requested power level, specified as percentages. Reported results include an 
+estimate of the slope of the linear pre-trend, the smallest linear pre-trend that detected at each given power level, {p_end}
 
 {phang}{opt makep:lots}: Produce event study plots. {p_end}
 
@@ -341,6 +309,7 @@ altmethod_adversarial
 Such cohorts are potentially allowed to contribute to pre-treatment relative time period-specific effects when this option is specified,
 but not otherwise. Note that if {it:esfixedbaseperiod} is specified, the out-of-sample-treated cohorts will be dropped if the specified reference period is not observed
 within the sample for these cohorts. {p_end}
+
 
 {pstd}{ul: Two Approaches to Estimation -- Pooled Reference Period vs Fixed Reference Period:} Difference-in-differences treatment effect estimates involve comparing average outcomes during
 treated cohorts' treatment periods to treated cohorts' average outcomes during a pre-treatment reference period. By default, {it:wooldid} does comparisons using a pooled reference period,
@@ -397,10 +366,8 @@ fixed effects (i.e., specifying {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}).
 
 {phang}{opt contreat(varname)}: The continuous treatment variable. Must be defined for all observations (set to 0 if not naturally defined within untreated cohort-periods).{p_end}
 
-{phang}{opt contreatelas:ticitytype(dydx/eyex/eydx/dyex)}: Specifies which type of treatment effect to compute. {it:eyex} corresponds with computing the elasticity
-(% change in y/% change in contreat), {it:eydx} corresponds with semi-elasticities comparable to what can be produced for the main effect of treatment
-(% change in y/unit change in continuous treatment), {it:dyex} gives the other semi-elasticity (change in y/% change in continuous treatment), and {it:dydx} is the default
-(not an elasticity). Note that successful estimation of these elasticities tends to require a larger sample, as well as y and contreat variables that are not sparsely distributed. {p_end}
+{phang}{opt contreatelas:ticity}: Compute effects as dyex semi-elasticities, i.e. the (level change in y/% change in contreat). Achieved by modifying the calculation done at the 
+margins calculation stage. Successful estimation of these elasticities tends to require a larger sample, as well as y and contreat variables that are not sparsely distributed. {p_end}
 
 {phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option sets the option {it:safety} to off, turns off
 estimability checks that would otherwise cause {it:wooldid} to stop estimation in the absence of any untreated cohorts, and causes {it:wooldid} to skip sample cleaning routines that drop time
@@ -554,8 +521,7 @@ in conjunction with the option {it:contreatcontrols(basic)}, or any option other
 
 {phang}{opt update}: If specified, the command {it:wooldid,} {it:update} will update your local installation of {it:wooldid} based on the most recent edition of the program available on github. {p_end}
 
-{phang}{opt customw:eightmultiplier(varname)}: When computing various treatment effects using the margins calculation (see step 2 {help wooldid##description:here}), this variable is used to
-weight the observations (or if a weight would already be used, that weight is multiplied by this variable). This allows production of certain bespoke types of treatment effects. {p_end}
+{phang}{opt rseed(#):} set the random number seed for the run (if bootstrapping, using randomization inference, etc.). 
 
 {phang}{opt clean:matrices}: If specified, {it:wooldid} will clear out all matrices storied in STATA's main memory and in mata. Occasionally, {it:wooldid} enters a state where it repeatedly
 crashes for difficult to determine reasons (relating to {it:reghdfe} crashing and leaving certain content in mata). Doing this can sometimes recover {it:wooldid} from this problem. {p_end}
@@ -575,18 +541,11 @@ efficiency in the main regression or under certain other circumstances. {p_end}
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses, displays raw output from the regression estimated, and prints progress reports throughout the estimation process.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
 
-{phang}{opt emptycellsoverride}: By default, {it:wooldid} tells Stata to drop interaction terms that correspond with empty cells, which is achieved by the command
-{it:set emptycells drop}, which improves estimation efficiency in this setting. This option overrides this behavior. This should only be of interest in conjunction
-with the option {it:verbose}. {p_end}
 
 {phang}{opt safety(string)}: When {it:safety(off)} is not explicitly specified, {it:wooldid} will caution the user or halt estimation when {it:wooldid} is likely to yield unreliable estimates.
 Most important among these checks are tests for whether or not a variable intended to capture the treatment effect in a given i-t cell was dropped from the underlying regression for
 multicolinearity, as may occur if one's fixed effects or continuous treatment control variables partial out one of the main effects. Identification failures of this sort will generally be detected,
 though not necessarily when the problem concerns continuous treatments being analyzed with a lattice or with polynomial terms.   {p_end}
-
-{phang}{opt oldsyntax}: In older versions, {it:wooldid} used the suffix {it:contemp} to flag the event study coefficient containing the period contemporaneous with treatment. 
-This turned out to make {it:wooldid} relatively incompatible with the popular event study plot production program {help event_plot}, so the {it:contemp} suffix has been 
-replaced with the suffix {it:post0}. This option reverts {it:wooldid} to using the older coefficient syntax, for compatibility with any older code that relies on it. {p_end}
 
 
 
@@ -609,15 +568,6 @@ primary results has not been suppressed.{p_end}
 {synopt:{it:e(pwsgs)}} Pairwise differences between the subgroup-specific treatment effects, if subgroups are used.{p_end}
 
 {pstd} In addition to these core results, the following materials are also returned in e(): {p_end}
-{synopt: Joint Tests by Horizon} Joint tests for the statistical significance of pre-treatment relative time period-specific event study effects are presented in the scalars e(joint_horiz)
-(ATT), e(joint_horiz_i) (ATT_i), e(joint_Choriz) (AME; continuous treatments only), and e(joint_Choriz_i) (AME_i; continuous treatments only). {p_end}
-
-{synopt: Joint Tests by Subgroup & Time Period} Joint tests for the statistical significance of pre-treatment relative time period-specific event study effects are presented by
-subgroup, when used, in the matrices: e(joint_horizon_bysg), e(joint_horizon_i_byssg), e(joint_cont_horizon_bysg), and e(joint_cont_horizon_i_bysg). {p_end}
-
-{synopt: Adversarial Line Tests:} P-values from joint tests of the hypothesis that all (non-reference) relative-time period treatment effect estimates fall on the same line
- are found in the local macros {it:e(adversarial_pval_att)}, {it:e(adversarial_pval_ame)}, {it:e(adversarial_pval_att_s[SG])}, etc. The coefficient and intercept of the line used in
- these tests may be found in matrices named {it:e(adversarial_line_att)}, etc. {p_end}
 
 {synopt: SG Effect Homogeneity Tests} For each estimate type (ATT, ATT_it, AME, etc.), the joint test that all subgroups have the same such post-treatment effect (namely, the
 same effect as the lowest numbered SG) may be found in the scalar {it:e(joint_att_allsgssame)} and analogously named scalars for other treatment effect types. For pre-treatment effects,
@@ -677,7 +627,7 @@ estimates will not, in general, yield valid results {p_end}
 The STATA 18 command {help hdidregress} has an option for implementing Wooldridge (2021) style estimates. Its implementation takes the Mundlak approach to estimation
 and uses the command {help regress}, in conjunction with {help margins}, to compute estimates. Estimates from {it:hdidregress twfe} with the option {it:notyet}
 (i.e., allowing use of not-yet treated cohorts as controls) should be comparable to estimates from {it:wooldid} using the {it:att} estimand-type, a pooled
-reference period (i.e., not using {it:esfixedbaseperiod}), unconditional standard errors, and sample weights which (if present) do not vary within units.
+reference period (i.e., not using {it:esfixedbaseperiod}), and sample weights which (if present) do not vary within units.
 Estimates produced by the two will still differ, however, when certain types of panel imbalance are present. For example, when a treatment onset group contains
 multiple cohorts and some of those cohorts are not observed in periods when others are observed, {it:wooldid} and {it:hddiregress twfe} will yield different results.
 In such cases, {it:wooldid} approaches the situation by presenting the average treatment effect among only the observed cohort-periods. For example, suppose cohorts 1 and 2
@@ -691,8 +641,8 @@ match between the two methods, a {it:wooldid} user will have to manually adjust 
 {pstd} {ul:Comparing Output to did_imputation:}
 The Borusyak, Jaravel, and Spiess (2023) difference-in-differences imputation estimator is implemented in the package {help did_imputation}. Wooldridge (2021)
 proves some equivalence results between their estimator and the Wooldridge estimator. For binary treatments, {it:wooldid} will yield the same estimates as
-{it:did_imputation} given that one uses the {it:att} estimand-type, uses a pooled reference period (i.e., not using {it:esfixedbaseperiod}), does not
-use unconditional standard errors, and does not use controls. With controls, {it:wooldid} and {it:did_imputation} will still yield the same results provided
+{it:did_imputation} given that one uses the {it:att} estimand-type, uses a pooled reference period (i.e., not using {it:esfixedbaseperiod}), and does not use controls. 
+With controls, {it:wooldid} and {it:did_imputation} will still yield the same results provided
 that each cohort-time period cell contains only 1 observation. In this 'fine cohorts' case, the inclusion of i-t cell indicators ensures that the included controls
 have their coefficients determined solely from the same portion of the sample as is used to estimate the regression in the BJS estimator. However, outside of special
 cases, results with controls will not match if cohorts are coarse (contain multiple observations per i-t cell). To assist in this case, the {it:wooldid} option
@@ -726,7 +676,7 @@ the portion of the sample where treatment effects are of interest. {p_end}
 {phang}4) Event study with 3 pre-treatment and 3 post-treatment estimates using a pooled reference period and generating event study plots, as well as testing the hypotheses
 that all pre-treatment effects are 0 and that all time-period specific effects fall on the same line: {p_end}
 
-{p 10 10}   {cmd:wooldid y i t ttre, espre(3) espost(3)  makeplots jointtests adversarial}
+{p 10 10}   {cmd:wooldid y i t ttre, espre(3) espost(3)  makeplots  }
 
 {phang}5) Event study with 3 pre-treatment and 3 post-treatment event study estimates, calculating all estimates relative a fixed reference period (fixed to the
 period 2 periods before treatment):{p_end}
