@@ -33,7 +33,7 @@ and the high dimensional fixed effects estimators developed by Correia (2017). F
 across subgroups, estimation of event study style estimates, parallel trends assumption tests following Roth (2022), and estimation of average and marginal treatment effects in the presence of a
 continuous treatment (or treatment intensity) variable. This suite also can produce event study plots, histograms of treatment effects by cohort, and plots of treatment
 effects across the distribution of a specified continuous treatment variable. Options for inference include analytic SEs, bootstrap (standard and Bayesian), randomization inference,
-and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
+simultaneous bands, and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
 
 {pstd}{ul:Shortcuts:} {help wooldid##description:Description}, {help wooldid##options:Options}, {help wooldid##output:Working with Output},
 {help wooldid##comparison:Comparison with Related Estimators}, {help wooldid##examples:Examples},
