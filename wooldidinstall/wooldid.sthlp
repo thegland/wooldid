@@ -1,9 +1,7 @@
 {smcl}
 {* *! version 1.3 2024-07-31}{...}
 {vieweralsosee "reghdfe" "help reghdfe"}{...}
-{vieweralsosee "regress" "help regress"}{...}
 {vieweralsosee "ppmlhdfe" "help ppmlhdfe"}{...}
-{vieweralsosee "poisson" "help poisson"}{...}
 {vieweralsosee "gtools" "help gtools"}{...}
 {vieweralsosee "margins" "help margins"}{...}
 {vieweralsosee "hdidregress" "help hdidregress"}{...}
@@ -32,7 +30,7 @@
 
 {pstd} {bf:wooldid} -- Suite for implementing difference-in-differences style analyses with staggered treatment onset using the two-way fixed effects approach proposed in Wooldridge (2021)
 and the high dimensional fixed effects estimators developed by Correia (2017). Features include estimation of various types of average treatment effects, comparison of treatment effects
-across subgroups, estimation of event study style estimates, parallel trends assumption tests, and estimation of average and marginal treatment effects in the presence of a
+across subgroups, estimation of event study style estimates, parallel trends assumption tests following Roth (2022), and estimation of average and marginal treatment effects in the presence of a
 continuous treatment (or treatment intensity) variable. This suite also can produce event study plots, histograms of treatment effects by cohort, and plots of treatment
 effects across the distribution of a specified continuous treatment variable. Options for inference include analytic SEs, bootstrap (standard and Bayesian), randomization inference,
 and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
@@ -41,7 +39,7 @@ and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
 {help wooldid##comparison:Comparison with Related Estimators}, {help wooldid##examples:Examples},
 {help wooldid##bugs:Bugs and Assistance}, {help wooldid##citations:Citations}, {help wooldid##author:Author Info and How to Cite}, {help wooldid##disclaimer:Disclaimer} {p_end}
 
-{pstd}{ul:Dependencies:} {cmd:wooldid} requires users have STATA 16 or higher installed, {help reghdfe} version 5.7.3, {help ftools} (for {it:reghdfe}),
+{pstd}{ul:Dependencies:} {cmd:wooldid} requires users have STATA 16 or higher installed, {help reghdfe} version 5.7.3, 
 and (optionally, for speed) {help gtools}. Poisson estimation also requires the package {help ppmlhdfe}. {p_end}
 
 {pstd}{ul:Github Link:} {browse "https://github.com/thegland/wooldid/"} - the command {it:wooldid, update} will cause this program to update itself using the materials
@@ -70,13 +68,13 @@ in general, yields poor results (unit FE can be included separately). The cohort
 {synoptset 1 tabbed }{...}
 {synopt : {help wooldid##specifyestimand:Specifying the Estimand(s):}} {opt att} {opt att_it} {opt att_i} {opt att_itime} {p_end}
 
-{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt rob:ust} {opt imp:values} 
-{opt simult:aneousbands} {opt level(#)} {opt fast:nose} {p_end}
+{synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt imp:values} 
+{opt simult:aneousbands} {opt level(#)}  {p_end}
 
-{synopt : {help wooldid##bootstrap:Bootstrap Inference:}} {opt boot:strap(standard|bayes)} {opt reps(#)} {opt bootdisp:lay(spec)} 
+{synopt : {help wooldid##bootstrap:Bootstrap Inference:}} {opt boot:strap(standard|bayes)} {opt reps(#)} {opt rseed(#)} {opt bootdisp:lay(spec)} 
 {opt bootdf(spec)} {opt bootsave(name)}    {p_end}
 
-{synopt : {help wooldid##randinf:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt reps(#)} {opt permex:act} {opt permprobs(spec)} 
+{synopt : {help wooldid##randinf:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt reps(#)} {opt rseed(#)} {opt permex:act} {opt permprobs(spec)} 
 {opt permonset:cohorts}   {opt permstr:ata(variable[integer])}  {opt permt:stat} {opt permtci} {opt permside(left|right} {opt permabs} {opt permsave(name)  {p_end}
 
 {synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem)} {opt replace} {opt sum:marystats}
@@ -99,7 +97,7 @@ in general, yields poor results (unit FE can be included separately). The cohort
 {opt inter:activecontrols(varlist)} {p_end}
 
 {synopt : {help wooldid##technical:Technical Features:}}
-{opt update} {opt rseed(#)} {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
+{opt update} {opt fast:nose}  {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
 {opt ver:bose} {opt: nofast:collapse} {opt safety(off)}    {p_end}
 
 
@@ -127,17 +125,24 @@ pairs where i is a treated cohort and t is a treated period for cohort i. In the
 TreatedFlag_it is a variable that is 1 if an observation is part of an (i,t) cell in Z and 0 otherwise, fe_i is a cohort fixed effect, fe_t is a time fixed effect,
 and Y_jt is the outcome variable. {p_end}
 
-{pstd} The output of the underlying Step 1 regression is then used for margins calculations in step 2. The exact margins calculation performed depends on the estimands
-specified by the user. The overall average treatment effect would be obtained by computing fitted values from the underlying regression among all treated observations (those where
-  TreatedFlag_it is equal to 1), subtracting the counterfactual fitted values for these observations that set TreatedFlag_it to 0, and then taking the average of these differences
-  (applying any sample weights). To target estimands other than the overall average treatment effect, this procedure can be modified by either
-  introducing a set of weights (or modifying the pre-existing sample weights) when averaging the computed differences in the margins calculation or by restricting the sample so that the
-  average only contains observations from a subgroup or time period of interest. 
-For more on the different estimand-types available, see {help wooldid##estimands:estimands}. {p_end}
- {pstd} With respect to inference, there are several approaches to standard error estimation available. The default estimates standard errors in the underlying regression and then obtains
+{pstd} The results from the above step 1 regression are then used in step 2 to produce the final average treatment effects. The exact calculations used depend on the estimand 
+specified by the user, but for an average treatment effect on the treated group (ATT), the margins calculation proceeds by computing fitted values for each treated observation 
+(those where TreatedFlag_it is equal to 1), subtracting the counterfactual fitted values for these observations when they are untreated (obtained by setting TreatedFlag_it to 0), 
+and then taking the average of these differences (applying any sample weights). To target other estimands, such as simple averages of the i-t level treatment effects, averages of 
+cohort-specific treatment effects, or relative-time-period-specific treatment effects, this procedure is modified by either computing the average only over the relevant subsample 
+(e.g., for period-specific effects) or by reweighting the sample (e.g., for averages of cohort effects). For more on the different estimand-types available, 
+see {help wooldid##estimands:estimands}. {p_end}
+
+{pstd} With respect to inference, there are several approaches available. The default estimates Heteroskedasticity robust standard errors in the underlying regression and then obtains
  standard errors on the treatment effects produced by the margins calculation using the delta method. Given these standard errors, p-values are then obtained using a t-distribution of 
-same degrees of freedom as the residual number of degrees of freedom in the underlying regression model. For more on standard error computation, 
-see {help wooldid##standarderrors:standard_errors}. {p_end}
+same degrees of freedom as the residual number of degrees of freedom in the underlying regression model. Inference is also available using analytic clustered standard errors, the 
+bootstrap, the Bayesian bootstrap, and randomization inference. When treatment effects can be estimated independently within clusters, inference via the method of Ibragimov and Muller 
+(2010) is also available, in which case inference is done by t-testing the set of cluster-specific estimates against 0 (possibly changing the requested estimand). Finally, note that to 
+speed estimation of analytic SEs, the delta method calculations are done at the cohort-period (i-t) level, rather than at the observation-level - except in cases where the two methods 
+might be reasonably expected to diverge. This speed-up trick can be disabled using the option {opt nofast:collapse} if one's specification is likely to produce differences between i-t 
+level averages and observation-level averages, as may occur if one specifies unusual specifications featuring controls that interact a continuous treatment variable with other variables.
+For more on standard error computation, see {help wooldid##standarderrors:standard_errors}. {p_end}
+
 
 {pstd} This overall approach can be extended to cover many additional use cases with little or no modification. The user can switch from standard regression to poisson regression without
 requiring any essential modification to the regression equation or margins procedure. Additional controls and fixed effects can be added to the underlying regression without requiring
@@ -162,10 +167,7 @@ the regression is saturated with i-t indicator variables and all treatment effec
 {pstd} With greater modification, the approach above can be extended to handle continuous treatment variables and treatments that come with an associated measure of treatment intensity
 or dosage. When cohorts are coarse -- i.e., there are multiple units within each cohort-period cell -- and when a continuous treatment variable varies
 within i-t cells, estimates of the effect of the continuous treatment variable can be computed within each treated i-t cell. To ensure treatment effect
-heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed.
-Note that this approach is a bit speculative and is not covered in Wooldridge (2021), though Wooldridge has
-{browse "https://twitter.com/jmwooldridge/status/1695115782739435922?s=61&t=pXC6R4euc7LaN6MMB5VApQ":informally suggested}
-handling continuous treatments using interactions between treated cell indicators and the continuous treatment variable. {p_end}
+heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed. {p_end}
 
 {pstd} The particular modification to the underlying regression used for estimation in the continuous treatment context is as follows: {p_end}
 {p2col 5 8 8 0 : Step 1 (Continuous):} Y_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt)) {p_end}
@@ -178,11 +180,6 @@ Contreat_jt rather than modifying the variable TreatedFlag_it. In addition to ov
 at varying points along the distribution of the continuous treatment variable. For more detail on options related to continuous treatments, 
 see {help wooldid##continuous:continuous_treatment}. {p_end}
 
-{pstd} A final feature available in {it:wooldid} is its implementation of Ibragimov and Muller (2010) style cluster robust inference. This approach estimates the same underlying
-regression as normal, but then modifies the margins calculation significantly. In particular, for any treatment effect requested (be it an average treatment effect or an effect of
-a continuous treatment variable), this approach has the margins calculation compute that effect separately within each cluster. The final estimate presented is then the simple
-average of these cluster-specific estimates, with inference being conducted by t-testing the cluster-level estimates. For more on this approach and when it is appropriate to apply,
-see {help wooldid##standarderrors:standard_errors}. {p_end}
 
 {pstd}
 {ul: Comment on Sample Formation, Cohorts Treated Prior to Sample Start:} The estimation sample {it:wooldid} uses may be more restricted than your overall sample: {it:wooldid}
@@ -212,8 +209,7 @@ using whatever weights (if any) are used in the main regression command.{p_end}
 {phang}{opt att_it}: Estimate simple averages of the i-t cell-specific treatment effects (ATT_it). The treatment effect in each cohort-period is calculated via the margins calculation
 using any weights that may apply to the observations falling in each i-t cell. The final ATT_it estimate is the simple, unweighted mean of all of the cohort-period-specific estimates.
 This is done by reweighting the data used in the margins calculation (after estimation of the underlying regression) by w/W_it where w is an observation's sample weight and W_it is the
-total sample weight associated with all observations appearing in a given i-t cell. If no weights are specified, w is taken to have a value of 1 for all observations. If cohorts are
-fine and thus each i-t cell contains only one observation, this is equivalent to ignoring any specified sample weights when performing margins calculations.   {p_end}
+total sample weight associated with all observations appearing in a given i-t cell. If no weights are specified, w is taken to have a value of 1 for all observations.   {p_end}
 
 {phang}{opt att_i}: Estimate the simple average of cohort-specific treatment effects (ATT_i). The treatment effect for each cohort is calculated using the margins calculation and any sample
 weights. The final ATT_i estimate is the simple, unweighted mean of the cohort-specific treatment effects. ATT_i effects are computed by performing the margins calculation, but reweighting
@@ -232,11 +228,7 @@ cohort i is observed. If weights are not used, w is taken to have a value of 1 f
 {marker standarderrors}{...}
 {dlgtab:Standard Errors}
 
-{phang}{opt clus:ter(clusvars)}: Variable(s) specifying clustering level. Clustered standard errors are computed analytically. By default,
-regression estimation using this option will underlying rely on either {help reghdfe} or, for poisson, {help ppmlhdfe}. {p_end}
-
-{phang}{opt rob:ust}: Heteroskedasticity robust standard errors; relevant only if cluster() is not specified. By default, regression estimation using this
-option will underlyingly rely on either {it:reghdfe} or, for poisson, {it:ppmlhdfe}. {p_end}
+{phang}{opt clus:ter(clusvars)}: Variable(s) specifying clustering level. Clustered standard errors are computed analytically.  {p_end}
 
 {phang}{opt imp:values}: Implements Ibragimov and Muller (2010) style cluster-robust inference for all estimates. The idea behind the Ibragimov and Muller approach is to compute
 cluster-specific treatment effect estimates, present their average as one's final treatment effect estimate, and conduct inference by t-testing the cluster-specific estimates against 0.
@@ -250,9 +242,6 @@ is simulated from the analytic event study covariance. {p_end}
 
 {phang}{opt level(#)}: Confidence level for reported confidence intervals; default 95%.   {p_end}
 
-{phang}{opt fast:nose}: Forego standard error estimation for an increase in estimation speed. {p_end}
-
-  
 
 
 {pstd} {ul: Discussion of Ibragimov and Muller-Style Inference:}
@@ -262,6 +251,78 @@ be satisfied when estimating the effect of continuous treatment variables using 
 units and where time fixed effects are not shared across clusters. In the standard diff-in-diff setting, {it:wooldid} will still present IM-style estimates by computing cluster-specific treatment
 effect estimates, despite the fact that the existence of a shared control group (and perhaps a shared reference period, if {it:esfixedbaseperiod} is not being used) likely causes mischief with the
 independence assumption.  {p_end}
+
+
+
+{marker bootstrap}{...}
+{dlgtab:Bootstrap Inference}
+
+{phang}{opt boot:strap(standard|bayes}: Bootstrap standard errors and inference using either the standard (pairs cluster, when clustering) bootstrap or the Bayesian bootstrap. 
+The default behavior is to show standard errors calculated as the standard deviation of the bootstrap replicate result distribution, coupled with percentile-based intervals and p-values.
+The Bayesian bootstrap proceeds like the standard Bootstrap, except that instead of resampling replicates, each replicate involves re-estimation after multiplying each observation's 
+(or cluster of observations's) sample weight with a Dirichlet weight. {p_end}
+
+{phang}{opt bootci:type(percentile|bc|bca|wald)}: Select the type of confidence interval and p-value shown. By default, the CI and p-value are based on percentiles of the bootstrap replicate 
+distribution ({it:percentile}). Specify wald to obtain CIs and p-values based on the bootstrapped standard error (the standard deviation of the bootstrap distribution) coupled with either a normal or 
+t-distribution approximation, depending on {it:bootdf()}. Bias-corrected percentile intervals and p-values are also available ({it:bc}), along with bias-corrected and accelerated ({it:bca}) intervals (only 
+when clusters are specified). {p_end}
+
+{phang}{opt bootdf(normal|clusters|#):} Specifies the reference distribution for bootstrap inference using just the bootstrap standard error ({it:bootcitype(wald)}). The default is {it:normal} without clustering, and 
+{it:clusters} with clustering (which specifies a t-distribution with number of clusters - 1 degrees of freedom). An integer can also be specified to use a t-distribution with the specified number of degrees of freedom. 
+{p_end}
+
+{phang}{opt reps(#)}: Number of replicates used; default 100.  {p_end}
+
+{phang}{opt rseed(#)}: Specify the random number seed.  {p_end}
+
+{phang}{opt bootsave(name[, replace]}: Save the full set of bootstrap replicate results to the specified file.  {p_end}
+
+
+
+
+{marker randinf}{...}
+{dlgtab:Randomization Inference}
+
+{phang}{opt randinf(shuffle|probabilities)}: Produce confidence intervals and p-values based on randomization inference (SE and t remain analytic). 
+The default behavior is to show a two-tailed randomization inference p-value, coupled with confidence intervals based on quantiles of the 
+randomization inference estimate distribution summed with the main estimate (shift intervals). 
+If {it:shuffle} is specified, treatment onset dates are rerandomized across clusters, holding constant the number of clusters per treatment onset date 
+and the number of untreated clusters. If {it:probabilities} is specified, clusters are rerandomized based on user-specified probabilities of falling in 
+any given treatment onset group, allowing the number of clusters per onset date to change. Note: {it:randinf()} requires users 
+specify a clustering scheme either where (a) the cluster variable is the cohort variable {it:i}, or (b) where the cohort variable {it:i} identifies 
+observations grouped by treatment onset date and where clusters are strict subsets. {p_end}
+
+{phang}{opt ristr:ata(variable[integer])}: Specify strata containing clusters such that, with {it:randinf(shuffle)}, treatment onset dates and 
+treatment status are rerandomized across clusters separately within each strata. This ensures treatment onset dates maintain their composition 
+with respect to strata, which can be useful for ensuring rerandomizations have the same allocation of clusters with respect to size or 
+expected treatment-effect variance (a condition generally required for randomization inference to be valid). {p_end}
+
+
+
+{phang}{opt riprobs(spec)}: Specify the probability of assigning each cluster to each treatment onset date (or untreated status), when using 
+{it:randinf(probabilities)}. The syntax for {it:spec} is: {it: (ttre level level ...) (cluster1 p1 p2 ...) ... (clusterN p1 p2...)}, 
+where {it:ttre} is the treatment onset variable, each level is the numerical level specifying a treatment onset period (including '.' for 
+untreated), and where the ensuing cluster-specific groups give the assignment probabilities for placing a given cluster into the 
+respective listed level of the treatment onset variable. {p_end}
+
+{phang}{opt riside(left|right)}: Swap from producing two-sided randomization inference p-values to the given type of one-sided p-value. {p_end}
+
+{phang}{opt riabs}: Swap from producing two-sided p-values based on percentiles of the randomization inference distirbution to calculating 
+p-values based on the share of the randomization inference distribution larger than the observed estimate in absolute value. The confidence 
+intervals are also adjusted based on this, and made symmetric. {p_end}
+
+{phang}{opt rit:stat}: Compute randomization inference test statistics based on the randomization inference for t-statistics rather than 
+that for coefficients. Comes at great cost with respect to estimation speed. {p_end}
+
+{phang}{opt reps(#)}: Number of rerandomizations used; default 100.  {p_end}
+
+{phang}{opt riex:act}: Compute every possible rerandomization. {p_end}
+
+{phang}{opt rseed(#)}: Specify the random number seed.  {p_end}
+
+{phang}{opt risave(name[, replace]}: Save the full set of rerandomization results to the specified file.  {p_end}
+
+
 
 
 {marker supporting}{...}
@@ -280,7 +341,7 @@ Summary statistics are computed overall, within the treatment group by time peri
 fixed reference period is not being used and pre-treatment relative time period effects are requested, statistics on the size of the reference group relative to the rest of the
 pre-treatment period will also be shown. {p_end}
 
-{phang}{opt pois:son}: Implement the specified {it:wooldid} command using poisson regression, achieved by switching from the regression command {it:reghdfe} to {it:ppmlhdfe}. Treatment effects
+{phang}{opt pois:son}: Implement the specified {it:wooldid} command using poisson regression. Treatment effects
 are presented in terms of differences in linear predictions (the poisson {it:predict(xb)} option). Poisson regression is especially useful in situations where one would like to use
 log(y) as an outcome, but where y contains natural 0s, as well as when treatment and control groups are only on parallel trends in proportions (e.g., one group is always 2x the other). {p_end}
 
@@ -485,10 +546,10 @@ since in the absence of an untreated group, the time period interactions will fo
 {marker controls}{...}
 {dlgtab:Controls and Fixed Effects}
 
-{phang}{opt control:s()}: The contents of this option are passed directly to {it:reghdfe} as controls, without any modification. {p_end}
+{phang}{opt control:s()}: The contents of this option are passed directly into the regression specification as controls, without any modification. {p_end}
 
-{phang}{opt fe()}: The contents of this option are passed directly to {it:reghdfe} as fixed effects (into its absorb statement) without modification. Variables given will be interpreted as
-categorical variables, though i.X##c.X2 type notation is also permitted for passing heterogeneous slope controls and the like.  {p_end}
+{phang}{opt fe()}: Specify fixed effects. The contents of this option are passed directly to {it:reghdfe} as fixed effects (into its absorb statement) without modification. 
+Variables given will be interpreted as categorical variables, though i.X##c.X2 type notation is also permitted for passing heterogeneous slope controls and the like.  {p_end}
 
 {phang}{opt timetrend:s}: Control for cohort specific time trends in the regression (i.e., for i.i##c.t). Importantly, this option is required for heterogeneous time trend controls to work,
 even when they are specified manually, as it also updates {it:wooldid}'s various estimability checks, drops cohorts without sufficient pre-treatment data to estimate a time trend,
@@ -521,7 +582,7 @@ in conjunction with the option {it:contreatcontrols(basic)}, or any option other
 
 {phang}{opt update}: If specified, the command {it:wooldid,} {it:update} will update your local installation of {it:wooldid} based on the most recent edition of the program available on github. {p_end}
 
-{phang}{opt rseed(#):} set the random number seed for the run (if bootstrapping, using randomization inference, etc.). 
+{phang}{opt fast:nose}: Forego standard error estimation for an increase in estimation speed. {p_end}
 
 {phang}{opt clean:matrices}: If specified, {it:wooldid} will clear out all matrices storied in STATA's main memory and in mata. Occasionally, {it:wooldid} enters a state where it repeatedly
 crashes for difficult to determine reasons (relating to {it:reghdfe} crashing and leaving certain content in mata). Doing this can sometimes recover {it:wooldid} from this problem. {p_end}
@@ -538,8 +599,15 @@ with variables being inappropriately dropped from the regression. {p_end}
 a high dimensional fixed effects estimator. This is often less efficient than the alternative approach in terms of computation time, but can be important in terms of memory
 efficiency in the main regression or under certain other circumstances. {p_end}
 
+{phang}{opt nofast:collapse}: Forces all stage 2 margins calculations of treatment effects and standard errors to occur at the observation-level, rather than at the cohort-period (i-t) 
+level. This significantly slows estimation time, but may be necessary if the ATT and related estimands cannot be estimated just based on i-t level summaries. This occurs whenever 
+{it:interactivecontrols()} is specified, in which case this option is automatically engaged, but may be necessary in other specifications also (for example, specifications including a 
+continuous treatment variable interacted with controls using the {it:controls()} option).  {p_end}
+
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses, displays raw output from the regression estimated, and prints progress reports throughout the estimation process.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
+
+{phang}{opt iteffects}: Prints the a full table of cohort-period (i-t) level effects, labelled by cohort, period, etc. These results are also available by default stored in e(). {p_end}
 
 
 {phang}{opt safety(string)}: When {it:safety(off)} is not explicitly specified, {it:wooldid} will caution the user or halt estimation when {it:wooldid} is likely to yield unreliable estimates.
@@ -717,9 +785,6 @@ when a treatment effect has been partialled out by a fixed effect in the binary 
 without a lattice variable or any polynomial terms. However, a continuous treatment is specified with a lattice and/or a polynomial term, and especially in the presence of an
 unbalanced panel, {it:wooldid} will be unlikely to detect problems related to important treatment effects being partialled out by controls or fixed effects. As such, one should
 be very careful when specifying one's fixed effects and {it:contreatcontrols} when using a continuous treatment.
-
-{p 10 10}   Under various circumstances, {it:wooldid} cannot estimate standard errors for all requested objects. In this case, {it:wooldid} will return point estimates without
-standard errors. This can cause the functionality of certain post-estimation tools to break since, in this situation, {it:wooldid} will not return an {it:e(V)} matrix.
 
 {pstd}If you encounter a bug - be it the program crashing or just the program delivering a weird result - please reach out to me about it. This program is still
 under development, so assistance finding and correcting bugs is much appreciated. I am also happy to help and offer guidance on how to use this program.{p_end}
