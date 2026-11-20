@@ -40,7 +40,7 @@ and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
 {help wooldid##bugs:Bugs and Assistance}, {help wooldid##citations:Citations}, {help wooldid##author:Author Info and How to Cite}, {help wooldid##disclaimer:Disclaimer} {p_end}
 
 {pstd}{ul:Dependencies:} {cmd:wooldid} requires users have STATA 16 or higher installed, {help reghdfe} version 5.7.3, 
-and (optionally, for speed) {help gtools}. Poisson estimation also requires the package {help ppmlhdfe}. {p_end}
+and {help gtools}. Poisson estimation also requires the package {help ppmlhdfe}. {p_end}
 
 {pstd}{ul:Github Link:} {browse "https://github.com/thegland/wooldid/"} - the command {it:wooldid, update} will cause this program to update itself using the materials
 at this link. {p_end}
@@ -72,12 +72,12 @@ in general, yields poor results (unit FE can be included separately). The cohort
 {opt simult:aneousbands} {opt level(#)}  {p_end}
 
 {synopt : {help wooldid##bootstrap:Bootstrap Inference:}} {opt boot:strap(standard|bayes)} {opt reps(#)} {opt rseed(#)} {opt bootdisp:lay(spec)} 
-{opt bootdf(spec)} {opt bootsave(name)}    {p_end}
+{opt bootdf(spec)} {opt bootsave(name[, replace])}    {p_end}
 
 {synopt : {help wooldid##randinf:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt reps(#)} {opt rseed(#)} {opt permex:act} {opt permprobs(spec)} 
-{opt permonset:cohorts}   {opt permstr:ata(variable[integer])}  {opt permt:stat} {opt permtci} {opt permside(left|right} {opt permabs} {opt permsave(name)  {p_end}
+{opt permonset:cohorts}   {opt permstr:ata(stratavariable)}  {opt permt:stat} {opt permtci} {opt permside(left|right} {opt permabs} {opt permsave(name[, replace])  {p_end}
 
-{synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem)} {opt replace} {opt sum:marystats}
+{synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem[, replace])}  {opt sum:marystats}
 {opt pois:son}    {p_end}
 
 {synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt espre:length(int>=0)} {opt espost:length(int>=0)} {opt esr:elativeto(-int)}
@@ -215,14 +215,14 @@ total sample weight associated with all observations appearing in a given i-t ce
 weights. The final ATT_i estimate is the simple, unweighted mean of the cohort-specific treatment effects. ATT_i effects are computed by performing the margins calculation, but reweighting
 observations by either w/W_ipre or w/W_ipost, where w is an observation's sample weight, W_ipre is the total sample weight associated with cohort-i in the pre-treatment period
 (but outside the reference period), and W_ipost is the total sample weight associated with cohort-i in the post-treatment period. Each observation is then reweighted based on whether it
-falls in the pre- or post-treatment period. If weights are not used, w is taken to have a value of 1 for all observations.{p_end}
+falls in the pre- or post-treatment period. Equivalent to {it:att_it} when producing event study horizon-specific estimates.  {p_end}
 
 {phang}{opt att_itime}: Estimate the simple average of cohort-specific simple average treatment effects (ATT_itime). Treatment effect calculation here begins like for {it:att_it}, obtaining
 treatment effects for individual cohort-periods of interest using weights. Then, cohort-specific effects are obtained by taking the simple mean of the cohort-period-specific effects.
 The overall presented ATT_itime estimate is then equal to the simple, unweighted mean of these cohort-specific effects. ATT_itime effects are calculated by performing the margins calculation,
 but reweighting observations by w/(W_it * T_iprepost), where w is an observation's sample weight, W_it is the amount of sample weight falling in a given i-t cell, and T_iprepost contains
 (depending on the time period) either the number of post-treatment time periods in which a cohort-i is observed or the number of pre-treatment, non-reference period time periods in which a
-cohort i is observed. If weights are not used, w is taken to have a value of 1 for all observations.{p_end}
+cohort i is observed. Equivalent to {it:att_it} when producing event study horizon-specific estimates. {p_end}
 
 
 {marker standarderrors}{...}
@@ -320,7 +320,7 @@ that for coefficients. Comes at great cost with respect to estimation speed. {p_
 
 {phang}{opt rseed(#)}: Specify the random number seed.  {p_end}
 
-{phang}{opt risave(name[, replace]}: Save the full set of rerandomization results to the specified file.  {p_end}
+{phang}{opt risave(name[, replace])}: Save the full set of rerandomization results to the specified file.  {p_end}
 
 
 
@@ -330,7 +330,7 @@ that for coefficients. Comes at great cost with respect to estimation speed. {p_
 
 {phang}{opt hist:ogramcohorteffects}: Produce a histogram of cohort i-specific treatment effects; return those effects in a matrix for the user to manipulate. {p_end}
 
-{phang}{opt save:plots(string)}: Save all graphs generated to .gph files beginning with the name specified in the option. Also saves .dta files beginning with the same
+{phang}{opt save:plots(string[, replace])}: Save all graphs generated to .gph files beginning with the name specified in the option. Also saves .dta files beginning with the same
 name containing the data used to generate any requested event study plots. Graphs and datasets generated have a suffix appended to the name specifying the exact graph/dataset
 generated. By default, everything is saved to STATA's working directory, though you should be able to pass a directory through this string along with your filename.{p_end}
 
@@ -391,11 +391,7 @@ cohorts with fewer observed pre-treatment periods will have their earliest obser
 reported for other cohorts. If this issue combines with cohorts not being on the same outcome trends, the resulting event study plots may show treatment effect time paths that evolve in
 counterintuitive and difficult to interpret ways, possibly obscuring even severe parallel trends assumption violations from detection. {p_end}
 
-{pstd}{ul: Invalid Estimands:} For relative-time period specific estimates, distinctions between the estimand types {it:att_i}, {it:att_itime}, and {it:att_it} collapse. The latter estimand
-will yield estimates that weight each cohort's contribution to the relative-time period specific estimate equally; the former two are differentiated from this only in terms of how they treat i-t
-cells not relevant to a given relative-time period specific estimate. As such, only {it:att} and {it:att_it} type results will be presented when relative-period specific estimates are requested.
-For the {it:att_i} and {it:att_itime} concepts, {it:att_it} type results will be shown. {p_end}
-
+ 
 
 {marker interactions}{...}
 {dlgtab:Subgroup Effects}
@@ -404,8 +400,6 @@ For the {it:att_i} and {it:att_itime} concepts, {it:att_it} type results will be
 The SG variable must consist of non-negative integer values (or missing values) and its levels must specify collections of cohorts i. For estimates to be valid, a given cohort i cannot
 be split across multiple subgroups. Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations.   {p_end}
 
-{phang}{opt suppress:sgprimaryeffects}: Skips estimation of subgroup-specific treatment effects and computes only the differences in effects between SGs. This option should
-speed estimation if these treatment effects are not otherwise of interest. {p_end}
 
 {pstd} {ul: Description of Approach to Subgroup Effect Estimation:} Given a variable dividing cohorts i into different subgroups, {it:wooldid} will estimate treatment effects separately
 for each subgroup (i.e., each level of the SG variable). This is achieved without modification to the underlying
@@ -413,13 +407,8 @@ regression specification in step 1 (see {help wooldid##description:here}). Rathe
 specified by the subgroup variable.
 Additionally, {it:wooldid} computes all possible pairwise comparisons of the overall
 effects (and pre-treatment effects) estimates by SG (e.g., SG 1 vs 2, 1 vs 3, 2 vs 3, etc.), presenting for each comparison the difference in effect estimates and a p-value for each difference.
-A joint test of the hypothesis that all SGs share the same effect estimate (normalized to be the effect estimate of the numerically lowest numbered SG) is also computed. Note: standard errors
-for subgroup-specific estimates can fail when using clustered standard errors in conjunction with subgroups that contain few (or only one) cluster. {p_end}
+A joint test of the hypothesis that all SGs share the same effect estimate (normalized to be the effect estimate of the numerically lowest numbered SG) is also computed.  {p_end}
 
-{pstd} A special case to consider is the difference-in-differences-in-differences (triple diff) case. In the triple diff case, all cohorts are categorized into two groups, with both groups
-existing among treated cohorts and control cohorts. The target estimand may be thought of as the difference in the diff-in-diff estimates obtained separately for each of the two groups. To
-implement a triple diff design in {it:wooldid}, one can specify the variable containing the two triple diff groups as a SG variable and then manually specify inclusion of SG by period
-fixed effects (i.e., specifying {it:subgroups(sgvarname) fe(i.sgvarname##i.t)}). The difference in SG level estimates returned will be the triple diff estimate. {p_end}
 
 
 {marker continuous}{...}
@@ -608,7 +597,6 @@ continuous treatment variable interacted with controls using the {it:controls()}
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
 
 {phang}{opt iteffects}: Prints the a full table of cohort-period (i-t) level effects, labelled by cohort, period, etc. These results are also available by default stored in e(). {p_end}
-
 
 {phang}{opt safety(string)}: When {it:safety(off)} is not explicitly specified, {it:wooldid} will caution the user or halt estimation when {it:wooldid} is likely to yield unreliable estimates.
 Most important among these checks are tests for whether or not a variable intended to capture the treatment effect in a given i-t cell was dropped from the underlying regression for
