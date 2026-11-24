@@ -71,10 +71,10 @@ in general, yields poor results (unit FE can be included separately). The cohort
 {synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt imp:values} 
 {opt simult:aneousbands} {opt level(#)}  {p_end}
 
-{synopt : {help wooldid##bootstrap:Bootstrap Inference:}} {opt boot:strap(standard|bayes)} {opt reps(#)} {opt rseed(#)} {opt bootdisp:lay(spec)} 
+{synopt : {help wooldid##bootstrap:Bootstrap Inference:}} {opt boot:strap(standard|bayes)} {opt reps(#)} {opt bootdisp:lay(spec)} 
 {opt bootdf(spec)} {opt bootsave(name[, replace])}    {p_end}
 
-{synopt : {help wooldid##randinf:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt reps(#)} {opt rseed(#)} {opt permex:act} {opt permprobs(spec)} 
+{synopt : {help wooldid##randinf:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt reps(#)}  {opt permex:act} {opt permprobs(spec)} 
 {opt permonset:cohorts}   {opt permstr:ata(stratavariable)}  {opt permt:stat} {opt permtci} {opt permside(left|right} {opt permabs} {opt permsave(name[, replace])  {p_end}
 
 {synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem[, replace])}  {opt sum:marystats}
@@ -98,7 +98,7 @@ in general, yields poor results (unit FE can be included separately). The cohort
 
 {synopt : {help wooldid##technical:Technical Features:}}
 {opt update} {opt fast:nose}  {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
-{opt ver:bose} {opt: nofast:collapse} {opt safety(off)}    {p_end}
+{opt rseed(#)}  {opt ver:bose} {opt: nofast:collapse} {opt safety(off)}    {p_end}
 
 
 
@@ -273,8 +273,6 @@ when clusters are specified). {p_end}
 
 {phang}{opt reps(#)}: Number of replicates used; default 100.  {p_end}
 
-{phang}{opt rseed(#)}: Specify the random number seed.  {p_end}
-
 {phang}{opt bootsave(name[, replace]}: Save the full set of bootstrap replicate results to the specified file.  {p_end}
 
 
@@ -289,8 +287,8 @@ randomization inference estimate distribution summed with the main estimate (shi
 If {it:shuffle} is specified, treatment onset dates are rerandomized across clusters, holding constant the number of clusters per treatment onset date 
 and the number of untreated clusters. If {it:probabilities} is specified, clusters are rerandomized based on user-specified probabilities of falling in 
 any given treatment onset group, allowing the number of clusters per onset date to change. Note: {it:randinf()} requires users 
-specify a clustering scheme either where (a) the cluster variable is the cohort variable {it:i}, or (b) where the cohort variable {it:i} identifies 
-observations grouped by treatment onset date and where clusters are strict subsets. {p_end}
+specify a clustering scheme where either (a) all cohorts are subsets of clusters (including the case where the cluster variable is the 
+cohort variable {it:i}), or (b) all clusters are subsets of cohorts and cohorts group observations by treatment onset date. {p_end}
 
 {phang}{opt ristr:ata(variable[integer])}: Specify strata containing clusters such that, with {it:randinf(shuffle)}, treatment onset dates and 
 treatment status are rerandomized across clusters separately within each strata. This ensures treatment onset dates maintain their composition 
@@ -317,8 +315,6 @@ that for coefficients. Comes at great cost with respect to estimation speed. {p_
 {phang}{opt reps(#)}: Number of rerandomizations used; default 100.  {p_end}
 
 {phang}{opt riex:act}: Compute every possible rerandomization. {p_end}
-
-{phang}{opt rseed(#)}: Specify the random number seed.  {p_end}
 
 {phang}{opt risave(name[, replace])}: Save the full set of rerandomization results to the specified file.  {p_end}
 
@@ -592,6 +588,8 @@ efficiency in the main regression or under certain other circumstances. {p_end}
 level. This significantly slows estimation time, but may be necessary if the ATT and related estimands cannot be estimated just based on i-t level summaries. This occurs whenever 
 {it:interactivecontrols()} is specified, in which case this option is automatically engaged, but may be necessary in other specifications also (for example, specifications including a 
 continuous treatment variable interacted with controls using the {it:controls()} option).  {p_end}
+
+{phang}{opt rseed(#)}: Specify the random number seed, for replicability of bootstrapping, randomization inference, and simultaneous bands results.  {p_end}
 
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses, displays raw output from the regression estimated, and prints progress reports throughout the estimation process.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
