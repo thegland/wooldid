@@ -356,8 +356,12 @@ prior to treatment.  {p_end}
 
 {phang}{opt espost:length(integer)}: The number of post-treatment relative time period-specific effects to be estimated. {p_end}
 
-{phang}{opt pretrend:test(numlist}: Reports Roth (2022) pre-trend power diagnostics for each requested power level, specified as percentages. Reported results include an 
-estimate of the slope of the linear pre-trend, the smallest linear pre-trend that detected at each given power level, {p_end}
+{phang}{opt pretrend:test(numlist}: Reports Roth (2022) pre-trend power diagnostics for each requested power level, specified as percentages. Reported results include:
+the slope of the line fit through the pre-treatment period-specific event horizon coefficients, the joint test of the hypothesis that all pre-treatment coefficients are 
+statistically significant, the probability (given the observed variance-covariance structure of the pre-treatment coefficients) that at least one pre-treatment ceofficeint 
+would be statistically significant in the absence of a pre-trend, and a table showing - given the observed variance-covariance structure of the pre-treatment coefficients - 
+(a) the smallest pre-trend (spt) that causes the joint test of the pre-treatment coefficeint null to reject at the user-specified power level, (b) the spt that causes at least 
+one pre-treatment coefficient to be rejected at the user-specified power level, and (c)/(d) the biases in the main treatment effect implied by those smallest detectable pre-trends.  {p_end}
 
 {phang}{opt makep:lots}: Produce event study plots. {p_end}
 
