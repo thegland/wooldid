@@ -51,9 +51,9 @@ at this link. {p_end}
 {title:Syntax}
 
 {phang}{cmd: wooldid} {it:y i t ttre} [if] [aw/pw=weights] [{cmd:,} {help wooldid##specifyestimand:estimands} {help wooldid##standarderrors:standard_errors}
-{help wooldid##bootstrap:boostrap} {help wooldid##randinf:randomization_inference}
+{help wooldid##bootstrap:bootstrap} {help wooldid##randinf:randomization_inference}
 {help wooldid##supporting:supporting_features} {help wooldid##eventstudy:event_study} {help wooldid##interactions:subgroup_effects} {help wooldid##continuous:continuous_treatment}
-{help wooldid##controls:controls_and_FE} {help wooldid##technical:technical_features} ]{p_end}
+{help wooldid##controls:controls_and_FE} {help wooldid##technical:technical_features}]{p_end}
 
 {synoptset 22 tabbed}{...}
 {synopt : {it:y}}Outcome variable. {p_end}
@@ -62,7 +62,7 @@ by year of treatment onset, or must be subsets of such treatment onset groups. C
 estimation of SEs with clusters (cohorts should not be finer than clusters, and ideally should be coarser). Setting cohorts equal to the unit-level identifier, 
 in general, yields poor results (unit FE can be included separately). The cohort variable i must consist only of integers greater than 0. {p_end}
 {synopt : {it:t}}Time period identifier; must consist of integers greater than 0.{p_end}
-{synopt : {it:ttre}}Variable containing cohort-specific dates of treatment onset; missing indicates never-treated cohorts, cohorts treated before the sample begins are dropped. {p_end}
+{synopt : {it:ttre}}Variable containing cohort-specific dates of treatment onset. Missing indicates never-treated cohorts; cohorts treated before the sample begins are dropped. {p_end}
 
 {phang} {ul:Options by Purpose:} {p_end}
 {synoptset 1 tabbed }{...}
@@ -72,7 +72,7 @@ in general, yields poor results (unit FE can be included separately). The cohort
 {opt simult:aneousbands} {opt level(#)}  {p_end}
 
 {synopt : {help wooldid##bootstrap:Bootstrap Inference:}} {opt boot:strap(standard|bayes)} {opt reps(#)} {opt bootdisp:lay(spec)} 
-{opt bootdf(spec)} {opt bootsave(name[, replace])}    {p_end}
+{opt bootdf(normal|clusters|#)} {opt bootsave(name[, replace])}    {p_end}
 
 {synopt : {help wooldid##randinf:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt reps(#)}  {opt permex:act} {opt permprobs(spec)} 
 {opt permonset:cohorts}   {opt permstr:ata(stratavariable)}  {opt permt:stat} {opt permtci} {opt permside(left|right} {opt permabs} {opt permsave(name[, replace])  {p_end}
@@ -81,24 +81,24 @@ in general, yields poor results (unit FE can be included separately). The cohort
 {opt pois:son}    {p_end}
 
 {synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt espre:length(int>=0)} {opt espost:length(int>=0)} {opt esr:elativeto(-int)}
- {opt pretrend:test(numlist)}  {opt makep:lots} {opt oos:treatedcontrols(int>=0)}   {p_end}
+ {opt pretrend:test(powerlevels)}  {opt makep:lots} {opt oos:treatedcontrols(int>=0)}   {p_end}
 
 {synopt : {help wooldid##interactions:Subgroup Effects:}} {opt subgroups(variable[>=0 int])}  {p_end}
 
 {synopt : {help wooldid##continuous:Continuous Treatments:}} {opt contreat(variable[numerical])} {opt contreatelas:ticity}  {opt contreatw:ithin}
 {opt contreatp:oly(+int)} {opt lattice(variable[+int] OR latticetype latticenum)} {opt latticeig:noreweights} {opt makec:fxplots} {opt cfxlattice(variable[+int])}
-{opt cfxplott:ypes(post, pre, and/or integers specifying relative time periods)} {opt makecfxplotsbysg}  {opt cfxplotnose}  {opt contreatc:ontrols(conttreatcontroltype)}  {p_end}
+{opt cfxplott:ypes(post, pre, and/or integers specifying relative time periods)} {opt makecfxplotsbysg}  {opt cfxplotnose}  {opt contreatc:ontrols(controltype)}  {p_end}
 {phang3} {it:-latticetype}: {it:all}, {it:byTime}, {it:byTreated}, {it:byTtre}, {it:byCohort}, {it:byTreatedByTime}, {it:byTtreByTime}, {it:byCohortByTime}, {it:baseTreated}, {it:baseTreatedRef},
 {it:baseTreatedPost}, or {it:baseTreatedPre}  {p_end}
 {phang3} {it:-latticenum}: integer > 1  {p_end}
-{phang3} {it:-conttreatcontroltype}: {it:untreatedZero}, or one or more of {it:basic}, {it:byTreated}, {it:byTtre}, {it:byCohort}, {it:byTime}  {p_end}
+{phang3} {it:-contreatcontroltype}: {it:untreatedZero}, or one or more of {it:basic}, {it:byTreated}, {it:byTtre}, {it:byCohort}, {it:byTime}  {p_end}
 
 {synopt : {help wooldid##controls:Controls and Fixed Effects:}} {opt control:s(fv varlist)} {opt fe(fv varlist)} {opt timetrend:s} {opt coarse:cohortcontrols(fv-required varlist)}
 {opt inter:activecontrols(varlist)} {p_end}
 
 {synopt : {help wooldid##technical:Technical Features:}}
-{opt update} {opt fast:nose}  {opt clean:matrices} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
-{opt rseed(#)}  {opt ver:bose} {opt: nofast:collapse} {opt safety(off)}    {p_end}
+{opt update} {opt fast:nose} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
+{opt rseed(#)}  {opt ver:bose} {opt iteffects} {opt nofast:collapse} {opt safety(off)}    {p_end}
 
 
 
@@ -131,7 +131,7 @@ specified by the user, but for an average treatment effect on the treated group 
 and then taking the average of these differences (applying any sample weights). To target other estimands, such as simple averages of the i-t level treatment effects, averages of 
 cohort-specific treatment effects, or relative-time-period-specific treatment effects, this procedure is modified by either computing the average only over the relevant subsample 
 (e.g., for period-specific effects) or by reweighting the sample (e.g., for averages of cohort effects). For more on the different estimand-types available, 
-see {help wooldid##estimands:estimands}. {p_end}
+see {help wooldid##specifyestimand:estimands}. {p_end}
 
 {pstd} With respect to inference, there are several approaches available. The default estimates Heteroskedasticity robust standard errors in the underlying regression and then obtains
  standard errors on the treatment effects produced by the margins calculation using the delta method. Given these standard errors, p-values are then obtained using a t-distribution of 
@@ -170,6 +170,7 @@ within i-t cells, estimates of the effect of the continuous treatment variable c
 heterogeneity is adequately captured, a flexible function of the continuous treatment variable can be used to measure its effect within each i-t cell if needed. {p_end}
 
 {pstd} The particular modification to the underlying regression used for estimation in the continuous treatment context is as follows: {p_end}
+
 {p2col 5 8 8 0 : Step 1 (Continuous):} Y_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt)) {p_end}
 
 {pstd} where Contreat_jt is a continuous treatment variable that potentially varies arbitrarily across observations, where f() is a flexible function of Contreat_jt, and where
@@ -182,14 +183,14 @@ see {help wooldid##continuous:continuous_treatment}. {p_end}
 
 
 {pstd}
-{ul: Comment on Sample Formation, Cohorts Treated Prior to Sample Start:} The estimation sample {it:wooldid} uses may be more restricted than your overall sample: {it:wooldid}
+{ul:Comment on Sample Formation, Cohorts Treated Prior to Sample Start:} The estimation sample {it:wooldid} uses may be more restricted than your overall sample: {it:wooldid}
 will drop observations with missing data, observations with 0-valued weights, observations from treated cohorts not observed prior to treatment (or not observed in the user-specified
 reference year if {it:esfixedbaseperiod} is specified), and observations from time periods no untreated
 (including not yet treated) units are observed. If the user requests that cohort-specific time trends be included, this restriction will extend to dropping cohorts that are
 not observed enough times to estimate a time trend using the pre-treatment data. {p_end}
 
 {pstd}
-{ul: Comment on Cohorts Treated After Sample End:} By default, {it:wooldid} handles cohorts treated after the end of the sample identically to cohorts that have never been treated. The
+{ul:Comment on Cohorts Treated After Sample End:} By default, {it:wooldid} handles cohorts treated after the end of the sample identically to cohorts that have never been treated. The
 option {it:oostreatedcontrols()} allows the user to specify that cohorts of this type should instead be handled more like cohorts treated within-sample
 and thus that these cohorts should be allowed to contribute to pre-treatment relative time period-specific estimates in the event study context.
 {p_end}
@@ -232,7 +233,7 @@ cohort i is observed. Equivalent to {it:att_it} when producing event study horiz
 
 {phang}{opt imp:values}: Implements Ibragimov and Muller (2010) style cluster-robust inference for all estimates. The idea behind the Ibragimov and Muller approach is to compute
 cluster-specific treatment effect estimates, present their average as one's final treatment effect estimate, and conduct inference by t-testing the cluster-specific estimates against 0.
-Using IM-style inference requires specifying a single cluster variable and is not compatible with the {it:unconditionalse} option. IM-style inference implicitly changes {it:wooldid}'s
+IM-style inference implicitly changes {it:wooldid}'s
 target estimand. For example, if clustering at the cohort level, IM-style inference will cause {it:att} to yield the same effect estimates as {it:att_i}. Note that {it:wooldid} does not adjust the
 weights used for computing different estimands when IM-style inference is requested: in general, IM-style inference will yield incorrect results for non-att estimands if clusters cross-cut cohorts
 or (worse) cohort-time period cells. IM-style inference is not currently allowed with the use of subgroups or the option {it:makecfxplots}. {p_end}
@@ -240,11 +241,11 @@ or (worse) cohort-time period cells. IM-style inference is not currently allowed
 {phang}{opt simult:aneousbands}: Compute a sup-t simultaneous confidence band for the event study relative-year effect estimates. Obtained via bootstrap, if used. Otherwise, it 
 is simulated from the analytic event study covariance. {p_end}
 
-{phang}{opt level(#)}: Confidence level for reported confidence intervals; default 95%.   {p_end}
+{phang}{opt level(#)}: Confidence level for reported confidence intervals.   {p_end}
 
 
 
-{pstd} {ul: Discussion of Ibragimov and Muller-Style Inference:}
+{pstd} {ul:Discussion of Ibragimov and Muller-Style Inference:}
 The virtue of the Ibragimov and Muller approach is that it can significantly improve on analytic clustered standard errors when the number of clusters is small and when the clusters are
 very heterogeneous in size. A key cost to adopting this approach is the required assumption that cluster-specific treatment effect estimates are independent. This assumption seems most likely to
 be satisfied when estimating the effect of continuous treatment variables using only within-cluster variation, or in a bespoke diff-in-diff set up where clusters contain both treated and control
@@ -257,23 +258,23 @@ independence assumption.  {p_end}
 {marker bootstrap}{...}
 {dlgtab:Bootstrap Inference}
 
-{phang}{opt boot:strap(standard|bayes}: Bootstrap standard errors and inference using either the standard (pairs cluster, when clustering) bootstrap or the Bayesian bootstrap. 
+{phang}{opt boot:strap(standard|bayes)}: Bootstrap standard errors and inference using either the standard (pairs cluster, when clustering) bootstrap or the Bayesian bootstrap. 
 The default behavior is to show standard errors calculated as the standard deviation of the bootstrap replicate result distribution, coupled with percentile-based intervals and p-values.
 The Bayesian bootstrap proceeds like the standard Bootstrap, except that instead of resampling replicates, each replicate involves re-estimation after multiplying each observation's 
-(or cluster of observations's) sample weight with a Dirichlet weight. {p_end}
+(or cluster of observations') sample weight with a Dirichlet weight. {p_end}
 
 {phang}{opt bootci:type(percentile|bc|bca|wald)}: Select the type of confidence interval and p-value shown. By default, the CI and p-value are based on percentiles of the bootstrap replicate 
 distribution ({it:percentile}). Specify wald to obtain CIs and p-values based on the bootstrapped standard error (the standard deviation of the bootstrap distribution) coupled with either a normal or 
 t-distribution approximation, depending on {it:bootdf()}. Bias-corrected percentile intervals and p-values are also available ({it:bc}), along with bias-corrected and accelerated ({it:bca}) intervals (only 
 when clusters are specified). {p_end}
 
-{phang}{opt bootdf(normal|clusters|#):} Specifies the reference distribution for bootstrap inference using just the bootstrap standard error ({it:bootcitype(wald)}). The default is {it:normal} without clustering, and 
+{phang}{opt bootdf(normal|clusters|#)}: Specifies the reference distribution for bootstrap inference using just the bootstrap standard error ({it:bootcitype(wald)}). The default is {it:normal} without clustering, and 
 {it:clusters} with clustering (which specifies a t-distribution with number of clusters - 1 degrees of freedom). An integer can also be specified to use a t-distribution with the specified number of degrees of freedom. 
 {p_end}
 
 {phang}{opt reps(#)}: Number of replicates used; default 100.  {p_end}
 
-{phang}{opt bootsave(name[, replace]}: Save the full set of bootstrap replicate results to the specified file.  {p_end}
+{phang}{opt bootsave(name[, replace])}: Save the full set of bootstrap replicate results to the specified file.  {p_end}
 
 
 
@@ -288,24 +289,22 @@ If {it:shuffle} is specified, treatment onset dates are rerandomized across clus
 and the number of untreated clusters. If {it:probabilities} is specified, clusters are rerandomized based on user-specified probabilities of falling in 
 any given treatment onset group, allowing the number of clusters per onset date to change. Note: {it:randinf()} requires users 
 specify a clustering scheme where either (a) all cohorts are subsets of clusters (including the case where the cluster variable is the 
-cohort variable {it:i}), or (b) all clusters are subsets of cohorts and cohorts group observations by treatment onset date. {p_end}
+cohort variable {it:i}), or (b) all clusters are subsets of cohorts and cohorts group observations by treatment onset date.  {p_end}
 
-{phang}{opt ristr:ata(variable[integer])}: Specify strata containing clusters such that, with {it:randinf(shuffle)}, treatment onset dates and 
-treatment status are rerandomized across clusters separately within each strata. This ensures treatment onset dates maintain their composition 
+{phang}{opt ristr:ata(variable)}: Specify strata containing clusters such that, with {it:randinf(shuffle)}, treatment onset dates and 
+treatment status are rerandomized across clusters separately within each stratum. This ensures treatment onset dates maintain their composition 
 with respect to strata, which can be useful for ensuring rerandomizations have the same allocation of clusters with respect to size or 
 expected treatment-effect variance (a condition generally required for randomization inference to be valid). {p_end}
 
-
-
 {phang}{opt riprobs(spec)}: Specify the probability of assigning each cluster to each treatment onset date (or untreated status), when using 
-{it:randinf(probabilities)}. The syntax for {it:spec} is: {it: (ttre level level ...) (cluster1 p1 p2 ...) ... (clusterN p1 p2...)}, 
+{it:randinf(probabilities)}. The syntax for {it:spec} is: {it:(ttre level level ...) (cluster1 p1 p2 ...) ... (clusterN p1 p2 ...)}, 
 where {it:ttre} is the treatment onset variable, each level is the numerical level specifying a treatment onset period (including '.' for 
 untreated), and where the ensuing cluster-specific groups give the assignment probabilities for placing a given cluster into the 
 respective listed level of the treatment onset variable. {p_end}
 
 {phang}{opt riside(left|right)}: Swap from producing two-sided randomization inference p-values to the given type of one-sided p-value. {p_end}
 
-{phang}{opt riabs}: Swap from producing two-sided p-values based on percentiles of the randomization inference distirbution to calculating 
+{phang}{opt riabs}: Swap from producing two-sided p-values based on percentiles of the randomization inference distribution to calculating 
 p-values based on the share of the randomization inference distribution larger than the observed estimate in absolute value. The confidence 
 intervals are also adjusted based on this, and made symmetric. {p_end}
 
@@ -328,9 +327,7 @@ that for coefficients. Comes at great cost with respect to estimation speed. {p_
 
 {phang}{opt save:plots(string[, replace])}: Save all graphs generated to .gph files beginning with the name specified in the option. Also saves .dta files beginning with the same
 name containing the data used to generate any requested event study plots. Graphs and datasets generated have a suffix appended to the name specifying the exact graph/dataset
-generated. By default, everything is saved to STATA's working directory, though you should be able to pass a directory through this string along with your filename.{p_end}
-
-{phang}{opt replace}: When saving materials to the file names specified in {it:saveplots()}, overwrite any existing files with the specified names. {p_end}
+generated. {p_end}
 
 {phang}{opt sum:marystats}: Compute and present summary statistics of the outcome variable y and, if present, of the continuous treatment variable contreat.
 Summary statistics are computed overall, within the treatment group by time period (post-treatment vs pre-treatment), and within the control group. If a
@@ -356,11 +353,11 @@ prior to treatment.  {p_end}
 
 {phang}{opt espost:length(integer)}: The number of post-treatment relative time period-specific effects to be estimated. {p_end}
 
-{phang}{opt pretrend:test(numlist}: Reports Roth (2022) pre-trend power diagnostics for each requested power level, specified as percentages. Reported results include:
+{phang}{opt pretrend:test(powerlevels)}: Reports Roth (2022) pre-trend power diagnostics for each requested power level. Reported results include:
 the slope of the line fit through the pre-treatment period-specific event horizon coefficients, the joint test of the hypothesis that all pre-treatment coefficients are 
-statistically significant, the probability (given the observed variance-covariance structure of the pre-treatment coefficients) that at least one pre-treatment ceofficeint 
+zero, the probability (given the observed variance-covariance structure of the pre-treatment coefficients) that at least one pre-treatment coefficient 
 would be statistically significant in the absence of a pre-trend, and a table showing - given the observed variance-covariance structure of the pre-treatment coefficients - 
-(a) the smallest pre-trend (spt) that causes the joint test of the pre-treatment coefficeint null to reject at the user-specified power level, (b) the spt that causes at least 
+(a) the smallest pre-trend (spt) that causes the joint test of the pre-treatment coefficient null to reject at the user-specified power level, (b) the spt that causes at least 
 one pre-treatment coefficient to be rejected at the user-specified power level, and (c)/(d) the biases in the main treatment effect implied by those smallest detectable pre-trends.  {p_end}
 
 {phang}{opt makep:lots}: Produce event study plots. {p_end}
@@ -372,12 +369,12 @@ but not otherwise. Note that if {it:esfixedbaseperiod} is specified, the out-of-
 within the sample for these cohorts. {p_end}
 
 
-{pstd}{ul: Two Approaches to Estimation -- Pooled Reference Period vs Fixed Reference Period:} Difference-in-differences treatment effect estimates involve comparing average outcomes during
+{pstd}{ul:Two Approaches to Estimation -- Pooled Reference Period vs Fixed Reference Period:} Difference-in-differences treatment effect estimates involve comparing average outcomes during
 treated cohorts' treatment periods to treated cohorts' average outcomes during a pre-treatment reference period. By default, {it:wooldid} does comparisons using a pooled reference period,
 meaning that treated periods for a given cohort are compared to a reference period containing all pre-treatment observations for the cohort. If the user specifies the option
 {it:esfixedbaseperiod}, {it:wooldid} will switch to employing a fixed reference period, meaning that all treatment effect estimates will be formed by comparing treated cohorts' average outcomes
 in post-treatment periods to their outcomes in a particular pre-treatment reference period (specified in relative time period terms). By default, this pre-treatment reference period is the
-time period immediately prior to treatment (relative period -1), though the user can specify alternative behavior. For more on how this is implemented, see {help wooldid##discussion:discussion}.{p_end}
+time period immediately prior to treatment (relative period -1), though the user can specify alternative behavior.  {p_end}
 
 {pstd} With respect to which type of reference period should be used, fixed reference periods offer the virtue of transparency: all treated cohorts are compared to one reference period,
 which is the same for all cohorts in relative time terms. By contrast, pooled reference periods can be more opaque, with different cohorts having reference periods that contain
@@ -401,7 +398,7 @@ The SG variable must consist of non-negative integer values (or missing values) 
 be split across multiple subgroups. Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations.   {p_end}
 
 
-{pstd} {ul: Description of Approach to Subgroup Effect Estimation:} Given a variable dividing cohorts i into different subgroups, {it:wooldid} will estimate treatment effects separately
+{pstd} {ul:Description of Approach to Subgroup Effect Estimation:} Given a variable dividing cohorts i into different subgroups, {it:wooldid} will estimate treatment effects separately
 for each subgroup (i.e., each level of the SG variable). This is achieved without modification to the underlying
 regression specification in step 1 (see {help wooldid##description:here}). Rather, it is done by carrying out the margins calculations in step (2) within the subsamples of the data
 specified by the subgroup variable.
@@ -419,8 +416,8 @@ A joint test of the hypothesis that all SGs share the same effect estimate (norm
 {phang}{opt contreatelas:ticity}: Compute effects as dyex semi-elasticities, i.e. the (level change in y/% change in contreat). Achieved by modifying the calculation done at the 
 margins calculation stage. Successful estimation of these elasticities tends to require a larger sample, as well as y and contreat variables that are not sparsely distributed. {p_end}
 
-{phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option sets the option {it:safety} to off, turns off
-estimability checks that would otherwise cause {it:wooldid} to stop estimation in the absence of any untreated cohorts, and causes {it:wooldid} to skip sample cleaning routines that drop time
+{phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option disables a number of estimability checks 
+that would otherwise cause {it:wooldid} to stop estimation in the absence of any untreated cohorts, and causes {it:wooldid} to skip sample cleaning routines that drop time
 periods for which a control cohort is not present.   {p_end}
 
 {phang}{opt contreatp:oly(integer)}: Includes polynomial terms in {it:contreat} of the specified degree. Be cautious using higher degree polynomials. {p_end}
@@ -475,7 +472,7 @@ the effect of {it:contreat} in a particular way, affecting the nature of the ref
 compared. This option must be specified to proceed with a continuous treatment, and care must be chosen when specifying it: different options correspond with very different
 substantive assumptions. See more on this topic in the description section below. {p_end}
 
-{phang} {it:conttreatcontroltype}: untreatedZero; or one or more of the following: basic, byTreated, byTtre, byCohort, and byTime  {p_end}
+{phang} {it:contreatcontroltype}: untreatedZero; or one or more of the following: basic, byTreated, byTtre, byCohort, and byTime  {p_end}
 {synopt : {it:basic}} Controls for the effect of contreat (i.e., for f(Contreat_jt)) are added without any interactions.  {p_end}
 {synopt : {it:byTreated}} Controls for the effect of contreat are interacted with indicators for membership in the treatment group and in the control group. {p_end}
 {synopt : {it:byTtre}} Controls for the effect of contreat are interacted with indicators for membership in each treatment onset group and in the control group.  {p_end}
@@ -485,13 +482,14 @@ substantive assumptions. See more on this topic in the description section below
 the continuous treatment variable to always equal 0 outside of treated cohort-periods can be an appropriate way to handle cases where the variable is unknowable or undefined outside
 of treated cohort-periods. If this option is specified when the always 0 condition is not met, {it:wooldid} will return poorly identified estimates. {p_end}
 
-{pstd} {ul:On Specifying contreatcontrols() and lattice:} As discussed {help wooldid##discussion:here}, the regression equation {it:wooldid} adopts when estimating
+{pstd} {ul:On Specifying contreatcontrols() and lattice:} The regression equation {it:wooldid} adopts when estimating
 the effects of a continuous treatment variable is:
 Y_jt = fe_i + fe_t + sum_over_it_in_Z(beta_it * TreatedFlag_it * Tz_it + TreatedFlag_it * Tz_it * f(Contreat_jt)) + g(f(Contreat_jt)) {p_end}
 
 {pstd} The idea behind this approach is that, just as each i-t cell is allowed its own treatment effect when a binary treatment is specified, here, each i-t cell is allowed its own treatment
 effect intercept and its own marginal effect of the continuous treatment variable. If cohort-period cells are large enough that concerns remain that the effect of Contreat_jt may be non-linear
-within those cells, the function f() can be used to allow for use of a more complicated function of the effect of Contreat_jt within i-t cells.{p_end}
+within those cells, the function f() can be used to allow for use of a more complicated function of the effect of Contreat_jt within i-t cells. Note that continuous treatment designs require 
+that cohort-period cells contain multiple clusters for use of analytic clustered standard error estimation. {p_end}
 
 {pstd} The options {it:contreatpoly()} and {it:lattice()} determine the contents of the function f(), which in general is a stepwise function of contreat. If no lattice is specified,
 f(Contreat_jt) = beta_it1*Contreat_jt^1 + beta_it2*Contreat_jt^2 + ... + beta_itp*Contreat_jt^p, where p is the polynomial order specified in {it:contreatpoly(p)}. If a lattice variable is
@@ -518,7 +516,7 @@ this is especially the case when considering continuous treatment effects plots.
 
 {pstd} In addition to the above control types, {it:byTime} can be specified to add interactions between time period indicator variables and f(Contreat_jt) to g(). These time period
 interactions can serve a role analogous to that of the second diff in the binary difference-in-differences case, partialling out time period specific effects of Contreat_jt. The control type
-{it:byTime} can be specified on its own, or in conjunction with another control type. For example, if the control types specified are {it:byCohort} and {it:byTime} are both specified,
+{it:byTime} can be specified on its own, or in conjunction with another control type. For example, if both of the control types {it:byCohort} and {it:byTime} are specified,
 one would have g() = sum_over_i[fe_i*f(Contreat_jt)] + sum_over_t[fe_t*f(Contreat_jt)].  {p_end}
 
 {pstd} If the continuous treatment variable is not meaningfully defined outside of treated cohort-periods, the control type {it:untreatedZero} can be used to specify g() = 0. By
@@ -546,8 +544,9 @@ and, in the fixed reference period case, ensures that the two reference periods 
 automatically include any time trends that are a function of any included continuous treatment variable.  {p_end}
 
 {phang}{opt coarse:cohortcontrols()}: Includes the specified controls as well as interactions between them with all Tz_it dummies included in the model, meaning one interaction with each
-cohort-time period for which a treatment effect is estimated (if {it:esfixedbaseperiod} is specified, that includes every estimable treated cohort by relative time period effect). Note that
-reported treatment effects will not vary as a direct function of these controls; the effect of these controls are partialled out from the reported treatment effects.
+cohort-time period for which a treatment effect is estimated (if {it:esfixedbaseperiod} is specified, that includes every estimable treated cohort by relative time period effect). 
+Included controls are de-meaned within i-t cells. Note that
+reported treatment effects will not vary as a direct function of these controls; the effect of these controls is partialled out from the reported treatment effects.
 This option differs from simply specifying cohort
 by time period interactions with a given control in that it pools the effect of the controls in the reference period and the control group. Note that all specified coarse cohort controls must be
 specified using factor notation, so that {it:wooldid} knows if they are to be interacted as a continuous variable (prefixed with "c.") or as a categorical variable (prefixed with "i."). {p_end}
@@ -571,12 +570,9 @@ in conjunction with the option {it:contreatcontrols(basic)}, or any option other
 
 {phang}{opt update}: If specified, the command {it:wooldid,} {it:update} will update your local installation of {it:wooldid} based on the most recent edition of the program available on github. {p_end}
 
-{phang}{opt fast:nose}: Forego standard error estimation for an increase in estimation speed. {p_end}
+{phang}{opt fast:nose}: Forgo standard error estimation for an increase in estimation speed. {p_end}
 
-{phang}{opt clean:matrices}: If specified, {it:wooldid} will clear out all matrices storied in STATA's main memory and in mata. Occasionally, {it:wooldid} enters a state where it repeatedly
-crashes for difficult to determine reasons (relating to {it:reghdfe} crashing and leaving certain content in mata). Doing this can sometimes recover {it:wooldid} from this problem. {p_end}
-
-{phang}{opt regtol}: Specifies the convergence tolerance to be used by {it:reghdfe} and {it:ppmlhdfe}. By default, {it:reghdfe} sets a value of 8; {it:wooldid} has a default of 9.
+{phang}{opt regtol(#)}: Specifies the convergence tolerance to be used by {it:reghdfe} and {it:ppmlhdfe}. By default, {it:reghdfe} sets a value of 8; {it:wooldid} has a default of 9.
 You may wish to set this higher or lower; higher may be advisable in settings where you ask {it:reghdfe} to absorb interaction terms with many continuous variables -- as tends
 to occur when using continuous treatment variables. {p_end}
 
@@ -589,20 +585,20 @@ a high dimensional fixed effects estimator. This is often less efficient than th
 efficiency in the main regression or under certain other circumstances. {p_end}
 
 {phang}{opt nofast:collapse}: Forces all stage 2 margins calculations of treatment effects and standard errors to occur at the observation-level, rather than at the cohort-period (i-t) 
-level. This significantly slows estimation time, but may be necessary if the ATT and related estimands cannot be estimated just based on i-t level summaries. This occurs whenever 
-{it:interactivecontrols()} is specified, in which case this option is automatically engaged, but may be necessary in other specifications also (for example, specifications including a 
-continuous treatment variable interacted with controls using the {it:controls()} option).  {p_end}
+level. This significantly slows estimation time, but may be necessary if the ATT and related estimands cannot be estimated just based on i-t level summaries. This occurs automatically when  
+{it:interactivecontrols()}, {it:contreatpoly()}, or controls with the continuous treatment variable inside them are specified. However, manually specifying this option may be necessary 
+in some cases.  {p_end}
 
 {phang}{opt rseed(#)}: Specify the random number seed, for replicability of bootstrapping, randomization inference, and simultaneous bands results.  {p_end}
 
 {phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses, displays raw output from the regression estimated, and prints progress reports throughout the estimation process.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
 
-{phang}{opt iteffects}: Prints the a full table of cohort-period (i-t) level effects, labelled by cohort, period, etc. These results are also available by default stored in e(). {p_end}
+{phang}{opt iteffects}: Produce the full table of cohort-period (i-t) level effects, labelled by cohort, period, etc. {p_end}
 
 {phang}{opt safety(string)}: When {it:safety(off)} is not explicitly specified, {it:wooldid} will caution the user or halt estimation when {it:wooldid} is likely to yield unreliable estimates.
 Most important among these checks are tests for whether or not a variable intended to capture the treatment effect in a given i-t cell was dropped from the underlying regression for
-multicolinearity, as may occur if one's fixed effects or continuous treatment control variables partial out one of the main effects. Identification failures of this sort will generally be detected,
+multicollinearity, as may occur if one's fixed effects or continuous treatment control variables partial out one of the main effects. Identification failures of this sort will generally be detected,
 though not necessarily when the problem concerns continuous treatments being analyzed with a lattice or with polynomial terms.   {p_end}
 
 
@@ -612,7 +608,7 @@ though not necessarily when the problem concerns continuous treatments being ana
 {title:Working With Output}
 
 {pstd}
-{it:wooldid} generates output primarily in the form of matrices and scalars stored stored in e(), though all main results can also be accessed using standard utilities like {it:esttab}.
+{it:wooldid} generates output primarily in the form of matrices and scalars stored in e(), though all main results can also be accessed using standard utilities like {it:esttab}.
 The commands {it:est restore} and {it:est save} are compatible with {it:wooldid} for saving its output. The full set of {it:wooldid} output in e() can be viewed using the command
 {it:ereturn list}. {p_end}
 
@@ -658,7 +654,7 @@ from the underlying regression estimator, wherever available. {p_end}
 {pstd} In addition to these objects returned in e(), if saveplots() is specified, a dataset containing the information used to produce event study plots along with .gph files containing
 all graphs generated will be saved to a file with your specified name in STATA's working directory. {p_end}
 
-{pstd} If the option {it:verbose} is specified, the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called {it:___wdidfullmodel}, which can be
+{pstd} If the option {it:verbose} is specified, the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called {it:___wooldidfullmodel}, which can be
 accessed using standard {it:estimates restore} type syntax. {p_end}
 
 {pstd} {ul:Tips for accessing output and remaking graphs:} Use the {it:matlist} command to print the contents of one of {it:wooldid}'s output matrices. To convert one of {it:wooldid}'s 
@@ -668,13 +664,6 @@ using as variable names the names of the matrix's columns. The program {help eve
 {it:wooldid} in {it:e()}, though the user will need to point {it:event_plot} to the name of the results of interest (e.g., for ATT-type event study coefficients, by specifying 
 {it:stub_lag(ES_att_post#)} and {it:stub_lead(ES_att_pre#)}). If taking this approach, be aware that the {it:event_plot} does not automatically insert 0s into the event study plot 
 to represent the missing reference period. {p_end}
-
-{pstd} {ul:Compatible Post-Estimation Commands:} {it:estimates save}, {it:estimates store}, {it:estimates restore}, {it:esttab}, and similar commands. {p_end}
-
-{pstd} {ul:Incompatible Post-Estimation Commands:} {it:lincom}, {it:test}, and all other post-estimation commands that rely on receiving a valid variance-covariance matrix from
-an estimator. While {it:wooldid} does return a coefficient vector ({it:e(b)}) and a variance-covariance matrix ({it:e(V)}), these are for display purposes only. The variance-covariance
-matrix has all off-diagonal elements set to 0, meaning that while {it:esttab} and the like will present correct estimates using these inputs, efforts to combine or otherwise test different
-estimates will not, in general, yield valid results {p_end}
 
 
 
@@ -687,11 +676,11 @@ and uses the command {help regress}, in conjunction with {help margins}, to comp
 (i.e., allowing use of not-yet treated cohorts as controls) should be comparable to estimates from {it:wooldid} using the {it:att} estimand-type, a pooled
 reference period (i.e., not using {it:esfixedbaseperiod}), and sample weights which (if present) do not vary within units.
 Estimates produced by the two will still differ, however, when certain types of panel imbalance are present. For example, when a treatment onset group contains
-multiple cohorts and some of those cohorts are not observed in periods when others are observed, {it:wooldid} and {it:hddiregress twfe} will yield different results.
+multiple cohorts and some of those cohorts are not observed in periods when others are observed, {it:wooldid} and {it:hdidregress twfe} will yield different results.
 In such cases, {it:wooldid} approaches the situation by presenting the average treatment effect among only the observed cohort-periods. For example, suppose cohorts 1 and 2
 are in the same treatment onset group, cohort 1 is observed for the first 3 periods after treatment onset, and cohort 2 is only observed for the first 2. In this case, {it:wooldid}
 and {it:hdidregress} will report the same treatment effects for the treatment onset group for the first 2 periods after treatment. The two programs will disagree on the third
-effect: {it:wooldid} will report the same 3rd period effect that it (and {it:hdidregress}) would report if cohort 2 were not incldued in the dataset at all; {it:hdidregress} does not.
+effect: {it:wooldid} will report the same 3rd period effect that it (and {it:hdidregress}) would report if cohort 2 were not included in the dataset at all; {it:hdidregress} does not.
 Finally, in order to get estimates using controls to
 match between the two methods, a {it:wooldid} user will have to manually adjust the controls as needed (e.g., given a control that is constant within cohorts, a
 {it:wooldid} user will need to specify i.t#c.control to replicate the behavior of including that control in {it:hdidregress}).  {p_end}
@@ -731,13 +720,13 @@ the portion of the sample where treatment effects are of interest. {p_end}
 
 {p 10 10}   {cmd:wooldid y i t ttre, coarsecohortcontrols(c.controlvar1 i.categoricalcontrolvar) timetrends }
 
-{phang}4) Event study with 3 pre-treatment and 3 post-treatment estimates using a pooled reference period and generating event study plots, as well as testing the hypotheses
-that all pre-treatment effects are 0 and that all time-period specific effects fall on the same line: {p_end}
+{phang}4) Event study with 3 pre-treatment and 3 post-treatment estimates using a pooled reference period and generating event study plots, as well as 
+implementing the full pre-trend testing suite for power levels 80 and 90: {p_end}
 
-{p 10 10}   {cmd:wooldid y i t ttre, espre(3) espost(3)  makeplots  }
+{p 10 10}   {cmd:wooldid y i t ttre, espre(3) espost(3)  makeplots pretrendtest(80 90)  }
 
-{phang}5) Event study with 3 pre-treatment and 3 post-treatment event study estimates, calculating all estimates relative a fixed reference period (fixed to the
-period 2 periods before treatment):{p_end}
+{phang}5) Event study with 3 pre-treatment and 3 post-treatment event study estimates, calculating all estimates relative to a fixed 
+reference period (fixed to the period 2 periods before treatment):{p_end}
 
 {p 10 10}   {cmd:wooldid y i t ttre, espre(3) espost(3) esfixedbaseperiod esrelativeto(-2)}
 
@@ -745,20 +734,19 @@ period 2 periods before treatment):{p_end}
 
 {p 10 10}   {cmd:wooldid y i t ttre, subgroups(ttre)}
 
-{phang}8) Difference-in-differences with a treatment intensity variable (one that is 0 outside the treatment period), estimated using a stepwise-linear function and a lattice with 5 quantiles
+{phang}7) Difference-in-differences with a treatment intensity variable (one that is 0 outside the treatment period), estimated using a stepwise-linear function and a lattice with 5 quantiles
 (formed based on the treated group's treatment period), and generating continuous treatment effects plots for the post treatment period:{p_end}
 
-{p 10 10}   {cmd:wooldid y i t ttre, contreat(intensity) contreatcontrols(untreatedZero) makecfxplot lattice(baseTreatedPost 5))}
+{p 10 10}   {cmd:wooldid y i t ttre, contreat(intensity) contreatcontrols(untreatedZero) makecfxplot lattice(baseTreatedPost 5)}
 
-{phang}9) Difference-in-differences with a continuous treatment variable that varies within all cohorts, with a lattice containing 5 quartiles (formed separately by treatment group and
+{phang}8) Difference-in-differences with a continuous treatment variable that varies within all cohorts, with a lattice containing 5 quantiles (formed separately by treatment group and
 by period), controlling for the continuous treatment variable by treatment group and by time period, with continuous treatment effects plots for the pre-treatment period:{p_end}
 
-{p 10 10}   {cmd:wooldid y i t ttre, contreat(contreatvar) contreatcontrols(byTreated byTime) makecfxplot lattice(byTreatedByTime 5) cfxplottypes(pre))}
+{p 10 10}   {cmd:wooldid y i t ttre, contreat(contreatvar) contreatcontrols(byTreated byTime) makecfxplot lattice(byTreatedByTime 5) cfxplottypes(pre)}
 
 
 
 {marker bugs}{...}
-
 {title:Bugs and Assistance}
 
 {pstd}{ul:Known Issues:} {p_end}
@@ -772,7 +760,7 @@ in the fixed effects (i.e., in the {it:absorb()} statement when using {it:reghdf
 
 {p 10 10}   The automatic tests for model identification that {it:wooldid} implements are not fully comprehensive: {it:wooldid} will almost always succeed in identifying
 when a treatment effect has been partialled out by a fixed effect in the binary treatment case and will often succeed in doing so when a continuous treatment variable is specified
-without a lattice variable or any polynomial terms. However, a continuous treatment is specified with a lattice and/or a polynomial term, and especially in the presence of an
+without a lattice variable or any polynomial terms. However, when a continuous treatment is specified with a lattice and/or a polynomial term, and especially in the presence of an
 unbalanced panel, {it:wooldid} will be unlikely to detect problems related to important treatment effects being partialled out by controls or fixed effects. As such, one should
 be very careful when specifying one's fixed effects and {it:contreatcontrols} when using a continuous treatment.
 
@@ -784,7 +772,6 @@ under development, so assistance finding and correcting bugs is much appreciated
 
 
 {marker citations}{...}
-
 {title:Citations}
 
 {phang} Borusyak, Kirill, Xavier Jaravel, and Jann Spiess. Revisiting Event Study Designs: Robust and Efficient Estimation. Working Paper, 2023. {p_end}
@@ -812,6 +799,7 @@ Fixed Effects Regressions. Statistical Software Components s459238, 2023.{p_end}
 
 {marker disclaimer}{...}
 {title:Disclaimer}
+
 {pstd}This document reflects only the views of the author and does not necessarily represent the views of the Agency for Healthcare Research and Quality, the Department
 of Health and Human Services, or the United States government. The program with which this help file is associated is the work of the author and does not come
 with any endorsement by or warranty from the Agency for Healthcare Research and Quality, the Department of Health and Human Services, or the United States government.  {p_end}
