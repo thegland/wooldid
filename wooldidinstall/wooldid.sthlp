@@ -35,8 +35,7 @@ continuous treatment (or treatment intensity) variable. This suite also can prod
 effects across the distribution of a specified continuous treatment variable. Options for inference include analytic SEs, bootstrap (standard and Bayesian), randomization inference,
 simultaneous bands, and Ibragimov and Muller (2010) style cluster-robust inference.  {p_end}
 
-{pstd}{ul:Shortcuts:} {help wooldid##description:Description}, {help wooldid##options:Options}, {help wooldid##output:Working with Output},
-{help wooldid##comparison:Comparison with Related Estimators}, {help wooldid##examples:Examples},
+{pstd}{ul:Shortcuts:} {help wooldid##description:Description}, {help wooldid##options:Options}, {help wooldid##output:Working with Output}, {help wooldid##examples:Examples},
 {help wooldid##bugs:Bugs and Assistance}, {help wooldid##citations:Citations}, {help wooldid##author:Author Info and How to Cite}, {help wooldid##disclaimer:Disclaimer} {p_end}
 
 {pstd}{ul:Dependencies:} {cmd:wooldid} requires users have STATA 16 or higher installed, {help reghdfe} version 5.7.3, 
@@ -59,7 +58,7 @@ at this link. {p_end}
 {synopt : {it:y}}Outcome variable. {p_end}
 {synopt : {it:i}}Cohort identifier; represents collections of units allowed to have different treatment effects by year. Cohorts must either group units 
 by year of treatment onset, or must be subsets of such treatment onset groups. Coarser cohort definitions allow for faster estimation and more stable 
-estimation of SEs with clusters (cohorts should not be finer than clusters, and ideally should be coarser). Setting cohorts equal to the unit-level identifier, 
+estimation of SEs with clusters (with analytic clustered SEs, cohorts should be coarser than clusters). Setting cohorts equal to the unit-level identifier, 
 in general, yields poor results (unit FE can be included separately). The cohort variable i must consist only of integers greater than 0. {p_end}
 {synopt : {it:t}}Time period identifier; must consist of integers greater than 0.{p_end}
 {synopt : {it:ttre}}Variable containing cohort-specific dates of treatment onset. Missing indicates never-treated cohorts; cohorts treated before the sample begins are dropped. {p_end}
@@ -185,8 +184,9 @@ see {help wooldid##continuous:continuous_treatment}. {p_end}
 {pstd}
 {ul:Comment on Sample Formation, Cohorts Treated Prior to Sample Start:} The estimation sample {it:wooldid} uses may be more restricted than your overall sample: {it:wooldid}
 will drop observations with missing data, observations with 0-valued weights, observations from treated cohorts not observed prior to treatment (or not observed in the user-specified
-reference year if {it:esfixedbaseperiod} is specified), and observations from time periods no untreated
-(including not yet treated) units are observed. If the user requests that cohort-specific time trends be included, this restriction will extend to dropping cohorts that are
+reference year if {it:esfixedbaseperiod} is specified), and observations from time periods where no untreated
+(including not yet treated) units are observed. Under continuous treatment designs, treated i-t cells with no variation in the continuous treatment variable 
+are also dropped. If the user requests that cohort-specific time trends be included, this restriction will extend to dropping cohorts that are
 not observed enough times to estimate a time trend using the pre-treatment data. {p_end}
 
 {pstd}
@@ -270,7 +270,7 @@ when clusters are specified). {p_end}
 
 {phang}{opt bootdf(normal|clusters|#)}: Specifies the reference distribution for bootstrap inference using just the bootstrap standard error ({it:bootcitype(wald)}). The default is {it:normal} without clustering, and 
 {it:clusters} with clustering (which specifies a t-distribution with number of clusters - 1 degrees of freedom). An integer can also be specified to use a t-distribution with the specified number of degrees of freedom. 
-{p_end}
+The dof set here also is used as an input into other downstream tests when bootstrapping (e.g., {it:lincom}, {it:pretrendtest()}). {p_end}
 
 {phang}{opt reps(#)}: Number of replicates used; default 100.  {p_end}
 
@@ -395,7 +395,7 @@ counterintuitive and difficult to interpret ways, possibly obscuring even severe
 
 {phang}{opt sub:groups()}: Specifies the subgroup (SG) variable, whose levels specify subgroups for which {it:wooldid} will compute subgroup specific estimates.
 The SG variable must consist of non-negative integer values (or missing values) and its levels must specify collections of cohorts i. For estimates to be valid, a given cohort i cannot
-be split across multiple subgroups. Observations given missing values are not placed in any subgroup and are ignored when performing subgroup computations.   {p_end}
+be split across multiple subgroups. Cohorts with all missing values are not placed in any subgroup and are ignored when performing subgroup computations.   {p_end}
 
 
 {pstd} {ul:Description of Approach to Subgroup Effect Estimation:} Given a variable dividing cohorts i into different subgroups, {it:wooldid} will estimate treatment effects separately
@@ -413,8 +413,9 @@ A joint test of the hypothesis that all SGs share the same effect estimate (norm
 
 {phang}{opt contreat(varname)}: The continuous treatment variable. Must be defined for all observations (set to 0 if not naturally defined within untreated cohort-periods).{p_end}
 
-{phang}{opt contreatelas:ticity}: Compute effects as dyex semi-elasticities, i.e. the (level change in y/% change in contreat). Achieved by modifying the calculation done at the 
-margins calculation stage. Successful estimation of these elasticities tends to require a larger sample, as well as y and contreat variables that are not sparsely distributed. {p_end}
+{phang}{opt contreatelas:ticity}: Compute effects as dyex semielasticities, i.e. the level change in y/% change in contreat. Achieved by modifying the calculation done at the 
+margins calculation stage. Successful estimation of these elasticities tends to require a larger sample, as well as y and contreat variables that are not sparsely distributed. 
+Note: with {it:poisson}, yields regular elasticities rather than semielasticities. {p_end}
 
 {phang}{opt contreatw:ithin}: Specify this when you wish to use only within-treated cohort variation in the continuous treatment variable. This option disables a number of estimability checks 
 that would otherwise cause {it:wooldid} to stop estimation in the absence of any untreated cohorts, and causes {it:wooldid} to skip sample cleaning routines that drop time
@@ -591,7 +592,7 @@ in some cases.  {p_end}
 
 {phang}{opt rseed(#)}: Specify the random number seed, for replicability of bootstrapping, randomization inference, and simultaneous bands results.  {p_end}
 
-{phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses, displays raw output from the regression estimated, and prints progress reports throughout the estimation process.
+{phang}{opt ver:bose}: Prints the regression command {it:wooldid} uses and prints progress reports throughout the estimation process.
 This option also stores the underlying regression model used by {it:wooldid} to {it:___wooldidfullmodel}; this model can be accessed using {it:estimates restore}. {p_end}
 
 {phang}{opt iteffects}: Produce the full table of cohort-period (i-t) level effects, labelled by cohort, period, etc. {p_end}
@@ -616,8 +617,7 @@ The commands {it:est restore} and {it:est save} are compatible with {it:wooldid}
 {synoptset 30 tabbed}{...}
 {synopt:{it:e(wdidmainresults)}} All primary and event study results.{p_end}
 
-{synopt:{it:e(wdidsgresults_{it:sgcase})}} Primary and event study results for the subgroup {it:sgcase}, if subgroups are used and presentation of their
-primary results has not been suppressed.{p_end}
+{synopt:{it:e(wdidsgresults_{it:sgcase})}} Primary and event study results for the subgroup {it:sgcase}, if subgroups are used.{p_end}
 
 {synopt:{it:e(pwsgs)}} Pairwise differences between the subgroup-specific treatment effects, if subgroups are used.{p_end}
 
@@ -648,7 +648,7 @@ procedures.{p_end}
 
 {synopt:{it:e(estimate_type)}} A macro recording whether your treatment effect estimates use a pooled reference period or a fixed reference period. {p_end}
 
-{synopt:{it:Other Items:}} {it:e(ll)}, {it:e(ll_0)}, {it:e(rmse)}, {it:e(rss)}, {it:e(F)}, {it:e(chi2)} (poisson only), and {it:e(converged)} (poisson only) are passed through directly
+{synopt:{it:Other Items:}} {it:e(ll)}, {it:e(ll_0)}, {it:e(rmse)}, {it:e(rss)}, {it:e(F)}, and {it:e(chi2)} (poisson only) are passed through directly
 from the underlying regression estimator, wherever available. {p_end}
 
 {pstd} In addition to these objects returned in e(), if saveplots() is specified, a dataset containing the information used to produce event study plots along with .gph files containing
@@ -665,39 +665,6 @@ using as variable names the names of the matrix's columns. The program {help eve
 {it:stub_lag(ES_att_post#)} and {it:stub_lead(ES_att_pre#)}). If taking this approach, be aware that the {it:event_plot} does not automatically insert 0s into the event study plot 
 to represent the missing reference period. {p_end}
 
-
-
-{marker comparison}{...}
-{title:Comparison to Related Estimators}
-
-{pstd} {ul:Comparing Output to hdidregress twfe:}
-The STATA 18 command {help hdidregress} has an option for implementing Wooldridge (2021) style estimates. Its implementation takes the Mundlak approach to estimation
-and uses the command {help regress}, in conjunction with {help margins}, to compute estimates. Estimates from {it:hdidregress twfe} with the option {it:notyet}
-(i.e., allowing use of not-yet treated cohorts as controls) should be comparable to estimates from {it:wooldid} using the {it:att} estimand-type, a pooled
-reference period (i.e., not using {it:esfixedbaseperiod}), and sample weights which (if present) do not vary within units.
-Estimates produced by the two will still differ, however, when certain types of panel imbalance are present. For example, when a treatment onset group contains
-multiple cohorts and some of those cohorts are not observed in periods when others are observed, {it:wooldid} and {it:hdidregress twfe} will yield different results.
-In such cases, {it:wooldid} approaches the situation by presenting the average treatment effect among only the observed cohort-periods. For example, suppose cohorts 1 and 2
-are in the same treatment onset group, cohort 1 is observed for the first 3 periods after treatment onset, and cohort 2 is only observed for the first 2. In this case, {it:wooldid}
-and {it:hdidregress} will report the same treatment effects for the treatment onset group for the first 2 periods after treatment. The two programs will disagree on the third
-effect: {it:wooldid} will report the same 3rd period effect that it (and {it:hdidregress}) would report if cohort 2 were not included in the dataset at all; {it:hdidregress} does not.
-Finally, in order to get estimates using controls to
-match between the two methods, a {it:wooldid} user will have to manually adjust the controls as needed (e.g., given a control that is constant within cohorts, a
-{it:wooldid} user will need to specify i.t#c.control to replicate the behavior of including that control in {it:hdidregress}).  {p_end}
-
-{pstd} {ul:Comparing Output to did_imputation:}
-The Borusyak, Jaravel, and Spiess (2023) difference-in-differences imputation estimator is implemented in the package {help did_imputation}. Wooldridge (2021)
-proves some equivalence results between their estimator and the Wooldridge estimator. For binary treatments, {it:wooldid} will yield the same estimates as
-{it:did_imputation} given that one uses the {it:att} estimand-type, uses a pooled reference period (i.e., not using {it:esfixedbaseperiod}), and does not use controls. 
-With controls, {it:wooldid} and {it:did_imputation} will still yield the same results provided
-that each cohort-time period cell contains only 1 observation. In this 'fine cohorts' case, the inclusion of i-t cell indicators ensures that the included controls
-have their coefficients determined solely from the same portion of the sample as is used to estimate the regression in the BJS estimator. However, outside of special
-cases, results with controls will not match if cohorts are coarse (contain multiple observations per i-t cell). To assist in this case, the {it:wooldid} option
-{it:coarsecohortcontrols()}
-will add to the {it:wooldid} regression your controls plus interactions between your controls and the i-t cell indicators associated with periods for which treatment
-effects are requested. While the {it:coarsecohortcontrols()} option will not yield the same estimates as {it:did_imputation}, it arguably reflects an approach closer to
-the spirit of BJS in that it increases the degree to which the effect of the controls is independent between the control/reference portion of the sample and
-the portion of the sample where treatment effects are of interest. {p_end}
 
 
 
@@ -742,7 +709,7 @@ reference period (fixed to the period 2 periods before treatment):{p_end}
 {phang}8) Difference-in-differences with a continuous treatment variable that varies within all cohorts, with a lattice containing 5 quantiles (formed separately by treatment group and
 by period), controlling for the continuous treatment variable by treatment group and by time period, with continuous treatment effects plots for the pre-treatment period:{p_end}
 
-{p 10 10}   {cmd:wooldid y i t ttre, contreat(contreatvar) contreatcontrols(byTreated byTime) makecfxplot lattice(byTreatedByTime 5) cfxplottypes(pre)}
+{p 10 10}   {cmd:wooldid y i t ttre, contreat(contreatvar) contreatcontrols(byTreated byTime) makecfxplot lattice(byTreatedByTime 5) esprelength(3) cfxplottypes(pre)}
 
 
 
@@ -751,8 +718,8 @@ by period), controlling for the continuous treatment variable by treatment group
 
 {pstd}{ul:Known Issues:} {p_end}
 
-{p 10 10}   Estimation with cohort-specific time trends sometimes encounters numerical stability and related issues. Identical specifications can yield slightly different underlying
-coefficients depending on the underlying program used for estimation ({it:regress} vs {it:reghdfe}). It is advised that you do not manually specify time-trends variables for inclusion
+{p 10 10}   Estimation with cohort-specific time trends sometimes encounters numerical stability and related issues. 
+It is advised that you do not manually specify time-trends variables for inclusion
 in the fixed effects (i.e., in the {it:absorb()} statement when using {it:reghdfe}). Estimate stability seems greater when the option {it:esfixedbaseperiod} is specified.
 
 {p 10 10}   Estimation with continuous treatment controls sometimes faces numerical stability issues as well. For more consistent results, specify either a higher {it:regtol()} or
