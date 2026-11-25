@@ -97,7 +97,7 @@ in general, yields poor results (unit FE can be included separately). The cohort
 
 {synopt : {help wooldid##technical:Technical Features:}}
 {opt update} {opt fast:nose} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
-{opt rseed(#)}  {opt ver:bose} {opt iteffects} {opt nofast:collapse} {opt safety(off)}    {p_end}
+{opt rseed(#)}  {opt ver:bose} {opt iteffects} {opt nofastcollapse} {opt safety(off)}    {p_end}
 
 
 
@@ -138,7 +138,7 @@ same degrees of freedom as the residual number of degrees of freedom in the unde
 bootstrap, the Bayesian bootstrap, and randomization inference. When treatment effects can be estimated independently within clusters, inference via the method of Ibragimov and Muller 
 (2010) is also available, in which case inference is done by t-testing the set of cluster-specific estimates against 0 (possibly changing the requested estimand). Finally, note that to 
 speed estimation of analytic SEs, the delta method calculations are done at the cohort-period (i-t) level, rather than at the observation-level - except in cases where the two methods 
-might be reasonably expected to diverge. This speed-up trick can be disabled using the option {opt nofast:collapse} if one's specification is likely to produce differences between i-t 
+might be reasonably expected to diverge. This speed-up trick can be disabled using the option {opt nofastcollapse} if one's specification is likely to produce differences between i-t 
 level averages and observation-level averages, as may occur if one specifies unusual specifications featuring controls that interact a continuous treatment variable with other variables.
 For more on standard error computation, see {help wooldid##standarderrors:standard_errors}. {p_end}
 
@@ -283,8 +283,8 @@ The dof set here also is used as an input into other downstream tests when boots
 {dlgtab:Randomization Inference}
 
 {phang}{opt randinf(shuffle|probabilities)}: Produce confidence intervals and p-values based on randomization inference (SE and t remain analytic). 
-The default behavior is to show a two-tailed randomization inference p-value, coupled with confidence intervals based on quantiles of the 
-randomization inference estimate distribution summed with the main estimate (shift intervals). 
+The default behavior is to show a two-tailed randomization inference p-value (testing the sharp null hypothesis of no effects for any cohorts in 
+any period), coupled with confidence intervals based on quantiles of the randomization inference estimate distribution subtracted from the main estimate (i.e., shift intervals).
 If {it:shuffle} is specified, treatment onset dates are rerandomized across clusters, holding constant the number of clusters per treatment onset date 
 and the number of untreated clusters. If {it:probabilities} is specified, clusters are rerandomized based on user-specified probabilities of falling in 
 any given treatment onset group, allowing the number of clusters per onset date to change. Note: {it:randinf()} requires users 
@@ -356,9 +356,10 @@ prior to treatment.  {p_end}
 {phang}{opt pretrend:test(powerlevels)}: Reports Roth (2022) pre-trend power diagnostics for each requested power level. Reported results include:
 the slope of the line fit through the pre-treatment period-specific event horizon coefficients, the joint test of the hypothesis that all pre-treatment coefficients are 
 zero, the probability (given the observed variance-covariance structure of the pre-treatment coefficients) that at least one pre-treatment coefficient 
-would be statistically significant in the absence of a pre-trend, and a table showing - given the observed variance-covariance structure of the pre-treatment coefficients - 
-(a) the minimum detectable trend (mdt) that causes the joint test of the pre-treatment coefficient null to reject at the user-specified power level, (b) the mdt that causes at least 
-one pre-treatment coefficient to be rejected at the user-specified power level, and (c)/(d) the biases in the main treatment effect implied by those smallest detectable pre-trends.  {p_end}
+would be statistically significant (at the 5% level) in the absence of a pre-trend, and a table showing - given the observed variance-covariance structure of the 
+pre-treatment coefficients - (a) the minimum detectable trend (mdt) that causes the joint test of the pre-treatment coefficient null to reject (at the 5% level) at 
+the user-specified power level, (b) the mdt that causes at least one pre-treatment coefficient to be rejected (at the 5% level) at the user-specified power level, and 
+(c)/(d) the biases in the main treatment effect implied by those smallest detectable pre-trends.  {p_end}
 
 {phang}{opt makep:lots}: Produce event study plots. {p_end}
 
@@ -585,7 +586,7 @@ with variables being inappropriately dropped from the regression. {p_end}
 a high dimensional fixed effects estimator. This is often less efficient than the alternative approach in terms of computation time, but can be important in terms of memory
 efficiency in the main regression or under certain other circumstances. {p_end}
 
-{phang}{opt nofast:collapse}: Forces all stage 2 margins calculations of treatment effects and standard errors to occur at the observation-level, rather than at the cohort-period (i-t) 
+{phang}{opt nofastcollapse}: Forces all stage 2 margins calculations of treatment effects and standard errors to occur at the observation-level, rather than at the cohort-period (i-t) 
 level. This significantly slows estimation time, but may be necessary if the ATT and related estimands cannot be estimated just based on i-t level summaries. This occurs automatically when  
 {it:interactivecontrols()}, {it:contreatpoly()}, or controls with the continuous treatment variable inside them are specified. However, manually specifying this option may be necessary 
 in some cases.  {p_end}
