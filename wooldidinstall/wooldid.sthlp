@@ -357,7 +357,7 @@ prior to treatment.  {p_end}
 the slope of the line fit through the pre-treatment period-specific event horizon coefficients, the joint test of the hypothesis that all pre-treatment coefficients are 
 zero, the probability (given the observed variance-covariance structure of the pre-treatment coefficients) that at least one pre-treatment coefficient 
 would be statistically significant in the absence of a pre-trend, and a table showing - given the observed variance-covariance structure of the pre-treatment coefficients - 
-(a) the smallest pre-trend (spt) that causes the joint test of the pre-treatment coefficient null to reject at the user-specified power level, (b) the spt that causes at least 
+(a) the smallest pre-trend that causes the joint test of the pre-treatment coefficient null to reject at the user-specified power level, (b) the smallest pre-trend that causes at least 
 one pre-treatment coefficient to be rejected at the user-specified power level, and (c)/(d) the biases in the main treatment effect implied by those smallest detectable pre-trends.  {p_end}
 
 {phang}{opt makep:lots}: Produce event study plots. {p_end}
