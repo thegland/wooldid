@@ -547,16 +547,18 @@ automatically include any time trends that are a function of any included contin
 
 {phang}{opt coarse:cohortcontrols()}: Includes the specified controls as well as interactions between them with all Tz_it dummies included in the model, meaning one interaction with each
 cohort-time period for which a treatment effect is estimated (if {it:esfixedbaseperiod} is specified, that includes every estimable treated cohort by relative time period effect). 
-Included controls are de-meaned within i-t cells. Note that
+The interactions between treated i-t cell indicators and the controls use versions of the controls that have been de-meaned within i-t cells 
+(and set to 0 outside of treated, non-reference period i-t cells). Note that 
 reported treatment effects will not vary as a direct function of these controls; the effect of these controls is partialled out from the reported treatment effects.
 This option differs from simply specifying cohort
 by time period interactions with a given control in that it pools the effect of the controls in the reference period and the control group. Note that all specified coarse cohort controls must be
 specified using factor notation, so that {it:wooldid} knows if they are to be interacted as a continuous variable (prefixed with "c.") or as a categorical variable (prefixed with "i."). {p_end}
 
-{phang}{opt inter:activecontrols()}: Includes the specified variables in the regression in two capacities. First, the variables are included as controls interacted with time period-specific
-indicator variables. Second, the variables are de-meaned by cohort (i) and then treatment effects are permitted to vary linearly with the de-meaned variables. This is achieved by including
-interactions between the de-meaned controls and all Tz_it dummies included in the model. The specification used is similar to as with {it:coarsecohortcontrols}, but differs in that these terms
-are marked so that variation associated with them is reported as part of the treatment effects (as opposed to being partialled out from the treatment effects). This specification most closely
+{phang}{opt inter:activecontrols()}: Includes the same controls as in {it:coarsecohortcontrols()}, except rather than partialling out the effect of the controls, the treatment effects are permitted to 
+vary linearly with the de-meaned controls. The stage 1 regression specification here is the same as in {it:coarsecohortcontrols()}. The difference between the two approaches is entirely in the stage 2 
+margins calculation which produces the ATTs, etc. Namely, when producing ATTs as the average of the difference in fitted values between when the treatment variable is turned on versus off, 
+{it:coarsecohortcontrols()} ignores the interaction between the i-t cell treatment dummies and these controls, whereas {it:interactivecontrols()} includes the 
+interaction term as part of the ATT (etc.) calculation when treatment is turned on. Relative to {it:coarsecohortcontrols()}, this specification most closely
 mimics the approach to including covariates that appears in Wooldridge (2021). When using only one interactive control, ATTs obtained using this option should be similar to those obtained
 when specifying that variable as a continuous treatment variable and then separately including controls that interact the continuous treatment variable with time dummy variables. {p_end}
 
