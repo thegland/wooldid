@@ -20,11 +20,10 @@
 {viewerjumpto "Controls and Fixed Effects" "wooldid##controls"}{...}
 {viewerjumpto "Technical Features" "wooldid##technical"}{...}
 {viewerjumpto "Working with Output" "wooldid##output"}{...}
-{viewerjumpto "Comparison with Related Estimators" "wooldid##comparison"}{...}
 {viewerjumpto "Examples" "wooldid##examples"}{...}
 {viewerjumpto "Bugs and Assistance" "wooldid##bugs"}{...}
 {viewerjumpto "Citations" "wooldid##citations"}{...}
-{viewerjumpto "Author Info How to Cite" "wooldid##author"}{...}
+{viewerjumpto "Author Info and How to Cite" "wooldid##author"}{...}
 {viewerjumpto "Disclaimer" "wooldid##disclaimer"}{...}
 {title:Estimation of Difference-in-Differences Treatment Effects with Staggered Treatment Onset Using Heterogeneity-Robust Two-Way Fixed Effects Regressions}
 
@@ -70,19 +69,19 @@ in general, yields poor results (unit FE can be included separately). The cohort
 {synopt : {help wooldid##standarderrors:Standard Errors:}} {opt clus:ter(variable(s)[numerical])}  {opt imp:values} 
 {opt simult:aneousbands} {opt level(#)}  {p_end}
 
-{synopt : {help wooldid##bootstrap:Bootstrap Inference:}} {opt boot:strap(standard|bayes)} {opt reps(#)} {opt bootdisp:lay(spec)} 
-{opt bootdf(normal|clusters|#)} {opt bootsave(name[, replace])}    {p_end}
+{synopt : {help wooldid##bootstrap:Bootstrap Inference:}} {opt boot:strap(standard|bayes)} {opt bootci:type(percentile|bc|bca|wald)} {opt bootdf(normal|clusters|#)} 
+{opt reps(#)} {opt bootsave(name[, replace])}    {p_end}
 
-{synopt : {help wooldid##randinf:Randomization Inference:}} {opt perm:ute(shuffle|probabilities)} {opt reps(#)}  {opt permex:act} {opt permprobs(spec)} 
-{opt permonset:cohorts}   {opt permstr:ata(stratavariable)}  {opt permt:stat} {opt permtci} {opt permside(left|right} {opt permabs} {opt permsave(name[, replace])  {p_end}
+{synopt : {help wooldid##randinf:Randomization Inference:}} {opt randinf(shuffle|probabilities)} {opt ristr:ata(stratavariable)} {opt riprobs(spec)} 
+{opt riside(left|right)} {opt riabs} {opt rit:stat} {opt reps(#)} {opt riex:act} {opt risave(name[, replace])}  {p_end}
 
 {synopt : {help wooldid##supporting:Supporting Features:}} {opt hist:ogramcohorteffects} {opt save:plots(filename_stem[, replace])}  {opt sum:marystats}
 {opt pois:son}    {p_end}
 
-{synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt espre:length(int>=0)} {opt espost:length(int>=0)} {opt esr:elativeto(-int)}
+{synopt : {help wooldid##eventstudy:Event Study Estimation:}}  {opt esf:ixedbaseperiod} {opt esr:elativeto(-int)} {opt espre:length(int>=0)} {opt espost:length(int>=0)}
  {opt pretrend:test(powerlevels)}  {opt makep:lots} {opt oos:treatedcontrols(int>=0)}   {p_end}
 
-{synopt : {help wooldid##interactions:Subgroup Effects:}} {opt subgroups(variable[>=0 int])}  {p_end}
+{synopt : {help wooldid##interactions:Subgroup Effects:}} {opt sub:groups(variable[>=0 int])}  {p_end}
 
 {synopt : {help wooldid##continuous:Continuous Treatments:}} {opt contreat(variable[numerical])} {opt contreatelas:ticity}  {opt contreatw:ithin}
 {opt contreatp:oly(+int)} {opt lattice(variable[+int] OR latticetype latticenum)} {opt latticeig:noreweights} {opt makec:fxplots} {opt cfxlattice(variable[+int])}
@@ -97,7 +96,7 @@ in general, yields poor results (unit FE can be included separately). The cohort
 
 {synopt : {help wooldid##technical:Technical Features:}}
 {opt update} {opt fast:nose} {opt regtol(+int)} {opt ccno:absorb} {opt ccc_absorb(varlist[numerical])}
-{opt rseed(#)}  {opt ver:bose} {opt iteffects} {opt nofastcollapse} {opt safety(off)}    {p_end}
+{opt nofastcollapse} {opt rseed(#)}  {opt ver:bose} {opt iteffects} {opt safety(off)}    {p_end}
 
 
 
@@ -132,9 +131,9 @@ cohort-specific treatment effects, or relative-time-period-specific treatment ef
 (e.g., for period-specific effects) or by reweighting the sample (e.g., for averages of cohort effects). For more on the different estimand-types available, 
 see {help wooldid##specifyestimand:estimands}. {p_end}
 
-{pstd} With respect to inference, there are several approaches available. The default estimates Heteroskedasticity robust standard errors in the underlying regression and then obtains
+{pstd} With respect to inference, there are several approaches available. The default estimates heteroskedasticity robust standard errors in the underlying regression and then obtains
  standard errors on the treatment effects produced by the margins calculation using the delta method. Given these standard errors, p-values are then obtained using a t-distribution of 
-same degrees of freedom as the residual number of degrees of freedom in the underlying regression model. Inference is also available using analytic clustered standard errors, the 
+the same degrees of freedom as the residual number of degrees of freedom in the underlying regression model. Inference is also available using analytic clustered standard errors, the 
 bootstrap, the Bayesian bootstrap, and randomization inference. When treatment effects can be estimated independently within clusters, inference via the method of Ibragimov and Muller 
 (2010) is also available, in which case inference is done by t-testing the set of cluster-specific estimates against 0 (possibly changing the requested estimand). Finally, note that to 
 speed estimation of analytic SEs, the delta method calculations are done at the cohort-period (i-t) level, rather than at the observation-level - except in cases where the two methods 
@@ -260,7 +259,7 @@ independence assumption.  {p_end}
 
 {phang}{opt boot:strap(standard|bayes)}: Bootstrap standard errors and inference using either the standard (pairs cluster, when clustering) bootstrap or the Bayesian bootstrap. 
 The default behavior is to show standard errors calculated as the standard deviation of the bootstrap replicate result distribution, coupled with percentile-based intervals and p-values.
-The Bayesian bootstrap proceeds like the standard Bootstrap, except that instead of resampling replicates, each replicate involves re-estimation after multiplying each observation's 
+The Bayesian bootstrap proceeds like the standard bootstrap, except that instead of resampling replicates, each replicate involves re-estimation after multiplying each observation's 
 (or cluster of observations') sample weight with a Dirichlet weight. {p_end}
 
 {phang}{opt bootci:type(percentile|bc|bca|wald)}: Select the type of confidence interval and p-value shown. By default, the CI and p-value are based on percentiles of the bootstrap replicate 
@@ -655,7 +654,7 @@ procedures.{p_end}
 from the underlying regression estimator, wherever available. {p_end}
 
 {pstd} In addition to these objects returned in e(), if saveplots() is specified, a dataset containing the information used to produce event study plots along with .gph files containing
-all graphs generated will be saved to a file with your specified name in STATA's working directory. {p_end}
+all graphs generated will be saved to files beginning with your specified name in STATA's working directory. {p_end}
 
 {pstd} If the option {it:verbose} is specified, the stage 1 underlying regression that {it:wooldid} estimates will also be stored to a model called {it:___wooldidfullmodel}, which can be
 accessed using standard {it:estimates restore} type syntax. {p_end}
@@ -665,7 +664,7 @@ output matrices into a dataset that you can directly manipulate (e.g., to remake
 {it:svmat e(histogramestimates), names(col)} will create in memory a dataset containing the contents of {it:e(histogramestimates)} (i.e., the cohort i-specific treatment effects), 
 using as variable names the names of the matrix's columns. The program {help event_plot} can also be used to automatically generate event study plots using the information stored by
 {it:wooldid} in {it:e()}, though the user will need to point {it:event_plot} to the name of the results of interest (e.g., for ATT-type event study coefficients, by specifying 
-{it:stub_lag(ES_att_post#)} and {it:stub_lead(ES_att_pre#)}). If taking this approach, be aware that the {it:event_plot} does not automatically insert 0s into the event study plot 
+{it:stub_lag(ES_att_post#)} and {it:stub_lead(ES_att_pre#)}). If taking this approach, be aware that {it:event_plot} does not automatically insert 0s into the event study plot 
 to represent the missing reference period. {p_end}
 
 
@@ -678,7 +677,7 @@ to represent the missing reference period. {p_end}
 
 {p 10 10} {cmd:wooldid y i t ttre, cluster(i) att}
 
-{phang}1) Conventional diff-in-diff, targeting both ATT and ATT_it, with production of histogram showing cohort-i specific effects: {p_end}
+{phang}1) Conventional diff-in-diff, targeting both ATT and ATT_it, with production of a histogram showing cohort-i specific effects: {p_end}
 
 {p 10 10}   {cmd:wooldid y i t ttre, att att_it histogramcohorteffects}
 
@@ -750,6 +749,8 @@ under development, so assistance finding and correcting bugs is much appreciated
 Boston College Department of Economics. https://ideas.repec.org/c/boc/bocode/s457874.html {p_end}
 
 {phang} Ibragimov, Rustam and Muller, Ulrich K. t-Statistic Based Correlation and Heterogeneity Robust Inference. Journal of Business & Economic Statistics, 2010. {p_end}
+
+{phang} Roth, Jonathan. Pretest with Caution: Event-Study Estimates after Testing for Parallel Trends. American Economic Review: Insights, 2022. {p_end}
 
 {phang} Wooldridge, Jeffrey M. Two-Way Fixed Effects, the Two-Way Mundlak Regression, and Difference-in-differences Estimators. Working Paper, 2021. https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345 {p_end}
 
