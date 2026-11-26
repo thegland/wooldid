@@ -366,7 +366,7 @@ bootstrap replicate result distribution, coupled with percentile-based intervals
 The Bayesian bootstrap proceeds like the standard bootstrap, except that instead of resampling
 replicates, each replicate involves re-estimation after multiplying each observation's 
 (or cluster of observations') sample weight with a Dirichlet weight. Note: the Bayesian bootstrap is
-not available with {it:att_it}, {it:att_i} or {it:att_itime}. {p_end}
+not available with {it:att_it}, {it:att_i}, or {it:att_itime}. {p_end}
 
 {phang}{opt bootci:type(percentile|bc|bca|wald)}: Select the type of confidence interval and p-value
 shown. By default, the CI and p-value are based on percentiles of the bootstrap replicate 
@@ -919,13 +919,13 @@ or with polynomial terms.   {p_end}
 
 
 {marker output}{...}
-{title:Working With Output}
+{title:Working with Output}
 
 {pstd}
 {it:wooldid} generates output primarily in the form of matrices and scalars stored in e(), though
-all main results can also be accessed using standard utilities like {it:esttab}.
-The commands {it:est store}, {it:est restore}, and {it:est save} are compatible with {it:wooldid}
-for saving its output. The full set of {it:wooldid} output in e() can be viewed using the command
+all main results can also be accessed using standard utilities like {it:esttab}. The commands
+{it:est store}, {it:est restore}, and {it:est save} are compatible with {it:wooldid} for saving its
+output. The full set of {it:wooldid} output in e() can be viewed using the command
 {it:ereturn list}. {p_end}
 
 {pstd} The primary results are stored in the following matrices: {p_end}
@@ -939,23 +939,21 @@ for saving its output. The full set of {it:wooldid} output in e() can be viewed 
 subgroups are used.{p_end}
 
 {synopt:{it:e(b)}, {it:e(V)}} The estimates (e.g., main_att, ES_att_post0) and their
-covariance. Without {it:bootstrap()}, e(V) is 0 off the diagonal except within one estimand type's
-event study coefficients for one (sub)sample, so {it:test} and {it:lincom} are not valid across
-other estimates.{p_end}
+covariance. Without {it:bootstrap()}, {it:e(V)} is 0 off the diagonal except within one estimate
+type's event study coefficients for one (sub)sample, so {it:test} and {it:lincom} are not valid
+across other estimates.{p_end}
 
 {pstd} In addition to these core results, the following materials are also returned in e(): {p_end}
-
-{synopt: SG Effect Homogeneity Tests} For each estimate type (ATT, ATT_it, AME, etc.), the p-value
-of the joint test that all subgroups have the same such post-treatment effect
-(namely, the same effect as the lowest numbered SG) is in the scalar {it:e(joint_att_allsgssame)}
-and analogously named scalars; for pre-treatment effects, in scalars like
-{it:e(joint_pre_att_allsgssame)}.{p_end}
+{synopt:SG Effect Homogeneity Tests} For each estimate type (ATT, ATT_it, AME, etc.), the p-value of
+the joint test that all subgroups have the same such post-treatment effect (namely, the same effect
+as the lowest numbered SG) is in the scalar {it:e(joint_att_allsgssame)} and analogously named
+scalars; for pre-treatment effects, in scalars like {it:e(joint_pre_att_allsgssame)}.{p_end}
 
 {synopt:{it:e(N)}, {it:e(N_dropped)}, {it:e(Nclus)}} Estimation sample observation count, number of
 observations dropped from initially specified sample, and cluster count. {p_end}
 
-{synopt:R^2 measures} For standard estimation, e(r2), e(r2adj), e(r2_within), and e(r2_withinadj);
-for poisson estimation, the pseudo-R^2 e(r2pseud). {p_end}
+{synopt:R^2 Measures} For standard estimation, {it:e(r2)}, {it:e(r2adj)}, {it:e(r2_within)}, and
+{it:e(r2_withinadj)}; for poisson estimation, the pseudo-R^2 {it:e(r2pseud)}. {p_end}
 
 {synopt:{it:e(histogramestimates)}} The cohort i-specific treatment effects used to generate
 histograms, when requested.{p_end}
@@ -965,49 +963,48 @@ histograms, when requested.{p_end}
 {synopt:{it:e(summarystats)}} Summary statistics, when requested. Some of the most commonly
 referenced are also returned directly as scalars into e(). {p_end}
 
-{synopt:{it:e(roth_power_att)}} The {it:pretrendtest()} table for ATT (likewise for att_it, ame, and
-ame_it); the slope and joint test p-value are in {it:e(roth_slope_att)} and
+{synopt:{it:e(roth_power_att)}} The {it:pretrendtest()} table for ATT (likewise for ATT_it, AME, and
+AME_it); the slope and joint test p-value are in {it:e(roth_slope_att)} and
 {it:e(roth_prep_att)}.{p_end}
 
-{synopt: CFX Plot Info} The information used to produce each continuous treatment effects plot, in a
-matrix e(cfx[item]_[type]): [item] is one of att, att_i, att_it, or att_itime
-(average treatment effects) or ame, ame_i, ame_it, or ame_itime (marginal effects of the continuous
-treatment); [type] is cfxpost (post-treatment period), cfxpre (pre-treatment
-period), or relyrZ (relative time period Z, where the letter n represents a negative sign). {p_end}
+{synopt:CFX Plot Info} The information used to produce each continuous treatment effects plot, in a
+matrix {it:e(cfx[item]_[type])}: [item] is one of att, att_i, att_it, or att_itime (average
+treatment effects) or ame, ame_i, ame_it, or ame_itime (marginal effects of the continuous
+treatment); [type] is cfxpost (post-treatment period), cfxpre (pre-treatment period), or relyrZ
+(relative time period Z, where the letter n represents a negative sign). {p_end}
 
 {synopt:{it:e(sample)}} The estimation sample used, useful for identifying which observations
 {it:wooldid} drops during its sample formation and sanitation procedures.{p_end}
 
 {synopt:{it:e(cmdline)}} The input you fed to {it:wooldid} on the command line.{p_end}
 
-{synopt:randinf() results} {it:e(ri_p)}, {it:e(ri_ci)} (the shift intervals), and {it:e(ridist_b)}
-(one row per rerandomization), aligned with {it:e(b)}.{p_end}
+{synopt:{it:randinf()} Results} {it:e(ri_p)}, {it:e(ri_ci)} (the shift intervals), and
+{it:e(ridist_b)} (one row per rerandomization), aligned with {it:e(b)}.{p_end}
 
 {synopt:{it:e(estimate_type)}} Whether your treatment effect estimates use a pooled reference period
 or a fixed reference period. {p_end}
 
 {synopt:{it:e(b_es_att)}, {it:e(V_es_att)}} The ATT event study coefficients and their covariance
 (e.g., for {it:honestdid}); {it:e(numpre_att)} is the number of pre-treatment coefficients. Likewise
-for att_it, ame, and ame_it, and for subgroups (e.g., e(b_es_att_s1) for subgroup 1).{p_end}
+for ATT_it, AME, and AME_it, and for subgroups (e.g., {it:e(b_es_att_s1)} for subgroup 1).{p_end}
 
-{synopt:Bootstrap results} {it:e(bootdist)} (one row per replicate) and the bootstrap intervals and
-p-values in {it:e(boot_ci_*)} and {it:e(boot_p_*)}.{p_end}
+{synopt:{it:bootstrap()} Results} {it:e(bootdist)} (one row per replicate) and the bootstrap
+intervals and p-values in {it:e(boot_ci_*)} and {it:e(boot_p_*)}.{p_end}
 
-{synopt:{it:Other Items}} {it:e(ll)}, {it:e(ll_0)}, {it:e(rmse)}, {it:e(rss)}, {it:e(F)}, and
-{it:e(chi2)} (poisson only) are passed through directly
-from the underlying regression estimator, wherever available. {p_end}
+{synopt:Other Items} {it:e(ll)}, {it:e(ll_0)}, {it:e(rmse)}, {it:e(rss)}, {it:e(F)}, and
+{it:e(chi2)} (poisson only) are passed through directly from the underlying regression estimator,
+wherever available. {p_end}
 
 {pstd} Outside of e(), {it:saveplots()} writes its files to STATA's working directory, and
-{it:verbose} stores the stage 1 underlying regression as the model {it:___wooldidfullmodel}
-(see those options). {p_end}
+{it:verbose} stores the stage 1 underlying regression as the model {it:___wooldidfullmodel} (see
+those options). {p_end}
 
-{pstd} {ul:Tips for accessing output and remaking graphs:} {it:matlist} prints one of {it:wooldid}'s
-output matrices. {it:svmat} adds one to the data in memory as variables that you can
-directly manipulate (e.g., to remake the event study graphs): for example,
+{pstd} {ul:Tips for Accessing Output and Remaking Graphs:} {it:matlist} prints one of {it:wooldid}'s
+output matrices. {it:svmat} adds one to the data in memory as variables that you can directly
+manipulate (e.g., to remake the event study graphs): for example,
 {it:svmat e(histogramestimates), names(col)} adds the cohort i-specific treatment effects, named
-after the
-matrix's columns. The program {help event_plot} can also generate event study plots from {it:e()} if
-pointed to the results of interest (e.g., for ATT-type event study coefficients,
+after the matrix's columns. The program {help event_plot} can also generate event study plots from
+e() if pointed to the results of interest (e.g., for ATT-type event study coefficients,
 {it:stub_lag(ES_att_post#)} and {it:stub_lead(ES_att_pre#)}); it does not automatically insert 0s to
 represent the missing reference period. {p_end}
 
